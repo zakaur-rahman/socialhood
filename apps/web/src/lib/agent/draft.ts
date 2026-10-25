@@ -1,5 +1,5 @@
 /**
- * An automation draft prepared by Ask Social Hood (FR-AGT-03, AutomationDraftPrefill) laid over a
+ * An automation draft prepared by Ask Amplychat (FR-AGT-03, AutomationDraftPrefill) laid over a
  * newly created automation's definition, in the editor's own terms (lib/automations/definition).
  * The result is what the editor's autosave would send; the member finishes it there.
  */

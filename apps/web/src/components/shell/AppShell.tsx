@@ -117,7 +117,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
       }
       overlays={
         <>
-          {/* FR-AGT-01: Ask Social Hood on every page, with its Ctrl/⌘ K shortcut. */}
+          {/* FR-AGT-01: Ask Amplychat on every page, with its Ctrl/⌘ K shortcut. */}
           <AskRoot />
           {/* F-15: any 402 opens the upgrade dialog (lib/api/provider.tsx). */}
           <UpgradeDialog />

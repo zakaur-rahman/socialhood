@@ -160,7 +160,7 @@ export function SettingsStep({
               <p id="automation-track-links-hint" className="text-xs text-fg-secondary">
                 {draft.track_links === false
                   ? "Link buttons are sent exactly as you wrote them, so clicks aren't counted."
-                  : "Link buttons go through a Social Hood link that sends people on to yours, so each step can show its clicks. Link previews aren't counted."}
+                  : "Link buttons go through a Amplychat link that sends people on to yours, so each step can show its clicks. Link previews aren't counted."}
               </p>
             </div>
             <Switch

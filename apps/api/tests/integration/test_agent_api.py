@@ -1,4 +1,4 @@
-"""TA.1: the Ask Social Hood API (§2.15 …/agent/*; FR-AGT-01, FR-AGT-03, FR-AGT-07, FR-AGT-10,
+"""TA.1: the Ask Amplychat API (§2.15 …/agent/*; FR-AGT-01, FR-AGT-03, FR-AGT-07, FR-AGT-10,
 TR-AGT-08). Asking stores a queued run and queues run_agent; a member sees and cancels their own
 runs, owners and admins every run; threads are personal; the policy is read_only in R1. Another
 workspace's ids are covered by the tenancy suite (tests/tenancy); here, another member's.

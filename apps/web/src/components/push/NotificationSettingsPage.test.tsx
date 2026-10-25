@@ -61,7 +61,7 @@ describe("Settings → Notifications (UX-SCR-07, FR-NOT-03, FR-NOT-04)", () => {
     expect(await screen.findByText("Saved")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Save changes" })).toBeNull();
     // The device's own state shows beside them.
-    expect(within(section).getByText("This browser can't show notifications from Social Hood")).toBeInTheDocument();
+    expect(within(section).getByText("This browser can't show notifications from Amplychat")).toBeInTheDocument();
   });
 
   it("a switch that fails to save moves back and says why", async () => {

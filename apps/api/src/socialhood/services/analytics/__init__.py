@@ -4,7 +4,7 @@ Collection (the snapshot jobs call these; they never call AI):
 - ``snapshots``: post metric snapshots at 1 h, 6 h, 24 h, 72 h, 7 d and 30 d after publishing.
 - ``account_daily``: one row of account metrics per account per day.
 
-Reads (the analytics routes and Ask Social Hood's analytics tools call the same functions,
+Reads (the analytics routes and Ask Amplychat's analytics tools call the same functions,
 agent-architecture §6):
 - ``queries``: ``post_performance``, ``compare_post``, ``top_posts``.
 - ``sentiment``: ``sentiment_distribution``.

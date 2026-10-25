@@ -262,7 +262,7 @@ async def test_the_document_is_public_and_lists_only_the_public_api(
     response = await client.get("/public/v1/openapi.json")
     assert response.status_code == 200, response.text
     document = response.json()
-    assert document["info"]["title"] == "Social Hood public API"
+    assert document["info"]["title"] == "Amplychat public API"
     assert "/public/v1/contacts" in document["paths"]
     assert not [p for p in document["paths"] if p.startswith("/v1/")]
     assert document["components"]["securitySchemes"]["ApiKey"]["scheme"] == "bearer"

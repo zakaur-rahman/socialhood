@@ -44,7 +44,7 @@ test.describe("GR-27 Google Sheets sync", () => {
 
     await card.getByRole("button", { name: "Send a test row" }).click();
     await expect.poll(async () => (await api.googleSheet(sheetId)).rows, { timeout: 30_000 }).toEqual([
-      ["test@example.com", "Test row from Social Hood"],
+      ["test@example.com", "Test row from Amplychat"],
     ]);
 
     // A real capture: the flow asks for an email.

@@ -48,7 +48,7 @@ export function LogoMark({ className }: { className?: string }) {
 }
 
 /**
- * The sidebar's header: logo, "Social Hood" with the plan, and the workspace name. It opens a
+ * The sidebar's header: logo, "Amplychat" with the plan, and the workspace name. It opens a
  * menu to switch between the member's workspaces (GET /v1/workspaces) and to reach workspace
  * settings. Collapsed, it is the logo alone, named by a tooltip.
  */
@@ -84,7 +84,7 @@ export function WorkspaceMenu({
       <span aria-hidden={collapsed} className={cn("flex min-w-0 flex-1 items-center gap-2.5 whitespace-nowrap", sidebarFadeClass(!collapsed))}>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold">Social Hood</span>
+              <span className="truncate text-sm font-semibold">Amplychat</span>
               <PlanBadge plan={workspace.plan} />
             </span>
             <span className="block truncate text-xs text-fg-secondary">{workspace.name}</span>

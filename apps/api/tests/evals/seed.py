@@ -1,4 +1,4 @@
-"""The Ask Social Hood eval workspace (TA.6): a bakery in Pune, seeded deterministically.
+"""The Ask Amplychat eval workspace (TA.6): a bakery in Pune, seeded deterministically.
 
 Everything is declared below as data (accounts, conversations, posts with their comments and
 metric snapshots, automations with runs, scheduled messages and posts, knowledge and gaps,

@@ -34,7 +34,7 @@ const UNSUPPORTED_LINK: Partial<Record<Platform, string>> = {
   instagram: "https://www.instagram.com/direct/inbox/",
   whatsapp: "https://web.whatsapp.com/",
   facebook: "https://business.facebook.com/latest/inbox/messenger",
-  // A website chat has no inbox outside Social Hood, so it has no link.
+  // A website chat has no inbox outside Amplychat, so it has no link.
 };
 
 const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; className?: string }>> = {

@@ -233,7 +233,7 @@ export function BroadcastDetailPage({ id }: { id: string }) {
                 <p className={META}>
                   {`An estimate from Meta's rate card for India as of ${b.cost.as_of}`}
                   {b.cost.verified ? "." : " (typed in by hand, not yet checked against Meta)."} Meta bills your WhatsApp
-                  Business Account directly; Social Hood charges nothing for it.
+                  Business Account directly; Amplychat charges nothing for it.
                 </p>
               </>
             ) : (

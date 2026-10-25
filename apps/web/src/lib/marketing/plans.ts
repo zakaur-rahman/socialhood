@@ -263,5 +263,5 @@ export const CREDIT_COSTS: { action: string; credits: string }[] = [
   { action: "Summarising a post's comments", credits: "2" },
   { action: "Writing a caption or hashtags", credits: "1" },
   { action: "Testing a knowledge question", credits: "1" },
-  { action: "Ask Social Hood (a typical question uses 2 to 4)", credits: "1 per step" },
+  { action: "Ask Amplychat (a typical question uses 2 to 4)", credits: "1 per step" },
 ];

@@ -182,7 +182,7 @@ class ListFilters:
     # GR-20: the caller (the "mine" view is theirs) and an explicit assignee to filter by.
     viewer_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
-    # Ask Social Hood (FR-AGT-05): conversations whose last message is in [active_from,
+    # Ask Amplychat (FR-AGT-05): conversations whose last message is in [active_from,
     # active_until).
     active_from: datetime | None = None
     active_until: datetime | None = None
@@ -280,7 +280,7 @@ def _filters(filters: ListFilters, now: datetime) -> list[ColumnElement[bool]]:
 
 
 async def count_conversations(session: AsyncSession, filters: ListFilters, *, now: datetime) -> int:
-    """How many conversations ``list_conversations`` would page through (Ask Social Hood's "and
+    """How many conversations ``list_conversations`` would page through (Ask Amplychat's "and
     n more", TA.4)."""
     count = await session.scalar(
         select(func.count())

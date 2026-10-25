@@ -65,7 +65,7 @@ const DELIVERY: Record<WebhookDelivery["status"], { label: string; tone: "succes
 };
 
 /**
- * Settings › Integrations (GR-04): webhook endpoints that receive Social Hood's events as they
+ * Settings › Integrations (GR-04): webhook endpoints that receive Amplychat's events as they
  * happen. Add one (its signing secret is shown once), turn it on or off, send a test event, see
  * each delivery's last attempt and replay one. Above them, the Google Sheets card (GR-27) adds
  * every captured lead to a sheet. Owners and admins.
@@ -84,7 +84,7 @@ export function IntegrationsPage() {
       header={
         <SettingsPageHeader
           title="Integrations"
-          description="Send events to Zapier, Make, your CRM or your own server as they happen. Each request is signed, so you can check it came from Social Hood."
+          description="Send events to Zapier, Make, your CRM or your own server as they happen. Each request is signed, so you can check it came from Amplychat."
           actions={
             <Button onClick={() => setAdding(true)}>
               <Plus aria-hidden /> Add endpoint

@@ -118,7 +118,7 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
       {attention ? null : (
         <p className="text-sm text-fg-secondary">
           Create a catalogue in Meta Commerce Manager and connect it to your WhatsApp Business Account in WhatsApp
-          Manager. Then enter its id here. Social Hood only adds and updates the items it sends.
+          Manager. Then enter its id here. Amplychat only adds and updates the items it sends.
         </p>
       )}
       <Field id="wa-catalogue-number">

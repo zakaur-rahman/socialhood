@@ -15,11 +15,11 @@ import { InstallSteps } from "./InstallPrompt";
 /** How to allow notifications again once they were blocked, per platform. */
 export function reenableSteps(platform: Platform, standalone: boolean): string {
   if (platform === "ios") {
-    return "Open the Settings app, tap Notifications, then Social Hood, and turn on Allow Notifications.";
+    return "Open the Settings app, tap Notifications, then Amplychat, and turn on Allow Notifications.";
   }
   if (platform === "android") {
     return standalone
-      ? "Touch and hold the Social Hood icon, tap App info, then Notifications, and allow them."
+      ? "Touch and hold the Amplychat icon, tap App info, then Notifications, and allow them."
       : "Tap the icon to the left of the address bar, then Permissions, and allow Notifications.";
   }
   return "Click the icon to the left of the address bar, allow Notifications, then reload this page.";
@@ -61,7 +61,7 @@ function StateView({
       );
     case "ios-install":
       return (
-        <Notice icon={<Smartphone className="size-4" />} title="Add Social Hood to your Home Screen first">
+        <Notice icon={<Smartphone className="size-4" />} title="Add Amplychat to your Home Screen first">
           <p className="text-sm text-fg-secondary">
             On iPhone, notifications work in the Home Screen app (iOS 16.4 or later). Then open this page there to turn
             them on.
@@ -71,9 +71,9 @@ function StateView({
       );
     case "unsupported":
       return (
-        <Notice icon={<BellOff className="size-4" />} title="This browser can't show notifications from Social Hood">
+        <Notice icon={<BellOff className="size-4" />} title="This browser can't show notifications from Amplychat">
           <p className="text-sm text-fg-secondary">
-            Use Chrome on Android or a computer, or on iPhone add Social Hood to your Home Screen (iOS 16.4 or later).
+            Use Chrome on Android or a computer, or on iPhone add Amplychat to your Home Screen (iOS 16.4 or later).
           </p>
         </Notice>
       );
@@ -89,7 +89,7 @@ function StateView({
       );
     case "denied":
       return (
-        <Notice icon={<BellOff className="size-4" />} title="Notifications are blocked for Social Hood">
+        <Notice icon={<BellOff className="size-4" />} title="Notifications are blocked for Amplychat">
           <p className="text-sm text-fg-secondary">{reenableSteps(state.platform, state.standalone)}</p>
         </Notice>
       );

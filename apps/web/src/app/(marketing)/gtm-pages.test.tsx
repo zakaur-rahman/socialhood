@@ -41,7 +41,7 @@ describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
     expect(metadata.description).toBe(page.description);
     expect(metadata.alternates?.canonical).toBe(page.path);
     expect(metadata).toMatchObject({
-      openGraph: { url: page.path, title: `${page.title} · Social Hood`, images: [expect.objectContaining({ url: "/og.png" })] },
+      openGraph: { url: page.path, title: `${page.title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] },
       twitter: { card: "summary_large_image" },
     });
     expect(PUBLIC_PATHS).toContain(page.path);
@@ -101,17 +101,17 @@ describe("Switch from Manychat", () => {
     expect(screen.getByText(/no one-click import from Manychat/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Flat plans" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "What is different, so you can decide" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Social Hood vs Manychat" })).toHaveAttribute("href", "/compare/manychat");
+    expect(screen.getByRole("link", { name: "Amplychat vs Manychat" })).toHaveAttribute("href", "/compare/manychat");
     expect(screen.getByRole("link", { name: /Kanal/ })).toHaveAttribute("href", "https://getkanal.com/blog/manychat-instagram");
     expect(screen.getByRole("img", { name: /automation editor's preview/ })).toBeInTheDocument();
   });
 });
 
-describe("Social Hood vs Manychat", () => {
+describe("Amplychat vs Manychat", () => {
   it("is a table with row headers, a status for each side and the sources with dates", () => {
     render(<ComparisonManychat />);
-    const table = screen.getByRole("table", { name: "Social Hood and Manychat feature by feature" });
-    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Feature", "Social Hood", "Manychat"]);
+    const table = screen.getByRole("table", { name: "Amplychat and Manychat feature by feature" });
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Feature", "Amplychat", "Manychat"]);
     const row = within(table).getByRole("row", { name: /^Broadcasts/ });
     expect(within(row).getAllByText("Coming soon")).toHaveLength(1);
     expect(within(table).getByRole("row", { name: /^Publishing posts/ })).toHaveTextContent("Not found");
@@ -120,7 +120,7 @@ describe("Social Hood vs Manychat", () => {
   });
 });
 
-describe("Social Hood vs Interakt", () => {
+describe("Amplychat vs Interakt", () => {
   it("cites Interakt's pricing page with the date read and says its prices change", () => {
     render(<ComparisonInterakt />);
     expect(screen.getByRole("link", { name: "Interakt pricing" })).toHaveAttribute("href", "https://www.interakt.shop/pricing/");
@@ -183,7 +183,7 @@ describe("the pricing page", () => {
     expect(broadcasts).toHaveTextContent("2,500");
     expect(broadcasts).toHaveTextContent("25,000");
     expect(broadcasts).toHaveTextContent(/Coming soon: broadcasts open after our review of India's consent rules/);
-    expect(screen.getByRole("row", { name: /Remove Powered by Social Hood/ })).toHaveTextContent("Not included");
+    expect(screen.getByRole("row", { name: /Remove Powered by Amplychat/ })).toHaveTextContent("Not included");
     expect(screen.getByText(/Catalogue and sequence limits are our current proposals and may change/)).toBeInTheDocument();
   });
 

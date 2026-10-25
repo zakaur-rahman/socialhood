@@ -1,4 +1,4 @@
-"""Ask Social Hood's runs, threads and policy for the API (TA.1; FR-AGT-01, FR-AGT-03,
+"""Ask Amplychat's runs, threads and policy for the API (TA.1; FR-AGT-01, FR-AGT-03,
 FR-AGT-07, FR-AGT-10, TR-AGT-08; agent-architecture.html §11).
 
 Runs belong to the member who asked. A member sees and cancels their own runs; owners and admins

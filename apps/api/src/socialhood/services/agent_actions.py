@@ -1,4 +1,4 @@
-"""The action gateway for Ask Social Hood's writes (GR-36; FR-AGT-08, FR-AGT-09, TR-AGT-04;
+"""The action gateway for Ask Amplychat's writes (GR-36; FR-AGT-08, FR-AGT-09, TR-AGT-04;
 agent-architecture.html §4, §8). Every write the agent proposes goes through here, and nothing
 else saves what the agent asked for. Nothing here commits: the caller does.
 

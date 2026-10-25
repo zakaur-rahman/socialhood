@@ -385,7 +385,7 @@ EXAMPLE_BODIES.update(
     }
 )
 
-# Ask Social Hood (TA.1, R2): continuing B's thread from A's workspace is 404 and starts no run;
+# Ask Amplychat (TA.1, R2): continuing B's thread from A's workspace is 404 and starts no run;
 # B's policy and approvals can't be changed or decided from A's workspace.
 EXAMPLE_BODIES.update(
     {

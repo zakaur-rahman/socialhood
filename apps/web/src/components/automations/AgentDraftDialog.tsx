@@ -33,7 +33,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * FR-AGT-03 "Open the automation draft": what Ask Social Hood prepared, to check before it
+ * FR-AGT-03 "Open the automation draft": what Ask Amplychat prepared, to check before it
  * becomes a draft in the editor (like choosing a template, F-11). Nothing runs until the member
  * activates it there. It stays mounted and keeps the last draft while it closes, so its exit plays
  * and focus goes back to what had it when it opened, if that is still on the page, else to the
@@ -100,7 +100,7 @@ function AgentDraftBody({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <Sparkles className="size-4 text-brand-fg" aria-hidden /> Automation from Ask Social Hood
+          <Sparkles className="size-4 text-brand-fg" aria-hidden /> Automation from Ask Amplychat
         </DialogTitle>
         <DialogDescription>
           Check what it prepared. Opening it creates a draft you finish in the editor; nothing runs until you activate

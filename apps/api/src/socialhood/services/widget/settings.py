@@ -7,7 +7,7 @@ Decisions (docs/CONFLICTS.md C-111):
   through the allowed-domains list.
 - **Domains are required.** A new widget allows no site; the frame is refused everywhere until a
   domain is added (services/widget/origin.py).
-- **Branding.** Free always shows "Powered by Social Hood"; Pro and Max can turn it off (PD-7,
+- **Branding.** Free always shows "Powered by Amplychat"; Pro and Max can turn it off (PD-7,
   decided 2026-10-24). The stored choice is kept across a downgrade; what the visitor sees is
   ``show_branding`` only while the plan allows removing it.
 - **AI mode** is the account's, changed with the other accounts' (PATCH social-accounts); the
@@ -161,7 +161,7 @@ async def update(session: AsyncSession, row: WidgetSettings, body: WidgetSetting
         await check_entitlement(
             session,
             "widget_remove_branding",
-            detail='Removing "Powered by Social Hood" is part of Pro.',
+            detail='Removing "Powered by Amplychat" is part of Pro.',
         )
     if values.get("accent_color"):
         values["accent_color"] = values["accent_color"].upper()

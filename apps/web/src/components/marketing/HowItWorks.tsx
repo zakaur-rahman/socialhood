@@ -10,7 +10,7 @@ import { SHOTS, type Shot } from "./shots";
 const STEPS: { title: string; body: string; shot: Shot; maxWidth: string }[] = [
   {
     title: "Connect your accounts",
-    body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Social Hood never asks for your password.",
+    body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Amplychat never asks for your password.",
     shot: SHOTS.connect,
     maxWidth: "max-w-xl",
   },

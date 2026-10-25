@@ -1,4 +1,4 @@
-/* Social Hood chat widget: the embed script (GR-28). It adds one iframe from this server and sizes
+/* Amplychat chat widget: the embed script (GR-28). It adds one iframe from this server and sizes
    it as the chat opens and closes; the chat itself lives inside the frame, so the host page's CSS
    and scripts can't touch it and it can't touch theirs. Nothing is stored on the host page. */
 (function () {

@@ -37,7 +37,7 @@ export function DisconnectDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect {handle}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Social Hood deletes this account&apos;s access now and stops receiving its messages and
+            Amplychat deletes this account&apos;s access now and stops receiving its messages and
             comments. Its conversations, comments and posts stay here for reference; to delete them
             too, use Delete account and data. You can connect it again later.
           </AlertDialogDescription>

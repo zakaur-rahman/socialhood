@@ -24,7 +24,7 @@ describe("ErrorState (§4.7)", () => {
     const retry = vi.fn();
     render(<ErrorState error={internal} onRetry={retry} />);
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com with code 01M3REQUESTID.",
+      "Something went wrong on our side. Try again. If it keeps happening, email support@amplychat.com with code 01M3REQUESTID.",
     );
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(retry).toHaveBeenCalledOnce();
@@ -72,7 +72,7 @@ describe("ErrorState: buttons and sizes (UI-025)", () => {
     expect(alert).toHaveClass("text-left", "text-sm", "items-start", "mt-2");
     expect(alert).not.toHaveClass("text-center", "py-10");
     expect(alert).toHaveTextContent("This didn't load");
-    expect(alert).toHaveTextContent("email support@socialhood.com with code 01M3REQUESTID");
+    expect(alert).toHaveTextContent("email support@amplychat.com with code 01M3REQUESTID");
     for (const control of [screen.getByRole("button", { name: "Try again" }), screen.getByRole("link", { name: "Go to Home" })]) {
       expect(control).toHaveAttribute("data-size", "sm");
       expect(control).toHaveClass("h-7", "pointer-coarse:min-h-10");

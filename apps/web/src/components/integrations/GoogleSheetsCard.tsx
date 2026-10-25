@@ -52,7 +52,7 @@ import {
   unusedFields,
 } from "./sheetMapping";
 
-const DEFAULT_TITLE = "Social Hood leads";
+const DEFAULT_TITLE = "Amplychat leads";
 
 const ROW: Record<GoogleSheetRow["status"], { label: string; tone: "success" | "warning" | "danger" }> = {
   succeeded: { label: "Added", tone: "success" },
@@ -77,7 +77,7 @@ function completeMessage(error: unknown): string | null {
 
 /**
  * Settings › Integrations, Google Sheets (GR-27): connect a Google account (the narrow drive.file
- * access: Social Hood can only use sheets it makes, or that Google lets it open), make or choose a
+ * access: Amplychat can only use sheets it makes, or that Google lets it open), make or choose a
  * sheet, say which field goes in which column, send a test row and see how the latest rows did.
  * Every captured lead is added as a new row. Owners and admins.
  */
@@ -163,7 +163,7 @@ function Connect({ wid, reconnect = false }: { wid: string; reconnect?: boolean 
     <div className="space-y-2">
       {reconnect ? null : (
         <p className="text-sm text-fg-secondary">
-          Social Hood asks Google for the narrowest access: it can use only the sheets it makes for you, never the
+          Amplychat asks Google for the narrowest access: it can use only the sheets it makes for you, never the
           rest of your Drive.
         </p>
       )}
@@ -350,7 +350,7 @@ function Columns({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
       <SectionLabel>Columns</SectionLabel>
       <p className="text-sm text-fg-secondary">
         One column for each field, in this order. The header is the column&rsquo;s name in the first row of a sheet
-        Social Hood made; a sheet you already had keeps its own first row.
+        Amplychat made; a sheet you already had keeps its own first row.
       </p>
       <ul className="space-y-2" aria-label="Columns">
         {columns.map((column, index) => {

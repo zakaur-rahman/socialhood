@@ -146,7 +146,7 @@ describe("Google Sheets card (GR-27)", () => {
     const user = userEvent.setup();
     const { calls } = setup(status({ connected: true, status: "active", google_email: "owner@example.com" }));
     const name = await screen.findByRole("textbox", { name: "New sheet name" });
-    expect(name).toHaveValue("Social Hood leads");
+    expect(name).toHaveValue("Amplychat leads");
     await user.clear(name);
     await user.type(name, "Maple leads");
     await user.click(screen.getByRole("button", { name: "Create sheet" }));
@@ -165,7 +165,7 @@ describe("Google Sheets card (GR-27)", () => {
             title: "Validation error",
             status: 422,
             code: "validation_error",
-            errors: [{ field: "link", message: "Social Hood can only use sheets it created or that Google has let it open." }],
+            errors: [{ field: "link", message: "Amplychat can only use sheets it created or that Google has let it open." }],
           }),
           { status: 422, headers: { "Content-Type": "application/problem+json" } },
         ),

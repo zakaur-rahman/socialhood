@@ -31,9 +31,7 @@ def _kind(status: int) -> GoogleError:
     if status == 401:
         return GoogleError("auth", "Google no longer accepts the access.", status=status)
     if status == 403:
-        return GoogleError(
-            "forbidden", "Google won't let Social Hood use that sheet.", status=status
-        )
+        return GoogleError("forbidden", "Google won't let Amplychat use that sheet.", status=status)
     if status == 404:
         return GoogleError("not_found", "Google can't find that sheet.", status=status)
     if status == 429:

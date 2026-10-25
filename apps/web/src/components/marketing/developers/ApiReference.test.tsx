@@ -21,7 +21,7 @@ describe("the public API reference (GR-25)", () => {
 
   it("has a heading, a contents link and a section for each area", () => {
     renderReference();
-    expect(screen.getByRole("heading", { level: 1, name: "Social Hood public API" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Amplychat public API" })).toBeInTheDocument();
     const contents = screen.getByRole("navigation", { name: "Contents" });
     expect(within(contents).getByRole("link", { name: "Contacts" })).toHaveAttribute("href", "#contacts");
     expect(within(contents).getByRole("link", { name: "REST hooks" })).toHaveAttribute("href", "#rest-hooks");

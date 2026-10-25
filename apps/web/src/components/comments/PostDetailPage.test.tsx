@@ -515,7 +515,7 @@ describe("Comment actions (FR-CMT-04)", () => {
   });
 });
 
-describe("A reply prepared by Ask Social Hood (FR-AGT-03)", () => {
+describe("A reply prepared by Ask Amplychat (FR-AGT-03)", () => {
   beforeEach(() => resetAgentHandoff());
 
   it("opens that comment's reply box with the text; the member edits and sends it", async () => {

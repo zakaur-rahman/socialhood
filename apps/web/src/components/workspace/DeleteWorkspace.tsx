@@ -29,7 +29,7 @@ export const DELETED_DATA = [
   "Connected Instagram and WhatsApp accounts, which stop sending and receiving at once",
   "Conversations, messages, comments and contacts",
   "Automations, scheduled messages and scheduled posts",
-  "The knowledge base, AI settings and Ask Social Hood history",
+  "The knowledge base, AI settings and Ask Amplychat history",
   "Uploaded photos, videos and files",
   "Analytics, notifications and usage",
 ] as const;

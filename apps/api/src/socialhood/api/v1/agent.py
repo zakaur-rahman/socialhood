@@ -1,4 +1,4 @@
-"""Ask Social Hood (§2.15 …/agent/*; FR-AGT-01…10, TR-AGT-07, TR-AGT-08; agent-architecture.html
+"""Ask Amplychat (§2.15 …/agent/*; FR-AGT-01…10, TR-AGT-07, TR-AGT-08; agent-architecture.html
 §9, §11): runs, threads, the agent policy and approvals.
 
 A member starts a run with a question; it is stored ``queued`` and run_agent (jobs/tasks/agent.py)

@@ -2,7 +2,7 @@
 (``SHOPIFY_PROVIDER=fake``; never in production).
 
 - ``authorize_url`` points straight back at the redirect address with ``code=fake-code:<shop>``,
-  so a browser "installs the app" without leaving Social Hood; ``exchange_code`` accepts that
+  so a browser "installs the app" without leaving Amplychat; ``exchange_code`` accepts that
   code and gives ``fake-token:<shop>``.
 - Every store starts with the same three products (a kurta with colour and size variants, a scarf
   without variants and an untracked stock, a draft jacket). ``set_products`` replaces them, so a

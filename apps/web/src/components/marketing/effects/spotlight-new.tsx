@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Spotlight, from Aceternity UI's free "spotlight-new" (ui.aceternity.com/components/spotlight-new),
- * adapted for Social Hood (C-068):
+ * adapted for Amplychat (C-068):
  * - brand-tinted light from the tokens instead of fixed blue HSL values;
  * - no fade-in: the first paint is the finished hero (the original faded in over 1.5 s);
  * - the slow drift is a CSS animation (effects.css), so it ships no JavaScript and runs on the

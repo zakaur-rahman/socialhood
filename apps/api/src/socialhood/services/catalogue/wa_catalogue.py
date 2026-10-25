@@ -79,7 +79,7 @@ TRIGGER_DELAY_S = 8.0  # after a change: the request that made it has committed 
 NOT_CONNECTED = "Connect a WhatsApp catalogue first."
 NEEDS_ATTENTION = (
     "Meta no longer lets this number use the catalogue. Check the catalogue is connected to your "
-    "WhatsApp Business Account and that Social Hood has catalogue access, then connect again."
+    "WhatsApp Business Account and that Amplychat has catalogue access, then connect again."
 )
 CATALOGUE_NOT_FOUND = "Meta can't find that catalogue. Check the id in Commerce Manager."
 CATALOGUE_DENIED = (

@@ -41,7 +41,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * A thread of Ask Social Hood (FR-AGT-01), laid out like a modern assistant chat: questions and
+ * A thread of Ask Amplychat (FR-AGT-01), laid out like a modern assistant chat: questions and
  * answers oldest first in one readable column (centred on the page, the panel's width in the
  * panel), a welcome with suggested questions for a new thread, and the question box below. The
  * view follows new content only while the member is near the bottom; otherwise "Jump to latest"
@@ -226,7 +226,7 @@ export function AskConversation({
           ref={scroller}
           onScroll={onScroll}
           role="log"
-          aria-label="Conversation with Social Hood"
+          aria-label="Conversation with Amplychat"
           tabIndex={0}
           className="min-h-0 flex-1 overflow-y-auto focus-visible:-outline-offset-2"
           data-testid="ask-conversation"
@@ -314,7 +314,7 @@ function askError(error: unknown, credits: ReturnType<typeof exhaustedAiCredits>
   return errorMessage(error);
 }
 
-/** A new thread: what Social Hood can do and a question to start from in each area. */
+/** A new thread: what Amplychat can do and a question to start from in each area. */
 function Welcome({
   variant,
   onPick,
@@ -333,7 +333,7 @@ function Welcome({
         <h2 className={cn(SECTION_TITLE, "tracking-tight")}>What would you like to know?</h2>
         <p className="text-sm text-fg-secondary">
           Ask about your posts, comments, conversations and automations. Answers show the numbers they used and
-          link to them; Social Hood can prepare a reply for you to finish, or propose an automation or a segment for
+          link to them; Amplychat can prepare a reply for you to finish, or propose an automation or a segment for
           you to approve, but doesn&apos;t change anything itself.
         </p>
       </div>

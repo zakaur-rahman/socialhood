@@ -79,7 +79,7 @@ test.describe("GR-25 public API and API keys", () => {
 
   test("the public API reference renders from the API's OpenAPI document", async ({ page }) => {
     await page.goto("/developers/api");
-    await expect(page.getByRole("heading", { name: "Social Hood public API", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Amplychat public API", level: 1 })).toBeVisible();
     await expect(page.getByRole("region", { name: "Authentication" })).toContainText("Authorization: Bearer");
     const list = page.locator('[data-operation="list_contacts"]');
     await expect(list).toContainText("/public/v1/contacts");

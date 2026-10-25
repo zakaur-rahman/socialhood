@@ -1,4 +1,4 @@
-"""Ask Social Hood jobs (TA.1, TA.2, TA.6; TR-AGT-07, TR-JOB-02…06; agent-architecture.html §10).
+"""Ask Amplychat jobs (TA.1, TA.2, TA.6; TR-AGT-07, TR-JOB-02…06; agent-architecture.html §10).
 Thin tasks: the work is in agent/orchestrator.py. Each task carries the workspace id, so none needs
 a cross-workspace lookup except the sweeper's (allowed in jobs/, TR-TEN-04).
 

@@ -62,7 +62,7 @@ export function CommentsColumn({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const canDelete = workspace.role === "owner" || workspace.role === "admin";
 
-  // FR-AGT-03: a reply Ask Social Hood prepared for a comment on this post opens in that
+  // FR-AGT-03: a reply Ask Amplychat prepared for a comment on this post opens in that
   // comment's composer. It is taken once; the comment is looked for in the first few pages.
   const handoff = useAgentHandoff((state) => (state.commentReply?.post_id === post.id ? state.commentReply : null));
   const takeCommentReply = useAgentHandoff((state) => state.takeCommentReply);
@@ -173,7 +173,7 @@ export function CommentsColumn({
           <Alert tone="warning" icon={<AlertTriangle />} className="mt-4" data-testid="prepared-missing">
             <AlertDescription>
               <p>
-                The comment Ask Social Hood prepared a reply for isn&apos;t among this post&apos;s latest comments. It
+                The comment Ask Amplychat prepared a reply for isn&apos;t among this post&apos;s latest comments. It
                 may have been deleted.
               </p>
               <p className="mt-1 break-words whitespace-pre-wrap text-fg-secondary">{prepared.text}</p>

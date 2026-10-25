@@ -5,7 +5,7 @@
  */
 
 /** Used when NEXT_PUBLIC_SITE_URL is unset or not a URL: the production web app (WEB_BASE_URL). */
-export const DEFAULT_SITE_URL = "https://app.socialhood.com";
+export const DEFAULT_SITE_URL = "https://app.amplychat.com";
 
 /** The site's origin ("https://host[:port]", no trailing slash) from a URL, else the default. */
 export function siteUrl(value: string | undefined = process.env.NEXT_PUBLIC_SITE_URL): string {
@@ -25,17 +25,17 @@ export function absoluteUrl(path: string, origin: string = siteUrl()): string {
   return new URL(path, `${origin}/`).href;
 }
 
-export const SITE_NAME = "Social Hood";
+export const SITE_NAME = "Amplychat";
 export const SITE_TAGLINE = "AI inbox and automations for Instagram and WhatsApp";
 export const SITE_DESCRIPTION =
-  "Social Hood brings your Instagram DMs, comments and WhatsApp chats into one inbox, drafts or sends replies from your own business knowledge in English, Hindi and Hinglish, and runs comment and DM automations.";
+  "Amplychat brings your Instagram DMs, comments and WhatsApp chats into one inbox, drafts or sends replies from your own business knowledge in English, Hindi and Hinglish, and runs comment and DM automations.";
 
 /** The share image every public page names, drawn by app/(marketing)/og.png/route.tsx (next/og). */
 export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Social Hood: the AI inbox for businesses that sell on Instagram and WhatsApp",
+  alt: "Amplychat: the AI inbox for businesses that sell on Instagram and WhatsApp",
   type: "image/png",
 };
 
@@ -87,8 +87,8 @@ export const PUBLIC_PATHS = [
 export const LEARN_LINKS = [
   { label: "Plans and limits", href: "/pricing" },
   { label: "Switch from Manychat", href: "/switch-from-manychat" },
-  { label: "Social Hood vs Manychat", href: "/compare/manychat" },
-  { label: "Social Hood vs Interakt", href: "/compare/interakt" },
+  { label: "Amplychat vs Manychat", href: "/compare/manychat" },
+  { label: "Amplychat vs Interakt", href: "/compare/interakt" },
   { label: "Comment intelligence", href: "/features/comment-intelligence" },
   { label: "The AI inbox", href: "/features/ai-inbox" },
   { label: "Publishing", href: "/features/publishing" },

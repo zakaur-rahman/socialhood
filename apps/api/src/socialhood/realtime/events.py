@@ -44,7 +44,7 @@ EventType = Literal[
     "social_account.updated",
     "usage.updated",
     "notification.created",
-    # Ask Social Hood (schemas/agent.py, PA): ids, statuses and plain-word steps, never the
+    # Ask Amplychat (schemas/agent.py, PA): ids, statuses and plain-word steps, never the
     # request or answer (runs are the requester's; the stream is the workspace's).
     "agent.run.updated",  # {run: AgentRunEvent}: status or step progress
     "agent.step",  # AgentStepEvent: a step started (running) or ended

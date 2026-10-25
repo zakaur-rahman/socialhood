@@ -109,7 +109,7 @@ MODEL_ATTEMPTS = 2  # a timeout, 429 or 5xx is retried once (§15)
 RETRYABLE_STATUS = frozenset({408, 429})
 REPORT_RESERVE_S = 20.0  # wall time kept for the answer: under it, tools are withheld
 FAKE_ANSWER = (
-    "Ask Social Hood needs a Gemini key to answer. This server runs without one (AI_PROVIDER=fake)."
+    "Ask Amplychat needs a Gemini key to answer. This server runs without one (AI_PROVIDER=fake)."
 )
 INTERRUPTED = "This call was interrupted before it returned. Call it again if you still need it."
 

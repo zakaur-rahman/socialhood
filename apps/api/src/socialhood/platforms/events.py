@@ -66,7 +66,7 @@ class InboundMessage(Inbound):
     text: str | None
     attachments: tuple[InboundMediaRef, ...] = field(default_factory=tuple)
     reply_to_id: str | None = None
-    is_echo: bool = False  # sent by the business outside Social Hood
+    is_echo: bool = False  # sent by the business outside Amplychat
     quick_reply_payload: str | None = None  # the quick reply they tapped (FR-AUT-21)
     postback_payload: str | None = None  # the ice breaker or button they tapped (GR-01, GR-11)
     referral: ReferralInfo | None = None  # an ad the message came from (GR-01)

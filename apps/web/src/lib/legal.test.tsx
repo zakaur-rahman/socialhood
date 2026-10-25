@@ -5,25 +5,28 @@ import { LegalDates, LegalFacts } from "@/components/marketing/legal/LegalPage";
 
 import { LEGAL, governingLawClause, legalDate, legalFacts, operatorName, type LegalConfig } from "./legal";
 
-const EMPTY: LegalConfig = { contactEmail: "support@socialhood.com" };
+const EMPTY: LegalConfig = { contactEmail: "support@amplychat.com" };
 const FULL: LegalConfig = {
   entityName: "Example Technologies Private Limited",
   registeredAddress: "12 Example Road, Bengaluru 560001, India",
   governingLaw: "the laws of India",
   jurisdiction: "the courts at Bengaluru, Karnataka",
   effectiveDate: "2026-10-15",
-  grievanceOfficer: { name: "A. Person", email: "privacy@socialhood.com" },
-  contactEmail: "support@socialhood.com",
+  grievanceOfficer: { name: "A. Person", email: "privacy@amplychat.com" },
+  contactEmail: "support@amplychat.com",
 };
 
 // Anything that would read as an unfilled template on a public page.
 const PLACEHOLDER = /\[[^\]]*\]|undefined|null|TODO|TBD|\{\{/;
 
 describe("the legal config renders only what is set", () => {
-  it("today's config sets nothing but the contact email", () => {
-    expect(LEGAL.entityName).toBeUndefined();
-    expect(legalFacts(LEGAL)).toEqual([{ label: "Email", value: "support@socialhood.com", href: "mailto:support@socialhood.com" }]);
-    expect(operatorName(LEGAL)).toBe("Social Hood");
+  it("today's config sets only the operator and the contact email", () => {
+    expect(LEGAL.entityName).toBe("unchartd");
+    expect(legalFacts(LEGAL)).toEqual([
+      { label: "Operated by", value: "unchartd" },
+      { label: "Email", value: "support@amplychat.com", href: "mailto:support@amplychat.com" },
+    ]);
+    expect(operatorName(LEGAL)).toBe("unchartd");
   });
 
   it("unset fields leave no label, blank or placeholder", () => {
@@ -52,9 +55,9 @@ describe("the legal config renders only what is set", () => {
     const terms = screen.getAllByRole("term").map((node) => node.textContent);
     expect(terms).toEqual(["Operated by", "Registered address", "Email", "Grievance officer"]);
     expect(screen.getByText("Example Technologies Private Limited")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "A. Person, privacy@socialhood.com" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "A. Person, privacy@amplychat.com" })).toHaveAttribute(
       "href",
-      "mailto:privacy@socialhood.com",
+      "mailto:privacy@amplychat.com",
     );
     expect(screen.getByText(/Effective 15 October 2026/)).toBeInTheDocument();
     expect(governingLawClause(FULL)).toBe(

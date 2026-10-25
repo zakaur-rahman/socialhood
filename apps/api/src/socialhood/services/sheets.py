@@ -1,14 +1,14 @@
 """Google Sheets sync (GR-27): connect Google, choose a sheet, map fields to columns, and add a row
 for every captured lead.
 
-- **Access.** The narrow ``drive.file`` scope only (google/client.py): Social Hood can use sheets
+- **Access.** The narrow ``drive.file`` scope only (google/client.py): Amplychat can use sheets
   it created, or ones Google has granted it. Google's refresh credential is stored encrypted like
   platform tokens (SEC-03) and never returned. Owners and admins; the plan must include
   ``sheets_sync`` (PD-6, decided).
 - **Connecting.** Like Instagram (X-1) the public callback never connects anything: it parks the
   code under a one-time nonce bound to the member and workspace that started it, and the signed-in
   Integrations page finishes with POST …/complete.
-- **The sheet.** Create a new one (Social Hood writes the header row) or give the link of one it
+- **The sheet.** Create a new one (Amplychat writes the header row) or give the link of one it
   can already see. A sheet the person already had is never given a header row.
 - **Mapping.** An ordered list of columns, each a field and a header: the person's name,
   @username, platform, email, phone, the automation, when it was captured, their consent, or any
@@ -96,7 +96,7 @@ REASONS: dict[str, str] = {
     ACCESS_REMOVED: "Access was removed: reconnect Google in Settings, under Integrations.",
     SHEET_GONE: "Google said the sheet was deleted. Pick or create a sheet again.",
     SHEET_REFUSED: (
-        "Google won't let Social Hood write to that sheet. Pick or create a sheet again."
+        "Google won't let Amplychat write to that sheet. Pick or create a sheet again."
     ),
     NO_SHEET: "No sheet is chosen. Pick or create one in Settings, under Integrations.",
     GOOGLE_BUSY: "Google didn't take the row. It was tried again and still failed.",
@@ -118,7 +118,7 @@ CONNECT_NOT_YOURS = (
 CONNECT_FAILED = "Google didn't respond. Try again."
 LINK_INVALID = "That doesn't look like a Google Sheets link."
 LINK_UNREADABLE = (
-    "Social Hood can only use sheets it created or that Google has let it open. "
+    "Amplychat can only use sheets it created or that Google has let it open. "
     "Create a new sheet instead."
 )
 
@@ -622,7 +622,7 @@ async def send_test(
         "platform": "Instagram",
         "email": "test@example.com",
         "phone": "+910000000000",
-        "automation": "Test row from Social Hood",
+        "automation": "Test row from Amplychat",
         "captured_at": now.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "consent": "Yes",
         "fields": {},

@@ -2,7 +2,7 @@
   "data": {
     "app_id": "9876543210",
     "type": "SYSTEM_USER",
-    "application": "Social Hood",
+    "application": "Amplychat",
     "data_access_expires_at": 0,
     "expires_at": 0,
     "is_valid": true,

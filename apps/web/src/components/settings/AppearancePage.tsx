@@ -14,7 +14,7 @@ export function AppearancePage() {
       header={
         <SettingsPageHeader
           title="Appearance"
-          description="Choose how Social Hood looks on this device. The public website stays dark."
+          description="Choose how Amplychat looks on this device. The public website stays dark."
         />
       }
     >

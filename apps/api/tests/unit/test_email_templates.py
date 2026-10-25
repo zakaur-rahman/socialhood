@@ -151,7 +151,7 @@ def test_every_notification_email_renders(template: str) -> None:
     assert f"{WEB}/w/maple/settings/notifications" in email.html
     assert "Maple Bakery" in email.html
     # The text part says the same, with the link written out.
-    assert email.text.startswith("Social Hood\n")
+    assert email.text.startswith("Amplychat\n")
     assert "@maple.bakery needs reconnecting to keep receiving messages." in email.text
     assert f"{WEB}/w/maple/settings/connections" in email.text
 

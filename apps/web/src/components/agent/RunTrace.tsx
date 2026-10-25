@@ -191,7 +191,7 @@ function ApprovalTrace({ approval, timeZone, now }: { approval: AgentApproval; t
         {(approval.events ?? []).map((event) => (
           <li key={event.id}>
             {APPROVAL_EVENT_LABEL[event.event]}
-            {event.actor?.name ? ` by ${event.actor.name}` : event.event === "proposed" ? " by Social Hood" : ""}
+            {event.actor?.name ? ` by ${event.actor.name}` : event.event === "proposed" ? " by Amplychat" : ""}
             {" · "}
             {formatDayTime(event.created_at, timeZone, now)}
           </li>

@@ -137,7 +137,7 @@ class GoogleConnection(IdMixin, TimestampMixin, TenantScoped, Base):
     spreadsheet_title: Mapped[str | None] = mapped_column(Text)
     spreadsheet_url: Mapped[str | None] = mapped_column(Text)
     sheet_tab: Mapped[str | None] = mapped_column(Text)
-    # Social Hood made the sheet, so it may write the header row; a sheet the person already had is
+    # Amplychat made the sheet, so it may write the header row; a sheet the person already had is
     # never overwritten.
     sheet_created: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     mapping: Mapped[list[dict[str, str]]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))

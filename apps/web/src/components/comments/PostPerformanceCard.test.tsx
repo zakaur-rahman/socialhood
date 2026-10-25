@@ -115,7 +115,7 @@ describe("Post figures (FR-ANL-02)", () => {
     });
     const notice = await screen.findByTestId("insights-unavailable");
     expect(notice).toHaveTextContent(
-      "@maple.bakery didn't give Social Hood permission to read insights, so reach, views, shares and saves aren't available. Reconnect to allow it.",
+      "@maple.bakery didn't give Amplychat permission to read insights, so reach, views, shares and saves aren't available. Reconnect to allow it.",
     );
     expect(within(notice).getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
     expect(figure("Reach")).toBe("—");

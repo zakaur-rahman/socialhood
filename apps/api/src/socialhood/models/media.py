@@ -95,7 +95,7 @@ class MediaItem(IdMixin, TimestampMixin, TenantScoped, Base):
     summary_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comments_since_summary: Mapped[int] = mapped_column(Integer, server_default=text("0"))
-    # The target that published this post, when Social Hood published it (T7.3). One post per
+    # The target that published this post, when Amplychat published it (T7.3). One post per
     # target; deleting the scheduled post keeps the post.
     published_target_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("scheduled_post_targets.id", ondelete="SET NULL"), unique=True

@@ -16,7 +16,7 @@ export const revalidate = 3600;
 export const metadata = pageMetadata({
   title: "Pricing",
   description:
-    "Social Hood plans: Free to start, Pro with Auto replies, more accounts, team members, WhatsApp broadcasts (coming soon), a product catalogue and the public API. Every limit side by side.",
+    "Amplychat plans: Free to start, Pro with Auto replies, more accounts, team members, WhatsApp broadcasts (coming soon), a product catalogue and the public API. Every limit side by side.",
   path: PRICING_PATH,
 });
 

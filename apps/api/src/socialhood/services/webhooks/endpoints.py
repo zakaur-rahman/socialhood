@@ -47,7 +47,7 @@ from socialhood.security.crypto import TokenCipher
 from socialhood.services.webhooks import events
 
 HTTPS_ONLY = "Use an address that starts with https://."
-TEST_MESSAGE = "A test event from Social Hood. Your endpoint is set up."
+TEST_MESSAGE = "A test event from Amplychat. Your endpoint is set up."
 
 
 def catalogue() -> WebhookEventTypeList:

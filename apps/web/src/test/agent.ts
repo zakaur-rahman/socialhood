@@ -1,5 +1,5 @@
 /**
- * Ask Social Hood fixtures (PA): runs, steps, threads and action cards shaped like the API's, and
+ * Ask Amplychat fixtures (PA): runs, steps, threads and action cards shaped like the API's, and
  * a helper that sends agent.* events through the real-time handler.
  */
 import { act } from "@testing-library/react";

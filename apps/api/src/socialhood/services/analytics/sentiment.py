@@ -105,7 +105,7 @@ async def comment_topics(
     examples: int = 3,
 ) -> CommentTopics:
     """The ``n`` most frequent topics with counts per sentiment and up to ``examples`` example
-    comments each (Ask Social Hood's comment_topics, TA.4). Ties go to the label, A to Z."""
+    comments each (Ask Amplychat's comment_topics, TA.4). Ties go to the label, A to Z."""
     scope, _, since, until = await _scope(
         session, view, post_id=post_id, account_id=account_id, since=since, until=until
     )

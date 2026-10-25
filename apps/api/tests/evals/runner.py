@@ -1,4 +1,4 @@
-"""Runs Ask Social Hood's eval set (TA.6; agent-architecture.html §18) against the real model.
+"""Runs Ask Amplychat's eval set (TA.6; agent-architecture.html §18) against the real model.
 
 For each case (tests/evals/cases.py), in order, one at a time:
 

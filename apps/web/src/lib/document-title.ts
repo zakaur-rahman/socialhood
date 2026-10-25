@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /** The suffix `metadata.title.template` adds to every static title (app/layout.tsx). */
-const SUFFIX = " · Social Hood";
+const SUFFIX = " · Amplychat";
 
 /**
  * A page whose title depends on data (a contact's name, an automation's name) or that is a client

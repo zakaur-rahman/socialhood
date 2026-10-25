@@ -9,7 +9,7 @@ import { MARKETING_CARD } from "../primitives";
 
 /**
  * Container Scroll Animation, from Aceternity UI's free "container-scroll-animation"
- * (ui.aceternity.com/components/container-scroll-animation), adapted for Social Hood (C-068):
+ * (ui.aceternity.com/components/container-scroll-animation), adapted for Amplychat (C-068):
  * - the card tilts back (rotateX 20° → 0) and grows (94% → 100%) as it scrolls up to the middle
  *   of the screen; there is no tall scroll container, so nothing is scroll-jacked;
  * - it never grows past its column (the original scaled to 105%, which overflowed on phones);

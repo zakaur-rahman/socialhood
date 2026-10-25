@@ -42,14 +42,14 @@ test.describe("F-15 upgrade after hitting a limit", () => {
       route.fulfill({
         status: 200,
         contentType: "text/html",
-        body: `<!doctype html><title>Dodo checkout (e2e stand-in)</title><h1>Checkout</h1><a href="${returnUrl}">Return to Social Hood</a>`,
+        body: `<!doctype html><title>Dodo checkout (e2e stand-in)</title><h1>Checkout</h1><a href="${returnUrl}">Return to Amplychat</a>`,
       }),
     );
     const checkout = page.waitForResponse((r) => r.url().endsWith("/billing/checkout") && r.request().method() === "POST");
     await dialog.getByRole("button", { name: "Start 7-day trial" }).click();
     expect((await checkout).status()).toBe(200);
     await expect(page).toHaveURL(/^https:\/\/checkout\.dodo\.invalid\/session\//);
-    await page.getByRole("link", { name: "Return to Social Hood" }).click();
+    await page.getByRole("link", { name: "Return to Amplychat" }).click();
 
     // Back from Dodo: the page waits; the return URL alone changes nothing.
     await expect(page).toHaveURL(returnUrl);

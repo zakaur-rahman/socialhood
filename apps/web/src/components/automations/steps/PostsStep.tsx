@@ -22,7 +22,7 @@ const SCOPES: { value: PostScope; label: string; hint: string }[] = [
   {
     value: "next_post",
     label: "Next post I publish",
-    hint: "The next post you publish, from Social Hood or the Instagram app. It links itself when the post goes live.",
+    hint: "The next post you publish, from Amplychat or the Instagram app. It links itself when the post goes live.",
   },
 ];
 

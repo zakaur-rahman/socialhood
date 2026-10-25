@@ -41,7 +41,7 @@ class SocialAccountOut(ResponseModel):
     auto_hide_spam: bool
     connected_at: datetime | None = None
     token_expires_at: datetime | None = None
-    # When Social Hood last pulled the account's posts (every 6 h) or conversation history from
+    # When Amplychat last pulled the account's posts (every 6 h) or conversation history from
     # the platform; null when it never has (WhatsApp has neither: its messages only arrive).
     last_synced_at: datetime | None = None
     capabilities: list[CapabilityName]

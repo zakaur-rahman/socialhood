@@ -2,7 +2,7 @@
 
 Real Dodo Payments **test-mode** answers, recorded 2026-09-30 with the test API key and
 anonymised: the customer is "Test Owner" <owner@example.com>, the billing address and card holder
-are made up, `metadata` is a Social Hood checkout's `{workspace_id}`, and the portal session token
+are made up, `metadata` is a Amplychat checkout's `{workspace_id}`, and the portal session token
 is replaced. Ids (`sub_…`, `cus_…`, `pdt_…`, `pay_…`) are test-mode ids.
 
 - `product_pro.json`: `GET /products/{id}` for the Pro product ($10.00 a month, its own 7-day

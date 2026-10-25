@@ -1,4 +1,4 @@
-"""Ask Social Hood's automation and knowledge tools against real data (TA.4; FR-AGT-02,
+"""Ask Amplychat's automation and knowledge tools against real data (TA.4; FR-AGT-02,
 FR-AGT-03, FR-AGT-06): list_automations, get_automation, get_automation_stats, test_automation,
 prepare_automation, search_knowledge, answer_from_knowledge and list_knowledge_gaps; the role
 bound on every owner-and-admin tool (§8) and another workspace's ids."""

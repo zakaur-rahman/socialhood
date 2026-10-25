@@ -214,7 +214,7 @@ async def test_the_knowledge_test_box_reads_the_catalogue_too(ai: Ai) -> None:
     assert "[p1] Cotton kurta" in call.contents[0].text
 
 
-# ---------------------------------------------------------------- Ask Social Hood
+# ---------------------------------------------------------------- Ask Amplychat
 
 
 @pytest.fixture

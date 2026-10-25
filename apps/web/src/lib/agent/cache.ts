@@ -1,5 +1,5 @@
 /**
- * Cache patching for Ask Social Hood (TR-FE-04). Mutations and the agent.* events both go through
+ * Cache patching for Ask Amplychat (TR-FE-04). Mutations and the agent.* events both go through
  * these functions. Events carry ids, statuses and plain-word steps only (never the request or the
  * answer), so on agent.completed the run is fetched again for its answer.
  */

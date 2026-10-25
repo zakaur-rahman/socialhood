@@ -18,12 +18,12 @@ const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: KeyRound,
     title: "No passwords asked",
-    body: "Social Hood never asks for, or sees, your Instagram or Facebook password.",
+    body: "Amplychat never asks for, or sees, your Instagram or Facebook password.",
   },
   {
     icon: LockKeyhole,
     title: "Encrypted tokens",
-    body: "The access tokens that let Social Hood act for your accounts are stored encrypted.",
+    body: "The access tokens that let Amplychat act for your accounts are stored encrypted.",
   },
   {
     icon: Layers,

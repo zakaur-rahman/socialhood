@@ -10,7 +10,7 @@ export const SHOTS = {
     src: "/marketing/inbox.webp",
     width: 2880,
     height: 1800,
-    alt: "The Social Hood inbox: Instagram conversations on the left, a customer asking whether a linen shirt is in stock, and an AI draft reply waiting to be sent, edited or dismissed.",
+    alt: "The Amplychat inbox: Instagram conversations on the left, a customer asking whether a linen shirt is in stock, and an AI draft reply waiting to be sent, edited or dismissed.",
   },
   connect: {
     src: "/marketing/connect.webp",

@@ -18,7 +18,7 @@ import { PAGE_COMPOSER_ID } from "./AskPanel";
 import { NewThreadButton, ThreadList, ThreadMenu } from "./Threads";
 
 /**
- * /w/[slug]/ask (FR-AGT-01): Ask Social Hood as a full page. Thread history on the left from
+ * /w/[slug]/ask (FR-AGT-01): Ask Amplychat as a full page. Thread history on the left from
  * 1024 px (a menu below that); the conversation and the question box in one centred, readable
  * column. It shows the same thread as the panel.
  */
@@ -70,7 +70,7 @@ export function AskPage() {
       <section aria-label="Conversation" className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line-subtle px-4" data-testid="ask-header">
           <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
-          <h1 className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>Ask Social Hood</h1>
+          <h1 className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>Ask Amplychat</h1>
           {admin ? (
             <Button asChild variant="ghost" size="icon" className="text-fg-secondary lg:hidden">
               <Link href={agentSettingsHref(workspace.slug)} aria-label="Run history">

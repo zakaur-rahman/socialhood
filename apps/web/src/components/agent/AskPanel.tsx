@@ -67,7 +67,7 @@ export function AskRoot() {
 }
 
 /**
- * The Ask Social Hood side sheet: 420 px on the right from 768 px, the full screen on phones. It
+ * The Ask Amplychat side sheet: 420 px on the right from 768 px, the full screen on phones. It
  * traps focus, closes on Esc and returns focus to what opened it (UX-A11Y-02). Its surface is the
  * sheets' (DESIGN_SYSTEM §6, level 2; D-12): `overlay` with `shadow-overlay` and a `line` edge,
  * over the modal scrim. It is a `SheetContent size="panel"`, so it moves like every sheet.
@@ -112,7 +112,7 @@ export function AskPanel() {
         <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line pr-2 pl-4">
           <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
           <SheetTitle className="ml-1 min-w-0 flex-1 truncate text-base font-semibold">
-            Ask Social Hood
+            Ask Amplychat
           </SheetTitle>
           <NewThreadButton wid={workspace.id} iconOnly onStart={() => focusComposer(PANEL_COMPOSER_ID)} />
           <ThreadMenu wid={workspace.id} now={now} />
@@ -132,7 +132,7 @@ export function AskPanel() {
 }
 
 /**
- * Opens Ask Social Hood: an item under the logo in the sidebar (desktop), an icon in the phone
+ * Opens Ask Amplychat: an item under the logo in the sidebar (desktop), an icon in the phone
  * top bar. On the Ask page it focuses the question box.
  */
 export function AskButton({ variant, collapsed = false }: { variant: "sidebar" | "topbar"; collapsed?: boolean }) {
@@ -148,7 +148,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
       <button
         type="button"
         onClick={activate}
-        aria-label="Ask Social Hood"
+        aria-label="Ask Amplychat"
         aria-keyshortcuts={ASK_SHORTCUT_ARIA}
         className="grid size-10 shrink-0 place-items-center rounded-lg text-brand-fg hover:bg-hover"
       >
@@ -161,7 +161,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
     <button
       type="button"
       onClick={activate}
-      aria-label={collapsed ? "Ask Social Hood" : undefined}
+      aria-label={collapsed ? "Ask Amplychat" : undefined}
       aria-keyshortcuts={ASK_SHORTCUT_ARIA}
       className={cn(
         "relative flex w-full items-center gap-3 rounded-lg border border-brand-line bg-brand-soft px-3 py-2 text-left text-md font-medium text-fg hover:bg-brand-soft-hover",
@@ -169,7 +169,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
       )}
     >
       <Sparkles className="size-5 shrink-0 text-brand-fg" aria-hidden />
-      {collapsed ? null : <span className="min-w-0 flex-1 truncate">Ask Social Hood</span>}
+      {collapsed ? null : <span className="min-w-0 flex-1 truncate">Ask Amplychat</span>}
     </button>
   );
   // The hint stays shut while the panel is open: a tooltip is a dismiss layer, and one that opens
@@ -180,7 +180,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
     <Tooltip open={hint && !panelOpen} onOpenChange={setHint}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       {panelOpen ? null : (
-        <TooltipContent side="right">{collapsed ? `Ask Social Hood (${key} K)` : `${key} K`}</TooltipContent>
+        <TooltipContent side="right">{collapsed ? `Ask Amplychat (${key} K)` : `${key} K`}</TooltipContent>
       )}
     </Tooltip>
   );

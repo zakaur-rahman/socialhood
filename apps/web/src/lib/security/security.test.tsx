@@ -15,9 +15,9 @@ const PAYLOAD = '<img src=x onerror="alert(1)"><script>alert(2)</script><a href=
 
 const PRODUCTION = {
   NODE_ENV: "production",
-  NEXT_PUBLIC_API_BASE_URL: "https://api.socialhood.com",
-  // pk_live_ + base64("clerk.socialhood.com$")
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: `pk_live_${btoa("clerk.socialhood.com$")}`,
+  NEXT_PUBLIC_API_BASE_URL: "https://api.amplychat.com",
+  // pk_live_ + base64("clerk.amplychat.com$")
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: `pk_live_${btoa("clerk.amplychat.com$")}`,
   NEXT_PUBLIC_SENTRY_DSN: "https://abc123@o42.ingest.us.sentry.io/7",
 };
 
@@ -34,14 +34,14 @@ describe("the web CSP (SEC-11)", () => {
     expect(directive(csp, "connect-src")).toEqual(
       expect.arrayContaining([
         "'self'",
-        "https://api.socialhood.com",
-        "https://clerk.socialhood.com",
+        "https://api.amplychat.com",
+        "https://clerk.amplychat.com",
         "https://api.cloudinary.com",
         "https://o42.ingest.us.sentry.io",
       ]),
     );
     expect(directive(csp, "script-src")).toEqual(
-      expect.arrayContaining(["https://clerk.socialhood.com", "https://connect.facebook.net"]),
+      expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net"]),
     );
     expect(directive(csp, "img-src")).toContain("https://res.cloudinary.com");
   });
@@ -108,7 +108,7 @@ describe("leaving the app for a URL the API gave", () => {
 });
 
 describe("text that looks like HTML is shown as text (SEC-08)", () => {
-  it("in an Ask Social Hood answer", () => {
+  it("in an Ask Amplychat answer", () => {
     const { container } = render(<AnswerText answer={`Here you go **${PAYLOAD}**`} refs={[]} slug="acme" />);
     expect(container.querySelector("img, script, a, iframe")).toBeNull();
     expect(container.textContent).toContain(PAYLOAD);

@@ -43,7 +43,7 @@ describe("the site header", () => {
   it("has the logo, the section links and the account actions", () => {
     render(<SiteHeader />);
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Social Hood" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Amplychat" })).toHaveAttribute("href", "/");
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toHaveTextContent("Features");
     for (const [name, href] of [

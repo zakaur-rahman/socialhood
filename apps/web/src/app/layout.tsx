@@ -14,10 +14,10 @@ const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Social Hood", template: "%s · Social Hood" },
+  title: { default: "Amplychat", template: "%s · Amplychat" },
   description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
-  appleWebApp: { capable: true, title: "Social Hood", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: "Amplychat", statusBarStyle: "black" },
 };
 
 // The browser bar: the dark canvas, the default. ThemeSync moves it for Light (and System on a light OS).

@@ -45,7 +45,7 @@ export function CommentComposer({
   error: string | null;
   onSend: (text: string, idempotencyKey: string) => void;
   onCancel: () => void;
-  /** A reply prepared by Ask Social Hood (FR-AGT-03); the member edits and sends it. */
+  /** A reply prepared by Ask Amplychat (FR-AGT-03); the member edits and sends it. */
   initialText?: string;
   /** GR-29: the post's platform. A Page counts a private reply in characters (2,000), Instagram in bytes. */
   platform?: Platform;

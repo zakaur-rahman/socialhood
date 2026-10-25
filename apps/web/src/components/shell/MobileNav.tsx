@@ -12,12 +12,12 @@ import { STATIC_WHEN_SHORT } from "./sticky-bar";
 
 type Props = Omit<ComponentProps<typeof AppSidebar>, "collapsed" | "onNavigate" | "onToggleCollapsed" | "ask"> & {
   title: string;
-  /** Ask Social Hood's button (FR-AGT-01), beside the menu. */
+  /** Ask Amplychat's button (FR-AGT-01), beside the menu. */
   ask?: ReactNode;
 };
 
 /**
- * UX-SH-02: below 768 px, a 56 px top bar with the logo, page title, Ask Social Hood and a menu
+ * UX-SH-02: below 768 px, a 56 px top bar with the logo, page title, Ask Amplychat and a menu
  * button. The drawer holds the expanded sidebar; it is closed on load and closes when a link is
  * tapped (v1 opened on load and stayed open). The bar sticks (the page's top scroll padding keeps
  * focus clear of it), except on short viewports, where it scrolls away (UI-ISS-014).

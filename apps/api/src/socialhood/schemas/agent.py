@@ -1,4 +1,4 @@
-"""Ask Social Hood shapes (§2.15 …/agent/*; FR-AGT-01…10, TR-AGT-07, TR-AGT-08;
+"""Ask Amplychat shapes (§2.15 …/agent/*; FR-AGT-01…10, TR-AGT-07, TR-AGT-08;
 agent-architecture.html §11, §12).
 
 The PA contract. Answers and their pieces:

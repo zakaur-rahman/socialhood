@@ -1,4 +1,4 @@
-"""Ask Social Hood's comment, post and analytics tools against real data (TA.4; FR-AGT-02,
+"""Ask Amplychat's comment, post and analytics tools against real data (TA.4; FR-AGT-02,
 FR-AGT-03, FR-AGT-04, FR-AGT-06, TR-AGT-05): get_post_comments, search_comments,
 prepare_comment_reply, get_posts, get_latest_post, search_posts, post_performance,
 compare_posts, top_posts, sentiment_distribution and comment_topics, with their caps, caveats,

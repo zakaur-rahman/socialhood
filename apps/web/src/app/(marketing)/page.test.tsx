@@ -66,11 +66,11 @@ describe("the landing page", () => {
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
     expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     expect(screen.getByRole("img", { name: SHOTS.inbox.alt })).toBeInTheDocument();
-    expect(screen.getByText(/The Social Hood inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
+    expect(screen.getByText(/The Amplychat inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
     expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
 
     // Features and product rules.
-    expect(screen.getByRole("heading", { name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ask Amplychat" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
     expect(screen.getByText("Illustrations with example data.")).toBeInTheDocument();
     // Integrations: each with an honest status; Facebook Pages are built, so no "Messenger coming soon" any more.
@@ -127,7 +127,7 @@ describe("the landing page", () => {
 
     // Structured data with only true fields.
     const data = jsonLd(container);
-    expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Social Hood", url: "https://socialhood.example/" });
+    expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Amplychat", url: "https://socialhood.example/" });
     expect(data.offers).toEqual([
       expect.objectContaining({ name: "Free", price: "0", priceCurrency: "INR" }),
       expect.objectContaining({ name: "Pro", price: "999.00", priceCurrency: "INR" }),
@@ -176,9 +176,9 @@ describe("the landing page", () => {
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {
     expect(revalidate).toBe(3600);
-    expect(metadata.title).toEqual({ absolute: "Social Hood · AI inbox and automations for Instagram and WhatsApp" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox and automations for Instagram and WhatsApp" });
     expect(metadata.alternates?.canonical).toBe("/");
-    expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Social Hood" });
+    expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Amplychat" });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
 });

@@ -5,7 +5,7 @@ import { useRef, type ReactNode } from "react";
 
 /**
  * Timeline, from Aceternity UI's free "timeline" (ui.aceternity.com/components/timeline), adapted
- * for Social Hood (C-068):
+ * for Amplychat (C-068):
  * - an ordered list with one h3 per step (the original rendered each title twice, for phone and
  *   desktop), and no built-in heading or copy;
  * - the rail fills as the steps scroll past with a transform (scaleY) instead of a measured

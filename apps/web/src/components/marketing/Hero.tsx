@@ -36,7 +36,7 @@ const WORKS_WITH: { name: string; platform?: Platform; tile?: string; soon?: boo
 ];
 
 /**
- * The first screen: what Social Hood is, the two ways in, and the real product. The text is
+ * The first screen: what Amplychat is, the two ways in, and the real product. The text is
  * server-rendered and still (it is the page's largest paint); one background effect (Spotlight);
  * the screenshot tilts up into place as it scrolls in.
  */
@@ -79,7 +79,7 @@ export function Hero() {
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-pretty text-fg-secondary sm:text-lg">
-            Every Instagram DM, comment and WhatsApp chat in one place. Social Hood drafts or sends replies from your own
+            Every Instagram DM, comment and WhatsApp chat in one place. Amplychat drafts or sends replies from your own
             business knowledge, and runs comment and DM automations.
           </p>
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
@@ -116,7 +116,7 @@ export function Hero() {
             />
           </ContainerScroll>
           <figcaption className="mt-4 text-center text-xs text-fg-secondary">
-            The Social Hood inbox with example data. The shop, people and messages are made up.
+            The Amplychat inbox with example data. The shop, people and messages are made up.
           </figcaption>
         </figure>
 

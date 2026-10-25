@@ -81,7 +81,7 @@ export function BroadcastsPage() {
             />
             <p className={META}>
               Meta charges your WhatsApp Business Account directly for each message, using the payment method you set up
-              when you connected the number. Social Hood adds nothing.
+              when you connected the number. Amplychat adds nothing.
             </p>
           </Card>
         ) : (
