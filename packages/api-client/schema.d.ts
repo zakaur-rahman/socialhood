@@ -3685,6 +3685,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/collaborators/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Post Collaborators
+         * @description FR-PUB-07: read each collaborator's invite status (Pending or Accepted) from Instagram
+         *     now. It is also read every hour for three days after publishing. 409 conflict while the post
+         *     has not published. A read that fails leaves the last answer.
+         */
+        post: operations["refresh_post_collaborators"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/duplicate": {
         parameters: {
             query?: never;
@@ -6985,7 +7007,7 @@ export interface components {
              * Key
              * @enum {string}
              */
-            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "publishing_limit" | "publish_at";
+            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "extras" | "publishing_limit" | "publish_at";
             /** Message */
             message: string;
             /** Ok */
@@ -7023,6 +7045,20 @@ export interface components {
             checkout_url: string;
             /** Trial */
             trial: boolean;
+        };
+        /**
+         * CollaboratorResult
+         * @description One collaborator's invite on a published post (FR-PUB-07). A collaborator can't be changed
+         *     after publishing.
+         */
+        CollaboratorResult: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted";
+            /** Username */
+            username: string;
         };
         /**
          * Comment
@@ -10381,6 +10417,8 @@ export interface components {
             thumbnail_url?: string | null;
             /** Url */
             url: string;
+            /** User Tags */
+            user_tags?: components["schemas"]["UserTag"][];
             /** Width */
             width?: number | null;
         };
@@ -11665,12 +11703,22 @@ export interface components {
             asset_count: number;
             /** Assets */
             assets: components["schemas"]["PostAsset"][];
+            /** Audio Name */
+            audio_name?: string | null;
             /** Automations */
             automations: components["schemas"]["LinkedAutomation"][];
             /** Caption */
             caption: string;
             /** Checklist */
             checklist: components["schemas"]["ChecklistItem"][];
+            /** Collaborators */
+            collaborators?: string[];
+            /** Cover Asset Id */
+            cover_asset_id?: string | null;
+            /** Cover Offset Ms */
+            cover_offset_ms?: number | null;
+            /** Cover Url */
+            cover_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -11693,12 +11741,19 @@ export interface components {
              * @enum {string}
              */
             kind: "post" | "story" | "reel";
+            /** Location Id */
+            location_id?: string | null;
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
             published_at?: string | null;
             /** Ready */
             ready: boolean;
+            /**
+             * Share To Feed
+             * @default true
+             */
+            share_to_feed: boolean;
             /**
              * Status
              * @enum {string}
@@ -11713,6 +11768,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Video Max Mb
+             * @default 100
+             */
+            video_max_mb: number;
         };
         /**
          * ScheduledPostDraft
@@ -11728,11 +11788,19 @@ export interface components {
         ScheduledPostDraft: {
             /** Asset Ids */
             asset_ids?: string[];
+            /** Audio Name */
+            audio_name?: string | null;
             /**
              * Caption
              * @default
              */
             caption: string;
+            /** Collaborators */
+            collaborators?: string[];
+            /** Cover Asset Id */
+            cover_asset_id?: string | null;
+            /** Cover Offset Ms */
+            cover_offset_ms?: number | null;
             /** First Comment */
             first_comment?: string | null;
             /**
@@ -11741,10 +11809,19 @@ export interface components {
              * @enum {string}
              */
             kind: "post" | "story" | "reel";
+            /** Location */
+            location?: string | null;
             /** Publish At */
             publish_at?: string | null;
+            /**
+             * Share To Feed
+             * @default true
+             */
+            share_to_feed: boolean;
             /** Targets */
             targets?: components["schemas"]["TargetIn"][];
+            /** User Tags */
+            user_tags?: components["schemas"]["UserTagIn"][];
         };
         /** ScheduledPostList */
         ScheduledPostList: {
@@ -11806,6 +11883,10 @@ export interface components {
         ScheduledPostTarget: {
             /** Caption Override */
             caption_override?: string | null;
+            /** Collaborators */
+            collaborators?: components["schemas"]["CollaboratorResult"][];
+            /** Collaborators Checked At */
+            collaborators_checked_at?: string | null;
             error?: components["schemas"]["ErrorInfo"] | null;
             /** Expires At */
             expires_at?: string | null;
@@ -13143,6 +13224,37 @@ export interface components {
             period_end?: string | null;
             /** Used */
             used: number;
+        };
+        /**
+         * UserTag
+         * @description An Instagram account tagged on a photo at a point: ``x`` and ``y`` are fractions (0 to 1)
+         *     of the photo's width and height from its top left (FR-PUB-07).
+         */
+        UserTag: {
+            /** Username */
+            username: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /**
+         * UserTagIn
+         * @description A tag on one of the post's photos (``asset_id`` must be in ``asset_ids``, else 422 on
+         *     ``user_tags.{i}``); ``username`` with or without "@".
+         */
+        UserTagIn: {
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Username */
+            username: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /** VariableOut */
         VariableOut: {
@@ -23249,6 +23361,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refresh_post_collaborators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
             };
             /** @description Validation error */
             422: {

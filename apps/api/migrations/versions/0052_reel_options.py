@@ -51,12 +51,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(op.f("ck_scheduled_posts_audio_name_length"), "scheduled_posts", type_="check")
+    op.drop_constraint(
+        op.f("ck_scheduled_posts_audio_name_length"), "scheduled_posts", type_="check"
+    )
     op.drop_constraint(op.f("ck_scheduled_posts_cover_offset"), "scheduled_posts", type_="check")
     op.drop_column("scheduled_posts", "audio_name")
     op.drop_column("scheduled_posts", "share_to_feed")
     op.drop_column("scheduled_posts", "cover_offset_ms")
     op.drop_constraint(
-        op.f("fk_scheduled_posts_cover_asset_id_media_assets"), "scheduled_posts", type_="foreignkey"
+        op.f("fk_scheduled_posts_cover_asset_id_media_assets"),
+        "scheduled_posts",
+        type_="foreignkey",
     )
     op.drop_column("scheduled_posts", "cover_asset_id")

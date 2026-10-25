@@ -6889,6 +6889,7 @@
               "caption",
               "hashtags",
               "mentions",
+              "extras",
               "publishing_limit",
               "publish_at"
             ],
@@ -6972,6 +6973,29 @@
           "trial"
         ],
         "title": "CheckoutSession",
+        "type": "object"
+      },
+      "CollaboratorResult": {
+        "description": "One collaborator's invite on a published post (FR-PUB-07). A collaborator can't be changed\nafter publishing.",
+        "properties": {
+          "status": {
+            "enum": [
+              "pending",
+              "accepted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "status"
+        ],
+        "title": "CollaboratorResult",
         "type": "object"
       },
       "Comment": {
@@ -16495,6 +16519,13 @@
             "title": "Url",
             "type": "string"
           },
+          "user_tags": {
+            "items": {
+              "$ref": "#/components/schemas/UserTag"
+            },
+            "title": "User Tags",
+            "type": "array"
+          },
           "width": {
             "anyOf": [
               {
@@ -20224,6 +20255,17 @@
             "title": "Assets",
             "type": "array"
           },
+          "audio_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Name"
+          },
           "automations": {
             "items": {
               "$ref": "#/components/schemas/LinkedAutomation"
@@ -20241,6 +20283,47 @@
             },
             "title": "Checklist",
             "type": "array"
+          },
+          "collaborators": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Collaborators",
+            "type": "array"
+          },
+          "cover_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Asset Id"
+          },
+          "cover_offset_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Offset Ms"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
           },
           "created_at": {
             "format": "date-time",
@@ -20303,6 +20386,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "location_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Id"
+          },
           "publish_at": {
             "anyOf": [
               {
@@ -20329,6 +20423,11 @@
           },
           "ready": {
             "title": "Ready",
+            "type": "boolean"
+          },
+          "share_to_feed": {
+            "default": true,
+            "title": "Share To Feed",
             "type": "boolean"
           },
           "status": {
@@ -20366,6 +20465,11 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "video_max_mb": {
+            "default": 100,
+            "title": "Video Max Mb",
+            "type": "integer"
           }
         },
         "required": [
@@ -20397,11 +20501,58 @@
             "title": "Asset Ids",
             "type": "array"
           },
+          "audio_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Name"
+          },
           "caption": {
             "default": "",
             "maxLength": 63206,
             "title": "Caption",
             "type": "string"
+          },
+          "collaborators": {
+            "items": {
+              "maxLength": 31,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 9,
+            "title": "Collaborators",
+            "type": "array"
+          },
+          "cover_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Asset Id"
+          },
+          "cover_offset_ms": {
+            "anyOf": [
+              {
+                "maximum": 900000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Offset Ms"
           },
           "first_comment": {
             "anyOf": [
@@ -20425,6 +20576,18 @@
             "title": "Kind",
             "type": "string"
           },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
           "publish_at": {
             "anyOf": [
               {
@@ -20437,12 +20600,25 @@
             ],
             "title": "Publish At"
           },
+          "share_to_feed": {
+            "default": true,
+            "title": "Share To Feed",
+            "type": "boolean"
+          },
           "targets": {
             "items": {
               "$ref": "#/components/schemas/TargetIn"
             },
             "maxItems": 10,
             "title": "Targets",
+            "type": "array"
+          },
+          "user_tags": {
+            "items": {
+              "$ref": "#/components/schemas/UserTagIn"
+            },
+            "maxItems": 200,
+            "title": "User Tags",
             "type": "array"
           }
         },
@@ -20611,6 +20787,25 @@
               }
             ],
             "title": "Caption Override"
+          },
+          "collaborators": {
+            "items": {
+              "$ref": "#/components/schemas/CollaboratorResult"
+            },
+            "title": "Collaborators",
+            "type": "array"
+          },
+          "collaborators_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collaborators Checked At"
           },
           "error": {
             "anyOf": [
@@ -24371,6 +24566,67 @@
           "used"
         ],
         "title": "UsageMeter",
+        "type": "object"
+      },
+      "UserTag": {
+        "description": "An Instagram account tagged on a photo at a point: ``x`` and ``y`` are fractions (0 to 1)\nof the photo's width and height from its top left (FR-PUB-07).",
+        "properties": {
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "username",
+          "x",
+          "y"
+        ],
+        "title": "UserTag",
+        "type": "object"
+      },
+      "UserTagIn": {
+        "additionalProperties": false,
+        "description": "A tag on one of the post's photos (``asset_id`` must be in ``asset_ids``, else 422 on\n``user_tags.{i}``); ``username`` with or without \"@\".",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 31,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          },
+          "x": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "asset_id",
+          "username",
+          "x",
+          "y"
+        ],
+        "title": "UserTagIn",
         "type": "object"
       },
       "VariableOut": {
@@ -42695,6 +42951,70 @@
           }
         },
         "summary": "Replace Scheduled Post",
+        "tags": [
+          "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/collaborators/refresh": {
+      "post": {
+        "description": "FR-PUB-07: read each collaborator's invite status (Pending or Accepted) from Instagram\nnow. It is also read every hour for three days after publishing. 409 conflict while the post\nhas not published. A read that fails leaves the last answer.",
+        "operationId": "refresh_post_collaborators",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scheduled_post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scheduled Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledPost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Refresh Post Collaborators",
         "tags": [
           "publishing"
         ]
