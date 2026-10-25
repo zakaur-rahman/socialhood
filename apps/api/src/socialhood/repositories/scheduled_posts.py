@@ -104,6 +104,16 @@ async def assets_for(
     return [(row[0], row[1]) for row in result.all()]
 
 
+async def covers_for(
+    session: AsyncSession, asset_ids: Sequence[uuid.UUID | None]
+) -> list[MediaAsset]:
+    """The Reel cover uploads of posts (FR-PUB-07)."""
+    wanted = {a for a in asset_ids if a is not None}
+    if not wanted:
+        return []
+    return list((await session.scalars(select(MediaAsset).where(MediaAsset.id.in_(wanted)))).all())
+
+
 async def targets_for(
     session: AsyncSession, post_ids: Sequence[uuid.UUID]
 ) -> list[tuple[ScheduledPostTarget, SocialAccount]]:
@@ -170,12 +180,21 @@ async def assets_by_id(
 
 
 async def replace_assets(
-    session: AsyncSession, scheduled_post_id: uuid.UUID, asset_ids: Sequence[uuid.UUID]
+    session: AsyncSession,
+    scheduled_post_id: uuid.UUID,
+    asset_ids: Sequence[uuid.UUID],
+    tags: dict[uuid.UUID, list[dict[str, Any]]] | None = None,
 ) -> None:
-    """The post's assets become ``asset_ids`` in that order."""
+    """The post's assets become ``asset_ids`` in that order, each with its user tags
+    (FR-PUB-07)."""
     await session.execute(scoped_delete(ScheduledPostAsset, scheduled_post_id=scheduled_post_id))
     session.add_all(
-        ScheduledPostAsset(scheduled_post_id=scheduled_post_id, media_asset_id=a, position=i)
+        ScheduledPostAsset(
+            scheduled_post_id=scheduled_post_id,
+            media_asset_id=a,
+            position=i,
+            user_tags=(tags or {}).get(a, []),
+        )
         for i, a in enumerate(asset_ids)
     )
     await session.flush()

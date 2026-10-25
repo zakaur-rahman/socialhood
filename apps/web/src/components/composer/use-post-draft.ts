@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { toApiError, type ApiError } from "@/lib/api/errors";
 import { useSaveComposerPost } from "@/lib/api/queries/scheduledPosts";
-import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
+import type { ScheduledPost, ScheduledPostDraft, UserTagIn } from "@/lib/publishing/types";
 
 export const AUTOSAVE_DELAY_MS = 1000;
 
@@ -23,6 +23,15 @@ export type Draft = {
   publish_at: string | null;
   /** "story": the one photo or video publishes as an Instagram Story, without a caption (GR-39). */
   kind: "post" | "story" | "reel";
+  /** FR-PUB-07, Instagram only: usernames without "@", the location (a Facebook Page id or link), tags on photos. */
+  collaborators: string[];
+  location: string | null;
+  user_tags: UserTagIn[];
+  /** A Reel's options: the cover (an uploaded image, or a frame at ``cover_offset_ms``), feed sharing, audio name. */
+  cover_asset_id: string | null;
+  cover_offset_ms: number | null;
+  share_to_feed: boolean;
+  audio_name: string | null;
 };
 
 /** The editable fields of a stored post, assets in their order. */
@@ -37,6 +46,15 @@ export function toDraft(post: ScheduledPost): Draft {
     first_comment: post.first_comment ?? null,
     publish_at: post.publish_at ?? null,
     kind: post.kind ?? "post",
+    collaborators: [...(post.collaborators ?? [])],
+    location: post.location_id ?? null,
+    user_tags: post.assets.flatMap((asset) =>
+      (asset.user_tags ?? []).map((tag) => ({ asset_id: asset.id, username: tag.username, x: tag.x, y: tag.y })),
+    ),
+    cover_asset_id: post.cover_asset_id ?? null,
+    cover_offset_ms: post.cover_offset_ms ?? null,
+    share_to_feed: post.share_to_feed ?? true,
+    audio_name: post.audio_name ?? null,
   };
 }
 
@@ -49,6 +67,14 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
     first_comment: draft.first_comment?.trim() ? draft.first_comment : null,
     publish_at: draft.publish_at,
     kind: draft.kind,
+    collaborators: [...draft.collaborators],
+    location: draft.location?.trim() ? draft.location.trim() : null,
+    // A tag whose photo left the post (removed or cropped into a new file) is dropped.
+    user_tags: draft.user_tags.filter((tag) => draft.asset_ids.includes(tag.asset_id)),
+    cover_asset_id: draft.cover_asset_id,
+    cover_offset_ms: draft.cover_offset_ms,
+    share_to_feed: draft.share_to_feed,
+    audio_name: draft.audio_name?.trim() ? draft.audio_name.trim() : null,
   };
 }
 
@@ -65,6 +91,8 @@ export function sameDraft(a: Draft, b: Draft): boolean {
     x.kind === y.kind &&
     x.caption === y.caption &&
     x.first_comment === y.first_comment &&
+    JSON.stringify([x.collaborators, x.location, x.user_tags, x.cover_asset_id, x.cover_offset_ms, x.share_to_feed, x.audio_name]) ===
+      JSON.stringify([y.collaborators, y.location, y.user_tags, y.cover_asset_id, y.cover_offset_ms, y.share_to_feed, y.audio_name]) &&
     instant(x.publish_at ?? null) === instant(y.publish_at ?? null) &&
     x.asset_ids?.length === y.asset_ids?.length &&
     (x.asset_ids ?? []).every((id, index) => id === y.asset_ids?.[index]) &&

@@ -55,6 +55,7 @@ async def register_media_asset(
         user_id=ctx.user.id,
         public_id=body.public_id,
         resource_type=body.resource_type,
+        post_video_max_mb=request.app.state.settings.post_video_max_mb,
     )
     return media_assets.asset_out(asset)
 

@@ -19,19 +19,22 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     Text,
     Time,
     UniqueConstraint,
 )
 from sqlalchemy import text as sql
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from socialhood.db.base import Base, IdMixin, TimestampMixin
@@ -76,6 +79,26 @@ STORY_VIDEO_MAX_S = 60
 # one): a Reel is one video of 3 to 90 seconds; 9:16 is the shape Meta recommends.
 FACEBOOK_REEL_MIN_S = 3
 FACEBOOK_REEL_MAX_S = 90
+
+# Instagram extras (FR-PUB-07, C-134; Meta's IG User Media and IG Media Collaborators references,
+# checked 2026-10-25). The publishing reference allows up to 3 collaborators and the
+# collaborators reference says up to 5: we allow 3. Meta states no limit on user tags; 20 per
+# image is Instagram's own limit in the app (unverified for the API).
+COLLABORATORS_MAX = 3
+USER_TAGS_MAX_PER_IMAGE = 20
+USER_TAGS_MAX = 200  # a request's total across a carousel
+INSTAGRAM_USERNAME_MAX_CHARS = 30
+# A Reel (single Instagram video): 3 seconds to 15 minutes, up to 300 MB (Meta's IG User Media
+# reference). Our upload cap is lower, ``post_video_max_mb`` (C-134).
+IG_REEL_MIN_S = 3
+IG_REEL_MAX_S = 900
+IG_REEL_MAX_BYTES = 300 * 1024 * 1024
+REEL_COVER_MAX_BYTES = 8 * 1024 * 1024  # a cover image: JPEG, up to 8 MB, sRGB
+REEL_AUDIO_NAME_MAX_CHARS = 100  # Meta states no limit; kept short (unverified)
+# After a post with collaborators publishes, their invite status is read every
+# COLLABORATOR_CHECK_EVERY for COLLABORATOR_CHECK_FOR (and on demand).
+COLLABORATOR_CHECK_EVERY = dt.timedelta(hours=1)
+COLLABORATOR_CHECK_FOR = dt.timedelta(days=3)
 
 # ---------------------------------------------------------------- publish job timing (T7.3)
 
@@ -138,6 +161,17 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
     kind: Mapped[str] = mapped_column(Text, server_default=sql("'post'"))
     caption: Mapped[str] = mapped_column(Text, server_default=sql("''"))
     first_comment: Mapped[str | None] = mapped_column(Text)
+    # FR-PUB-07 (C-134), Instagram only: collaborator usernames (without "@"), the Facebook Page
+    # id of the location, and a Reel's options: a cover image (an uploaded asset) or a frame of
+    # the video, whether it also shows in the feed, and an audio name.
+    collaborators: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    location_id: Mapped[str | None] = mapped_column(Text)
+    cover_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("media_assets.id", ondelete="SET NULL")
+    )
+    cover_offset_ms: Mapped[int | None] = mapped_column(Integer)
+    share_to_feed: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    audio_name: Mapped[str | None] = mapped_column(Text)
     # A draft may hold the time it was started at (a calendar click); a scheduled post always has
     # one (the ``schedulable`` check).
     publish_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
@@ -161,6 +195,13 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("status", ScheduledPostStatus), name="status"),
         CheckConstraint(f"format IS NULL OR {_in('format', PostFormat)}", name="format"),
         CheckConstraint(_in("kind", PostKind), name="kind"),
+        CheckConstraint(f"cardinality(collaborators) <= {COLLABORATORS_MAX}", name="collaborators"),
+        CheckConstraint("cover_offset_ms IS NULL OR cover_offset_ms >= 0", name="cover_offset"),
+        CheckConstraint(
+            "audio_name IS NULL OR char_length(audio_name) BETWEEN 1 AND "
+            f"{REEL_AUDIO_NAME_MAX_CHARS}",
+            name="audio_name_length",
+        ),
         # A story format only comes from a Story choice (GR-39).
         CheckConstraint("format IS DISTINCT FROM 'story' OR kind = 'story'", name="story_kind"),
         CheckConstraint(
@@ -192,6 +233,9 @@ class ScheduledPostAsset(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("media_assets.id", ondelete="RESTRICT"), index=True
     )
     position: Mapped[int] = mapped_column(SmallInteger)  # 0-based
+    # FR-PUB-07: Instagram user tags on an image, [{username, x, y}] with x and y between 0 and 1
+    # (fractions of the width and height from the top left).
+    user_tags: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=sql("'[]'"))
 
     __table_args__ = (
         UniqueConstraint("scheduled_post_id", "position"),
@@ -227,6 +271,12 @@ class ScheduledPostTarget(IdMixin, TimestampMixin, TenantScoped, Base):
     # FR-PUB-11: set once post_first_comment has run; neither set while it is pending.
     first_comment_platform_id: Mapped[str | None] = mapped_column(Text)
     first_comment_error: Mapped[str | None] = mapped_column(Text)
+    # FR-PUB-07: each collaborator's invite after publishing, [{username, status}] with status
+    # pending or accepted, and when it was last read from Instagram.
+    collaborator_statuses: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, server_default=sql("'[]'")
+    )
+    collaborators_checked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("scheduled_post_id", "social_account_id"),

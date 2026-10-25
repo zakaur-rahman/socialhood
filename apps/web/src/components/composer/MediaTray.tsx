@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Crop, FileVideo, GripVertical, ImagePlus, Library, RotateCw, X } from "lucide-react";
+import { AlertCircle, Crop, FileVideo, GripVertical, ImagePlus, Library, RotateCw, Tag, X } from "lucide-react";
 import { useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Alert } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ import {
   cropNeeded,
   formatDuration,
   FORMAT_LABEL,
+  igReelProblem,
   MAX_ASSETS,
   POST_FILE_ACCEPT,
   storyVideoProblem,
@@ -94,6 +95,10 @@ export function MediaTray({
   onRemove,
   onMove,
   onCrop,
+  onTag,
+  tagCounts = {},
+  igReel = false,
+  videoMaxMb = 100,
   onRetryUpload,
   onRemoveUpload,
 }: {
@@ -109,6 +114,14 @@ export function MediaTray({
   onRemove: (assetId: string) => void;
   onMove: (from: number, to: number) => void;
   onCrop: (assetId: string) => void;
+  /** FR-PUB-07: opens the tag tool for a photo; leave out where tags aren't available (Stories, Facebook only). */
+  onTag?: (assetId: string) => void;
+  /** User tags per asset id. */
+  tagCounts?: Record<string, number>;
+  /** The post's one video goes to Instagram alone, so it is a Reel (3 seconds to 15 minutes). */
+  igReel?: boolean;
+  /** The video size cap, from the API. */
+  videoMaxMb?: number;
   onRetryUpload: (id: string) => void;
   onRemoveUpload: (id: string) => void;
 }) {
@@ -186,7 +199,12 @@ export function MediaTray({
             const label = assetLabel(asset, index);
             // A Story takes any photo shape (9:16 fits best) and videos of 3 to 60 seconds.
             const crop = format === "story" ? null : cropNeeded(asset);
-            const tooLong = format === "story" ? storyVideoProblem(asset) !== null : videoTooLong(asset);
+            const tooLong =
+              format === "story"
+                ? storyVideoProblem(asset) !== null
+                : igReel
+                  ? igReelProblem(asset) !== null
+                  : videoTooLong(asset);
             const dragging = drag?.from === index;
             const gap = drag ? drag.drop : -1;
             const marker = drag && gap !== drag.from && gap !== drag.from + 1 ? (gap === index ? "before" : gap === entries.length && index === entries.length - 1 ? "after" : null) : null;
@@ -234,7 +252,7 @@ export function MediaTray({
                     </Button>
                   ) : tooLong ? (
                     <span className="absolute inset-x-1 bottom-1 rounded-sm bg-danger-fill px-1 py-0.5 text-center text-2xs font-medium text-on-brand">
-                      Over 90 s
+                      {igReel ? "Check length" : "Over 90 s"}
                     </span>
                   ) : null}
                   {replacing ? (
@@ -257,6 +275,19 @@ export function MediaTray({
                     <GripVertical className="size-3.5" aria-hidden />
                   </Button>
                   <div className="ml-auto flex gap-0.5">
+                    {asset.resource_type === "image" && onTag ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Tag people in ${label}`}
+                        onClick={() => onTag(asset.id)}
+                        className="text-fg-secondary"
+                      >
+                        <Tag className="size-3.5" aria-hidden />
+                        {tagCounts[asset.id] ? <span className="text-2xs tabular-nums">{tagCounts[asset.id]}</span> : null}
+                      </Button>
+                    ) : null}
                     {asset.resource_type === "image" && !crop ? (
                       <Button type="button" variant="ghost" size="icon-sm" aria-label={`Crop ${label}`} onClick={() => onCrop(asset.id)} className="text-fg-secondary">
                         <Crop className="size-3.5" aria-hidden />
@@ -330,7 +361,7 @@ export function MediaTray({
       <p className="mt-2 text-xs text-fg-secondary">
         {full
           ? "A post can have up to 10 photos and videos."
-          : "Photos: JPEG, PNG, WEBP or HEIC up to 8 MB. Videos: MP4 or MOV up to 100 MB and 90 seconds. One video makes a Reel; 2 to 10 items make a carousel."}
+          : `Photos: JPEG, PNG, WEBP or HEIC up to 8 MB. Videos: MP4 or MOV up to ${videoMaxMb} MB. A single video makes a Reel (3 seconds to 15 minutes); in a carousel, videos run up to 90 seconds. 2 to 10 items make a carousel.`}
       </p>
       {notice ? (
         <Alert tone="danger" icon={<AlertCircle />} className="mt-2">

@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { account, json, performance, renderWithApi } from "@/test/api";
@@ -101,5 +102,75 @@ describe("a published Story shows its insights (C-131)", () => {
     banner(performance(), null);
     expect(await screen.findByTestId("status-banner")).toBeInTheDocument();
     expect(screen.queryByTestId("story-insights")).toBeNull();
+  });
+});
+
+describe("a published post shows its collaborators' invites (FR-PUB-07, C-134)", () => {
+  const published = (collaborators: { username: string; status: "pending" | "accepted" }[], checked: string | null = null) =>
+    scheduledPost({
+      id: "sp9",
+      status: "published",
+      published_at: "2026-09-29T10:00:00Z",
+      targets: [
+        target({
+          status: "published",
+          permalink: "https://www.instagram.com/p/abc/",
+          published_at: "2026-09-29T10:00:00Z",
+          collaborators,
+          collaborators_checked_at: checked,
+        }),
+      ],
+    });
+
+  function render(post: ReturnType<typeof published>, handlers = {}) {
+    return renderWithApi(
+      <StatusBanner
+        post={post}
+        accounts={[account({ id: "a1", username: "maple" })]}
+        timeZone="UTC"
+        now={NOW}
+        onEditAndRetry={() => {}}
+        retrying={false}
+        wid="w1"
+      />,
+      { handlers },
+    );
+  }
+
+  it("lists each collaborator as Pending or Accepted and says they cannot be changed", () => {
+    render(
+      published(
+        [
+          { username: "maple.studio", status: "accepted" },
+          { username: "bread.fan", status: "pending" },
+        ],
+        "2026-09-29T11:00:00Z",
+      ),
+    );
+    expect(screen.getByTestId("collaborator-maple.studio")).toHaveTextContent("@maple.studio Accepted");
+    expect(screen.getByTestId("collaborator-bread.fan")).toHaveTextContent("@bread.fan Pending");
+    const line = screen.getByTestId("collaborator-status");
+    expect(line).toHaveTextContent("Checked");
+    expect(line).toHaveTextContent("They can't be changed after publishing.");
+  });
+
+  it("says when the invites have not been read yet", () => {
+    render(published([{ username: "bread.fan", status: "pending" }]));
+    expect(screen.getByTestId("collaborator-status")).toHaveTextContent("Not checked yet.");
+  });
+
+  it("shows nothing for a post without collaborators", () => {
+    render(published([]));
+    expect(screen.queryByTestId("collaborator-status")).toBeNull();
+  });
+
+  it("Refresh reads the invites now", async () => {
+    const user = userEvent.setup();
+    const fresh = published([{ username: "bread.fan", status: "accepted" }], "2026-09-29T12:00:00Z");
+    const view = render(published([{ username: "bread.fan", status: "pending" }]), {
+      "POST /v1/w/:wid/scheduled-posts/:id/collaborators/refresh": () => json(fresh),
+    });
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(view.calls.some((call) => call.method === "POST" && /collaborators\/refresh$/.test(call.path))).toBe(true));
   });
 });

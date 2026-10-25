@@ -28,12 +28,16 @@ from pydantic import Field
 
 from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
+    COLLABORATORS_MAX,
     FIRST_COMMENT_MAX_CHARS,
     HASHTAG_GROUP_NAME_MAX_CHARS,
+    INSTAGRAM_USERNAME_MAX_CHARS,
     MAX_ASSETS,
     MAX_HASHTAGS,
+    REEL_AUDIO_NAME_MAX_CHARS,
     STORED_CAPTION_MAX_CHARS,
     SUGGESTED_HASHTAGS_MAX,
+    USER_TAGS_MAX,
 )
 from socialhood.schemas.automations import StatusName as AutomationStatusName
 from socialhood.schemas.automations import TriggerName
@@ -57,6 +61,7 @@ ScheduledPostView = Literal["scheduled", "drafts", "published", "failed"]
 BulkActionName = Literal["shift", "unschedule", "delete"]
 CalendarLayer = Literal["posts", "messages", "slots"]
 FirstCommentStatus = Literal["pending", "posted", "failed"]
+CollaboratorInvite = Literal["pending", "accepted"]
 
 # The composer's checklist (FR-PUB-10, UX-SCR-13), in this order:
 # - accounts: at least one account; each is connected and can publish (Capability.PUBLISH)
@@ -67,6 +72,9 @@ FirstCommentStatus = Literal["pending", "posted", "failed"]
 #   they go to (2,200 for Instagram, 63,206 for a Facebook Page)
 # - hashtags: at most 30 hashtags in each caption
 # - mentions: at most 20 @mentions in each caption
+# - extras: Instagram collaborators (up to 3, not on Stories or Facebook-only posts), user tags on
+#   photos, the location (a Facebook Page id) and a Reel's cover and audio name (FR-PUB-07); only
+#   listed when the post uses one
 # - publishing_limit: room in each account's 24-hour publishing limit on the post's day
 # - publish_at: at least 5 minutes from now (only when the post has a time)
 ChecklistKey = Literal[
@@ -76,6 +84,7 @@ ChecklistKey = Literal[
     "caption",
     "hashtags",
     "mentions",
+    "extras",
     "publishing_limit",
     "publish_at",
 ]
@@ -86,6 +95,7 @@ CHECKLIST_KEYS: tuple[ChecklistKey, ...] = (
     "caption",
     "hashtags",
     "mentions",
+    "extras",
     "publishing_limit",
     "publish_at",
 )
@@ -93,9 +103,20 @@ CHECKLIST_KEYS: tuple[ChecklistKey, ...] = (
 # As typed: with or without "#", any case; stored without "#", lowercase. Letters, digits and
 # underscores only (else a field error on ``hashtags.{i}``).
 Hashtag = Annotated[str, Field(min_length=1, max_length=100)]
+# An Instagram username as typed, with or without "@" (FR-PUB-07).
+HandleIn = Annotated[str, Field(min_length=1, max_length=INSTAGRAM_USERNAME_MAX_CHARS + 1)]
 
 
 # ---- scheduled posts
+
+
+class UserTag(ResponseModel):
+    """An Instagram account tagged on a photo at a point: ``x`` and ``y`` are fractions (0 to 1)
+    of the photo's width and height from its top left (FR-PUB-07)."""
+
+    username: str
+    x: float
+    y: float
 
 
 class PostAsset(ResponseModel):
@@ -110,6 +131,7 @@ class PostAsset(ResponseModel):
     height: int | None = None
     duration_s: float | None = None
     position: int  # 0-based
+    user_tags: list[UserTag] = Field(default_factory=list)  # photos only
 
 
 class FirstCommentResult(ResponseModel):
@@ -119,6 +141,14 @@ class FirstCommentResult(ResponseModel):
     status: FirstCommentStatus
     platform_comment_id: str | None = None
     error: str | None = None
+
+
+class CollaboratorResult(ResponseModel):
+    """One collaborator's invite on a published post (FR-PUB-07). A collaborator can't be changed
+    after publishing."""
+
+    username: str
+    status: CollaboratorInvite
 
 
 class ScheduledPostTarget(ResponseModel):
@@ -136,6 +166,10 @@ class ScheduledPostTarget(ResponseModel):
     error: ErrorInfo | None = None  # Instagram's reason when failed (FR-PUB-06)
     # None when the post has no first comment or this target has not published.
     first_comment: FirstCommentResult | None = None
+    # A published Instagram post with collaborators: each invite, read from Instagram and
+    # refreshed for a few days; ``collaborators_checked_at`` is the last read (None: not yet).
+    collaborators: list[CollaboratorResult] = Field(default_factory=list)
+    collaborators_checked_at: datetime | None = None
 
 
 class ScheduledPostSummary(ResponseModel):
@@ -182,6 +216,18 @@ class ScheduledPost(ScheduledPostSummary):
     """GET …/scheduled-posts/{id} (§5.10 ScheduledPost, UX-SCR-13): the composer's post."""
 
     first_comment: str | None = None
+    # FR-PUB-07 (Instagram only): collaborator usernames, the location's Facebook Page id, and a
+    # Reel's options (the cover is an uploaded image, ``cover_url``, or a frame at
+    # ``cover_offset_ms``; the image wins).
+    collaborators: list[str] = Field(default_factory=list)
+    location_id: str | None = None
+    cover_asset_id: uuid.UUID | None = None
+    cover_url: str | None = None
+    cover_offset_ms: int | None = None
+    share_to_feed: bool = True
+    audio_name: str | None = None
+    # The largest video a post upload accepts, in MB (the ``post_video_max_mb`` setting).
+    video_max_mb: int = 100
     assets: list[PostAsset]
     automations: list[LinkedAutomation]
     checklist: list[ChecklistItem]
@@ -199,6 +245,16 @@ class TargetIn(RequestModel):
 
     social_account_id: uuid.UUID
     caption_override: str | None = Field(default=None, max_length=STORED_CAPTION_MAX_CHARS)
+
+
+class UserTagIn(RequestModel):
+    """A tag on one of the post's photos (``asset_id`` must be in ``asset_ids``, else 422 on
+    ``user_tags.{i}``); ``username`` with or without "@"."""
+
+    asset_id: uuid.UUID
+    username: str = Field(min_length=1, max_length=INSTAGRAM_USERNAME_MAX_CHARS + 1)
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
 
 
 class ScheduledPostDraft(RequestModel):
@@ -222,6 +278,18 @@ class ScheduledPostDraft(RequestModel):
     # ``reel``: the one video is published to a Facebook Page as a Reel instead of a normal video
     # (C-131).
     kind: PostKind = "post"
+    # FR-PUB-07, Instagram targets only (the checklist says where they don't apply). Usernames
+    # with or without "@"; more than 3 is a field error on ``collaborators``.
+    collaborators: list[HandleIn] = Field(default_factory=list, max_length=COLLABORATORS_MAX * 3)
+    # The location: a Facebook Page id, or the Page's link (else 422 on ``location``).
+    location: str | None = Field(default=None, max_length=300)
+    user_tags: list[UserTagIn] = Field(default_factory=list, max_length=USER_TAGS_MAX)
+    # A Reel's options (a single Instagram video): the cover is an uploaded image or a frame
+    # offset in ms (the image wins); the audio name can be set only once on Instagram.
+    cover_asset_id: uuid.UUID | None = None
+    cover_offset_ms: int | None = Field(default=None, ge=0, le=900_000)
+    share_to_feed: bool = True
+    audio_name: str | None = Field(default=None, max_length=REEL_AUDIO_NAME_MAX_CHARS * 2)
 
 
 class ScheduleRequest(RequestModel):

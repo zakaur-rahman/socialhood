@@ -1,9 +1,11 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ExternalLink, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Pencil, RotateCw } from "lucide-react";
 
 import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useRefreshCollaborators } from "@/lib/api/queries/scheduledPosts";
 import { usePostPerformance } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { AGE_LABEL, figuresOf, formatFigure } from "@/lib/analytics/format";
@@ -34,6 +36,38 @@ function FirstCommentLine({ target }: { target: ScheduledPostTarget }) {
   return (
     <span className="text-danger-fg">
       First comment didn&apos;t post{result.error ? `: ${result.error}` : "."}
+    </span>
+  );
+}
+
+/**
+ * FR-PUB-07: each collaborator's invite on a published post, Pending until they accept. Read from
+ * Instagram every hour for three days, or now with Refresh. Collaborators can't be changed once the
+ * post is published.
+ */
+function CollaboratorLine({ target, wid, postId, timeZone, now }: { target: ScheduledPostTarget; wid?: string; postId: string; timeZone: string; now: Date }) {
+  const refresh = useRefreshCollaborators(wid ?? "", postId);
+  const list = target.collaborators ?? [];
+  if (target.status !== "published" || list.length === 0) return null;
+  return (
+    <span className="flex basis-full flex-wrap items-center gap-x-3 gap-y-1 text-fg-secondary" data-testid="collaborator-status">
+      <span>Collaborators:</span>
+      <ul className="flex flex-wrap gap-x-3" aria-label="Collaborators">
+        {list.map((item) => (
+          <li key={item.username} data-testid={`collaborator-${item.username}`}>
+            @{item.username} <span className={item.status === "accepted" ? "text-success-fg" : undefined}>{item.status === "accepted" ? "Accepted" : "Pending"}</span>
+          </li>
+        ))}
+      </ul>
+      {wid ? (
+        <Button type="button" variant="ghost" size="xs" loading={refresh.isPending} onClick={() => refresh.mutate()}>
+          <RotateCw aria-hidden /> Refresh
+        </Button>
+      ) : null}
+      <span className="text-xs">
+        {target.collaborators_checked_at ? `Checked ${formatDayTime(target.collaborators_checked_at, timeZone, now)}. ` : "Not checked yet. "}
+        They can&apos;t be changed after publishing.
+      </span>
     </span>
   );
 }
@@ -73,7 +107,9 @@ function TargetRows({
   timeZone,
   now,
   wid,
+  postId,
 }: {
+  postId?: string;
   targets: ScheduledPostTarget[];
   accounts: SocialAccount[];
   timeZone: string;
@@ -120,6 +156,7 @@ function TargetRows({
               )
             ) : null}
             <FirstCommentLine target={target} />
+            {postId ? <CollaboratorLine target={target} wid={wid} postId={postId} timeZone={timeZone} now={now} /> : null}
           </li>
         );
       })}
@@ -175,7 +212,7 @@ export function StatusBanner({
             {post.status === "published" ? "Published" : "Partly published"}
             {post.published_at ? ` ${formatDayTime(post.published_at, timeZone, now)}` : ""}
           </AlertTitle>
-          <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} wid={wid} />
+          <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} wid={wid} postId={post.id} />
         </Alert>
       );
     case "failed":

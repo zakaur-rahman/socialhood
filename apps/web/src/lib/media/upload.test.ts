@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ATTACHMENT_RULES, STICKER_RULE, resourceTypeFor } from "./upload";
+import { ATTACHMENT_RULES, chunkRanges, SINGLE_UPLOAD_MAX_BYTES, STICKER_RULE, resourceTypeFor } from "./upload";
 
 const MB = 1024 * 1024;
 
@@ -45,5 +45,21 @@ describe("attachment rules (FR-INB-08, Meta's limits)", () => {
     expect(STICKER_RULE.check(file("wave.webp", 40_000))).toBeNull();
     expect(STICKER_RULE.check(file("wave.png", 40_000))).toBe("Stickers are WebP images.");
     expect(STICKER_RULE.check(file("wave.webp", 600 * 1024))).toBe("Stickers can be up to 500 KB.");
+  });
+});
+
+describe("large video uploads (C-134)", () => {
+  it("sends a file over 100 MB in 20 MB chunks that cover it exactly", () => {
+    const size = 250 * MB + 5;
+    const ranges = chunkRanges(size);
+    expect(ranges).toHaveLength(13);
+    expect(ranges[0]).toEqual({ start: 0, end: 20 * MB - 1 });
+    expect(ranges.at(-1)?.end).toBe(size - 1);
+    for (let i = 1; i < ranges.length; i += 1) expect(ranges[i].start).toBe(ranges[i - 1].end + 1);
+  });
+
+  it("sends a small file in one request", () => {
+    expect(chunkRanges(5)).toEqual([{ start: 0, end: 4 }]);
+    expect(SINGLE_UPLOAD_MAX_BYTES).toBe(100 * MB);
   });
 });

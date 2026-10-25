@@ -61,12 +61,15 @@ import {
   assetLabel,
   captionLimit,
   checkPostFile,
+  COVER_MAX_BYTES,
+  DEFAULT_VIDEO_MAX_MB,
   deriveFormat,
   fromMediaAsset,
   fromPostAsset,
   handleOf,
   isEditable,
   pagesOnlyText,
+  postFileKind,
   MAX_ASSETS,
   MIN_SCHEDULE_LEAD_MS,
   publishingAccounts,
@@ -86,10 +89,20 @@ import { accountChipId, AccountPicker } from "./AccountPicker";
 import { AutomationSection } from "./AutomationSection";
 import { accountCaptionId, CAPTION_ID, CaptionEditor, FIRST_COMMENT_ID, FirstCommentEditor } from "./CaptionEditor";
 import { CropDialog } from "./CropDialog";
+import {
+  COLLABORATORS_ID,
+  EXTRAS_ID,
+  extrasUnavailable,
+  InstagramExtras,
+  LOCATION_ID,
+  pruneExtras,
+  REEL_OPTIONS_ID,
+} from "./InstagramExtras";
+import { TagDialog } from "./TagDialog";
 import { MediaLibraryDialog } from "./MediaLibraryDialog";
 import { MEDIA_ADD_ID, mediaTileId, MediaTray, moveItem, type TrayEntry } from "./MediaTray";
 import { PostChecklist } from "./PostChecklist";
-import { PostPreview } from "./PostPreview";
+import { PostPreview, type PreviewExtras } from "./PostPreview";
 import { PostTypeSection } from "./PostTypeSection";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
@@ -209,25 +222,32 @@ function Composer({
 
   // Failures from the last rejected action (a 422), shown in the checklist until the next edit.
   const [actionErrors, setActionErrors] = useState<ChecklistItem[]>([]);
-  const change = useCallback(
-    (patch: Partial<Draft> | ((current: Draft) => Partial<Draft>)) => {
-      update(patch);
-      setActionErrors([]);
-    },
-    [update],
-  );
-
-  // ---- media: what is known about each asset, uploads, crop, library
+  // The Instagram options go with the post: a Story, a post without an Instagram account or one that
+  // is no longer a single video can't carry them, and they are hidden then, so they are dropped
+  // (FR-PUB-07). Before the accounts load nothing is dropped.
   const [localAssets, setLocalAssets] = useState<Record<string, AssetInfo>>({});
-  // Photos picked in this session, so a crop reads the file instead of downloading it again.
-  const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
-  const assets = useMemo(() => {
+  const assetMap = useMemo(() => {
     const map: Record<string, AssetInfo> = { ...localAssets };
     for (const asset of [...initial.assets, ...server.assets]) {
       map[asset.id] = { ...fromPostAsset(asset), name: localAssets[asset.id]?.name ?? null };
     }
     return map;
   }, [initial.assets, localAssets, server.assets]);
+  const change = useCallback(
+    (patch: Partial<Draft> | ((current: Draft) => Partial<Draft>)) => {
+      update((current) => {
+        const changed = typeof patch === "function" ? patch(current) : patch;
+        return { ...changed, ...pruneExtras({ ...current, ...changed }, allAccounts, assetMap) };
+      });
+      setActionErrors([]);
+    },
+    [update, allAccounts, assetMap],
+  );
+
+  // ---- media: what is known about each asset, uploads, crop, library
+  // Photos picked in this session, so a crop reads the file instead of downloading it again.
+  const [localFiles, setLocalFiles] = useState<Record<string, File>>({});
+  const assets = assetMap;
 
   const remember = (list: MediaAsset[]) =>
     setLocalAssets((current) => {
@@ -258,6 +278,30 @@ function Composer({
     },
   });
   const newUploads = uploads.items.filter((item) => !item.replaces);
+  // A Reel's cover image uploads on its own and sets the cover, not a post media item (FR-PUB-07).
+  const coverUploads = useMediaUploads(wid, {
+    upload,
+    onUploaded: (asset) => {
+      if (asset.resource_type !== "image") return;
+      remember([asset]);
+      change({ cover_asset_id: asset.id, cover_offset_ms: null });
+    },
+  });
+  const [coverNotice, setCoverNotice] = useState<string | null>(null);
+  const pickCover = (file: File) => {
+    const kind = postFileKind(file);
+    const extension = file.name.toLowerCase().split(".").pop() ?? "";
+    if (kind !== "image" || !["jpg", "jpeg", "png"].includes(extension)) {
+      setCoverNotice("Use a JPEG or PNG image for the cover.");
+    } else if (file.size > COVER_MAX_BYTES) {
+      setCoverNotice(`The cover image can be up to ${COVER_MAX_BYTES / (1024 * 1024)} MB.`);
+    } else {
+      setCoverNotice(null);
+      coverUploads.add(file);
+    }
+  };
+  // Tags on photos (FR-PUB-07): the tag tool for one photo at a time.
+  const [tagId, setTagId] = useState<string | null>(null);
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [cropId, setCropId] = useState<string | null>(null);
@@ -266,7 +310,7 @@ function Composer({
     let room = MAX_ASSETS - draft.asset_ids.length - newUploads.length;
     const problems: string[] = [];
     for (const file of files) {
-      const problem = checkPostFile(file);
+      const problem = checkPostFile(file, server.video_max_mb ?? DEFAULT_VIDEO_MAX_MB);
       if (problem) {
         problems.push(`${file.name}: ${problem}`);
         continue;
@@ -314,6 +358,33 @@ function Composer({
       : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
       ? "text"
       : deriveFormat(postAssets);
+  // The Instagram options (FR-PUB-07): shown for a post with an Instagram account that isn't a Story.
+  const hasInstagram = selectedAccounts.length === 0 || selectedAccounts.some((account) => account.platform === "instagram");
+  const extrasReason = extrasUnavailable({ story: isStory, kind: draft.kind, hasInstagram });
+  const reelOptions = !extrasReason && format === "reel";
+  // A single video for Instagram alone runs 3 seconds to 15 minutes; with a Page it keeps 90 seconds.
+  const igReel = reelOptions && !selectedAccounts.some((account) => account.platform === "facebook");
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const tag of draft.user_tags) counts[tag.asset_id] = (counts[tag.asset_id] ?? 0) + 1;
+    return counts;
+  }, [draft.user_tags]);
+  const tagTotal = draft.asset_ids.reduce((sum, id) => sum + (tagCounts[id] ?? 0), 0);
+  const previewExtras = useMemo<PreviewExtras | undefined>(() => {
+    if (extrasReason) return undefined;
+    const tags: PreviewExtras["tags"] = {};
+    for (const tag of draft.user_tags) (tags[tag.asset_id] ??= []).push({ username: tag.username, x: tag.x, y: tag.y });
+    const coverAsset = draft.cover_asset_id ? assets[draft.cover_asset_id] : undefined;
+    return {
+      collaborators: draft.collaborators,
+      hasLocation: Boolean(draft.location?.trim()),
+      tags,
+      coverUrl: coverAsset ? (coverAsset.thumbnail_url ?? coverAsset.url) : null,
+      audioName: draft.audio_name?.trim() || null,
+    };
+  }, [assets, draft.audio_name, draft.collaborators, draft.cover_asset_id, draft.location, draft.user_tags, extrasReason]);
+  const tagAsset = tagId ? assets[tagId] : undefined;
+  const tagIndex = tagId ? draft.asset_ids.indexOf(tagId) : -1;
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
   const cropAsset = cropId ? assets[cropId] : undefined;
 
@@ -417,6 +488,10 @@ function Composer({
       return assetId ? mediaTileId(assetId) : MEDIA_ADD_ID;
     }
     if (field.startsWith("asset_ids")) return MEDIA_ADD_ID;
+    if (field === "collaborators") return COLLABORATORS_ID;
+    if (field === "location") return LOCATION_ID;
+    if (/^user_tags/.test(field)) return MEDIA_ADD_ID;
+    if (["cover_asset_id", "cover_offset_ms", "audio_name", "share_to_feed"].includes(field)) return reelOptions ? REEL_OPTIONS_ID : EXTRAS_ID;
     if (field === "caption") return perAccount && draft.targets[0] ? accountCaptionId(draft.targets[0].social_account_id) : CAPTION_ID;
     if (field === "first_comment") return FIRST_COMMENT_ID;
     if (field.startsWith("publish_at")) return WHEN_DATE_ID;
@@ -672,8 +747,24 @@ function Composer({
               onRemove={(assetId) => change((current) => ({ asset_ids: current.asset_ids.filter((id) => id !== assetId) }))}
               onMove={(from, to) => change((current) => ({ asset_ids: moveItem(current.asset_ids, from, to) }))}
               onCrop={setCropId}
+              onTag={extrasReason ? undefined : setTagId}
+              tagCounts={tagCounts}
+              igReel={igReel}
+              videoMaxMb={server.video_max_mb ?? DEFAULT_VIDEO_MAX_MB}
               onRetryUpload={uploads.retry}
               onRemoveUpload={uploads.remove}
+            />
+            <InstagramExtras
+              draft={draft}
+              onChange={(patch) => change(patch)}
+              unavailable={extrasReason}
+              isReel={reelOptions}
+              video={assets[draft.asset_ids[0]]}
+              cover={draft.cover_asset_id ? assets[draft.cover_asset_id] : undefined}
+              coverBusy={coverUploads.busy}
+              coverNotice={coverNotice ?? coverUploads.items.find((item) => item.status === "failed")?.error ?? null}
+              onPickCover={pickCover}
+              tagTotal={tagTotal}
             />
             {isStory ? null : (
             <>
@@ -825,6 +916,7 @@ function Composer({
             assets={postAssets.filter((asset) => asset.url)}
             format={format}
             firstComment={draft.first_comment}
+            extras={previewExtras}
           />
         </aside>
       </div>
@@ -837,6 +929,24 @@ function Composer({
           inPost={draft.asset_ids}
           slots={Math.max(0, MAX_ASSETS - draft.asset_ids.length - newUploads.length)}
           onAdd={addFromLibrary}
+        />
+      ) : null}
+      {tagId && tagAsset ? (
+        <TagDialog
+          key={tagId}
+          open
+          onOpenChange={(open) => !open && setTagId(null)}
+          asset={tagAsset}
+          label={assetLabel(tagAsset, Math.max(0, tagIndex))}
+          tags={draft.user_tags.filter((tag) => tag.asset_id === tagId).map((tag) => ({ username: tag.username, x: tag.x, y: tag.y }))}
+          onSave={(tags) =>
+            change((current) => ({
+              user_tags: [
+                ...current.user_tags.filter((tag) => tag.asset_id !== tagId),
+                ...tags.map((tag) => ({ asset_id: tagId, username: tag.username, x: tag.x, y: tag.y })),
+              ],
+            }))
+          }
         />
       ) : null}
       {cropId && cropAsset ? (

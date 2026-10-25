@@ -23,14 +23,21 @@ from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
     CAROUSEL_MAX_ASSETS,
     CAROUSEL_MIN_ASSETS,
+    COLLABORATORS_MAX,
     FACEBOOK_CAPTION_MAX_CHARS,
     FACEBOOK_REEL_MIN_S,
     FIRST_COMMENT_MAX_CHARS,
+    IG_REEL_MAX_S,
+    IG_REEL_MIN_S,
+    INSTAGRAM_USERNAME_MAX_CHARS,
     MAX_HASHTAGS,
     MAX_MENTIONS,
     MIN_SCHEDULE_LEAD,
+    REEL_AUDIO_NAME_MAX_CHARS,
+    REEL_COVER_MAX_BYTES,
     STORY_VIDEO_MAX_S,
     STORY_VIDEO_MIN_S,
+    USER_TAGS_MAX_PER_IMAGE,
     PostFormat,
 )
 from socialhood.schemas.publishing import ChecklistItem, ChecklistKey
@@ -67,6 +74,8 @@ HASHTAG_TEXT = re.compile(rf"{_WORD}+")
 MIN_ASPECT = 4 / 5
 MAX_ASPECT = 1.91
 ASPECT_SLACK = 0.005
+# Videos that are not an Instagram Reel (carousel items, Facebook videos): 90 seconds, as before.
+EXTRA_VIDEO_MAX_S = 90
 
 # A Story is shown full screen, 9:16; other shapes are cropped or letterboxed by Instagram, so
 # they pass with a note (unverified: Meta states 9:16 as the recommendation, C-114).
@@ -85,6 +94,23 @@ REEL_NEEDS_VIDEO = "Add a video for the Reel."
 FACEBOOK_NO_MIX = "A Facebook post can have several photos or one video, not both."
 FACEBOOK_NO_MEDIA = "Add a photo or video, or write the post's text."
 NEEDS_MEDIA = "{handle} can't publish a post without a photo or video."
+
+# FR-PUB-07 (C-134): Instagram usernames and Facebook Page ids as typed or pasted.
+USERNAME = re.compile(r"[a-z0-9._]{1,30}")
+PAGE_ID = re.compile(r"\d{5,20}")
+_PAGE_LINK = (
+    re.compile(r"[?&]id=(\d{5,20})(?:&|$)"),  # facebook.com/profile.php?id=...
+    re.compile(r"facebook\.com/(?:pages/[^/?#]+/)?(?:[^/?#]*-)?(\d{5,20})(?:[/?#]|$)"),
+)
+LOCATION_HELP = (
+    "Paste the numeric id of a Facebook Page that has a location, or the link to it "
+    "(facebook.com/profile.php?id=...)."
+)
+EXTRAS_NEED_INSTAGRAM = (
+    "{what} are an Instagram feature. Choose an Instagram account or remove them."
+)
+EXTRAS_NOT_ON_STORIES = "{what} are not available on Stories. Remove them or publish a post."
+REEL_OPTIONS_ONLY_REEL = "Reel options only apply to a single Instagram video. Remove them."
 
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."
@@ -166,6 +192,29 @@ def unique(items: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(items))
 
 
+def normalize_username(raw: str) -> str | None:
+    """An Instagram username as stored (FR-PUB-07): without "@", lowercase; None when it is not
+    a valid one (letters, digits, "." and "_", up to 30)."""
+    name = raw.strip().lstrip("@").strip().lower()
+    return name if USERNAME.fullmatch(name) and len(name) <= INSTAGRAM_USERNAME_MAX_CHARS else None
+
+
+def parse_location(raw: str) -> str | None:
+    """The Facebook Page id in a pasted id or Page link (FR-PUB-07), else None. A Page's vanity
+    link has no id in it, so it can not be used (Meta's Pages search needs a review we do not
+    have, C-134)."""
+    text = raw.strip()
+    if PAGE_ID.fullmatch(text):
+        return text
+    if "facebook.com" not in text.lower():
+        return None
+    for pattern in _PAGE_LINK:
+        match = pattern.search(text)
+        if match:
+            return match.group(1)
+    return None
+
+
 # ---------------------------------------------------------------- the checklist (FR-PUB-10)
 
 
@@ -190,6 +239,26 @@ class AssetFacts:
     width: int | None
     height: int | None
     duration_s: float | None
+    user_tags: int = 0  # Instagram user tags on this image (FR-PUB-07)
+
+
+@dataclass(frozen=True)
+class ReelFacts:
+    """A Reel's options (FR-PUB-07 follow-up): ``cover`` is the uploaded cover image."""
+
+    cover: AssetFacts | None = None
+    cover_offset_ms: int | None = None
+    share_to_feed: bool = True
+    audio_name: str | None = None
+
+    @property
+    def used(self) -> bool:
+        return bool(
+            self.cover is not None
+            or self.cover_offset_ms is not None
+            or not self.share_to_feed
+            or self.audio_name
+        )
 
 
 @dataclass(frozen=True)
@@ -201,6 +270,11 @@ class PostFacts:
     publish_at: datetime | None
     story: bool = False  # chosen as a Story (GR-39; a Facebook Page's too, C-131)
     reel: bool = False  # chosen as a Facebook Reel (C-131)
+    collaborators: Sequence[str] = ()  # FR-PUB-07, as typed
+    location_id: str | None = None
+    reel_options: ReelFacts = ReelFacts()
+    # The video upload cap in bytes (the ``post_video_max_mb`` setting, C-134).
+    video_max_bytes: int = POST_VIDEO.max_bytes
 
 
 def handle(username: str | None, display_name: str | None = None) -> str:
@@ -222,10 +296,18 @@ def _account_problem(target: TargetFacts, *, text: bool = False) -> str | None:
 
 
 def asset_problem(
-    asset: AssetFacts, *, story: bool = False, instagram: bool = True, reel: bool = False
+    asset: AssetFacts,
+    *,
+    story: bool = False,
+    instagram: bool = True,
+    reel: bool = False,
+    ig_reel: bool = False,
+    video_max_bytes: int = POST_VIDEO.max_bytes,
 ) -> str | None:
     """TR-MED-02: type, size, aspect ratio and video length. A Story takes any image shape (9:16
-    is only recommended) and a video of 3 to 60 seconds; a Facebook Reel a video of 3 to 90."""
+    is only recommended) and a video of 3 to 60 seconds; a Facebook Reel a video of 3 to 90. An
+    Instagram Reel (``ig_reel``: the post's one video, for Instagram only) runs 3 seconds to 15
+    minutes (Meta's IG User Media reference, C-134); other videos stay at 90 seconds."""
     fmt = (asset.format or "").lower()
     if asset.resource_type == "image":
         if fmt and fmt not in IMAGE.formats:
@@ -240,11 +322,17 @@ def asset_problem(
     if asset.resource_type == "video":
         if fmt and fmt not in POST_VIDEO.formats:
             return "Use an MP4 or MOV video."
-        if asset.bytes > POST_VIDEO.max_bytes:
-            return f"Videos can be up to {POST_VIDEO.max_bytes // MB} MB."
-        limit = STORY_VIDEO_MAX_S if story else POST_VIDEO.max_duration_s
+        if asset.bytes > video_max_bytes:
+            return f"Videos can be up to {video_max_bytes // MB} MB."
+        limit: float | None = IG_REEL_MAX_S if ig_reel else EXTRA_VIDEO_MAX_S
+        if story:
+            limit = STORY_VIDEO_MAX_S
         if limit is not None and asset.duration_s is not None and asset.duration_s > limit:
+            if limit >= 120:
+                return f"Reels can be up to {limit // 60:.0f} minutes."
             return f"{'Story videos' if story else 'Videos'} can be up to {limit:.0f} seconds."
+        if ig_reel and asset.duration_s is not None and asset.duration_s < IG_REEL_MIN_S:
+            return f"Reels must be at least {IG_REEL_MIN_S} seconds."
         if story and asset.duration_s is not None and asset.duration_s < STORY_VIDEO_MIN_S:
             return f"Story videos must be at least {STORY_VIDEO_MIN_S} seconds."
         if reel and asset.duration_s is not None and asset.duration_s < FACEBOOK_REEL_MIN_S:
@@ -376,6 +464,121 @@ def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[
     return items
 
 
+def _plural(n: int, one: str, many: str) -> str:
+    return f"{n} {one if n == 1 else many}"
+
+
+def extras_items(post: PostFacts, *, ig: bool, fmt: PostFormat | None) -> list[ChecklistItem]:
+    """The Instagram extras (FR-PUB-07, C-134): collaborators, user tags, the location and a
+    Reel's options. Nothing is listed for a post that uses none. Each is Instagram only and
+    unavailable on Stories (Meta: collaborators are for feed images, Reels and carousels)."""
+    items: list[ChecklistItem] = []
+
+    def fail(message: str, field: str) -> None:
+        items.append(_item("extras", message, ok=False, field=field))
+
+    def unavailable(what: str, field: str) -> bool:
+        """True (and a failing item) when the extras can not go on this post at all."""
+        if post.story:
+            fail(EXTRAS_NOT_ON_STORIES.format(what=what), field)
+            return True
+        if not ig:
+            fail(EXTRAS_NEED_INSTAGRAM.format(what=what), field)
+            return True
+        return False
+
+    names = [normalize_username(c) for c in post.collaborators]
+    if post.collaborators and not unavailable("Collaborators", "collaborators"):
+        bad = [raw for raw, name in zip(post.collaborators, names, strict=True) if name is None]
+        valid = unique(n for n in names if n)
+        if bad:
+            fail(f"{bad[0]} is not a valid Instagram username.", "collaborators")
+        elif len(valid) > COLLABORATORS_MAX:
+            fail(
+                f"Add at most {COLLABORATORS_MAX} collaborators (now {len(valid)}).",
+                "collaborators",
+            )
+        else:
+            items.append(_item("extras", "Collaborators: " + ", ".join(f"@{n}" for n in valid)))
+
+    tagged = [(i, a) for i, a in enumerate(post.assets) if a.user_tags]
+    if tagged and not unavailable("User tags", "asset_ids"):
+        over = [(i, a) for i, a in tagged if a.user_tags > USER_TAGS_MAX_PER_IMAGE]
+        for i, a in over:
+            fail(
+                f"Tag at most {USER_TAGS_MAX_PER_IMAGE} accounts in one photo (now {a.user_tags}).",
+                f"asset_ids.{i}",
+            )
+        if not over:
+            total = sum(a.user_tags for _, a in tagged)
+            items.append(
+                _item(
+                    "extras",
+                    f"{_plural(total, 'tag', 'tags')} on {_plural(len(tagged), 'photo', 'photos')}",
+                )
+            )
+
+    if post.location_id and not unavailable("Locations", "location"):
+        if PAGE_ID.fullmatch(post.location_id):
+            items.append(_item("extras", "Location set"))
+        else:
+            fail(LOCATION_HELP, "location")
+
+    options = post.reel_options
+    if options.used:
+        if fmt != PostFormat.REEL or not ig or post.story or post.reel:
+            fail(REEL_OPTIONS_ONLY_REEL, "cover_asset_id")
+        else:
+            problems = _reel_option_problems(post, options)
+            items += problems or [_item("extras", "Reel options set")]
+    return items
+
+
+def _reel_option_problems(post: PostFacts, options: ReelFacts) -> list[ChecklistItem]:
+    out: list[ChecklistItem] = []
+    cover = options.cover
+    if cover is not None:
+        if cover.resource_type != "image":
+            out.append(
+                _item("extras", "The cover must be an image.", ok=False, field="cover_asset_id")
+            )
+        elif cover.bytes > REEL_COVER_MAX_BYTES:
+            out.append(
+                _item(
+                    "extras",
+                    f"The cover image can be up to {REEL_COVER_MAX_BYTES // MB} MB.",
+                    ok=False,
+                    field="cover_asset_id",
+                )
+            )
+    video = post.assets[0] if post.assets else None
+    if (
+        options.cover_offset_ms is not None
+        and video is not None
+        and video.duration_s is not None
+        and options.cover_offset_ms > video.duration_s * 1000
+    ):
+        out.append(
+            _item(
+                "extras",
+                "The cover frame is past the end of the video.",
+                ok=False,
+                field="cover_offset_ms",
+            )
+        )
+    name = options.audio_name
+    if name is not None and not 1 <= len(name) <= REEL_AUDIO_NAME_MAX_CHARS:
+        out.append(
+            _item(
+                "extras",
+                f"Keep the audio name to {REEL_AUDIO_NAME_MAX_CHARS} characters.",
+                ok=False,
+                field="audio_name",
+            )
+        )
+    return out
+
+
 def checklist(
     post: PostFacts,
     *,
@@ -460,7 +663,12 @@ def checklist(
         for i, a in enumerate(post.assets)
         if (
             problem := asset_problem(
-                a, story=post.story, instagram=ig or not fb, reel=post.reel and fb
+                a,
+                story=post.story,
+                instagram=ig or not fb,
+                reel=post.reel and fb,
+                ig_reel=ig and not fb and len(post.assets) == 1 and not post.story,
+                video_max_bytes=post.video_max_bytes,
             )
         )
         is not None
@@ -481,6 +689,8 @@ def checklist(
         items.append(_item("caption", STORY_NO_CAPTION))
     else:
         items += _text_items(post, hashtags_and_mentions=ig or not fb)
+
+    items += extras_items(post, ig=ig, fmt=fmt)
 
     # publishing_limit: this post plus the account's others in the 24 hours up to its time
     # (Instagram only: Facebook Pages have no such limit)

@@ -27,6 +27,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +39,10 @@ from socialhood.models.billing import UsageMetric
 from socialhood.models.connections import SocialAccount
 from socialhood.models.media import AssetPurpose, MediaAsset
 from socialhood.models.publishing import (
+    COLLABORATORS_MAX,
     MIN_SCHEDULE_LEAD,
+    REEL_AUDIO_NAME_MAX_CHARS,
+    USER_TAGS_MAX_PER_IMAGE,
     ScheduledPostAsset,
     ScheduledPostStatus,
     ScheduledPostTarget,
@@ -60,6 +64,7 @@ from socialhood.schemas.publishing import (
     TargetIn,
 )
 from socialhood.services.conversations import decode_cursor, encode_cursor
+from socialhood.services.post_publishing import collaborators
 from socialhood.services.scheduled_posts import rules, slots, views
 
 log = get_logger(__name__)
@@ -166,6 +171,69 @@ async def get(session: AsyncSession, scheduled_post_id: uuid.UUID, env: Env) -> 
 class _Checked:
     accounts: dict[uuid.UUID, SocialAccount]
     assets: list[MediaAsset]
+    # FR-PUB-07 (C-134), as stored: usernames, the location's Page id, each asset's user tags,
+    # the Reel's cover upload and audio name.
+    collaborators: list[str]
+    location_id: str | None
+    tags: dict[uuid.UUID, list[dict[str, Any]]]
+    cover: MediaAsset | None
+    audio_name: str | None
+
+
+def _check_extras(
+    body: ScheduledPostDraft, assets: dict[uuid.UUID, MediaAsset]
+) -> tuple[list[str], str | None, dict[uuid.UUID, list[dict[str, Any]]], str | None]:
+    """The extras as stored, or every problem as a field error: usernames are valid and appear
+    once, at most 3 collaborators, the location is a Page id or link, tags sit on this post's
+    photos (up to 20 each), the audio name fits."""
+    errors: list[FieldError] = []
+    names: list[str] = []
+    for raw in body.collaborators:
+        name = rules.normalize_username(raw)
+        if name is None:
+            errors.append(FieldError("collaborators", f"{raw} is not a valid Instagram username."))
+        elif name not in names:
+            names.append(name)
+    if len(names) > COLLABORATORS_MAX:
+        errors.append(
+            FieldError("collaborators", f"Add at most {COLLABORATORS_MAX} collaborators.")
+        )
+    location = None
+    if body.location and body.location.strip():
+        location = rules.parse_location(body.location)
+        if location is None:
+            errors.append(FieldError("location", rules.LOCATION_HELP))
+    tags: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for i, tag in enumerate(body.user_tags):
+        asset = assets.get(tag.asset_id)
+        name = rules.normalize_username(tag.username)
+        if asset is None or tag.asset_id not in body.asset_ids or asset.resource_type != "image":
+            errors.append(FieldError(f"user_tags.{i}", "Tag a photo that is in this post."))
+        elif name is None:
+            errors.append(
+                FieldError(f"user_tags.{i}", f"{tag.username} is not a valid Instagram username.")
+            )
+        else:
+            tags.setdefault(tag.asset_id, []).append({"username": name, "x": tag.x, "y": tag.y})
+    for asset_id, rows in tags.items():
+        if len(rows) > USER_TAGS_MAX_PER_IMAGE:
+            at = body.asset_ids.index(asset_id)
+            errors.append(
+                FieldError(
+                    f"asset_ids.{at}",
+                    f"Tag at most {USER_TAGS_MAX_PER_IMAGE} accounts in one photo.",
+                )
+            )
+    audio = (body.audio_name or "").strip() or None
+    if audio is not None and len(audio) > REEL_AUDIO_NAME_MAX_CHARS:
+        errors.append(
+            FieldError(
+                "audio_name", f"Keep the audio name to {REEL_AUDIO_NAME_MAX_CHARS} characters."
+            )
+        )
+    if errors:
+        raise ApiError("validation_error", errors=errors)
+    return names, location, tags, audio
 
 
 async def _check_body(session: AsyncSession, body: ScheduledPostDraft) -> _Checked:
@@ -191,9 +259,19 @@ async def _check_body(session: AsyncSession, body: ScheduledPostDraft) -> _Check
         elif asset_id in seen_assets:
             errors.append(FieldError(f"asset_ids.{i}", "This file is already in the post."))
         seen_assets.add(asset_id)
+    cover = None
+    if body.cover_asset_id is not None:
+        cover = (await repo.assets_by_id(session, [body.cover_asset_id])).get(body.cover_asset_id)
+        if cover is None or cover.purpose != AssetPurpose.POST or cover.resource_type != "image":
+            errors.append(FieldError("cover_asset_id", "Use an uploaded image for the cover."))
+        elif body.cover_asset_id in seen_assets:
+            errors.append(FieldError("cover_asset_id", "The cover can not also be in the post."))
     if errors:
         raise ApiError("validation_error", errors=errors)
-    return _Checked(accounts, [found[a] for a in body.asset_ids])
+    names, location, tags, audio = _check_extras(body, found)
+    return _Checked(
+        accounts, [found[a] for a in body.asset_ids], names, location, tags, cover, audio
+    )
 
 
 def _reset(target: ScheduledPostTarget) -> None:
@@ -211,6 +289,8 @@ def _reset(target: ScheduledPostTarget) -> None:
     target.error_message = None
     target.first_comment_platform_id = None
     target.first_comment_error = None
+    target.collaborator_statuses = []
+    target.collaborators_checked_at = None
 
 
 async def _write_targets(
@@ -266,9 +346,18 @@ async def _write(
         reel=body.kind == "reel",
     )
     post.updated_at = now
-    current = [row.media_asset_id for row, _ in await repo.assets_for(session, [post.id])]
-    if current != list(body.asset_ids):
-        await repo.replace_assets(session, post.id, body.asset_ids)
+    post.collaborators = checked.collaborators
+    post.location_id = checked.location_id
+    post.cover_asset_id = checked.cover.id if checked.cover else None
+    post.cover_offset_ms = body.cover_offset_ms
+    post.share_to_feed = body.share_to_feed
+    post.audio_name = checked.audio_name
+    current = [
+        (row.media_asset_id, row.user_tags) for row, _ in await repo.assets_for(session, [post.id])
+    ]
+    wanted = [(a, checked.tags.get(a, [])) for a in body.asset_ids]
+    if current != wanted:
+        await repo.replace_assets(session, post.id, body.asset_ids, checked.tags)
     await _write_targets(session, post, body.targets, reset=reset)
 
 
@@ -307,6 +396,13 @@ async def replace(
             assets=checked.assets,
             story=body.kind == "story",
             reel=body.kind == "reel",
+            collaborators=checked.collaborators,
+            location_id=checked.location_id,
+            tag_counts=[len(checked.tags.get(a.id, [])) for a in checked.assets],
+            cover=checked.cover,
+            cover_offset_ms=body.cover_offset_ms,
+            share_to_feed=body.share_to_feed,
+            audio_name=checked.audio_name,
         )
         await _require_ready(session, draft, env)
     retry = post.status in RETRYABLE
@@ -328,6 +424,19 @@ async def _require_ready(
         errors.append(FieldError("publish_at", NO_TIME))
     if errors:
         raise ApiError("validation_error", errors=errors)
+
+
+async def refresh_collaborators(
+    session: AsyncSession, scheduled_post_id: uuid.UUID, env: Env
+) -> ScheduledPost:
+    """Read the collaborators' invite status from Instagram now (FR-PUB-07). A read that fails
+    leaves the last answer, so the post comes back as it was."""
+    post = await _locked(session, scheduled_post_id)
+    if post.status not in PUBLISHED:
+        raise _conflict(post.status)
+    if await collaborators.refresh_post(session, post, env.deps, env.now):
+        return await _changed(session, post, env)
+    return await views.post_out(session, post, deps=env.deps, now=env.now)
 
 
 # ---------------------------------------------------------------- lifecycle
@@ -494,13 +603,22 @@ async def duplicate(
         kind=source.kind,
         caption=source.caption,
         first_comment=source.first_comment,
+        collaborators=list(source.collaborators or []),
+        location_id=source.location_id,
+        cover_asset_id=source.cover_asset_id,
+        cover_offset_ms=source.cover_offset_ms,
+        share_to_feed=source.share_to_feed,
+        audio_name=source.audio_name,
         created_by_user_id=user_id,
     )
     session.add(copy)
     await session.flush()
     session.add_all(
         ScheduledPostAsset(
-            scheduled_post_id=copy.id, media_asset_id=asset.id, position=row.position
+            scheduled_post_id=copy.id,
+            media_asset_id=asset.id,
+            position=row.position,
+            user_tags=row.user_tags,
         )
         for row, asset in loaded.assets
     )

@@ -159,15 +159,52 @@ type UploadOptions = {
   signal?: AbortSignal;
 };
 
+/**
+ * Cloudinary takes a single upload request up to 100 MB (its free plan's limit too); a larger
+ * file, such as a Reel (Instagram allows up to 300 MB), goes in chunks of this size, each with a
+ * Content-Range, tied together by one X-Unique-Upload-Id (C-134). Needs a plan that allows files
+ * of that size; the API's ``post_video_max_mb`` setting decides what is accepted at all.
+ */
+export const SINGLE_UPLOAD_MAX_BYTES = 100 * MB;
+export const CHUNK_BYTES = 20 * MB;
+
+/** The byte ranges a large file is sent in. */
+export function chunkRanges(size: number, chunk = CHUNK_BYTES): { start: number; end: number }[] {
+  const ranges: { start: number; end: number }[] = [];
+  for (let start = 0; start < size; start += chunk) ranges.push({ start, end: Math.min(start + chunk, size) - 1 });
+  return ranges;
+}
+
 /** POST the file to Cloudinary with the signed parameters; resolves with its public_id. */
-export function sendToStorage(
+export async function sendToStorage(
   signature: UploadSignature,
   file: File,
-  { onProgress, signal }: UploadOptions = {},
+  options: UploadOptions = {},
+): Promise<{ public_id: string }> {
+  if (file.size <= SINGLE_UPLOAD_MAX_BYTES) return sendPart(signature, file, options);
+  const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  let last: { public_id: string } | null = null;
+  for (const { start, end } of chunkRanges(file.size)) {
+    last = await sendPart(signature, file.slice(start, end + 1), {
+      ...options,
+      onProgress: (fraction) => options.onProgress?.((start + fraction * (end + 1 - start)) / file.size),
+      headers: { "X-Unique-Upload-Id": id, "Content-Range": `bytes ${start}-${end}/${file.size}` },
+      name: file.name,
+    });
+  }
+  if (!last?.public_id) throw new UploadError("The upload didn't finish. Try again.");
+  return last;
+}
+
+function sendPart(
+  signature: UploadSignature,
+  file: Blob,
+  { onProgress, signal, headers, name }: UploadOptions & { headers?: Record<string, string>; name?: string } = {},
 ): Promise<{ public_id: string }> {
   return new Promise((resolve, reject) => {
     const form = new FormData();
-    form.append("file", file);
+    if (name) form.append("file", file, name);
+    else form.append("file", file);
     form.append("api_key", signature.api_key);
     form.append("timestamp", String(signature.timestamp));
     form.append("folder", signature.folder);
@@ -175,6 +212,7 @@ export function sendToStorage(
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", signature.upload_url);
+    for (const [key, value] of Object.entries(headers ?? {})) xhr.setRequestHeader(key, value);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress?.(event.loaded / event.total);
     };
@@ -186,6 +224,8 @@ export function sendToStorage(
         } catch {
           // fall through
         }
+        // A chunk before the last is acknowledged without the finished file.
+        if (headers) return resolve({ public_id: "" });
       }
       reject(new UploadError("The upload didn't finish. Try again."));
     };

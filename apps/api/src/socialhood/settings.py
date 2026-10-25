@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     database_url: str
     database_url_direct: str
     bulk_concurrency_per_workspace: int = Field(default=4, ge=1, le=64)
+    # The largest video a post upload accepts, in MB (C-134). Cloudinary's free plan stops single
+    # uploads at 100 MB; above that the browser sends the file in chunks and the plan must allow
+    # large files. Instagram takes Reels up to 300 MB.
+    post_video_max_mb: int = Field(default=100, ge=10, le=300)
     redis_url: str
 
     log_level: str = "INFO"

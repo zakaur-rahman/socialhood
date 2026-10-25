@@ -63,7 +63,9 @@ from socialhood.platforms.base import (
     ContainerStatus,
     PlatformAdapter,
     PlatformMedia,
+    PublishExtras,
     PublishingQuota,
+    UserTag,
 )
 from socialhood.platforms.capabilities import Capability
 from socialhood.platforms.deps import PlatformDeps
@@ -77,7 +79,9 @@ from socialhood.services.automations import posts as automation_posts
 from socialhood.services.connections import mark_needs_reconnect, platform_label
 from socialhood.services.media_assets import delivery_url
 from socialhood.services.notifications import notify_admins
-from socialhood.services.post_publishing import claims
+from socialhood.services.post_publishing import claims, collaborators
+from socialhood.services.post_publishing.extras import applies as extras_applies
+from socialhood.services.post_publishing.extras import extras_for, user_tags
 from socialhood.services.post_publishing.projection import derive_status, queue_post_updated
 
 log = get_logger(__name__)
@@ -432,10 +436,17 @@ async def publish_target(
             )
             await commit_and_publish(session, redis)
             return "failed"
+        extras = await _extras(session, post, acct, media)
+        if extras is not None:
+            media = [
+                replace(m, user_tags=tags) if m.kind == "image" and tags else m
+                for m, tags in zip(media, extras.tags, strict=False)
+            ]
         if claimed:
             await queue_post_updated(session, post)
         await commit_and_publish(session, redis)
     adapter, caption, workspace_id = got, _caption(post, target), post.workspace_id
+    share_to_feed = post.share_to_feed
 
     try:
         # Only Instagram has a publishing limit to read (Facebook Pages have none, C-115).
@@ -450,7 +461,14 @@ async def publish_target(
                 message=LIMIT_REACHED,
             )
         container_id, children = await _create(
-            adapter, acct, post.format, media, caption, page_reel=post.kind == PostKind.REEL
+            adapter,
+            acct,
+            post.format,
+            media,
+            caption,
+            page_reel=post.kind == PostKind.REEL,
+            extras=extras.values if extras is not None else None,
+            share_to_feed=share_to_feed,
         )
     except PlatformError as error:
         if error.retryable and will_retry(error):
@@ -477,6 +495,31 @@ async def publish_target(
     return "containers_created"
 
 
+@dataclass(frozen=True)
+class _Extras:
+    """The Instagram extras read in the claim transaction: the container fields and each
+    asset user tags."""
+
+    values: PublishExtras | None
+    tags: list[tuple[UserTag, ...]]
+
+
+async def _extras(
+    session: AsyncSession,
+    post: ScheduledPost,
+    acct: SocialAccount,
+    media: Sequence[ContainerMedia],
+) -> _Extras | None:
+    """FR-PUB-07 for an Instagram target: None when it takes none."""
+    if not extras_applies(post, acct):
+        return None
+    per_asset = [user_tags(rows) for rows in await repo.user_tags_of(session, post.id)]
+    cover = await repo.cover_of(session, post)
+    cover_url = delivery_url(cover.secure_url, "image") if cover and cover.secure_url else None
+    own = per_asset[0] if len(media) == 1 and per_asset else ()
+    return _Extras(extras_for(post, acct, tags=own, cover_url=cover_url), per_asset)
+
+
 async def _quota(adapter: PlatformAdapter, acct: SocialAccount) -> PublishingQuota | None:
     """The quota, or None when Instagram won't say (it enforces the limit at publish anyway).
     Retryable errors and a dead token raise."""
@@ -497,10 +540,14 @@ async def _create(
     caption: str,
     *,
     page_reel: bool = False,
+    extras: PublishExtras | None = None,
+    share_to_feed: bool = True,
 ) -> tuple[str | None, list[str]]:
     """(container id, children): a carousel's children only, its parent comes once they are
     FINISHED (poll_container). ``page_reel``: a Facebook Page's video is published as a Reel
-    (C-131) instead of a normal video."""
+    (C-131) instead of a normal video. ``extras``: Instagram collaborators, location, user tags and
+    Reel options (FR-PUB-07); a carousel children carry their own tags, the rest goes on its
+    parent."""
     if post_format == PostFormat.TEXT:
         return await adapter.create_text_container(acct), []
     if post_format == PostFormat.STORY:
@@ -509,9 +556,16 @@ async def _create(
         return None, [await adapter.create_carousel_item(acct, m) for m in media]
     if post_format == PostFormat.REEL:
         return await adapter.create_reel_container(
-            acct, video_url=media[0].url, caption=caption, share_to_feed=True, page_reel=page_reel
+            acct,
+            video_url=media[0].url,
+            caption=caption,
+            share_to_feed=share_to_feed,
+            page_reel=page_reel,
+            extras=extras,
         ), []
-    return await adapter.create_image_container(acct, image_url=media[0].url, caption=caption), []
+    return await adapter.create_image_container(
+        acct, image_url=media[0].url, caption=caption, extras=extras
+    ), []
 
 
 # ---------------------------------------------------------------- poll_container
@@ -593,7 +647,10 @@ async def _poll(p: _Poll) -> Outcome:
             return await _next_poll(p, processing=True)
         try:
             container_id = await p.adapter.create_carousel_container(
-                p.acct, children=children, caption=p.caption
+                p.acct,
+                children=children,
+                caption=p.caption,
+                extras=extras_for(p.post, p.acct),
             )
         except PlatformError as error:
             return await _later(p, error, processing=False)
@@ -811,6 +868,9 @@ async def _published(p: _Poll, media: PlatformMedia) -> Outcome:
         if item.media_type != MediaType.STORY:
             await automation_posts.link_next_posts(session, p.acct.id)
         await settle(session, post, target, TargetStatus.PUBLISHED, media=media)
+        if extras_applies(post, p.acct):  # FR-PUB-07: every collaborator starts Pending
+            target.collaborator_statuses = collaborators.initial(post)
+            target.collaborators_checked_at = None
         # A Story takes no comment of its own (GR-39).
         first_comment = bool(post.first_comment) and post.format != PostFormat.STORY
         await commit_and_publish(session, p.redis)
