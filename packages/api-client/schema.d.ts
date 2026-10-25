@@ -7360,6 +7360,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Name Source
+             * @default platform
+             * @enum {string}
+             */
+            name_source: "platform" | "team";
+            /** Platform Name */
+            platform_name?: string | null;
             /** Platform User Id */
             platform_user_id: string;
             /** Profile Picture Url */
@@ -7496,7 +7504,8 @@ export interface components {
         };
         /**
          * ContactPatch
-         * @description Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or
+         * @description Only what is sent changes. A ``name`` is the team's; ``use_platform_name`` goes back to the
+         *     platform's. ``fields`` merges: a key set to null is removed. An email or
          *     phone set here is marked as entered by a member and not verified.
          */
         ContactPatch: {
@@ -7516,8 +7525,15 @@ export interface components {
             fields?: {
                 [key: string]: unknown;
             } | null;
+            /** Name */
+            name?: string | null;
             /** Phone */
             phone?: string | null;
+            /**
+             * Use Platform Name
+             * @default false
+             */
+            use_platform_name: boolean;
         };
         /**
          * ContactRecord
@@ -7568,6 +7584,12 @@ export interface components {
             lead_stage_reason?: string | null;
             /** Name */
             name: string;
+            /**
+             * Name Source
+             * @default platform
+             * @enum {string}
+             */
+            name_source: "platform" | "team";
             /** Phone */
             phone?: string | null;
             /** Phone Source */
@@ -7576,6 +7598,8 @@ export interface components {
             phone_verified: boolean;
             /** Platform */
             platform: string;
+            /** Platform Name */
+            platform_name?: string | null;
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**

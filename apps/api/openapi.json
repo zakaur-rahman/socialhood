@@ -7623,6 +7623,26 @@
             "title": "Id",
             "type": "string"
           },
+          "name_source": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "team"
+            ],
+            "title": "Name Source",
+            "type": "string"
+          },
+          "platform_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Name"
+          },
           "platform_user_id": {
             "title": "Platform User Id",
             "type": "string"
@@ -8211,7 +8231,7 @@
       },
       "ContactPatch": {
         "additionalProperties": false,
-        "description": "Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or\nphone set here is marked as entered by a member and not verified.",
+        "description": "Only what is sent changes. A ``name`` is the team's; ``use_platform_name`` goes back to the\nplatform's. ``fields`` merges: a key set to null is removed. An email or\nphone set here is marked as entered by a member and not verified.",
         "properties": {
           "clear_email": {
             "default": false,
@@ -8247,6 +8267,19 @@
             ],
             "title": "Fields"
           },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "phone": {
             "anyOf": [
               {
@@ -8258,6 +8291,11 @@
               }
             ],
             "title": "Phone"
+          },
+          "use_platform_name": {
+            "default": false,
+            "title": "Use Platform Name",
+            "type": "boolean"
           }
         },
         "title": "ContactPatch",
@@ -8411,6 +8449,15 @@
             "title": "Name",
             "type": "string"
           },
+          "name_source": {
+            "default": "platform",
+            "enum": [
+              "platform",
+              "team"
+            ],
+            "title": "Name Source",
+            "type": "string"
+          },
           "phone": {
             "anyOf": [
               {
@@ -8440,6 +8487,17 @@
           "platform": {
             "title": "Platform",
             "type": "string"
+          },
+          "platform_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Name"
           },
           "profile_picture_url": {
             "anyOf": [
