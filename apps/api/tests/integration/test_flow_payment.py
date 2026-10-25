@@ -55,7 +55,11 @@ async def execute(world: World, sql: str, **params: Any) -> None:
 
 async def with_flow(world: World, definition: dict[str, Any]) -> None:
     automation_id = await make_automation(
-        world.engine, workspace_id=world.wid, account_id=world.account_id, message_text=None
+        world.engine,
+        workspace_id=world.wid,
+        account_id=world.account_id,
+        message_text=None,
+        keywords=("kurta",),
     )
     await execute(
         world,
@@ -82,7 +86,7 @@ def pay_flow(**step: Any) -> dict[str, Any]:
     return {
         "start": "pay",
         "steps": [
-            {"type": "payment", "id": "pay", "method": "upi", **step},
+            {"type": "payment", "id": "pay", "method": "upi", "next": "after", **step},
             {"type": "send", "id": "after", "text": "Thanks!"},
         ],
     }
@@ -102,7 +106,7 @@ async def outbound(world: World) -> list[dict[str, Any]]:
 
 
 async def test_the_step_orders_the_chosen_products_and_sends_the_upi_request(world: World) -> None:
-    await set_plan(world.engine, str(world.wid), "pro")
+    await world.plan("pro")
     await upi(world)
     kurta = await make_product(world.engine, workspace_id=world.wid)
     await with_flow(
@@ -146,7 +150,7 @@ async def test_the_step_orders_the_chosen_products_and_sends_the_upi_request(wor
 
 
 async def test_the_price_is_the_catalogues_when_the_step_runs(world: World) -> None:
-    await set_plan(world.engine, str(world.wid), "pro")
+    await world.plan("pro")
     await upi(world)
     kurta = await make_product(world.engine, workspace_id=world.wid)
     await with_flow(
@@ -166,7 +170,7 @@ async def test_the_price_is_the_catalogues_when_the_step_runs(world: World) -> N
 
 
 async def test_draft_mode_asks_for_the_conversations_unpaid_order(world: World) -> None:
-    await set_plan(world.engine, str(world.wid), "pro")
+    await world.plan("pro")
     await upi(world)
     await with_flow(world, pay_flow(source="draft"))
     dm = await world.dm(ref(), "I want the kurta")
@@ -197,7 +201,7 @@ async def test_draft_mode_asks_for_the_conversations_unpaid_order(world: World) 
 
 
 async def test_draft_mode_with_nothing_to_ask_for_fails_with_a_reason(world: World) -> None:
-    await set_plan(world.engine, str(world.wid), "pro")
+    await world.plan("pro")
     await upi(world)
     await with_flow(world, pay_flow(source="draft"))
     dm = await world.dm(ref(), "I want the kurta")
@@ -229,7 +233,7 @@ async def test_a_workspace_that_left_pro_fails_the_step_at_run_time(world: World
 
 
 async def test_a_method_that_is_not_set_up_fails_the_step_with_the_reason(world: World) -> None:
-    await set_plan(world.engine, str(world.wid), "pro")  # no UPI address saved
+    await world.plan("pro")  # no UPI address saved
     kurta = await make_product(world.engine, workspace_id=world.wid)
     await with_flow(
         world,

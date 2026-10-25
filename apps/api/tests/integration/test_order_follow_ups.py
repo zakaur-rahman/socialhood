@@ -28,7 +28,7 @@ from tests.integration.test_orders import (
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
 from tests.support.broadcasts import Shop, shop
-from tests.support.catalogue import make_product
+from tests.support.catalogue import kurta_data, make_product
 
 
 @pytest.fixture
@@ -230,7 +230,12 @@ async def test_a_link_without_part_payments_ignores_a_part_and_a_part_link_needs
     assert await process_last(engine, redis) is WebhookStatus.IGNORED
     assert (await ws.ok("GET", f"/orders/{order['id']}"))["status"] == "awaiting_payment"
 
-    usd = await make_product(engine, workspace_id=ws.wid, currency="USD")
+    # A second product in the same workspace needs its own SKUs.
+    data = kurta_data()
+    data.currency = "USD"
+    for variant in data.variants:
+        variant.sku = f"USD-{variant.sku}"
+    usd = await make_product(engine, workspace_id=ws.wid, data=data)
     other, _ = await order_in_chat(ws, engine, kurta=usd)
     refused = await ws.call(
         "POST",
@@ -310,12 +315,12 @@ async def test_a_razorpay_order_is_refunded_in_part_then_in_full(
 async def test_a_refund_must_have_a_reason_and_fit_what_was_paid(
     ws: Ws, client: httpx.AsyncClient, engine: AsyncEngine, redis: Redis
 ) -> None:
-    unpaid, _ = await order_in_chat(ws, engine)
+    unpaid, kurta = await order_in_chat(ws, engine)
     nothing = await ws.call("POST", f"/orders/{unpaid['id']}/refunds", json={"reason": "x"})
     assert nothing.status_code == 422
     assert nothing.json()["detail"] == "Only an order with a payment can be refunded."
 
-    order = await paid_by_razorpay(ws, client, engine, redis)
+    order = await paid_by_razorpay(ws, client, engine, redis, kurta=kurta)
     no_reason = await ws.call("POST", f"/orders/{order['id']}/refunds", json={"reason": ""})
     assert no_reason.status_code == 422
     too_big = await ws.call(
@@ -564,7 +569,7 @@ async def test_a_new_total_cancels_the_old_link_and_can_send_a_new_one(
 
 
 async def test_a_paid_or_cancelled_order_cannot_be_edited(ws: Ws, engine: AsyncEngine) -> None:
-    paid, _ = await order_in_chat(ws, engine)
+    paid, kurta = await order_in_chat(ws, engine)
     await ws.ok("POST", f"/orders/{paid['id']}/mark-paid", json={})
     refused = await ws.call("PATCH", f"/orders/{paid['id']}", json={"note": "x"})
     assert refused.status_code == 422
@@ -573,7 +578,7 @@ async def test_a_paid_or_cancelled_order_cannot_be_edited(ws: Ws, engine: AsyncE
         == "An order can be changed until someone pays it. This one is paid."
     )
 
-    gone, _ = await order_in_chat(ws, engine)
+    gone, _ = await order_in_chat(ws, engine, kurta=kurta)
     await ws.ok("POST", f"/orders/{gone['id']}/cancel")
     assert (await ws.call("PATCH", f"/orders/{gone['id']}", json={"note": "x"})).status_code == 422
 

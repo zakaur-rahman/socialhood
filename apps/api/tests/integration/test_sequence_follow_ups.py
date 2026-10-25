@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 
 from tests.integration.test_sequences import (
     DAY,
@@ -114,6 +115,12 @@ async def test_the_numbers_per_sequence_and_per_step(desk: Shop) -> None:  # noq
         await enter(desk, who, tag_id)
     start = datetime.now(UTC)
     assert await sweep(desk, start + timedelta(hours=25)) == {"sent": 2, "skipped": 1}
+    # The sweep ran at a made-up time 25 hours on; the reply below happens now, so bring the runs
+    # back to the real clock for "followed by a customer message" to hold.
+    async with desk.engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE sequence_step_runs SET ran_at = ran_at - interval '25 hours'")
+        )
     await reply(desk, ben)  # Ben answers the first step: stopped, and counted as a reply
 
     stats = await desk.ws.ok("GET", f"/sequences/{sequence['id']}/analytics")

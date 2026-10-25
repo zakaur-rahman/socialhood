@@ -240,6 +240,7 @@ EXAMPLE_BODIES.update(
         ("POST", "/v1/w/{wid}/orders/{order_id}/mark-paid"): {},
         # C-125: B's order edited, shipped and refunded.
         ("PATCH", "/v1/w/{wid}/orders/{order_id}"): {"note": "Taken over"},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/cancel"): {},
         ("POST", "/v1/w/{wid}/orders/{order_id}/fulfil"): {},
         ("POST", "/v1/w/{wid}/orders/{order_id}/refunds"): {"reason": "Taken over"},
         ("PUT", "/v1/w/{wid}/integrations/payments/razorpay"): {

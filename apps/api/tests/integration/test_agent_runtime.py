@@ -51,14 +51,28 @@ from tests.support.analysis import add_owner_member, use_credits
 from tests.support.inbox import make_workspace
 from tests.support.ingest import jobs
 
-# As stored: the test tools' refs name no parent (a comment's post, a message's conversation).
-POST_REF = {"kind": "post", "id": str(LATEST_POST), "label": "Reel of 26 Sep", "parent_id": None}
-COMMENT_REF = {"kind": "comment", "id": str(COMMENT), "label": "“Love this!”", "parent_id": None}
+# As stored: the test tools' refs name no parent (a comment's post, a message's conversation) and
+# no week (only a report ref has one).
+POST_REF = {
+    "kind": "post",
+    "id": str(LATEST_POST),
+    "label": "Reel of 26 Sep",
+    "parent_id": None,
+    "week": None,
+}
+COMMENT_REF = {
+    "kind": "comment",
+    "id": str(COMMENT),
+    "label": "“Love this!”",
+    "parent_id": None,
+    "week": None,
+}
 EARLIER_REF = {
     "kind": "post",
     "id": str(EARLIER_POST),
     "label": "Post of 20 Sep",
     "parent_id": None,
+    "week": None,
 }
 
 

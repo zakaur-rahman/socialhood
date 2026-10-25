@@ -189,6 +189,7 @@ async def test_a_page_photo_story_publishes_without_an_address(desk: Desk) -> No
     assert (await desk.post_row(made.id))["status"] == "published"
 
     acct = await desk.account(page)
+    acct.platform = "facebook"  # the desk's helper builds an Instagram account
     assert await adapter_for(acct, desk.deps).list_stories(acct) == []  # no read API for Pages
 
 
