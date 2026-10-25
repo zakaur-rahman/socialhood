@@ -299,6 +299,13 @@ describe("range and platform controls (VIS-11)", () => {
     );
   });
 
+  it("offers only the platform under a lead list (C-135)", () => {
+    show(leadListVisual(), { onAsk: vi.fn() });
+    const controls = screen.getByTestId("visual-controls");
+    expect(within(controls).queryByRole("radio", { name: "Last 30 days" })).toBeNull();
+    expect(within(controls).getByRole("radio", { name: "Facebook" })).toBeInTheDocument();
+  });
+
   it("has no controls on an older answer or on a visual with no range to change", () => {
     const { unmount } = show(trendVisual());
     expect(screen.queryByTestId("visual-controls")).toBeNull();

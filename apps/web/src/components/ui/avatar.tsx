@@ -61,11 +61,11 @@ function AvatarFallback({
 
 /**
  * The platform badge at the avatar's bottom right (DESIGN_SYSTEM §5, §8.2): a platform fill from
- * the caller (`PLATFORM_BG`) with the glyph in `on-brand`, cut out of the picture by a 2 px ring in
+ * the caller (`PLATFORM_LOGO_BG`) with the glyph in `on-brand`, cut out of the picture by a 2 px ring in
  * the panel colour. A ring, not a border, so the glyph keeps its size. ContactAvatar (and the
  * account avatars) draw their badge with it; the identity colours stay where they are (D-13).
  *
- *   <Avatar size="lg">…<AvatarBadge className={PLATFORM_BG.instagram}><PlatformGlyph … /></AvatarBadge></Avatar>
+ *   <Avatar size="lg">…<AvatarBadge className={PLATFORM_LOGO_BG.instagram}><PlatformGlyph … /></AvatarBadge></Avatar>
  */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (

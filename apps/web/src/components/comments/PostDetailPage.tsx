@@ -1,15 +1,14 @@
 "use client";
 
 import type { Route } from "next";
-import Link from "next/link";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { cn } from "@/lib/utils";
-import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError } from "@/lib/api/errors";
+import { isNotFound } from "@/lib/api/errors";
+import { NotFoundState } from "@/components/states/NotFoundState";
 import { usePost, useSocialAccounts } from "@/lib/api/queries";
 import { mediaTypeLabel } from "@/lib/comments/format";
 import { formatDay } from "@/lib/tz";
@@ -77,20 +76,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
 
   if (post.isPending) return <DetailSkeleton />;
   if (post.isError) {
-    if (post.error instanceof ApiError && post.error.status === 404) {
-      return (
-        <EmptyState
-          className="flex-1"
-          title="Post not found"
-          body="It may have been deleted, or it belongs to another workspace."
-          action={
-            <Link href={back.href} className="text-sm text-brand-fg underline-offset-4 hover:underline">
-              Back to Comments
-            </Link>
-          }
-        />
-      );
-    }
+    if (isNotFound(post.error)) return <NotFoundState thing="post" backHref={back.href} backLabel="Back to Comments" />;
     return <ErrorState error={post.error} onRetry={() => void post.refetch()} />;
   }
 

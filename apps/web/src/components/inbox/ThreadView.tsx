@@ -15,6 +15,8 @@ import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
+import { isNotFound } from "@/lib/api/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +95,9 @@ export function ThreadView({
   const conversation = useConversation(wid, conversationId);
 
   if (conversation.isError) {
+    if (isNotFound(conversation.error)) {
+      return <NotFoundState thing="conversation" backHref={`/w/${workspace.slug}/inbox` as Route} backLabel="Back to Inbox" />;
+    }
     return <ErrorState error={conversation.error} onRetry={() => void conversation.refetch()} />;
   }
   if (!conversation.data) {

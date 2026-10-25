@@ -351,6 +351,20 @@ export const SCREENS: Screen[] = [
     open: (ctx) => marketingPage(ctx.page, "/"),
   },
   {
+    name: "not-found-site",
+    what: "The 404 page on the public site, signed out",
+    signedOut: true,
+    open: (ctx) => marketingPage(ctx.page, "/no-such-page"),
+  },
+  {
+    name: "not-found-app",
+    what: "The 404 page inside a workspace, in the app shell",
+    open: async (ctx) => {
+      await go(ctx.page, `${app(ctx)}/no-such-page`);
+      await heading(ctx.page);
+    },
+  },
+  {
     name: "privacy",
     what: "The privacy policy (/privacy), signed out",
     signedOut: true,

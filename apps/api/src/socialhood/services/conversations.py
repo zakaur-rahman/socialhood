@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import check_entitlement
 from socialhood.errors import ApiError, FieldError
+from socialhood.models.contacts import NameSource
 from socialhood.models.identity import User
 from socialhood.models.inbox import (
     Contact,
@@ -438,6 +439,8 @@ async def conversation_detail(
                 first_seen_at=contact.first_seen_at or contact.created_at,
                 platform_user_id=contact.platform_user_id,
                 follows_business=contact.follows_business,
+                name_source=NameSource(contact.name_source).value,
+                platform_name=contact.platform_name,
             ),
             "reply_window": reply_window(
                 conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now

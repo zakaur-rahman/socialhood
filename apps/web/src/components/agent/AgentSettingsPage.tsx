@@ -108,6 +108,8 @@ function CreditsStat() {
   const workspace = useCurrentWorkspace();
   const billing = useBilling(workspace.id);
   const credits = usageMeter(billing.data, "ai_credits");
+  // The box's place is held while the plan loads, so the header doesn't grow when it arrives.
+  if (billing.isPending) return <Skeleton className="h-[4.25rem] w-36 rounded-lg" />;
   if (!credits || typeof credits.limit !== "number") return null;
   const count = new Intl.NumberFormat("en-US");
   return (
@@ -140,13 +142,18 @@ function PolicyCard() {
             <ShieldCheck aria-hidden />
             Mode: <span>{MODE_LABEL[mode]}</span>
           </Badge>
+        ) : policy.isPending ? (
+          <Skeleton className="h-6 w-36 rounded-full" />
         ) : null
       }
     >
       {policy.isPending ? (
         <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
-          <Skeleton className="h-3 w-1/3" />
-          <Skeleton className="h-3 w-2/3" />
+          {/* Lines are 20 px apart, like the sentence's, and the sentence is about four lines on a phone. */}
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-full sm:hidden" />
+          <Skeleton className="h-3 w-1/3 sm:hidden" />
         </div>
       ) : policy.isError ? (
         <ErrorState error={policy.error} onRetry={() => void policy.refetch()} />

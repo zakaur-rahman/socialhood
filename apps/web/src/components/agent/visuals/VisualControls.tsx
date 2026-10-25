@@ -23,6 +23,7 @@ export function VisualControls({
   credits,
   now,
   busy,
+  showRange = true,
   onChange,
 }: {
   selection: Selection;
@@ -30,6 +31,8 @@ export function VisualControls({
   now?: Date;
   /** A question is being sent, or another run in the thread is working. */
   busy?: boolean;
+  /** False for a lead list: it is whoever is waiting now, so there is no range to change. */
+  showRange?: boolean;
   onChange: (hints: RunHints) => void;
 }) {
   const noteId = useId();
@@ -38,20 +41,22 @@ export function VisualControls({
   return (
     <div className="space-y-1.5" data-testid="visual-controls">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <ToggleGroup
-          variant="chips"
-          aria-label="Range"
-          aria-describedby={noteId}
-          value={selection.rangeDays === null ? "" : String(selection.rangeDays)}
-          disabled={disabled}
-          onValueChange={(value) => onChange(controlHints(selection, { rangeDays: Number(value) as 7 | 30 | 90 }))}
-        >
-          {RANGE_OPTIONS.map((days) => (
-            <ToggleGroupItem key={days} value={String(days)} aria-label={`Last ${days} days`}>
-              {days} days
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        {showRange ? (
+          <ToggleGroup
+            variant="chips"
+            aria-label="Range"
+            aria-describedby={noteId}
+            value={selection.rangeDays === null ? "" : String(selection.rangeDays)}
+            disabled={disabled}
+            onValueChange={(value) => onChange(controlHints(selection, { rangeDays: Number(value) as 7 | 30 | 90 }))}
+          >
+            {RANGE_OPTIONS.map((days) => (
+              <ToggleGroupItem key={days} value={String(days)} aria-label={`Last ${days} days`}>
+                {days} days
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        ) : null}
         <ToggleGroup
           variant="chips"
           aria-label="Platform"

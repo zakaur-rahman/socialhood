@@ -6,7 +6,7 @@ import type { AgentRunDetail, AgentStepProgress } from "@/lib/api/types";
 import { agentRun, runDetail } from "@/test/agent";
 import { leadListVisual, leadRow, tableVisual, trendPoint, trendVisual } from "@/test/visuals";
 
-import { controlGate, controlHints, costWords, currentSelection, offersControls } from "./controls";
+import { controlGate, controlHints, costWords, currentSelection, offersControls, offersRange } from "./controls";
 import { REF_KIND_LABEL } from "./format";
 import { applyAgentStepEvent, cancelVisualRefetches, VISUAL_REFETCH_MS, VISUAL_TOOLS } from "./cache";
 import { moreLeads, prepareRepliesHint, prepareRepliesHints, scoreText, stageLabel } from "./leads";
@@ -265,7 +265,9 @@ describe("controls (VIS-11)", () => {
   it("offers controls on trends, comparisons and period rankings only", () => {
     expect(offersControls(trendVisual())).toBe(true);
     expect(offersControls(tableVisual())).toBe(false);
-    expect(offersControls(leadListVisual())).toBe(false);
+    expect(offersControls(leadListVisual())).toBe(true); // platform only (C-135)
+    expect(offersRange(leadListVisual())).toBe(false);
+    expect(offersRange(trendVisual())).toBe(true);
   });
 });
 

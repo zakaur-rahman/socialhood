@@ -101,6 +101,7 @@ from socialhood.platforms.events import (
 from socialhood.realtime.events import queue_conversation, queue_message
 from socialhood.repositories import inbox
 from socialhood.repositories import ingest as rows
+from socialhood.services import contact_names
 from socialhood.services.inbox_views import UNSENT_PREVIEW, conversation_touch, preview_text
 from socialhood.services.webhooks import events as webhook_events
 
@@ -545,8 +546,7 @@ class _Ingest:
             conv.awaiting_reply = True
         conv.last_inbound_at = _later(conv.last_inbound_at, msg.occurred_at)
         contact.last_seen_at = _later(contact.last_seen_at, msg.occurred_at)
-        if event.contact_name and contact.display_name != event.contact_name:
-            contact.display_name = event.contact_name
+        contact_names.apply_platform_name(contact, event.contact_name)
         if not self.backfill:
             conv.unread_count += 1
             if conv.status == ConversationStatus.ARCHIVED:

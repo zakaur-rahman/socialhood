@@ -128,7 +128,7 @@ export function useUpdateContact(wid: string) {
       unwrap(
         api.PATCH("/v1/w/{wid}/contacts/{contact_id}", {
           params: { path: { wid, contact_id: id } },
-          body: { clear_email: false, clear_phone: false, ...body },
+          body: { clear_email: false, clear_phone: false, use_platform_name: false, ...body },
         }),
       ),
     onSuccess: (record) => {

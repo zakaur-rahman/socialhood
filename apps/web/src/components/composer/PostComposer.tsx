@@ -4,7 +4,6 @@ import { PAGE_TITLE } from "@/styles/tokens";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Copy, EllipsisVertical, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -13,8 +12,8 @@ import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
 import { BackLink, STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
-import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { ApiError, isPlanLimitError, toApiError } from "@/lib/api/errors";
+import { isNotFound, isPlanLimitError, toApiError } from "@/lib/api/errors";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
   composerKeys,
@@ -143,19 +142,8 @@ export function PostComposer({
   const post = useComposerPost(workspace.id, id);
   if (post.isPending) return <ComposerSkeleton />;
   if (post.isError) {
-    if (post.error instanceof ApiError && post.error.status === 404) {
-      return (
-        <EmptyState
-          className="flex-1"
-          title="Post not found"
-          body="It may have been deleted."
-          action={
-            <Link href={scheduleHref(workspace.slug)} className="text-sm text-brand-fg underline-offset-4 hover:underline">
-              Back to Schedule
-            </Link>
-          }
-        />
-      );
+    if (isNotFound(post.error)) {
+      return <NotFoundState thing="post" backHref={scheduleHref(workspace.slug)} backLabel="Back to Schedule" />;
     }
     return <ErrorState error={post.error} onRetry={() => void post.refetch()} />;
   }

@@ -27,9 +27,14 @@ export const costWords = `About ${CONTROL_CREDITS.min} to ${CONTROL_CREDITS.max}
 
 export type Selection = { rangeDays: RangeDays | null; platform: PlatformChoice | null };
 
-/** The visuals that offer controls; a table or a lead list has no range or platform to change. */
+/**
+ * The visuals that offer controls; a table has no range or platform to change. A lead list has a
+ * platform but no range (it is whoever is waiting now): see `offersRange`.
+ */
 export function offersControls(visual: Visual): boolean {
   switch (visual.kind) {
+    case "lead_list":
+      return true;
     case "trend":
       return true;
     case "metric_comparison":
@@ -40,6 +45,11 @@ export function offersControls(visual: Visual): boolean {
     default:
       return false;
   }
+}
+
+/** Whether the range chips show: every visual with controls except the lead list. */
+export function offersRange(visual: Visual): boolean {
+  return visual.kind !== "lead_list";
 }
 
 function periodDays(visual: Visual): number | null {

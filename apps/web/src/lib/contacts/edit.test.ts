@@ -13,17 +13,24 @@ const def = (key: string, type: FieldDefinition["type"] = "text"): FieldDefiniti
   position: 0,
 });
 const defs = [def("city"), def("age", "number"), def("size", "choice")];
-const record = { email: "a@example.com", phone: null, fields: { city: "Pune", age: 31 } };
+const record = { name: "Asha R.", email: "a@example.com", phone: null, fields: { city: "Pune", age: 31 } };
 
 describe("contact edits (GR-17)", () => {
   it("shows stored values as text and missing ones as empty", () => {
     expect(fieldText(31)).toBe("31");
     expect(fieldText(null)).toBe("");
     expect(editFrom(record, defs)).toEqual({
+      name: "Asha R.",
       email: "a@example.com",
       phone: "",
       fields: { city: "Pune", age: "31", size: "" },
     });
+  });
+
+  it("sends a changed name, and never a blanked one (C-135)", () => {
+    const before = editFrom(record, defs);
+    expect(buildPatch(before, { ...before, name: " Asha (wholesale) " }, defs)).toEqual({ name: "Asha (wholesale)" });
+    expect(buildPatch(before, { ...before, name: "  " }, defs)).toBeNull();
   });
 
   it("makes no patch when nothing changed", () => {

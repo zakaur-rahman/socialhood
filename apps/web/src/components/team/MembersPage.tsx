@@ -182,8 +182,6 @@ export function MembersPage() {
           </ul>
         </Card>
 
-        <AssignmentCard />
-
         <section aria-labelledby="pending-invitations" className="space-y-3">
           <h2 id="pending-invitations" className="text-base font-semibold">
             Pending invitations
@@ -239,6 +237,9 @@ export function MembersPage() {
             </Card>
           )}
         </section>
+
+        {/* Last: it loads on its own and nothing is below it to move. */}
+        <AssignmentCard />
       </div>
     );
   }

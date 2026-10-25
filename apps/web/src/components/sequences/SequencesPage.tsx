@@ -10,12 +10,12 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useSequences } from "@/lib/api/queries";
 import type { Sequence } from "@/lib/api/types";
 import { SEQUENCE_STATUS } from "@/lib/sequences/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { META } from "@/styles/tokens";
+import { RowCardsSkeleton, SkeletonRegion } from "@/components/states/skeletons";
 
 /**
  * GR-24: Sequences. Timed follow-up messages after something happens (a lead is captured, a tag is
@@ -50,10 +50,9 @@ export function SequencesPage() {
         ) : null}
 
         {list.isPending ? (
-          <div className="space-y-3">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
+          <SkeletonRegion label="Loading sequences">
+            <RowCardsSkeleton count={3} />
+          </SkeletonRegion>
         ) : list.isError ? (
           <ErrorState error={list.error} onRetry={() => void list.refetch()} />
         ) : list.data.items.length === 0 ? (

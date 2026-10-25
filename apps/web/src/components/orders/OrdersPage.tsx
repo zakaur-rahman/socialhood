@@ -11,7 +11,6 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBleed } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useOrders } from "@/lib/api/queries";
@@ -22,6 +21,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { OrderSheet } from "./OrderSheet";
 import { PaymentsCard } from "./PaymentsCard";
+import { SkeletonRegion, TableSkeleton } from "@/components/states/skeletons";
 
 type Filter = "all" | OrderStatus;
 
@@ -59,19 +59,6 @@ export function OrdersPage() {
   return (
     <PageFrame title="Orders">
       <div className="space-y-6">
-        {!entitled ? (
-          <Alert tone="brand">
-            Orders and payment requests are part of Pro. You can see what is here, but making orders needs Pro.{" "}
-            {manager ? (
-              <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
-                See plans
-              </button>
-            ) : null}
-          </Alert>
-        ) : null}
-
-        {manager ? <PaymentsCard wid={wid} /> : null}
-
         <Card asChild padding="roomy">
           <section aria-labelledby="orders-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -103,12 +90,22 @@ export function OrdersPage() {
               </div>
             </div>
 
+            {!entitled ? (
+              <Alert tone="brand" className="mt-4">
+                Orders and payment requests are part of Pro. You can see what is here, but making orders needs Pro.{" "}
+                {manager ? (
+                  <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
+                    See plans
+                  </button>
+                ) : null}
+              </Alert>
+            ) : null}
+
             <CardBleed className="mt-5 border-t border-line">
               {orders.isPending ? (
-                <div className="space-y-3 p-(--card-padding)" role="status" aria-busy="true" aria-label="Loading orders">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
+                <SkeletonRegion label="Loading orders">
+                  <TableSkeleton columns={6} rows={7} />
+                </SkeletonRegion>
               ) : orders.isError ? (
                 <div className="p-(--card-padding)">
                   <ErrorState error={orders.error} onRetry={() => void orders.refetch()} />
@@ -170,6 +167,9 @@ export function OrdersPage() {
             </CardBleed>
           </section>
         </Card>
+
+        {/* After the orders: the card is taller once its settings load, and nothing is below it to move. */}
+        {manager ? <PaymentsCard wid={wid} /> : null}
       </div>
 
       <OrderSheet order={open} limits={limits} onOpenChange={(next) => (next ? undefined : setOpenId(null))} />

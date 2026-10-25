@@ -1081,7 +1081,7 @@ describe("PostComposer loading and access", () => {
     renderWithApi(<PostComposer id="gone" />, {
       handlers: { "GET /v1/w/:wid/scheduled-posts/:id": () => problem(404, "not_found", "Not found") },
     });
-    expect(await screen.findByText("Post not found")).toBeInTheDocument();
+    expect(await screen.findByText("This post doesn't exist or was deleted")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to Schedule" })).toHaveAttribute("href", "/w/maple/schedule");
   });
 

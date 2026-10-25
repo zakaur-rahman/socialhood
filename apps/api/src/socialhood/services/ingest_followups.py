@@ -37,6 +37,7 @@ from socialhood.realtime.events import commit_and_publish, queue_conversation, q
 from socialhood.repositories import inbox
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import social_accounts as accounts
+from socialhood.services import contact_names
 from socialhood.services.ingest import COPYABLE
 
 log = get_logger(__name__)
@@ -136,7 +137,7 @@ async def _store(
             return
         profile = read.profile
         if profile is not None:
-            contact.display_name = profile.name or contact.display_name
+            contact_names.apply_platform_name(contact, profile.name)
             contact.username = profile.username or contact.username
             contact.profile_picture_url = profile.profile_picture_url or contact.profile_picture_url
             if profile.follows_business is not None:

@@ -30,6 +30,7 @@ const kabir = conversation({
     profile_picture_url: null,
     first_seen_at: "2026-09-20T09:00:00Z",
     platform_user_id: "178",
+    name_source: "platform",
   },
 });
 

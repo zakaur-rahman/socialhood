@@ -5699,3 +5699,164 @@ Also fixed: `publish_target` set each collaborator's Pending invite after `settl
   the most any post accepts: 15 minutes (900 s), an Instagram Reel's limit. The 90-second limit for
   carousel and Facebook videos (and 60 s for Stories) is enforced when the post is saved, by the
   publishing rules. Upload message: "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."
+
+## C-135 · Polish A: contact names, account card colours and small leftovers (feature/polish-names-colours)
+
+On top of the combined GR branch (migrations to 0052). **One migration, 0053** (expand-only).
+
+### A name the team saved is never replaced
+- **The rule.** `contacts.name_source` (`platform` default, or `team`) says who chose
+  `display_name`; `contacts.platform_name` keeps the latest profile name the platform sent. The
+  rule lives in one place, `services/contact_names.py`: a platform name is always stored in
+  `platform_name` and becomes the shown name only while `name_source = platform`; an empty or
+  missing name never overwrites anything.
+- **Every channel.** *The owner asked about WhatsApp; the same code serves Instagram, Facebook, the
+  website widget and WhatsApp, so the rule is built once for all of them.* Inbound messages
+  (`ingest._inbound`), the profile follow-up (`ingest_followups._store`) and the widget's typed
+  visitor name go through `apply_platform_name`; a new contact also starts with `platform_name`.
+- **What counts as the team's name.** A rename (`PATCH /contacts/{id}` with `name`, in the app and
+  the public API, which share `ContactPatch`) and a contact the team creates (public API
+  `POST /contacts` with a name). `use_platform_name: true` hands the name back: `name_source` is
+  `platform` again and `platform_name` is copied over (without one, the saved name stays shown
+  until the next message brings it). *There is no contact CSV import in the product (only the
+  catalogue imports files), and Ask has no write action that types a contact name, so there was
+  nothing to change there.*
+- **Responses.** `ContactRecord` and the inbox `ContactDetail` gain `name_source` and
+  `platform_name`; the contacts list is unchanged.
+- **Web.** The contact drawer has a Name field (a changed name is sent; a blanked one is not).
+  When the team's name differs from the platform's, the drawer header and the inbox details panel
+  show a quiet "Instagram name: Priya N." line (the platform word from the channel) with "Use this
+  name". Existing contacts keep `name_source = platform` and an empty `platform_name` until their
+  next message (*no backfill: older names cannot be told apart from team-typed ones*).
+
+### Account cards in the platforms' own colours
+- `PLATFORM_LOGO_BG` (`bg-instagram-logo-gradient`, `bg-facebook-logo`, `bg-whatsapp-logo`,
+  `bg-web`) is used wherever a badge or tile holds the glyph alone: the account card, the AI
+  settings account tile, avatar platform badges, the platform strip dot, the billing meter tiles and
+  the marketing tiles. The darkened `PLATFORM_BG` stays for fills with text (contrast). DESIGN_SYSTEM
+  §1.6 states the rule.
+
+### Small leftovers
+- **View on Facebook.** The post menu and the card peek in Schedule take their label from the
+  platform of the account the link is from (`viewLabelOf`); the composer banner already did.
+- **Sign-in contrast.** Clerk's "Secured by" line is an unnamed `<p data-variant="buttonSmall"
+  data-color="inherit">` inside the footer; the `footer` element rule in `lib/clerk-appearance.ts`
+  sets it to solid `fg-secondary` (both themes, since the variable follows the theme). *Not
+  measured with axe here (no browser run); the selector is the one axe reported.*
+- **Lead list platform control (VIS-11 leftover).** The lead list offers the platform chips only
+  (`offersRange` is false for it: it is whoever is waiting now); `list_contacts` also accepts
+  `facebook`.
+- **VIS-X2.** Account names in the agent's system prompt are JSON-quoted on one line, at most 60
+  characters (`agent/context.quoted`), so they are data. **VIS-X4.** DESIGN_SYSTEM §8.2 has the
+  trend, table, lead list and controls. Both are marked in the backlog.
+
+### Tests (written; the DB-free ones were run)
+Unit: `test_contact_names.py`, `test_agent_context_names.py` (ruff, mypy and the unit and contract
+suites pass). Integration (not run): `test_contact_names.py` (inbound fills and updates a platform
+name, keeps a team name, a missing name never clears, rename sets team, revert works) and an assertion
+in `test_public_api.py` (create sets team). Vitest (not run): `edit.test.ts`, `ContactDrawer.test.tsx`,
+`PlatformGlyph.test.tsx`, `post-parts.test.ts`, `vis-lib.test.ts`, `VisualViewVis.test.tsx`, plus
+class updates in `ContactAvatar`, `PlatformStrip` and `BillingPage` tests. E2E (not run):
+`polish-names-colours.spec.ts`. *For the coordinator:* regenerate the client (`ContactPatch.name`,
+`use_platform_name`, `ContactRecord` and `ContactDetail` `name_source` and `platform_name`); no
+decision is pending an owner call (PD-n).
+
+## C-136 Polish B: skeletons and layout shift
+
+### Shared pieces
+- `components/states/skeletons.tsx`: `SkeletonRegion` (the one `aria-busy` region with one polite
+  "Loading" label), `CardSkeleton`, `RowSkeleton`, `RowCardsSkeleton`, `ListCardSkeleton`,
+  `TableSkeleton` (for use inside a `CardBleed`), `ChartSkeleton`, `MetricTileSkeleton`,
+  `MediaSkeleton` (a picture at its real aspect ratio). They use the real `Card`, so padding and
+  radius match; colours are the existing `bg-raised` skeleton and the pulse stops under reduced motion.
+- `Skeleton` is now `aria-hidden`: placeholders are invisible to assistive tech, the region announces.
+- Contacts, Leads, Sequences, Broadcasts, Orders and Products use the shared pieces (a list card,
+  row cards, a table with the real column count). Home, Comments grid, post detail, Schedule list,
+  Knowledge and Automations already had skeletons shaped like their cards and were kept.
+
+### No layout shift
+- `PageFrame` no longer keeps the header height in React state. `--page-header-h` starts at a CSS
+  value for a title-only header (3.8125rem; 4.3125rem from md) and the observer writes the
+  measured value straight onto the page element, so the first paint and the measured value agree
+  and nothing re-renders.
+- Inbox attachments reserve their box: images and videos take the platform's `width` and `height`
+  when present, otherwise a minimum box (images) or 16:9 (video) holds the place.
+- Fonts: `next/font` (Geist) already self-hosts with `display: swap` and a size-adjusted fallback.
+- The sidebar's collapsed state on first paint is unchanged.
+
+### Measured
+`e2e/layout-shift.spec.ts` records `layout-shift` entries (no recent input) from navigation to idle
+for 27 pages on a desktop and a phone viewport, with the API slowed by 350 ms, and fails above 0.1.
+It runs locally only (CI does not run e2e).
+
+Measured on the e2e stack (Chromium, API slowed 350 ms, three contacts). Every page is at or below 0.1
+on both viewports. CLS, desktop / phone:
+
+home 0.003 / 0.002; inbox 0.0006 / 0.0004; comments 0.0006 / 0; contacts 0.0006 / 0; leads 0.0006 / 0;
+orders 0.029 / 0.067; products 0.025 / 0.056; schedule 0.042 / 0; automations 0.004 / 0;
+sequences 0.0006 / 0; broadcasts 0.0006 / 0; knowledge 0.0006 / 0; ask 0.002 / 0; reports 0.0006 / 0;
+settings: workspace, connections, billing, ai, hours, replies, widget, appearance 0.0006 / 0 (each);
+members 0.0006 / 0.026; agent 0.014 / 0.020; integrations 0.0006 / 0.004; notifications 0.005 / 0.042;
+activity 0.001 / 0.004.
+
+What the first run found on a phone (leads 0.22, agent 0.16, products 0.13, orders 0.11, members 0.11,
+knowledge 0.075, automations 0.097) and the fixes:
+- Leads: the stage buttons' counts arrived after the summary and widened them, so the row wrapped.
+  The count's place is held (invisible "0") until it loads.
+- Orders and Products: the Pro notice and the settings cards (Payments; Shopify, WhatsApp catalogue)
+  grew above the list. The notice now sits inside the list card, and the settings cards come after
+  the list. The table skeleton is 7 and 8 rows (the empty state is about that tall on a phone).
+- Knowledge: the cards load on their own and pushed each other and the test box (below on a phone).
+  They show together once sources, brand voice and questions have all answered; the test box waits too below xl.
+- Members: the assignment card loaded between the list and the invitations; it is now last.
+- Settings, Agent: the mode sentence is about four lines on a phone, the skeleton is now as tall; the
+  mode badge and the AI credits box hold their places while they load.
+- Automations: the Broadcasts button (a flag) re-wrapped the header; its place is held until the flag is known.
+- `PageFrame`'s first-paint header height is 3.8125rem (4.3125rem from md), the title-only header's real height.
+- The spec also logs which elements moved for a page above 0.05 (set `CLS_PAGES` / `CLS_VIEWPORT` to narrow a run).
+It runs locally only (CI does not run e2e).
+
+Still not tied to the page's data: the "gone cold" note on Leads, a Broadcasts button when the flag is
+off, and a settings card that has no AI credits to show appear or disappear after load; they only show
+for workspaces that have them.
+
+## C-137 · Polish C: 404 handling and the 404 page (feature/polish-not-found)
+
+Web only; no API, model or migration change.
+
+**The 404 page**
+- `app/not-found.tsx` answers any address no route claims, with a real 404 status and `noindex`. It
+  wears the public site's frame (header, footer, always dark like the marketing pages) around
+  `NotFoundPage`. Visitors get "Go to the home page", "See pricing" and "Sign in"; once Clerk says
+  someone is signed in, "Open the app" replaces "Sign in".
+- `app/(app)/w/[slug]/not-found.tsx` is the in-app version, inside the workspace layout so the
+  sidebar stays: Go to Home, Open Inbox, Ask. A catch-all `[...rest]/page.tsx` under the workspace
+  calls `notFound()` so unknown sub-addresses reach it instead of the root page. *Deviation from
+  the brief:* no "search" link, because the app has no search page; Ask is the closest.
+- The illustration (`components/not-found/NotFoundIllustration.tsx`) is one inline SVG from
+  tokens only (`fill-*`, `stroke-*`): a short chat thread whose last message, drawn dashed with a
+  "?", has drifted off. It bobs and twinkles through `nf-drift` and `nf-twinkle` in `globals.css`,
+  and stays still under reduced motion. The requested path shows small under the text.
+- The product name comes from nothing hard-coded in the new files; the copy never says it.
+- *Known limit:* a `notFound()` thrown after a page has started streaming (the workspace pages
+  under a `loading.tsx`) can still answer with status 200; the page shows the same 404 and Next adds
+  `noindex` either way. The public 404 has the real status.
+
+**Missing resources inside the app**
+- `isNotFound(error)` (lib/api/errors.ts) is true for an API 404. `NotFoundState` shows "This
+  {post, conversation, automation, broadcast, sequence} doesn't exist or was deleted" with a link
+  back to the list. It replaces the earlier ad-hoc "Post not found" and "Automation not found"
+  states (wording changed, tests updated) and is added to the conversation, broadcast and sequence
+  pages, which showed the generic error. The contact drawer (`?contact=<id>`) shows the same text
+  with "Back to Contacts" (it closes the drawer).
+- A deleted resource and one in another workspace read the same, because the API answers 404 for
+  both. Any other error keeps the error state with Try again.
+- Orders, products and reports have no per-item pages, so nothing to map there.
+
+**Tests (run in the polish-batch check: vitest and the e2e spec pass)**
+- Vitest: `components/not-found/NotFound.test.tsx`, `components/states/NotFoundState.test.tsx`
+  (`isNotFound` mapping included); `PostDetailPage.test.tsx` and `PostComposer.test.tsx` expect the
+  new wording.
+- E2E: `apps/web/e2e/not-found.spec.ts` (public 404 with status, noindex and links; app 404 in the
+  shell; missing post and conversation with working back links; another workspace's contact and a
+  made-up one read the same). Screenshots: `not-found-site` and `not-found-app` in ui-shots.
