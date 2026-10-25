@@ -124,8 +124,13 @@ test.describe("GR-17 contacts", () => {
     await expect(drawer).toBeVisible();
     const box = await drawer.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(370); // the whole screen
-    await drawer.getByLabel("Email").fill("drawer@example.com");
-    await drawer.getByLabel("City").fill("Pune");
+    // The form is rebuilt when the field definitions arrive: type once they have, and check it held.
+    await expect(drawer.getByLabel("City")).toBeVisible();
+    await expect(async () => {
+      await drawer.getByLabel("Email").fill("drawer@example.com");
+      await drawer.getByLabel("City").fill("Pune");
+      await expect(drawer.getByLabel("Email")).toHaveValue("drawer@example.com", { timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
     await drawer.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Contact saved")).toBeVisible();
 

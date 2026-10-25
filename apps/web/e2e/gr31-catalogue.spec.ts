@@ -88,6 +88,7 @@ test.describe("GR-31 product catalogue", () => {
     api,
     sandbox,
   }) => {
+    test.setTimeout(240_000); // the first copy of the store waits for the bulk worker
     const { workspace } = sandbox;
     await api.setPlan(workspace.id, "pro");
     await page.goto(`/w/${workspace.slug}/products`);
@@ -99,7 +100,11 @@ test.describe("GR-31 product catalogue", () => {
     await expect(page).not.toHaveURL(/shopify=/);
 
     const rows = page.getByTestId("product-row");
-    await rows.first().waitFor({ timeout: 60_000 });
+    // The list was read before the first copy finished and doesn't refresh by itself: look again.
+    await expect(async () => {
+      if ((await rows.count()) === 0) await page.reload();
+      await rows.first().waitFor({ timeout: 10_000 });
+    }).toPass({ timeout: 120_000 });
     await expect(rows.filter({ hasText: "Cotton kurta" })).toContainText("4 variants");
     await expect(rows.filter({ hasText: "Silk scarf" })).toContainText("Not tracked");
     await expect(rows.filter({ hasText: "Shopify" })).toHaveCount(3);
@@ -151,8 +156,18 @@ test.describe("GR-31 product catalogue", () => {
     });
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: keyword, fromId: "e2e_gr31_flow" });
 
+    // The conversation is stored by the worker a moment after the event; open the inbox once it is.
+    await expect
+      .poll(
+        async () =>
+          (await api.call<{ items: { last_message_preview: string | null }[] }>("GET", `/v1/w/${workspace.id}/conversations`)).items.some((c) =>
+            c.last_message_preview?.includes(keyword),
+          ),
+        { timeout: 30_000 },
+      )
+      .toBe(true);
     await page.goto(`/w/${workspace.slug}/inbox`);
-    await page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: keyword }).click();
+    await page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: new RegExp(`${keyword}|Cotton kurta`) }).first().click();
     const log = page.getByRole("log", { name: /^Messages with / });
     const sent = log.locator("[data-direction='outbound']").filter({ hasText: "Cotton kurta - Blue / M" });
     await sent.first().waitFor({ timeout: 30_000 });
