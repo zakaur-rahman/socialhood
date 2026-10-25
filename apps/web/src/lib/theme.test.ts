@@ -4,7 +4,7 @@ import {
   DEFAULT_THEME,
   THEME_COOKIE,
   THEME_INIT_SCRIPT,
-  THEME_PIN_DARK_SCRIPT,
+  THEMED_ROUTE,
   applyThemeAttribute,
   applyThemeColor,
   parseTheme,
@@ -77,12 +77,15 @@ describe("the theme choice (C-129)", () => {
 });
 
 describe("the head script (runs before first paint)", () => {
-  const run = (script: string) => new Function(script)();
+  const run = (script: string, path = "/w/maple") => {
+    window.history.replaceState(null, "", path);
+    new Function(script)();
+  };
 
   it("is plain text with no import, built from the cookie name", () => {
     expect(THEME_INIT_SCRIPT).toContain(THEME_COOKIE);
     expect(THEME_INIT_SCRIPT).not.toMatch(/import|require/);
-    expect(THEME_INIT_SCRIPT.length).toBeLessThan(300);
+    expect(THEME_INIT_SCRIPT.length).toBeLessThan(400);
   });
 
   it.each(["light", "system", "dark"] as const)("copies the %s cookie to data-theme", (choice) => {
@@ -99,10 +102,26 @@ describe("the head script (runs before first paint)", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  it("pins a page dark whatever the cookie says", () => {
-    document.cookie = `${THEME_COOKIE}=light; path=/`;
-    run(THEME_INIT_SCRIPT);
-    run(THEME_PIN_DARK_SCRIPT);
-    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+  it.each(["/", "/pricing", "/compare/manychat", "/an-unknown-page"])(
+    "pins %s dark whatever the cookie says (the public site and its 404)",
+    (path) => {
+      document.cookie = `${THEME_COOKIE}=light; path=/`;
+      run(THEME_INIT_SCRIPT, path);
+      expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    },
+  );
+
+  it.each(["/app", "/w/maple/inbox", "/sign-in", "/sign-up/verify", "/dev/tokens"])(
+    "lets %s follow the cookie",
+    (path) => {
+      document.cookie = `${THEME_COOKIE}=light; path=/`;
+      run(THEME_INIT_SCRIPT, path);
+      expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    },
+  );
+
+  it("doesn't mistake a public path that starts like an app one", () => {
+    expect(THEMED_ROUTE.test("/apple")).toBe(false);
+    expect(THEMED_ROUTE.test("/websites")).toBe(false);
   });
 });

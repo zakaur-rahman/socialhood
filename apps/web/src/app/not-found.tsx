@@ -5,7 +5,6 @@ import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteNotFoundActions } from "@/components/not-found/NotFoundActions";
 import { NotFoundPage } from "@/components/not-found/NotFoundPage";
 import { ThemePin } from "@/components/theme/ThemePin";
-import { THEME_PIN_DARK_SCRIPT } from "@/lib/theme";
 
 // A 404 is never worth indexing; Next answers with status 404 for an unknown URL.
 export const metadata: Metadata = { title: "Page not found", robots: { index: false, follow: true } };
@@ -19,7 +18,6 @@ export const metadata: Metadata = { title: "Page not found", robots: { index: fa
 export default function RootNotFound() {
   return (
     <div className="scheme-dark flex min-h-dvh flex-col bg-canvas bg-ambient bg-fixed">
-      <script dangerouslySetInnerHTML={{ __html: THEME_PIN_DARK_SCRIPT }} />
       <ThemePin />
       <SiteHeader />
       <main id="main" className="flex flex-1 flex-col">

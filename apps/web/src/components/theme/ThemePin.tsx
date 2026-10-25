@@ -7,7 +7,7 @@ import { applyThemeAttribute, readThemeCookie } from "@/lib/theme";
 /**
  * For a page that is always dark (the marketing pages): sets `data-theme="dark"` on <html> before
  * paint on a client navigation, and gives the user's choice back when the page unmounts. The first
- * load is pinned by an inline script in the layout (THEME_PIN_DARK_SCRIPT), because this runs only
+ * load is pinned by the root layout's head script (THEME_INIT_SCRIPT, by route), because this runs only
  * after hydration. The subtree also carries `scheme-dark`, so its colours are dark even for the
  * moment before either runs.
  */
