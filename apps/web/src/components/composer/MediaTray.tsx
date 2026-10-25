@@ -15,6 +15,7 @@ import {
   FORMAT_LABEL,
   MAX_ASSETS,
   POST_FILE_ACCEPT,
+  storyVideoProblem,
   videoTooLong,
   type AssetInfo,
 } from "@/lib/publishing/rules";
@@ -45,7 +46,7 @@ type Drag = { from: number; pointerId: number; drop: number };
 function ProgressBar({ item, label }: { item: UploadItem; label: string }) {
   const percent = Math.round(item.progress * 100);
   return (
-    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-scrim/80 p-1.5">
+    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-heavy p-1.5">
       <Progress
         aria-label={`Uploading ${label}`}
         value={percent}
@@ -183,8 +184,9 @@ export function MediaTray({
         <ul aria-label="Post media" className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {entries.map(({ asset, replacing }, index) => {
             const label = assetLabel(asset, index);
-            const crop = cropNeeded(asset);
-            const tooLong = videoTooLong(asset);
+            // A Story takes any photo shape (9:16 fits best) and videos of 3 to 60 seconds.
+            const crop = format === "story" ? null : cropNeeded(asset);
+            const tooLong = format === "story" ? storyVideoProblem(asset) !== null : videoTooLong(asset);
             const dragging = drag?.from === index;
             const gap = drag ? drag.drop : -1;
             const marker = drag && gap !== drag.from && gap !== drag.from + 1 ? (gap === index ? "before" : gap === entries.length && index === entries.length - 1 ? "after" : null) : null;
@@ -355,7 +357,7 @@ function UploadOverlay({
 }) {
   if (item.status === "failed") {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-media-scrim/85 p-2 text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-media-heavy p-2 text-center">
         <AlertCircle className="size-4 text-danger" aria-hidden />
         <p className="line-clamp-3 text-2xs text-danger-fg">{item.error ?? "The upload didn't finish."}</p>
         <div className="flex gap-1">

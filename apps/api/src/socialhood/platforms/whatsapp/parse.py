@@ -17,6 +17,8 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from socialhood.platforms.events import (
+    CartItem,
+    CartOrder,
     DeliveryStatus,
     InboundEvent,
     InboundMediaRef,
@@ -74,6 +76,38 @@ def _location_text(location: dict[str, Any]) -> str | None:
     return "\n".join(lines) or None
 
 
+def cart_of(message: dict[str, Any]) -> CartOrder | None:
+    """A customer's cart from an ``order`` message: ``order.catalog_id``, ``order.text`` and
+    ``order.product_items[]`` (``product_retailer_id``, ``quantity``, ``item_price``, ``currency``).
+    Prices and quantities may arrive as numbers or text, so both are read; an item without a
+    retailer id or a positive quantity is dropped. *Unverified against a live number (C-121).*"""
+    body = _dict(message.get("order"))
+    items: list[CartItem] = []
+    for raw in body.get("product_items") or []:
+        item = _dict(raw)
+        retailer = item.get("product_retailer_id")
+        try:
+            quantity = int(item.get("quantity") or 0)
+        except (TypeError, ValueError):
+            quantity = 0
+        if not retailer or quantity < 1:
+            continue
+        price = item.get("item_price")
+        items.append(
+            CartItem(
+                retailer_id=str(retailer),
+                quantity=quantity,
+                price=str(price) if price is not None else None,
+                currency=str(item["currency"]) if item.get("currency") else None,
+            )
+        )
+    if not items:
+        return None
+    catalog = body.get("catalog_id")
+    note = body.get("text")
+    return CartOrder(str(catalog) if catalog else None, str(note) if note else None, tuple(items))
+
+
 def _content(message: dict[str, Any]) -> tuple[str, str | None, tuple[InboundMediaRef, ...]]:
     """(kind, text, attachments) for one message."""
     kind = str(message.get("type", ""))
@@ -91,6 +125,11 @@ def _content(message: dict[str, Any]) -> tuple[str, str | None, tuple[InboundMed
         return message_kind, body.get("caption"), (ref,)
     if kind == "location":
         return "location", _location_text(body), ()
+    if kind == "order":  # a cart sent from a catalogue message (GR-33): the text says so
+        cart = cart_of(message)
+        count = sum(i.quantity for i in cart.items) if cart else 0
+        label = f"Sent an order of {count} {'item' if count == 1 else 'items'}"
+        return "text", f"{label}. {cart.note}" if cart and cart.note else label, ()
     if kind == "button":  # a quick-reply button on one of our templates
         return "text", body.get("text") or body.get("payload"), ()
     if kind == "interactive":
@@ -142,6 +181,7 @@ def _message(payload: dict[str, Any], account_ref: str) -> InboundEvent:
         attachments=attachments,
         reply_to_id=context.get("id") or None,
         referral=referral_info(message.get("referral")),
+        order=cart_of(message) if kind == "order" else None,
     )
 
 

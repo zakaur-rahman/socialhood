@@ -31,6 +31,18 @@ describe("ConversationRow (UX-INB-04)", () => {
     expect(row).not.toHaveAttribute("aria-current");
   });
 
+  // GR-20: who has the conversation, as initials with the name for screen readers.
+  it("assigned: shows the assignee, and nothing when nobody has it", () => {
+    renderRow({ assignee: { user_id: "u2", name: "Sam Rao", avatar_url: null } });
+    expect(screen.getByTestId("row-assignee")).toHaveTextContent("SR");
+    expect(screen.getByText("Assigned to Sam Rao")).toHaveClass("sr-only");
+  });
+
+  it("unassigned: no assignee mark", () => {
+    renderRow({ assignee: null });
+    expect(screen.queryByTestId("row-assignee")).not.toBeInTheDocument();
+  });
+
   it("read: secondary name, no unread dot", () => {
     renderRow({ unread_count: 0 });
     expect(screen.getByText("Priya Nair")).toHaveClass("text-fg-secondary");

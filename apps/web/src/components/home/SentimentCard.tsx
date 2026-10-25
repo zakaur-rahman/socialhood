@@ -2,6 +2,7 @@ import { SentimentBar } from "@/components/comments/SentimentBar";
 import { Card, CardTitle } from "@/components/ui/card";
 import type { SentimentSplit } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { formatCount, formatShare } from "./format";
 
@@ -17,7 +18,7 @@ function SplitRow({ title, noun, split, within }: { title: string; noun: string;
     // A container: the legend's columns follow the card's width, not the viewport's.
     <div data-testid={`sentiment-${noun}`} className="@container space-y-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-medium">{title}</h3>
+        <h3 className={ITEM_TITLE}>{title}</h3>
         {split.total > 0 ? (
           <p className="text-xs text-fg-secondary tabular-nums">
             {formatCount(split.analysed)} of {formatCount(split.total)} analysed

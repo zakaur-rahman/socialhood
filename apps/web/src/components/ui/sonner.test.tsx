@@ -70,8 +70,8 @@ describe("Toaster (UI-024)", () => {
     const item = toastItem();
     expect(item).toHaveAttribute("data-styled", "false");
     expect(item).toHaveAttribute("data-type", "error");
-    expect(item).toHaveClass("bg-popover", "border", "border-line-strong", "text-fg", "data-[type=error]:text-danger-fg");
-    // The floating elevation (D-12): overlay through bg-popover, and the dark floating shadow.
+    expect(item).toHaveClass("glass-float", "border", "border-line-strong", "text-fg", "data-[type=error]:text-danger-fg");
+    // The floating elevation (D-12): overlay through bg-overlay, and the dark floating shadow.
     expect(item).toHaveClass("rounded-lg", "shadow-floating", "focus-visible:shadow-floating!", "text-sm", "font-sans");
     expect(classes(item).filter((c) => /shadow-(sm|md|lg|xl)/.test(c))).toEqual([]);
     expect(list()).not.toHaveAttribute("data-sonner-theme", "dark");
@@ -96,7 +96,7 @@ describe("Toaster (UI-024)", () => {
     setWidth(1280);
     render(<Toaster />);
     show(() => toast("Saved"));
-    expect(toastItem()).toHaveClass("focus-visible:outline-2!", "focus-visible:outline-ring!");
+    expect(toastItem()).toHaveClass("focus-visible:outline-2!", "focus-visible:outline-brand!");
   });
 
   it("gives an action the Button recipe: 28 px, and 40 px on coarse pointers", () => {
@@ -104,7 +104,7 @@ describe("Toaster (UI-024)", () => {
     render(<Toaster />);
     show(() => toast("Conversation archived", { action: { label: "Undo", onClick: () => {} }, duration: TOAST_ACTION_DURATION }));
     const undo = screen.getByRole("button", { name: "Undo" });
-    expect(undo).toHaveClass("h-7", "pointer-coarse:min-h-10", "bg-raised", "text-fg");
+    expect(undo).toHaveClass("h-7", "pointer-coarse:min-h-10", "glass-raised", "text-fg");
   });
 
   it("keeps a toast with an action for 10 s, where sonner's default is 4 s", () => {

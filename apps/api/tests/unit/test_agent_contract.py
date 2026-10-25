@@ -61,8 +61,10 @@ from socialhood.schemas.agent import (
     ApprovalStatusName,
     AutomationDraftAction,
     CommentReplyAction,
+    FlowProposalAction,
     RiskTierName,
     ScheduleMessageAction,
+    SegmentProposalAction,
     StepKindName,
     StepStatusName,
 )
@@ -76,13 +78,13 @@ PA_ROUTES = {
     "list_agent_threads": ("get", "/v1/w/{wid}/agent/threads", None),
     "get_agent_policy": ("get", "/v1/w/{wid}/agent/policy", None),
     "update_agent_policy": ("put", "/v1/w/{wid}/agent/policy", "R2"),
-    "list_agent_approvals": ("get", "/v1/w/{wid}/agent/approvals", "R2"),
+    "list_agent_approvals": ("get", "/v1/w/{wid}/agent/approvals", None),
     "approve_agent_approval": (
         "post",
         "/v1/w/{wid}/agent/approvals/{approval_id}/approve",
-        "R2",
+        None,
     ),
-    "reject_agent_approval": ("post", "/v1/w/{wid}/agent/approvals/{approval_id}/reject", "R2"),
+    "reject_agent_approval": ("post", "/v1/w/{wid}/agent/approvals/{approval_id}/reject", None),
 }
 
 
@@ -105,12 +107,16 @@ def test_policy_shapes_match_the_stored_defaults() -> None:
 
 
 def test_action_cards_cover_every_kind() -> None:
-    kinds = [
-        get_args(model.model_fields["kind"].annotation)
-        for model in (ScheduleMessageAction, CommentReplyAction, AutomationDraftAction)
-    ]
+    cards = (
+        ScheduleMessageAction,
+        CommentReplyAction,
+        AutomationDraftAction,
+        FlowProposalAction,
+        SegmentProposalAction,
+    )
+    kinds = [get_args(model.model_fields["kind"].annotation) for model in cards]
     assert kinds == [(kind,) for kind in get_args(ActionKind)]
-    for model in (ScheduleMessageAction, CommentReplyAction, AutomationDraftAction):
+    for model in cards:
         assert model.model_fields["kind"].is_required()  # the web narrows on it
 
 

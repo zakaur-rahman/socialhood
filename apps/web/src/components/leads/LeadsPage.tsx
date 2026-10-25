@@ -14,17 +14,19 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContacts, useLeadSettings, useLeadSummary, useSetLeadStage, useUpdateLeadSettings } from "@/lib/api/queries";
-import type { ContactListItem, LeadStage } from "@/lib/api/types";
+import type { ContactListItem, LeadStage, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
 import { coldDayOptions, LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { StageControl } from "./StageControl";
 
@@ -191,7 +193,7 @@ function StageColumn({
 
   return (
     <section aria-label={`${label} leads`} className={cn("min-w-0 space-y-3", visibleBelowLarge ? "block" : "hidden lg:block")}>
-      <h2 className="hidden items-center gap-2 text-sm font-medium lg:flex">
+      <h2 className={cn(ITEM_TITLE, "hidden items-center gap-2 lg:flex")}>
         {label}
         {count !== undefined ? <span className="text-xs text-fg-secondary tabular-nums">{count}</span> : null}
       </h2>
@@ -237,9 +239,9 @@ function LeadCard({ item, onOpen }: { item: ContactListItem; onOpen: () => void 
   const move = useSetLeadStage(wid);
   const last = item.last_activity_at ? relativeTime(item.last_activity_at) : null;
   return (
-    <li data-testid="lead-card" className="space-y-2 rounded-xl border border-border bg-surface p-3">
+    <li data-testid="lead-card" className={cn(cardVariants(), "space-y-2 p-3")}>
       <div className="flex items-start gap-3">
-        <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as "instagram" | "whatsapp"} size={32} />
+        <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as Platform} size={32} />
         <div className="min-w-0 flex-1">
           <button type="button" onClick={onOpen} aria-label={`Open ${item.name}`} className="block max-w-full truncate text-left font-medium hover:underline">
             {item.name}

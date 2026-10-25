@@ -81,6 +81,8 @@ async def make_scheduled_post(
                 assert asset is not None, "no such asset in this workspace"
                 kinds.append(asset.resource_type)
             values.setdefault("format", derived_format(kinds))
+            if values["format"] == "story":  # a story format only comes from a Story choice
+                values.setdefault("kind", "story")
             post = ScheduledPost(
                 status=status,
                 caption=caption,

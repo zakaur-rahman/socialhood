@@ -3,8 +3,11 @@
 /* Addition to §4.2 (docs/CONFLICTS.md C-002): keyframes and data-state variants used by shadcn v4 components. No colours. */
 @import "shadcn/tailwind.css";
 
-/* Addition to §4.2 (C-002): the app is dark-only (D13), so `dark:` follows the class on <html>, not the OS setting. */
-@custom-variant dark (&:is(.dark *));
+/* Addition to §4.2 (C-002), reworked for light mode (C-129): `dark:` follows the theme attribute on
+   <html> (or a pinned subtree), not the OS setting. App code doesn't use it (the lint refuses it):
+   a token has both values, so a component never needs a per-theme class. Kept for `shadcn add`
+   output. Under the System choice it is false, because only the browser knows the scheme. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* A short viewport, 500 px tall or less: 200% zoom, a landscape phone (RSP-006). Sticky bars stay in
    the flow there (`short:static`, shell/sticky-bar.ts) so they can't take a quarter of the screen,
@@ -14,8 +17,22 @@
 /* Additions marked "C-070" are the UI audit's token foundation (docs/ui-audit/DESIGN_SYSTEM.md
    §1.13, §1.9, §2, §7): names for values already in use; the few on-screen changes are listed in
    docs/CONFLICTS.md C-070. Those marked "C-071" apply the owner's decisions D-01 (control edges),
-   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069. styles/tokens.ts
-   mirrors every value and tokens.test.ts checks this file against it. */
+   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069.
+
+   THIS FILE IS THE ONE PLACE A THEME VALUE IS WRITTEN (C-127, docs/ui-audit/THEME.md). Colours,
+   shadows, sizes, easings, radii, breakpoints and gradients live here and nowhere else.
+   `pnpm tokens` (scripts/gen-tokens.mjs, run by predev and prebuild) reads this file and writes
+   styles/tokens.generated.ts and .json, which the TypeScript consumers (Clerk, the OG image, the
+   manifest, the icon generator, /dev/tokens) read; tokens.ts holds only the descriptions. Edit a
+   value here, run `pnpm tokens`, commit the generated files.
+
+   TWO THEMES, ONE DECLARATION (C-129). A colour that differs between themes is written once as
+   `light-dark(LIGHT, DARK)`, light first, so the pair sits side by side. The browser picks by the
+   element's `color-scheme`: `<html data-theme>` sets it (dark, light, or both for System, which
+   follows the OS with no script), and a subtree can pin itself (`scheme-dark`: the marketing
+   pages). A colour with one value (a platform brand, the media scrim, `on-brand`) is the same in
+   both and is listed in `themeInvariant` (styles/tokens.ts). Shades are `color-mix` of a base
+   token and follow it. The generator splits the pairs into a dark and a light set. */
 
 @theme {
   /* The palette lock (UI-070, C-075): Tailwind's default colours are cleared, so only the
@@ -27,56 +44,95 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Surfaces: the v1 ladder */
-  --color-canvas: #000000;        /* app and thread background */
-  --color-panel: #1F1F1F;         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
-  --color-field: #1D1D1D;         /* inputs, incoming bubbles, segmented track */
-  --color-raised: #2A2A2A;        /* selected row, active segment, focused input, secondary button */
-  --color-raised-hover: #333333;
-  --color-overlay: #262626;       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
-  --color-line: rgb(255 255 255 / 0.10);
-  --color-line-subtle: rgb(255 255 255 / 0.05);
-  --color-line-strong: rgb(255 255 255 / 0.20);
-  --color-line-control: rgb(255 255 255 / 0.40);  /* edges that identify a control, 3:1 or more on every surface; --input (D-01, C-071) */
+  /* Surfaces: Midnight, a charcoal with a cool indigo cast (C-128). The ladder is canvas < field < panel < overlay < raised. */
+  --color-canvas: light-dark(#F5F6FB, #131520);        /* app and thread background */
+  --color-panel: light-dark(#FFFFFF, #1B1E2A);         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
+  --color-field: light-dark(#F0F1F8, #181B26);         /* inputs, incoming bubbles, segmented track */
+  --color-raised: light-dark(#E8EAF5, #252937);        /* selected row, active segment, focused input, secondary button */
+  --color-raised-hover: light-dark(#DEE1F0, #2E3343);
+  --color-overlay: light-dark(#FFFFFF, #222633);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
+  --color-line: light-dark(rgb(20 24 54 / 0.14), rgb(214 219 255 / 0.14));
+  --color-line-subtle: light-dark(rgb(20 24 54 / 0.08), rgb(214 219 255 / 0.08));
+  --color-line-strong: light-dark(rgb(20 24 54 / 0.24), rgb(214 219 255 / 0.24));
+  --color-line-glass: light-dark(rgb(20 24 54 / 0.14), rgb(214 219 255 / 0.16));  /* a card's edge on glass: a clear edge (the owner found 8% invisible), with the top highlight and the drop shadow (C-128) */
+  --color-line-control: light-dark(rgb(20 24 54 / 0.55), rgb(214 219 255 / 0.45));  /* edges that identify a control, 3:1 or more on every surface: dark 3.16 (raised-hover) to 3.63, light 3.61 to 3.91; --input (D-01, C-071, C-128, C-129) */
 
   /* States, as overlays so they work on any surface (C-070) */
-  --color-hover: rgb(255 255 255 / 0.05);    /* hover fill on any surface; neutral chip fill */
-  --color-pressed: rgb(255 255 255 / 0.10);  /* pressed or open: aria-expanded, data-state=open */
-  --color-scrim: rgb(0 0 0 / 0.60);          /* modal and drawer backdrop (UX-SH-02) */
-  --color-media-scrim: #000000;              /* on photos and video only, with an opacity (bg-media-scrim/60) */
+  --color-hover: light-dark(rgb(20 24 54 / 0.05), rgb(214 219 255 / 0.05));    /* hover fill on any surface; neutral chip fill */
+  --color-pressed: light-dark(rgb(20 24 54 / 0.09), rgb(214 219 255 / 0.10));  /* pressed or open: aria-expanded, data-state=open */
+  --color-scrim: light-dark(rgb(10 12 26 / 0.50), rgb(4 5 10 / 0.65));          /* modal and drawer backdrop (UX-SH-02) */
+  --color-media-scrim: #000000;              /* on photos and video only; the steps below are its named shades */
+  --color-media-wash: color-mix(in srgb, var(--color-media-scrim) 20%, transparent);   /* a light dim over a photo: file cards, thumbnails */
+  --color-media-chip: color-mix(in srgb, var(--color-media-scrim) 70%, transparent);   /* a label or button on a photo: count chips, captions */
+  --color-media-heavy: color-mix(in srgb, var(--color-media-scrim) 85%, transparent);  /* text over a photo: upload progress, the end of a caption fade */
+  --color-canvas-veil: color-mix(in srgb, var(--color-canvas) 30%, transparent);       /* a dimmed cell or inset: days outside the month, a card in a flow */
+  --color-panel-glass: color-mix(in srgb, var(--color-panel) 50%, transparent);        /* marketing cards over the page glow */
+  --color-panel-veil: color-mix(in srgb, var(--color-panel) 85%, transparent);         /* the floating marketing nav over scrolled content */
+
+  /* Glass (C-128): the surfaces that let the ambient light show through. Each is its solid token
+     at a set strength; the blur comes from the glass-* utilities below. Work panes are subtler than
+     cards on purpose: dense text sits on them. */
+  --color-panel-frost: light-dark(color-mix(in srgb, var(--color-panel) 88%, transparent), color-mix(in srgb, var(--color-panel) 82%, transparent));    /* work panes: sidebar, inbox panes, headers, composer bar */
+  --color-card-glass: light-dark(color-mix(in srgb, var(--color-panel) 72%, transparent), color-mix(in srgb, var(--color-panel) 68%, transparent));     /* cards: where the glass shows */
+  --color-overlay-frost: light-dark(color-mix(in srgb, var(--color-overlay) 92%, transparent), color-mix(in srgb, var(--color-overlay) 86%, transparent));  /* what floats: menus, popovers, selects, dialogs, sheets, toasts */
+  --color-raised-frost: color-mix(in srgb, var(--color-raised) 72%, transparent);  /* the secondary button */
+  --color-frost-outline: light-dark(color-mix(in srgb, var(--color-panel) 55%, transparent), color-mix(in srgb, var(--color-panel) 45%, transparent));  /* the outline button */
+
+  /* The three glows of the ambient light (C-128, C-129), as colours so each theme sets its own
+     strength: indigo at the top corners and a deeper pool at the bottom on dark, lighter washes of
+     the brand on light. --gradient-ambient places them. */
+  --color-ambient-1: light-dark(color-mix(in srgb, var(--color-brand) 14%, transparent), color-mix(in srgb, var(--color-brand) 20%, transparent));
+  --color-ambient-2: light-dark(color-mix(in srgb, var(--color-brand-strong) 8%, transparent), color-mix(in srgb, var(--color-brand-strong) 13%, transparent));
+  --color-ambient-3: light-dark(color-mix(in srgb, var(--color-brand) 10%, transparent), color-mix(in srgb, var(--color-brand-deep) 32%, transparent));
 
   /* Text */
-  --color-fg: #FFFFFF;
-  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071) */
-  --color-fg-disabled: #71717A;   /* disabled controls only (3.41:1 on panel: never readable text) */
+  --color-fg: light-dark(#14161F, #F3F4F8);
+  --color-fg-secondary: light-dark(#585C73, #A6A9BC);  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071); 5.4:1 or more on every dark surface (7.13 on panel), 5.05:1 or more on every light one (6.58 on panel) */
+  --color-fg-disabled: light-dark(#A3A6B8, #71758A);   /* disabled controls only (3.65:1 on dark panel, 2.41:1 on light: never readable text) */
   --color-on-brand: #FFFFFF;      /* text and icons on the brand gradient, brand-strong, danger-fill and platform fills (C-070) */
+  --color-on-brand-soft: color-mix(in srgb, var(--color-on-brand) 15%, transparent);         /* a quiet fill on a brand bubble: image and button previews */
+  --color-on-brand-line: color-mix(in srgb, var(--color-on-brand) 30%, transparent);         /* an edge on a brand bubble */
+  --color-on-brand-line-strong: color-mix(in srgb, var(--color-on-brand) 60%, transparent);  /* a chip edge on a brand bubble */
+  --color-fg-hover: color-mix(in srgb, var(--color-fg) 90%, transparent);  /* hover on the inverse button (bg-fg) */
 
   /* Brand */
-  --color-brand: #567FF8;         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text */
-  --color-brand-strong: #4467E6;  /* solid brand fills that carry text (4.85:1 with on-brand); the gradient's end (C-070) */
-  --color-brand-deep: #20338A;
-  --color-brand-fg: #9DB5FF;      /* brand-coloured text and icons on dark surfaces */
-  --color-brand-soft: rgb(86 127 248 / 0.15);
-  --color-brand-soft-hover: rgb(86 127 248 / 0.25);  /* hover and open on brand-soft: the soft button (C-073) */
-  --color-brand-line: rgb(86 127 248 / 0.35);
-  --color-shell-1: #3352CC;       /* logo tile and upgrade button */
-  --color-shell-2: #1C2D70;
+  --color-brand: light-dark(#5B57EA, #6D6AF5);         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text; 3:1 or more on every surface: dark 3.01 (raised-hover) to 4.35, light 4.04 to 5.25 */
+  --color-brand-strong: #5550E0;  /* solid brand fills that carry text (5.82:1 with on-brand in both themes); the gradient's end (C-070) */
+  --color-brand-deep: #2B2585;
+  --color-brand-fg: light-dark(#4640C8, #B5B3FF);      /* brand-coloured text and icons: 6.4:1 or more on every dark surface (8.58 on panel), 5.71:1 or more on every light one (7.43 on panel) */
+  --color-brand-soft: light-dark(rgb(91 87 234 / 0.12), rgb(109 106 245 / 0.15));
+  --color-brand-soft-hover: light-dark(rgb(91 87 234 / 0.20), rgb(109 106 245 / 0.25));  /* hover and open on brand-soft: the soft button (C-073) */
+  --color-brand-line: light-dark(rgb(91 87 234 / 0.40), rgb(109 106 245 / 0.35));  /* the light values are the light brand (#5B57EA) */
+  --color-shell-1: #4B44C9;       /* logo tile and upgrade button */
+  --color-shell-2: #231E6B;
 
   /* Semantic */
-  --color-success: #22C55E;
-  --color-warning: #FB923C;
-  --color-danger: #EF4444;        /* icons and borders */
-  --color-danger-fg: #FCA5A5;     /* danger text on dark */
+  --color-success: light-dark(#166534, #22C55E);  /* marks, and text on success-soft: light 4.9:1 or more on every light surface (a dark green so the text passes) */
+  --color-warning: light-dark(#92400E, #FB923C);  /* the same, light 4.9:1 or more (a dark amber) */
+  --color-danger: light-dark(#DC2626, #EF4444);        /* icons and borders */
+  --color-danger-fg: light-dark(#B91C1C, #FCA5A5);     /* danger text: 7.94:1 on dark overlay, light 4.31:1 or more over every light surface and soft fill (5.54 on panel) */
   --color-danger-fill: #C53030;   /* failed bubble background (white text) */
-  --color-success-soft: rgb(34 197 94 / 0.15);  /* chip, banner and callout fills (C-070) */
-  --color-warning-soft: rgb(251 146 60 / 0.15);
-  --color-danger-soft: rgb(239 68 68 / 0.15);
+  --color-success-soft: light-dark(rgb(22 163 74 / 0.12), rgb(34 197 94 / 0.15));  /* chip, banner and callout fills (C-070) */
+  --color-warning-soft: light-dark(rgb(217 119 6 / 0.12), rgb(251 146 60 / 0.15));
+  --color-danger-soft: light-dark(rgb(220 38 38 / 0.10), rgb(239 68 68 / 0.15));
+  --color-danger-line: color-mix(in srgb, var(--color-danger) 30%, transparent);  /* callout edges, as brand-line is for brand */
+  --color-warning-line: color-mix(in srgb, var(--color-warning) 40%, transparent);
+  --color-danger-fill-hover: color-mix(in srgb, var(--color-danger-fill) 90%, transparent);  /* hover on the destructive button */
 
   /* Platforms */
   --color-instagram: #BE185D;
   --color-whatsapp: #16A34A;
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
+  --color-web: #0F766E;  /* the website chat widget (GR-28): 5.5:1 with on-brand */
+  /* The platforms' own logo colours, for logo tiles only (Add account): the fills above are
+     darkened so white text on them passes 4.5:1; a logo tile carries no text. */
+  --color-instagram-logo-1: #F58529;
+  --color-instagram-logo-2: #DD2A7B;
+  --color-instagram-logo-3: #8134AF;
+  --color-instagram-logo-4: #515BD4;
+  --color-facebook-logo: #0866FF;
+  --color-whatsapp-logo: #25D366;
 
   /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
      series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */
@@ -84,17 +140,45 @@
   --color-chart-neutral: var(--color-fg-secondary);
   --color-chart-negative: var(--color-danger);
   --color-chart-series-1: var(--color-brand);
+  /* The categorical palette for several series (accounts, platforms, intents), in a fixed order that
+     is never cycled: brand indigo, orange, aqua, yellow, magenta, blue
+     (the strongest contrasts come first, so a workspace with a few accounts never gets two similar hues). Validated with the data-viz
+     checker per theme (lightness band, chroma, adjacent colour-blind and normal-vision separation);
+     the light yellow, aqua and magenta are under 3:1 on white, so every chart also has a legend, a
+     tooltip and a table. A 7th series folds into "Other" in the neutral token, never a new hue. */
+  --color-chart-series-2: light-dark(#EB6834, #D95926);   /* orange */
+  --color-chart-series-3: light-dark(#1BAF7A, #199E70);   /* aqua */
+  --color-chart-series-4: light-dark(#EDA100, #C98500);   /* yellow */
+  --color-chart-series-5: light-dark(#E87BA4, #D55181);   /* magenta */
+  --color-chart-series-6: light-dark(#2A8FD8, #2F8FE0);   /* blue */
 
   /* Type: the two sizes the scale lacked, each with its line height (C-070) */
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */
   --text-md: 0.9375rem;  --text-md--line-height: 1.5rem;     /* 15/24: reading (Ask, legal prose) */
+
+  /* Letter spacing and line height that were arbitrary values in the type roles (C-127) */
+  --tracking-eyebrow: 0.08em;     /* uppercase eyebrows only */
+  --leading-display: 1.08;        /* the marketing display heading */
+
+  /* Radius scale: Tailwind's own values, written here so the scale is visible and Clerk and the
+     global error page read it instead of restating it (C-127). Cards and dialogs are xl, inputs,
+     buttons and menus lg, small buttons and tooltips md; marketing cards 2xl (DESIGN_SYSTEM §4). */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
 
   /* Motion easings (C-070); the durations are --motion-* below */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes: colour, opacity, toggles */
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);       /* things arriving */
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);        /* things leaving */
 
-  /* Tailwind's breakpoints plus one (C-070) */
+  /* Tailwind's breakpoints plus one (C-070). md, lg and xl are Tailwind's own values, written here
+     so lib/breakpoints.ts reads them from the generated file instead of restating them (C-127). */
+  --breakpoint-md: 48rem;         /* 768 px: top bar and drawer below it */
+  --breakpoint-lg: 64rem;         /* 1024 px: sidebar expands; three-column dashboards */
+  --breakpoint-xl: 80rem;         /* 1280 px: inbox details inline; settings two columns */
   --breakpoint-wide: 90rem;       /* 1440 px: inbox details open by default, schedule rail inline */
 
   /* Elevation (DESIGN_SYSTEM §6; D-12, C-071): on near-black, Tailwind's 10% shadows don't show.
@@ -102,15 +186,88 @@
      toasts) and overlay (dialogs, alert dialogs, sheets, over the scrim). The 1 px `line` edge is a
      separate ring-1 ring-line (or a sheet's side border), so a call site's leftover shadow can't
      take the edge with it. */
-  --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);
-  --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);
+  --shadow-floating: 0 8px 24px -6px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.7));
+  --shadow-overlay: 0 24px 64px -12px light-dark(rgb(30 35 80 / 0.25), rgb(0 0 0 / 0.8));
+
+  /* Glass (C-128): a 1 px inset highlight along the top edge and a soft drop. The cool edge
+     around a card is the border (line-glass); the buttons' glow is brand-tinted. */
+  --shadow-glass: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06)), 0 1px 2px light-dark(rgb(30 35 80 / 0.08), rgb(0 0 0 / 0.30)), 0 12px 32px -14px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.65));
+  --shadow-highlight: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06));
+  --shadow-button-primary: inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px light-dark(color-mix(in srgb, var(--color-brand) 40%, transparent), color-mix(in srgb, var(--color-brand) 60%, transparent));
+  --shadow-button-secondary: inset 0 0 0 1px var(--color-line-glass), inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06));
+
+  /* Marketing glow (C-127): brand-tinted drops under marketing and auth cards. They replace
+     `shadow-2xl shadow-brand/15`, `hover:shadow-xl hover:shadow-brand/10` and
+     `shadow-lg shadow-brand/25`, so the size and the tint are chosen once. */
+  --shadow-glow: 0 25px 50px -12px color-mix(in srgb, var(--color-brand) 15%, transparent);
+  --shadow-glow-hover: 0 20px 25px -5px color-mix(in srgb, var(--color-brand) 10%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--color-brand) 10%, transparent);
+  --shadow-glow-button: 0 10px 15px -3px color-mix(in srgb, var(--color-brand) 25%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-brand) 25%, transparent);
 }
 
-/* Gradients (DESIGN_SYSTEM §1.9): four, each with one job; the stops are tokens (C-070). */
-@utility bg-brand-gradient { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%); }
-@utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%); }
-@utility bg-shell-gradient { background-image: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%); }
-@utility bg-glow-brand { background-image: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%); }
+/* Gradients (DESIGN_SYSTEM §1.9): four, each with one job, plus the marketing top glow; the stops
+   are tokens (C-070). Each is a variable too (C-127), so a consumer that can't use a utility reads
+   the same gradient: Clerk's primary button takes `var(--gradient-brand)`. */
+:root {
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%);
+  --gradient-brand-decor: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%);
+  --gradient-shell: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%);
+  --gradient-instagram-logo: linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%);
+  --gradient-glow-brand: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%);
+  --gradient-glow-brand-top: radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%);
+  /* The light behind the glass (C-128), fixed to the viewport on the body; the glows are the
+     --color-ambient-* tokens. */
+  --gradient-ambient:
+    radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%),
+    radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%),
+    radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%);
+}
+@utility bg-brand-gradient { background-image: var(--gradient-brand); }
+@utility bg-brand-gradient-decor { background-image: var(--gradient-brand-decor); }
+@utility bg-shell-gradient { background-image: var(--gradient-shell); }
+@utility bg-instagram-logo-gradient { background-image: var(--gradient-instagram-logo); }
+@utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
+@utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
+@utility bg-ambient { background-image: var(--gradient-ambient); }
+
+/* Glass surfaces (C-128): a frost colour and a blur, bundled. Work panes get a light blur, cards
+   and the secondary and outline buttons a medium one, what floats a strong one. Under
+   `prefers-reduced-transparency` they fall back to the solid token, so nothing depends on the
+   blur for contrast. The colours are the --color-*-frost tokens; the blur is not a colour. */
+:root {
+  --glass-blur-pane: blur(10px) saturate(130%);
+  --glass-blur-card: blur(16px) saturate(140%);
+  --glass-blur-float: blur(22px) saturate(150%);
+}
+@utility glass-pane {
+  background-color: var(--color-panel-frost);
+  -webkit-backdrop-filter: var(--glass-blur-pane);
+  backdrop-filter: var(--glass-blur-pane);
+  @media (prefers-reduced-transparency: reduce) { background-color: var(--color-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@utility glass-card {
+  background-color: var(--color-card-glass);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  backdrop-filter: var(--glass-blur-card);
+  @media (prefers-reduced-transparency: reduce) { background-color: var(--color-panel); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@utility glass-float {
+  background-color: var(--color-overlay-frost);
+  -webkit-backdrop-filter: var(--glass-blur-float);
+  backdrop-filter: var(--glass-blur-float);
+  @media (prefers-reduced-transparency: reduce) { background-color: var(--color-overlay); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@utility glass-raised {
+  background-color: var(--color-raised-frost);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  backdrop-filter: var(--glass-blur-card);
+  @media (prefers-reduced-transparency: reduce) { background-color: var(--color-raised); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@utility glass-outline {
+  background-color: var(--color-frost-outline);
+  -webkit-backdrop-filter: var(--glass-blur-card);
+  backdrop-filter: var(--glass-blur-card);
+  @media (prefers-reduced-transparency: reduce) { background-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 
 /* Motion durations (DESIGN_SYSTEM §7, C-070). The utilities set --tw-duration too, which
    tw-animate-css reads, so `duration-slow ease-enter` times transitions and animate-in alike. */
@@ -178,10 +335,28 @@
   to { background-position: -100% 0; }
 }
 
+/* The theme (C-129): `<html data-theme>` is dark (the default), light or system, and sets the
+   scheme that every `light-dark()` above reads. System takes both, so the OS decides with no
+   script. A subtree pins itself with `scheme-dark` (Tailwind's utility; the marketing pages). The
+   attribute is set before first paint (app/layout.tsx, lib/theme.ts). */
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="system"] { color-scheme: light dark; }
+
+/* The grain over the sidebar and the auth panel is a dark-theme texture: its opacity is a
+   variable, and it is off on light, and under System when the OS is light. */
+:root { --grain-opacity: 0.05; }
+:root[data-theme="light"] { --grain-opacity: 0; }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] { --grain-opacity: 0; }
+}
+
 :root {
-  color-scheme: dark;
-  /* shadcn/ui semantic variables mapped onto the tokens. They stay inside components/ui; app code
-     uses the tokens (DESIGN_SYSTEM §1.10). Every one has a --color-* mapping below (C-070). */
+  /* shadcn/ui semantic variables mapped onto the tokens. Nothing hand-written uses these names:
+     components, primitives included, wear the tokens (bg-overlay, text-fg-secondary, border-line
+     …) and the design lint refuses the alias class names. They stay only so that `shadcn add`
+     output, which is written in these names, still compiles and lands on the tokens. They are
+     listed in styles/colour-exceptions.ts. Every one has a --color-* mapping below (C-070). */
   --background: var(--color-canvas);   --foreground: var(--color-fg);
   --card: var(--color-panel);          --card-foreground: var(--color-fg);
   --popover: var(--color-overlay);     --popover-foreground: var(--color-fg);
@@ -191,8 +366,9 @@
   --accent: var(--color-hover);        --accent-foreground: var(--color-fg);
   --destructive: var(--color-danger);
   --border: var(--color-line);  --input: var(--color-line-control);  --ring: var(--color-brand);
-  --radius: 0.5rem;  /* inert: nothing reads it; Tailwind's default radii are the scale (DESIGN_SYSTEM §4) */
 }
+/* The same aliases as Tailwind colours, so `bg-popover` and `border-border` generate CSS. Kept for
+   `shadcn add` output only (see :root above). */
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
   --color-card: var(--card); --color-card-foreground: var(--card-foreground);
@@ -209,11 +385,23 @@
   * { border-color: var(--color-line); }
   /* Below md the 56 px top bar is sticky: a control scrolled into view lands below it (A11Y-008, C-070). */
   html { @variant max-md { scroll-padding-top: 4rem; } }
-  body { background: var(--color-canvas); color: var(--color-fg); }
+  /* The ambient light sits on the body, fixed, so the glass has something to blur (C-128). */
+  body { background-color: var(--color-canvas); background-image: var(--gradient-ambient); background-attachment: fixed; color: var(--color-fg); }
   /* In the base layer, so utilities still win (v1's unlayered rule squared off focused pills) */
   :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-  /* Placeholders are text: fg-secondary is 4.6:1 or more on every surface (D-06, C-071). */
+  /* Placeholders are text: fg-secondary is 5.4:1 or more on every surface (D-06, C-071). */
   ::placeholder { color: var(--color-fg-secondary); }
+  /* Thin scrollbars everywhere (owner, 2026-10-25): a 6 px rounded thumb on the line token, brighter
+     on hover, over a transparent track. Chromium and Safari style the ::-webkit-scrollbar parts and
+     ignore them once scrollbar-width/-color are set, so those standard properties (Firefox's thin,
+     about 8 px) apply only where the WebKit parts don't exist. */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: var(--color-line-strong); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-line-control); }
+  @supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
+  }
   /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070). */
   strong, b { font-weight: 600; }
   /* Reduced motion (DESIGN_SYSTEM §7.4, C-070): overlays, their scrims and skeletons appear and

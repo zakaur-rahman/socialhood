@@ -13,15 +13,16 @@ import { usePostComparison, usePostPerformance } from "@/lib/api/queries";
 import type { AgeName, MetricComparison, PostComparison, PostPerformance, SocialAccount } from "@/lib/api/types";
 import {
   AGE_LABEL,
-  AGES,
+  agesFor,
   atAge,
   baselineText,
   diffTone,
   diffWords,
+  figuresOf,
   formatDiff,
+  formatFigure,
   formatMetric,
   METRIC_LABEL,
-  METRICS,
   notEnoughHistory,
   youngerNote,
 } from "@/lib/analytics/format";
@@ -29,7 +30,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
-import { EYEBROW } from "@/styles/tokens";
+import { EYEBROW, ITEM_TITLE } from "@/styles/tokens";
 
 const TONE_TEXT = {
   up: "text-success",
@@ -69,8 +70,11 @@ function Figures({
 }) {
   const { metrics } = performance;
   const younger = youngerNote(performance, "figures");
-  const anyMissing = METRICS.some((metric) => metrics[metric] == null);
+  const figures = figuresOf(performance);
+  const anyMissing = figures.some((figure) => figure.value == null);
   const handle = account ? accountLabel(account) : "This account";
+  const platform = account?.platform === "facebook" ? "Facebook" : "Instagram";
+  const story = performance.media_type === "story";
 
   return (
     <div className="space-y-3" data-testid="post-figures">
@@ -86,8 +90,8 @@ function Figures({
           }
         >
           <AlertDescription className="text-xs">
-            {handle} didn&apos;t give Social Hood permission to read insights, so reach, views, shares and saves
-            aren&apos;t available. Reconnect to allow it.
+            {handle} didn&apos;t give Social Hood permission to read insights, so reach, views, shares
+            {story ? " and replies" : " and saves"} aren&apos;t available. Reconnect to allow it.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -100,30 +104,32 @@ function Figures({
           </p>
           {younger ? <p className="text-xs text-brand-fg">{younger}</p> : null}
           <dl className="grid grid-cols-2 gap-2">
-            {METRICS.map((metric) => (
+            {figures.map((figure) => (
               <CardInset
-                key={metric}
+                key={figure.key}
                 padding="compact"
-                className={cn(metric === "engagement_rate" && "col-span-2")}
-                data-metric={metric}
+                className={cn(figure.key === "engagement_rate" && "col-span-2")}
+                data-metric={figure.key}
               >
-                <dt className="text-xs text-fg-secondary">{METRIC_LABEL[metric]}</dt>
-                <dd className="text-lg font-semibold tabular-nums">{formatMetric(metric, metrics[metric])}</dd>
+                <dt className="text-xs text-fg-secondary">{figure.label}</dt>
+                <dd className="text-lg font-semibold tabular-nums">{formatFigure(figure)}</dd>
               </CardInset>
             ))}
           </dl>
           {performance.insights_granted && !performance.insights_final && metrics.reach != null ? (
-            <p className="text-xs text-fg-secondary">Instagram can take up to 48 h to settle these numbers.</p>
+            <p className="text-xs text-fg-secondary">{platform} can take up to 48 h to settle these numbers.</p>
           ) : null}
           {anyMissing && performance.insights_granted ? (
-            <p className="text-xs text-fg-secondary">— means Instagram has no figure for this post at this age.</p>
+            <p className="text-xs text-fg-secondary">— means {platform} has no figure for this post at this age.</p>
           ) : null}
         </>
       ) : (
         <div className="space-y-1 text-sm" data-testid="no-figures">
           <p className="font-medium">No figures yet</p>
           <p className="text-xs text-fg-secondary">
-            Social Hood reads a post&apos;s figures 1 h, 6 h, 24 h, 72 h, 7 days and 30 days after it&apos;s published.
+            {story
+              ? "Social Hood reads a Story's figures 1 h, 6 h and 23 h after it's published, before it goes down at 24 h."
+              : "Social Hood reads a post's figures 1 h, 6 h, 24 h, 72 h, 7 days and 30 days after it's published."}{" "}
             Posts published before you connected have figures only from then on.
           </p>
         </div>
@@ -218,7 +224,7 @@ export function PostPerformanceCard({
               <SelectValue placeholder="Latest" />
             </SelectTrigger>
             <SelectContent>
-              {AGES.map((value) => (
+              {agesFor(performance.data?.media_type).map((value) => (
                 <SelectItem key={value} value={value}>
                   {value === "lifetime" ? AGE_LABEL[value] : `At ${AGE_LABEL[value]}`}
                 </SelectItem>
@@ -245,7 +251,7 @@ export function PostPerformanceCard({
         </div>
 
         <div className="space-y-2 border-t border-line pt-4">
-          <h3 className="text-sm font-semibold">Compared with earlier posts</h3>
+          <h3 className={ITEM_TITLE}>Compared with earlier posts</h3>
           <div
             className={cn(comparison.isPlaceholderData && "text-fg-secondary")}
             aria-busy={comparison.isFetching || undefined}

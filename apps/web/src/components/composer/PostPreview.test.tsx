@@ -72,6 +72,43 @@ describe("PostPreview (FR-PUB-03, UX-CMP-02)", () => {
     expect(within(reel).getByLabelText("Video")).toBeInTheDocument();
   });
 
+  it("Story: a 9:16 phone with the account, no caption and no tabs (GR-39)", () => {
+    renderPreview({ assets: [assetInfo({ width: 1080, height: 1920 })], format: "story" });
+    const story = screen.getByRole("article", { name: "Story preview" });
+    expect(within(story).getByText("maple.bakery")).toBeInTheDocument();
+    expect(story).not.toHaveTextContent("Fresh #linen");
+    expect(screen.queryByRole("tab", { name: "Feed" })).not.toBeInTheDocument();
+    expect(screen.getByText("Disappears 24 hours after it is published.")).toBeInTheDocument();
+  });
+
+  it("a Facebook Page shows its text and photos in a Facebook post (GR-30)", () => {
+    const page = account({ id: "p1", platform: "facebook", username: "maple.page", display_name: "Maple Page" });
+    renderPreview({ accounts: [page], format: "carousel", assets: [assetInfo(), assetInfo({ id: "as2" })], captionFor: () => "Open late #tonight" });
+    const post = screen.getByRole("article", { name: "Facebook preview" });
+    expect(within(post).getByTestId("fb-caption")).toHaveTextContent("Open late #tonight");
+    expect(within(post).getByRole("list", { name: "Photos" }).children).toHaveLength(2);
+    expect(screen.queryByRole("tab", { name: "Feed" })).not.toBeInTheDocument();
+  });
+
+  it("a text post for a Page says where its text will show", () => {
+    const page = account({ id: "p1", platform: "facebook", username: "maple.page", display_name: "Maple Page" });
+    renderPreview({ accounts: [page], format: "text", assets: [], captionFor: () => "" });
+    expect(screen.getByText(/Maple Page.s post text shows here/)).toBeInTheDocument();
+  });
+
+  it("switches between an Instagram account and a Page when the post goes to both", () => {
+    const page = account({ id: "p1", platform: "facebook", username: "maple.page" });
+    renderPreview({ accounts: [maple, page] });
+    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+  });
+
+  it("Story without media says what to add", () => {
+    renderPreview({ assets: [], format: null });
+    expect(screen.getByRole("tab", { name: "Feed" })).toBeInTheDocument();
+    renderPreview({ assets: [], format: "story" });
+    expect(screen.getByText("Add one photo or video to see the Story.")).toBeInTheDocument();
+  });
+
   it("explains the Reel tab when the post isn't a single video", async () => {
     const user = userEvent.setup();
     renderPreview();

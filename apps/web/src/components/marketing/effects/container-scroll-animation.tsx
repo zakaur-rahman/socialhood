@@ -5,6 +5,8 @@ import { useRef, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { MARKETING_CARD } from "../primitives";
+
 /**
  * Container Scroll Animation, from Aceternity UI's free "container-scroll-animation"
  * (ui.aceternity.com/components/container-scroll-animation), adapted for Social Hood (C-068):
@@ -25,7 +27,7 @@ export function ContainerScroll({ children, className }: { children: ReactNode; 
     <div ref={ref} className={cn("relative [perspective:1000px]", className)}>
       <m.div
         style={{ rotateX, scale }}
-        className="mx-auto w-full origin-top rounded-2xl border border-line-strong bg-panel p-1.5 shadow-2xl shadow-brand/15 will-change-transform motion-reduce:transform-none! sm:p-2"
+        className={cn(MARKETING_CARD, "mx-auto w-full origin-top p-1.5 shadow-glow will-change-transform motion-reduce:transform-none! sm:p-2")}
       >
         <div className="overflow-hidden rounded-xl border border-line bg-canvas">{children}</div>
       </m.div>

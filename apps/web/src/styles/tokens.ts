@@ -1,70 +1,166 @@
 /**
- * The design tokens from spec §4.2 and the UI audit's design system (docs/ui-audit/DESIGN_SYSTEM.md),
- * as data: the /dev/tokens page renders them and a test checks globals.css against them, so the
- * CSS and the spec cannot drift apart silently. The type-role constants are the source for
- * components: import them (`EYEBROW` …) instead of restating the classes.
+ * What the design tokens are for, as data: the /dev/tokens page renders it and tokens.test.ts
+ * checks it against globals.css. The VALUES are not written here: globals.css is the only place a
+ * theme value is written, and `pnpm tokens` (scripts/gen-tokens.mjs) copies them into
+ * tokens.generated.ts, which this file reads (C-127, docs/ui-audit/THEME.md). What lives here is
+ * the description of each token (name, use, swatch class) and the type-role constants, which
+ * components import (`EYEBROW` …) instead of restating the classes.
  */
-/** `swatch` is a literal class so Tailwind emits the variable (it only keeps theme values in use). */
-export type ColorToken = { name: string; value: string; use: string; swatch: string };
+import { tokenValues } from "./tokens.generated";
 
-export const colorTokens: ColorToken[] = [
+/** `swatch` is a literal class so Tailwind emits the variable (it only keeps theme values in use). */
+export type ColorToken = { name: string; value: string; light: string; use: string; swatch: string };
+
+/** The two themes (C-129). Dark is the default; a token's `value` is its dark value, `light` its light one. */
+export type Theme = "dark" | "light";
+
+/** What each colour is for, by name. Every `--color-*` in globals.css needs an entry (tokens.test.ts). */
+const colorMeta: Record<string, { use: string; swatch: string }> = {
   // Surfaces
-  { name: "canvas", value: "#000000", use: "App and thread background", swatch: "bg-canvas" },
-  { name: "panel", value: "#1F1F1F", use: "Cards, sidebar, list pane, headers, composer bar, the phone drawer", swatch: "bg-panel" },
-  { name: "field", value: "#1D1D1D", use: "Inputs, incoming bubbles, segmented track", swatch: "bg-field" },
-  { name: "raised", value: "#2A2A2A", use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
-  { name: "raised-hover", value: "#333333", use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
-  { name: "overlay", value: "#262626", use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },
+  canvas: { use: "App and thread background", swatch: "bg-canvas" },
+  panel: { use: "Cards, sidebar, list pane, headers, composer bar, the phone drawer", swatch: "bg-panel" },
+  field: { use: "Inputs, incoming bubbles, segmented track", swatch: "bg-field" },
+  raised: { use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
+  "raised-hover": { use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
+  overlay: { use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },
   // States: overlays, so they work on any surface
-  { name: "hover", value: "rgb(255 255 255 / 0.05)", use: "Hover fill on any surface; neutral chip fill", swatch: "bg-hover" },
-  { name: "pressed", value: "rgb(255 255 255 / 0.10)", use: "Pressed or open (aria-expanded, data-state=open)", swatch: "bg-pressed" },
-  { name: "scrim", value: "rgb(0 0 0 / 0.60)", use: "Modal and drawer backdrop", swatch: "bg-scrim" },
-  { name: "media-scrim", value: "#000000", use: "On photos and video only, with an opacity (bg-media-scrim/60)", swatch: "bg-media-scrim" },
+  hover: { use: "Hover fill on any surface; neutral chip fill", swatch: "bg-hover" },
+  pressed: { use: "Pressed or open (aria-expanded, data-state=open)", swatch: "bg-pressed" },
+  scrim: { use: "Modal and drawer backdrop", swatch: "bg-scrim" },
+  "media-scrim": { use: "On photos and video only; the base of the three media steps", swatch: "bg-media-scrim" },
+  "media-wash": { use: "A light dim over a photo: file cards, thumbnails", swatch: "bg-media-wash" },
+  "media-chip": { use: "A label or button on a photo: count chips, captions", swatch: "bg-media-chip" },
+  "media-heavy": { use: "Text over a photo: upload progress, the end of a caption fade", swatch: "bg-media-heavy" },
+  "canvas-veil": { use: "A dimmed cell or inset: days outside the month, a card in a flow", swatch: "bg-canvas-veil" },
+  "panel-glass": { use: "Marketing cards over the page glow", swatch: "bg-panel-glass" },
+  "panel-veil": { use: "The floating marketing nav over scrolled content", swatch: "bg-panel-veil" },
+  // Glass (C-128): a surface token at a set strength; the glass-* utilities add the blur
+  "panel-frost": { use: "Work panes on glass: sidebar, inbox panes, headers, composer bar (82% panel, light blur)", swatch: "bg-panel-frost" },
+  "card-glass": { use: "Cards on glass (68% panel, medium blur)", swatch: "bg-card-glass" },
+  "overlay-frost": { use: "What floats on glass: menus, popovers, selects, dialogs, sheets, toasts (86% overlay, strong blur)", swatch: "bg-overlay-frost" },
+  "raised-frost": { use: "The secondary button on glass (72% raised)", swatch: "bg-raised-frost" },
+  "frost-outline": { use: "The outline button on glass (45% panel)", swatch: "bg-frost-outline" },
+  "ambient-1": { use: "The ambient light's top-left glow, behind the glass", swatch: "bg-ambient-1" },
+  "ambient-2": { use: "The ambient light's top-right glow", swatch: "bg-ambient-2" },
+  "ambient-3": { use: "The ambient light's bottom pool", swatch: "bg-ambient-3" },
   // Lines
-  { name: "line", value: "rgb(255 255 255 / 0.10)", use: "Borders", swatch: "bg-line" },
-  { name: "line-subtle", value: "rgb(255 255 255 / 0.05)", use: "Faint borders", swatch: "bg-line-subtle" },
-  { name: "line-strong", value: "rgb(255 255 255 / 0.20)", use: "Emphasised borders", swatch: "bg-line-strong" },
-  { name: "line-control", value: "rgb(255 255 255 / 0.40)", use: "Control edges, 3:1 or more on every surface: fields, selects, checkboxes, switches (--input; D-01)", swatch: "bg-line-control" },
+  "line-glass": { use: "A card's edge on glass, quieter than line", swatch: "bg-line-glass" },
+  line: { use: "Borders", swatch: "bg-line" },
+  "line-subtle": { use: "Faint borders", swatch: "bg-line-subtle" },
+  "line-strong": { use: "Emphasised borders", swatch: "bg-line-strong" },
+  "line-control": { use: "Control edges, 3:1 or more on every surface: fields, selects, checkboxes, switches (D-01)", swatch: "bg-line-control" },
   // Text
-  { name: "fg", value: "#FFFFFF", use: "Primary text", swatch: "bg-fg" },
-  { name: "fg-secondary", value: "#9B9CA0", use: "Secondary and meta text, timestamps, placeholders (D-06)", swatch: "bg-fg-secondary" },
-  { name: "fg-disabled", value: "#71717A", use: "Disabled controls only", swatch: "bg-fg-disabled" },
-  { name: "on-brand", value: "#FFFFFF", use: "Text and icons on the brand gradient, brand-strong, danger-fill, platform fills", swatch: "bg-on-brand" },
+  fg: { use: "Primary text", swatch: "bg-fg" },
+  "fg-secondary": { use: "Secondary and meta text, timestamps, placeholders (D-06)", swatch: "bg-fg-secondary" },
+  "fg-disabled": { use: "Disabled controls only", swatch: "bg-fg-disabled" },
+  "fg-hover": { use: "Hover on the inverse button (bg-fg)", swatch: "bg-fg-hover" },
+  "on-brand": { use: "Text and icons on the brand gradient, brand-strong, danger-fill, platform fills", swatch: "bg-on-brand" },
+  "on-brand-soft": { use: "A quiet fill on a brand bubble: image and button previews", swatch: "bg-on-brand-soft" },
+  "on-brand-line": { use: "An edge on a brand bubble", swatch: "bg-on-brand-line" },
+  "on-brand-line-strong": { use: "A chip edge on a brand bubble", swatch: "bg-on-brand-line-strong" },
   // Brand
-  { name: "brand", value: "#567FF8", use: "Non-text marks: focus ring, dots, selection bar, switch on, checkbox checked", swatch: "bg-brand" },
-  { name: "brand-strong", value: "#4467E6", use: "Solid brand fills that carry text; the gradient's end", swatch: "bg-brand-strong" },
-  { name: "brand-deep", value: "#20338A", use: "Gradient start", swatch: "bg-brand-deep" },
-  { name: "brand-fg", value: "#9DB5FF", use: "Brand-coloured text and icons on dark", swatch: "bg-brand-fg" },
-  { name: "brand-soft", value: "rgb(86 127 248 / 0.15)", use: "Soft brand fills; the info tone", swatch: "bg-brand-soft" },
-  { name: "brand-soft-hover", value: "rgb(86 127 248 / 0.25)", use: "Hover and open on brand-soft: the soft button (C-073)", swatch: "bg-brand-soft-hover" },
-  { name: "brand-line", value: "rgb(86 127 248 / 0.35)", use: "Brand borders", swatch: "bg-brand-line" },
-  { name: "shell-1", value: "#3352CC", use: "Logo tile and upgrade button", swatch: "bg-shell-1" },
-  { name: "shell-2", value: "#1C2D70", use: "Logo tile and upgrade button", swatch: "bg-shell-2" },
+  brand: { use: "Non-text marks: focus ring, dots, selection bar, switch on, checkbox checked", swatch: "bg-brand" },
+  "brand-strong": { use: "Solid brand fills that carry text; the gradient's end", swatch: "bg-brand-strong" },
+  "brand-deep": { use: "Gradient start", swatch: "bg-brand-deep" },
+  "brand-fg": { use: "Brand-coloured text and icons on dark", swatch: "bg-brand-fg" },
+  "brand-soft": { use: "Soft brand fills; the info tone", swatch: "bg-brand-soft" },
+  "brand-soft-hover": { use: "Hover and open on brand-soft: the soft button (C-073)", swatch: "bg-brand-soft-hover" },
+  "brand-line": { use: "Brand borders", swatch: "bg-brand-line" },
+  "shell-1": { use: "Logo tile and upgrade button", swatch: "bg-shell-1" },
+  "shell-2": { use: "Logo tile and upgrade button", swatch: "bg-shell-2" },
   // Status
-  { name: "success", value: "#22C55E", use: "Success", swatch: "bg-success" },
-  { name: "warning", value: "#FB923C", use: "Warning", swatch: "bg-warning" },
-  { name: "danger", value: "#EF4444", use: "Danger icons and borders", swatch: "bg-danger" },
-  { name: "danger-fg", value: "#FCA5A5", use: "Danger text on dark", swatch: "bg-danger-fg" },
-  { name: "danger-fill", value: "#C53030", use: "Failed bubble background", swatch: "bg-danger-fill" },
-  { name: "success-soft", value: "rgb(34 197 94 / 0.15)", use: "Success chip, banner and callout fill", swatch: "bg-success-soft" },
-  { name: "warning-soft", value: "rgb(251 146 60 / 0.15)", use: "Warning chip, banner and callout fill", swatch: "bg-warning-soft" },
-  { name: "danger-soft", value: "rgb(239 68 68 / 0.15)", use: "Danger chip, banner and callout fill; destructive menu highlight", swatch: "bg-danger-soft" },
+  success: { use: "Success", swatch: "bg-success" },
+  warning: { use: "Warning", swatch: "bg-warning" },
+  danger: { use: "Danger icons and borders", swatch: "bg-danger" },
+  "danger-fg": { use: "Danger text on dark", swatch: "bg-danger-fg" },
+  "danger-fill": { use: "Failed bubble background; the destructive button", swatch: "bg-danger-fill" },
+  "danger-fill-hover": { use: "Hover on the destructive button", swatch: "bg-danger-fill-hover" },
+  "success-soft": { use: "Success chip, banner and callout fill", swatch: "bg-success-soft" },
+  "warning-soft": { use: "Warning chip, banner and callout fill", swatch: "bg-warning-soft" },
+  "danger-soft": { use: "Danger chip, banner and callout fill; destructive menu highlight", swatch: "bg-danger-soft" },
+  "danger-line": { use: "Danger callout edge", swatch: "bg-danger-line" },
+  "warning-line": { use: "Warning callout edge", swatch: "bg-warning-line" },
   // Platforms: fills and glyphs only, never text
-  { name: "instagram", value: "#BE185D", use: "Instagram", swatch: "bg-instagram" },
-  { name: "whatsapp", value: "#16A34A", use: "WhatsApp", swatch: "bg-whatsapp" },
-  { name: "facebook", value: "#2563EB", use: "Facebook", swatch: "bg-facebook" },
-  { name: "linkedin", value: "#1E40AF", use: "LinkedIn", swatch: "bg-linkedin" },
-];
+  instagram: { use: "Instagram", swatch: "bg-instagram" },
+  whatsapp: { use: "WhatsApp", swatch: "bg-whatsapp" },
+  facebook: { use: "Facebook", swatch: "bg-facebook" },
+  linkedin: { use: "LinkedIn", swatch: "bg-linkedin" },
+  web: { use: "Website chat (GR-28)", swatch: "bg-web" },
+  // The platforms' own logo colours: logo tiles only, never under text
+  "instagram-logo-1": { use: "Instagram logo gradient, first stop", swatch: "bg-instagram-logo-1" },
+  "instagram-logo-2": { use: "Instagram logo gradient, second stop", swatch: "bg-instagram-logo-2" },
+  "instagram-logo-3": { use: "Instagram logo gradient, third stop", swatch: "bg-instagram-logo-3" },
+  "instagram-logo-4": { use: "Instagram logo gradient, last stop", swatch: "bg-instagram-logo-4" },
+  "facebook-logo": { use: "Facebook logo tile", swatch: "bg-facebook-logo" },
+  "whatsapp-logo": { use: "WhatsApp logo tile", swatch: "bg-whatsapp-logo" },
+  // The categorical chart palette after series 1 (brand): charts only, never text
+  "chart-series-2": { use: "Chart series 2 (orange): the 2th account, platform or topic in a chart", swatch: "bg-chart-series-2" },
+  "chart-series-3": { use: "Chart series 3 (aqua): the 3th account, platform or topic in a chart", swatch: "bg-chart-series-3" },
+  "chart-series-4": { use: "Chart series 4 (yellow): the 4th account, platform or topic in a chart", swatch: "bg-chart-series-4" },
+  "chart-series-5": { use: "Chart series 5 (magenta): the 5th account, platform or topic in a chart", swatch: "bg-chart-series-5" },
+  "chart-series-6": { use: "Chart series 6 (blue): the 6th account, platform or topic in a chart", swatch: "bg-chart-series-6" },
+};
+
+/**
+ * Colours that are the same in both themes on purpose, written once in globals.css: a literal here
+ * has no `light-dark()`. Every other literal colour must be a pair (tokens.test.ts), so a new token
+ * can't be added to one theme only. Shades (`color-mix` of another token) follow their base and
+ * are not listed.
+ */
+export const themeInvariant: Record<string, string> = {
+  "media-scrim": "Black over photos and video, dark in any theme",
+  "on-brand": "White on the brand gradient, brand-strong, danger-fill and platform fills, in both themes",
+  "brand-strong": "The gradient's end and the primary fill: white on it is 5.82:1 in both themes",
+  "brand-deep": "The gradient's start",
+  "shell-1": "The logo tile's own gradient; the icons are drawn from it",
+  "shell-2": "The logo tile's own gradient; the icons are drawn from it",
+  "danger-fill": "The failed bubble and the destructive button carry white text: 5.47:1 in both themes",
+  instagram: "A third party's brand colour",
+  whatsapp: "A third party's brand colour",
+  facebook: "A third party's brand colour",
+  linkedin: "A third party's brand colour",
+  web: "The website chat's badge fill: white on it is 5.5:1 in both themes",
+  "instagram-logo-1": "A third party's logo colour",
+  "instagram-logo-2": "A third party's logo colour",
+  "instagram-logo-3": "A third party's logo colour",
+  "instagram-logo-4": "A third party's logo colour",
+  "facebook-logo": "A third party's logo colour",
+  "whatsapp-logo": "A third party's logo colour",
+};
+
+/** The colour tokens, in the order of globals.css, with their values from the generated file. */
+export const colorTokens: ColorToken[] = Object.entries(tokenValues.colors as Record<string, string>).map(([name, value]) => ({
+  name,
+  value,
+  light: (tokenValues.colorsLight as Record<string, string>)[name] ?? value,
+  use: colorMeta[name]?.use ?? "",
+  swatch: colorMeta[name]?.swatch ?? `bg-${name}`,
+}));
+
+/** The names `colorMeta` describes, for the test that every token has a description and no entry is stale. */
+export const describedColors: string[] = Object.keys(colorMeta);
 
 /**
  * A colour token's value, for the consumers that can't read CSS variables: Clerk (it computes
  * shades), the OG image (Satori), the manifest and the viewport (UI-ISS-095). They read it here
- * instead of restating the hex, so a token change reaches them too.
+ * instead of restating the hex, so a token change reaches them too. A chart alias resolves to the
+ * token it points at. `theme` picks the dark (default) or light value (C-129); a consumer that follows
+ * the user's choice passes the resolved theme, one that is dark on purpose (the OG image, the
+ * manifest, the global error page) passes nothing.
  */
-export function colorValue(name: string): string {
-  const found = colorTokens.find((entry) => entry.name === name);
-  if (!found) throw new Error(`Unknown colour token: ${name}`);
-  return found.value;
+export function colorValue(name: string, theme: Theme = "dark"): string {
+  const colors = (theme === "light" ? tokenValues.colorsLight : tokenValues.colors) as Record<string, string>;
+  const aliases = tokenValues.colorAliases as Record<string, string>;
+  const found = colors[name] ?? colors[aliases[name]];
+  if (found === undefined) throw new Error(`Unknown colour token: ${name}`);
+  return found;
+}
+
+/** A radius token's value (`lg` is 0.5rem), for Clerk and the global error page, which can't use `rounded-lg`. */
+export function radiusValue(name: string): string {
+  const found = (tokenValues.radius as Record<string, string>)[name];
+  if (found === undefined) throw new Error(`Unknown radius token: ${name}`);
+  return found;
 }
 
 /**
@@ -72,61 +168,40 @@ export function colorValue(name: string): string {
  * Status series (sentiment, failures) sit on the status tokens; a single neutral series on brand.
  * Categorical series (accounts, people) use the identity palette (lib/ui/identity.ts) instead.
  */
-export const chartAliases = [
-  { name: "chart-positive", token: "success", use: "Positive sentiment", swatch: "bg-chart-positive" },
-  { name: "chart-neutral", token: "fg-secondary", use: "Neutral sentiment", swatch: "bg-chart-neutral" },
-  { name: "chart-negative", token: "danger", use: "Negative sentiment; failures", swatch: "bg-chart-negative" },
-  { name: "chart-series-1", token: "brand", use: "A single series: runs, the 7-day trend", swatch: "bg-chart-series-1" },
+const chartMeta = [
+  { name: "chart-positive", use: "Positive sentiment", swatch: "bg-chart-positive" },
+  { name: "chart-neutral", use: "Neutral sentiment", swatch: "bg-chart-neutral" },
+  { name: "chart-negative", use: "Negative sentiment; failures", swatch: "bg-chart-negative" },
+  { name: "chart-series-1", use: "A single series: runs, the 7-day trend", swatch: "bg-chart-series-1" },
 ] as const;
+export const chartAliases = chartMeta.map((entry) => ({
+  ...entry,
+  token: (tokenValues.colorAliases as Record<string, string>)[entry.name],
+}));
 
-/** DESIGN_SYSTEM §1.9: four gradients, each with one job; the stops are tokens. */
-export const gradientUtilities = [
-  {
-    name: "bg-brand-gradient",
-    value: "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%)",
-    use: "Primary buttons, outgoing bubbles, count badges; on-brand text",
-  },
-  {
-    name: "bg-brand-gradient-decor",
-    value: "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%)",
-    use: "Meters, progress fills, decorative icon tiles; never under text",
-  },
-  {
-    name: "bg-shell-gradient",
-    value: "linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%)",
-    use: "Logo tile and Upgrade only",
-  },
-  {
-    name: "bg-glow-brand",
-    value: "radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%)",
-    use: "One per view at most: the marketing hero and the plan hero",
-  },
+/** DESIGN_SYSTEM §1.9: four gradients, each with one job, plus the marketing top glow; the stops are tokens. */
+const gradientMeta = [
+  { name: "bg-brand-gradient", key: "brand", use: "Primary buttons, outgoing bubbles, count badges; on-brand text" },
+  { name: "bg-brand-gradient-decor", key: "brand-decor", use: "Meters, progress fills, decorative icon tiles; never under text" },
+  { name: "bg-shell-gradient", key: "shell", use: "Logo tile and Upgrade only" },
+  { name: "bg-instagram-logo-gradient", key: "instagram-logo", use: "Instagram's logo tile (Add account); never under text" },
+  { name: "bg-glow-brand", key: "glow-brand", use: "One per view at most: the plan hero" },
+  { name: "bg-ambient", key: "ambient", use: "The light behind the glass, fixed on the body; not for components" },
+  { name: "bg-glow-brand-top", key: "glow-brand-top", use: "The marketing glow at the top of a section: the hero, the illustration cards" },
 ] as const;
+export const gradientUtilities = gradientMeta.map(({ name, key, use }) => ({
+  name,
+  variable: `--gradient-${key}`,
+  value: (tokenValues.gradients as Record<string, string>)[key],
+  use,
+}));
 
 /**
  * shadcn's semantic variables (`:root` in globals.css) and the token each one points at
- * (DESIGN_SYSTEM §1.10). They stay inside components/ui; app code uses the tokens.
+ * (DESIGN_SYSTEM §1.10). Nothing hand-written uses these names; they are there so `shadcn add`
+ * output compiles.
  */
-export const shadcnAliases = [
-  { alias: "background", token: "canvas" },
-  { alias: "foreground", token: "fg" },
-  { alias: "card", token: "panel" },
-  { alias: "card-foreground", token: "fg" },
-  { alias: "popover", token: "overlay" },
-  { alias: "popover-foreground", token: "fg" },
-  { alias: "primary", token: "brand-strong" },
-  { alias: "primary-foreground", token: "on-brand" },
-  { alias: "secondary", token: "raised" },
-  { alias: "secondary-foreground", token: "fg" },
-  { alias: "muted", token: "field" },
-  { alias: "muted-foreground", token: "fg-secondary" },
-  { alias: "accent", token: "hover" },
-  { alias: "accent-foreground", token: "fg" },
-  { alias: "destructive", token: "danger" },
-  { alias: "border", token: "line" },
-  { alias: "input", token: "line-control" },
-  { alias: "ring", token: "brand" },
-] as const;
+export const shadcnAliases = Object.entries(tokenValues.shadcn as Record<string, string>).map(([alias, token]) => ({ alias, token }));
 
 /**
  * Elevation (DESIGN_SYSTEM §6; D-12): the two dark shadows, set by the primitives, never at call
@@ -134,30 +209,68 @@ export const shadcnAliases = [
  * call site's leftover `shadow-xl` replaces only the drop shadow. `sample` is a literal class list
  * so Tailwind emits it for /dev/tokens.
  */
-export const shadowTokens = [
-  {
-    name: "shadow-floating",
-    value: "0 8px 24px -6px rgb(0 0 0 / 0.7)",
-    use: "Level 1, on overlay: popovers, menus, select options, toasts",
-    sample: "bg-overlay ring-1 ring-line shadow-floating",
-  },
-  {
-    name: "shadow-overlay",
-    value: "0 24px 64px -12px rgb(0 0 0 / 0.8)",
-    use: "Level 2, on overlay over the scrim: dialogs, alert dialogs, sheets",
-    sample: "bg-overlay ring-1 ring-line shadow-overlay",
-  },
+const shadowMeta = [
+  { name: "shadow-floating", use: "Level 1, on overlay: popovers, menus, select options, toasts", sample: "bg-overlay ring-1 ring-line shadow-floating" },
+  { name: "shadow-overlay", use: "Level 2, on overlay over the scrim: dialogs, alert dialogs, sheets", sample: "bg-overlay ring-1 ring-line shadow-overlay" },
 ] as const;
+export const shadowTokens = shadowMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+  light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
+}));
+
+/** The glass family (C-128): a top highlight, a soft drop, the buttons' inner light and glow. */
+const glassShadowMeta = [
+  { name: "shadow-glass", use: "Glass cards: a top highlight and a soft drop (C-128)", sample: "bg-card-glass ring-1 ring-line-glass shadow-glass" },
+  { name: "shadow-highlight", use: "The outline button: the top highlight alone", sample: "bg-frost-outline ring-1 ring-line shadow-highlight" },
+  { name: "shadow-button-primary", use: "The primary button: an inner highlight and an indigo glow", sample: "bg-brand-gradient shadow-button-primary" },
+  { name: "shadow-button-secondary", use: "The secondary button: an inset edge and the highlight", sample: "bg-raised-frost shadow-button-secondary" },
+] as const;
+export const glassShadows = glassShadowMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+  light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
+}));
+
+/** The marketing glow family (C-127): brand-tinted drops under marketing and auth cards. */
+const glowMeta = [
+  { name: "shadow-glow", use: "Marketing and auth cards: a brand-tinted 2xl drop", sample: "bg-panel shadow-glow" },
+  { name: "shadow-glow-hover", use: "A marketing card on hover: a softer xl drop", sample: "bg-panel shadow-glow-hover" },
+  { name: "shadow-glow-button", use: "The marketing primary button and the logo mark: a tight lg drop", sample: "bg-panel shadow-glow-button" },
+] as const;
+export const glowShadows = glowMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+}));
+
+/** The radius scale (DESIGN_SYSTEM §4); `sample` is a literal class so Tailwind emits it. */
+const radiusMeta = [
+  { name: "rounded-sm", key: "sm", use: "Checkboxes, small tags, keyboard hints", sample: "rounded-sm" },
+  { name: "rounded-md", key: "md", use: "Small buttons, tooltips, thumbnails", sample: "rounded-md" },
+  { name: "rounded-lg", key: "lg", use: "Inputs, buttons, selects, menus, popovers, toasts", sample: "rounded-lg" },
+  { name: "rounded-xl", key: "xl", use: "App cards, dialogs, sheets", sample: "rounded-xl" },
+  { name: "rounded-2xl", key: "2xl", use: "Marketing cards", sample: "rounded-2xl" },
+] as const;
+export const radiusTokens = radiusMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.radius as Record<string, string>)[entry.key],
+}));
+
+const remPx = (rem: string) => Math.round(parseFloat(rem) * 16);
 
 /** The two sizes Tailwind's scale lacks; each carries its line height. */
-export const fontSizes = [
-  { name: "text-2xs", size: "0.6875rem", lineHeight: "1rem", px: "11/16", use: "Status badges, chips, eyebrows, kbd" },
-  { name: "text-md", size: "0.9375rem", lineHeight: "1.5rem", px: "15/24", use: "Reading: Ask answers and composer, legal prose" },
+const fontSizeMeta = [
+  { name: "text-2xs", key: "2xs", use: "Status badges, chips, eyebrows, kbd" },
+  { name: "text-md", key: "md", use: "Reading: Ask answers and composer, legal prose" },
 ] as const;
+export const fontSizes = fontSizeMeta.map(({ name, key, use }) => {
+  const { size, lineHeight } = (tokenValues.fontSizes as Record<string, { size: string; lineHeight: string }>)[key];
+  return { name, size, lineHeight, px: `${remPx(size)}/${remPx(lineHeight)}`, use };
+});
 
 // Type roles (DESIGN_SYSTEM §2.1). Weights 400, 500 and 600 only; tracking −0.025em at 24 px and
-// up, +0.08em on eyebrows only; nothing under 11 px.
-export const DISPLAY = "text-4xl font-semibold tracking-tight leading-[1.08] sm:text-5xl lg:text-6xl";
+// up, +0.08em on eyebrows only (`tracking-eyebrow`); nothing under 11 px.
+export const DISPLAY = "text-4xl font-semibold tracking-tight leading-display sm:text-5xl lg:text-6xl";
 export const MARKETING_HEADING = "text-3xl font-semibold tracking-tight sm:text-4xl";
 export const PAGE_TITLE = "text-2xl font-semibold tracking-tight";
 export const KPI = "text-2xl font-semibold tracking-tight tabular-nums";
@@ -174,7 +287,7 @@ export const META = "text-xs text-fg-secondary";
 export const SMALL_CONTROL = "text-xs font-medium";
 export const CHIP = "text-2xs font-medium";
 export const COUNT = "text-xs font-medium";
-export const EYEBROW = "text-2xs font-semibold uppercase tracking-[0.08em] text-fg-secondary";
+export const EYEBROW = "text-2xs font-semibold uppercase tracking-eyebrow text-fg-secondary";
 export const MONO = "font-mono text-xs";
 
 export const typeRoles = [
@@ -200,25 +313,41 @@ export const typeRoles = [
 ] as const;
 
 /** DESIGN_SYSTEM §7: `duration-*` utilities over `--motion-*` variables, which tw-animate-css reads too. */
-export const motionDurations = [
-  { name: "duration-fast", variable: "--motion-fast", value: "120ms", use: "Hover, press, toggles, menus, popovers, tooltips; every exit" },
-  { name: "duration-normal", variable: "--motion-normal", value: "150ms", use: "Content arriving in place: live message, inline reveals" },
-  { name: "duration-slow", variable: "--motion-slow", value: "200ms", use: "Surfaces: dialogs, sheets, the drawer, panels, the suggestion bar" },
+const motionMeta = [
+  { name: "duration-fast", key: "fast", use: "Hover, press, toggles, menus, popovers, tooltips; every exit" },
+  { name: "duration-normal", key: "normal", use: "Content arriving in place: live message, inline reveals" },
+  { name: "duration-slow", key: "slow", use: "Surfaces: dialogs, sheets, the drawer, panels, the suggestion bar" },
 ] as const;
+export const motionDurations = motionMeta.map(({ name, key, use }) => ({
+  name,
+  variable: `--motion-${key}`,
+  value: (tokenValues.motion as Record<string, string>)[key],
+  use,
+}));
 
-export const easings = [
-  { name: "ease-standard", value: "cubic-bezier(0.4, 0, 0.2, 1)", use: "State changes: colour, opacity, toggles" },
-  { name: "ease-enter", value: "cubic-bezier(0, 0, 0.2, 1)", use: "Things arriving" },
-  { name: "ease-exit", value: "cubic-bezier(0.4, 0, 1, 1)", use: "Things leaving" },
+const easingMeta = [
+  { name: "ease-standard", use: "State changes: colour, opacity, toggles" },
+  { name: "ease-enter", use: "Things arriving" },
+  { name: "ease-exit", use: "Things leaving" },
 ] as const;
+export const easings = easingMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.easings as Record<string, string>)[entry.name.replace("ease-", "")],
+}));
+
+export type BreakpointName = "md" | "lg" | "xl" | "wide";
 
 /** Tailwind's breakpoints are kept; `wide` is the one addition. */
-export const breakpoints = [
-  { name: "md", value: "48rem", px: 768, use: "Top bar and drawer below it", custom: false },
-  { name: "lg", value: "64rem", px: 1024, use: "Sidebar expands; three-column dashboards", custom: false },
-  { name: "xl", value: "80rem", px: 1280, use: "Inbox details inline; settings two columns", custom: false },
-  { name: "wide", value: "90rem", px: 1440, use: "Inbox details open by default; schedule rail inline", custom: true },
-] as const;
+const breakpointMeta: { name: BreakpointName; use: string; custom: boolean }[] = [
+  { name: "md", use: "Top bar and drawer below it", custom: false },
+  { name: "lg", use: "Sidebar expands; three-column dashboards", custom: false },
+  { name: "xl", use: "Inbox details inline; settings two columns", custom: false },
+  { name: "wide", use: "Inbox details open by default; schedule rail inline", custom: true },
+];
+export const breakpoints = breakpointMeta.map((entry) => {
+  const value = (tokenValues.breakpoints as Record<string, string>)[entry.name];
+  return { ...entry, value, px: remPx(value) };
+});
 
 /**
  * Variants defined in globals.css besides Tailwind's own (`dark` stays for library code, C-002).
@@ -227,21 +356,17 @@ export const breakpoints = [
 export const customVariants = [
   {
     name: "short",
-    value: "@media (max-height: 500px)",
+    value: (tokenValues.variants as Record<string, string>).short,
     use: "Short viewports (200% zoom, a landscape phone): sticky bars stay in the flow, their text on one line",
   },
-] as const;
+];
 
 /** Other utilities defined in globals.css. */
-export const otherUtilities = [
-  {
-    name: "mask-fade-x",
-    value: "mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent)",
-    use: "A row that scrolls sideways: its trailing 1rem fades; pair with pe-4",
-  },
-  {
-    name: "shadow-crop-mask",
-    value: "box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-media-scrim) 60%, transparent)",
-    use: "The crop box: dims the photo outside it (media-scrim 60%); its container clips. Not an elevation",
-  },
+const otherUtilityMeta = [
+  { name: "mask-fade-x", use: "A row that scrolls sideways: its trailing 1rem fades; pair with pe-4" },
+  { name: "shadow-crop-mask", use: "The crop box: dims the photo outside it (media-scrim 60%); its container clips. Not an elevation" },
 ] as const;
+export const otherUtilities = otherUtilityMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.utilities as Record<string, string>)[entry.name],
+}));

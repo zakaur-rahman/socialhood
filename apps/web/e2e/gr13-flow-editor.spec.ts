@@ -122,7 +122,7 @@ for (const size of SIZES) {
       await api.inbound(workspace.id, { accountId: account.id, kind: "comment", text: `${keyword} please`, fromId });
       await expect.poll(async () => (await runs()).items[0]?.result, { timeout: 60_000 }).toBe("awaiting_reply");
       const [run] = (await runs()).items;
-      await expect.poll(async () => (await runs()).items[0]?.conversation_id, { timeout: 30_000 }).not.toBeNull();
+      await expect.poll(async () => (await runs()).items[0]?.conversation_id ?? null, { timeout: 30_000 }).not.toBeNull();
       const conversation = (await runs()).items[0].conversation_id;
 
       // They answer with their email, the contact keeps it, and the buttons follow.
@@ -177,7 +177,8 @@ test.describe("GR-13 reorder and errors", () => {
   }
 
   test("a step is dragged above another and the order is saved", async ({ page, api, sandbox }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
+    // Tall enough for both cards at once: the mouse can't drag to a card that is scrolled out of view.
+    await page.setViewportSize({ width: 1280, height: 1800 });
     const { workspace, account } = sandbox;
     const draft = await twoMessages(api, workspace.id, account.id);
     await page.goto(`/w/${workspace.slug}/automations/${draft.id}`);

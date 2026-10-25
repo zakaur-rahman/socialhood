@@ -1,9 +1,13 @@
 """Reply-window rules (FR-INB-10, TR-PL-04). Pure functions: the read API shows the state and the
 send pipeline enforces it, from the same code.
 
-Instagram: open for 24 h after the contact's last message; then, when Human Agent is enabled,
-human replies (only) are allowed for 7 days with the HUMAN_AGENT tag; then closed.
+Instagram and Facebook (Messenger): open for 24 h after the contact's last message; then, when
+Human Agent is enabled (IG_HUMAN_AGENT_ENABLED: Meta approves Human Agent once for the app),
+human replies (only) are allowed for 7 days with the HUMAN_AGENT tag; then closed. Messenger's
+other message tags are not used: a send outside the window is refused.
 WhatsApp: open for 24 h; then only an approved template can be sent.
+Website chat (GR-28): always open. The visitor's page can stay open for days, the widget shows a
+reply whenever it comes, and nothing is sent through a platform that could refuse it.
 """
 
 from __future__ import annotations
@@ -22,13 +26,15 @@ SendKind = Literal["human", "ai_auto", "automation", "template"]
 def reply_window(
     platform: str, last_inbound_at: datetime | None, *, human_agent: bool, now: datetime
 ) -> ReplyWindow:
+    if platform == "web":
+        return ReplyWindow(state="open")
     closed = "template_only" if platform == "whatsapp" else "closed"
     if last_inbound_at is None:
         return ReplyWindow(state=closed)
     open_until = last_inbound_at + STANDARD_WINDOW
     if now < open_until:
         return ReplyWindow(state="open", closes_at=open_until)
-    if platform == "instagram" and human_agent:
+    if platform in ("instagram", "facebook") and human_agent:
         agent_until = last_inbound_at + HUMAN_AGENT_WINDOW
         if now < agent_until:
             return ReplyWindow(state="human_agent", closes_at=agent_until)

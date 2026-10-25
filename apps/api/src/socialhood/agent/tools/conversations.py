@@ -15,6 +15,12 @@ R1:
 
 Any member (``min_role`` agent), as in the inbox.
 
+Visuals (GR-38): list_contacts with ``awaiting_reply`` puts a ``lead_list`` in its result (top 10 by
+lead score; a row opens the conversation, VIS-08), and its ``reply_ids`` are what the web's "Prepare
+replies" follow-up asks draft_reply for, a few at a time (VIS-12; a draft is never sent).
+search_conversations puts a ``table`` (VIS-09). The tool's role check is the visual's: it is built
+from the rows the tool returns, nothing more.
+
 R2: send_message(conversation_id, text): high, capability send_replies; sending.queue_outbound.
 """
 
@@ -26,6 +32,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from socialhood.agent import visuals
 from socialhood.agent.registry import DraftResult, ToolContext, ToolResult
 from socialhood.agent.tools.common import (
     FACEBOOK_NOT_CONNECTED,
@@ -33,6 +40,7 @@ from socialhood.agent.tools.common import (
     PlatformName,
     clip,
     contact_name,
+    facebook_unconnected,
     find_account,
     handle,
     limit_field,
@@ -41,6 +49,7 @@ from socialhood.agent.tools.common import (
     quoted,
     ref,
     tool,
+    visual,
     when,
 )
 from socialhood.ai.metering import QuotaExceeded
@@ -48,7 +57,12 @@ from socialhood.ai.provider import AIError
 from socialhood.errors import ApiError
 from socialhood.models.agent import RiskTier
 from socialhood.repositories import inbox, social_accounts
-from socialhood.schemas.agent import ScheduleMessageAction, ScheduleMessagePrefill
+from socialhood.schemas.agent import (
+    ScheduleMessageAction,
+    ScheduleMessagePrefill,
+    TableVisual,
+    Visual,
+)
 from socialhood.schemas.inbox import InboxView
 from socialhood.services import contacts as contact_records
 from socialhood.services import conversations
@@ -135,6 +149,33 @@ class ConversationsResult(ToolResult):
     items: list[ConversationItem]
     total: int
     more: int
+    visual: Visual | None = None  # GR-38 (VIS-09): the first rows as a table
+
+
+def _conversation_table(items: list[ConversationItem], total: int, view: str) -> TableVisual:
+    """The list as a table: names and previews are the customers' words, drawn as text."""
+    return visuals.table(
+        title="Conversations",
+        columns=[
+            visuals.Column("customer", "Customer"),
+            visuals.Column("platform", "Platform"),
+            visuals.Column("last_message", "Last message"),
+            visuals.Column("when", "When"),
+            visuals.Column("lead_score", "Lead score", figures=True, format="count"),
+        ],
+        rows=[
+            [
+                i.contact,
+                i.platform.capitalize(),
+                i.last_message,
+                i.last_message_at_label,
+                float(i.lead_score) if i.lead_score is not None else None,
+            ]
+            for i in items
+        ],
+        total=total,
+        more_route="inbox" if view == "all" else f"inbox?view={view}",
+    )
 
 
 @tool(
@@ -151,7 +192,7 @@ class ConversationsResult(ToolResult):
 async def search_conversations(
     ctx: ToolContext, args: SearchConversationsInput
 ) -> ConversationsResult:
-    if args.platform == "facebook":
+    if await facebook_unconnected(ctx, args.platform):
         return ConversationsResult(
             summary="Facebook isn't connected, so there are no Facebook conversations",
             items=[],
@@ -213,6 +254,11 @@ async def search_conversations(
         items=items,
         total=total,
         more=max(total - len(items), 0),
+        visual=(
+            visual(ctx, "table", lambda: _conversation_table(items, total, args.view))
+            if items
+            else None
+        ),
         refs=[ref("conversation", i.id, i.contact) for i in items],
     )
 
@@ -569,6 +615,11 @@ class ListContactsInput(_Input):
     )
     platform: Literal["instagram", "whatsapp"] | None = None
     min_lead_score: int | None = Field(default=None, ge=0, le=100)
+    awaiting_reply: bool | None = Field(
+        default=None,
+        description="True: only contacts whose conversation is waiting for your reply, best lead "
+        "score first (a list for 'which leads haven't I answered?').",
+    )
     limit: int = limit_field(default=10, maximum=25)
 
 
@@ -585,6 +636,8 @@ class ContactLine(BaseModel):
 class ListContactsResult(ToolResult):
     contacts: list[ContactLine]
     more: bool
+    total: int | None = None  # with awaiting_reply: how many contacts match, not only those listed
+    visual: Visual | None = None  # GR-38 (VIS-08): the leads waiting for a reply
 
 
 @tool(
@@ -592,8 +645,9 @@ class ListContactsResult(ToolResult):
     label="Listing contacts",
     description=(
         "Contacts filtered by tag, whether an email or phone is known, platform or minimum lead "
-        "score, most recently active first. For questions like 'who is tagged VIP?' or 'which "
-        "leads gave an email?'."
+        "score, most recently active first. With awaiting_reply they are the contacts whose "
+        "conversation is waiting for your reply, best lead score first. For questions like 'who "
+        "is tagged VIP?', 'which leads gave an email?' or 'which leads haven't I answered?'."
     ),
     input_model=ListContactsInput,
     result_model=ListContactsResult,
@@ -619,18 +673,22 @@ async def list_contacts(ctx: ToolContext, args: ListContactsInput) -> ListContac
                 caveats=["Tags are matched by their full name."],
             )
         tag_ids = (match.id,)
-    page = await contact_records.list_contacts(
-        ctx.session,
-        contact_records.ContactFilter(
-            tag_ids=tag_ids,
-            has_email=args.has_email,
-            has_phone=args.has_phone,
-            platform=args.platform,
-            min_lead_score=args.min_lead_score,
-        ),
-        cursor=None,
-        limit=args.limit,
+    filt = contact_records.ContactFilter(
+        tag_ids=tag_ids,
+        has_email=args.has_email,
+        has_phone=args.has_phone,
+        platform=args.platform,
+        min_lead_score=args.min_lead_score,
+        awaiting_reply=True if args.awaiting_reply else None,
     )
+    total: int | None = None
+    if args.awaiting_reply:
+        # A short "who first" list: best score first, with how many wait (VIS-08).
+        found, total = await contact_records.top_leads(ctx.session, filt, limit=args.limit)
+        more = total > len(found)
+    else:
+        page = await contact_records.list_contacts(ctx.session, filt, cursor=None, limit=args.limit)
+        found, more = page.items, page.next_cursor is not None
     lines = [
         ContactLine(
             contact_id=item.id,
@@ -641,14 +699,40 @@ async def list_contacts(ctx: ToolContext, args: ListContactsInput) -> ListContac
             conversation_id=item.conversation_id,
             last_activity_label=when(ctx, item.last_activity_at),
         )
-        for item in page.items
+        for item in found
     ]
-    count = f"{len(lines)}{'+' if page.next_cursor else ''}"
+    if total is not None:
+        summary = f"{total} {'contact' if total == 1 else 'contacts'} waiting for a reply"
+        summary += ", best lead score first" + (f" ({len(lines)} shown)" if more else "")
+    else:
+        summary = f"{len(lines)}{'+' if more else ''} contact{'s' if len(lines) != 1 else ''}"
+    leads = (
+        visual(
+            ctx,
+            "lead_list",
+            lambda: visuals.lead_list(
+                items=found,
+                total=total or 0,
+                more_route="inbox?view=needs_reply",
+                activity=[line.last_activity_label for line in lines],
+            ),
+        )
+        if total and lines
+        else None
+    )
     return ListContactsResult(
-        summary=clip(f"{count} contact{'s' if len(lines) != 1 else ''}", 300) or "Contacts",
+        summary=clip(summary, 300) or "Contacts",
         contacts=lines,
-        more=page.next_cursor is not None,
-        refs=[ref("conversation", c.conversation_id, c.name) for c in lines if c.conversation_id],
+        more=more,
+        total=total,
+        visual=leads,
+        # A contact with a conversation opens it; one without opens their contact record.
+        refs=[
+            ref("conversation", c.conversation_id, c.name)
+            if c.conversation_id
+            else ref("contact", c.contact_id, c.name)
+            for c in lines
+        ],
         caveats=caveats,
     )
 
@@ -695,7 +779,10 @@ async def draft_reply(ctx: ToolContext, args: DraftReplyInput) -> DraftReplyResu
     conv = await conversations.get_or_404(ctx.session, args.conversation_id)
     contact = await inbox.get_contact(ctx.session, conv.contact_id)
     name = contact_name(contact)
-    human_agent = ctx.platform.settings.ig_human_agent_enabled and conv.platform == "instagram"
+    human_agent = ctx.platform.settings.ig_human_agent_enabled and conv.platform in (
+        "instagram",
+        "facebook",
+    )
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=ctx.now)
     if not may_send(window, "human"):
         raise ApiError(
@@ -759,7 +846,8 @@ async def draft_reply(ctx: ToolContext, args: DraftReplyInput) -> DraftReplyResu
         caveats=caveats,
         action_card=ScheduleMessageAction(
             kind="schedule_message",
-            label="Schedule this reply",
+            # VIS-12: named, so the cards of several leads can be told apart.
+            label=clip(f"Schedule a reply to {name}", 80) or "Schedule this reply",
             route=f"inbox/{conv.id}?schedule=1",
             note=clip(note, 200),
             prefill=ScheduleMessagePrefill(

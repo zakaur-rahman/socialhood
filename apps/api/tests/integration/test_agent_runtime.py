@@ -51,14 +51,28 @@ from tests.support.analysis import add_owner_member, use_credits
 from tests.support.inbox import make_workspace
 from tests.support.ingest import jobs
 
-# As stored: the test tools' refs name no parent (a comment's post, a message's conversation).
-POST_REF = {"kind": "post", "id": str(LATEST_POST), "label": "Reel of 26 Sep", "parent_id": None}
-COMMENT_REF = {"kind": "comment", "id": str(COMMENT), "label": "“Love this!”", "parent_id": None}
+# As stored: the test tools' refs name no parent (a comment's post, a message's conversation) and
+# no week (only a report ref has one).
+POST_REF = {
+    "kind": "post",
+    "id": str(LATEST_POST),
+    "label": "Reel of 26 Sep",
+    "parent_id": None,
+    "week": None,
+}
+COMMENT_REF = {
+    "kind": "comment",
+    "id": str(COMMENT),
+    "label": "“Love this!”",
+    "parent_id": None,
+    "week": None,
+}
 EARLIER_REF = {
     "kind": "post",
     "id": str(EARLIER_POST),
     "label": "Post of 20 Sep",
     "parent_id": None,
+    "week": None,
 }
 
 
@@ -105,7 +119,7 @@ async def test_a_run_answers_from_its_steps_and_cites_them(desk: Desk) -> None:
         run["answer"] == "71% of 83 analysed comments are positive [1], on your latest reel [2][1]."
     )
     assert run["answer_refs"] == [COMMENT_REF, POST_REF]  # in order of first use
-    assert (run["model"], run["prompt_version"]) == ("scripted-model", "agent.v3")
+    assert (run["model"], run["prompt_version"]) == ("scripted-model", "agent.v4")
     assert run["credits"] == 3  # one per model turn
     assert run["input_tokens"] > 0
     assert run["output_tokens"] > 0

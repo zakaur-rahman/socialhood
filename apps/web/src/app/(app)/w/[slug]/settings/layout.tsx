@@ -1,54 +1,36 @@
 "use client";
 
-import type { Route } from "next";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Route } from "next";
 import type { ReactNode } from "react";
 
-import { SETTINGS_SECTIONS } from "@/components/settings/sections";
+import { BackLink } from "@/components/shell/PageFrame";
+import { visibleGroups } from "@/components/settings/groups";
+import { SettingsRail } from "@/components/settings/SettingsRail";
 import { useCurrentWorkspace } from "@/lib/workspace";
-import { cn } from "@/lib/utils";
 
 /**
- * UX-SCR-07: the settings tabs, each visible to the roles it was before (C-066). The active tab
- * has an underline and aria-current; on phones the row scrolls sideways and fades at its trailing
- * edge, so the tabs past it read as more to scroll to (UI-ISS-058). The end padding lets the last
- * tab scroll clear of the fade, and the scroll padding stops a tab reached with Tab short of it.
- * The hairline sits on a wrapper, outside the mask, so it doesn't fade; the row overlaps it by 1 px
- * and the active underline covers it. Focus is the global outline, inset because the row clips
- * (DESIGN_SYSTEM §8.3).
+ * UX-SCR-07: from lg, a grouped rail beside the page (sticky, with a filter box); each page is
+ * visible to the roles it was before (C-066). Below lg there is no rail: /settings is a list of
+ * the same groups, and a page under it opens with a "Settings" back link. The page header keeps
+ * its own sticky behaviour (PageFrame's STICKY_PAGE_HEADER).
  */
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   const { slug, role } = useCurrentWorkspace();
   const pathname = usePathname();
+  const home = `/w/${slug}/settings`;
+  const onHome = pathname === home || pathname === `${home}/`;
   return (
-    <div>
-      <div className="w-full px-4 pt-4 md:px-6 md:pt-6">
-        <div className="border-b border-line">
-          <nav aria-label="Settings" className="mask-fade-x -mb-px flex gap-1 overflow-x-auto pe-4 scroll-pe-4">
-            {SETTINGS_SECTIONS.filter((section) => section.roles.includes(role)).map((section) => {
-              const href = `/w/${slug}/settings/${section.segment}`;
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link
-                  key={section.segment}
-                  href={href as Route}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "inline-flex min-h-11 shrink-0 items-center rounded-t-md border-b-2 px-3 text-sm font-medium whitespace-nowrap focus-visible:-outline-offset-2",
-                    active
-                      ? "border-brand text-fg"
-                      : "border-transparent text-fg-secondary hover:border-line-strong hover:text-fg",
-                  )}
-                >
-                  {section.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+    <div className="lg:flex lg:items-start">
+      <SettingsRail slug={slug} groups={visibleGroups(role)} />
+      <div className="min-w-0 flex-1">
+        {onHome ? null : (
+          <div className="px-4 pt-3 md:px-6 lg:hidden">
+            <BackLink href={home as Route} label="Settings" />
+          </div>
+        )}
+        {children}
       </div>
-      {children}
     </div>
   );
 }

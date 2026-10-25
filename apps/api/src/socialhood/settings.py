@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_authorized_parties: CommaList = Field(default_factory=list)
     clerk_webhook_secret: SecretStr | None = None
+    # fake: keep team invitations in memory (auth/invitations.py); refused in production. Tests
+    # swap the sender with auth.invitations.use_invitation_sender whatever this says.
+    clerk_invitations_provider: Literal["clerk", "fake"] = "clerk"
 
     token_encryption_keys: CommaList = Field(default_factory=list)
 
@@ -108,10 +111,19 @@ class Settings(BaseSettings):
     ig_graph_version: str = "v25.0"
     meta_graph_version: str = "v25.0"
     ig_request_insights_scope: bool = False
+    # C-131: ask Facebook Pages for read_insights, which Page post insights need (a Meta App
+    # Review item, O-10). Off: Pages connect without it and show no post insights.
+    fb_request_insights_scope: bool = False
     ig_human_agent_enabled: bool = False
 
     meta_app_id: str | None = None
     meta_app_secret: SecretStr | None = None
+    # GR-29 Facebook Pages: Facebook Login's redirect URI (api/v1/oauth/facebook/callback) and the
+    # verify token of the Page webhook (/webhooks/facebook, signed with META_APP_SECRET). Neither
+    # set: Facebook connections are off. Messenger's 7-day HUMAN_AGENT window follows
+    # IG_HUMAN_AGENT_ENABLED: Meta approves Human Agent once for the app.
+    fb_redirect_uri: str | None = None
+    fb_webhook_verify_token: SecretStr | None = None
     whatsapp_config_id: str | None = None
     whatsapp_webhook_verify_token: SecretStr | None = None
 
@@ -127,6 +139,10 @@ class Settings(BaseSettings):
     # GR-38: Ask Social Hood's runs expose typed visuals (cards, ranked posts, sentiment) beside
     # the answer. Off: ``visuals`` is always empty and the prompt doesn't mention them.
     agent_visuals_enabled: bool = False
+    # GR-23: WhatsApp broadcasts. Off by default until the legal check of marketing consent in
+    # India (O-11) is done: off, the routes answer 404 "not available yet" (except the availability
+    # check the web asks), nothing is dispatched and the web shows nothing.
+    broadcasts_enabled: bool = False
     # Thinking level per model id, JSON (TR-AI-03); unset: "minimal" for Flash-Lite, else "low".
     ai_thinking_levels: dict[str, str] = Field(default_factory=dict)
     ai_daily_spend_limit_usd: float = 100.0
@@ -157,10 +173,38 @@ class Settings(BaseSettings):
     # fake: keep pushes in memory (notify/push_fake.py); refused in production.
     push_provider: Literal["webpush", "fake"] = "webpush"
 
+    # GR-27: Google Sheets sync. The OAuth client of the "drive.file" scope (not required: the
+    # card says "not set up" without them). fake: keep sheets in memory, or in Redis where the API
+    # and the worker are separate processes (google/fake.py); refused in production.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    google_redirect_uri: str | None = None
+    google_provider: Literal["google", "fake"] = "google"
+
+    # GR-31: the Shopify app (owner track O-10: a Partner account and an app listing). All unset by
+    # default: connecting Shopify then answers 503 "not configured" and the webhook route refuses.
+    # The API key and secret are the app's client credentials (the secret also signs the webhooks
+    # and the install redirect). fake: a built-in store for development and the end-to-end stack
+    # (shopify/fake.py); refused in production.
+    shopify_api_key: str | None = None
+    shopify_api_secret: SecretStr | None = None
+    shopify_redirect_uri: str | None = None
+    shopify_scopes: str = "read_products"
+    shopify_api_version: str = "2025-07"
+    shopify_provider: Literal["shopify", "fake"] = "shopify"
+
+    # GR-32: Razorpay payment links use each business's own keys (stored per workspace, encrypted),
+    # so there are no app-wide credentials. fake: a sandbox that accepts rzp_test_ keys, for
+    # development and the end-to-end stack (razorpay/fake.py); refused in production.
+    razorpay_provider: Literal["razorpay", "fake"] = "razorpay"
+
     sandbox_platform_enabled: bool = False
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
     # receive them locally); refused in production (security/ssrf.py).
     webhooks_allow_private: bool = False
+    # GR-35: a website crawl may read private and local addresses (development and e2e, which crawl
+    # a local fixture site); refused in production (security/ssrf.py).
+    crawl_allow_private: bool = False
 
     # TR-API-07 (security/ratelimit.py). Off only for local load or end-to-end runs; refused in
     # production. CLIENT_IP_HEADER names the header that carries the caller's address; required
@@ -211,11 +255,22 @@ class Settings(BaseSettings):
             unsafe.append("SANDBOX_PLATFORM_ENABLED must be false in production")
         if self.webhooks_allow_private:
             unsafe.append("WEBHOOKS_ALLOW_PRIVATE must be false in production")
+        if self.crawl_allow_private:
+            unsafe.append("CRAWL_ALLOW_PRIVATE must be false in production")
         if self.log_level == "DEBUG":
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:
             unsafe.append("RATE_LIMITS_ENABLED must be true in production")
-        for name in ("ai_provider", "dodo_provider", "email_provider", "push_provider"):
+        for name in (
+            "ai_provider",
+            "dodo_provider",
+            "email_provider",
+            "push_provider",
+            "clerk_invitations_provider",
+            "google_provider",
+            "shopify_provider",
+            "razorpay_provider",
+        ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")
         problems = []

@@ -29,7 +29,10 @@ test.describe("GR-09 ad clicks", () => {
     expect(conversationId).not.toBeNull();
 
     await page.goto(`/w/${workspace.slug}/inbox/${conversationId}`);
-    await expect(page.getByTestId("conversation-entry")).toContainText('From an ad: "Diwali hampers"');
+    // The details panel starts closed on a conversation opened by its address.
+    const details = page.getByRole("complementary", { name: "Details" });
+    if (!(await details.isVisible())) await page.getByRole("button", { name: "Details" }).click();
+    await expect(details.getByTestId("conversation-entry")).toContainText('From an ad: "Diwali hampers"');
   });
 
   test("an ad click on chosen ads passes over other ads", async ({ api, sandbox }) => {

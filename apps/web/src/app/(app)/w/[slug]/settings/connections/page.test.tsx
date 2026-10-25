@@ -97,10 +97,11 @@ describe("finishing an Instagram connect (F-03, X-1)", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
-  it("the empty state offers both Connect buttons, once", async () => {
+  it("the empty state offers every Connect button, once", async () => {
     renderPage(() => json(account()));
     expect(await screen.findByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Connect Instagram/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Connect Facebook/ })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: /Connect WhatsApp/ })).toHaveLength(1);
   });
 });
@@ -192,8 +193,20 @@ describe("search and filters (C-066)", () => {
     const card = await screen.findByRole("article", { name: "Gone Soon" });
     expect(within(card).getByText("Deleting…")).toBeInTheDocument();
     expect(within(card).queryAllByRole("button")).toEqual([]);
-    const filters = screen.getByRole("radiogroup", { name: "Show accounts" });
-    expect(counts(filters)).toEqual(["All1", "Connected0", "Disconnected1", "Sandboxes0"]);
+    // One account: no chips or search to filter it with.
+    expect(screen.queryByRole("radiogroup", { name: "Show accounts" })).toBeNull();
+    expect(screen.queryByRole("searchbox", { name: "Search accounts" })).toBeNull();
+  });
+
+  it("one Add account menu lists Instagram, Facebook and WhatsApp", async () => {
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByRole("radiogroup", { name: "Show accounts" });
+    expect(screen.queryByRole("button", { name: /Connect Instagram/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Add account/ }));
+    expect(await screen.findByRole("menuitem", { name: /Instagram/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Facebook/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /WhatsApp/ })).toBeInTheDocument();
   });
 
   it("Auto on the Free plan opens the upgrade dialog, with no request (UI-061)", async () => {
@@ -214,8 +227,7 @@ describe("search and filters (C-066)", () => {
     renderList();
     expect(await screen.findByRole("heading", { level: 1, name: "Connections" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
-    expect(screen.getByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Connect WhatsApp/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add account/ })).toBeInTheDocument();
   });
 });
 
@@ -267,5 +279,65 @@ describe("deleting an account's data (C-067)", () => {
     await user.click(within(dialog).getByRole("button", { name: "Remove account" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+});
+
+describe("connecting Facebook Pages (GR-29)", () => {
+  const pages = [
+    { id: "p1", name: "Maple Bakery", username: "maplebakery", picture_url: null, connected: false, can_connect: true, problem: null },
+    { id: "p2", name: "Maple Cafe", username: null, picture_url: null, connected: false, can_connect: true, problem: null },
+  ];
+
+  it("Add account → Facebook asks the API to start, and a refusal is a toast", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [account({ platform: "facebook", username: "maplebakery" })] }),
+        "POST /v1/w/:wid/social-accounts/facebook/connect": () =>
+          problem(503, "service_unavailable", "Facebook connections are not configured."),
+      },
+    });
+    await user.click(await screen.findByRole("button", { name: /Add account/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Facebook/ }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/v1/w/w1/social-accounts/facebook/connect")).toBe(true));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it("opens the Pages dialog with the nonce Facebook sent back, and drops it from the address", async () => {
+    nav.search = "facebook=n0nce";
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [] }),
+        "POST /v1/w/:wid/social-accounts/facebook/pages": () => json({ items: pages }),
+      },
+    });
+    expect(await screen.findByRole("list", { name: "Your Facebook Pages" })).toBeInTheDocument();
+    expect(calls.find((c) => c.path.endsWith("/facebook/pages"))?.body).toEqual({ nonce: "n0nce" });
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/connections", { scroll: false });
+  });
+
+  it("a cancelled Facebook login is explained, and nothing starts on its own", async () => {
+    nav.search = "error=access_denied&platform=facebook";
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [] }),
+      },
+    });
+    expect(await screen.findByText("Connection cancelled")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(calls.filter((c) => c.path.endsWith("/connect"))).toEqual([]);
+  });
+
+  it("a Page's card names Facebook and its API", async () => {
+    renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () =>
+          json({ items: [account({ platform: "facebook", username: "maplebakery", display_name: "Maple Bakery" })] }),
+      },
+    });
+    const card = await screen.findByRole("article", { name: "Maple Bakery" });
+    expect(within(card).getByRole("img", { name: "Facebook" })).toBeInTheDocument();
+    expect(within(card).getByText("Facebook Pages API")).toBeInTheDocument();
+    expect(within(card).getByText("@maplebakery")).toBeInTheDocument();
   });
 });

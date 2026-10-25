@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { pausedUntil } from "@/components/ai/AiModeControl";
 import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
+import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
 import { ContactDrawer } from "@/components/contacts/ContactDrawer";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
@@ -91,8 +92,9 @@ export function DetailsPanel({
   const name = contactName(c.contact, c.platform);
   const platform = PLATFORM_LABEL[c.platform];
   const linked = c.social_account.username ? `@${c.social_account.username}` : (c.social_account.display_name ?? platform);
-  // A profile to open: an Instagram username, or a WhatsApp number.
-  const profile = c.platform === "instagram" ? Boolean(c.contact.username) : Boolean(c.contact.platform_user_id);
+  // A profile to open: an Instagram username, or a WhatsApp number. A website visitor has none.
+  const profile =
+    c.platform === "web" ? false : c.platform === "instagram" ? Boolean(c.contact.username) : Boolean(c.contact.platform_user_id);
 
   return (
     <div className="flex flex-col gap-5 p-4">
@@ -152,6 +154,12 @@ export function DetailsPanel({
           </Button>
         </CardInset>
         <Attention conversation={c} now={now} timeZone={workspace.timezone} />
+      </Section>
+
+      <Section id="details-assignee" title="Assigned to">
+        <CardInset padding="compact">
+          <AssigneeMenu conversation={c} variant="panel" />
+        </CardInset>
       </Section>
 
       <Section

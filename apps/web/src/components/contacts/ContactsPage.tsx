@@ -10,15 +10,17 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContactCount, useContacts, useExportContacts } from "@/lib/api/queries";
-import type { ContactListItem } from "@/lib/api/types";
+import type { ContactListItem, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { cn } from "@/lib/utils";
 
 import { BulkTagDialog } from "./BulkTagDialog";
 import { ContactDrawer } from "./ContactDrawer";
@@ -215,7 +217,7 @@ export function ContactsPage() {
           />
         ) : (
           <>
-            <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div className={cn(cardVariants(), "overflow-hidden p-0")}>
               <div className="flex items-center gap-3 border-b border-line px-3 py-2 text-xs text-fg-secondary">
                 <Checkbox
                   aria-label="Select all on this page"
@@ -299,7 +301,7 @@ function ContactRow({
         className="flex min-w-0 flex-1 flex-col gap-2 text-left md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_4.5rem_5rem] md:items-center md:gap-4"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as "instagram" | "whatsapp"} size={32} />
+          <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as Platform} size={32} />
           <span className="min-w-0">
             <span className="block truncate font-medium">{item.name}</span>
             {item.username ? <span className="block truncate text-xs text-fg-secondary">@{item.username}</span> : null}

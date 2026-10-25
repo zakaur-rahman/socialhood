@@ -4,16 +4,23 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Pencil } from "lucide-react"
 
 import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import { usePostPerformance } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
+import { AGE_LABEL, figuresOf, formatFigure } from "@/lib/analytics/format";
 import { handleOf } from "@/lib/publishing/rules";
 import type { ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
+/** The platform's name in the words the banner uses. */
+function platformName(account: SocialAccount | undefined): string {
+  return account?.platform === "facebook" ? "Facebook" : "Instagram";
+}
+
 const TARGET_LABEL: Record<ScheduledPostTarget["status"], string> = {
   pending: "Waiting",
   publishing: "Publishing",
-  container_created: "Instagram is processing it",
+  container_created: "Processing",
   published: "Published",
   failed: "Failed",
   canceled: "Cancelled",
@@ -31,7 +38,48 @@ function FirstCommentLine({ target }: { target: ScheduledPostTarget }) {
   );
 }
 
-function TargetRows({ targets, accounts, timeZone, now }: { targets: ScheduledPostTarget[]; accounts: SocialAccount[]; timeZone: string; now: Date }) {
+/** The figures read so far for a published Story (1 h, 6 h and 23 h, before it goes down). */
+const STORY_SUMMARY = ["reach", "views", "replies", "shares"] as const;
+
+function StoryInsights({ wid, postId }: { wid: string; postId: string }) {
+  const performance = usePostPerformance(wid, postId, null);
+  if (!performance.data) return null;
+  const { data } = performance;
+  if (!data.captured_at) {
+    return (
+      <span className="text-fg-secondary" data-testid="story-insights">
+        Figures are read 1 h after it goes up
+      </span>
+    );
+  }
+  const figures = figuresOf(data).filter((figure) => (STORY_SUMMARY as readonly string[]).includes(figure.key) && figure.value != null);
+  if (figures.length === 0) {
+    return (
+      <span className="text-fg-secondary" data-testid="story-insights">
+        {data.insights_granted ? "No figures from Instagram yet" : "Reconnect to read Story insights"}
+      </span>
+    );
+  }
+  return (
+    <span className="text-fg-secondary" data-testid="story-insights">
+      {figures.map((figure) => `${figure.label} ${formatFigure(figure)}`).join(" · ")} · at {AGE_LABEL[data.age]}
+    </span>
+  );
+}
+
+function TargetRows({
+  targets,
+  accounts,
+  timeZone,
+  now,
+  wid,
+}: {
+  targets: ScheduledPostTarget[];
+  accounts: SocialAccount[];
+  timeZone: string;
+  now: Date;
+  wid?: string;
+}) {
   return (
     <ul className="mt-3 space-y-2" aria-label="Accounts">
       {targets.map((target) => {
@@ -40,7 +88,7 @@ function TargetRows({ targets, accounts, timeZone, now }: { targets: ScheduledPo
           <li key={target.social_account_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="font-medium">{handleOf(account)}</span>
             <span className={cn(target.status === "failed" ? "text-danger-fg" : "text-fg-secondary")}>
-              {TARGET_LABEL[target.status]}
+              {target.status === "container_created" ? `${platformName(account)} is processing it` : TARGET_LABEL[target.status]}
               {target.status === "published" && target.published_at ? ` ${formatDayTime(target.published_at, timeZone, now)}` : ""}
               {target.status === "failed" && target.error ? `: ${target.error.message}` : ""}
             </span>
@@ -51,9 +99,25 @@ function TargetRows({ targets, accounts, timeZone, now }: { targets: ScheduledPo
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-brand-fg underline-offset-4 hover:underline"
               >
-                View on Instagram <ExternalLink className="size-3.5" aria-hidden />
+                View on {platformName(account)} <ExternalLink className="size-3.5" aria-hidden />
                 <span className="sr-only">(opens in a new tab)</span>
               </a>
+            ) : null}
+            {target.expires_at ? (
+              <span className="text-fg-secondary" data-testid="story-expiry">
+                {new Date(target.expires_at).getTime() > now.getTime()
+                  ? `Disappears ${formatDayTime(target.expires_at, timeZone, now)}`
+                  : "Expired after 24 hours"}
+              </span>
+            ) : null}
+            {wid && target.expires_at && target.status === "published" && target.post_id ? (
+              account?.platform === "facebook" ? (
+                <span className="text-fg-secondary" data-testid="story-insights">
+                  Facebook doesn&apos;t share figures for Page Stories
+                </span>
+              ) : (
+                <StoryInsights wid={wid} postId={target.post_id} />
+              )
             ) : null}
             <FirstCommentLine target={target} />
           </li>
@@ -75,11 +139,14 @@ export function StatusBanner({
   now,
   onEditAndRetry,
   retrying,
+  wid,
 }: {
   post: ScheduledPost;
   accounts: SocialAccount[];
   timeZone: string;
   now: Date;
+  /** The workspace, to read a published Story's insights. */
+  wid?: string;
   onEditAndRetry: () => void;
   retrying: boolean;
 }) {
@@ -108,7 +175,7 @@ export function StatusBanner({
             {post.status === "published" ? "Published" : "Partly published"}
             {post.published_at ? ` ${formatDayTime(post.published_at, timeZone, now)}` : ""}
           </AlertTitle>
-          <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
+          <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} wid={wid} />
         </Alert>
       );
     case "failed":

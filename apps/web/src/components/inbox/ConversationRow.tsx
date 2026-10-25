@@ -3,9 +3,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { Ref } from "react";
 
+import { AssigneeAvatar } from "@/components/assignment/AssigneeAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AiMode, ConversationListItem, MessageKind } from "@/lib/api/types";
+import { assigneeName } from "@/lib/inbox/assignee";
 import { contactName, previewPrefix, previewText, rowBadges } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -77,6 +79,13 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
           <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", unread ? "text-fg" : "text-fg-secondary")}>
             {name}
           </span>
+          {item.assignee ? (
+            // GR-20: who has it. The name is written for screen readers; the avatar is a picture or initials.
+            <span className="flex shrink-0 items-center" data-testid="row-assignee">
+              <AssigneeAvatar name={assigneeName(item.assignee)} pictureUrl={item.assignee.avatar_url} />
+              <span className="sr-only">Assigned to {assigneeName(item.assignee)}</span>
+            </span>
+          ) : null}
           {item.last_message_at ? (
             <time
               dateTime={item.last_message_at}

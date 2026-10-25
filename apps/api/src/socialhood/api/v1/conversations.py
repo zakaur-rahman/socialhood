@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanAssign, CanReply, Session
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.inbox import (
     Conversation,
@@ -39,13 +39,21 @@ async def list_conversations(
     view: Annotated[InboxView, Query()] = "all",
     platform: Annotated[PlatformName | None, Query()] = None,
     account_id: Annotated[uuid.UUID | None, Query()] = None,
+    assignee_id: Annotated[uuid.UUID | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ConversationList:
     return await service.list_conversations(
         session,
-        service.ListFilters(view=view, platform=platform, account_id=account_id, q=q),
+        service.ListFilters(
+            view=view,
+            platform=platform,
+            account_id=account_id,
+            q=q,
+            viewer_id=ctx.user.id,
+            assignee_id=assignee_id,
+        ),
         cursor=cursor,
         limit=limit,
         ig_human_agent_enabled=_human_agent_enabled(request),
@@ -55,7 +63,7 @@ async def list_conversations(
 
 @router.get("/conversations/counts", operation_id="get_inbox_counts")
 async def get_inbox_counts(ctx: AnyMember, session: Session) -> InboxCounts:
-    return await service.inbox_counts(session)
+    return await service.inbox_counts(session, ctx.user.id)
 
 
 @router.get("/conversations/{conversation_id}", operation_id="get_conversation")
@@ -73,7 +81,7 @@ async def update_conversation(
     request: Request,
     conversation_id: uuid.UUID,
     body: ConversationPatch,
-    ctx: AnyMember,
+    ctx: CanAssign,
     session: Session,
 ) -> Conversation:
     """Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
@@ -93,7 +101,7 @@ async def update_conversation(
     operation_id="mark_conversation_read",
 )
 async def mark_conversation_read(
-    request: Request, conversation_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, conversation_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     conv = await service.get_or_404(session, conversation_id)
     if await service.mark_read(
@@ -109,7 +117,7 @@ async def mark_conversation_read(
     operation_id="mark_conversation_unread",
 )
 async def mark_conversation_unread(
-    request: Request, conversation_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, conversation_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     conv = await service.get_or_404(session, conversation_id)
     if await service.mark_unread(

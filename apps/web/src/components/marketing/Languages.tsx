@@ -33,7 +33,7 @@ const EXAMPLES: Example[] = [
 /** The AI's three languages, as replies to real-sounding questions (examples, labelled as such). */
 export function Languages() {
   return (
-    <section aria-labelledby="languages-title" className="border-t border-line-subtle bg-panel/30 py-20 sm:py-24">
+    <section aria-labelledby="languages-title" className="border-t border-line-subtle bg-panel-glass py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="languages-title"
@@ -46,7 +46,7 @@ export function Languages() {
             <li key={example.language} data-reveal style={{ "--reveal-delay": `${index * 100}ms` } as CSSProperties}>
               <article
                 aria-labelledby={`language-${example.lang}`}
-                className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-canvas p-5 transition-[border-color,box-shadow,translate] duration-slow hover:border-brand-line hover:shadow-xl hover:shadow-brand/10 motion-safe:hover:-translate-y-1"
+                className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-canvas p-5 transition-[border-color,box-shadow,translate] duration-slow hover:border-brand-line hover:shadow-glow-hover motion-safe:hover:-translate-y-1"
               >
                 <h3 id={`language-${example.lang}`} className={EYEBROW}>
                   {example.language}

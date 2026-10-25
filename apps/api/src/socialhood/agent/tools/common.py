@@ -14,11 +14,12 @@ from __future__ import annotations
 import functools
 import uuid
 from collections.abc import Callable, Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from socialhood.agent import visuals
 from socialhood.agent.registry import (
     Release,
     ToolContext,
@@ -41,12 +42,13 @@ from socialhood.agent.timeparse import (
 from socialhood.auth.deps import ROLE_RANK
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.agent import RiskTier
-from socialhood.models.connections import SocialAccount
+from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.identity import Role
 from socialhood.models.inbox import Contact
 from socialhood.models.media import MediaItem
 from socialhood.repositories import social_accounts
-from socialhood.schemas.agent import AnswerRef, AnswerRefKind
+from socialhood.schemas.agent import AnswerRef, AnswerRefKind, Visual
+from socialhood.services import reports
 from socialhood.services.analytics.ages import format_of
 from socialhood.services.analytics.common import View, capabilities_from
 
@@ -56,8 +58,8 @@ LABEL_CHARS = 60
 TEXT_CHARS = 280  # a message, comment or caption in a result
 ADMIN_ONLY = "Only owners and admins can use this, as in the app."
 FACEBOOK_NOT_CONNECTED = (
-    "Facebook isn't connected: Facebook Pages arrive in a later release, so only Instagram "
-    "(and WhatsApp for messages) is covered."
+    "Facebook isn't connected: connect a Facebook Page in Settings to include it, so for now "
+    "only Instagram (and WhatsApp for messages) is covered."
 )
 
 PlatformName = Literal["instagram", "whatsapp", "facebook"]
@@ -226,6 +228,55 @@ def ref(
     )
 
 
+# VIS-13: ids of report refs come from the week and the account, so the same report is one source.
+REPORT_NAMESPACE = uuid.UUID("5d6c1b0e-7a3f-4c52-9a84-3f1e2b7c9d10")
+
+
+def report_week(ctx: ToolContext, since: date, until: date) -> date | None:
+    """The Monday of the latest finished week (Monday to Sunday, in the workspace's zone) that
+    lies wholly inside ``since``..``until``, or None when none does or it is older than the
+    report can show. Whether a figure matches a report is a matter of dates, never of the model."""
+    zone_name = ctx.timezone.key
+    latest = reports.latest_week(zone_name, ctx.now)
+    monday = reports.monday_of(until)
+    if monday + timedelta(days=6) > until:
+        monday -= timedelta(weeks=1)
+    monday = min(monday, latest)
+    oldest = latest - timedelta(weeks=reports.MAX_WEEKS_BACK)
+    return monday if monday >= since and monday >= oldest else None
+
+
+def report_ref(
+    ctx: ToolContext, since: date, until: date, account: SocialAccount | None
+) -> list[AnswerRef]:
+    """The weekly report for the latest finished week inside the period (one account when the
+    question was about one), as the refs of a result; empty when no whole week fits."""
+    monday = report_week(ctx, since, until)
+    if monday is None:
+        return []
+    sunday = monday + timedelta(days=6)
+    who = f"{handle(account)}, " if account is not None else ""
+    label = f"Weekly report, {who}{span_label(monday, sunday)}"
+    key = f"{monday.isoformat()}:{account.id if account is not None else ''}"
+    return [
+        AnswerRef(
+            kind="report",
+            id=uuid.uuid5(REPORT_NAMESPACE, key),
+            label=clip(label, LABEL_CHARS) or "Weekly report",
+            parent_id=account.id if account is not None else None,
+            week=monday,
+        )
+    ]
+
+
+def visual[V: Visual](ctx: ToolContext, kind: str, build: Callable[[], V]) -> V | None:
+    """The tool's visual (GR-38), or None with AGENT_VISUALS_ENABLED off or when it can't be
+    built (the result and the answer stand). The tool's own role check has already run."""
+    if not ctx.platform.settings.agent_visuals_enabled:
+        return None
+    return visuals.safe(kind, build)
+
+
 def quoted(text: str | None) -> str:
     """ "“Too expensive for me”" for a comment or message label."""
     return f"“{clip(text, LABEL_CHARS - 2) or ''}”"
@@ -297,8 +348,19 @@ async def find_account(ctx: ToolContext, account: str | None) -> SocialAccount |
 
 
 def facebook_asked(*values: str | None) -> bool:
-    """Whether the member asked about Facebook, which isn't connected in R1 (FR-AGT-06)."""
+    """Whether the member asked about Facebook (FR-AGT-06)."""
     return any((v or "").strip().lower() in ("facebook", "fb", "facebook page") for v in values)
+
+
+async def facebook_unconnected(ctx: ToolContext, *values: str | None) -> bool:
+    """The member asked about Facebook and the workspace has no Facebook Page connected
+    (FR-AGT-06; Pages connect since GR-29)."""
+    if not facebook_asked(*values):
+        return False
+    accounts = await social_accounts.list_all(ctx.session)
+    return not any(
+        a.platform == "facebook" and a.status != AccountStatus.DISCONNECTED for a in accounts
+    )
 
 
 def analytics_view(ctx: ToolContext) -> View:

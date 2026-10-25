@@ -188,9 +188,7 @@ async def overview(
     current = await stats.compute(session, span=span, now=now)
     previous_inbox = await stats.inbox_stats(session, before)
     previous_comments = await stats.comments_received(session, before)
-    mentions = await stats.story_mentions_received(session, span)
     previous_mentions = await stats.story_mentions_received(session, before)
-    entries = await stats.conversations_by_entry(session, span)
     previous_entries = await stats.conversations_by_entry(session, before)
     counts = await inbox_counts(session)
     connected, platforms = await stats.accounts_connected(session)
@@ -233,7 +231,13 @@ async def overview(
                 session, now=now, human_agent=human_agent
             ),
             "messages_today": await stats.messages_received(session, today),
-            "current": _period(span, current.inbox, current.comments_received, mentions, entries),
+            "current": _period(
+                span,
+                current.inbox,
+                current.comments_received,
+                current.story_mentions,
+                {"ad": current.conversations_from_ads, "link": current.conversations_from_links},
+            ),
             "previous": _period(
                 before, previous_inbox, previous_comments, previous_mentions, previous_entries
             ),

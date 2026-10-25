@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useApi } from "@/lib/api/provider";
-import type { ActionName, AutomationDefinition, LinkButton, MediaAsset, Plan } from "@/lib/api/types";
+import type { ActionName, AutomationDefinition, LinkButton, MediaAsset, Plan, Platform } from "@/lib/api/types";
 import {
   buttonProblems,
   DEFAULT_FOLLOW_NUDGE,
@@ -39,6 +39,7 @@ import {
 } from "@/lib/automations/definition";
 import type { StepKind } from "@/lib/automations/flow";
 import { formatCount } from "@/lib/automations/format";
+import { messageLimit, messageSize, networkName, overLimitCopy } from "@/lib/automations/limits";
 import {
   AI_INSTRUCTIONS_MAX,
   BUTTON_TEXT_MAX_CHARS,
@@ -50,12 +51,10 @@ import {
   INSERTABLE_FIELDS,
   MAX_BUTTONS,
   MAX_PUBLIC_REPLIES,
-  MESSAGE_LIMIT_BYTES,
   MESSAGE_MAX_CHARS,
   OPENING_BUTTON_MAX,
   OPENING_MAX_CHARS,
   PUBLIC_REPLY_MAX,
-  worstCaseBytes,
   worstCaseChars,
 } from "@/lib/automations/render";
 import { ATTACHMENT_RULES, UploadError, uploadAsset } from "@/lib/media/upload";
@@ -115,6 +114,7 @@ export function ThenStep({
   errors,
   state,
   plan,
+  platform,
   disclosure,
   mediaUrl,
   onMediaChange,
@@ -127,6 +127,8 @@ export function ThenStep({
   errors: FieldErrors;
   state: StepState;
   plan: Plan;
+  /** GR-29: the account's platform (Instagram when unknown). */
+  platform?: Platform;
   disclosure: string | null;
   mediaUrl: string | null;
   onMediaChange: (url: string | null) => void;
@@ -177,7 +179,9 @@ export function ThenStep({
 
         {draft.action === "send_message" ? (
           <>
-            {comment ? <TapFirst draft={draft} change={change} errors={errors} disclosure={disclosure} /> : null}
+            {comment ? (
+              <TapFirst draft={draft} change={change} errors={errors} disclosure={disclosure} platform={platform} />
+            ) : null}
             <DmBuilder
               wid={wid}
               comment={comment}
@@ -185,11 +189,12 @@ export function ThenStep({
               change={change}
               errors={errors}
               disclosure={disclosure}
+              platform={platform}
               mediaUrl={mediaUrl}
               onMediaChange={onMediaChange}
               upload={upload}
             />
-            <FollowNudge draft={draft} change={change} errors={errors} />
+            <FollowNudge draft={draft} change={change} errors={errors} platform={platform} />
             {startFlow ? <MoreSteps {...startFlow} /> : null}
           </>
         ) : null}
@@ -289,6 +294,7 @@ function DmBuilder({
   change,
   errors,
   disclosure,
+  platform,
   mediaUrl,
   onMediaChange,
   upload,
@@ -299,14 +305,16 @@ function DmBuilder({
   change: Change;
   errors: FieldErrors;
   disclosure: string | null;
+  platform?: Platform;
   mediaUrl: string | null;
   onMediaChange: (url: string | null) => void;
   upload?: Uploader;
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const text = draft.message_text ?? "";
-  const bytes = worstCaseBytes(text, disclosure);
-  const over = bytes > MESSAGE_LIMIT_BYTES;
+  const size = messageSize(text, disclosure, platform);
+  const { limit, unit } = messageLimit(platform);
+  const over = size > limit;
   const buttons = draft.message_buttons ?? [];
   const overButtonText = buttons.length > 0 && worstCaseChars(text, disclosure) > BUTTON_TEXT_MAX_CHARS;
   const textError = errorsFor(errors, "message_text")[0];
@@ -355,16 +363,14 @@ function DmBuilder({
             id="automation-message-bytes"
             className={cn("shrink-0 tabular-nums", over ? "text-danger-fg" : "text-fg-secondary")}
           >
-            {formatCount(bytes)} / {formatCount(MESSAGE_LIMIT_BYTES)} bytes
+            {formatCount(size)} / {formatCount(limit)} {unit}
           </p>
         </div>
         {over ? (
-          <p className="text-xs text-danger-fg">
-            Instagram allows {formatCount(MESSAGE_LIMIT_BYTES)} bytes in a DM, counting the longest name. Shorten the message.
-          </p>
+          <p className="text-xs text-danger-fg">{overLimitCopy(platform, "the message")}</p>
         ) : overButtonText ? (
           <p className="text-xs text-danger-fg">
-            With link buttons Instagram allows {formatCount(BUTTON_TEXT_MAX_CHARS)} characters, counting the longest name.
+            With link buttons {networkName(platform)} allows {formatCount(BUTTON_TEXT_MAX_CHARS)} characters, counting the longest name.
             Shorten the message.
           </p>
         ) : null}
@@ -459,18 +465,21 @@ function TapFirst({
   change,
   errors,
   disclosure,
+  platform,
 }: {
   draft: AutomationDefinition;
   change: Change;
   errors: FieldErrors;
   disclosure: string | null;
+  platform?: Platform;
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const on = draft.confirm_first;
   const text = draft.opening_text ?? "";
   const button = draft.opening_button ?? "";
-  const bytes = worstCaseBytes(text, disclosure);
-  const problems = openingProblems(draft, disclosure);
+  const size = messageSize(text, disclosure, platform);
+  const { limit, unit } = messageLimit(platform);
+  const problems = openingProblems(draft, disclosure, platform);
   const textProblem = errorsFor(errors, "opening_text")[0] ?? problems.text;
   const buttonProblem = errorsFor(errors, "opening_button")[0] ?? problems.button;
 
@@ -483,7 +492,7 @@ function TapFirst({
             <Badge tone="brand">Recommended</Badge>
           </Label>
           <p id="automation-tap-first-hint" className="text-xs text-fg-secondary">
-            Instagram allows one text-only reply to a comment until the person answers. Once they tap the button or
+            {networkName(platform)} allows one text-only reply to a comment until the person answers. Once they tap the button or
             reply, your message can use their real first name, an image and link buttons, and you can follow up.
           </p>
         </div>
@@ -532,10 +541,10 @@ function TapFirst({
                 id="automation-opening-bytes"
                 className={cn(
                   "shrink-0 tabular-nums",
-                  bytes > MESSAGE_LIMIT_BYTES ? "text-danger-fg" : "text-fg-secondary",
+                  size > limit ? "text-danger-fg" : "text-fg-secondary",
                 )}
               >
-                {formatCount(bytes)} / {formatCount(MESSAGE_LIMIT_BYTES)} bytes
+                {formatCount(size)} / {formatCount(limit)} {unit}
               </p>
             </div>
             {textProblem ? (
@@ -576,10 +585,38 @@ function TapFirst({
  * One more message after the automation's, only to people Instagram reports as not following the
  * account. Never a gate: the message goes to everyone either way.
  */
-function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; change: Change; errors: FieldErrors }) {
+function FollowNudge({
+  draft,
+  change,
+  errors,
+  platform,
+}: {
+  draft: AutomationDefinition;
+  change: Change;
+  errors: FieldErrors;
+  platform?: Platform;
+}) {
   const on = draft.follow_nudge;
   const text = draft.follow_nudge_text ?? "";
   const problem = errorsFor(errors, "follow_nudge_text")[0] ?? (on ? followNudgeProblem(text) : null);
+
+  if (platform === "facebook") {
+    // Messenger doesn't say whether someone follows a Page (GR-29): the line can't be sent, and
+    // one left on from another account is switched off here, where the API would refuse it.
+    return (
+      <CardInset className="space-y-3" data-testid="follow-nudge-unavailable">
+        <p className="text-sm font-medium">Follow message</p>
+        <p className="text-xs text-fg-secondary">
+          Messenger doesn&apos;t say whether someone follows your Page, so the follow message isn&apos;t available on Facebook.
+        </p>
+        {on ? (
+          <Button variant="secondary" size="sm" onClick={() => change({ follow_nudge: false })}>
+            Turn it off
+          </Button>
+        ) : null}
+      </CardInset>
+    );
+  }
 
   return (
     <CardInset className="space-y-4">

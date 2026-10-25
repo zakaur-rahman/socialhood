@@ -10,6 +10,8 @@ import { z } from "zod";
 import type { EntitlementValue } from "@/lib/api/types";
 import { PLAN_NAME, formatPrice } from "@/lib/copy";
 
+import table from "./plan-table.json";
+
 export const PLANS_REVALIDATE_SECONDS = 3600;
 const TIMEOUT_MS = 5000;
 
@@ -105,6 +107,7 @@ const LINES: { key: string; line: Line }[] = [
     key: "accounts_per_platform",
     line: (v) => (typeof v === "number" ? `${count.format(v)} Instagram and ${plural(v, "WhatsApp account", "WhatsApp accounts")}` : null),
   },
+  { key: "members", line: (v) => (typeof v === "number" ? plural(v, "team member", "team members") : null) },
   {
     key: "ai_modes",
     line: (v) => (Array.isArray(v) ? (v.includes("auto") ? "AI replies: Off, Suggest and Auto" : "AI replies: Off and Suggest") : null),
@@ -141,6 +144,9 @@ const LINES: { key: string; line: Line }[] = [
           ? `Comment analysis on your ${plural(v, "latest post", "latest posts")} per account`
           : null,
   },
+  { key: "public_api", line: (v) => (v === true ? "Public API and Zapier app" : null) },
+  { key: "sheets_sync", line: (v) => (v === true ? "Google Sheets sync" : null) },
+  { key: "commerce", line: (v) => (v === true ? "Product catalogue" : null) },
 ];
 
 /** The plan card's feature lines from its entitlements; unknown keys are left out. */
@@ -158,34 +164,20 @@ function numberOf(entitlements: EntitlementValue[], key: string): number | null 
 }
 
 /**
- * The product guide's plan table (and billing/plans.py), used only when the API can't be reached,
- * so the page still lists what each plan includes. Never a price.
+ * billing/plans.py as exported to plan-table.json (checked by tests/unit/test_marketing_plan_table.py),
+ * used only when the API can't be reached, so the page still lists what each plan includes. Never
+ * a price.
  */
+function fromTable(plan: "free" | "pro"): EntitlementValue[] {
+  return Object.entries(table.entitlements).map(([key, byPlan]) => ({
+    key,
+    value: (byPlan as Record<string, EntitlementValue["value"]>)[plan],
+  }));
+}
+
 export const FALLBACK_ENTITLEMENTS: Record<"free" | "pro", EntitlementValue[]> = {
-  free: [
-    { key: "accounts_per_platform", value: 1 },
-    { key: "ai_modes", value: ["off", "suggest"] },
-    { key: "ai_reply_automations", value: false },
-    { key: "ai_credits_monthly", value: 200 },
-    { key: "active_automations", value: 3 },
-    { key: "knowledge_characters", value: 200_000 },
-    { key: "scheduled_posts_monthly", value: 10 },
-    { key: "pending_scheduled_messages", value: 20 },
-    { key: "message_history_days", value: 90 },
-    { key: "comment_intelligence_posts", value: 5 },
-  ],
-  pro: [
-    { key: "accounts_per_platform", value: 3 },
-    { key: "ai_modes", value: ["off", "suggest", "auto"] },
-    { key: "ai_reply_automations", value: true },
-    { key: "ai_credits_monthly", value: 5000 },
-    { key: "active_automations", value: 50 },
-    { key: "knowledge_characters", value: 5_000_000 },
-    { key: "scheduled_posts_monthly", value: 300 },
-    { key: "pending_scheduled_messages", value: 500 },
-    { key: "message_history_days", value: null },
-    { key: "comment_intelligence_posts", value: null },
-  ],
+  free: fromTable("free"),
+  pro: fromTable("pro"),
 };
 
 /** FR-BIL-03: Pro's trial, once per workspace; used only in the fallback. */

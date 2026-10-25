@@ -14,7 +14,7 @@ from socialhood.schemas.common import RequestModel, ResponseModel
 FieldTypeName = Literal["text", "email", "phone", "number", "date", "choice"]
 ConsentChannelName = Literal["instagram", "whatsapp", "email"]
 ConsentStatusName = Literal["granted", "revoked"]
-ConsentSourceName = Literal["platform_optin", "flow", "stop_reply", "member", "import"]
+ConsentSourceName = Literal["platform_optin", "flow", "stop_reply", "member", "import", "widget"]
 LeadStageName = Literal["new", "qualified", "follow_up", "won", "lost"]  # GR-18
 Option = Annotated[str, Field(min_length=1, max_length=60)]  # a choice field's value
 # A custom field filter: ``key:value`` (equal, ignoring case) or ``key:*`` (has any value).
@@ -160,6 +160,16 @@ class ContactPatch(RequestModel):
     fields: dict[str, Any] | None = None
 
 
+class ContactCreate(RequestModel):
+    """The public API adds a customer to a WhatsApp account by phone number (GR-25)."""
+
+    account_id: uuid.UUID
+    phone: str = Field(min_length=8, max_length=32)
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    email: str | None = Field(default=None, max_length=254)
+    fields: dict[str, Any] | None = None
+
+
 class ContactTagsUpdate(RequestModel):
     add: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     remove: list[uuid.UUID] = Field(default_factory=list, max_length=20)
@@ -171,7 +181,7 @@ class ContactFilterSpec(RequestModel):
 
     q: str | None = Field(default=None, max_length=100)
     tag_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)  # every one of them
-    platform: Literal["instagram", "whatsapp"] | None = None
+    platform: Literal["instagram", "whatsapp", "facebook", "web"] | None = None
     account_id: uuid.UUID | None = None
     has_email: bool | None = None
     has_phone: bool | None = None
@@ -199,7 +209,7 @@ class ContactFilterOut(ResponseModel):
 
     q: str | None = None
     tag_ids: list[uuid.UUID] = Field(default_factory=list)
-    platform: Literal["instagram", "whatsapp"] | None = None
+    platform: Literal["instagram", "whatsapp", "facebook", "web"] | None = None
     account_id: uuid.UUID | None = None
     has_email: bool | None = None
     has_phone: bool | None = None
@@ -262,7 +272,17 @@ class SegmentPatch(RequestModel):
 # ---- timeline
 
 TimelineKind = Literal[
-    "conversation", "comment", "automation_run", "story_mention", "consent", "tag", "lead_stage"
+    "conversation",
+    "comment",
+    "automation_run",
+    "story_mention",
+    "consent",
+    "tag",
+    "lead_stage",
+    "broadcast",
+    "assignment",
+    "sequence",
+    "order",
 ]
 
 

@@ -45,3 +45,10 @@ AI = Depends(per_workspace("ai"))
 OAUTH_CALLBACK = Depends(per_ip("oauth_callback"))
 # 60 a minute per IP: the other routes without sign-in (webhooks excepted).
 PUBLIC = Depends(per_ip("public"))
+# GR-28, the website chat widget: its public routes (the other limits are counted per visitor in
+# api/v1/widget_public.py).
+WIDGET_FRAME = Depends(per_ip("widget_frame"))
+WIDGET_SESSION = Depends(per_ip("widget_session"))
+WIDGET_SEND = Depends(per_ip("widget_send_ip"))
+WIDGET_POLL = Depends(per_ip("widget_poll_ip"))
+WIDGET_EMAIL = Depends(per_ip("widget_email_ip"))

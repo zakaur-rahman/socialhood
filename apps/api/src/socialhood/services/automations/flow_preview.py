@@ -19,11 +19,14 @@ from socialhood.schemas.flows import (
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchStep,
     DelayStep,
     FlowDefinition,
     HandOff,
     NotifyTeam,
+    PaymentStep,
+    ProductStep,
     RandomizeStep,
     RemoveTag,
     SendStep,
@@ -47,6 +50,12 @@ def _action_title(step: ActionStep, tag_names: Mapping[uuid.UUID, str]) -> str:
             return "Notify the team"
         case HandOff():
             return "Hand off to a person"
+        case Assign(mode=mode):
+            return {
+                "member": "Assign to a team member",
+                "round_robin": "Assign to the next available member",
+                "nobody": "Remove the assignee",
+            }[mode]
 
 
 def _delay_title(seconds: int) -> str:
@@ -61,6 +70,10 @@ def title(step: Step, tag_names: Mapping[uuid.UUID, str]) -> str:
     match step:
         case SendStep():
             return "Message"
+        case ProductStep():
+            return "Send a product"
+        case PaymentStep():
+            return "Request payment"
         case AskStep():
             return ASK_TITLES[step.expect]
         case BranchStep():

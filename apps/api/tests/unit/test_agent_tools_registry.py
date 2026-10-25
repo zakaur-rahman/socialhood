@@ -41,10 +41,22 @@ READ = {
     "search_knowledge",
     "answer_from_knowledge",
     "list_knowledge_gaps",
+    "search_products",  # GR-31
+    "list_orders",  # GR-32
     "list_webhook_endpoints",
     "list_recent_failures",
+    "list_sequences",
 }
-DRAFT = {"draft_reply", "prepare_comment_reply", "prepare_scheduled_message", "prepare_automation"}
+DRAFT = {
+    "draft_reply",
+    "prepare_comment_reply",
+    "prepare_scheduled_message",
+    "prepare_automation",
+    "propose_flow",  # GR-36: proposals wait for a member's approval
+    "propose_segment",
+}
+# GR-36: the slot for broadcast drafts (GR-23); registered for R2, so no run offers it.
+UNAVAILABLE = {"propose_broadcast"}
 ADMIN = {
     "list_scheduled_posts",
     "list_automations",
@@ -52,19 +64,28 @@ ADMIN = {
     "get_automation_stats",
     "test_automation",
     "prepare_automation",
+    "propose_flow",
+    "propose_segment",
     "search_knowledge",
     "answer_from_knowledge",
     "list_knowledge_gaps",
+    "search_products",  # GR-31
+    "list_orders",  # GR-32
     "list_webhook_endpoints",
     "list_recent_failures",
+    "list_sequences",
 }
 
 
 def test_every_r1_tool_is_registered_with_its_tier_and_role() -> None:
     tools = load_tools()
     assert tools is registry
-    assert {spec.name for spec in tools} == READ | DRAFT
+    assert {spec.name for spec in tools} == READ | DRAFT | UNAVAILABLE
     for spec in tools:
+        if spec.name in UNAVAILABLE:
+            assert spec.release == Release.R2
+            assert spec.tier == RiskTier.DRAFT
+            continue
         assert spec.release == Release.R1
         assert spec.capability is None
         assert spec.tier == (RiskTier.DRAFT if spec.name in DRAFT else RiskTier.READ)

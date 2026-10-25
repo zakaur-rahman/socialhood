@@ -14,8 +14,10 @@ its id, platform, @username and name; an email or phone only in the events about
 subscribed to it, each with its deliver_webhook job (services/webhooks/delivery.py). Nothing is
 written when no endpoint wants the event. Backfilled history emits nothing.
 
-``conversation.assigned`` (GR-20) and ``broadcast.finished`` (GR-23) are in the catalogue so
-endpoints can subscribe now; they're emitted once those features exist.
+A ``lead.captured`` also queues a row for the workspace's Google Sheet (services/sheets.py).
+
+``broadcast.finished`` (GR-23) is in the catalogue so endpoints can subscribe now; it's emitted once
+that feature sends it.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.plans import current_plan, entitlement
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.connections import SocialAccount
 from socialhood.models.inbox import Contact, Message
@@ -59,9 +62,16 @@ EVENTS: tuple[EventType, ...] = (
     EventType("lead.captured", 1, "An automation's question saved an email, phone or field."),
     EventType("lead.stage_changed", 1, "A contact's lead stage changed."),
     EventType("message.received", 1, "A customer sent a direct message."),
-    EventType("conversation.assigned", 1, "A conversation was assigned.", emitted=False),
+    EventType("conversation.assigned", 1, "A conversation was assigned or unassigned."),
     EventType("automation.run.completed", 1, "An automation run finished."),
     EventType("broadcast.finished", 1, "A broadcast finished sending.", emitted=False),
+    EventType("order.created", 1, "An order was made for a customer."),
+    EventType("order.paid", 1, "An order was paid."),
+    EventType("order.refunded", 1, "An order was refunded, in full or in part."),
+    EventType("sequence.enrolled", 1, "A contact entered a sequence."),
+    EventType("sequence.step_sent", 1, "A sequence step was sent to a contact."),
+    EventType("sequence.completed", 1, "A contact reached the end of a sequence."),
+    EventType("sequence.stopped", 1, "A contact left a sequence before the end, and why."),
 )
 BY_NAME = {e.name: e for e in EVENTS}
 TEST_EVENT = "webhook.test"  # "Send test event" (not subscribable)
@@ -107,7 +117,14 @@ async def _endpoints(session: AsyncSession, event_type: str) -> list[WebhookEndp
             WebhookEndpoint.events.contains([event_type]),
         )
     )
-    return list(rows.all())
+    found = list(rows.all())
+    # A Zapier REST hook (GR-26) works while the plan has the public API (PD-6); the plan is
+    # looked up only when a hook is among the endpoints.
+    if any(e.api_key_id is not None for e in found) and not entitlement(
+        await current_plan(session), "public_api"
+    ):
+        found = [e for e in found if e.api_key_id is None]
+    return found
 
 
 async def wanted(session: AsyncSession, event_type: str) -> bool:
@@ -213,7 +230,13 @@ class TagChange:
 
 
 async def contacts_tagged(session: AsyncSession, changes: list[TagChange]) -> None:
-    if not changes or not await wanted(session, "contact.tagged"):
+    if not changes:
+        return
+    # GR-24: a tag added enters and stops sequences, whether or not an endpoint wants the event.
+    from socialhood.services.sequences import entry
+
+    await entry.on_tagged(session, changes)
+    if not await wanted(session, "contact.tagged"):
         return
     platforms = dict(
         (
@@ -249,16 +272,24 @@ async def lead_captured(
     automation_name: str,
     run_id: uuid.UUID,
 ) -> None:
+    platform = await _platform(session, contact)
+    from socialhood.services.sequences import entry  # GR-24: a capture can start a sequence
+
+    await entry.on_captured(session, contact, kind=kind)
     await emit(
         session,
         "lead.captured",
         {
-            "contact": contact_ref(contact, await _platform(session, contact)),
+            "contact": contact_ref(contact, platform),
             "captured": {"kind": kind, "field_key": field_key, "value": value},
             "automation": {"id": str(automation_id), "name": automation_name},
             "run_id": str(run_id),
         },
     )
+    # GR-27: the workspace's Google Sheet gets a row for the same capture.
+    from socialhood.services import sheets
+
+    await sheets.queue_lead(session, contact, platform=platform, automation_name=automation_name)
 
 
 async def lead_stage_changed(
@@ -273,6 +304,11 @@ async def lead_stage_changed(
     reason: str | None,
 ) -> None:
     """A lead's stage moved (GR-18), by a member, an automation or a rule."""
+    from socialhood.models.contacts import LeadStage
+    from socialhood.services import leads
+    from socialhood.services.sequences import entry  # GR-24: a stage can stop a sequence
+
+    await entry.on_stage(session, contact, to_stage, leads.STAGE_LABEL[LeadStage(to_stage)])
     if not await wanted(session, "lead.stage_changed"):
         return
     await emit(
@@ -292,6 +328,80 @@ async def lead_stage_changed(
     )
 
 
+async def order_event(
+    session: AsyncSession,
+    event_type: str,
+    order: Any,
+    items: list[Any],
+    contact: Contact,
+    **extra: Any,
+) -> None:
+    """``order.created``, ``order.paid`` and ``order.refunded`` (GR-32): the order, its lines and
+    the contact, plus what the event adds (the refund). The delivery address is left out: an
+    endpoint that needs it reads the order in the app."""
+    from socialhood.services.catalogue import money
+
+    if not await wanted(session, event_type):
+        return
+    await emit(
+        session,
+        event_type,
+        {
+            "contact": contact_ref(contact, await _platform(session, contact)),
+            "order": {
+                "id": str(order.id),
+                "number": order.number,
+                "status": order.status,
+                "currency": order.currency,
+                "total_minor": order.total_minor,
+                "total": money.plain(order.total_minor, order.currency),
+                "amount_paid_minor": order.amount_paid_minor,
+                "amount_refunded_minor": order.amount_refunded_minor,
+                "payment_method": order.payment_method,
+                "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+                "items": [
+                    {
+                        "name": i.name,
+                        "variant": i.variant_title,
+                        "sku": i.sku,
+                        "quantity": i.quantity,
+                        "unit_price_minor": i.unit_price_minor,
+                    }
+                    for i in items
+                ],
+            },
+            **extra,
+        },
+    )
+
+
+async def sequence_event(
+    session: AsyncSession,
+    event_type: str,
+    contact: Contact,
+    *,
+    sequence_id: uuid.UUID,
+    sequence_name: str,
+    enrolment_id: uuid.UUID,
+    **extra: Any,
+) -> None:
+    """``sequence.enrolled``, ``sequence.step_sent``, ``sequence.completed`` and
+    ``sequence.stopped`` (GR-24): the contact, the sequence and the enrolment, and what the event
+    adds (the step, why it stopped)."""
+    if not await wanted(session, event_type):
+        return
+    await emit(
+        session,
+        event_type,
+        {
+            "contact": contact_ref(contact, await _platform(session, contact)),
+            "sequence": {"id": str(sequence_id), "name": sequence_name},
+            "enrolment_id": str(enrolment_id),
+            **extra,
+        },
+    )
+
+
 async def message_received(
     session: AsyncSession, contact: Contact, msg: Message, *, platform: str
 ) -> None:
@@ -307,6 +417,34 @@ async def message_received(
                 "text": msg.text,
                 "occurred_at": msg.occurred_at.isoformat(),
             },
+        },
+    )
+
+
+async def conversation_assigned(
+    session: AsyncSession,
+    contact: Contact,
+    *,
+    conversation_id: uuid.UUID,
+    platform: str,
+    assignee: dict[str, Any] | None,
+    previous: dict[str, Any] | None,
+    assigned_by: dict[str, Any],
+) -> None:
+    """A conversation was assigned, handed to someone else or unassigned (GR-20). ``assignee`` and
+    ``previous`` are ``{user_id, name}`` or null; ``assigned_by`` is ``{kind, user_id}`` where kind
+    is member, round_robin or automation."""
+    if not await wanted(session, "conversation.assigned"):
+        return
+    await emit(
+        session,
+        "conversation.assigned",
+        {
+            "contact": contact_ref(contact, platform),
+            "conversation_id": str(conversation_id),
+            "assignee": assignee,
+            "previous_assignee": previous,
+            "assigned_by": assigned_by,
         },
     )
 

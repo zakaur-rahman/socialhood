@@ -761,7 +761,7 @@ def _refused_quick_reply(item: _Claimed, error: PlatformError) -> bool:
 
 async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
     from socialhood.services.connections import mark_needs_reconnect
-    from socialhood.services.sending import BLOCKED_STATUSES
+    from socialhood.services.sending import BLOCKED_STATUSES, say
 
     acct, now = run.acct, run.now
     back = [
@@ -827,7 +827,9 @@ async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
             fresh = await accounts.get(session, acct.id)
             if fresh is not None and fresh.status not in BLOCKED_STATUSES:
                 await mark_needs_reconnect(
-                    session, fresh, "Instagram stopped accepting this connection."
+                    session,
+                    fresh,
+                    say("Instagram stopped accepting this connection.", fresh.platform),
                 )
         await events.commit_and_publish(session, run.redis)
     tally.sent += len(sent)

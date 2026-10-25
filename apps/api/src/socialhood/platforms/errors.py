@@ -76,7 +76,8 @@ def map_graph_error(status: int, body: Any, headers: dict[str, str] | None = Non
 
     if code == 190:
         return build("account_needs_reconnect")
-    if code == 10 and subcode == 2534022:
+    # 2534022: Instagram; 2018278: Messenger ("outside of allowed window", unverified, GR-29).
+    if code == 10 and subcode in (2534022, 2018278):
         return build("reply_window_closed")
     if code == 551:
         return build("recipient_unavailable")

@@ -38,6 +38,7 @@ from socialhood.schemas.entry_links import (
 )
 
 IG_ME = "https://ig.me/m"
+MESSENGER_ME = "https://m.me"  # GR-29: a Facebook Page's chat, with the same ?ref=
 CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no look-alikes
 CODE_LENGTH = 8
 CODE_TRIES = 5
@@ -48,6 +49,8 @@ MEDIA_TYPES = {"svg": "image/svg+xml", "png": "image/png"}
 
 def link_url(acct: SocialAccount, code: str) -> str:
     handle = acct.username or acct.platform_account_id
+    if acct.platform == "facebook":
+        return f"{MESSENGER_ME}/{handle}?ref={code}"
     return f"{IG_ME}/{handle}?ref={code}"
 
 
@@ -64,9 +67,11 @@ async def _instagram_account(session: AsyncSession, account_id: uuid.UUID) -> So
     if acct is None:
         # Another workspace's account looks the same as none at all (tests/tenancy).
         raise ApiError("not_found", "That account wasn't found.")
-    if acct.platform != "instagram":
+    if acct.platform not in ("instagram", "facebook"):
         raise _invalid(
-            "social_account_id", "Entry links open Instagram chats. Choose an Instagram account."
+            "social_account_id",
+            "Entry links open Instagram and Messenger chats. Choose an Instagram or Facebook "
+            "account.",
         )
     return acct
 

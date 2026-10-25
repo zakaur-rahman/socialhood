@@ -129,6 +129,21 @@ async def test_the_owner_deletes_by_typing_the_name_and_it_stops_at_once(
         engine, workspace_id=wid, account_ids=[account_id], status="scheduled"
     )
     await make_email_delivery(engine, workspace_id=wid)
+    async with engine.begin() as conn:  # GR-19: an open invitation and an audit row
+        await conn.execute(
+            text(
+                "INSERT INTO workspace_invitations (workspace_id, email, role, expires_at)"
+                " VALUES (:w, 'invited@example.com', 'agent', now() + interval '7 days')"
+            ),
+            {"w": wid},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO audit_events (workspace_id, action, target_type)"
+                " VALUES (:w, 'automation.created', 'automation')"
+            ),
+            {"w": wid},
+        )
 
     response = await delete(client, clerk, clerk_id, wid, "  Priya's workspace ")
     assert response.status_code == 202, response.text

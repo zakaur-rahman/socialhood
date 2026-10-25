@@ -30,8 +30,11 @@ Ranges are local calendar days in the workspace's time zone (services/analytics/
 - **Needs you**: open conversations marked "Needs you" now.
 - **Unanswered questions**: knowledge gaps open now, asked in the last 30 days, most asked first
   (the Knowledge page's list, FR-KB-06).
-- **Story mentions** (GR-07): people who mentioned the account in a story in the range (Home
-  only; the digest doesn't read it).
+- **Story mentions** (GR-07): people who mentioned the account in a story in the range.
+- **Conversations from ads and from links** (GR-08, GR-09): conversations that began in the range
+  from an ad click or an entry link or QR code.
+- **Leads qualified and won** (GR-18): contacts that moved into the stage in the range, each
+  counted once (``lead_stage_changes``); a lead that moves back and forward counts once.
 - **Comments** and **top posts**: comments made in the range and not deleted; posts ranked by
   them, most first, then the newest post.
 - **Message sentiment**: customer messages received in the range, by their analysis's sentiment
@@ -62,16 +65,30 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
-from sqlalchemy import ColumnElement, and_, case, exists, extract, func, literal, not_, or_, select
+from sqlalchemy import (
+    ColumnElement,
+    and_,
+    case,
+    exists,
+    extract,
+    func,
+    literal,
+    literal_column,
+    not_,
+    or_,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.ai import GapStatus, KnowledgeGap, MessageAnalysis, Sentiment
 from socialhood.models.analytics import PostMetricSnapshot
-from socialhood.models.automations import Comment
+from socialhood.models.automations import Automation, AutomationRun, AutomationRunStep, Comment
 from socialhood.models.connections import AccountStatus, SocialAccount
+from socialhood.models.contacts import LeadStage, LeadStageChange
 from socialhood.models.inbox import (
+    Contact,
     Conversation,
     ConversationStatus,
     Direction,
@@ -193,6 +210,12 @@ class OverviewStats:
     needs_you: int = 0
     open_questions: int = 0
     top_questions: list[QuestionCount] = field(default_factory=list)
+    story_mentions: int = 0
+    conversations_from_ads: int = 0
+    conversations_from_links: int = 0
+    leads_qualified: int = 0
+    leads_won: int = 0
+    captures: int = 0
 
     @property
     def active(self) -> bool:
@@ -226,6 +249,12 @@ class OverviewStats:
             "needs_you": self.needs_you,
             "open_questions": self.open_questions,
             "top_questions": [asdict(item) for item in self.top_questions],
+            "story_mentions": self.story_mentions,
+            "conversations_from_ads": self.conversations_from_ads,
+            "conversations_from_links": self.conversations_from_links,
+            "leads_qualified": self.leads_qualified,
+            "leads_won": self.leads_won,
+            "captures": self.captures,
         }
 
 
@@ -291,32 +320,41 @@ def _reply_at(m: type[Message] | Any) -> ColumnElement[datetime]:
     return func.coalesce(m.sent_at, m.occurred_at)
 
 
-def _received_in(ws: uuid.UUID, span: DateRange) -> ColumnElement[bool]:
-    """Customer messages that arrived in the range."""
-    return and_(
+def _received_in(
+    ws: uuid.UUID, span: DateRange, account_id: uuid.UUID | None = None
+) -> ColumnElement[bool]:
+    """Customer messages that arrived in the range (on one account's with ``account_id``)."""
+    where = and_(
         Message.workspace_id == ws,
         _customer(Message),
         Message.occurred_at >= span.start,
         Message.occurred_at < span.end,
     )
+    if account_id is not None:
+        where = and_(where, Message.social_account_id == account_id)
+    return where
 
 
-async def messages_received(session: AsyncSession, span: DateRange) -> int:
+async def messages_received(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> int:
     """Messages received: Home's "Messages today" is this over today."""
     ws = require_workspace()
     return int(
         await session.scalar(
-            select(func.count()).select_from(Message).where(_received_in(ws, span))
+            select(func.count()).select_from(Message).where(_received_in(ws, span, account_id))
         )
         or 0
     )
 
 
-async def inbox_stats(session: AsyncSession, span: DateRange) -> InboxStats:
+async def inbox_stats(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> InboxStats:
     ws = require_workspace()
     start, end = span.start, span.end
-    in_range = _received_in(ws, span)
-    received = await messages_received(session, span)
+    in_range = _received_in(ws, span, account_id)
+    received = await messages_received(session, span, account_id)
 
     # Reply rate and handled by AI, per conversation.
     firsts = (
@@ -404,8 +442,13 @@ async def inbox_stats(session: AsyncSession, span: DateRange) -> InboxStats:
     )
 
 
-async def top_intents(session: AsyncSession, span: DateRange, n: int = TOP_N) -> list[IntentCount]:
+async def top_intents(
+    session: AsyncSession, span: DateRange, n: int = TOP_N, account_id: uuid.UUID | None = None
+) -> list[IntentCount]:
     ws = require_workspace()
+    on_account = (
+        Message.social_account_id == account_id if account_id is not None else literal(True)
+    )
     intent = func.coalesce(MessageAnalysis.corrected_intent, MessageAnalysis.intent)
     count = func.count()
     rows = await session.execute(
@@ -418,6 +461,7 @@ async def top_intents(session: AsyncSession, span: DateRange, n: int = TOP_N) ->
             Message.occurred_at >= span.start,
             Message.occurred_at < span.end,
             intent.not_in(LEFT_OUT_INTENTS),
+            on_account,
         )
         .group_by(intent)
         .order_by(count.desc(), intent)
@@ -426,26 +470,35 @@ async def top_intents(session: AsyncSession, span: DateRange, n: int = TOP_N) ->
     return [IntentCount(intent=row.intent, count=int(row.n)) for row in rows]
 
 
-def _comments_in(ws: uuid.UUID, span: DateRange) -> ColumnElement[bool]:
-    return and_(
+def _comments_in(
+    ws: uuid.UUID, span: DateRange, account_id: uuid.UUID | None = None
+) -> ColumnElement[bool]:
+    where = and_(
         Comment.workspace_id == ws,
         Comment.deleted_at.is_(None),
         Comment.commented_at >= span.start,
         Comment.commented_at < span.end,
     )
+    if account_id is not None:
+        where = and_(where, Comment.social_account_id == account_id)
+    return where
 
 
-async def comments_received(session: AsyncSession, span: DateRange) -> int:
+async def comments_received(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> int:
     ws = require_workspace()
     return int(
         await session.scalar(
-            select(func.count()).select_from(Comment).where(_comments_in(ws, span))
+            select(func.count()).select_from(Comment).where(_comments_in(ws, span, account_id))
         )
         or 0
     )
 
 
-async def conversations_by_entry(session: AsyncSession, span: DateRange) -> dict[str, int]:
+async def conversations_by_entry(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> dict[str, int]:
     """GR-08, GR-09: conversations that began in the range, by how they began (``ad`` and
     ``link``; conversations from before GR-01 have no entry and are not counted)."""
     rows = await session.execute(
@@ -455,26 +508,91 @@ async def conversations_by_entry(session: AsyncSession, span: DateRange) -> dict
             Conversation.entry_at >= span.start,
             Conversation.entry_at < span.end,
             Conversation.entry_source.in_(("ad", "link")),
+            Conversation.social_account_id == account_id
+            if account_id is not None
+            else literal(True),
         )
         .group_by(Conversation.entry_source)
     )
     return {str(source): int(count) for source, count in rows.all()}
 
 
-async def story_mentions_received(session: AsyncSession, span: DateRange) -> int:
+async def story_mentions_received(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> int:
     """GR-07: story mentions in the range."""
     from socialhood.repositories import story_mentions
 
-    return await story_mentions.count_between(session, span.start, span.end)
+    return await story_mentions.count_between(session, span.start, span.end, account_id)
+
+
+async def captures_received(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> int:
+    """GR-14: answers a flow's question step (``ask``) took in the range. The stored source of
+    truth is the step log: an ask step's row gets an ``answer`` only when the answer was accepted
+    and saved (a skipped question has ``skipped`` instead), the same predicate the flow funnel
+    counts. It is dated by when the row last changed, which is when the answer was taken; a
+    consent follow-up a few minutes later can move it, never into another week in practice.
+    ``lead.captured`` events are not counted: they exist only for workspaces with an endpoint.
+    For one account: the runs of that account's automations."""
+    on_account = (
+        AutomationRunStep.run_id.in_(
+            select(AutomationRun.id)
+            .join(Automation, Automation.id == AutomationRun.automation_id)
+            .where(Automation.social_account_id == account_id)
+        )
+        if account_id is not None
+        else literal(True)
+    )
+    count = await session.scalar(
+        select(func.count())
+        .select_from(AutomationRunStep)
+        .where(
+            on_account,
+            AutomationRunStep.kind == "ask",
+            func.jsonb_exists(AutomationRunStep.detail, "answer"),
+            AutomationRunStep.updated_at >= span.start,
+            AutomationRunStep.updated_at < span.end,
+        )
+    )
+    return int(count or 0)
+
+
+async def leads_moved(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> tuple[int, int]:
+    """GR-18: contacts that moved into ``qualified`` and into ``won`` in the range, each contact
+    once per stage (the contacts of one account with ``account_id``)."""
+    on_account = (
+        LeadStageChange.contact_id.in_(
+            select(Contact.id).where(Contact.social_account_id == account_id)
+        )
+        if account_id is not None
+        else literal(True)
+    )
+    rows = await session.execute(
+        select(LeadStageChange.to_stage, func.count(func.distinct(LeadStageChange.contact_id)))
+        .where(
+            LeadStageChange.workspace_id == require_workspace(),
+            LeadStageChange.created_at >= span.start,
+            LeadStageChange.created_at < span.end,
+            LeadStageChange.to_stage.in_((LeadStage.QUALIFIED, LeadStage.WON)),
+            on_account,
+        )
+        .group_by(LeadStageChange.to_stage)
+    )
+    found = {str(stage): int(n) for stage, n in rows.all()}
+    return found.get(LeadStage.QUALIFIED, 0), found.get(LeadStage.WON, 0)
 
 
 async def comments(
-    session: AsyncSession, span: DateRange, n: int = TOP_N
+    session: AsyncSession, span: DateRange, n: int = TOP_N, account_id: uuid.UUID | None = None
 ) -> tuple[int, list[PostComments]]:
     """Comments made in the range, and the ``n`` posts with the most of them."""
     ws = require_workspace()
-    scope = _comments_in(ws, span)
-    total = await comments_received(session, span)
+    scope = _comments_in(ws, span, account_id)
+    total = await comments_received(session, span, account_id)
     if not total:
         return 0, []
     count = func.count(Comment.id)
@@ -506,8 +624,11 @@ async def comments(
     ]
 
 
-async def needs_you(session: AsyncSession) -> int:
+async def needs_you(session: AsyncSession, account_id: uuid.UUID | None = None) -> int:
     ws = require_workspace()
+    on_account = (
+        Conversation.social_account_id == account_id if account_id is not None else literal(True)
+    )
     return int(
         await session.scalar(
             select(func.count())
@@ -516,6 +637,7 @@ async def needs_you(session: AsyncSession) -> int:
                 Conversation.workspace_id == ws,
                 Conversation.status == ConversationStatus.OPEN,
                 Conversation.needs_human.is_(True),
+                on_account,
             )
         )
         or 0
@@ -683,18 +805,122 @@ async def unanswered_questions(
     return open_count, [QuestionCount(topic=row.topic, asked=row.occurrences) for row in rows]
 
 
-async def compute(session: AsyncSession, *, span: DateRange, now: datetime) -> OverviewStats:
-    """Every number for the current workspace: flows over ``span``, states as of ``now``."""
-    received, posts = await comments(session, span)
-    open_count, questions = await unanswered_questions(session, now=now)
+async def compute(
+    session: AsyncSession,
+    *,
+    span: DateRange,
+    now: datetime,
+    account_id: uuid.UUID | None = None,
+) -> OverviewStats:
+    """Every number for the current workspace (or one account of it): flows over ``span``, states
+    as of ``now``. Knowledge-gap questions belong to the workspace, so an account's figures leave
+    them out (0 and none)."""
+    received, posts = await comments(session, span, account_id=account_id)
+    open_count, questions = (
+        (0, []) if account_id is not None else await unanswered_questions(session, now=now)
+    )
+    entries = await conversations_by_entry(session, span, account_id)
+    qualified, won = await leads_moved(session, span, account_id)
     return OverviewStats(
         since=span.since,
         until=span.until,
-        inbox=await inbox_stats(session, span),
-        top_intents=await top_intents(session, span),
+        inbox=await inbox_stats(session, span, account_id),
+        top_intents=await top_intents(session, span, account_id=account_id),
         comments_received=received,
         top_posts=posts,
-        needs_you=await needs_you(session),
+        needs_you=await needs_you(session, account_id),
         open_questions=open_count,
         top_questions=questions,
+        story_mentions=await story_mentions_received(session, span, account_id),
+        conversations_from_ads=entries.get("ad", 0),
+        conversations_from_links=entries.get("link", 0),
+        leads_qualified=qualified,
+        leads_won=won,
+        captures=await captures_received(session, span, account_id),
     )
+
+
+# ---------------------------------------------------------------- per account
+
+
+async def counts_by_account_week(
+    session: AsyncSession, timezone: str, span: DateRange
+) -> dict[date, dict[uuid.UUID, dict[str, float]]]:
+    """The range's counts for every account and every Monday to Sunday week in it, five queries
+    however many accounts and weeks there are (grouped by account and by the workspace's local
+    week in the database): ``messages_received``, ``conversations`` (people who wrote in),
+    ``comments_received``, ``replies_sent`` (people, AI and automations: the reply rate's own
+    definition) and ``automation_runs``. A count an account has none of in a week is absent;
+    callers read it as 0. The span should start on a Monday."""
+    ws = require_workspace()
+    out: dict[date, dict[uuid.UUID, dict[str, float]]] = {}
+
+    def week_of(column: Any) -> Any:
+        # One labelled expression, grouped by its label: separate copies would carry separate bind
+        # parameters and Postgres would not see them as the same expression.
+        return func.date_trunc("week", func.timezone(timezone, column)).label("week")
+
+    def add(key: str, rows: Any) -> None:
+        for week, account, n in rows:
+            if account is not None:
+                out.setdefault(week.date(), {}).setdefault(account, {})[key] = float(n)
+
+    received_at = Message.occurred_at
+    in_range = _received_in(ws, span)
+    add(
+        "messages_received",
+        await session.execute(
+            select(week_of(received_at), Message.social_account_id, func.count())
+            .where(in_range)
+            .group_by(literal_column("week"), Message.social_account_id)
+        ),
+    )
+    add(
+        "conversations",
+        await session.execute(
+            select(
+                week_of(received_at),
+                Message.social_account_id,
+                func.count(func.distinct(Message.conversation_id)),
+            )
+            .where(in_range)
+            .group_by(literal_column("week"), Message.social_account_id)
+        ),
+    )
+    add(
+        "comments_received",
+        await session.execute(
+            select(week_of(Comment.commented_at), Comment.social_account_id, func.count())
+            .where(_comments_in(ws, span))
+            .group_by(literal_column("week"), Comment.social_account_id)
+        ),
+    )
+    sent_at = _reply_at(Message)
+    add(
+        "replies_sent",
+        await session.execute(
+            select(week_of(sent_at), Message.social_account_id, func.count())
+            .where(
+                Message.workspace_id == ws,
+                _reply(Message),
+                sent_at >= span.start,
+                sent_at < span.end,
+            )
+            .group_by(literal_column("week"), Message.social_account_id)
+        ),
+    )
+    add(
+        "automation_runs",
+        await session.execute(
+            select(week_of(AutomationRun.created_at), Automation.social_account_id, func.count())
+            .select_from(AutomationRun)
+            .join(Automation, Automation.id == AutomationRun.automation_id)
+            .where(
+                AutomationRun.workspace_id == ws,
+                AutomationRun.created_at >= span.start,
+                AutomationRun.created_at < span.end,
+            )
+            .group_by(literal_column("week"), Automation.social_account_id)
+        ),
+    )
+    return out

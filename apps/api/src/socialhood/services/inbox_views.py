@@ -10,6 +10,7 @@ from socialhood.models.connections import SocialAccount
 from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.schemas.inbox import (
     Actor,
+    Assignee,
     Attachment,
     AutomationRef,
     ContactSummary,
@@ -33,8 +34,9 @@ PREVIEW_CHARS = 200
 
 
 def human_agent_allowed(acct: SocialAccount, *, ig_human_agent_enabled: bool) -> bool:
-    """Human Agent applies to Instagram only, once Meta has approved it (IG_HUMAN_AGENT_ENABLED)."""
-    return ig_human_agent_enabled and acct.platform == "instagram"
+    """Human Agent applies to Instagram and Facebook, once Meta has approved it
+    (IG_HUMAN_AGENT_ENABLED)."""
+    return ig_human_agent_enabled and acct.platform in ("instagram", "facebook")
 
 
 def closing_soon(conv: Conversation, *, now: datetime, window_closes_at: datetime | None) -> bool:
@@ -70,8 +72,30 @@ def signal_for(
     return None
 
 
+def member_label(name: str | None, email: str | None) -> str | None:
+    """How a member is named in the inbox: their name, else the part of their email before the @."""
+    if name and name.strip():
+        return name.strip()
+    return email.split("@")[0] if email and "@" in email else None
+
+
+def assignee_of(conv: Conversation, known: Assignee | None) -> Assignee | None:
+    """GR-20: the assignee to show. A caller that has not looked the member up still names who it
+    is (the web resolves the name from the members it already holds)."""
+    if conv.assignee_user_id is None:
+        return None
+    if known is not None and known.user_id == conv.assignee_user_id:
+        return known
+    return Assignee(user_id=conv.assignee_user_id)
+
+
 def list_item(
-    conv: Conversation, contact: Contact, *, now: datetime, human_agent: bool = False
+    conv: Conversation,
+    contact: Contact,
+    *,
+    now: datetime,
+    human_agent: bool = False,
+    assignee: Assignee | None = None,
 ) -> ConversationListItem:
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
     closes_at = window.closes_at if window.state == "open" else None
@@ -99,6 +123,8 @@ def list_item(
         reply_window_closes_at=closes_at,
         lead_score=conv.lead_score,
         ai_mode_override=conv.ai_mode_override,
+        assignee=assignee_of(conv, assignee),
+        assigned_at=conv.assigned_at if conv.assignee_user_id is not None else None,
     )
 
 

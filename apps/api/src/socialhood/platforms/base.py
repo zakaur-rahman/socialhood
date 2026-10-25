@@ -66,6 +66,19 @@ class OutboundQuickReply:
 
 
 @dataclass(frozen=True, kw_only=True)
+class OutboundProducts:
+    """A WhatsApp product or product-list message (GR-33): the catalogue's id and the retailer ids
+    to show. ``text`` of the message is its body. A list has a header and titled sections."""
+
+    type: Literal["product", "product_list"]
+    catalog_id: str
+    retailer_id: str | None = None  # a product message
+    header: str | None = None  # a list's header (required by WhatsApp)
+    footer: str | None = None
+    sections: tuple[tuple[str, tuple[str, ...]], ...] = ()  # (title, retailer ids)
+
+
+@dataclass(frozen=True, kw_only=True)
 class OutboundMessage:
     """One platform send: text, one attachment, a built-in sticker (Instagram's heart) or
     (WhatsApp) a template."""
@@ -77,6 +90,7 @@ class OutboundMessage:
     buttons: tuple[OutboundButton, ...] = ()  # with text: sent as one button-template message
     quick_replies: tuple[OutboundQuickReply, ...] = ()  # with text, not with buttons
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
+    products: OutboundProducts | None = None  # WhatsApp product messages (GR-33)
 
 
 @dataclass(frozen=True)
@@ -167,6 +181,14 @@ class MediaInsights:
     total_interactions: int | None = None
     profile_visits: int | None = None
     follows: int | None = None
+    # Instagram Stories only: replies and the taps and swipes through the Story.
+    replies: int | None = None
+    taps_forward: int | None = None
+    taps_back: int | None = None
+    swipes_forward: int | None = None
+    exits: int | None = None
+    # Facebook Page posts only: clicks on the post.
+    clicks: int | None = None
 
     def metrics(self) -> dict[str, int]:
         """The known values, as stored in a snapshot's ``metrics``."""
@@ -350,10 +372,24 @@ class PlatformAdapter(Protocol):
         ...
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
         """A Reel's container (single videos publish as Reels, shown in the feed too); returns
-        its id. The video processes on the platform: poll ``get_container_status``."""
+        its id. The video processes on the platform: poll ``get_container_status``. A Facebook
+        Page publishes the video as a normal video unless ``page_reel`` (the composer's Reel
+        choice, C-131); Instagram ignores it."""
+        ...
+
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        """A Story's container (GR-39): one image or video, no caption; returns its id. A video
+        processes on the platform: poll ``get_container_status``. Instagram, and Facebook Pages
+        (C-131)."""
         ...
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
@@ -373,17 +409,28 @@ class PlatformAdapter(Protocol):
         """A container's processing state (at most one call a minute per container)."""
         ...
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        """A post with only text (GR-30; Facebook Pages): the text goes with ``publish_container``.
+        Returns its reference."""
+        ...
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         """Publish a FINISHED container; returns the new post's platform media id. After
         delivery_unknown, ``get_container_status`` tells whether it went out (PUBLISHED: find the
-        post with ``find_published_media``; FINISHED: publishing again is safe)."""
+        post with ``find_published_media``; FINISHED: publishing again is safe on Instagram).
+        ``caption`` is the post's text for platforms that take it at publish time (Facebook
+        Pages); Instagram has it on the container already. A Facebook Page can't tell from the
+        status whether a lost answer published, so the jobs never retry it there."""
         ...
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         """The post just published, read back: its permalink and the fields media_items stores.
-        None when the platform does not return it (yet)."""
+        None when the platform does not return it (yet). A Story is read with the fields Stories
+        have."""
         ...
 
     async def find_published_media(
@@ -393,9 +440,11 @@ class PlatformAdapter(Protocol):
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         """The post a PUBLISHED container became, when the publish answer was lost: the account's
-        recent posts matched on caption and time. None when it is not found."""
+        recent posts matched on caption and time (a Story: the account's live stories, matched on
+        time alone). None when it is not found."""
         ...
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

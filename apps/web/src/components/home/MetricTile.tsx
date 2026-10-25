@@ -34,10 +34,13 @@ type Props = {
   trend?: Trend | null;
   /** The whole tile links here (Needs reply opens that inbox view). */
   href?: Route;
+  /** Something drawn inside the card under the number (a chart); it sits at the bottom, so the
+   * charts of a row line up. */
+  children?: ReactNode;
 };
 
 /** UX-SCR-01: one metric on a Card, the number in text-2xl semibold tabular-nums. */
-export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
+export function MetricTile({ label, value, badge, hint, trend, href, children }: Props) {
   const body = (
     <>
       <p className="flex items-center justify-between gap-2 text-xs text-fg-secondary">
@@ -61,13 +64,14 @@ export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
         {trend ? <TrendChip trend={trend} /> : null}
       </p>
       {hint ? <p className="mt-1 text-xs text-fg-secondary">{hint}</p> : null}
+      {children ? <div className="mt-auto pt-3">{children}</div> : null}
     </>
   );
   if (href) {
     return (
       // An interactive card: the `line-strong` edge on hover (DESIGN_SYSTEM §1.2). Focus is the global
       // outline (§8.3), not a halo.
-      <Card asChild className="block h-full hover:border-line-strong">
+      <Card asChild className="flex h-full flex-col hover:border-line-strong">
         <Link href={href} data-testid="metric-tile">
           {body}
         </Link>
@@ -75,7 +79,7 @@ export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
     );
   }
   return (
-    <Card data-testid="metric-tile" className="h-full">
+    <Card data-testid="metric-tile" className="flex h-full flex-col">
       {body}
     </Card>
   );

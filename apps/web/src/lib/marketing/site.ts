@@ -67,4 +67,28 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /** The public pages the sitemap lists. */
-export const PUBLIC_PATHS = ["/", "/privacy", "/terms", "/refunds", "/data-deletion"] as const;
+export const PUBLIC_PATHS = [
+  "/",
+  "/pricing",
+  "/switch-from-manychat",
+  "/compare/manychat",
+  "/compare/interakt",
+  "/features/comment-intelligence",
+  "/features/ai-inbox",
+  "/features/publishing",
+  "/privacy",
+  "/terms",
+  "/refunds",
+  "/data-deletion",
+] as const;
+
+/** The footer's "Compare and learn" links to the go-to-market pages (GR-37). */
+export const LEARN_LINKS = [
+  { label: "Plans and limits", href: "/pricing" },
+  { label: "Switch from Manychat", href: "/switch-from-manychat" },
+  { label: "Social Hood vs Manychat", href: "/compare/manychat" },
+  { label: "Social Hood vs Interakt", href: "/compare/interakt" },
+  { label: "Comment intelligence", href: "/features/comment-intelligence" },
+  { label: "The AI inbox", href: "/features/ai-inbox" },
+  { label: "Publishing", href: "/features/publishing" },
+] as const;

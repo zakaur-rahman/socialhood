@@ -93,7 +93,7 @@ export default function EmojiPicker({
       type="button"
       onClick={() => onPick(emoji)}
       aria-label={words.split(" ")[0]}
-      className="grid size-8 place-items-center rounded-md text-lg hover:bg-pressed focus-visible:-outline-offset-2"
+      className="grid size-8 place-items-center rounded-md text-lg hover:bg-hover focus-visible:-outline-offset-2"
     >
       {emoji}
     </button>

@@ -42,7 +42,7 @@ import { ScheduledList } from "./ScheduledList";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { useInboxShortcuts, useSingleKeyShortcuts } from "./use-inbox-shortcuts";
 
-const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
+const PLATFORM_ORDER: Platform[] = ["instagram", "facebook", "whatsapp", "web"];
 
 function viewFromLink(value: string | null): InboxView {
   return VIEWS.find((option) => option.value === value)?.value ?? "all";
@@ -118,7 +118,7 @@ function InboxFrame({ children, className }: { children: ReactNode; className?: 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-panel md:m-4 md:rounded-xl md:border md:border-line",
+        "flex min-h-0 flex-1 overflow-hidden glass-pane md:m-4 md:rounded-xl md:border md:border-line",
         className,
       )}
       data-testid="inbox"
@@ -343,7 +343,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
             aria-label="Conversation list"
             data-pane="list"
             className={cn(
-              "relative flex shrink-0 flex-col border-r border-line bg-panel",
+              "relative flex shrink-0 flex-col border-r border-line glass-pane",
               resizable ? "w-(--pane-w) max-w-[45%]" : LIST_WIDTH[layout],
               layout === "phone" && "border-r-0",
             )}
@@ -439,7 +439,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
           <aside
             aria-label="Details"
             data-pane="details"
-            className="relative w-(--pane-w) max-w-[40%] shrink-0 border-l border-line bg-panel"
+            className="relative w-(--pane-w) max-w-[40%] shrink-0 border-l border-line glass-pane"
             style={paneWidth(detailsWidth)}
           >
             <ResizeHandle

@@ -7,6 +7,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { AiModeMenu } from "@/components/ai/AiModeControl";
+import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
+import { CreateOrderDialog } from "@/components/orders/CreateOrderDialog";
+import { SendProductDialog } from "./SendProductDialog";
 import { AnalysisChips } from "@/components/ai/AnalysisChips";
 import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
@@ -95,7 +98,7 @@ export function ThreadView({
   if (!conversation.data) {
     return (
       <div role="status" className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
-        <div className="flex h-14 items-center gap-3 border-b border-line bg-panel px-4">
+        <div className="flex h-14 items-center gap-3 border-b border-line glass-pane px-4">
           <Skeleton className="size-8 rounded-full" />
           <Skeleton className="h-3 w-40" />
         </div>
@@ -124,6 +127,8 @@ function Thread({
   const accounts = useSocialAccounts(wid);
   const outbox = useInboxStore((state) => state.outbox);
   const queryClient = useQueryClient();
+  const [ordering, setOrdering] = useState(false); // GR-32: the Create order dialog
+  const [productKind, setProductKind] = useState<"product" | "product_list" | null>(null); // GR-33
   const { send: sendReply, retry, discard } = useSendReply(wid, conversationId);
   const pendingSuggestionId = conversation.pending_suggestion?.id ?? null;
   // Any reply retires the pending suggestion: sent as is, edited, or typed instead (F-08).
@@ -200,9 +205,9 @@ function Thread({
   const account = accounts.data?.find((a) => a.id === conversation.social_account_id);
   const canAttach = account ? account.capabilities.includes("dm_attachments") : true;
   const handle =
-    conversation.platform === "instagram"
-      ? conversation.social_account.username
-      : (conversation.social_account.display_name ?? account?.phone_number);
+    conversation.platform === "whatsapp"
+      ? (conversation.social_account.display_name ?? account?.phone_number)
+      : conversation.social_account.username;
   const reconnectHref = `/w/${workspace.slug}/settings/connections` as Route;
   const canSchedule = conversation.reply_window.state === "open" || conversation.reply_window.state === "human_agent";
   const accountStatus = conversation.social_account.status;
@@ -239,7 +244,27 @@ function Thread({
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
+        assigneeControl={<AssigneeMenu conversation={conversation} />}
+        commerceActions={[
+          { key: "create-order", label: "Create order", onSelect: () => setOrdering(true) },
+          ...(conversation.platform === "whatsapp"
+            ? [
+                { key: "send-product", label: "Send product", onSelect: () => setProductKind("product") },
+                { key: "send-product-list", label: "Send product list", onSelect: () => setProductKind("product_list") },
+              ]
+            : []),
+        ]}
       />
+      <CreateOrderDialog conversationId={conversationId} open={ordering} onOpenChange={setOrdering} />
+      {conversation.platform === "whatsapp" ? (
+        <SendProductDialog
+          key={productKind ?? "closed"}
+          conversationId={conversationId}
+          kind={productKind ?? "product"}
+          open={productKind !== null}
+          onOpenChange={(open) => (open ? undefined : setProductKind(null))}
+        />
+      ) : null}
       <MessageLog
         messages={all}
         timeZone={workspace.timezone}

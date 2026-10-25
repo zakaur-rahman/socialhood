@@ -10,13 +10,13 @@ import { Card } from "@/components/ui/card";
 import type { CalendarMessage, ScheduledPostSummary } from "@/lib/api/types";
 import { contactName } from "@/lib/inbox/format";
 import { agendaDayLabel } from "@/lib/schedule/dates";
-import { captionLine } from "@/lib/schedule/format";
+import { postLine } from "@/lib/schedule/format";
 import { dayKey, formatTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
 import { postLabel } from "./CalendarPostCard";
-import { PostMenu, PostThumbnail, StatusChip, TargetAvatars } from "./post-parts";
+import { PostMenu, PostThumbnail, StatusChip, StoryBadge, TargetAvatars } from "./post-parts";
 import { useSchedule } from "./schedule-context";
 
 type Row =
@@ -89,9 +89,10 @@ export function AgendaView({
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2 text-sm font-semibold tabular-nums">
                           {formatTime(row.at, timeZone)}
+                          <StoryBadge post={row.post} />
                           <StatusChip post={row.post} />
                         </span>
-                        <span className="block truncate text-sm text-fg-secondary">{captionLine(row.post.caption)}</span>
+                        <span className="block truncate text-sm text-fg-secondary">{postLine(row.post)}</span>
                       </span>
                     </Link>
                     <TargetAvatars post={row.post} />

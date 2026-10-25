@@ -6,6 +6,7 @@ import { act } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type {
+  AgentApproval,
   AgentRun,
   AgentRunDetail,
   AgentRunEvent,
@@ -14,10 +15,12 @@ import type {
   AgentThread,
   AutomationDraftAction,
   CommentReplyAction,
+  FlowProposalAction,
   MetricComparisonVisual,
   MetricDelta,
   RankedPostsVisual,
   ScheduleMessageAction,
+  SegmentProposalAction,
   SentimentSummaryVisual,
 } from "@/lib/api/types";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
@@ -74,6 +77,7 @@ export function runDetail(overrides: Partial<AgentRunDetail> = {}): AgentRunDeta
   return {
     ...agentRun(),
     steps: [],
+    approvals: [],
     plan: null,
     model: "gemini-2.5-flash",
     prompt_version: "agent.v1",
@@ -156,6 +160,69 @@ export function draftCard(overrides: Partial<AutomationDraftAction> = {}): Autom
       post_scope: "all",
       media_item_ids: [],
     },
+    ...overrides,
+  };
+}
+
+// ---- proposed writes (GR-36): a card in the answer and the approval behind it
+
+export function flowProposalCard(overrides: Partial<FlowProposalAction> = {}): FlowProposalAction {
+  return {
+    kind: "flow_proposal",
+    label: "Review and approve",
+    route: "automations",
+    note: "Nothing is saved until you approve it.",
+    approval_id: "ap1",
+    title: "New automation: Price list on PRICE",
+    lines: [
+      "Starts on a comment with a keyword: “PRICE”.",
+      "It's saved as a draft. Nothing is switched on.",
+      "1. send “Here's our price list: example.com/prices”",
+    ],
+    automation_id: null,
+    step_count: 1,
+    ...overrides,
+  };
+}
+
+export function segmentProposalCard(overrides: Partial<SegmentProposalAction> = {}): SegmentProposalAction {
+  return {
+    kind: "segment_proposal",
+    label: "Review and approve",
+    route: "contacts",
+    note: "Nothing is saved until you approve it.",
+    approval_id: "ap2",
+    title: "New segment: VIPs with email",
+    lines: ["Has the tag vip", "Has an email", "Matches 12 people right now. It always follows whoever matches, not a fixed list."],
+    match_count: 12,
+    ...overrides,
+  };
+}
+
+/** The approval behind a proposal card: waiting, and the caller may decide it. */
+export function approval(overrides: Partial<AgentApproval> = {}): AgentApproval {
+  return {
+    id: "ap1",
+    run_id: "r1",
+    step_id: "st1",
+    request: "When someone comments PRICE send them the price list",
+    tool: "propose_flow",
+    label: "Drafting an automation for your approval",
+    tier: "draft",
+    summary: "New automation: Price list on PRICE",
+    payload: { tool: "propose_flow", args: {} },
+    lines: flowProposalCard().lines,
+    match_count: null,
+    step_count: 1,
+    status: "pending",
+    expires_at: "2026-09-30T10:00:00Z",
+    can_decide: true,
+    requested_by: { id: "u1", name: "Zakaur Rahman" },
+    decided_by: null,
+    decided_at: null,
+    outcome: null,
+    events: [],
+    created_at: "2026-09-29T10:00:00Z",
     ...overrides,
   };
 }

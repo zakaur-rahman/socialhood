@@ -44,7 +44,9 @@ def posts(acct: SocialAccount, *, limit: int, now: datetime | None = None) -> li
 
     now = now or datetime.now(UTC)
     ref = acct.platform_account_id
-    items: list[PlatformMedia] = publishing.published(ref)[:limit]
+    items: list[PlatformMedia] = [m for m in publishing.published(ref) if m.media_type != "story"][
+        :limit
+    ]
     for i, (media_type, caption) in enumerate(POSTS[: max(0, limit - len(items))]):
         items.append(
             PlatformMedia(
@@ -63,11 +65,14 @@ def posts(acct: SocialAccount, *, limit: int, now: datetime | None = None) -> li
 
 
 def stories(acct: SocialAccount, *, now: datetime | None = None) -> list[PlatformMedia]:
-    """Two live stories, newest first (GR-06). Their ids are fixed per account, so an automation
-    scoped to one keeps matching; the sandbox inbound injector replies to them by id."""
+    """Sandbox-published stories (GR-39), then two live stories, newest first (GR-06). Their ids
+    are fixed per account, so an automation scoped to one keeps matching;
+    the sandbox inbound injector replies to them by id."""
+    from socialhood.platforms.sandbox import publishing
+
     now = now or datetime.now(UTC)
     ref = acct.platform_account_id
-    return [
+    return publishing.stories(ref, now=now) + [
         PlatformMedia(
             platform_media_id=f"{ref}_story_{i}",
             media_type="story",
@@ -90,6 +95,13 @@ def post(acct: SocialAccount, media_ref: str, *, now: datetime | None = None) ->
     every = len(POSTS) + len(publishing.published(acct.platform_account_id))
     known = next(
         (p for p in posts(acct, limit=every, now=now) if p.platform_media_id == media_ref),
+        None,
+    ) or next(
+        (
+            p
+            for p in publishing.stories(acct.platform_account_id, now=now)
+            if p.platform_media_id == media_ref
+        ),
         None,
     )
     if known is not None:

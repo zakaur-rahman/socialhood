@@ -25,6 +25,14 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeInTheDocument();
   });
 
+  it("GR-29: a Facebook Page is a segment with its colour dot", () => {
+    render(<PlatformStrip platforms={["instagram", "facebook", "whatsapp"]} value="facebook" onChange={() => {}} />);
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    const segment = screen.getByRole("radio", { name: "Facebook" });
+    expect(segment).toHaveAttribute("aria-checked", "true");
+    expect(segment.querySelector(".bg-facebook")).not.toBeNull();
+  });
+
   // D-15 item 1 (C-069): the chosen segment is neutral, raised with brand-fg text, like every other
   // segmented control; no longer the brand-strong fill UI-002 gave it.
   it("the chosen segment is the neutral one; the others stay on the track", () => {
@@ -59,5 +67,11 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
   it("shows a skeleton while accounts load", () => {
     render(<PlatformStrip platforms={[]} value="all" onChange={() => {}} loading />);
     expect(screen.getByLabelText("Loading platforms")).toHaveAttribute("aria-busy", "true");
+  });
+
+  // GR-28: website chats are a platform of their own, with the web mark's colour.
+  it("lists Website beside the others", () => {
+    render(<PlatformStrip platforms={["instagram", "web"]} value="all" onChange={() => {}} />);
+    expect(screen.getByRole("radio", { name: "Website" })).toBeInTheDocument();
   });
 });

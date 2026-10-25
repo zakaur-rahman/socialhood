@@ -254,7 +254,17 @@ async def _write(
     post.caption = body.caption
     post.first_comment = body.first_comment or None
     post.publish_at = utc(body.publish_at) if body.publish_at else None
-    post.format = rules.derive_format([a.resource_type for a in checked.assets])
+    # No media but text, and only Facebook Pages: a text post (GR-30).
+    pages_only = bool(body.targets) and all(
+        checked.accounts[t.social_account_id].platform == "facebook" for t in body.targets
+    )
+    post.kind = body.kind
+    post.format = rules.derive_format(
+        [a.resource_type for a in checked.assets],
+        story=body.kind == "story",
+        text=pages_only and bool(body.caption.strip()) and body.kind != "reel",
+        reel=body.kind == "reel",
+    )
     post.updated_at = now
     current = [row.media_asset_id for row, _ in await repo.assets_for(session, [post.id])]
     if current != list(body.asset_ids):
@@ -295,6 +305,8 @@ async def replace(
                 for t in body.targets
             ],
             assets=checked.assets,
+            story=body.kind == "story",
+            reel=body.kind == "reel",
         )
         await _require_ready(session, draft, env)
     retry = post.status in RETRYABLE
@@ -479,6 +491,7 @@ async def duplicate(
     copy = PostRow(
         status=P.DRAFT,
         format=source.format,
+        kind=source.kind,
         caption=source.caption,
         first_comment=source.first_comment,
         created_by_user_id=user_id,

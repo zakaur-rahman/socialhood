@@ -4,6 +4,8 @@ import type { Route } from "next";
 import { useId, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent } from "react";
 
 import type { Automation } from "@/lib/api/types";
+import { ITEM_TITLE } from "@/styles/tokens";
+import { cn } from "@/lib/utils";
 
 import { AutomationRow, type RowReorder } from "./AutomationRow";
 
@@ -116,7 +118,7 @@ export function AccountGroup({
 
   return (
     <section aria-labelledby={headingId} className="space-y-2">
-      <h2 id={headingId} className="flex items-center gap-2 text-sm font-semibold">
+      <h2 id={headingId} className={cn(ITEM_TITLE, "flex items-center gap-2")}>
         {title}
         <span className="text-xs font-normal text-fg-secondary tabular-nums">{automations.length}</span>
       </h2>

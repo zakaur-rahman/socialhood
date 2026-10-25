@@ -15,8 +15,10 @@ from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
-PlatformName = Literal["instagram", "whatsapp"]
-MessageSourceName = Literal["customer", "human", "ai_auto", "automation", "native_app", "system"]
+PlatformName = Literal["instagram", "whatsapp", "facebook", "web"]
+MessageSourceName = Literal[
+    "customer", "human", "ai_auto", "automation", "broadcast", "native_app", "system"
+]
 MessageKindName = Literal[
     "text",
     "image",
@@ -67,7 +69,16 @@ IntentName = Literal[
 Signal = Literal["needs_you", "complaint", "closing_soon", "lead", "negative"]
 WindowState = Literal["open", "human_agent", "template_only", "closed"]
 InboxView = Literal[
-    "all", "unread", "needs_reply", "needs_you", "leads", "closing_soon", "ai_handled", "archived"
+    "all",
+    "unread",
+    "needs_reply",
+    "needs_you",
+    "leads",
+    "closing_soon",
+    "ai_handled",
+    "mine",  # GR-20: assigned to the caller
+    "unassigned",  # GR-20: open, with nobody
+    "archived",
 ]
 
 
@@ -92,6 +103,15 @@ class ContactDetail(ContactSummary):
     follows_business: bool | None = None  # FR-AUT-22; None until known
 
 
+class Assignee(ResponseModel):
+    """The member who has a conversation (GR-20). The name is the member's at the time of the
+    response; an assignee with no name shows their email's local part on the web."""
+
+    user_id: uuid.UUID
+    name: str | None = None
+    avatar_url: str | None = None
+
+
 class ConversationListItem(ResponseModel):
     id: uuid.UUID
     platform: PlatformName
@@ -112,6 +132,8 @@ class ConversationListItem(ResponseModel):
     lead_score: int | None = None
     # The conversation's own AI mode, if set; else the account's applies (the row's AI badge).
     ai_mode_override: AiModeName | None = None
+    assignee: Assignee | None = None  # GR-20; null: nobody has it
+    assigned_at: datetime | None = None
 
 
 class ReplyWindow(ResponseModel):
@@ -213,6 +235,7 @@ class InboxCounts(ResponseModel):
     unread: int
     needs_reply: int
     needs_you: int
+    mine: int  # GR-20: open conversations assigned to the caller
 
 
 class ConversationPatch(RequestModel):

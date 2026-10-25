@@ -61,6 +61,7 @@ class MessageSource(StrEnum):
     HUMAN = "human"
     AI_AUTO = "ai_auto"
     AUTOMATION = "automation"
+    BROADCAST = "broadcast"  # a WhatsApp broadcast (GR-23)
     NATIVE_APP = "native_app"  # sent from the Instagram app (FR-INB-09)
     SYSTEM = "system"
 
@@ -210,9 +211,22 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
     entry_ad_id: Mapped[str | None] = mapped_column(Text)
     entry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_referral: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # GR-20: the member who has the conversation (null: nobody), and since when. Set to null when
+    # the member is removed (services/team.remove_member) or their account is deleted.
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "contact_id"),
+        Index(
+            "ix_conversations_assignee",
+            "workspace_id",
+            "assignee_user_id",
+            sql("last_message_at DESC"),
+            postgresql_where=sql("assignee_user_id IS NOT NULL"),
+        ),
         Index(
             "ix_conversations_list",
             "workspace_id",
@@ -287,6 +301,9 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     # The quick reply the customer tapped (its payload; Instagram's message.quick_reply).
     quick_reply_payload: Mapped[str | None] = mapped_column(Text)
+    # GR-33: a WhatsApp product or product-list message (the catalogue id, the retailer ids and
+    # the texts); ``text`` holds its body so the thread shows what was said.
+    interactive: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # The payload of a tapped postback: an ice breaker or a button (GR-01, GR-11).
     postback_payload: Mapped[str | None] = mapped_column(Text)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

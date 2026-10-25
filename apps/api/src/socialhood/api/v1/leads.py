@@ -12,18 +12,18 @@ import uuid
 
 from fastapi import APIRouter
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageSettings, CanTag, Session
 from socialhood.schemas.contacts import ContactRecord
 from socialhood.schemas.leads import LeadSettings, LeadSettingsPatch, LeadStageUpdate, LeadSummary
+from socialhood.services import audit, leads
 from socialhood.services import contacts as contacts_service
-from socialhood.services import leads
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["leads"])
 
 
 @router.post("/contacts/{contact_id}/lead-stage", operation_id="set_lead_stage")
 async def set_lead_stage(
-    contact_id: uuid.UUID, body: LeadStageUpdate, ctx: AnyMember, session: Session
+    contact_id: uuid.UUID, body: LeadStageUpdate, ctx: CanTag, session: Session
 ) -> ContactRecord:
     """Move a lead to any stage; the note is why. The same stage again changes nothing."""
     await leads.member_set_stage(
@@ -48,9 +48,10 @@ async def get_lead_settings(ctx: AnyMember, session: Session) -> LeadSettings:
 
 @router.patch("/leads/settings", operation_id="update_lead_settings")
 async def update_lead_settings(
-    body: LeadSettingsPatch, ctx: Admin, session: Session
+    body: LeadSettingsPatch, ctx: CanManageSettings, session: Session
 ) -> LeadSettings:
     """Days without a customer message before a qualified or follow-up lead goes cold (1 to 90)."""
     out = await leads.set_cold_days(session, body.cold_after_days)
+    await audit.record(session, ctx, "settings.updated", "lead_settings")
     await session.commit()
     return out

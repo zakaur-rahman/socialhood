@@ -3,7 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
-import { colorValue } from "@/styles/tokens";
+import { colorValue, radiusValue } from "@/styles/tokens";
 
 /**
  * The last-resort boundary (RG-07): it replaces the root layout when that layout itself throws, so
@@ -41,7 +41,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
               minHeight: 40,
               padding: "0 16px",
               border: `1px solid ${colorValue("line-strong")}`,
-              borderRadius: 8,
+              borderRadius: radiusValue("lg"),
               background: colorValue("panel"),
               color: colorValue("fg"),
               fontSize: 14,

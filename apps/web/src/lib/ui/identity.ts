@@ -8,14 +8,15 @@
  * Built only from existing brand, shell and platform-blue values (no new token). The rules, with
  * WCAG contrast:
  * - every gradient stop is 4.5:1 or more with `on-brand`, the initial's colour
- *   (brand-deep 11.04, brand-strong 4.85; shell-1 6.52, shell-2 12.66; linkedin 8.72,
- *   facebook 5.17; the oklab midpoints 7.37, 9.19, 6.72);
- * - every ring and dot is 3:1 or more on `panel` (brand 4.54, brand-fg 8.23, facebook 3.19), and
- *   the rings are told apart from each other (oklab ΔE 8.9 or more; 1.42:1 or more).
+ *   (brand-deep 12.31, brand-strong 5.82; shell-1 7.07, shell-2 14.29; linkedin 8.72,
+ *   facebook 5.17; the oklab midpoints stay above 4.5);
+ * - every ring and dot is 3:1 or more on `panel` (brand 3.97, brand-fg 8.58, facebook 3.21), and
+ *   the rings are told apart from each other: three hues (indigo, lavender, blue) and 1.2:1 or more
+ *   in luminance (brand and facebook, the closest pair, are 1.24:1 apart; C-128).
  *
  * Three identities, not four: the only values in these families that reach 3:1 on panel are
- * brand-fg, brand, brand-strong and facebook, and brand-strong and facebook are 1.07:1 apart
- * (ΔE 3.0), so a fourth ring would look like the third. The initial is decorative (the name is
+ * brand-fg, brand and facebook (brand-strong is 2.85), so a fourth ring would look like one of them.
+ * The initial is decorative (the name is
  * always beside the avatar), so callers render it `aria-hidden`.
  */
 export type Identity = {

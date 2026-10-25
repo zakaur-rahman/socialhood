@@ -13,10 +13,11 @@ import {
 import type { CSSProperties } from "react";
 
 import { SECTION_IDS } from "@/lib/marketing/site";
+import { cn } from "@/lib/utils";
 
 import { BentoGrid, BentoGridItem } from "./effects/bento-grid";
 import { LazyIllustration, type IllustrationName } from "./illustrations/LazyIllustration";
-import { Container, SectionHeading } from "./primitives";
+import { Container, MARKETING_CARD_GLASS, MARKETING_CARD_HOVER, SectionHeading } from "./primitives";
 
 type Feature = {
   icon: LucideIcon;
@@ -124,7 +125,7 @@ export function Features() {
         <ul className="mx-auto mt-10 grid max-w-6xl gap-4 md:grid-cols-3" aria-label="Also in Social Hood">
           {MORE.map(({ icon: Icon, title, body }, index) => (
             <li key={title} data-reveal style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}>
-              <div className="flex h-full gap-3 rounded-2xl border border-line bg-panel/60 p-4 transition-colors duration-slow hover:border-line-strong">
+              <div className={cn(MARKETING_CARD_GLASS, MARKETING_CARD_HOVER, "flex h-full gap-3 p-4")}>
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
                   <Icon className="size-4" aria-hidden />
                 </span>

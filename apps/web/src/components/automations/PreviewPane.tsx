@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { AutomationDefinition, FlowDefinition, FlowTag } from "@/lib/api/types";
+import type { AutomationDefinition, FlowDefinition, FlowTag, SavedReply } from "@/lib/api/types";
 import { walk } from "@/lib/automations/flow";
 import {
   DEFAULT_OPENING_BUTTON,
@@ -17,7 +17,7 @@ import { renderFields, withDisclosure, type FieldValues } from "@/lib/automation
 import { IDENTITY_FILL, identityAt, type Identity } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
-import { PathView } from "./flow/PathView";
+import { PathView, withChoice } from "./flow/PathView";
 
 export const SAMPLE_CONTACT = { first_name: "Priya", username: "priya.styles" } as const;
 
@@ -41,6 +41,7 @@ export function PreviewPane({
   mediaUrl,
   flow = null,
   tags = [],
+  savedReplies = [],
 }: {
   draft: AutomationDefinition;
   accountUsername: string | null;
@@ -49,6 +50,7 @@ export function PreviewPane({
   /** GR-13: the flow being edited. The DM part then walks it one branch at a time. */
   flow?: FlowDefinition | null;
   tags?: FlowTag[];
+  savedReplies?: SavedReply[];
 }) {
   const [sample, setSample] = useState<Sample>("known");
   // The way chosen at each fork of the walk, in order (0: the first way).
@@ -57,9 +59,15 @@ export function PreviewPane({
   const path = useMemo(
     () =>
       flow
-        ? walk(flow, { choices, values, disclosure, tagName: (id) => tags.find((tag) => tag.id === id)?.name })
+        ? walk(flow, {
+            choices,
+            values,
+            disclosure,
+            tagName: (id) => tags.find((tag) => tag.id === id)?.name,
+            savedReplyTitle: (id) => savedReplies.find((reply) => reply.id === id)?.title,
+          })
         : [],
-    [flow, choices, values, disclosure, tags],
+    [flow, choices, values, disclosure, tags, savedReplies],
   );
   const withImage = useMemo(
     () => new Set((flow?.steps ?? []).flatMap((step) => (step.type === "send" && step.image_asset_id ? [step.id] : []))),
@@ -131,7 +139,7 @@ export function PreviewPane({
           <PathView
             steps={path}
             imageNote={withImage}
-            onChoose={(fork, exit) => setChoices((current) => [...current.slice(0, fork), exit])}
+            onChoose={(fork, exit) => setChoices((current) => withChoice(current, fork, exit))}
           />
         ) : null}
 
@@ -174,7 +182,7 @@ export function PreviewPane({
                 </p>
               ) : null}
               {buttons.map((button, index) => (
-                <span key={index} className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">
+                <span key={index} className="block rounded-lg bg-on-brand-soft py-1.5 text-center text-xs font-medium">
                   {button.title}
                 </span>
               ))}
@@ -189,7 +197,7 @@ export function PreviewPane({
             <p className="text-2xs text-fg-secondary">Only to people who don&apos;t follow you</p>
             <Mine testId="preview-nudge">
               <p className="leading-relaxed break-words whitespace-pre-wrap">{nudge}</p>
-              <span className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">View profile</span>
+              <span className="block rounded-lg bg-on-brand-soft py-1.5 text-center text-xs font-medium">View profile</span>
             </Mine>
           </div>
         ) : null}

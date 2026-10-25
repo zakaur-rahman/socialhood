@@ -193,7 +193,7 @@ async def billing_state(
             limit=entitlement(plan, "pending_scheduled_messages"),
         ),
     ]
-    for platform in (Platform.INSTAGRAM, Platform.WHATSAPP):
+    for platform in (Platform.INSTAGRAM, Platform.WHATSAPP, Platform.FACEBOOK):
         meters.append(
             UsageMeter(
                 metric=f"{platform.value}_accounts",

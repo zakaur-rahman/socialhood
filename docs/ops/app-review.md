@@ -73,8 +73,8 @@ role account: connect, receive and reply to a DM, reply to a comment, publish a 
 - They must match `SUBSCRIBED_FIELDS` in `apps/api/src/socialhood/platforms/instagram/adapter.py`.
 - For outside accounts, webhooks arrive only with Advanced Access.
 
-**Later submissions:** Facebook Pages (GR-29, GR-30), the WhatsApp catalogue (GR-33), and
-`ads_read` if GR-09 lists ads.
+**Later submissions:** Facebook Pages (GR-29, section 8 below; GR-30 adds publishing and insights),
+the WhatsApp catalogue (GR-33), and `ads_read` if GR-09 lists ads.
 
 ## 4. Screencast scripts
 
@@ -158,6 +158,76 @@ accounts.
 | Logging the test API calls | Up to 2 days |
 | App Review decision | About a week per round (Meta's guide); first submissions are often sent back once |
 
-## 8. Changelog
+## 8. Second submission: Facebook Pages and Messenger (GR-29, O-10)
+
+Send this after the first submission (Instagram and WhatsApp) is approved, from the same Meta app
+and business. Everything in sections 1, 2 and 5 to 7 applies; this section adds what is different.
+Every permission name and field below is **unverified until a real Page is connected**: check
+Meta's current Messenger Platform and Pages API pages before submitting, and record what you find
+in `docs/verification.md` item 36.
+
+**Extra app settings** (Meta app dashboard):
+
+| Setting | Value | Done |
+|---|---|---|
+| Facebook Login product | Add it; valid OAuth redirect URI `<api>/v1/oauth/facebook/callback` (`FB_REDIRECT_URI`) | [ ] |
+| Webhooks product, **Page** object | Callback `<api>/webhooks/facebook`, verify token from `FB_WEBHOOK_VERIFY_TOKEN`; signed with the app secret (`META_APP_SECRET`) | [ ] |
+| Server settings | `META_APP_ID`, `META_APP_SECRET`, `FB_REDIRECT_URI`, `FB_WEBHOOK_VERIFY_TOKEN` set on the API; without `FB_REDIRECT_URI` the Connect Facebook button answers "not configured" | [ ] |
+| Human Agent | One request covers Instagram and Messenger; set `IG_HUMAN_AGENT_ENABLED` once Meta approves it | [ ] |
+
+**Permissions** (Advanced Access; one successful call each within 30 days of submitting):
+
+| Permission | Why we need it (draft; write it in your own words) | Test call that logs it | Screencast |
+|---|---|---|---|
+| `pages_show_list` | To list the Facebook Pages the person manages, so they pick which ones to connect to Social Hood. | Connect Facebook: the Pages list (`/me/accounts`) | S-9 |
+| `pages_manage_metadata` | To subscribe the connected Page to message and comment webhooks, so the inbox and comments update as they arrive. | Connect a Page (`/{page}/subscribed_apps`) | S-9 |
+| `pages_messaging` | To show the Page's Messenger conversations in the shared inbox and let its team reply. The AI suggests replies a person approves; automations send the link or offer someone asked for, inside Messenger's 24-hour window, and Human Agent replies up to 7 days. | Receive a Messenger message; reply from the inbox | S-10, S-11 |
+| `pages_read_engagement` | To read the Page's posts and their comment and reaction counts, so each comment is shown on its post. | Open the Comments grid after connecting | S-12 |
+| `pages_read_user_content` | To read the comments people leave on the Page's posts (*verify* whether `pages_read_engagement` covers this). | Open a post's comments | S-12 |
+| `pages_manage_engagement` | To reply to comments as the Page, hide spam, delete comments, and send one private reply to a person who comments a keyword. | Reply to and hide a comment; automation private reply | S-12, S-13 |
+
+Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories) and `read_insights` for Page post insights (only asked for when `FB_REQUEST_INSIGHTS_SCOPE` is on).
+
+**Webhook fields to subscribe** (Page object): `messages`, `message_echoes`, `messaging_postbacks`,
+`messaging_referrals`, `message_reads`, `message_deliveries`, `message_reactions`, `message_edits`,
+`messaging_optins`, `feed`.
+- They must match `SUBSCRIBED_FIELDS` in `apps/api/src/socialhood/platforms/facebook/adapter.py`.
+- Each Page is subscribed when it is connected, and again by the 6-hourly `reconcile_subscriptions`.
+
+**Screencast scripts** (record on production with a test Facebook Page the reviewer account manages):
+
+- **S-9 · Connect a Page (`pages_show_list`, `pages_manage_metadata`):**
+  1. Settings › Connections › Connect Facebook; Facebook's consent screen: grant the permissions.
+  2. Back in Social Hood, the list of Pages appears; tick the test Page and press Connect Page.
+  3. The Page's card shows its name and "Facebook Pages API".
+- **S-10 · Messenger inbox (`pages_messaging`):**
+  1. From another Facebook account, message the Page in Messenger.
+  2. The Inbox shows it live, with the Facebook mark; open it.
+  3. Insert an AI draft or type a reply and press Send; show it arriving in Messenger.
+- **S-11 · Automations on Messenger (`pages_messaging`):**
+  1. Automations › New for the Page: a DM keyword automation; activate it.
+  2. Send the keyword in Messenger; show the answer with its link button.
+  3. Show an entry link (an `m.me` link with a `ref`) and a conversation starter opening a chat.
+- **S-12 · Comments (`pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`):**
+  1. Comment on a Page post from another account.
+  2. Comments shows it; reply publicly, hide a spam comment.
+- **S-13 · Comment automation (`pages_manage_engagement`):**
+  1. Create a comment keyword automation for the Page with a public reply and a private message.
+  2. Comment the keyword; show the public reply under the comment and the private message in Messenger.
+
+**Reviewer instructions (draft):**
+
+> Sign up at `<web>`, go to Settings › Connections and press Connect Facebook. Continue as the test
+> user, grant the permissions, tick the test Page and connect it. Then message the Page from
+> another account (Inbox), and comment on its newest post (Comments). Automations can be created
+> for the Page from the Automations tab. The app's UI is English.
+
+**Guardrails to keep** (Meta's Messenger rules): replies only inside the 24-hour window (Human
+Agent to 7 days once approved; no other message tags are used); one private reply per comment,
+within 7 days; no follow gating (Messenger doesn't tell us who follows a Page, so there is no
+follow message on Pages); nothing is sent to someone who hasn't written first.
+
+## 9. Changelog
 
 - 2026-10-23: first version (GR-00). Instagram fields include GR-01's four.
+- 2026-10-25: section 8, the second submission for Facebook Pages and Messenger (GR-29).

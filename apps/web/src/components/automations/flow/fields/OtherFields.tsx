@@ -3,9 +3,11 @@
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAssignment } from "@/lib/api/queries";
 import type { FlowAction } from "@/lib/api/types";
 import { MAX_DELAY_SECONDS, type ActionNode, type AiNode, type DelayNode } from "@/lib/automations/flow";
 import { AI_INSTRUCTIONS_MAX } from "@/lib/automations/render";
+import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { useFlowEnv } from "../FlowContext";
 import { NativeSelect } from "../NativeSelect";
@@ -18,6 +20,7 @@ const ACTION_LABEL: Record<ActionKind, string> = {
   set_field: "Set a field",
   notify_team: "Notify the team",
   hand_off: "Hand off to a person",
+  assign: "Assign the conversation",
 };
 
 function actionFor(kind: ActionKind, previous: FlowAction, tagId: string, fieldKey: string): FlowAction {
@@ -31,6 +34,8 @@ function actionFor(kind: ActionKind, previous: FlowAction, tagId: string, fieldK
       return { kind, note: previous.kind === "notify_team" ? previous.note : "" };
     case "hand_off":
       return { kind };
+    case "assign":
+      return previous.kind === "assign" ? previous : { kind, mode: "round_robin" };
   }
 }
 
@@ -127,11 +132,71 @@ export function ActionFields({ node }: { node: ActionNode }) {
         </p>
       ) : null}
 
+      {action.kind === "assign" ? <AssignFields action={action} set={set} error={problems["action.user_id"]?.message} id={id} /> : null}
+
       {where ? (
         <p id={`${id}-error`} className="text-xs text-danger-fg">
           {where}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+type AssignAction = Extract<FlowAction, { kind: "assign" }>;
+
+const ASSIGN_MODE_HELP: Record<AssignAction["mode"], string> = {
+  member: "Always the same person. They are told, as for any assignment.",
+  round_robin: "The next available member in turn, whether or not round-robin is on for new conversations.",
+  nobody: "Takes the assignee away.",
+};
+
+/** The assign action (GR-20): a chosen member, the next available member in turn, or nobody. */
+function AssignFields({
+  action,
+  set,
+  error,
+  id,
+}: {
+  action: AssignAction;
+  set: (next: FlowAction) => void;
+  error?: string;
+  id: string;
+}) {
+  const { id: wid } = useCurrentWorkspace();
+  const overview = useAssignment(wid);
+  const members = overview.data?.members ?? [];
+  return (
+    <div className="space-y-3">
+      <NativeSelect
+        label="Assign to"
+        value={action.mode}
+        onChange={(value) => {
+          const mode = value as AssignAction["mode"];
+          set(mode === "member" ? { kind: "assign", mode, user_id: action.user_id ?? null } : { kind: "assign", mode });
+        }}
+      >
+        <option value="round_robin">The next available member</option>
+        <option value="member">A chosen member</option>
+        <option value="nobody">Nobody</option>
+      </NativeSelect>
+      {action.mode === "member" ? (
+        <NativeSelect
+          label="Member"
+          value={action.user_id ?? ""}
+          onChange={(user_id) => set({ ...action, user_id: user_id || null })}
+          invalid={Boolean(error)}
+          describedBy={error ? `${id}-error` : undefined}
+        >
+          <option value="">Choose a member</option>
+          {members.map((member) => (
+            <option key={member.user_id} value={member.user_id}>
+              {member.name ?? "A team member"}
+            </option>
+          ))}
+        </NativeSelect>
+      ) : null}
+      <p className="text-xs text-fg-secondary">{ASSIGN_MODE_HELP[action.mode]}</p>
     </div>
   );
 }

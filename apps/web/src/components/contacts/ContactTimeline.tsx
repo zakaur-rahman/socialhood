@@ -1,6 +1,19 @@
 "use client";
 
-import { AtSign, Flag, MessageCircle, MessageSquare, ShieldCheck, Tag, Zap, type LucideIcon } from "lucide-react";
+import {
+  AtSign,
+  Flag,
+  Megaphone,
+  MessageCircle,
+  MessageSquare,
+  ShieldCheck,
+  Tag,
+  ListOrdered,
+  Receipt,
+  UserCheck,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -19,12 +32,17 @@ const ICON: Record<TimelineKind, LucideIcon> = {
   consent: ShieldCheck,
   tag: Tag,
   lead_stage: Flag,
+  broadcast: Megaphone,
+  assignment: UserCheck,
+  sequence: ListOrdered,
+  order: Receipt,
 };
 
 /**
  * A contact's timeline (GR-17), newest first and read-only: their conversation, comments,
- * automation runs, story mentions, consent, tags and lead stage moves. Older items load on request. Broadcasts
- * and captured answers join when those features exist.
+ * automation runs, story mentions, consent, tags, lead stage moves, the broadcasts they were sent (GR-23),
+ * who had their conversation (GR-20) and the sequence steps they were sent or skipped (GR-24).
+ * Older items load on request. Captured answers join when that feature has a table of its own.
  */
 export function ContactTimeline({ contactId }: { contactId: string }) {
   const { id: wid, slug, timezone } = useCurrentWorkspace();

@@ -248,7 +248,9 @@ async function main() {
     TOKEN_ENCRYPTION_KEYS: fernetKey(),
     SANDBOX_PLATFORM_ENABLED: "true",
     WEBHOOKS_ALLOW_PRIVATE: "true", // GR-04: the e2e receiver is local
+    CRAWL_ALLOW_PRIVATE: "true", // GR-35: the e2e site crawl reads a local fixture site
     AGENT_VISUALS_ENABLED: "true", // GR-38: runs carry their visuals
+    BROADCASTS_ENABLED: "true", // GR-23: broadcasts are off by default (O-11)
     // Every test signs in as the one e2e user, from 3 workers at once: together they pass the
     // per-user 300 a minute (TR-API-07), which tests/integration/test_rate_limits.py covers.
     RATE_LIMITS_ENABLED: "false",
@@ -259,6 +261,14 @@ async function main() {
     DODO_PRODUCT_MAX_MONTHLY: "prod_e2e_max",
     EMAIL_PROVIDER: "fake",
     PUSH_PROVIDER: "fake",
+    CLERK_INVITATIONS_PROVIDER: "fake",
+    GOOGLE_PROVIDER: "fake", // GR-27: sheets live in Redis, shared by the API and the worker
+    GOOGLE_REDIRECT_URI: `${apiUrl}/v1/oauth/google/callback`,
+    SHOPIFY_PROVIDER: "fake", // GR-31: a built-in store, its products in Redis (API and worker share it)
+    SHOPIFY_API_KEY: "e2e-shopify-key",
+    SHOPIFY_API_SECRET: randomBytes(24).toString("hex"), // signs the webhooks the suite sends
+    SHOPIFY_REDIRECT_URI: `${apiUrl}/v1/oauth/shopify/callback`,
+    RAZORPAY_PROVIDER: "fake", // GR-32: a sandbox that accepts rzp_test_ keys; the suite signs its own webhooks
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",
@@ -287,7 +297,16 @@ async function main() {
   run("db-reset", py, [join(e2ePy, "db.py"), "reset"], { cwd: e2ePy, env: apiEnv });
   run("migrate", py, ["-m", "alembic", "upgrade", "head"], { cwd: apiDir, env: apiEnv });
 
-  // 2. The web build (NEXT_PUBLIC_* values are baked in). --skip-build reuses only a build this
+  // 2. The API first: the web build prerenders pages from its documents (the public API reference
+  // reads /public/v1/openapi.json, and is kept for an hour), so it must be answering. It runs from
+  // apps/api/scripts/e2e, where no .env file is loaded, so only the values above apply.
+  const uvicornArgs = ["-m", "uvicorn", "api:app", "--host", "127.0.0.1", "--port", String(API_PORT), "--no-access-log"];
+  if (isWindows) uvicornArgs.push("--loop", "asyncio:SelectorEventLoop"); // the job queue's driver needs it
+  await startReady("api", py, uvicornArgs, { cwd: e2ePy, env: apiEnv }, (child) =>
+    waitFor("The API", `http://127.0.0.1:${API_PORT}/readyz`, child, 90_000),
+  );
+
+  // 3. The web build (NEXT_PUBLIC_* values are baked in). --skip-build reuses only a build this
   // launcher made for the same API and Clerk instance, never a development build (which would
   // call the API on port 8000).
   const nextBin = join(webDir, "node_modules", "next", "dist", "bin", "next");
@@ -300,10 +319,7 @@ async function main() {
     writeFileSync(marker, buildKey);
   }
 
-  // 3. API, worker and web. The API and worker run from apps/api/scripts/e2e, where no .env
-  // file is loaded, so only the values above apply.
-  const uvicornArgs = ["-m", "uvicorn", "api:app", "--host", "127.0.0.1", "--port", String(API_PORT), "--no-access-log"];
-  if (isWindows) uvicornArgs.push("--loop", "asyncio:SelectorEventLoop"); // the job queue's driver needs it
+  // 4. The workers and the web app (the workers also run where no .env file is loaded).
   // One worker per lane, as in production (scripts/worker.sh, TR-JOB-06), so a sandbox account's
   // backfill never holds up a webhook or a suggestion. Lower concurrency than production: the
   // suite doesn't need more, and it keeps connections to a shared Postgres down.
@@ -313,9 +329,6 @@ async function main() {
   ];
   // A process that stops while starting (say, Postgres was slow to accept connections) gets
   // one more try before the run fails.
-  await startReady("api", py, uvicornArgs, { cwd: e2ePy, env: apiEnv }, (child) =>
-    waitFor("The API", `http://127.0.0.1:${API_PORT}/readyz`, child, 90_000),
-  );
   for (const [name, lane, concurrency] of lanes) {
     const workerArgs = [join(e2ePy, "worker.py"), `--queues=${lane}`, `--concurrency=${concurrency}`];
     await startReady(name, py, workerArgs, { cwd: e2ePy, env: apiEnv }, (child) =>

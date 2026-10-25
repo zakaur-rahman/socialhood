@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ScheduledPostSummary } from "@/lib/api/types";
-import { canMove, captionLine, POST_STATUS } from "@/lib/schedule/format";
+import { canMove, postLine, POST_STATUS } from "@/lib/schedule/format";
 import { formatDayTime, formatTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ import { useSchedule } from "./schedule-context";
 /** "Linen styles, Scheduled, Wed 30 Sep 18:00" for the card's link. */
 export function postLabel(post: ScheduledPostSummary, timeZone: string, now: Date): string {
   const when = post.publish_at ? `, ${formatDayTime(post.publish_at, timeZone, now)}` : "";
-  return `${captionLine(post.caption)}, ${POST_STATUS[post.status].label}${when}`;
+  return `${postLine(post)}, ${POST_STATUS[post.status].label}${when}`;
 }
 
 /**
@@ -37,6 +37,7 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
   const badges = (
     <>
       {published ? <Check className="size-3 text-success" aria-hidden /> : null}
+      {post.format === "story" ? <span data-testid="story-badge">· Story</span> : null}
       {post.status === "failed" ? <span className="text-danger-fg">· Failed</span> : null}
       {post.status === "publishing" ? <Lock className="size-3 text-fg-secondary" aria-hidden /> : null}
     </>
@@ -66,7 +67,7 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
               {time}
               {badges}
             </span>
-            <span className="block truncate text-2xs text-fg-secondary">{captionLine(post.caption)}</span>
+            <span className="block truncate text-2xs text-fg-secondary">{postLine(post)}</span>
           </span>
         </>
       ) : (
@@ -75,7 +76,7 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
             {time}
             {badges}
           </span>
-          <span className="min-w-0 flex-1 truncate text-2xs text-fg-secondary">{captionLine(post.caption)}</span>
+          <span className="min-w-0 flex-1 truncate text-2xs text-fg-secondary">{postLine(post)}</span>
         </>
       )}
     </Link>

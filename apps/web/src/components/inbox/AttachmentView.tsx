@@ -27,7 +27,7 @@ function MediaImage({ src, alt, className }: { src: string; alt: string; classNa
 
 function Unavailable({ label }: { label: string }) {
   return (
-    <span className="flex items-center gap-2 rounded-lg bg-media-scrim/20 px-3 py-2 text-xs">
+    <span className="flex items-center gap-2 rounded-lg bg-media-wash px-3 py-2 text-xs">
       <ImageOff className="size-4 shrink-0" aria-hidden />
       {label}
     </span>
@@ -81,7 +81,7 @@ export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" 
     case "story": {
       const label = kind === "story_mention" ? "Mentioned you in their story" : kind === "story_reply" ? "Replied to your story" : "Story";
       return (
-        <span className="flex w-48 flex-col gap-1.5 rounded-lg bg-media-scrim/20 p-2 text-xs">
+        <span className="flex w-48 flex-col gap-1.5 rounded-lg bg-media-wash p-2 text-xs">
           <span className="font-medium">{label}</span>
           {attachment.expired ? (
             <Unavailable label="Story expired" />
@@ -102,7 +102,7 @@ export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" 
     }
     case "share":
       return (
-        <span className="flex w-56 flex-col gap-1.5 rounded-lg bg-media-scrim/20 p-2 text-xs">
+        <span className="flex w-56 flex-col gap-1.5 rounded-lg bg-media-wash p-2 text-xs">
           {attachment.thumbnail_url ? (
             <MediaImage src={attachment.thumbnail_url} alt="Shared post" className="aspect-square w-full rounded-md object-cover" />
           ) : null}
@@ -119,7 +119,7 @@ export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" 
     case "file":
     default:
       return (
-        <span className="flex items-center gap-3 rounded-lg bg-media-scrim/20 px-3 py-2">
+        <span className="flex items-center gap-3 rounded-lg bg-media-wash px-3 py-2">
           <FileText className="size-5 shrink-0" aria-hidden />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm">{attachment.filename ?? "File"}</span>

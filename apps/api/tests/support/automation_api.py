@@ -36,8 +36,9 @@ class Ws:
         return self.clerk.headers(self.clerk_id)
 
     async def call(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        extra = kwargs.pop("headers", None) or {}
         return await self.client.request(
-            method, f"/v1/w/{self.wid}{path}", headers=self.headers, **kwargs
+            method, f"/v1/w/{self.wid}{path}", headers={**self.headers, **extra}, **kwargs
         )
 
     async def ok(self, method: str, path: str, status: int = 200, **kwargs: Any) -> Any:
@@ -129,6 +130,12 @@ async def make_run(
 ) -> uuid.UUID:
     with workspace_scope(uuid.UUID(workspace_id)):
         async with AsyncSession(engine, expire_on_commit=False) as session:
+            if trigger_message_id is None and trigger_comment_id is None:
+                # A run always has exactly one trigger (ck_automation_runs_one_trigger): borrow
+                # any message the workspace already has.
+                trigger_message_id = (
+                    await session.execute(text("SELECT id FROM messages LIMIT 1"))
+                ).scalar_one()
             row = AutomationRun(
                 automation_id=uuid.UUID(str(automation_id)),
                 trigger_message_id=trigger_message_id,

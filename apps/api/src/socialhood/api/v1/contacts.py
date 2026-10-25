@@ -19,7 +19,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query, Response
 from fastapi.responses import StreamingResponse
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import Admin, AnyMember, CanManageContacts, CanTag, Session
 from socialhood.schemas.contacts import (
     BulkTagsResult,
     BulkTagsUpdate,
@@ -55,7 +55,7 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["contacts"])
 def _filter(
     q: Annotated[str | None, Query(max_length=100)] = None,
     tag_id: Annotated[list[uuid.UUID] | None, Query(max_length=10)] = None,
-    platform: Annotated[Literal["instagram", "whatsapp"] | None, Query()] = None,
+    platform: Annotated[Literal["instagram", "whatsapp", "facebook", "web"] | None, Query()] = None,
     account_id: uuid.UUID | None = None,
     has_email: bool | None = None,
     has_phone: bool | None = None,
@@ -92,7 +92,7 @@ async def list_contacts(
     session: Session,
     q: Annotated[str | None, Query(max_length=100)] = None,
     tag_id: Annotated[list[uuid.UUID] | None, Query(max_length=10)] = None,
-    platform: Annotated[Literal["instagram", "whatsapp"] | None, Query()] = None,
+    platform: Annotated[Literal["instagram", "whatsapp", "facebook", "web"] | None, Query()] = None,
     account_id: uuid.UUID | None = None,
     has_email: bool | None = None,
     has_phone: bool | None = None,
@@ -129,7 +129,7 @@ async def count_contacts(
     session: Session,
     q: Annotated[str | None, Query(max_length=100)] = None,
     tag_id: Annotated[list[uuid.UUID] | None, Query(max_length=10)] = None,
-    platform: Annotated[Literal["instagram", "whatsapp"] | None, Query()] = None,
+    platform: Annotated[Literal["instagram", "whatsapp", "facebook", "web"] | None, Query()] = None,
     account_id: uuid.UUID | None = None,
     has_email: bool | None = None,
     has_phone: bool | None = None,
@@ -163,7 +163,7 @@ async def export_contacts(
     session: Session,
     q: Annotated[str | None, Query(max_length=100)] = None,
     tag_id: Annotated[list[uuid.UUID] | None, Query(max_length=10)] = None,
-    platform: Annotated[Literal["instagram", "whatsapp"] | None, Query()] = None,
+    platform: Annotated[Literal["instagram", "whatsapp", "facebook", "web"] | None, Query()] = None,
     account_id: uuid.UUID | None = None,
     has_email: bool | None = None,
     has_phone: bool | None = None,
@@ -203,9 +203,7 @@ async def export_contacts(
 
 
 @router.post("/contacts/bulk-tags", operation_id="bulk_tag_contacts")
-async def bulk_tag_contacts(
-    body: BulkTagsUpdate, ctx: AnyMember, session: Session
-) -> BulkTagsResult:
+async def bulk_tag_contacts(body: BulkTagsUpdate, ctx: CanTag, session: Session) -> BulkTagsResult:
     """Add and remove tags on up to 500 named contacts, or on everyone a filter matches (up to
     5,000; a bigger match is a 422 with the count). 404 for an unknown tag."""
     updated = await contact_segments.bulk_tag(session, body, user_id=ctx.user.id)
@@ -220,7 +218,7 @@ async def get_contact(contact_id: uuid.UUID, ctx: AnyMember, session: Session) -
 
 @router.patch("/contacts/{contact_id}", operation_id="update_contact")
 async def update_contact(
-    contact_id: uuid.UUID, body: ContactPatch, ctx: AnyMember, session: Session
+    contact_id: uuid.UUID, body: ContactPatch, ctx: CanTag, session: Session
 ) -> ContactRecord:
     """422 lists each value that doesn't fit (an email's shape, a phone without a country code, a
     field's type or an unknown field)."""
@@ -244,7 +242,7 @@ async def get_contact_timeline(
 
 @router.post("/contacts/{contact_id}/tags", operation_id="tag_contact")
 async def tag_contact(
-    contact_id: uuid.UUID, body: ContactTagsUpdate, ctx: AnyMember, session: Session
+    contact_id: uuid.UUID, body: ContactTagsUpdate, ctx: CanTag, session: Session
 ) -> ContactRecord:
     if not await service.change_tags(
         session, [contact_id], add=body.add, remove=body.remove, user_id=ctx.user.id
@@ -257,7 +255,7 @@ async def tag_contact(
 
 @router.post("/contacts/{contact_id}/consents", operation_id="record_contact_consent")
 async def record_contact_consent(
-    contact_id: uuid.UUID, body: ConsentCreate, ctx: Admin, session: Session
+    contact_id: uuid.UUID, body: ConsentCreate, ctx: CanManageContacts, session: Session
 ) -> ContactRecord:
     """A member records consent given elsewhere, or its withdrawal; the note is the evidence."""
     await service.record_member_consent(
@@ -284,7 +282,7 @@ async def list_tags(ctx: AnyMember, session: Session) -> TagList:
 
 
 @router.post("/tags", status_code=201, operation_id="create_tag")
-async def create_tag(body: TagCreate, ctx: Admin, session: Session) -> Tag:
+async def create_tag(body: TagCreate, ctx: CanManageContacts, session: Session) -> Tag:
     """409 when a tag with that name (any case) exists."""
     out = await service.create_tag(session, body.name, body.color)
     await session.commit()
@@ -292,14 +290,16 @@ async def create_tag(body: TagCreate, ctx: Admin, session: Session) -> Tag:
 
 
 @router.patch("/tags/{tag_id}", operation_id="update_tag")
-async def update_tag(tag_id: uuid.UUID, body: TagPatch, ctx: Admin, session: Session) -> Tag:
+async def update_tag(
+    tag_id: uuid.UUID, body: TagPatch, ctx: CanManageContacts, session: Session
+) -> Tag:
     out = await service.update_tag(session, tag_id, name=body.name, color=body.color)
     await session.commit()
     return out
 
 
 @router.delete("/tags/{tag_id}", status_code=204, operation_id="delete_tag")
-async def delete_tag(tag_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_tag(tag_id: uuid.UUID, ctx: CanManageContacts, session: Session) -> Response:
     """The tag goes from every contact too."""
     await service.delete_tag(session, tag_id)
     await session.commit()
@@ -317,7 +317,7 @@ async def list_contact_fields(ctx: AnyMember, session: Session) -> FieldDefiniti
 
 @router.post("/contact-fields", status_code=201, operation_id="create_contact_field")
 async def create_contact_field(
-    body: FieldDefinitionCreate, ctx: Admin, session: Session
+    body: FieldDefinitionCreate, ctx: CanManageContacts, session: Session
 ) -> FieldDefinition:
     """402 quota_exceeded over the plan's contact_fields; 409 for a key in use."""
     out = await service.create_field(session, body)
@@ -327,7 +327,7 @@ async def create_contact_field(
 
 @router.patch("/contact-fields/{field_id}", operation_id="update_contact_field")
 async def update_contact_field(
-    field_id: uuid.UUID, body: FieldDefinitionPatch, ctx: Admin, session: Session
+    field_id: uuid.UUID, body: FieldDefinitionPatch, ctx: CanManageContacts, session: Session
 ) -> FieldDefinition:
     out = await service.update_field(session, field_id, body)
     await session.commit()
@@ -335,7 +335,9 @@ async def update_contact_field(
 
 
 @router.delete("/contact-fields/{field_id}", status_code=204, operation_id="delete_contact_field")
-async def delete_contact_field(field_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_contact_field(
+    field_id: uuid.UUID, ctx: CanManageContacts, session: Session
+) -> Response:
     """The field goes, and its values from every contact."""
     await service.delete_field(session, field_id)
     await session.commit()
@@ -352,7 +354,9 @@ async def list_contact_segments(ctx: AnyMember, session: Session) -> SegmentList
 
 
 @router.post("/contact-segments", status_code=201, operation_id="create_contact_segment")
-async def create_contact_segment(body: SegmentCreate, ctx: Admin, session: Session) -> Segment:
+async def create_contact_segment(
+    body: SegmentCreate, ctx: CanManageContacts, session: Session
+) -> Segment:
     """409 for a name in use; 404 for a tag that isn't there; 422 for a field that doesn't exist."""
     out = await contact_segments.create_segment(session, body, user_id=ctx.user.id)
     await session.commit()
@@ -361,7 +365,7 @@ async def create_contact_segment(body: SegmentCreate, ctx: Admin, session: Sessi
 
 @router.patch("/contact-segments/{segment_id}", operation_id="update_contact_segment")
 async def update_contact_segment(
-    segment_id: uuid.UUID, body: SegmentPatch, ctx: Admin, session: Session
+    segment_id: uuid.UUID, body: SegmentPatch, ctx: CanManageContacts, session: Session
 ) -> Segment:
     out = await contact_segments.update_segment(session, segment_id, body)
     await session.commit()
@@ -371,7 +375,9 @@ async def update_contact_segment(
 @router.delete(
     "/contact-segments/{segment_id}", status_code=204, operation_id="delete_contact_segment"
 )
-async def delete_contact_segment(segment_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_contact_segment(
+    segment_id: uuid.UUID, ctx: CanManageContacts, session: Session
+) -> Response:
     await contact_segments.delete_segment(session, segment_id)
     await session.commit()
     return Response(status_code=204)

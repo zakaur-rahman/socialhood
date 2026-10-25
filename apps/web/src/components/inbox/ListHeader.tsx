@@ -24,6 +24,7 @@ export const CHIP_VIEWS: { value: InboxView; label: string }[] = [
   { value: "unread", label: "Unread" },
   { value: "needs_reply", label: "Needs reply" },
   { value: "needs_you", label: "Needs you" },
+  { value: "mine", label: "Assigned to me" },
   { value: "leads", label: "Leads" },
   { value: "ai_handled", label: "Handled by AI" },
   { value: "archived", label: "Archived" },
@@ -33,8 +34,12 @@ export const VIEWS = CHIP_VIEWS;
 
 export const SEARCH_DEBOUNCE_MS = 250;
 
-/** The two chips that carry a count (the counts query is workspace-wide). */
-const COUNTED: Partial<Record<InboxView, "needs_reply" | "needs_you">> = { needs_reply: "needs_reply", needs_you: "needs_you" };
+/** The chips that carry a count (the counts query is workspace-wide; "Assigned to me" is yours). */
+const COUNTED: Partial<Record<InboxView, "needs_reply" | "needs_you" | "mine">> = {
+  needs_reply: "needs_reply",
+  needs_you: "needs_you",
+  mine: "mine",
+};
 
 /** The Scheduled count stops at 99, like the sidebar's. */
 function countText(count: number): string {
@@ -65,7 +70,7 @@ export function ListHeader({
   view: InboxView;
   onViewChange: (view: InboxView) => void;
   /** Open conversations waiting on a reply or on the owner; the two chips show them when above zero. */
-  counts?: Pick<InboxCounts, "needs_reply" | "needs_you">;
+  counts?: Pick<InboxCounts, "needs_reply" | "needs_you"> & Partial<Pick<InboxCounts, "mine">>;
   /** Opens the Keyboard shortcuts dialog (D-14). */
   onShortcuts?: () => void;
   search: string;
@@ -94,7 +99,7 @@ export function ListHeader({
   }, [text, search, onSearchChange]);
 
   return (
-    <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
+    <div className="space-y-3 border-b border-line glass-pane px-3 pt-3 pb-2.5">
       <div className="flex items-center justify-between gap-2">
         <h1 className={cn(PANE_TITLE, "sr-only md:not-sr-only")}>Inbox</h1>
         <div className="ml-auto flex items-center gap-1">
@@ -170,7 +175,7 @@ export function ListHeader({
               className="w-max flex-nowrap md:w-auto md:flex-wrap"
             >
               {CHIP_VIEWS.map((option) => {
-                const count = counts && COUNTED[option.value] ? counts[COUNTED[option.value]!] : 0;
+                const count = counts && COUNTED[option.value] ? (counts[COUNTED[option.value]!] ?? 0) : 0;
                 return (
                   <ToggleGroupItem
                     key={option.value}

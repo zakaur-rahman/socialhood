@@ -240,6 +240,7 @@ class AutomationTemplate(ResponseModel):
     trigger: TriggerName
     action: ActionName
     requires_paid_plan: bool
+    steps: int  # GR-16: the steps of the flow it starts as; 0 for a single message
 
 
 class AutomationTemplateList(ResponseModel):

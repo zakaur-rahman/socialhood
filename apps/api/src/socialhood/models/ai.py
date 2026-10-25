@@ -148,6 +148,8 @@ class KnowledgeType(StrEnum):
     TEXT = "text"
     URL = "url"
     FILE = "file"
+    SITE = "site"  # GR-35: a whole website, read page by page
+    PAGE = "page"  # GR-35: one page of a site, a source of its own (parent_source_id)
 
 
 class KnowledgeStatus(StrEnum):
@@ -298,6 +300,11 @@ class KnowledgeSource(IdMixin, TimestampMixin, TenantScoped, Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    # GR-35: a crawled page's site. The pages are sources like any other (their text is chunked
+    # and embedded by the same job) but are listed under their site, not on their own.
+    parent_source_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("knowledge_sources.id", ondelete="CASCADE"), index=True
+    )
 
     __table_args__ = (
         Index("ix_knowledge_sources_workspace", "workspace_id", text("created_at DESC")),
@@ -305,6 +312,84 @@ class KnowledgeSource(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("status", KnowledgeStatus), name="status"),
         CheckConstraint("char_length(title) BETWEEN 1 AND 120", name="title_length"),
         CheckConstraint("body IS NULL OR char_length(body) <= 20000", name="body_length"),
+    )
+
+
+class SiteCrawlStatus(StrEnum):
+    IDLE = "idle"  # never crawled (a crawl is queued right after the source is created)
+    QUEUED = "queued"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class SitePageStatus(StrEnum):
+    QUEUED = "queued"  # found, or due to be checked again
+    DONE = "done"
+    FAILED = "failed"
+    SKIPPED = "skipped"  # robots.txt, noindex, not a page, or another site
+    GONE = "gone"  # the page answered 404 or 410: its knowledge is removed
+    EXCLUDED = "excluded"  # under a path the owner excluded
+    REMOVED = "removed"  # the owner removed this page; a crawl never adds it back
+
+
+class SiteCrawl(IdMixin, TimestampMixin, TenantScoped, Base):
+    """The crawl settings and state of a site source (GR-35): one row per site. The site
+    source's ``version`` numbers the crawls: each crawl request adds 1, and a job for an older
+    number is dropped."""
+
+    __tablename__ = "site_crawls"
+
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("knowledge_sources.id", ondelete="CASCADE"), unique=True
+    )
+    recrawl: Mapped[str] = mapped_column(Text, server_default=text("'weekly'"))  # weekly, off
+    excluded_paths: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    status: Mapped[str] = mapped_column(Text, server_default=text("'idle'"))
+    seeded: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    truncated: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))  # hit the cap
+    page_cap: Mapped[int] = mapped_column(Integer, server_default=text("0"))  # of this run
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_crawl_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_site_crawls_due", "next_crawl_at"),
+        CheckConstraint(_in("status", SiteCrawlStatus), name="status"),
+        CheckConstraint("recrawl IN ('weekly', 'off')", name="recrawl"),
+        CheckConstraint("cardinality(excluded_paths) <= 50", name="excluded_paths_count"),
+    )
+
+
+class SitePage(IdMixin, TimestampMixin, TenantScoped, Base):
+    """One address of a site crawl (GR-35). Its text lives in the page's own knowledge source."""
+
+    __tablename__ = "site_pages"
+
+    site_source_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("knowledge_sources.id", ondelete="CASCADE")
+    )
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("knowledge_sources.id", ondelete="SET NULL")
+    )
+    url: Mapped[str] = mapped_column(Text)  # normalised (crawl_rules.normalise)
+    ordinal: Mapped[int] = mapped_column(Integer)  # the order found; with depth, the crawl order
+    depth: Mapped[int] = mapped_column(SmallInteger)
+    status: Mapped[str] = mapped_column(Text, server_default=text("'queued'"))
+    error: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    content_hash: Mapped[str | None] = mapped_column(Text)
+    etag: Mapped[str | None] = mapped_column(Text)
+    last_modified: Mapped[str | None] = mapped_column(Text)
+    last_crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("site_source_id", "url"),
+        Index("ix_site_pages_queue", "site_source_id", "status", "depth", "ordinal"),
+        Index("ix_site_pages_source", "source_id"),
+        CheckConstraint(_in("status", SitePageStatus), name="status"),
+        CheckConstraint("char_length(url) <= 1000", name="url_length"),
     )
 
 

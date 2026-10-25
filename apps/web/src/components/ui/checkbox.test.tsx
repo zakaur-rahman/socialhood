@@ -42,7 +42,7 @@ describe("Checkbox", () => {
     render(<Checkbox aria-label="Select" />);
     const box = screen.getByRole("checkbox", { name: "Select" });
     expect(box).not.toBeChecked();
-    expect(box).toHaveClass("border-input", "rounded-sm", "size-4");
+    expect(box).toHaveClass("border-line-control", "rounded-sm", "size-4");
     const list = classes(box);
     expect(list.filter((c) => c.includes("bg-input"))).toEqual([]);
     expect(list).not.toContain("outline-none");

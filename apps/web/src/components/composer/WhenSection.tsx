@@ -8,7 +8,9 @@ import { ScheduleFields, type ScheduleValue } from "@/components/inbox/ScheduleF
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { formatDayTime } from "@/lib/tz";
+import { formatDayTime, toZonedInputs } from "@/lib/tz";
+
+import { BestTimeHint } from "@/components/schedule/BestTimes";
 
 import { useComposerTools } from "./ComposerTools";
 import { Section } from "./Section";
@@ -46,6 +48,7 @@ export function WhenSection({
   allowQueue,
   slug,
   now,
+  bestFor = null,
 }: {
   mode: WhenMode;
   onModeChange: (mode: WhenMode) => void;
@@ -60,6 +63,8 @@ export function WhenSection({
   allowQueue: boolean;
   slug: string;
   now: Date;
+  /** GR-30: the account whose best times show beside the picker (the post's first account). */
+  bestFor?: { wid: string; accountId: string; handle: string } | null;
 }) {
   const limits = { min: new Date(now.getTime() + 5 * 60_000), max: null };
   const tools = useComposerTools();
@@ -93,7 +98,19 @@ export function WhenSection({
         </ToggleGroup>
       ) : null}
       {mode === "time" || !allowQueue ? (
-        <ScheduleFields idPrefix={WHEN_PREFIX} value={value} onChange={onChange} timeZone={timeZone} limits={limits} error={error} />
+        <>
+          <ScheduleFields idPrefix={WHEN_PREFIX} value={value} onChange={onChange} timeZone={timeZone} limits={limits} error={error} />
+          {bestFor ? (
+            <BestTimeHint
+              wid={bestFor.wid}
+              accountId={bestFor.accountId}
+              handle={bestFor.handle}
+              date={value.date}
+              today={toZonedInputs(now, timeZone).date}
+              onUse={onChange}
+            />
+          ) : null}
+        </>
       ) : (
         <div className="space-y-1 text-sm" data-testid="queue-preview">
           <QueueLine queue={queue} timeZone={timeZone} now={now} slug={slug} />

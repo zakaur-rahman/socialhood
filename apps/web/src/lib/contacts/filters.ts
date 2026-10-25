@@ -68,7 +68,7 @@ export function filtersToSpec(f: ContactFilters): ContactFilterSpec {
   const spec: ContactFilterSpec = {};
   if (f.q.trim()) spec.q = f.q.trim();
   if (f.tagIds.length) spec.tag_ids = f.tagIds.slice(0, MAX_TAG_FILTERS);
-  if (f.platform) spec.platform = f.platform as "instagram" | "whatsapp";
+  if (f.platform) spec.platform = f.platform as Platform;
   if (f.hasEmail !== null) spec.has_email = f.hasEmail;
   if (f.hasPhone !== null) spec.has_phone = f.hasPhone;
   if (f.consent) spec.marketing_consent = f.consent;

@@ -15,7 +15,10 @@ import {
   newId,
   placeErrors,
   removeStep,
+  PLACEHOLDERS,
+  placeholderProblem,
   stepProblems,
+  stepTitle,
   updateList,
   updateStep,
   walk,
@@ -353,6 +356,34 @@ describe("tree changes", () => {
   });
 });
 
+describe("template placeholders (C-105)", () => {
+  it("names the first placeholder still in a message", () => {
+    expect(placeholderProblem("The small one is [price]. Reply here.")).toBe("Replace [price] with your price.");
+    expect(placeholderProblem("Your code is [CODE]")).toBe("Replace [code] with your code.");
+    expect(placeholderProblem("Code [code], price [price]")).toBe("Replace [code] with your code.");
+  });
+
+  it("leaves a user's own brackets alone", () => {
+    for (const text of ["Free shipping [on orders over 999]", "See [1]", "[prices]", "Price: [price tag]", "{price}", ""]) {
+      expect(placeholderProblem(text)).toBeNull();
+    }
+  });
+
+  it("lists the same tokens the API does", () => {
+    expect(PLACEHOLDERS).toEqual({ "[price]": "your price", "[code]": "your code" });
+  });
+
+  it("a message or a question that still has one is a problem on its text", () => {
+    expect(stepProblems(send("s", "That one is [price]."), CTX)).toEqual({ text: "Replace [price] with your price." });
+    expect(stepProblems(send("s", "That one is 499 [incl. GST]."), CTX)).toEqual({});
+    const ask = stepProblems(
+      { kind: "ask", id: "q", text: "Email for your [code]?", expect: "email", field_key: null, retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "Your code is [code].", skip: [] },
+      CTX,
+    );
+    expect(ask).toEqual({ text: "Replace [code] with your code.", confirm_text: "Replace [code] with your code." });
+  });
+});
+
 describe("checking a step", () => {
   it("a message needs text (or an image), https links and titles", () => {
     expect(stepProblems(send("s", ""), CTX)).toEqual({ text: "Write the message to send." });
@@ -531,5 +562,136 @@ describe("an Ask step's capture options (GR-14)", () => {
   it("drops the consent question text when consent is off", () => {
     const { definition } = compile([node({ consent: false })]);
     expect(definition.steps[0]).toMatchObject({ consent: false, consent_text: "" });
+  });
+});
+
+describe("a Send step that sends a saved reply (GR-21)", () => {
+  const reply = "7c1f0c1e-7d6a-4a7e-9f2b-3f6d2d1f9a10";
+  const savedSend = (extra: Partial<SendNode> = {}) => send("s", "", { saved: true, saved_reply_id: reply, ...extra });
+
+  it("compiles to a send with the reply and nothing else", () => {
+    const { definition } = compile([savedSend({ text: "ignored", buttons: [{ title: "Open", url: "https://example.com", profile: false }] }), send("after")]);
+    expect(definition.steps[0]).toEqual({ type: "send", id: "s", text: "", saved_reply_id: reply, next: "after" });
+  });
+
+  it("keeps a chosen source with no reply picked yet as an empty saved reply", () => {
+    const { definition } = compile([savedSend({ saved_reply_id: null })]);
+    expect(definition.steps[0]).toMatchObject({ type: "send", saved_reply_id: null, next: null });
+  });
+
+  it("reads the reply back, and the tree compiles to the same graph", () => {
+    const { definition } = compile([savedSend(), send("after")]);
+    const tree = decompile(definition) as EditorStep[];
+    expect(tree[0]).toMatchObject({ kind: "send", saved: true, saved_reply_id: reply });
+    expect(compile(tree).definition).toEqual(definition);
+    // A written message has no saved reply to read.
+    expect((decompile(compile([send("w", "Hello")]).definition) as EditorStep[])[0]).not.toHaveProperty("saved");
+  });
+
+  it("needs a reply that exists, and not on a comment flow's first step", () => {
+    expect(stepProblems(savedSend({ saved_reply_id: null }), CTX)).toEqual({ saved_reply_id: "Choose a saved reply." });
+    expect(stepProblems(savedSend(), CTX)).toEqual({});
+    const known = { ...CTX, savedReplyIds: new Set([reply]) };
+    expect(stepProblems(savedSend(), known)).toEqual({});
+    expect(stepProblems(savedSend({ saved_reply_id: "gone" }), known)).toEqual({
+      saved_reply_id: "That saved reply was deleted. Choose another.",
+    });
+    expect(stepProblems(savedSend(), { ...known, commentFirstId: "s" }).saved_reply_id).toMatch(/can't be a saved reply/);
+    // Later steps of a comment flow are fine, and so is the first step of a DM flow.
+    expect(stepProblems(savedSend(), { ...known, commentFirstId: "other" })).toEqual({});
+    // A saved reply is not checked for text.
+    expect(stepProblems(savedSend({ text: "" }), known)).not.toHaveProperty("text");
+  });
+
+  it("shows the reply's title in the walk", () => {
+    const { definition } = compile([savedSend()]);
+    const values = { first_name: "Priya", username: "priya" };
+    const path = walk(definition, { values, disclosure: null, savedReplyTitle: (id) => (id === reply ? "Shipping times" : undefined) });
+    expect(path[0]).toMatchObject({ title: "Saved reply", text: "Saved reply: Shipping times" });
+    expect(walk(definition, { values, disclosure: null })[0].text).toBe("Saved reply: (not found)");
+  });
+
+  it("is titled Saved reply in the editor", () => {
+    expect(stepTitle(savedSend())).toBe("Saved reply");
+    expect(stepTitle(send("w"))).toBe("Message");
+  });
+});
+
+describe("the product step (GR-31)", () => {
+  const product = (id: string, extra: Partial<Extract<EditorStep, { kind: "product" }>> = {}): EditorStep => ({
+    kind: "product",
+    id,
+    product_id: "p1",
+    variant_id: "v1",
+    intro: "Here you go",
+    ...extra,
+  });
+
+  it("is made empty, compiles to the API's product step and reads back", () => {
+    const made = makeStep("product", new Set());
+    expect(made).toMatchObject({ kind: "product", product_id: null, variant_id: null, intro: "" });
+
+    const tree: EditorStep[] = [send("a", "Hi"), product("p"), send("b", "Anything else?")];
+    const { definition } = compile(tree);
+    expect(definition.steps[1]).toEqual({
+      type: "product",
+      id: "p",
+      product_id: "p1",
+      variant_id: "v1",
+      intro: "Here you go",
+      next: "b",
+    });
+    expect(decompile(definition)).toEqual(tree);
+  });
+
+  it("goes to the step below, and ends the flow when last", () => {
+    const { definition } = compile([product("p", { variant_id: null })]);
+    expect(definition.steps[0]).toMatchObject({ type: "product", variant_id: null, next: null });
+  });
+
+  it("needs a product, and is titled for what it does", () => {
+    expect(stepProblems(product("p", { product_id: null }), CTX)).toEqual({ product_id: "Choose a product." });
+    expect(stepProblems(product("p"), CTX)).toEqual({});
+    expect(stepTitle(product("p"))).toBe("Send a product");
+  });
+});
+
+describe("the request payment step (GR-32)", () => {
+  const payment = (id: string, extra: Partial<Extract<EditorStep, { kind: "payment" }>> = {}): EditorStep => ({
+    kind: "payment",
+    id,
+    source: "items",
+    items: [{ product_id: "p1", variant_id: "v1", quantity: 2 }],
+    method: "upi",
+    intro: "Here is your order:",
+    ...extra,
+  });
+
+  it("is made empty, compiles to the API's payment step and reads back", () => {
+    expect(makeStep("payment", new Set())).toMatchObject({ kind: "payment", source: "items", items: [], method: "razorpay", intro: "" });
+    const tree: EditorStep[] = [send("a", "Hi"), payment("p"), send("b", "Thanks!")];
+    const { definition } = compile(tree);
+    expect(definition.steps[1]).toEqual({
+      type: "payment",
+      id: "p",
+      source: "items",
+      items: [{ product_id: "p1", variant_id: "v1", quantity: 2 }],
+      method: "upi",
+      intro: "Here is your order:",
+      next: "b",
+    });
+    expect(decompile(definition)).toEqual(tree);
+  });
+
+  it("sends no lines when it asks for the conversation's own order", () => {
+    const { definition } = compile([payment("p", { source: "draft" })]);
+    expect(definition.steps[0]).toMatchObject({ type: "payment", source: "draft", items: [], next: null });
+  });
+
+  it("needs at least one product unless it uses the chat's order, and is titled for what it does", () => {
+    expect(stepProblems(payment("p", { items: [] }), CTX)).toEqual({ items: "Choose at least one product to sell." });
+    expect(stepProblems(payment("p", { items: [], source: "draft" }), CTX)).toEqual({});
+    expect(stepProblems(payment("p"), CTX)).toEqual({});
+    expect(stepTitle(payment("p"))).toBe("Request payment");
   });
 });

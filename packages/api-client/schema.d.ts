@@ -188,8 +188,9 @@ export interface paths {
         };
         /**
          * List Agent Approvals
-         * @description R2: approvals across runs; a member sees the ones they may decide (their own runs' writes
-         *     their role allows), owners and admins all.
+         * @description The writes the agent proposed, soonest to expire first ("Waiting for you"): owners and
+         *     admins see every approval, a member those of their own runs. ``status`` ``all`` keeps every
+         *     status; ``run_id`` one run's. Approvals past their time are marked expired first.
          */
         get: operations["list_agent_approvals"];
         put?: never;
@@ -211,8 +212,11 @@ export interface paths {
         put?: never;
         /**
          * Approve Agent Approval
-         * @description R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The
-         *     caller's role must allow the tool (403 forbidden); 409 when it is no longer pending.
+         * @description Run the write as proposed, or with edited ``args``, through the normal service (what the
+         *     screen would do by hand). 403 forbidden when the caller's role couldn't do it by hand; 404
+         *     when it isn't the caller's to see; 409 when it is no longer pending (decided or expired); 422
+         *     for edited arguments that don't fit. When the service refuses it (a name taken since, a plan
+         *     limit) nothing is saved, the approval stays pending and its ``outcome`` says why.
          */
         post: operations["approve_agent_approval"];
         delete?: never;
@@ -232,8 +236,8 @@ export interface paths {
         put?: never;
         /**
          * Reject Agent Approval
-         * @description R2: cancel the write; the step is skipped and the run continues without it. 409 when it
-         *     is no longer pending.
+         * @description Say no: nothing is saved. 404 when it isn't the caller's to see; 409 when it is no longer
+         *     pending.
          */
         post: operations["reject_agent_approval"];
         delete?: never;
@@ -555,6 +559,113 @@ export interface paths {
          *     the metric at that age are left out (``considered`` is the sample size).
          */
         get: operations["list_top_posts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Api Keys
+         * @description Newest first, revoked keys included, with every scope a key can carry.
+         */
+        get: operations["list_api_keys"];
+        put?: never;
+        /**
+         * Create Api Key
+         * @description The key is in this response only. 402 entitlement_required on Free (the public API is part
+         *     of Pro); 409 at 20 active keys.
+         */
+        post: operations["create_api_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Api Key
+         * @description Stops the key working at once and removes the REST hooks it subscribed. Revoking a revoked
+         *     key changes nothing.
+         */
+        delete: operations["revoke_api_key"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/assignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Assignment
+         * @description The members who can be assigned (with their availability and open conversations) and
+         *     whether round-robin is on.
+         */
+        get: operations["get_assignment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/assignment/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Assignment Settings
+         * @description Turn round-robin on or off: new conversations nobody has go to the next available member.
+         */
+        put: operations["update_assignment_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit Events
+         * @description Who sent, edited or deleted what, newest first. ``until`` is exclusive.
+         */
+        get: operations["list_audit_events"];
         put?: never;
         post?: never;
         delete?: never;
@@ -990,6 +1101,196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/broadcasts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Broadcasts
+         * @description Newest first, each with its counts.
+         */
+        get: operations["list_broadcasts"];
+        put?: never;
+        /**
+         * Create Broadcast
+         * @description Save a draft. Nothing is sent until it is started.
+         */
+        post: operations["create_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Broadcast Availability
+         * @description Whether broadcasts are switched on, what the plan allows this month and Meta's rate card.
+         */
+        get: operations["get_broadcast_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Broadcast
+         * @description Who would get it, who is skipped and why, what Meta's rate card says it costs, whether it
+         *     fits the plan's recipients and the number's daily limit, and the message with a sample
+         *     contact. 402 on a plan without broadcasts; 404 for a number or segment of another workspace;
+         *     422 names what doesn't fit the template.
+         */
+        post: operations["preview_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Broadcast */
+        get: operations["get_broadcast"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Broadcast
+         * @description Delete a draft, a cancelled or a failed broadcast; 409 for one that was sent.
+         */
+        delete: operations["delete_broadcast"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Broadcast
+         * @description Change a draft or scheduled broadcast; 409 once it has started.
+         */
+        patch: operations["update_broadcast"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Broadcast
+         * @description Stop for good: everyone still waiting is skipped. Messages already handed over still go.
+         */
+        post: operations["cancel_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Broadcast */
+        post: operations["pause_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Broadcast Recipients
+         * @description The audience, by position, with each person's status; failed and skipped ones say why.
+         */
+        get: operations["list_broadcast_recipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Broadcast
+         * @description Resume a paused broadcast; 409 while the number's quality is Low.
+         */
+        post: operations["resume_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Broadcast
+         * @description Send now, or at ``scheduled_at``. 402 without the plan or past the month's recipients, 409
+         *     if it has already finished, 422 when no one can be sent to.
+         */
+        post: operations["start_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/business-hours": {
         parameters: {
             query?: never;
@@ -1404,6 +1705,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/contacts/{contact_id}/sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contact Sequences
+         * @description The sequences a contact is in or has been in, with what happened at each step.
+         */
+        get: operations["list_contact_sequences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/contacts/{contact_id}/tags": {
         parameters: {
             query?: never;
@@ -1497,6 +1818,27 @@ export interface paths {
         patch: operations["update_conversation"];
         trace?: never;
     };
+    "/v1/w/{wid}/conversations/{conversation_id}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Assign Conversation
+         * @description Give the conversation to a member, or to nobody (``user_id`` null). The member is told, and
+         *     the change is in the thread, the contact's timeline and the audit log.
+         */
+        put: operations["assign_conversation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations/{conversation_id}/messages": {
         parameters: {
             query?: never;
@@ -1543,6 +1885,29 @@ export interface paths {
          *     503 when the AI can't answer or its answer changed the draft's details.
          */
         post: operations["polish_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/product-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Product Message
+         * @description Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up
+         *     to 10 sections) in the conversation. Every item must be in the catalogue as last synced. 402
+         *     without commerce on the plan, 409 when no catalogue is connected, it belongs to another number
+         *     or the reply window is closed, 422 for an item that isn't ready or a list without a header.
+         */
+        post: operations["send_product_message"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1664,7 +2029,9 @@ export interface paths {
         put?: never;
         /**
          * Create Sandbox Account
-         * @description Connect a fake Instagram account for local development.
+         * @description Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
+         *     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
+         *     templates (GR-23).
          */
         post: operations["create_sandbox_account"];
         delete?: never;
@@ -1828,6 +2195,406 @@ export interface paths {
         patch: operations["update_hashtag_group"];
         trace?: never;
     };
+    "/v1/w/{wid}/integrations/google-sheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Google Sheets
+         * @description The connection, its sheet and column mapping, the fields a column can hold and the latest
+         *     rows with their results.
+         */
+        get: operations["get_google_sheets"];
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Google Sheets
+         * @description Revoke Google's access and remove the connection and the rows still waiting.
+         */
+        delete: operations["disconnect_google_sheets"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Google Connect
+         * @description Finish a connect with the nonce the OAuth callback redirected with. Only the member who
+         *     started it, in the workspace they started it in, can finish it; the nonce works once and for 10
+         *     minutes. 404 when it expired or was used, 403 when someone else started it, 502 when Google
+         *     fails.
+         */
+        post: operations["complete_google_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Google Connect
+         * @description Google's authorize URL (the narrow drive.file scope). 402 without Sheets sync on the plan,
+         *     503 when Google isn't set up on this server.
+         */
+        post: operations["start_google_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Google Sheet Mapping
+         * @description Which field goes in which column, in order. A sheet Social Hood made gets its header row
+         *     updated; a sheet that was already yours is not touched.
+         */
+        put: operations["save_google_sheet_mapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select Google Sheet
+         * @description Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it
+         *     made or was granted: any other gives 422 on ``link``.
+         */
+        put: operations["select_google_sheet"];
+        /**
+         * Create Google Sheet
+         * @description Make a new sheet in the connected Google account, with a header row from the mapping.
+         */
+        post: operations["create_google_sheet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Google Sheet Test
+         * @description Add a sample row now. 409 with the reason in plain words when Google refuses it.
+         */
+        post: operations["send_google_sheet_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payment Settings
+         * @description Whether Razorpay and/or UPI are set up, and the webhook address to add in Razorpay. The
+         *     keys and secrets are never returned.
+         */
+        get: operations["get_payment_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/payments/razorpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Connect Razorpay
+         * @description Check the keys with Razorpay and save them (encrypted). 402 without commerce on the plan,
+         *     422 when Razorpay refuses the keys, 502 when it doesn't answer.
+         */
+        put: operations["connect_razorpay"];
+        post?: never;
+        /** Disconnect Razorpay */
+        delete: operations["disconnect_razorpay"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/payments/upi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Upi
+         * @description The UPI address customers pay (a plain UPI request has no webhook: such an order is marked
+         *     paid by hand).
+         */
+        put: operations["save_upi"];
+        post?: never;
+        /** Remove Upi */
+        delete: operations["remove_upi"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/shopify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Shopify Status
+         * @description The store connection, its last sync, and whether Shopify is set up on this server.
+         */
+        get: operations["get_shopify"];
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Shopify
+         * @description Revoke Shopify's access and remove the connection and, unless ``keep_products``, the
+         *     products it made (they would no longer be kept in step).
+         */
+        delete: operations["disconnect_shopify"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/shopify/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Shopify Connect
+         * @description Finish a connect with the nonce the OAuth callback redirected with. Only the member who
+         *     started it, in the workspace they started it in, can finish it; the nonce works once and for 10
+         *     minutes. 404 when it expired or was used, 403 when someone else started it, 502 when Shopify
+         *     fails. The first sync starts at once.
+         */
+        post: operations["complete_shopify_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/shopify/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Shopify Connect
+         * @description Shopify's install address for the store. 402 without the catalogue on the plan, 503 when
+         *     the Shopify app isn't set up on this server, 409 for a store another workspace holds.
+         */
+        post: operations["start_shopify_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/shopify/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Shopify
+         * @description Copy the store's products again now. While one sync runs this changes nothing.
+         */
+        post: operations["sync_shopify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/whatsapp-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Whatsapp Catalogue
+         * @description The connection, how many items Meta has, which ones it refused and why. Any member may read
+         *     it (the inbox's "Send product" needs to know a catalogue is connected).
+         */
+        get: operations["get_whatsapp_catalogue"];
+        /**
+         * Connect Whatsapp Catalogue
+         * @description Check Meta shows the catalogue to the number's business account, save the connection and
+         *     start the first sync. 402 without commerce on the plan, 404 for an account that isn't this
+         *     workspace's, 422 for a number that isn't WhatsApp, 409 for a catalogue Meta won't show (not
+         *     found, or not connected to the number's business account), 502 when Meta doesn't answer.
+         */
+        put: operations["connect_whatsapp_catalogue"];
+        post?: never;
+        /**
+         * Disconnect Whatsapp Catalogue
+         * @description Forget the connection. The catalogue itself is left as it is in Meta.
+         */
+        delete: operations["disconnect_whatsapp_catalogue"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/whatsapp-catalogue/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Whatsapp Catalogue
+         * @description Send what changed now. While a sync runs this changes nothing.
+         */
+        post: operations["sync_whatsapp_catalogue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invitations
+         * @description Pending invitations, with the ones past their expiry marked expired.
+         */
+        get: operations["list_invitations"];
+        put?: never;
+        /**
+         * Create Invitation
+         * @description Invite by email. 402 when the plan's seats (members and pending invitations) are full;
+         *     409 for a member or an open invitation; 403 when an admin invites an admin.
+         */
+        post: operations["create_invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Invitation */
+        delete: operations["revoke_invitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations/{invitation_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Invitation */
+        post: operations["resend_invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/knowledge-gaps": {
         parameters: {
             query?: never;
@@ -1888,6 +2655,8 @@ export interface paths {
          *     (file_asset_id). 422 lists missing or foreign fields; 402 quota_exceeded over
          *     knowledge_characters; 415 for a file that isn't PDF, DOCX, TXT or MD up to 10 MB; 404 for a
          *     gap_id that isn't this workspace's. Ingestion runs in the background (status pending).
+         *     GR-35: a website (type site: url, optional title and recrawl, weekly or off) is crawled in the
+         *     background, up to the plan's crawl_pages; its pages are read through ``…/pages``.
          */
         post: operations["create_knowledge_source"];
         delete?: never;
@@ -1916,6 +2685,88 @@ export interface paths {
          * @description Any change (or ``reingest``) adds 1 to the version and ingests the source again.
          */
         patch: operations["update_knowledge_source"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exclude Site Path
+         * @description Pages at this path or below it (``/blog`` holds ``/blog/a``) are removed now and left out
+         *     of later crawls. 422 for a path that is only "/" and past 50 excluded paths.
+         */
+        post: operations["exclude_site_path"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Site Pages
+         * @description The addresses of a website source's crawl, shallowest first (404 for any other source).
+         */
+        get: operations["list_site_pages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/pages/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Site Page
+         * @description The page's knowledge is deleted and later crawls leave the address out.
+         */
+        delete: operations["remove_site_page"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/recrawl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recrawl Site
+         * @description Crawl the site again now. One crawl runs at a time: while one is queued or running this
+         *     changes nothing and returns the site as it is. 404 for any other source.
+         */
+        post: operations["recrawl_site"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/knowledge/test": {
@@ -2023,6 +2874,71 @@ export interface paths {
          * @description Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}.
          */
         post: operations["create_upload_signature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description Members with role and last active, and the seats the plan allows.
+         */
+        get: operations["list_members"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Member
+         * @description Their past messages and changes stay attributed to them.
+         */
+        delete: operations["remove_member"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Member Role
+         * @description Admin or agent. 409 for the owner of record: transfer ownership instead.
+         */
+        patch: operations["update_member_role"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/members/{user_id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Member Availability
+         * @description Whether round-robin may hand this member new conversations. Your own, or any member's if
+         *     you are an owner or admin (403 otherwise).
+         */
+        put: operations["set_member_availability"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2152,6 +3068,168 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orders
+         * @description Newest first, with whether the plan and the payment settings are ready.
+         */
+        get: operations["list_orders"];
+        put?: never;
+        /**
+         * Create Order
+         * @description An order for the conversation's customer, priced from the catalogue now (the request
+         *     never carries a price). 402 without commerce on the plan or over the month's orders, 404
+         *     for a conversation or product that isn't this workspace's, 422 on the lines (a variant
+         *     needed, a product switched off or without a price, more than is in stock).
+         */
+        post: operations["create_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order */
+        get: operations["get_order"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit Order
+         * @description Change a draft or waiting order: the lines (re-priced from the catalogue now), the address,
+         *     the note. A new total cancels the payment link and returns the order to a draft; ``payment``
+         *     asks for a new request straight after. 422 once the order has a payment or is closed.
+         */
+        patch: operations["edit_order"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Order
+         * @description Cancel an order nobody has paid, and its Razorpay link. 422 once there is a payment:
+         *     refund it first.
+         */
+        post: operations["cancel_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/fulfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fulfil Order
+         * @description Mark a paid order shipped, with a note (a courier and tracking number, say) that shows on
+         *     the order. 422 for an order that is not paid, or already shipped.
+         */
+        post: operations["fulfil_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Order Paid
+         * @description A member says a payment arrived: for UPI, which has no webhook. All that is left, or
+         *     ``amount_minor`` of it (the order is then partly paid; send another request for the rest).
+         *     Who, when and how much are kept on the order and in the audit trail. 422 when it is already
+         *     paid or cancelled, or the amount is more than what is left.
+         */
+        post: operations["mark_order_paid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/payment-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Payment
+         * @description Make a Razorpay payment link or a UPI request for what is left to pay and, unless ``send``
+         *     is false, send it as a message on the order's conversation. ``allow_partial`` lets the
+         *     customer pay a Razorpay link in parts (rupees only). 409 when the method isn't set up
+         *     ("Razorpay isn't set up for this workspace"), 409 ``reply_window_closed`` when the message
+         *     can't go, 422 for an order that is paid or cancelled.
+         */
+        post: operations["request_order_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refund Order
+         * @description Refund an order in full or in part, with a reason. A Razorpay payment is refunded through
+         *     the business's own keys (the refund is pending until Razorpay says it is processed); a UPI
+         *     payment is returned by the business, which records it here. 422 for an order without
+         *     payments, too large an amount or no reason; 409 when Razorpay isn't set up.
+         */
+        post: operations["refund_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/overview": {
         parameters: {
             query?: never;
@@ -2167,6 +3245,46 @@ export interface paths {
          *     for comparison. ``range`` with ``from`` or ``to`` is 422.
          */
         get: operations["get_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ownership-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Ownership
+         * @description Make another member the owner; the caller becomes an admin. Needs the workspace name.
+         */
+        post: operations["transfer_ownership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Workspace Permissions
+         * @description The caller's role and permissions here; the web app hides what they can't do from it.
+         */
+        get: operations["get_workspace_permissions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2258,6 +3376,121 @@ export interface paths {
          *     off for its account.
          */
         post: operations["refresh_post_summary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Products
+         * @description Newest first, with the plan's limits. ``q`` matches names, SKUs and variant words.
+         */
+        get: operations["list_products"];
+        put?: never;
+        /**
+         * Create Product
+         * @description Name, price (or variants that each have one), stock, picture and link. 402
+         *     ``entitlement_required`` without the catalogue on the plan, 402 ``quota_exceeded`` over its
+         *     products, 422 on the fields, 404 for a picture that isn't this workspace's.
+         */
+        post: operations["create_product"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Products
+         * @description Save the file's valid lines (the same reading as the preview); lines with problems are
+         *     skipped and counted.
+         */
+        post: operations["import_products"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/products/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Product Import
+         * @description Read the file and say, line by line, what would be created, updated or left out and why.
+         *     Saves nothing. 402 over the plan's rows, 422 for a file with no header row.
+         */
+        post: operations["preview_product_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Product */
+        get: operations["get_product"];
+        put?: never;
+        post?: never;
+        /** Delete Product */
+        delete: operations["delete_product"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Product
+         * @description Only the fields sent change; ``variants`` replaces the list (a variant is kept by its id).
+         */
+        patch: operations["update_product"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/reports/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weekly Report
+         * @description A finished week against the week before, and the last 8 weeks of each count. ``week`` is
+         *     the Monday it starts (default: the latest finished week); a day that is not a Monday, a week
+         *     still running or one over a year back is 422. Gaps are null with the days they cover, never
+         *     zeros. ``account_id`` makes every figure that connected account's (an account of another
+         *     workspace is 404); without it the report is workspace-wide and lists each account's own
+         *     numbers in ``breakdown``.
+         */
+        get: operations["get_weekly_report"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2583,6 +3816,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sequences
+         * @description Newest first, each with its enrolment counts, and the plan's limits.
+         */
+        get: operations["list_sequences"];
+        put?: never;
+        /**
+         * Create Sequence
+         * @description A draft. The steps are checked against the account (a template must be approved on the
+         *     number) and the plan's step limit.
+         */
+        post: operations["create_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Sequence
+         * @description The steps as a sample contact would meet them: when each is due after entry and what it
+         *     would send. Nothing is saved or sent.
+         */
+        post: operations["preview_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sequence */
+        get: operations["get_sequence"];
+        /**
+         * Update Sequence
+         * @description Replace the sequence and its steps. Only a draft or paused sequence (409 otherwise).
+         */
+        put: operations["update_sequence"];
+        post?: never;
+        /**
+         * Delete Sequence
+         * @description With its enrolments and history. Not while it is active (409).
+         */
+        delete: operations["delete_sequence"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Sequence
+         * @description Start taking people in (and carry on those already in it). 402 past the plan's limit.
+         */
+        post: operations["activate_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sequence Analytics
+         * @description Who entered, how it went per step (sent, skipped and why, failed, replied) and the funnel.
+         *     Computed on the server; cached for a few minutes.
+         */
+        get: operations["get_sequence_analytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/enrolments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sequence Enrolments
+         * @description The people in the sequence, newest first: where each is, when the next step is due, and why
+         *     a stopped one stopped.
+         */
+        get: operations["list_sequence_enrolments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/enrolments/{enrolment_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Sequence Enrolment
+         * @description Take one person out of the sequence.
+         */
+        post: operations["stop_sequence_enrolment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Sequence
+         * @description Stop taking people in and sending steps. Those already in it keep their place.
+         */
+        post: operations["pause_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts": {
         parameters: {
             query?: never;
@@ -2594,6 +4000,72 @@ export interface paths {
         get: operations["list_social_accounts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Facebook Connect
+         * @description Facebook's authorize URL. 503 until Facebook connections are configured, 402 over
+         *     accounts_per_platform.
+         */
+        post: operations["start_facebook_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/connect-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Facebook Pages
+         * @description Connect the picked Pages. 422 page_ids for a Page that wasn't listed or that the person
+         *     can't answer messages for, 409 account_in_use when a Page is connected to another workspace,
+         *     402 over accounts_per_platform (nothing is added, the nonce stays valid), 404 when it
+         *     expired.
+         */
+        post: operations["connect_facebook_pages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List Facebook Pages
+         * @description The Pages the person who started the connect manages, from the nonce the OAuth callback
+         *     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
+         *     expired (10 minutes), 502 when Facebook fails. Asking again returns the same list.
+         */
+        post: operations["list_facebook_pages"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2697,6 +4169,28 @@ export interface paths {
         head?: never;
         /** Update Social Account */
         patch: operations["update_social_account"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/{account_id}/best-times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Best Times
+         * @description GR-30: a suggested posting hour per weekday from the account's own posts (the method is in
+         *     the answer). Worked out by a service, cached for a few hours, never by an AI model; an account
+         *     with too little history says so (``enough_history`` false).
+         */
+        get: operations["get_best_times"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/social-accounts/{account_id}/business-hours": {
@@ -3085,6 +4579,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/widget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Widget Settings
+         * @description The widget's settings and its embed code.
+         */
+        get: operations["get_widget_settings"];
+        /**
+         * Update Widget Settings
+         * @description Change the fields sent; the others stay as they are.
+         */
+        put: operations["update_widget_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -3117,7 +4635,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Status
              * @enum {string}
@@ -3125,6 +4643,12 @@ export interface components {
             status: "needs_reconnect" | "error";
             /** Username */
             username: string | null;
+        };
+        /** AccountBreakdown */
+        AccountBreakdown: {
+            account: components["schemas"]["ReportAccount"];
+            /** Metrics */
+            metrics: components["schemas"]["BreakdownMetric"][];
         };
         /**
          * AccountBusinessHours
@@ -3183,7 +4707,7 @@ export interface components {
         /** ActionStep */
         ActionStep: {
             /** Action */
-            action: components["schemas"]["AddTag"] | components["schemas"]["RemoveTag"] | components["schemas"]["SetField"] | components["schemas"]["NotifyTeam"] | components["schemas"]["HandOff"];
+            action: components["schemas"]["AddTag"] | components["schemas"]["RemoveTag"] | components["schemas"]["SetField"] | components["schemas"]["NotifyTeam"] | components["schemas"]["HandOff"] | components["schemas"]["Assign"];
             /** Id */
             id: string;
             /** Next */
@@ -3224,7 +4748,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account";
+            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence" | "order";
             /**
              * Occurred At
              * Format: date-time
@@ -3298,10 +4822,56 @@ export interface components {
             tag_id: string;
         };
         /**
+         * AddressIn
+         * @description Where to deliver. Every part is optional (digital orders have none); it is saved as given.
+         */
+        AddressIn: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Line1 */
+            line1?: string | null;
+            /** Line2 */
+            line2?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /** State */
+            state?: string | null;
+        };
+        /** AddressOut */
+        AddressOut: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Line1 */
+            line1?: string | null;
+            /** Line2 */
+            line2?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /** State */
+            state?: string | null;
+        };
+        /**
          * AgentApproval
          * @description A write waiting for a person: exactly what will happen (recipients, text, scope, count).
          */
         AgentApproval: {
+            /**
+             * Can Decide
+             * @default false
+             */
+            can_decide: boolean;
             /**
              * Created At
              * Format: date-time
@@ -3310,6 +4880,8 @@ export interface components {
             /** Decided At */
             decided_at?: string | null;
             decided_by?: components["schemas"]["Actor"] | null;
+            /** Events */
+            events?: components["schemas"]["ApprovalEvent"][];
             /**
              * Expires At
              * Format: date-time
@@ -3322,12 +4894,18 @@ export interface components {
             id: string;
             /** Label */
             label: string;
+            /** Lines */
+            lines?: string[];
+            /** Match Count */
+            match_count?: number | null;
+            outcome?: components["schemas"]["ApprovalOutcome"] | null;
             /** Payload */
             payload: {
                 [key: string]: unknown;
             };
             /** Request */
             request: string;
+            requested_by?: components["schemas"]["Actor"] | null;
             /**
              * Run Id
              * Format: uuid
@@ -3338,6 +4916,8 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "rejected" | "expired" | "superseded";
+            /** Step Count */
+            step_count?: number | null;
             /**
              * Step Id
              * Format: uuid
@@ -3458,7 +5038,7 @@ export interface components {
          */
         AgentRun: {
             /** Action Cards */
-            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"] | components["schemas"]["FlowProposalAction"] | components["schemas"]["SegmentProposalAction"])[];
             /** Answer */
             answer?: string | null;
             /** Answer Refs */
@@ -3473,6 +5053,7 @@ export interface components {
             /** Credits */
             credits: number;
             error?: components["schemas"]["ErrorInfo"] | null;
+            hints?: components["schemas"]["RunHints"] | null;
             /**
              * Id
              * Format: uuid
@@ -3504,14 +5085,18 @@ export interface components {
              */
             thread_id: string;
             /** Visuals */
-            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"] | components["schemas"]["TrendVisual"] | components["schemas"]["LeadListVisual"] | components["schemas"]["TableVisual"])[];
         };
         /**
          * AgentRunCreate
          * @description POST …/agent/runs: a question in plain language (English, Hindi or Hinglish).
          */
         AgentRunCreate: {
-            /** Request */
+            hints?: components["schemas"]["RunHints"] | null;
+            /**
+             * Request
+             * @default
+             */
             request: string;
             /** Thread Id */
             thread_id?: string | null;
@@ -3522,11 +5107,13 @@ export interface components {
          */
         AgentRunDetail: {
             /** Action Cards */
-            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"] | components["schemas"]["FlowProposalAction"] | components["schemas"]["SegmentProposalAction"])[];
             /** Answer */
             answer?: string | null;
             /** Answer Refs */
             answer_refs: components["schemas"]["AnswerRef"][];
+            /** Approvals */
+            approvals: components["schemas"]["AgentApproval"][];
             /** Completed At */
             completed_at?: string | null;
             /**
@@ -3537,6 +5124,7 @@ export interface components {
             /** Credits */
             credits: number;
             error?: components["schemas"]["ErrorInfo"] | null;
+            hints?: components["schemas"]["RunHints"] | null;
             /**
              * Id
              * Format: uuid
@@ -3578,7 +5166,7 @@ export interface components {
              */
             thread_id: string;
             /** Visuals */
-            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"] | components["schemas"]["TrendVisual"] | components["schemas"]["LeadListVisual"] | components["schemas"]["TableVisual"])[];
         };
         /**
          * AgentRunList
@@ -3859,11 +5447,90 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source";
+            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source" | "product" | "order" | "contact" | "report";
             /** Label */
             label: string;
             /** Parent Id */
             parent_id?: string | null;
+            /** Week */
+            week?: string | null;
+        };
+        /** ApiKey */
+        ApiKey: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Name */
+            name: string;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiKeyCreate */
+        ApiKeyCreate: {
+            /** Name */
+            name: string;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiKeyList */
+        ApiKeyList: {
+            /** Active Limit */
+            active_limit: number;
+            /** Items */
+            items: components["schemas"]["ApiKey"][];
+            /** Scopes */
+            scopes: components["schemas"]["ApiScope"][];
+        };
+        /**
+         * ApiKeyWithKey
+         * @description Create only: the key itself, shown this once. Only its hash is kept.
+         */
+        ApiKeyWithKey: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Name */
+            name: string;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiScope */
+        ApiScope: {
+            /** Description */
+            description: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe";
         };
         /**
          * ApprovalApprove
@@ -3875,6 +5542,51 @@ export interface components {
             args?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * ApprovalEvent
+         * @description One line of an approval's audit trail (GR-36): who did what, and when.
+         */
+        ApprovalEvent: {
+            actor?: components["schemas"]["Actor"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "proposed" | "approved" | "rejected" | "expired" | "executed" | "failed";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /**
+         * ApprovalOutcome
+         * @description What approving did (GR-36). ``ok`` false: the service refused it, nothing was saved, and
+         *     the approval is still pending so the member can edit it or reject it.
+         */
+        ApprovalOutcome: {
+            /** Error Code */
+            error_code?: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Resource Id */
+            resource_id?: string | null;
+            /** Resource Kind */
+            resource_kind?: ("automation" | "segment") | null;
+            /** Route */
+            route?: string | null;
+            /** Summary */
+            summary: string;
         };
         /**
          * AskStep
@@ -3939,6 +5651,90 @@ export interface components {
              */
             type: "ask";
         };
+        /**
+         * Assign
+         * @description Give the conversation to a member (GR-20): a chosen ``member``, the next available member
+         *     in turn (``round_robin``, whatever the workspace's own round-robin setting), or ``nobody``
+         *     (clears the assignment). The member is told, as for any assignment.
+         */
+        Assign: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "assign";
+            /**
+             * Mode
+             * @default round_robin
+             * @enum {string}
+             */
+            mode: "member" | "round_robin" | "nobody";
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * Assignable
+         * @description A member who can be given a conversation. Any member may list them (the picker), so there
+         *     is no email here: the name is the member's, else the part of their email before the @.
+         */
+        Assignable: {
+            /** Available */
+            available: boolean;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Is You */
+            is_you: boolean;
+            /** Name */
+            name: string | null;
+            /** Open Conversations */
+            open_conversations: number;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * Assignee
+         * @description The member who has a conversation (GR-20). The name is the member's at the time of the
+         *     response; an assignee with no name shows their email's local part on the web.
+         */
+        Assignee: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * AssigneeUpdate
+         * @description PUT …/conversations/{id}/assignee. ``user_id`` null takes the assignment away.
+         */
+        AssigneeUpdate: {
+            /** User Id */
+            user_id: string | null;
+        };
+        /** AssignmentOverview */
+        AssignmentOverview: {
+            /** Members */
+            members: components["schemas"]["Assignable"][];
+            /** Round Robin */
+            round_robin: boolean;
+        };
+        /** AssignmentSettingsPut */
+        AssignmentSettingsPut: {
+            /** Round Robin */
+            round_robin: boolean;
+        };
         /** Attachment */
         Attachment: {
             /** Duration S */
@@ -3968,6 +5764,55 @@ export interface components {
             url: string;
             /** Width */
             width?: number | null;
+        };
+        /** AudienceCounts */
+        AudienceCounts: {
+            /** Eligible */
+            eligible: number;
+            /** Matching */
+            matching: number;
+            /** Missing Value */
+            missing_value: number;
+            /** No Consent */
+            no_consent: number;
+            /** Opted Out */
+            opted_out: number;
+        };
+        /** AuditEvent */
+        AuditEvent: {
+            /** Action */
+            action: string;
+            /** Actor Name */
+            actor_name: string | null;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Target Id */
+            target_id: string | null;
+            /** Target Type */
+            target_type: string;
+        };
+        /** AuditEventList */
+        AuditEventList: {
+            /** Actions */
+            actions: string[];
+            /** Has More */
+            has_more: boolean;
+            /** Items */
+            items: components["schemas"]["AuditEvent"][];
         };
         /** Automation */
         Automation: {
@@ -4404,6 +6249,8 @@ export interface components {
             outcome: string;
             /** Requires Paid Plan */
             requires_paid_plan: boolean;
+            /** Steps */
+            steps: number;
             /**
              * Trigger
              * @enum {string}
@@ -4472,6 +6319,11 @@ export interface components {
             /** Waiting */
             waiting: number;
         };
+        /** AvailabilityPut */
+        AvailabilityPut: {
+            /** Available */
+            available: boolean;
+        };
         /**
          * Baseline
          * @description What the post was compared with, as requested and as found.
@@ -4492,6 +6344,55 @@ export interface components {
             since?: string | null;
             /** Until */
             until?: string | null;
+        };
+        /**
+         * BestTimeDay
+         * @description One weekday's suggestion. ``local_time`` is None when the account's history is too thin for
+         *     this day (``posts`` is how many posts the suggested hour is based on, else 0).
+         */
+        BestTimeDay: {
+            /** Lift Percent */
+            lift_percent?: number | null;
+            /** Local Time */
+            local_time?: string | null;
+            /**
+             * Posts
+             * @default 0
+             */
+            posts: number;
+            /** Weekday */
+            weekday: number;
+        };
+        /**
+         * BestTimes
+         * @description GET …/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out
+         *     from the account's own posts (never by an AI model). ``enough_history`` is false, and every
+         *     day empty, until the account has ``min_posts`` posts with known engagement. Cached for a few
+         *     hours.
+         */
+        BestTimes: {
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Days */
+            days: components["schemas"]["BestTimeDay"][];
+            /** Enough History */
+            enough_history: boolean;
+            /** Method */
+            method: string;
+            /** Min Posts */
+            min_posts: number;
+            /** Sample Size */
+            sample_size: number;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Timezone */
+            timezone: string;
         };
         /** BillingPrice */
         BillingPrice: {
@@ -4562,6 +6463,237 @@ export interface components {
              * @enum {string}
              */
             type: "branch";
+        };
+        /**
+         * BreakdownMetric
+         * @description One account's count for the week against the week before, with a weekly series. A value
+         *     the platform can't give is None and ``unavailable`` says why (``insights_not_granted``,
+         *     ``no_readings``); a count is never None for that reason.
+         */
+        BreakdownMetric: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Days Known */
+            days_known?: number | null;
+            /** Days Total */
+            days_total?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "messages_received" | "conversations" | "comments_received" | "replies_sent" | "automation_runs" | "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows";
+            /** Label */
+            label: string;
+            /** Previous */
+            previous?: number | null;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+            /** Unavailable */
+            unavailable?: string | null;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "seconds";
+            /** Value */
+            value?: number | null;
+        };
+        /** Broadcast */
+        Broadcast: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Audience Size */
+            audience_size: number;
+            /** Completed At */
+            completed_at?: string | null;
+            cost?: components["schemas"]["CostEstimate"] | null;
+            counts: components["schemas"]["BroadcastCounts"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Paused Code */
+            paused_code?: string | null;
+            /** Paused Reason */
+            paused_reason?: string | null;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Segment Id */
+            segment_id?: string | null;
+            /** Segment Name */
+            segment_name: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "scheduled" | "sending" | "paused" | "completed" | "cancelled" | "failed";
+            template: components["schemas"]["BroadcastTemplate"];
+            /** Variables */
+            variables: components["schemas"]["VariableOut"][];
+        };
+        /**
+         * BroadcastAvailability
+         * @description Whether the web shows broadcasts at all (the BROADCASTS_ENABLED setting), and what the plan
+         *     allows.
+         */
+        BroadcastAvailability: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Monthly Limit
+             * @default 0
+             */
+            monthly_limit: number;
+            /** Period End */
+            period_end?: string | null;
+            /**
+             * Plan Allowed
+             * @default false
+             */
+            plan_allowed: boolean;
+            rate_card?: components["schemas"]["RateCardOut"] | null;
+            /**
+             * Used This Period
+             * @default 0
+             */
+            used_this_period: number;
+        };
+        /** BroadcastCounts */
+        BroadcastCounts: {
+            /** Delivered */
+            delivered: number;
+            /** Failed */
+            failed: number;
+            /** Queued */
+            queued: number;
+            /** Read */
+            read: number;
+            /** Replied */
+            replied: number;
+            /** Sent */
+            sent: number;
+            /** Skipped */
+            skipped: number;
+            /** Stopped */
+            stopped: number;
+            /** Total */
+            total: number;
+        };
+        /** BroadcastCreate */
+        BroadcastCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            segment_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Template Language */
+            template_language: string;
+            /** Template Name */
+            template_name: string;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][];
+        };
+        /**
+         * BroadcastDraft
+         * @description What a broadcast says and who gets it; the preview takes only this.
+         */
+        BroadcastDraft: {
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            segment_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Template Language */
+            template_language: string;
+            /** Template Name */
+            template_name: string;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][];
+        };
+        /** BroadcastList */
+        BroadcastList: {
+            /** Items */
+            items: components["schemas"]["Broadcast"][];
+            /** Total */
+            total: number;
+        };
+        /** BroadcastPreview */
+        BroadcastPreview: {
+            audience: components["schemas"]["AudienceCounts"];
+            cost: components["schemas"]["CostEstimate"];
+            number: components["schemas"]["NumberInfo"];
+            /** Problems */
+            problems?: string[];
+            quota: components["schemas"]["QuotaInfo"];
+            sample: components["schemas"]["SamplePreview"];
+        };
+        /**
+         * BroadcastStart
+         * @description Send now, or at ``scheduled_at`` (at least a minute from now).
+         */
+        BroadcastStart: {
+            /** Scheduled At */
+            scheduled_at?: string | null;
+        };
+        /** BroadcastTemplate */
+        BroadcastTemplate: {
+            /** Body */
+            body: string;
+            /** Category */
+            category: string;
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * BroadcastUpdate
+         * @description Change a draft or a scheduled broadcast. Everything is optional; a changed number,
+         *     segment or template must still fit the others.
+         */
+        BroadcastUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Segment Id */
+            segment_id?: string | null;
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][] | null;
         };
         /** BulkPause */
         BulkPause: {
@@ -4755,7 +6887,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Send At
              * Format: date-time
@@ -4791,6 +6923,10 @@ export interface components {
              */
             social_account_id: string;
         };
+        /** CancelOrder */
+        CancelOrder: {
+            notice?: components["schemas"]["NoticeIn"] | null;
+        };
         /**
          * CaptionRequest
          * @description POST …/ai/caption: ``write`` a caption from ``brief`` (what the post is about), or
@@ -4813,6 +6949,19 @@ export interface components {
         CaptionSuggestion: {
             /** Caption */
             caption: string;
+        };
+        /** CatalogueLimits */
+        CatalogueLimits: {
+            /** Csv Max Chars */
+            csv_max_chars: number;
+            /** Default Currency */
+            default_currency: string;
+            /** Entitled */
+            entitled: boolean;
+            /** Import Row Cap */
+            import_row_cap: number;
+            /** Product Cap */
+            product_cap: number;
         };
         /** Checklist */
         Checklist: {
@@ -5107,7 +7256,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import";
+            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import" | "widget";
             /**
              * Status
              * @enum {string}
@@ -5209,7 +7358,7 @@ export interface components {
             /** Min Lead Score */
             min_lead_score?: number | null;
             /** Platform */
-            platform?: ("instagram" | "whatsapp") | null;
+            platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
             /** Q */
             q?: string | null;
             /** Stages */
@@ -5244,7 +7393,7 @@ export interface components {
             /** Min Lead Score */
             min_lead_score?: number | null;
             /** Platform */
-            platform?: ("instagram" | "whatsapp") | null;
+            platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
             /** Q */
             q?: string | null;
             /** Stages */
@@ -5403,6 +7552,46 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** ContactRef */
+        ContactRef: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username?: string | null;
+        };
+        /** ContactSequence */
+        ContactSequence: {
+            enrolment: components["schemas"]["Enrolment"];
+            /** Runs */
+            runs: components["schemas"]["ContactStepRun"][];
+        };
+        /** ContactSequenceList */
+        ContactSequenceList: {
+            /** Items */
+            items: components["schemas"]["ContactSequence"][];
+        };
+        /** ContactStepRun */
+        ContactStepRun: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Position */
+            position: number;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sent" | "skipped" | "failed";
+        };
         /** ContactSummary */
         ContactSummary: {
             /** Display Name */
@@ -5429,6 +7618,9 @@ export interface components {
             ai: components["schemas"]["ConversationAi"];
             /** Ai Mode Override */
             ai_mode_override?: ("off" | "suggest" | "auto") | null;
+            /** Assigned At */
+            assigned_at?: string | null;
+            assignee?: components["schemas"]["Assignee"] | null;
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactDetail"];
@@ -5449,7 +7641,7 @@ export interface components {
             /** Last Message Preview */
             last_message_preview?: string | null;
             /** Last Message Source */
-            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system") | null;
             latest_analysis?: components["schemas"]["MessageAnalysis"] | null;
             /** Lead Score */
             lead_score?: number | null;
@@ -5462,7 +7654,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             reply_window: components["schemas"]["ReplyWindow"];
             /** Reply Window Closes At */
             reply_window_closes_at?: string | null;
@@ -5542,6 +7734,9 @@ export interface components {
         ConversationListItem: {
             /** Ai Mode Override */
             ai_mode_override?: ("off" | "suggest" | "auto") | null;
+            /** Assigned At */
+            assigned_at?: string | null;
+            assignee?: components["schemas"]["Assignee"] | null;
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactSummary"];
@@ -5559,7 +7754,7 @@ export interface components {
             /** Last Message Preview */
             last_message_preview?: string | null;
             /** Last Message Source */
-            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system") | null;
             /** Lead Score */
             lead_score?: number | null;
             /** Needs Human */
@@ -5570,7 +7765,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Reply Window Closes At */
             reply_window_closes_at?: string | null;
             /** Signal */
@@ -5616,6 +7811,32 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * CostEstimate
+         * @description Meta's rate card times the people to send to. Information, not a charge: the business pays
+         *     Meta directly (PD-3). The card is typed in by hand and unverified.
+         */
+        CostEstimate: {
+            /** As Of */
+            as_of: string;
+            /** Category */
+            category: string;
+            /** Currency */
+            currency: string;
+            /** Per Message */
+            per_message: string;
+            /** Source */
+            source: string;
+            /** Total */
+            total: string;
+            /** Verified */
+            verified: boolean;
+        };
+        /** CsvImport */
+        CsvImport: {
+            /** Csv */
+            csv: string;
         };
         /** DailyRuns */
         DailyRuns: {
@@ -5728,6 +7949,65 @@ export interface components {
              */
             type: "end";
         };
+        /** Enrolment */
+        Enrolment: {
+            contact: components["schemas"]["ContactRef"];
+            /**
+             * Enrolled At
+             * Format: date-time
+             */
+            enrolled_at: string;
+            /** Entry Event */
+            entry_event: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            last_run?: components["schemas"]["LastRun"] | null;
+            /** Next Due At */
+            next_due_at?: string | null;
+            /** Next Step */
+            next_step?: number | null;
+            /**
+             * Sequence Id
+             * Format: uuid
+             */
+            sequence_id: string;
+            /** Sequence Name */
+            sequence_name?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "stopped";
+            /** Step Count */
+            step_count: number;
+            /** Stop Reason */
+            stop_reason?: ("reply" | "tag" | "tag_removed" | "stage" | "member" | "ended") | null;
+            /** Stop Text */
+            stop_text?: string | null;
+        };
+        /** EnrolmentCounts */
+        EnrolmentCounts: {
+            /** Active */
+            active: number;
+            /** Completed */
+            completed: number;
+            /** Stopped */
+            stopped: number;
+        };
+        /** EnrolmentList */
+        EnrolmentList: {
+            /** Has More */
+            has_more: boolean;
+            /** Items */
+            items: components["schemas"]["Enrolment"][];
+            /** Total */
+            total: number;
+        };
         /** EntitlementValue */
         EntitlementValue: {
             /** Key */
@@ -5803,12 +8083,129 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** EntryOut */
+        EntryOut: {
+            /** Broadcast Id */
+            broadcast_id?: string | null;
+            /** Broadcast Name */
+            broadcast_name?: string | null;
+            /** Capture Kind */
+            capture_kind?: ("email" | "phone" | "field") | null;
+            /** Label */
+            label: string;
+            /** Stage */
+            stage?: ("new" | "qualified" | "follow_up" | "won" | "lost") | null;
+            /** Tag Id */
+            tag_id?: string | null;
+            /** Tag Name */
+            tag_name?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "captured" | "tagged" | "broadcast_replied" | "lead_stage";
+        };
+        /**
+         * EntryRule
+         * @description What starts the sequence for a contact: a lead captured (any, or an email, a phone or an
+         *     answer), a tag added (``tag_id``), a reply to a WhatsApp broadcast (any, or one), or the lead
+         *     moving into a stage (``stage``).
+         */
+        EntryRule: {
+            /** Broadcast Id */
+            broadcast_id?: string | null;
+            /** Capture Kind */
+            capture_kind?: ("email" | "phone" | "field") | null;
+            /** Stage */
+            stage?: ("new" | "qualified" | "follow_up" | "won" | "lost") | null;
+            /** Tag Id */
+            tag_id?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "captured" | "tagged" | "broadcast_replied" | "lead_stage";
+        };
         /** ErrorInfo */
         ErrorInfo: {
             /** Code */
             code: string;
             /** Message */
             message: string;
+        };
+        /**
+         * ExcludePath
+         * @description POST …/excluded-paths: pages at this path or below it are removed and not crawled again.
+         */
+        ExcludePath: {
+            /** Path */
+            path: string;
+        };
+        /**
+         * ExtraMetrics
+         * @description Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and
+         *     compares): an Instagram Story's replies and its taps and swipes through the Story, and the
+         *     clicks on a Facebook Page post. None: not given for this post or not read yet.
+         */
+        ExtraMetrics: {
+            /** Clicks */
+            clicks?: number | null;
+            /** Exits */
+            exits?: number | null;
+            /** Replies */
+            replies?: number | null;
+            /** Swipes Forward */
+            swipes_forward?: number | null;
+            /** Taps Back */
+            taps_back?: number | null;
+            /** Taps Forward */
+            taps_forward?: number | null;
+        };
+        /**
+         * FacebookConnectPages
+         * @description The Pages to connect, picked from the list the same nonce returned.
+         */
+        FacebookConnectPages: {
+            /** Nonce */
+            nonce: string;
+            /** Page Ids */
+            page_ids: string[];
+        };
+        /** FacebookPageList */
+        FacebookPageList: {
+            /** Items */
+            items: components["schemas"]["FacebookPageOption"][];
+        };
+        /** FacebookPageOption */
+        FacebookPageOption: {
+            /**
+             * Can Connect
+             * @default true
+             */
+            can_connect: boolean;
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Id */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Picture Url */
+            picture_url?: string | null;
+            /** Problem */
+            problem?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * FacebookPagesRequest
+         * @description The nonce the OAuth callback put in the Connections page's URL (?facebook=…).
+         */
+        FacebookPagesRequest: {
+            /** Nonce */
+            nonce: string;
         };
         /**
          * FieldCondition
@@ -5955,7 +8352,7 @@ export interface components {
             /** Start */
             start: string;
             /** Steps */
-            steps: (components["schemas"]["SendStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
+            steps: (components["schemas"]["SendStep"] | components["schemas"]["ProductStep"] | components["schemas"]["PaymentStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
         };
         /**
          * FlowPreviewStep
@@ -5979,6 +8376,33 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FlowProposalAction */
+        FlowProposalAction: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /** Automation Id */
+            automation_id?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flow_proposal";
+            /** Label */
+            label: string;
+            /** Lines */
+            lines: string[];
+            /** Note */
+            note?: string | null;
+            /** Route */
+            route: string;
+            /** Step Count */
+            step_count: number;
+            /** Title */
+            title: string;
+        };
         /**
          * FollowsCondition
          * @description Whether they follow the account, read when the step runs; unknown counts as neither.
@@ -5994,6 +8418,16 @@ export interface components {
              * @enum {string}
              */
             kind: "follows_business";
+        };
+        /**
+         * FulfilOrder
+         * @description Mark a paid order shipped. ``note`` is shown on the order and in the default message
+         *     (a courier and tracking number, say).
+         */
+        FulfilOrder: {
+            /** Note */
+            note?: string | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
         };
         /**
          * FunnelStep
@@ -6046,6 +8480,55 @@ export interface components {
             text?: string | null;
             /** Title */
             title: string;
+        };
+        /**
+         * GoogleConnectComplete
+         * @description The nonce the OAuth callback put in the Integrations page's URL (?google=…).
+         */
+        GoogleConnectComplete: {
+            /** Nonce */
+            nonce: string;
+        };
+        /** GoogleConnectStart */
+        GoogleConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /** GoogleSheetsStatus */
+        GoogleSheetsStatus: {
+            /** Available */
+            available: boolean;
+            /** Columns */
+            columns?: components["schemas"]["SheetColumnOut"][];
+            /** Connected */
+            connected: boolean;
+            /** Entitled */
+            entitled: boolean;
+            /**
+             * Failed Rows
+             * @default 0
+             */
+            failed_rows: number;
+            /** Fields */
+            fields?: components["schemas"]["SheetFieldOption"][];
+            /** Google Email */
+            google_email?: string | null;
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /**
+             * Pending Rows
+             * @default 0
+             */
+            pending_rows: number;
+            /** Recent */
+            recent?: components["schemas"]["SheetRowOut"][];
+            sheet?: components["schemas"]["SheetOut"] | null;
+            /** Status */
+            status?: ("active" | "needs_reconnect") | null;
         };
         /**
          * HandOff
@@ -6182,11 +8665,61 @@ export interface components {
             /** Items */
             items: components["schemas"]["IceBreakerIn"][];
         };
+        /** ImportPreview */
+        ImportPreview: {
+            /** Columns */
+            columns: string[];
+            /** Create */
+            create: number;
+            /** Errors */
+            errors: number;
+            /** Ignored Columns */
+            ignored_columns: string[];
+            /** Products */
+            products: number;
+            /** Row Cap */
+            row_cap: number;
+            /** Rows */
+            rows: components["schemas"]["ImportRowOut"][];
+            /** Total Rows */
+            total_rows: number;
+            /** Update */
+            update: number;
+        };
+        /** ImportResult */
+        ImportResult: {
+            /** Created */
+            created: number;
+            /** Products */
+            products: number;
+            /** Skipped */
+            skipped: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ImportRowOut */
+        ImportRowOut: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "error";
+            /** Errors */
+            errors?: string[];
+            /** Line */
+            line: number;
+            /** Name */
+            name: string;
+            /** Variant */
+            variant?: string | null;
+        };
         /**
          * InboxCounts
          * @description The Inbox nav badge (FR-INB-04) and view chips.
          */
         InboxCounts: {
+            /** Mine */
+            mine: number;
             /** Needs Reply */
             needs_reply: number;
             /** Needs You */
@@ -6211,6 +8744,66 @@ export interface components {
              * @enum {string}
              */
             intent: "pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other";
+        };
+        /** Invitation */
+        Invitation: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invited By Name */
+            invited_by_name: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "expired" | "accepted" | "revoked";
+        };
+        /**
+         * InvitationCreate
+         * @description Owners invite admins or agents; admins invite agents only.
+         */
+        InvitationCreate: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+        };
+        /** InvitationList */
+        InvitationList: {
+            /** Items */
+            items: components["schemas"]["Invitation"][];
+        };
+        /** ItemRef */
+        ItemRef: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Variant Id */
+            variant_id?: string | null;
         };
         /** KnowledgeGap */
         KnowledgeGap: {
@@ -6294,6 +8887,7 @@ export interface components {
             last_ingested_at?: string | null;
             /** Question */
             question?: string | null;
+            site?: components["schemas"]["SiteCrawlInfo"] | null;
             /**
              * Status
              * @enum {string}
@@ -6305,7 +8899,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "faq" | "text" | "url" | "file";
+            type: "faq" | "text" | "url" | "file" | "site" | "page";
             /**
              * Updated At
              * Format: date-time
@@ -6331,13 +8925,15 @@ export interface components {
             gap_id?: string | null;
             /** Question */
             question?: string | null;
+            /** Recrawl */
+            recrawl?: ("weekly" | "off") | null;
             /** Title */
             title?: string | null;
             /**
              * Type
              * @enum {string}
              */
-            type: "faq" | "text" | "url" | "file";
+            type: "faq" | "text" | "url" | "file" | "site";
             /** Url */
             url?: string | null;
         };
@@ -6354,8 +8950,12 @@ export interface components {
         KnowledgeSourcePatch: {
             /** Body */
             body?: string | null;
+            /** Excluded Paths */
+            excluded_paths?: string[] | null;
             /** Question */
             question?: string | null;
+            /** Recrawl */
+            recrawl?: ("weekly" | "off") | null;
             /**
              * Reingest
              * @default false
@@ -6391,6 +8991,77 @@ export interface components {
             characters_limit?: number | null;
             /** Characters Used */
             characters_used: number;
+        };
+        /** LastRun */
+        LastRun: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Position */
+            position: number;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "sent" | "skipped" | "failed";
+        };
+        /**
+         * LeadListVisual
+         * @description Leads waiting for a reply, best score first (list_contacts with awaiting_reply, VIS-08).
+         */
+        LeadListVisual: {
+            /** Items */
+            items: components["schemas"]["LeadRow"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lead_list";
+            /** More Route */
+            more_route?: string | null;
+            /** Reply Ids */
+            reply_ids: string[];
+            /** Title */
+            title: string;
+            /** Total */
+            total: number;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * LeadRow
+         * @description One lead. ``name`` is the customer's own text: render it as text.
+         */
+        LeadRow: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Last Activity Label */
+            last_activity_label?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /**
+             * Lead Stage
+             * @default new
+             * @enum {string}
+             */
+            lead_stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
         };
         /** LeadScoreCondition */
         LeadScoreCondition: {
@@ -6505,6 +9176,19 @@ export interface components {
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
         };
+        /**
+         * MarkPaid
+         * @description A payment a member received by hand (UPI has no webhook): the customer's reference, if they
+         *     shared one, and the amount in minor units when it is less than what is left to pay (blank:
+         *     all of it).
+         */
+        MarkPaid: {
+            /** Amount Minor */
+            amount_minor?: number | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
+            /** Reference */
+            reference?: string | null;
+        };
         /** MarkRead */
         MarkRead: {
             /**
@@ -6591,6 +9275,51 @@ export interface components {
             /** Width */
             width?: number | null;
         };
+        /** Member */
+        Member: {
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Email */
+            email: string;
+            /** Is You */
+            is_you: boolean;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Name */
+            name: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** MemberList */
+        MemberList: {
+            /** Items */
+            items: components["schemas"]["Member"][];
+            seats: components["schemas"]["Seats"];
+        };
+        /**
+         * MemberRolePatch
+         * @description Admin or agent. Ownership moves only through the transfer route.
+         */
+        MemberRolePatch: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+        };
         /** MentionContact */
         MentionContact: {
             /** Display Name */
@@ -6661,7 +9390,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "customer" | "human" | "ai_auto" | "automation" | "native_app" | "system";
+            source: "customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system";
             /** Status */
             status?: ("received" | "queued" | "sending" | "sent" | "delivered" | "read" | "failed") | null;
             /** Suggestion Id */
@@ -6826,6 +9555,30 @@ export interface components {
             /** Unavailable */
             unavailable?: string | null;
         };
+        /**
+         * NoticeIn
+         * @description A message to the customer about an order's new status, sent on the order's conversation.
+         *     ``message`` replaces the default wording. On WhatsApp after the 24-hour window an approved
+         *     utility template (name and language) carries it; without one it can't be sent.
+         */
+        NoticeIn: {
+            /** Message */
+            message?: string | null;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+        };
+        /**
+         * NoticeOut
+         * @description What happened to the message asked for with a status change: sent, or why not.
+         */
+        NoticeOut: {
+            /** Reason */
+            reason?: string | null;
+            /** Sent */
+            sent: boolean;
+        };
         /** NotificationList */
         NotificationList: {
             /** Items */
@@ -6887,6 +9640,299 @@ export interface components {
              */
             note: string;
         };
+        /** NumberInfo */
+        NumberInfo: {
+            /** Daily Limit */
+            daily_limit?: number | null;
+            /** Days To Send */
+            days_to_send: number;
+            /** Limit Known */
+            limit_known: boolean;
+            /**
+             * Quality Rating
+             * @enum {string}
+             */
+            quality_rating: "green" | "yellow" | "red" | "unknown";
+        };
+        /** OrderContact */
+        OrderContact: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username?: string | null;
+        };
+        /** OrderCreate */
+        OrderCreate: {
+            address?: components["schemas"]["AddressIn"] | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /** Items */
+            items: components["schemas"]["OrderLineIn"][];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * OrderEdit
+         * @description Change an order that is a draft or waiting for payment. Lines are replaced when given (and
+         *     re-priced from the catalogue now); the address and the note are replaced when given (an empty
+         *     note clears it). ``payment``, when given, sends a new payment request straight after, which
+         *     is what replaces a link the edit made useless.
+         */
+        OrderEdit: {
+            address?: components["schemas"]["AddressIn"] | null;
+            /** Items */
+            items?: components["schemas"]["OrderLineIn"][] | null;
+            /** Note */
+            note?: string | null;
+            payment?: components["schemas"]["PaymentRequest"] | null;
+        };
+        /** OrderLimits */
+        OrderLimits: {
+            /** Entitled */
+            entitled: boolean;
+            /** Razorpay Ready */
+            razorpay_ready: boolean;
+            /** Upi Ready */
+            upi_ready: boolean;
+        };
+        /** OrderLineIn */
+        OrderLineIn: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
+        /** OrderLineOut */
+        OrderLineOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Line Total */
+            line_total: string;
+            /** Line Total Minor */
+            line_total_minor: number;
+            /** Name */
+            name: string;
+            /** Product Id */
+            product_id?: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Sku */
+            sku?: string | null;
+            /** Unit Price */
+            unit_price: string;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Variant Id */
+            variant_id?: string | null;
+            /** Variant Title */
+            variant_title?: string | null;
+        };
+        /** OrderList */
+        OrderList: {
+            /** Items */
+            items: components["schemas"]["OrderOut"][];
+            limits: components["schemas"]["OrderLimits"];
+            /** Total */
+            total: number;
+        };
+        /** OrderOut */
+        OrderOut: {
+            /**
+             * Accept Partial
+             * @default false
+             */
+            accept_partial: boolean;
+            address?: components["schemas"]["AddressOut"] | null;
+            /**
+             * Amount Left
+             * @default 0.00
+             */
+            amount_left: string;
+            /**
+             * Amount Left Minor
+             * @default 0
+             */
+            amount_left_minor: number;
+            /**
+             * Amount Paid
+             * @default 0.00
+             */
+            amount_paid: string;
+            /**
+             * Amount Paid Minor
+             * @default 0
+             */
+            amount_paid_minor: number;
+            /**
+             * Amount Refunded
+             * @default 0.00
+             */
+            amount_refunded: string;
+            /**
+             * Amount Refunded Minor
+             * @default 0
+             */
+            amount_refunded_minor: number;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            contact: components["schemas"]["OrderContact"];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Currency */
+            currency: string;
+            /** Fulfilled At */
+            fulfilled_at?: string | null;
+            /** Fulfilment Note */
+            fulfilment_note?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["OrderLineOut"][];
+            /** Link Expires At */
+            link_expires_at?: string | null;
+            /** Note */
+            note?: string | null;
+            notice?: components["schemas"]["NoticeOut"] | null;
+            /** Number */
+            number: number;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Paid By Name */
+            paid_by_name?: string | null;
+            /** Payment Link Url */
+            payment_link_url?: string | null;
+            /** Payment Method */
+            payment_method?: ("razorpay" | "upi") | null;
+            /** Payment Reference */
+            payment_reference?: string | null;
+            /** Payments */
+            payments?: components["schemas"]["OrderPaymentOut"][];
+            /** Platform */
+            platform?: string | null;
+            /**
+             * Refundable
+             * @default 0.00
+             */
+            refundable: string;
+            /**
+             * Refundable Minor
+             * @default 0
+             */
+            refundable_minor: number;
+            /** Refunds */
+            refunds?: components["schemas"]["OrderRefundOut"][];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "inbox" | "whatsapp" | "flow";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "awaiting_payment" | "partially_paid" | "paid" | "fulfilled" | "refunded" | "cancelled" | "expired";
+            /** Total */
+            total: string;
+            /** Total Minor */
+            total_minor: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** OrderPaymentOut */
+        OrderPaymentOut: {
+            /** Amount */
+            amount: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /**
+             * Paid At
+             * Format: date-time
+             */
+            paid_at: string;
+            /** Recorded By Name */
+            recorded_by_name?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** OrderRefundOut */
+        OrderRefundOut: {
+            /** Amount */
+            amount: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Failure */
+            failure?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "manual";
+            /** Processed At */
+            processed_at?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "processed" | "failed";
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -6933,7 +9979,7 @@ export interface components {
             /** Oldest Waiting Since */
             oldest_waiting_since: string | null;
             /** Platforms Connected */
-            platforms_connected: ("instagram" | "whatsapp")[];
+            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web")[];
             previous: components["schemas"]["OverviewPeriod"];
             /** Priority Queue */
             priority_queue: components["schemas"]["PriorityConversation"][];
@@ -7078,6 +10124,38 @@ export interface components {
             /** Thumbnail Url */
             thumbnail_url: string | null;
         };
+        /**
+         * OwnershipTransfer
+         * @description Hand the workspace to another member. The previous owner becomes an admin. Type the
+         *     workspace's name to confirm.
+         */
+        OwnershipTransfer: {
+            /** Confirm Name */
+            confirm_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * PaymentItem
+         * @description One line of an order a payment step makes: a product (and variant, when it has some).
+         */
+        PaymentItem: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
         /** PaymentList */
         PaymentList: {
             /** Items */
@@ -7114,6 +10192,87 @@ export interface components {
              * @enum {string}
              */
             status: "succeeded" | "failed" | "refunded" | "pending";
+        };
+        /** PaymentRequest */
+        PaymentRequest: {
+            /**
+             * Allow Partial
+             * @default false
+             */
+            allow_partial: boolean;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /**
+             * Send
+             * @default true
+             */
+            send: boolean;
+        };
+        /** PaymentSettings */
+        PaymentSettings: {
+            /** Entitled */
+            entitled: boolean;
+            /** Razorpay Connected */
+            razorpay_connected: boolean;
+            /** Razorpay Error */
+            razorpay_error?: string | null;
+            /** Razorpay Key Id */
+            razorpay_key_id?: string | null;
+            /**
+             * Razorpay Test Mode
+             * @default false
+             */
+            razorpay_test_mode: boolean;
+            /** Upi Name */
+            upi_name?: string | null;
+            /** Upi Vpa */
+            upi_vpa?: string | null;
+            /** Webhook Events */
+            webhook_events?: string[];
+            /** Webhook Seen At */
+            webhook_seen_at?: string | null;
+            /** Webhook Url */
+            webhook_url?: string | null;
+        };
+        /**
+         * PaymentStep
+         * @description Ask the customer to pay: make an order and send the payment link (Razorpay) or UPI request.
+         *     ``source`` ``items`` orders the chosen ``items`` at the catalogue's prices when the step runs;
+         *     ``draft`` uses the conversation's latest order that isn't paid yet (a member's draft, or the
+         *     customer's WhatsApp cart). ``intro`` is a line of your own above the payment message.
+         */
+        PaymentStep: {
+            /** Id */
+            id: string;
+            /**
+             * Intro
+             * @default
+             */
+            intro: string;
+            /** Items */
+            items?: components["schemas"]["PaymentItem"][];
+            /**
+             * Method
+             * @default razorpay
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /** Next */
+            next?: string | null;
+            /**
+             * Source
+             * @default items
+             * @enum {string}
+             */
+            source: "items" | "draft";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "payment";
         };
         /**
          * PeriodFigure
@@ -7166,7 +10325,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook";
         };
         /**
          * PolishRequest
@@ -7241,7 +10400,7 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             baseline: components["schemas"]["Baseline"];
             /** Baseline Size */
             baseline_size: number;
@@ -7339,9 +10498,10 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             /** Captured At */
             captured_at?: string | null;
+            extra_metrics?: components["schemas"]["ExtraMetrics"] | null;
             /** Insights Final */
             insights_final: boolean;
             /** Insights Granted */
@@ -7360,7 +10520,7 @@ export interface components {
              */
             posted_at: string;
             /** Requested Age */
-            requested_age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+            requested_age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
         };
         /**
          * PostRef
@@ -7480,6 +10640,22 @@ export interface components {
             /** Slots */
             slots: components["schemas"]["PostingSlotIn"][];
         };
+        /** PreviewStep */
+        PreviewStep: {
+            /** After Seconds */
+            after_seconds: number;
+            /** Note */
+            note?: string | null;
+            /** Position */
+            position: number;
+            /**
+             * Sends
+             * @enum {string}
+             */
+            sends: "text" | "template" | "nothing";
+            /** Text */
+            text?: string | null;
+        };
         /** PrioritiesUpdate */
         PrioritiesUpdate: {
             /** Ordered Ids */
@@ -7519,7 +10695,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Priority */
             priority: ("critical" | "high" | "medium" | "low") | null;
             /** Waiting Since */
@@ -7530,8 +10706,9 @@ export interface components {
         /**
          * PrivateReplyCreate
          * @description POST …/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's
-         *     private replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks
-         *     bytes.
+         *     private replies carry no attachments). Instagram's limit is 1,000 bytes and a Facebook Page's
+         *     2,000 characters (GR-29); the service checks the account's own limit; this only bounds the body
+         *     size.
          */
         PrivateReplyCreate: {
             /** Text */
@@ -7562,6 +10739,167 @@ export interface components {
             title: string;
             /** Type */
             type: string;
+        };
+        /** ProductCreate */
+        ProductCreate: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /** Currency */
+            currency?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Image Asset Id */
+            image_asset_id?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name: string;
+            /** Price */
+            price?: string | null;
+            /** Sku */
+            sku?: string | null;
+            /** Stock */
+            stock?: number | null;
+            /** Url */
+            url?: string | null;
+            /** Variants */
+            variants?: components["schemas"]["VariantIn"][];
+        };
+        /** ProductList */
+        ProductList: {
+            /** Items */
+            items: components["schemas"]["ProductOut"][];
+            limits: components["schemas"]["CatalogueLimits"];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ProductMessageSend
+         * @description ``product``: one item (``item``). ``product_list``: ``sections`` of items (up to 30 in all,
+         *     in up to 10 sections) under a ``header``, which Meta requires for a list.
+         */
+        ProductMessageSend: {
+            /** Body */
+            body: string;
+            /** Footer */
+            footer?: string | null;
+            /** Header */
+            header?: string | null;
+            item?: components["schemas"]["ItemRef"] | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "product" | "product_list";
+            /** Sections */
+            sections?: components["schemas"]["SectionIn"][];
+        };
+        /** ProductOut */
+        ProductOut: {
+            /** Active */
+            active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Asset Id */
+            image_asset_id?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name: string;
+            /** Price */
+            price?: string | null;
+            /** Price Minor */
+            price_minor?: number | null;
+            /** Sku */
+            sku?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual" | "csv" | "shopify";
+            /** Stock */
+            stock?: number | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url?: string | null;
+            /** Variants */
+            variants: components["schemas"]["VariantOut"][];
+        };
+        /**
+         * ProductPatch
+         * @description Only the fields sent change. ``variants`` replaces the whole list (see the module doc).
+         */
+        ProductPatch: {
+            /** Active */
+            active?: boolean | null;
+            /** Currency */
+            currency?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Image Asset Id */
+            image_asset_id?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Price */
+            price?: string | null;
+            /** Sku */
+            sku?: string | null;
+            /** Stock */
+            stock?: number | null;
+            /** Url */
+            url?: string | null;
+            /** Variants */
+            variants?: components["schemas"]["VariantIn"][] | null;
+        };
+        /**
+         * ProductStep
+         * @description Send a product from the catalogue: its name, price, stock (when recorded), picture and
+         *     link, read when the step runs. With ``variant_id`` that variant; without one, the product's
+         *     price, or a short list of its variants. ``intro`` is a line of your own above it.
+         */
+        ProductStep: {
+            /** Id */
+            id: string;
+            /**
+             * Intro
+             * @default
+             */
+            intro: string;
+            /** Next */
+            next?: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "product";
+            /** Variant Id */
+            variant_id?: string | null;
         };
         /**
          * PushConfig
@@ -7669,6 +11007,19 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** QuotaInfo */
+        QuotaInfo: {
+            /** Fits */
+            fits: boolean;
+            /** Limit */
+            limit: number;
+            /** Period End */
+            period_end?: string | null;
+            /** Remaining */
+            remaining: number;
+            /** Used */
+            used: number;
+        };
         /**
          * RandomizeStep
          * @description An A/B split: each run takes one path, at random by weight.
@@ -7744,6 +11095,32 @@ export interface components {
              */
             version: 1;
         };
+        /** RateCardOut */
+        RateCardOut: {
+            /** As Of */
+            as_of: string;
+            /** Country */
+            country: string;
+            /** Currency */
+            currency: string;
+            /** Rates */
+            rates: {
+                [key: string]: string;
+            };
+            /** Source */
+            source: string;
+            /** Verified */
+            verified: boolean;
+        };
+        /** RazorpayConnect */
+        RazorpayConnect: {
+            /** Key Id */
+            key_id: string;
+            /** Private Key */
+            private_key: string;
+            /** Webhook Key */
+            webhook_key: string;
+        };
         /** Reaction */
         Reaction: {
             /**
@@ -7758,6 +11135,65 @@ export interface components {
             by: "customer" | "business";
             /** Emoji */
             emoji: string;
+        };
+        /** ReasonCount */
+        ReasonCount: {
+            /** Code */
+            code: string;
+            /** Count */
+            count: number;
+            /** Text */
+            text: string;
+        };
+        /** Recipient */
+        Recipient: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contact Name */
+            contact_name: string;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Dispatched At */
+            dispatched_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Replied */
+            replied: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "sent" | "delivered" | "read" | "failed" | "skipped";
+            /** Stopped */
+            stopped: boolean;
+            /** Username */
+            username?: string | null;
+        };
+        /** RecipientList */
+        RecipientList: {
+            /** Items */
+            items: components["schemas"]["Recipient"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * RefundCreate
+         * @description Refund an order. ``amount_minor`` blank refunds everything not yet refunded.
+         */
+        RefundCreate: {
+            /** Amount Minor */
+            amount_minor?: number | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
+            /** Reason */
+            reason: string;
         };
         /** RemoveTag */
         RemoveTag: {
@@ -7782,6 +11218,124 @@ export interface components {
              */
             state: "open" | "human_agent" | "template_only" | "closed";
         };
+        /**
+         * ReportAccount
+         * @description A connected account, as the picker and the breakdown name it.
+         */
+        ReportAccount: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
+            /** Status */
+            status: string;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * ReportAccountMetric
+         * @description An account insight (GR-38's service) for the week against the week before, with a weekly
+         *     series. ``figure`` carries the gap reason and days covered.
+         */
+        ReportAccountMetric: {
+            figure: components["schemas"]["AccountMetricFigure"];
+            /** Label */
+            label: string;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+        };
+        /** ReportIntent */
+        ReportIntent: {
+            /** Count */
+            count: number;
+            /** Intent */
+            intent: string;
+        };
+        /**
+         * ReportMetric
+         * @description A count or rate for the week, the week before, and the weeks leading up to it (oldest
+         *     first, the last point is the week). ``change_pct`` is relative for counts and times; for a
+         *     percentage ``change_points`` is the difference in percentage points instead.
+         */
+        ReportMetric: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Change Points */
+            change_points?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "messages_received" | "conversations" | "reply_rate" | "median_first_response_s" | "handled_by_ai_rate" | "comments_received" | "story_mentions" | "conversations_from_links" | "conversations_from_ads" | "captures" | "leads_qualified" | "leads_won";
+            /** Label */
+            label: string;
+            /**
+             * Lower Is Better
+             * @default false
+             */
+            lower_is_better: boolean;
+            /** Previous */
+            previous?: number | null;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "seconds";
+            /** Value */
+            value?: number | null;
+        };
+        /**
+         * ReportPoint
+         * @description One week of a series: the Monday it starts, and its value (None is a gap).
+         */
+        ReportPoint: {
+            /** Days Known */
+            days_known?: number | null;
+            /** Days Total */
+            days_total?: number | null;
+            /** Value */
+            value?: number | null;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+        };
+        /** ReportPost */
+        ReportPost: {
+            /** Caption */
+            caption?: string | null;
+            /** Comments */
+            comments: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Permalink */
+            permalink?: string | null;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+        };
+        /** ReportQuestion */
+        ReportQuestion: {
+            /** Asked */
+            asked: number;
+            /** Topic */
+            topic: string;
+        };
         /** RunContact */
         RunContact: {
             /** Display Name */
@@ -7804,11 +11358,69 @@ export interface components {
             message: string;
         };
         /**
+         * RunHints
+         * @description VIS-11: a structured follow-up on the run before it, instead of free text from the screen.
+         *
+         *     Two kinds, never mixed: ``range_days`` and/or ``platform`` ask the same question again over
+         *     another range or platform (the controls on a visual); ``reply_conversation_ids`` asks for a
+         *     draft reply to each of those conversations (VIS-12). Keys and values are whitelisted; the
+         *     server words the member's question from them and the planner applies them as if the member had
+         *     asked. Conversations must be the workspace's (404 otherwise).
+         */
+        RunHints: {
+            /** Platform */
+            platform?: ("all" | "instagram" | "facebook" | "whatsapp") | null;
+            /** Range Days */
+            range_days?: (7 | 30 | 90) | null;
+            /** Reply Conversation Ids */
+            reply_conversation_ids?: string[];
+        };
+        /** SamplePreview */
+        SamplePreview: {
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Text */
+            text: string;
+        };
+        /**
+         * SandboxAccountCreate
+         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
+         *     or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.
+         */
+        SandboxAccountCreate: {
+            /**
+             * Platform
+             * @default instagram
+             * @enum {string}
+             */
+            platform: "instagram" | "facebook" | "whatsapp";
+        };
+        /** SandboxCartItem */
+        SandboxCartItem: {
+            /** Price */
+            price?: string | null;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Retailer Id */
+            retailer_id: string;
+        };
+        /**
          * SandboxInbound
-         * @description A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
-         *     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-         *     comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
-         *     story reply, a story like (the heart) and a story mention.
+         * @description A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
+         *     GR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped
+         *     postback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its
+         *     first message from an ad). GR-06 and GR-07 add a
+         *     story reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a
+         *     comment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are
+         *     refused (GR-29).
+         *
+         *     GR-23 adds two kinds for a sandbox WhatsApp number, and lets a ``dm`` be a WhatsApp customer's
+         *     message (``from_id`` is their number): ``status`` is a delivery status for the last message we
+         *     sent that contact (``delivery_status``, with ``error_code`` and ``error_text`` for a failure),
+         *     and ``quality`` a ``phone_number_quality_update`` (``quality_event``, ``tier``).
          */
         SandboxInbound: {
             /**
@@ -7822,6 +11434,14 @@ export interface components {
             ad_title?: string | null;
             /** Age Seconds */
             age_seconds?: number | null;
+            /** Cart */
+            cart?: components["schemas"]["SandboxCartItem"][] | null;
+            /** Delivery Status */
+            delivery_status?: ("sent" | "delivered" | "read" | "failed") | null;
+            /** Error Code */
+            error_code?: number | null;
+            /** Error Text */
+            error_text?: string | null;
             /** From Id */
             from_id?: string | null;
             /** From Username */
@@ -7830,9 +11450,11 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention" | "status" | "quality" | "order";
             /** Postback Payload */
             postback_payload?: string | null;
+            /** Quality Event */
+            quality_event?: ("ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED") | null;
             /** Quick Reply Payload */
             quick_reply_payload?: string | null;
             /** Ref */
@@ -7843,6 +11465,8 @@ export interface components {
             story_id?: string | null;
             /** Text */
             text?: string | null;
+            /** Tier */
+            tier?: string | null;
         };
         /** SandboxInboundResult */
         SandboxInboundResult: {
@@ -7992,7 +11616,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Send At
              * Format: date-time
@@ -8057,12 +11681,18 @@ export interface components {
             /** First Comment */
             first_comment?: string | null;
             /** Format */
-            format?: ("image" | "carousel" | "reel") | null;
+            format?: ("image" | "carousel" | "reel" | "story" | "text") | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
@@ -8105,6 +11735,12 @@ export interface components {
             caption: string;
             /** First Comment */
             first_comment?: string | null;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Targets */
@@ -8132,12 +11768,18 @@ export interface components {
              */
             created_at: string;
             /** Format */
-            format?: ("image" | "carousel" | "reel") | null;
+            format?: ("image" | "carousel" | "reel" | "story" | "text") | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
@@ -8165,6 +11807,8 @@ export interface components {
             /** Caption Override */
             caption_override?: string | null;
             error?: components["schemas"]["ErrorInfo"] | null;
+            /** Expires At */
+            expires_at?: string | null;
             first_comment?: components["schemas"]["FirstCommentResult"] | null;
             /** Permalink */
             permalink?: string | null;
@@ -8184,6 +11828,25 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
+        };
+        /**
+         * Seats
+         * @description Members plus pending invitations against the plan's ``members`` limit (null: unlimited).
+         */
+        Seats: {
+            /** Limit */
+            limit: number | null;
+            /** Members */
+            members: number;
+            /** Pending Invitations */
+            pending_invitations: number;
+        };
+        /** SectionIn */
+        SectionIn: {
+            /** Items */
+            items: components["schemas"]["ItemRef"][];
+            /** Title */
+            title: string;
         };
         /** Segment */
         Segment: {
@@ -8217,6 +11880,31 @@ export interface components {
             filter?: components["schemas"]["ContactFilterSpec"] | null;
             /** Name */
             name?: string | null;
+        };
+        /** SegmentProposalAction */
+        SegmentProposalAction: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "segment_proposal";
+            /** Label */
+            label: string;
+            /** Lines */
+            lines: string[];
+            /** Match Count */
+            match_count: number;
+            /** Note */
+            note?: string | null;
+            /** Route */
+            route: string;
+            /** Title */
+            title: string;
         };
         /**
          * SendMessage
@@ -8373,6 +12061,137 @@ export interface components {
              */
             version: 1;
         };
+        /** Sequence */
+        Sequence: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Activated At */
+            activated_at?: string | null;
+            /** Allow Reentry */
+            allow_reentry: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            enrolments: components["schemas"]["EnrolmentCounts"];
+            entry: components["schemas"]["EntryOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform */
+            platform?: string | null;
+            /** Problems */
+            problems?: string[];
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
+            /** Step Count */
+            step_count: number;
+            /** Steps */
+            steps?: components["schemas"]["StepOut"][] | null;
+            stop: components["schemas"]["StopOut"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * SequenceAnalytics
+         * @description A sequence's numbers, computed by the server and cached for a few minutes.
+         */
+        SequenceAnalytics: {
+            /** Active */
+            active: number;
+            /** Completed */
+            completed: number;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Enrolled */
+            enrolled: number;
+            /** Failed */
+            failed: number;
+            /** Replied */
+            replied: number;
+            /** Reply Rate */
+            reply_rate?: number | null;
+            /** Sent */
+            sent: number;
+            /**
+             * Sequence Id
+             * Format: uuid
+             */
+            sequence_id: string;
+            /** Skipped */
+            skipped: number;
+            /** Skipped By */
+            skipped_by: components["schemas"]["ReasonCount"][];
+            /** Steps */
+            steps: components["schemas"]["StepStats"][];
+            /** Stopped */
+            stopped: number;
+            /** Stopped By */
+            stopped_by: components["schemas"]["ReasonCount"][];
+            /** Window Hours */
+            window_hours: number;
+        };
+        /**
+         * SequenceBody
+         * @description The whole sequence, as the editor sends it. Saving replaces the steps.
+         */
+        SequenceBody: {
+            /**
+             * Allow Reentry
+             * @default false
+             */
+            allow_reentry: boolean;
+            entry: components["schemas"]["EntryRule"];
+            /** Name */
+            name: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Steps */
+            steps: components["schemas"]["StepIn"][];
+            stop?: components["schemas"]["StopRules"];
+        };
+        /** SequenceList */
+        SequenceList: {
+            /** Active */
+            active: number;
+            /** Active Limit */
+            active_limit: number | null;
+            /** Items */
+            items: components["schemas"]["Sequence"][];
+            /** Step Limit */
+            step_limit: number | null;
+        };
+        /** SequencePreview */
+        SequencePreview: {
+            /** Contact Name */
+            contact_name: string;
+            /** Problems */
+            problems: string[];
+            /** Steps */
+            steps: components["schemas"]["PreviewStep"][];
+        };
         /** SetField */
         SetField: {
             /** Key */
@@ -8384,6 +12203,226 @@ export interface components {
             kind: "set_field";
             /** Value */
             value: string;
+        };
+        /** SheetColumn */
+        SheetColumn: {
+            /** Field */
+            field: string;
+            /** Header */
+            header: string;
+        };
+        /** SheetColumnOut */
+        SheetColumnOut: {
+            /** Field */
+            field: string;
+            /** Header */
+            header: string;
+        };
+        /** SheetCreate */
+        SheetCreate: {
+            /**
+             * Title
+             * @default Social Hood leads
+             */
+            title: string;
+        };
+        /** SheetFieldOption */
+        SheetFieldOption: {
+            /** Custom */
+            custom: boolean;
+            /** Field */
+            field: string;
+            /** Label */
+            label: string;
+        };
+        /** SheetMappingPut */
+        SheetMappingPut: {
+            /** Columns */
+            columns: components["schemas"]["SheetColumn"][];
+        };
+        /** SheetOut */
+        SheetOut: {
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Tab */
+            tab: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
+        /** SheetRowOut */
+        SheetRowOut: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error?: string | null;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Attempt At */
+            last_attempt_at?: string | null;
+            /** Next Attempt At */
+            next_attempt_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "succeeded" | "failed";
+        };
+        /** SheetSelect */
+        SheetSelect: {
+            /** Link */
+            link: string;
+        };
+        /** SheetTestResult */
+        SheetTestResult: {
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * ShopifyConnectComplete
+         * @description The nonce the OAuth callback put in the Products page's URL (?shopify=…).
+         */
+        ShopifyConnectComplete: {
+            /** Nonce */
+            nonce: string;
+        };
+        /** ShopifyConnectRequest */
+        ShopifyConnectRequest: {
+            /** Shop */
+            shop: string;
+        };
+        /** ShopifyConnectStart */
+        ShopifyConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /** ShopifyStatus */
+        ShopifyStatus: {
+            /** Available */
+            available: boolean;
+            /** Connected */
+            connected: boolean;
+            /** Currency */
+            currency?: string | null;
+            /** Entitled */
+            entitled: boolean;
+            /** Last Error */
+            last_error?: string | null;
+            /**
+             * Products Skipped
+             * @default 0
+             */
+            products_skipped: number;
+            /**
+             * Products Synced
+             * @default 0
+             */
+            products_synced: number;
+            /** Shop Domain */
+            shop_domain?: string | null;
+            /** Shop Name */
+            shop_name?: string | null;
+            /** Status */
+            status?: ("active" | "needs_reconnect") | null;
+            /** Sync Error */
+            sync_error?: string | null;
+            /** Synced At */
+            synced_at?: string | null;
+            /**
+             * Syncing
+             * @default false
+             */
+            syncing: boolean;
+        };
+        /**
+         * SiteCrawlInfo
+         * @description GR-35: where a site source's crawl is. Counts are of this site's pages.
+         */
+        SiteCrawlInfo: {
+            /** Char Count */
+            char_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Error */
+            error?: string | null;
+            /** Excluded Paths */
+            excluded_paths: string[];
+            /** Finished At */
+            finished_at?: string | null;
+            /** Next Crawl At */
+            next_crawl_at?: string | null;
+            /** Page Cap */
+            page_cap: number;
+            /** Pages Done */
+            pages_done: number;
+            /** Pages Failed */
+            pages_failed: number;
+            /** Pages Found */
+            pages_found: number;
+            /** Pages Skipped */
+            pages_skipped: number;
+            /**
+             * Recrawl
+             * @enum {string}
+             */
+            recrawl: "weekly" | "off";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "running" | "done" | "failed";
+            /** Truncated */
+            truncated: boolean;
+        };
+        /**
+         * SitePage
+         * @description GR-35: one address of a site crawl.
+         */
+        SitePage: {
+            /** Char Count */
+            char_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Error */
+            error?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ingest Status */
+            ingest_status?: ("pending" | "processing" | "ready" | "failed") | null;
+            /** Last Crawled At */
+            last_crawled_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "done" | "failed" | "skipped" | "gone" | "excluded" | "removed";
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url: string;
+        };
+        /** SitePageList */
+        SitePageList: {
+            /** Items */
+            items: components["schemas"]["SitePage"][];
+            /** Total */
+            total: number;
         };
         /** SkippedCounts */
         SkippedCounts: {
@@ -8441,7 +12480,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**
@@ -8512,6 +12551,85 @@ export interface components {
             step_id: string;
         };
         /**
+         * StepIn
+         * @description One message. It waits ``delay_seconds`` from the contact's entry or the step before, then
+         *     sends ``text`` (while the messaging window is open), or on WhatsApp the approved template.
+         */
+        StepIn: {
+            /**
+             * Delay From
+             * @default previous
+             * @enum {string}
+             */
+            delay_from: "entry" | "previous";
+            /** Delay Seconds */
+            delay_seconds: number;
+            /**
+             * Respect Hours
+             * @default false
+             */
+            respect_hours: boolean;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+            /** Text */
+            text?: string | null;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][];
+        };
+        /** StepOut */
+        StepOut: {
+            /**
+             * Delay From
+             * @enum {string}
+             */
+            delay_from: "entry" | "previous";
+            /** Delay Seconds */
+            delay_seconds: number;
+            /** Position */
+            position: number;
+            /** Respect Hours */
+            respect_hours: boolean;
+            /** Template Body */
+            template_body?: string | null;
+            /** Template Category */
+            template_category?: string | null;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+            /** Text */
+            text?: string | null;
+            /** Variables */
+            variables?: components["schemas"]["VariableOut"][];
+        };
+        /**
+         * StepStats
+         * @description One step's numbers. ``reached`` is the people it ran for plus those it is next for; the
+         *     funnel is ``share`` of everyone who entered.
+         */
+        StepStats: {
+            /** Failed */
+            failed: number;
+            /** Position */
+            position: number;
+            /** Reached */
+            reached: number;
+            /** Replied */
+            replied: number;
+            /** Reply Rate */
+            reply_rate?: number | null;
+            /** Sent */
+            sent: number;
+            /** Share */
+            share: number;
+            /** Skipped */
+            skipped: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /**
          * StepVerification
          * @description R2 (TR-AGT-06): what the verifier read back after a write.
          */
@@ -8522,6 +12640,39 @@ export interface components {
             external_ids: string[];
             /** Verified */
             verified: boolean;
+        };
+        /** StopOut */
+        StopOut: {
+            /** On Reply */
+            on_reply: boolean;
+            /** Removed Tag Ids */
+            removed_tag_ids?: string[];
+            /** Removed Tag Names */
+            removed_tag_names?: string[];
+            /** Stages */
+            stages: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
+            /** Tag Ids */
+            tag_ids: string[];
+            /** Tag Names */
+            tag_names: string[];
+        };
+        /**
+         * StopRules
+         * @description When to stop: the contact writing (on by default), a tag from ``tag_ids`` being added, a tag
+         *     from ``removed_tag_ids`` being taken off, or their lead stage becoming one from the list.
+         */
+        StopRules: {
+            /**
+             * On Reply
+             * @default true
+             */
+            on_reply: boolean;
+            /** Removed Tag Ids */
+            removed_tag_ids?: string[];
+            /** Stages */
+            stages?: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
+            /** Tag Ids */
+            tag_ids?: string[];
         };
         /**
          * Story
@@ -8640,6 +12791,61 @@ export interface components {
             id: string;
             /** Title */
             title: string;
+        };
+        /** TableColumn */
+        TableColumn: {
+            /**
+             * Align
+             * @default left
+             * @enum {string}
+             */
+            align: "left" | "right";
+            /**
+             * Format
+             * @default text
+             * @enum {string}
+             */
+            format: "text" | "count" | "percent";
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * TableRow
+         * @description Cells in the order of the table's columns. Text cells may be the customer's own words:
+         *     render them as text.
+         */
+        TableRow: {
+            /** Cells */
+            cells: (string | number | null)[];
+        };
+        /**
+         * TableVisual
+         * @description A short table of what a tool listed (VIS-09): at most 10 rows and 6 columns.
+         */
+        TableVisual: {
+            /** Columns */
+            columns: components["schemas"]["TableColumn"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "table";
+            /** More Route */
+            more_route?: string | null;
+            /** Rows */
+            rows: components["schemas"]["TableRow"][];
+            /** Title */
+            title: string;
+            /** Total */
+            total: number;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
         };
         /** Tag */
         Tag: {
@@ -8766,7 +12972,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage";
+            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage" | "broadcast" | "assignment" | "sequence" | "order";
             /**
              * Occurred At
              * Format: date-time
@@ -8788,7 +12994,7 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             post: components["schemas"]["PostSummary"];
             /** Value */
             value: number;
@@ -8812,7 +13018,7 @@ export interface components {
              * Requested Age
              * @enum {string}
              */
-            requested_age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            requested_age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             /**
              * Since
              * Format: date
@@ -8823,6 +13029,81 @@ export interface components {
              * Format: date
              */
             until: string;
+        };
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Days Known */
+            days_known: number;
+            /** Value */
+            value?: number | null;
+        };
+        /**
+         * TrendVisual
+         * @description One series over time (metric_trend, VIS-07). One series only: a second hue waits for the
+         *     categorical palette (C-123). Every value, the extremes and the change come from the tool.
+         */
+        TrendVisual: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            first?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "count" | "percent";
+            /**
+             * Granularity
+             * @enum {string}
+             */
+            granularity: "day" | "week";
+            highest?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "trend";
+            /** Known Points */
+            known_points: number;
+            last?: components["schemas"]["TrendPoint"] | null;
+            lowest?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * Metric Key
+             * @enum {string}
+             */
+            metric_key: "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps";
+            /** Metric Label */
+            metric_label: string;
+            /** Note */
+            note?: string | null;
+            period: components["schemas"]["VisualPeriod"];
+            /** Points */
+            points: components["schemas"]["TrendPoint"][];
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /** UpiSave */
+        UpiSave: {
+            /** Name */
+            name: string;
+            /** Vpa */
+            vpa: string;
         };
         /** UploadSignature */
         UploadSignature: {
@@ -8863,6 +13144,79 @@ export interface components {
             /** Used */
             used: number;
         };
+        /** VariableOut */
+        VariableOut: {
+            /** Fallback */
+            fallback?: string | null;
+            /** Field */
+            field?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "field" | "fixed";
+            /** Value */
+            value?: string | null;
+        };
+        /**
+         * VariableSpec
+         * @description One template variable: a contact field (with the text to use when the person has none) or
+         *     a fixed text. ``field`` is first_name, name, username, email, phone or a custom field's key.
+         */
+        VariableSpec: {
+            /** Fallback */
+            fallback?: string | null;
+            /** Field */
+            field?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "field" | "fixed";
+            /** Value */
+            value?: string | null;
+        };
+        /** VariantIn */
+        VariantIn: {
+            /** Id */
+            id?: string | null;
+            /** Options */
+            options?: {
+                [key: string]: string;
+            };
+            /** Price */
+            price: string;
+            /** Sku */
+            sku?: string | null;
+            /** Stock */
+            stock?: number | null;
+            /** Title */
+            title: string;
+        };
+        /** VariantOut */
+        VariantOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Options */
+            options: {
+                [key: string]: string;
+            };
+            /** Position */
+            position: number;
+            /** Price */
+            price: string;
+            /** Price Minor */
+            price_minor: number;
+            /** Sku */
+            sku?: string | null;
+            /** Stock */
+            stock?: number | null;
+            /** Title */
+            title: string;
+        };
         /**
          * VisualPeriod
          * @description Calendar days in the workspace's zone, both included, with the label the answer uses.
@@ -8889,6 +13243,72 @@ export interface components {
             count: number;
             /** Label */
             label: string;
+        };
+        /** WaCatalogueConnect */
+        WaCatalogueConnect: {
+            /** Brand */
+            brand?: string | null;
+            /** Catalog Id */
+            catalog_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /** WaCatalogueProblem */
+        WaCatalogueProblem: {
+            /** Message */
+            message: string;
+            /** Name */
+            name: string;
+        };
+        /** WaCatalogueStatus */
+        WaCatalogueStatus: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Catalog Id */
+            catalog_id?: string | null;
+            /** Catalog Name */
+            catalog_name?: string | null;
+            /** Connected */
+            connected: boolean;
+            /** Entitled */
+            entitled: boolean;
+            /**
+             * Items Error
+             * @default 0
+             */
+            items_error: number;
+            /**
+             * Items Pending
+             * @default 0
+             */
+            items_pending: number;
+            /**
+             * Items Synced
+             * @default 0
+             */
+            items_synced: number;
+            /** Last Error */
+            last_error?: string | null;
+            /** Problems */
+            problems?: components["schemas"]["WaCatalogueProblem"][];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Status */
+            status?: ("active" | "needs_reconnect") | null;
+            /** Sync Error */
+            sync_error?: string | null;
+            /** Synced At */
+            synced_at?: string | null;
+            /**
+             * Syncing
+             * @default false
+             */
+            syncing: boolean;
         };
         /** WebhookDelivery */
         WebhookDelivery: {
@@ -8957,7 +13377,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -8982,7 +13402,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Url */
             url: string;
         };
@@ -8998,7 +13418,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[] | null;
+            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[] | null;
             /** Status */
             status?: ("active" | "paused") | null;
             /** Url */
@@ -9019,7 +13439,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -9051,7 +13471,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished";
+            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped";
             /** Version */
             version: number;
         };
@@ -9059,6 +13479,47 @@ export interface components {
         WebhookEventTypeList: {
             /** Items */
             items: components["schemas"]["WebhookEventType"][];
+        };
+        /**
+         * WeeklyReport
+         * @description GET …/reports/weekly: the report for one finished week. ``week_start`` is its Monday in
+         *     the workspace's time zone; ``weeks`` lists the Mondays that can be asked for, newest first.
+         *     The digest email of that Monday carries the same numbers.
+         */
+        WeeklyReport: {
+            account?: components["schemas"]["ReportAccount"] | null;
+            account_comparison: components["schemas"]["MetricComparisonVisual"];
+            /** Account Metrics */
+            account_metrics: components["schemas"]["ReportAccountMetric"][];
+            /** Accounts */
+            accounts?: components["schemas"]["ReportAccount"][];
+            /** Breakdown */
+            breakdown?: components["schemas"]["AccountBreakdown"][] | null;
+            /** Metrics */
+            metrics: components["schemas"]["ReportMetric"][];
+            /** Needs You */
+            needs_you: number;
+            /** Open Questions */
+            open_questions: number;
+            previous_week: components["schemas"]["DaySpan"];
+            /** Series Weeks */
+            series_weeks: number;
+            /** Timezone */
+            timezone: string;
+            /** Top Intents */
+            top_intents: components["schemas"]["ReportIntent"][];
+            /** Top Posts */
+            top_posts: components["schemas"]["ReportPost"][];
+            /** Top Questions */
+            top_questions: components["schemas"]["ReportQuestion"][];
+            week: components["schemas"]["DaySpan"];
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /** Weeks */
+            weeks: string[];
         };
         /** WhatsAppTemplate */
         WhatsAppTemplate: {
@@ -9082,6 +13543,89 @@ export interface components {
         WhatsAppTemplateList: {
             /** Items */
             items: components["schemas"]["WhatsAppTemplate"][];
+        };
+        /** WidgetSettingsOut */
+        WidgetSettingsOut: {
+            /** Accent Color */
+            accent_color: string;
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Ai Mode
+             * @enum {string}
+             */
+            ai_mode: "off" | "suggest" | "auto";
+            /** Allowed Domains */
+            allowed_domains: string[];
+            /** Can Remove Branding */
+            can_remove_branding: boolean;
+            /** Conversations Daily Limit */
+            conversations_daily_limit: number;
+            /** Conversations Today */
+            conversations_today: number;
+            /**
+             * Email Capture
+             * @enum {string}
+             */
+            email_capture: "off" | "optional" | "required";
+            /** Email Prompt */
+            email_prompt: string;
+            /** Embed Snippet */
+            embed_snippet: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Greeting */
+            greeting: string;
+            /** Marketing Consent Enabled */
+            marketing_consent_enabled: boolean;
+            /** Marketing Consent Text */
+            marketing_consent_text: string;
+            /**
+             * Position
+             * @enum {string}
+             */
+            position: "right" | "left";
+            /** Script Url */
+            script_url: string;
+            /** Show Branding */
+            show_branding: boolean;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Widget Id */
+            widget_id: string;
+        };
+        /** WidgetSettingsUpdate */
+        WidgetSettingsUpdate: {
+            /** Accent Color */
+            accent_color?: string | null;
+            /** Allowed Domains */
+            allowed_domains?: string[] | null;
+            /** Email Capture */
+            email_capture?: ("off" | "optional" | "required") | null;
+            /** Email Prompt */
+            email_prompt?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Greeting */
+            greeting?: string | null;
+            /** Marketing Consent Enabled */
+            marketing_consent_enabled?: boolean | null;
+            /** Marketing Consent Text */
+            marketing_consent_text?: string | null;
+            /** Position */
+            position?: ("right" | "left") | null;
+            /** Show Branding */
+            show_branding?: boolean | null;
+            /** Title */
+            title?: string | null;
         };
         /** WinningAutomation */
         WinningAutomation: {
@@ -9179,6 +13723,20 @@ export interface components {
             slug?: string | null;
             /** Timezone */
             timezone?: string | null;
+        };
+        /**
+         * WorkspacePermissions
+         * @description What the signed-in member may do here. The web app's can() reads this list; it never
+         *     keeps a copy of the matrix.
+         */
+        WorkspacePermissions: {
+            /** Permissions */
+            permissions: string[];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
@@ -9590,7 +14148,7 @@ export interface operations {
         parameters: {
             query?: {
                 failures_only?: boolean;
-                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account") | null;
+                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence" | "order") | null;
                 automation_id?: string | null;
                 account_id?: string | null;
                 cursor?: string | null;
@@ -9636,7 +14194,8 @@ export interface operations {
     list_agent_approvals: {
         parameters: {
             query?: {
-                status?: "pending" | "approved" | "rejected" | "expired" | "superseded";
+                status?: "pending" | "approved" | "rejected" | "expired" | "superseded" | "all";
+                run_id?: string | null;
                 cursor?: string | null;
                 limit?: number;
             };
@@ -10332,7 +14891,7 @@ export interface operations {
                 n?: number;
                 since?: string | null;
                 until?: string | null;
-                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+                age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
                 same_format?: boolean;
             };
             header?: never;
@@ -10376,7 +14935,7 @@ export interface operations {
     get_post_performance: {
         parameters: {
             query?: {
-                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+                age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
             };
             header?: never;
             path: {
@@ -10468,7 +15027,7 @@ export interface operations {
                 since?: string | null;
                 until?: string | null;
                 n?: number;
-                age?: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+                age?: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
                 account_id?: string | null;
             };
             header?: never;
@@ -10486,6 +15045,262 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopPosts"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_api_keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiKeyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyWithKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_assignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOverview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_assignment_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentSettingsPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOverview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_audit_events: {
+        parameters: {
+            query?: {
+                member?: string | null;
+                action?: string | null;
+                since?: string | null;
+                until?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventList"];
                 };
             };
             /** @description Validation error */
@@ -11560,6 +16375,516 @@ export interface operations {
             };
         };
     };
+    list_broadcasts: {
+        parameters: {
+            query?: {
+                status?: ("draft" | "scheduled" | "sending" | "paused" | "completed" | "cancelled" | "failed") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_broadcast_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastAvailability"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastPreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    pause_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_broadcast_recipients: {
+        parameters: {
+            query?: {
+                status?: ("queued" | "sent" | "delivered" | "read" | "failed" | "skipped") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resume_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_business_hours: {
         parameters: {
             query?: never;
@@ -12285,7 +17610,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -12386,7 +17711,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -12441,7 +17766,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -12667,6 +17992,47 @@ export interface operations {
             };
         };
     };
+    list_contact_sequences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactSequenceList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     tag_contact: {
         parameters: {
             query?: never;
@@ -12759,9 +18125,10 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "archived";
-                platform?: ("instagram" | "whatsapp") | null;
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
+                assignee_id?: string | null;
                 q?: string | null;
                 cursor?: string | null;
                 limit?: number;
@@ -12929,6 +18296,51 @@ export interface operations {
             };
         };
     };
+    assign_conversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssigneeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_messages: {
         parameters: {
             query?: {
@@ -13043,6 +18455,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PolishResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    send_product_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductMessageSend"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
                 };
             };
             /** @description Validation error */
@@ -13322,7 +18779,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SandboxAccountCreate"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {
@@ -13862,6 +19323,1078 @@ export interface operations {
             };
         };
     };
+    get_google_sheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_google_sheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_google_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleConnectComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_google_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    save_google_sheet_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetMappingPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    select_google_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetSelect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_google_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    send_google_sheet_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetTestResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_payment_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_razorpay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RazorpayConnect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_razorpay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    save_upi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpiSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_upi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_shopify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopifyStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_shopify: {
+        parameters: {
+            query?: {
+                keep_products?: boolean;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_shopify_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopifyConnectComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopifyStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_shopify_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShopifyConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopifyConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_shopify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopifyStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaCatalogueConnect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_invitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resend_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_knowledge_gaps: {
         parameters: {
             query?: {
@@ -14124,6 +20657,177 @@ export interface operations {
                 "application/json": components["schemas"]["KnowledgeSourcePatch"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    exclude_site_path: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExcludePath"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_site_pages: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePageList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_site_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                page_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    recrawl_site: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -14456,6 +21160,175 @@ export interface operations {
             };
         };
     };
+    list_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_member_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRolePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_member_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailabilityPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     correct_message_analysis: {
         parameters: {
             query?: never;
@@ -14752,6 +21625,406 @@ export interface operations {
             };
         };
     };
+    list_orders: {
+        parameters: {
+            query?: {
+                status?: ("draft" | "awaiting_payment" | "partially_paid" | "paid" | "fulfilled" | "refunded" | "cancelled" | "expired") | null;
+                contact_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    edit_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelOrder"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    fulfil_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FulfilOrder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    mark_order_paid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkPaid"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    request_order_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refund_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_overview: {
         parameters: {
             query?: {
@@ -14774,6 +22047,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    transfer_ownership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnershipTransfer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_workspace_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePermissions"];
                 };
             };
             /** @description Validation error */
@@ -14947,6 +22304,352 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_products: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                active?: boolean | null;
+                source?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_product: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    import_products: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CsvImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_product_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CsvImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_product: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_product: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_product: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_weekly_report: {
+        parameters: {
+            query?: {
+                week?: string | null;
+                account_id?: string | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReport"];
                 };
             };
             /** @description Validation error */
@@ -15821,6 +23524,469 @@ export interface operations {
             };
         };
     };
+    list_sequences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SequenceList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SequenceBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SequenceBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SequencePreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SequenceBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    activate_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_sequence_analytics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SequenceAnalytics"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_sequence_enrolments: {
+        parameters: {
+            query?: {
+                status?: ("active" | "completed" | "stopped") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrolmentList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    stop_sequence_enrolment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                enrolment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Enrolment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    pause_sequence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_social_accounts: {
         parameters: {
             query?: never;
@@ -15839,6 +24005,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_facebook_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_facebook_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FacebookConnectPages"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_facebook_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FacebookPagesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FacebookPageList"];
                 };
             };
             /** @description Validation error */
@@ -16054,6 +24348,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_best_times: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BestTimes"];
                 };
             };
             /** @description Validation error */
@@ -17145,6 +25480,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookEventTypeList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_widget_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetSettingsOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_widget_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetSettingsOut"];
                 };
             };
             /** @description Validation error */

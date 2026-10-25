@@ -67,6 +67,9 @@ RECOVERY: dict[str, Recovery] = {
     "sweep_stuck_scheduled": R,
     "end_automation_windows": R,
     "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket
+    "dispatch_broadcast": R,  # recipients' state is the progress; a message has a stable client id
+    "run_broadcasts": R,  # starts what is due and queues batches; a re-run changes nothing
+    "run_sequences": R,  # GR-24: a step runs once (row lock, client id, unique step run)
     "mark_cold_leads": R,  # a flagged lead is no longer selected; one transaction
     "check_closing_windows": R,  # one transaction: reminded conversations are no longer due
     "dispatch_comment_analysis": R,
@@ -76,6 +79,7 @@ RECOVERY: dict[str, Recovery] = {
     "dispatch_due_posts": R,
     "sweep_stuck_posts": R,
     "sweep_agent_runs": R,
+    "expire_agent_approvals": R,  # an expired approval is no longer pending
     "reconcile_billing": R,
     "sweep_email_outbox": R,
     "send_weekly_digests": R,  # weekly_digests' unique (workspace, week_start)
@@ -91,6 +95,8 @@ RECOVERY: dict[str, Recovery] = {
     "backfill_comments": R,
     "snapshot_account_posts": R,  # each window is captured once
     "snapshot_account_day": R,  # one row per account and day
+    "crawl_site": R,  # resumable: the queue is in site_pages, a stale version is dropped
+    "dispatch_site_recrawls": R,  # a started crawl is queued, so a re-run leaves it alone
     "ingest_knowledge_source": R,  # re-ingests the version; retried on any error already
     "analyze_conversation": R,  # "already_analysed" when the message has its analysis
     "summarize_conversation": R,
@@ -99,6 +105,10 @@ RECOVERY: dict[str, Recovery] = {
     "suggest_reply": R,  # skips a message that already has this generation
     "decide_auto_reply": R,  # one transaction; a stable client id per suggestion, pending only
     "deliver_webhook": R,  # GR-04: at least once; receivers dedupe on webhook-id
+    "sync_shopify_products": R,  # GR-31: a full pass that upserts by Shopify id; re-run is harmless
+    "sync_whatsapp_catalogue": R,  # GR-33: sends only what changed; a re-run is harmless
+    "sweep_whatsapp_catalogue": R,  # GR-33: queues a sync for each connected catalogue
+    "append_sheet_row": R,  # GR-27: re-checks the row's status; doubles only if killed mid-append
     "run_automation": R,  # a run recorded for the event means handled; retried on any error
     "drain_private_replies": R,  # each reply is committed ``sending`` before the call
     "delete_platform_user_data": R,  # until the request is completed

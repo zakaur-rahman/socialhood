@@ -78,7 +78,7 @@ describe("Composer (UX-INB-07)", () => {
     expect(send).toHaveAttribute("data-slot", "button");
     expect(send).toHaveAttribute("data-size", "default");
     expect(send).toHaveAttribute("data-variant", "secondary");
-    expect(send).toHaveClass("bg-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
+    expect(send).toHaveClass("glass-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
     expect(send).not.toHaveClass("disabled:opacity-50");
 
     await user.type(textbox(), "Yes");
@@ -338,7 +338,7 @@ describe("Schedule popover (F-10)", () => {
     expect(screen.getByText("Window closes Today 23:30")).toBeInTheDocument();
 
     const time = screen.getByLabelText("Time");
-    expect(screen.getByLabelText("Date")).toHaveValue("2026-09-28");
+    expect(screen.getByLabelText("Date")).toHaveTextContent("Mon 28 Sep 2026");
     fireEvent.change(time, { target: { value: "23:45" } });
     await user.click(screen.getByRole("button", { name: "Schedule" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Pick a time before Today 23:25, when the reply window closes.");

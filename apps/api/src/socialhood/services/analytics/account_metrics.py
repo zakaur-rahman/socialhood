@@ -252,10 +252,18 @@ async def period_figures(
     only_account: bool,
     span: DaySpan,
     metrics: Sequence[AccountMetricName],
+    rows: Sequence[AccountDailyMetric] | None = None,
 ) -> dict[AccountMetricName, PeriodFigure]:
     """Each metric for the span. ``only_account``: ``accounts`` is the one the member picked, so
-    the comment and message counts are that account's; otherwise they cover every account."""
-    rows = await repo.account_daily_rows(session, [a.id for a in accounts], span.since, span.until)
+    the comment and message counts are that account's; otherwise they cover every account.
+    ``rows`` are the accounts' daily rows when the caller has already read a longer range (the
+    weekly report reads its eight weeks once); they are cut to the span here."""
+    if rows is None:
+        rows = await repo.account_daily_rows(
+            session, [a.id for a in accounts], span.since, span.until
+        )
+    else:
+        rows = [r for r in rows if span.since <= r.date <= span.until]
     ids = [a.id for a in accounts] if only_account else None
     found: dict[AccountMetricName, PeriodFigure] = {}
     for metric in metrics:
@@ -392,14 +400,22 @@ async def metric_series(
     span: DaySpan,
     weekly: bool,
     account_id: uuid.UUID | None = None,
+    accounts: Sequence[SocialAccount] | None = None,
+    rows: Sequence[AccountDailyMetric] | None = None,
 ) -> tuple[list[SeriesPoint], MetricGap | None]:
     """One point per day of the span, or per week (Monday to Sunday, cut to the span) with
     ``weekly``: a week's value is the sum of its known days (``followers``: its latest
-    reading). The second value is why no point has a value, when none does."""
+    reading). The second value is why no point has a value, when none does. ``accounts`` and
+    ``rows`` are given by a caller that has already read them for the span (one read for many
+    series)."""
     if metric not in SERIES_METRICS:
         raise ApiError("validation_error", f"There's no daily series for {metric}.")
-    accounts, _ = await accounts_for(session, account_id)
-    rows = await repo.account_daily_rows(session, [a.id for a in accounts], span.since, span.until)
+    if accounts is None:
+        accounts, _ = await accounts_for(session, account_id)
+    if rows is None:
+        rows = await repo.account_daily_rows(
+            session, [a.id for a in accounts], span.since, span.until
+        )
     by_day: dict[date, list[AccountDailyMetric]] = {}
     for row in rows:
         by_day.setdefault(row.date, []).append(row)

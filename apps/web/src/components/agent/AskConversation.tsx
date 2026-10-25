@@ -14,7 +14,8 @@ import { isActive, SUGGESTED_PROMPTS, type PromptArea } from "@/lib/agent/format
 import { useAskStore } from "@/lib/agent/store";
 import { ApiError } from "@/lib/api/errors";
 import { upgradeRequestFrom, useUpgradeDialog } from "@/lib/api/provider";
-import { exhaustedAiCredits, useAskAgent, useBilling, useCancelAgentRun, useThreadRuns } from "@/lib/api/queries";
+import { exhaustedAiCredits, useAskAgent, useBilling, useCancelAgentRun, usageMeter, useThreadRuns } from "@/lib/api/queries";
+import type { AgentRunCreate, AskInput } from "@/lib/api/types";
 import { aiCreditsExhausted, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
@@ -23,6 +24,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AskComposer } from "./AskComposer";
 import { RunView, type RunContext } from "./RunView";
+import { WaitingForYou } from "./WaitingForYou";
 
 /** Within this distance of the bottom the conversation follows new content. */
 const NEAR_BOTTOM_PX = 96;
@@ -74,6 +76,10 @@ export function AskConversation({
   const working = Boolean(latest && isActive(latest.status));
   const upgrade = useUpgradeDialog();
   const credits = exhaustedAiCredits(billing.data);
+  const creditsNow = useMemo(() => {
+    const meter = usageMeter(billing.data, "ai_credits");
+    return meter ? { limit: meter.limit, used: meter.used, resetsOn: meter.period_end } : null;
+  }, [billing.data]);
   const outOfCredits = error instanceof ApiError && error.code === "quota_exceeded";
 
   // ---- scrolling: follow new content only while near the bottom
@@ -121,11 +127,19 @@ export function AskConversation({
     toBottom();
   }, [threadId, toBottom]);
 
-  const send = (request: string) => {
+  // A question in words, or a structured follow-up (a visual's controls, "Prepare replies") in
+  // this thread: the API words the member's side of a follow-up.
+  const send = (input: AskInput) => {
     setError(null);
     stick.current = true;
     setAway(false);
-    ask.mutate(threadId ? { request, thread_id: threadId } : { request }, {
+    const body: AgentRunCreate =
+      typeof input === "string"
+        ? threadId
+          ? { request: input, thread_id: threadId }
+          : { request: input }
+        : { request: "", hints: input, thread_id: threadId };
+    ask.mutate(body, {
       onSuccess: (run) => {
         setThread(wid, run.thread_id);
         setDraft(wid, "");
@@ -146,8 +160,13 @@ export function AskConversation({
     role: workspace.role,
     now,
     onNavigate,
-    onAsk: (request) => send(request),
+    onAsk: (input) => {
+      // A follow-up needs the thread it follows.
+      if (typeof input !== "string" && !threadId) return;
+      send(input);
+    },
     busy: ask.isPending || working,
+    credits: creditsNow,
   };
 
   let body;
@@ -264,6 +283,7 @@ export function AskConversation({
             {askError(error, credits, now)}
           </Alert>
         ) : null}
+        <WaitingForYou wid={wid} slug={workspace.slug} timeZone={workspace.timezone} now={now} onNavigate={onNavigate} />
         <AskComposer
           id={composerId}
           value={draft}
@@ -313,7 +333,8 @@ function Welcome({
         <h2 className={cn(SECTION_TITLE, "tracking-tight")}>What would you like to know?</h2>
         <p className="text-sm text-fg-secondary">
           Ask about your posts, comments, conversations and automations. Answers show the numbers they used and
-          link to them; Social Hood can prepare a reply for you to finish, but doesn&apos;t change anything itself.
+          link to them; Social Hood can prepare a reply for you to finish, or propose an automation or a segment for
+          you to approve, but doesn&apos;t change anything itself.
         </p>
       </div>
       <ul

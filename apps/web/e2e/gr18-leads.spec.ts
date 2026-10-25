@@ -94,11 +94,14 @@ test.describe("GR-18 leads", () => {
     const username = `e2e_gr18c_${Date.now().toString(36)}`;
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "hi", fromId: username, fromUsername: username });
     let id = "";
+    let name = "";
     await expect
       .poll(
         async () => {
           const list = await api.call<{ items: Item[] }>("GET", `/v1/w/${workspace.id}/contacts?q=${username}`);
-          id = list.items.find((c) => c.username === username)?.id ?? "";
+          const found = list.items.find((c) => c.username === username);
+          id = found?.id ?? "";
+          name = found?.name ?? "";
           return id;
         },
         { timeout: 30_000 },
@@ -113,7 +116,7 @@ test.describe("GR-18 leads", () => {
 
     await page.getByRole("group", { name: "Show a stage" }).getByRole("button", { name: /Follow up/ }).click();
     const column = page.getByRole("region", { name: "Follow up leads" });
-    await expect(column.getByTestId("lead-card").filter({ hasText: username })).toHaveCount(1);
+    await expect(column.getByTestId("lead-card").filter({ hasText: name })).toHaveCount(1);
     await expect(page.getByRole("region", { name: "New leads" })).toBeHidden();
     // No horizontal scroll at 375 px.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

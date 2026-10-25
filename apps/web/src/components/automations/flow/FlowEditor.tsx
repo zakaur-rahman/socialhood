@@ -18,8 +18,8 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBillingPlans, useFlowFields, useFlowTags, useResetFlow } from "@/lib/api/queries";
-import type { FlowDefinition, Plan } from "@/lib/api/types";
+import { useBillingPlans, useFlowFields, useFlowTags, useResetFlow, useSavedReplies } from "@/lib/api/queries";
+import type { FlowDefinition, Plan, Platform } from "@/lib/api/types";
 import { entitlementOf } from "@/lib/billing/plan";
 import { stepTitle, type StepErrors } from "@/lib/automations/flow";
 import { toastError } from "@/lib/toast-error";
@@ -48,6 +48,7 @@ export function FlowEditor({
   plan,
   draft,
   comment,
+  platform,
   disclosure,
   upload,
   activationErrors,
@@ -58,6 +59,8 @@ export function FlowEditor({
   plan: Plan;
   draft: FlowDraft;
   comment: boolean;
+  /** GR-29: the account's platform (Instagram when unknown). */
+  platform?: Platform;
   disclosure: string | null;
   upload?: Uploader;
   /** The API's problems from the last activation, by step. */
@@ -66,6 +69,7 @@ export function FlowEditor({
 }) {
   const tags = useFlowTags(wid);
   const fields = useFlowFields(wid);
+  const savedReplies = useSavedReplies(wid);
   const cap = useStepCap(plan);
   const [announcement, setAnnouncement] = useState("");
 
@@ -103,9 +107,11 @@ export function FlowEditor({
       update={draft.update}
       disclosure={disclosure}
       comment={comment}
+      platform={platform}
       upload={upload}
       tags={tags.data ?? []}
       fields={fields.data ?? []}
+      savedReplies={savedReplies.data?.items}
       serverErrors={serverErrors}
       clearServerErrors={clearServerErrors}
       cap={cap}

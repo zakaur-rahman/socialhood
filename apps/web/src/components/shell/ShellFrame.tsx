@@ -55,7 +55,10 @@ export function ShellFrame({
         Skip to content
       </a>
       {topBar}
-      <div className="sticky top-0 hidden h-dvh shrink-0 p-4 pr-0 md:block">{sidebar}</div>
+      {/* z-30: sticky makes this its own stacking layer, and <main> paints after it, so without a
+          z-index the half of the sidebar's edge toggle that overhangs <main> sits under the page and
+          misses clicks. Above the sticky page headers (z-20), below menus and dialogs (z-50). */}
+      <div className="sticky top-0 z-30 hidden h-dvh shrink-0 p-4 pr-0 md:block">{sidebar}</div>
       <main id="main" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col text-sm outline-none">
         {children}
       </main>
@@ -78,7 +81,7 @@ export function ShellSkeleton() {
   return (
     <ShellFrame
       topBar={
-        <div aria-hidden data-testid="shell-skeleton-topbar" className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-panel px-4 md:hidden">
+        <div aria-hidden data-testid="shell-skeleton-topbar" className="sticky top-0 z-40 flex h-14 items-center border-b border-line glass-pane px-4 md:hidden">
           <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" />
         </div>
       }
@@ -86,7 +89,7 @@ export function ShellSkeleton() {
         <div
           aria-hidden
           data-testid="shell-skeleton-sidebar"
-          className={cn("h-full rounded-xl border border-line bg-panel", sidebar.collapsed ? "w-16" : "w-[232px]")}
+          className={cn("h-full rounded-xl border border-line glass-pane", sidebar.collapsed ? "w-16" : "w-[232px]")}
         />
       }
     >

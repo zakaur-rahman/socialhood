@@ -7,7 +7,9 @@ job ignores a version that is no longer current. Nothing here commits.
 
 What each type needs: an FAQ a question and an answer (``body``; its title is the question); a
 note a title and a body; a web page a public http(s) address (checked again, with DNS, when it is
-fetched); a file an uploaded PDF, DOCX, TXT or MD asset up to 10 MB. ``gap_id`` (FAQ only)
+fetched); a file an uploaded PDF, DOCX, TXT or MD asset up to 10 MB; a site (GR-35) a
+public address to start from and a re-crawl setting (services/knowledge/sites.py: it is crawled,
+not ingested, and its pages are sources of their own, listed under it). ``gap_id`` (FAQ only)
 answers a knowledge gap (F-17).
 
 knowledge_characters (§1.7) caps the characters of all sources: an FAQ or note that would pass it
@@ -37,9 +39,10 @@ from socialhood.schemas.knowledge import (
     KnowledgeSourceList,
     KnowledgeSourcePatch,
     KnowledgeUsage,
+    SiteCrawlInfo,
 )
 from socialhood.security import ssrf
-from socialhood.services.knowledge import gaps
+from socialhood.services.knowledge import gaps, sites
 from socialhood.services.knowledge.extract import FILE_FORMATS, FILE_FORMATS_COPY, MAX_FILE_BYTES
 from socialhood.services.media_assets import file_format
 
@@ -52,18 +55,25 @@ CREATE_FIELDS: dict[KnowledgeType, frozenset[str]] = {
     KnowledgeType.TEXT: frozenset({"title", "body"}),
     KnowledgeType.URL: frozenset({"title", "url"}),
     KnowledgeType.FILE: frozenset({"title", "file_asset_id"}),
+    KnowledgeType.SITE: frozenset({"title", "url", "recrawl"}),
+    KnowledgeType.PAGE: frozenset(),
 }
 EDIT_FIELDS: dict[KnowledgeType, frozenset[str]] = {
     KnowledgeType.FAQ: frozenset({"question", "body"}),
     KnowledgeType.TEXT: frozenset({"title", "body"}),
     KnowledgeType.URL: frozenset({"title", "url"}),
     KnowledgeType.FILE: frozenset({"title"}),
+    KnowledgeType.SITE: frozenset({"title", "recrawl", "excluded_paths"}),
+    KnowledgeType.PAGE: frozenset(),
 }
 NOT_FOR_TYPE = {
     KnowledgeType.FAQ: "An FAQ has a question and an answer.",
     KnowledgeType.TEXT: "A note has a title and text.",
     KnowledgeType.URL: "A web page source has an address and an optional title.",
     KnowledgeType.FILE: "A file source has a file and an optional title.",
+    KnowledgeType.SITE: "A website source has an address, an optional title and a re-crawl "
+    "setting.",
+    KnowledgeType.PAGE: "A page of a website can't be edited. Edit the website or remove the page.",
 }
 
 
@@ -79,8 +89,10 @@ async def usage(session: AsyncSession) -> KnowledgeUsage:
 
 async def list_sources(session: AsyncSession) -> KnowledgeSourceList:
     rows = await repo.list_sources(session)
+    crawls = await sites.infos(session, [source for source, _ in rows])
     return KnowledgeSourceList(
-        items=[source_out(source, asset) for source, asset in rows], usage=await usage(session)
+        items=[source_out(source, asset, crawls.get(source.id)) for source, asset in rows],
+        usage=await usage(session),
     )
 
 
@@ -89,10 +101,13 @@ async def get(session: AsyncSession, source_id: uuid.UUID) -> KnowledgeSource:
 
 
 async def view(session: AsyncSession, source: SourceRow) -> KnowledgeSource:
-    return source_out(source, await repo.get_asset(session, source.file_asset_id))
+    site = await sites.info(session, source) if source.type == KnowledgeType.SITE else None
+    return source_out(source, await repo.get_asset(session, source.file_asset_id), site)
 
 
-def source_out(source: SourceRow, asset: MediaAsset | None) -> KnowledgeSource:
+def source_out(
+    source: SourceRow, asset: MediaAsset | None, site: SiteCrawlInfo | None = None
+) -> KnowledgeSource:
     return KnowledgeSource.model_validate(
         {
             "id": source.id,
@@ -109,6 +124,7 @@ def source_out(source: SourceRow, asset: MediaAsset | None) -> KnowledgeSource:
             "char_count": source.char_count,
             "chunk_count": source.chunk_count,
             "last_ingested_at": source.last_ingested_at,
+            "site": site,
             "created_at": source.created_at,
             "updated_at": source.updated_at,
         }
@@ -129,7 +145,11 @@ def file_name(asset: MediaAsset | None) -> str | None:
 
 
 async def create(
-    session: AsyncSession, body: KnowledgeSourceCreate, *, user_id: uuid.UUID
+    session: AsyncSession,
+    body: KnowledgeSourceCreate,
+    *,
+    user_id: uuid.UUID,
+    allow_private: bool = False,
 ) -> SourceRow:
     """Store a pending source (and answer its gap); the caller commits, then enqueue_ingest."""
     kind = KnowledgeType(body.type)
@@ -149,8 +169,10 @@ async def create(
         text = _required(body.body, "body", "Write the note.")
         source = SourceRow(type=kind, title=short_title(title), body=text)
         chars = len(text)
-    elif kind is KnowledgeType.URL:
-        url = _checked_url(_required(body.url, "url", ssrf.BAD_ADDRESS))
+    elif kind in (KnowledgeType.URL, KnowledgeType.SITE):
+        # A local address passes only for a site, and only where crawl_allow_private is on.
+        local = allow_private and kind is KnowledgeType.SITE
+        url = _checked_url(_required(body.url, "url", ssrf.BAD_ADDRESS), allow_private=local)
         title = short_title(body.title) if body.title else url_title(url)
         source = SourceRow(type=kind, title=title, url=str(url))
     else:
@@ -167,6 +189,8 @@ async def create(
     if gap is not None:
         gaps.mark_answered(gap, source.id)
         await session.flush()
+    if kind is KnowledgeType.SITE:
+        await sites.start(session, source, recrawl=body.recrawl)
     await session.refresh(source)
     return source
 
@@ -181,6 +205,8 @@ async def update(
     if kind is KnowledgeType.FAQ:
         sent.discard("title")  # an FAQ's title is its question
     _reject_other_fields(kind, sent, EDIT_FIELDS[kind])
+    if kind is KnowledgeType.SITE:
+        return await sites.patch(session, source, body)
     changed = False
 
     def assign(name: str, value: str | None) -> None:
@@ -223,27 +249,47 @@ async def update(
 
 
 async def delete(session: AsyncSession, source_id: uuid.UUID) -> None:
-    """The source and its chunks (ON DELETE CASCADE); a gap it answered keeps its status."""
+    """The source and its chunks (ON DELETE CASCADE; a site's pages go with it); a gap it
+    answered keeps its status."""
+    await _get_or_404(session, source_id)
     if not await repo.delete_source(session, source_id):
         raise ApiError("not_found")
 
 
 async def enqueue_ingest(source: SourceRow) -> bool:
-    """Queue ingestion of the source's current version, after the caller has committed. A lost
-    enqueue leaves the source pending; saving it again (or ``reingest``) queues it again."""
+    """Queue ingestion of the source's current version (a crawl, for a site), after the caller
+    has committed. A lost enqueue leaves the source pending; saving it again (or ``reingest``)
+    queues it again."""
+    return await enqueue_job(
+        source.workspace_id, source.id, source.version, KnowledgeType(source.type)
+    )
+
+
+async def enqueue_job(
+    workspace_id: uuid.UUID, source_id: uuid.UUID, version: int, kind: KnowledgeType
+) -> bool:
     from socialhood.jobs.enqueue import enqueue
-    from socialhood.jobs.tasks.knowledge import ingest_knowledge_source
+    from socialhood.jobs.tasks.knowledge import crawl_site, ingest_knowledge_source
 
     try:
+        if kind is KnowledgeType.SITE:
+            return await enqueue(
+                crawl_site,
+                key=f"crawl:{source_id}:{version}",
+                lock=f"crawl:{source_id}",
+                workspace_id=str(workspace_id),
+                source_id=str(source_id),
+                version=version,
+            )
         return await enqueue(
             ingest_knowledge_source,
-            key=f"kb:{source.id}:{source.version}",
-            workspace_id=str(source.workspace_id),
-            source_id=str(source.id),
-            version=source.version,
+            key=f"kb:{source_id}:{version}",
+            workspace_id=str(workspace_id),
+            source_id=str(source_id),
+            version=version,
         )
     except Exception:
-        log.warning("knowledge_enqueue_failed", source_id=str(source.id), exc_info=True)
+        log.warning("knowledge_enqueue_failed", source_id=str(source_id), exc_info=True)
         return False
 
 
@@ -284,9 +330,9 @@ def _required[T](value: T | None, field: str, message: str) -> T:
     return value
 
 
-def _checked_url(raw: str) -> httpx.URL:
+def _checked_url(raw: str, *, allow_private: bool = False) -> httpx.URL:
     try:
-        return ssrf.check_url(raw)
+        return ssrf.check_url_or_local(raw, allow_private)
     except ssrf.FetchError as error:
         raise ApiError("validation_error", errors=[FieldError("url", error.message)]) from error
 
@@ -326,6 +372,6 @@ async def _get_or_404(
     session: AsyncSession, source_id: uuid.UUID, *, for_update: bool = False
 ) -> SourceRow:
     source = await repo.get_source(session, source_id, for_update=for_update)
-    if source is None:
+    if source is None or source.parent_source_id is not None:  # a crawled page is its site's
         raise ApiError("not_found")
     return source

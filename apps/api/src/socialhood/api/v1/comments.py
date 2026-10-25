@@ -21,7 +21,7 @@ from typing import Annotated
 from fastapi import APIRouter, Header, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanDeleteComments, CanReply, Session
 from socialhood.errors import ApiError
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.realtime.events import commit_and_publish
@@ -71,7 +71,7 @@ async def reply_to_comment(
     comment_id: uuid.UUID,
     body: CommentReplyCreate,
     idempotency_key: IdempotencyKey,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
 ) -> Comment:
     """A public reply under the comment, posted on Instagram before the answer (the comment's
@@ -106,7 +106,7 @@ async def private_reply_to_comment(
     comment_id: uuid.UUID,
     body: PrivateReplyCreate,
     idempotency_key: IdempotencyKey,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
 ) -> Comment:
     """A DM to the commenter, addressed by the comment: queued as an outbound message in their
@@ -147,7 +147,7 @@ async def private_reply_to_comment(
 
 @router.post("/comments/{comment_id}/hide", operation_id="hide_comment")
 async def hide_comment(
-    request: Request, comment_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, comment_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Comment:
     """Hide the comment on Instagram (others no longer see it; the commenter still does).
     Hiding a hidden comment returns it as it is."""
@@ -159,7 +159,7 @@ async def hide_comment(
 
 @router.post("/comments/{comment_id}/unhide", operation_id="unhide_comment")
 async def unhide_comment(
-    request: Request, comment_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, comment_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Comment:
     """Show a hidden comment again."""
     redis = request.app.state.redis
@@ -170,7 +170,7 @@ async def unhide_comment(
 
 @router.delete("/comments/{comment_id}", status_code=204, operation_id="delete_comment")
 async def delete_comment(
-    request: Request, comment_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, comment_id: uuid.UUID, ctx: CanDeleteComments, session: Session
 ) -> Response:
     """Delete the comment on Instagram (admins). The row keeps ``deleted_at`` and leaves every
     list and count; comment.updated (with ``deleted_at`` set) tells open pages to drop it."""

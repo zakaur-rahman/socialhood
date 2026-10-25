@@ -39,6 +39,6 @@ test.describe("GR-01 where a conversation started", () => {
     await page.goto(`/w/${workspace.slug}/inbox`);
     await page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: text }).click();
     const details = page.getByRole("complementary", { name: "Details" });
-    await expect(details.getByTestId("conversation-entry")).toContainText('Ad "Diwali hampers"');
+    await expect(details.getByTestId("conversation-entry")).toContainText('From an ad: "Diwali hampers"');
   });
 });

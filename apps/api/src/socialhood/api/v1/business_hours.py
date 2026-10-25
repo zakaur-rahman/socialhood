@@ -8,14 +8,14 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Response
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageSettings, Session
 from socialhood.schemas.business_hours import (
     BusinessHours,
     BusinessHoursOverview,
     BusinessHoursUpdate,
 )
+from socialhood.services import audit, connections
 from socialhood.services import business_hours as service
-from socialhood.services import connections
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["business-hours"])
 
@@ -28,23 +28,25 @@ async def get_business_hours(ctx: AnyMember, session: Session) -> BusinessHoursO
 
 @router.put("/business-hours", operation_id="update_business_hours")
 async def update_business_hours(
-    body: BusinessHoursUpdate, ctx: Admin, session: Session
+    body: BusinessHoursUpdate, ctx: CanManageSettings, session: Session
 ) -> BusinessHours:
     """Replace the workspace's schedule. 422 names each field: an overlapping range, a closing
     time before the opening one, an away message left empty, hours switched on with no range."""
     out = await service.save(session, body, account_id=None, now=datetime.now(UTC))
+    await audit.record(session, ctx, "settings.updated", "business_hours")
     await session.commit()
     return out
 
 
 @router.put("/social-accounts/{account_id}/business-hours", operation_id="update_account_hours")
 async def update_account_hours(
-    account_id: uuid.UUID, body: BusinessHoursUpdate, ctx: Admin, session: Session
+    account_id: uuid.UUID, body: BusinessHoursUpdate, ctx: CanManageSettings, session: Session
 ) -> BusinessHours:
     """Give the account its own schedule, which replaces the workspace's for it. Switched off, it
     has no hours and is always open."""
     acct = await connections.get_or_404(session, account_id)
     out = await service.save(session, body, account_id=acct.id, now=datetime.now(UTC))
+    await audit.record(session, ctx, "settings.updated", "business_hours", account_id)
     await session.commit()
     return out
 
@@ -54,9 +56,14 @@ async def update_account_hours(
     status_code=204,
     operation_id="delete_account_hours",
 )
-async def delete_account_hours(account_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_account_hours(
+    account_id: uuid.UUID, ctx: CanManageSettings, session: Session
+) -> Response:
     """The account goes back to the workspace's schedule."""
     acct = await connections.get_or_404(session, account_id)
     await service.remove_override(session, acct.id)
+    await audit.record(
+        session, ctx, "settings.updated", "business_hours", account_id, override_removed=True
+    )
     await session.commit()
     return Response(status_code=204)

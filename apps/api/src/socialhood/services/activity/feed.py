@@ -40,9 +40,19 @@ from socialhood.schemas.activity import (
 )
 from socialhood.services.activity import reasons
 from socialhood.services.automations.results import PRIVATE_PREFIX, PUBLIC_PREFIX
+from socialhood.services.catalogue import money
 from socialhood.services.sending import platform_name
 
-Kind = Literal["automation_run", "flow_step", "message", "webhook_delivery", "account"]
+Kind = Literal[
+    "automation_run",
+    "flow_step",
+    "message",
+    "webhook_delivery",
+    "account",
+    "broadcast",
+    "sequence",
+    "order",
+]
 
 # What a run that is not a failure did, for its title.
 RUN_VERBS: dict[str, str] = {
@@ -63,6 +73,7 @@ SOURCE_LABELS = {
     "automation": "An automation message",
     "ai_auto": "An AI reply",
     "human": "A message",
+    "broadcast": "A broadcast message",
 }
 REASON_MAX = 400
 
@@ -308,6 +319,86 @@ def _account_item(row: Any) -> ActivityItem:
     )
 
 
+def _broadcast_item(row: Any) -> ActivityItem:
+    """A broadcast that stopped by itself (quality, plan, a number to reconnect) or could not
+    start. The reason is the one the broadcast page shows; the action opens that page."""
+    label = account_label(row.account_username, row.account_display_name, row.platform)
+    failed = row.status == "failed"
+    return ActivityItem(
+        id=row.id,
+        kind="broadcast",
+        outcome="failed" if failed else "attention",
+        occurred_at=row.at,
+        title=f"{row.name} couldn't start" if failed else f"{row.name} was paused",
+        reason=_clip(row.paused_reason),
+        error_code=row.paused_code,
+        social_account_id=row.account_id,
+        account_label=label,
+        platform=row.platform,
+        action=ActivityAction(label="Open the broadcast", href=f"/broadcasts/{row.id}"),
+    )
+
+
+SEQUENCE_OUTCOME: dict[str, ActivityOutcome] = {
+    "sent": "ok",
+    "skipped": "skipped",
+    "failed": "failed",
+}
+
+
+def _sequence_item(row: Any) -> ActivityItem:
+    """A sequence step that was sent, skipped (with why) or failed (GR-24)."""
+    who = _who(row.contact_username, row.contact_display_name)
+    step = f"step {row.position + 1}"
+    to = {"skipped": f" for {who}" if who else ""}.get(row.status, _to(who))
+    verb = {"sent": f"sent {step}", "skipped": f"skipped {step}", "failed": f"couldn't send {step}"}
+    return ActivityItem(
+        id=row.id,
+        kind="sequence",
+        outcome=SEQUENCE_OUTCOME.get(row.status, "ok"),
+        occurred_at=row.at,
+        title=f"{row.sequence_name} {verb.get(row.status, step)}{to}",
+        reason=_clip(row.reason) if row.status != "sent" else None,
+        error_code=row.reason_code if row.status != "sent" else None,
+        social_account_id=row.account_id,
+        account_label=account_label(row.account_username, row.account_display_name, row.platform),
+        platform=row.platform,
+        action=ActivityAction(label="Open the sequence", href=f"/sequences/{row.sequence_id}"),
+    )
+
+
+def _order_item(row: Any) -> ActivityItem:
+    """An order that was paid, or whose payment link ran out (GR-32)."""
+    who = _who(row.contact_username, row.contact_display_name)
+    paid = row.status in ("paid", "fulfilled")
+    refunded = row.status == "refunded"
+    total = money.label(row.total_minor, row.currency)
+    return ActivityItem(
+        id=row.id,
+        kind="order",
+        outcome="ok" if paid or refunded else "attention",
+        occurred_at=row.at,
+        title=(
+            f"Order #{row.number} was paid{_for(who)}"
+            if paid
+            else f"Order #{row.number} was refunded{_for(who)}"
+            if refunded
+            else f"Order #{row.number} expired without payment{_for(who)}"
+        ),
+        reason=(
+            total if paid or refunded else f"The payment link for {total} ran out. Send a new one."
+        ),
+        social_account_id=row.account_id,
+        account_label=account_label(row.account_username, row.account_display_name, row.platform),
+        platform=row.platform,
+        action=ActivityAction(label="Open the order", href=f"/orders?order={row.id}"),
+    )
+
+
+def _for(who: str | None) -> str:
+    return f" from {who}" if who else ""
+
+
 def encode_cursor(at: datetime, row_id: uuid.UUID) -> str:
     raw = json.dumps([at.isoformat(), str(row_id)]).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
@@ -332,13 +423,22 @@ async def feed(
     limit: int,
 ) -> ActivityList:
     """The newest ``limit`` items. A filter on an automation leaves out the sources that have
-    none (sends, webhooks, accounts); a filter on an account leaves out webhooks."""
+    none (sends, webhooks, accounts, broadcasts); a filter on an account leaves out webhooks."""
     before = decode_cursor(cursor) if cursor else None
     take = limit + 1
     wanted: set[ActivityKindName] = (
         {kind}
         if kind
-        else {"automation_run", "flow_step", "message", "webhook_delivery", "account"}
+        else {
+            "automation_run",
+            "flow_step",
+            "message",
+            "webhook_delivery",
+            "account",
+            "broadcast",
+            "sequence",
+            "order",
+        }
     )
     if automation_id is not None:
         wanted &= {"automation_run", "flow_step"}
@@ -369,6 +469,21 @@ async def feed(
     if "account" in wanted:
         rows = await repo.broken_accounts(session, before=before, limit=take, account_id=account_id)
         items += [_account_item(r) for r in rows]
+    if "broadcast" in wanted:
+        rows = await repo.stopped_broadcasts(
+            session, before=before, limit=take, account_id=account_id
+        )
+        items += [_broadcast_item(r) for r in rows]
+    if "sequence" in wanted:
+        rows = await repo.sequence_steps(
+            session, before=before, limit=take, failures_only=failures_only, account_id=account_id
+        )
+        items += [_sequence_item(r) for r in rows]
+    if "order" in wanted:
+        rows = await repo.orders_settled(
+            session, before=before, limit=take, failures_only=failures_only, account_id=account_id
+        )
+        items += [_order_item(r) for r in rows]
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     more = len(items) > limit
     items = items[:limit]

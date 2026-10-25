@@ -34,12 +34,15 @@ import {
   type SplitNode,
 } from "@/lib/automations/flow";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { useFlowEnv } from "./FlowContext";
 import { KindMenu } from "./KindMenu";
 import { ConditionEditor } from "./fields/ConditionEditor";
 import { AskFields } from "./fields/AskFields";
 import { ActionFields, AiFields, DelayFields } from "./fields/OtherFields";
+import { PaymentFields } from "./fields/PaymentFields";
+import { ProductFields } from "./fields/ProductFields";
 import { SendFields } from "./fields/SendFields";
 import { NativeSelect } from "./NativeSelect";
 
@@ -201,12 +204,14 @@ const STATE_BADGE = {
 
 /** The fields the card shows itself; a problem on any other field is listed at the top of the card. */
 const SHOWN: Record<EditorStep["kind"], RegExp> = {
-  send: /^(text|image_asset_id|buttons\..*|quick_replies(\..*)?)$/,
+  send: /^(text|saved_reply_id|image_asset_id|buttons\..*|quick_replies(\..*)?)$/,
   ask: /^(text|field_key|retry_text|consent_text|confirm_text)$/,
   branch: /^rules\.\d+\.when$/,
   action: /^action(\.value)?$/,
   delay: /^$/,
   split: /^$/,
+  product: /^(product_id|variant_id|intro)$/,
+  payment: /^(source|items(\..*)?|method|intro)$/,
   ai: /^instructions$/,
   end: /^$/,
 };
@@ -255,9 +260,9 @@ function FlowStepCard({
           }
         }}
         className={cn(
-          "scroll-mt-24 bg-canvas/40 sm:[--card-padding:--spacing(4)]",
+          "scroll-mt-24 bg-canvas-veil sm:[--card-padding:--spacing(4)]",
           state === "error" && "border-danger",
-          dragging && "opacity-60 ring-2 ring-ring",
+          dragging && "opacity-60 ring-2 ring-brand",
         )}
       >
         <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
@@ -267,11 +272,11 @@ function FlowStepCard({
             disabled={length < 2}
             aria-label={`Reorder step ${number}`}
             aria-describedby={length < 2 ? undefined : "flow-reorder-help"}
-            className="inline-flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-secondary hover:bg-hover active:cursor-grabbing disabled:cursor-default disabled:opacity-30 pointer-coarse:size-10"
+            className="inline-flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-secondary hover:bg-hover active:cursor-grabbing disabled:cursor-default disabled:opacity-50 pointer-coarse:size-10"
           >
             <GripVertical className="size-4" aria-hidden />
           </button>
-          <h3 id={headId} className="flex min-w-24 flex-1 items-center gap-2 text-sm font-semibold">
+          <h3 id={headId} className={cn(ITEM_TITLE, "flex min-w-24 flex-1 items-center gap-2")}>
             <span className="tabular-nums text-fg-secondary">{number}</span>
             <span className="truncate">{title}</span>
             {badge ? (
@@ -344,7 +349,12 @@ function FlowStepCard({
 }
 
 function summary(node: EditorStep): string {
+  if (node.kind === "send" && node.saved) return "A saved reply";
   if (node.kind === "send" || node.kind === "ask") return node.text.trim() || "Nothing written yet";
+  if (node.kind === "product") return node.intro.trim() || (node.product_id ? "A product from your catalogue" : "No product chosen yet");
+  if (node.kind === "payment") {
+    return node.intro.trim() || (node.source === "draft" ? "The latest unpaid order in the chat" : `${node.items.length} ${node.items.length === 1 ? "product" : "products"} to pay for`);
+  }
   if (node.kind === "ai") return node.instructions.trim() || "No instructions yet";
   if (node.kind === "branch") return node.rules.map((rule) => describeCondition(rule.when)).join(", ");
   return "";
@@ -354,6 +364,10 @@ function Body({ node }: { node: EditorStep }) {
   switch (node.kind) {
     case "send":
       return <SendFields node={node} />;
+    case "product":
+      return <ProductFields node={node} />;
+    case "payment":
+      return <PaymentFields node={node} />;
     case "ask":
       return <AskFields node={node} />;
     case "action":
@@ -416,6 +430,11 @@ function Arms({ node, follower }: { node: EditorStep; follower: boolean }) {
 }
 
 function SendArms({ node, follower }: { node: SendNode; follower: boolean }) {
+  if (node.saved) return null; // a saved reply goes alone: no quick replies
+  return <SendReplies node={node} follower={follower} />;
+}
+
+function SendReplies({ node, follower }: { node: SendNode; follower: boolean }) {
   const env = useFlowEnv();
   const problems = env.problemsOf(node.id);
   const set = (change: (current: SendNode) => SendNode) =>
@@ -594,6 +613,7 @@ function BranchArms({ node, follower }: { node: BranchNode; follower: boolean })
                   tags={env.tags}
                   fields={env.fields}
                   label={`Rule ${index + 1} of step ${env.numberOf(node.id)}`}
+                  platform={env.platform}
                   problem={problems[`rules.${index}.when`]?.message}
                   onChange={(when) =>
                     set((current) => ({ ...current, rules: current.rules.map((r, i) => (i === index ? { ...r, when } : r)) }))

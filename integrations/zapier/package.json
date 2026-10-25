@@ -1,0 +1,26 @@
+{
+  "name": "socialhood-zapier",
+  "version": "1.0.0",
+  "description": "Social Hood for Zapier: new contacts, captured leads, tags and messages as triggers; tag, field and message actions. Calls the Social Hood public API (/public/v1) with an API key.",
+  "private": true,
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "jest --testTimeout 10000",
+    "validate": "zapier validate"
+  },
+  "dependencies": {
+    "zapier-platform-core": "^16.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nock": "^13.5.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/*.test.js"]
+  }
+}

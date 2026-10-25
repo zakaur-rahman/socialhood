@@ -20,6 +20,7 @@ import { billingCopy } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { InstagramOnlyNotice } from "./InstagramOnlyNotice";
 import { useReturnFocusOr } from "./return-focus";
@@ -167,7 +168,7 @@ export function TemplateGallery({
                   <span className="grid size-9 place-items-center rounded-lg bg-raised text-fg-secondary">
                     <Plus className="size-5" aria-hidden />
                   </span>
-                  <p className="mt-3 text-sm font-semibold">Start from blank</p>
+                  <p className={cn(ITEM_TITLE, "mt-3")}>Start from blank</p>
                   <p className="mt-1 flex-1 text-sm text-fg-secondary">Choose the trigger, keywords and reply yourself.</p>
                   <Button
                     variant="secondary"
@@ -222,6 +223,7 @@ export function TemplateCard({
           {template.action === "ai_reply" ? <Sparkles aria-hidden /> : null}
           {ACTION_TAG[template.action]}
         </Badge>
+        {template.steps > 0 ? <Badge>{template.steps === 1 ? "1 step" : `${template.steps} steps`}</Badge> : null}
       </div>
       <Button variant="secondary" className="mt-3 self-start" disabled={disabled} loading={pending} onClick={onUse} aria-label={`Use template: ${template.name}`}>
         Use template

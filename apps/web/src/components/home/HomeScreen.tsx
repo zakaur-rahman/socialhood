@@ -1,7 +1,9 @@
 "use client";
 
 import { PAGE_TITLE } from "@/styles/tokens";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, FileText, RefreshCw } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 
 import { ProTrialOffer } from "@/components/billing/ProTrialOffer";
@@ -18,6 +20,7 @@ import { gapPrefill } from "@/lib/knowledge/prefill";
 import { toastError } from "@/lib/toast-error";
 import { dayKey } from "@/lib/tz";
 import { useNow, useStoredString } from "@/lib/use-browser-state";
+import { STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -67,7 +70,7 @@ export function HomeScreen() {
   };
 
   const header = (
-    <header className="mb-6 flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
+    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
       <div className="min-w-0">
         <h1 className={PAGE_TITLE}>{title}</h1>
         {data ? (
@@ -93,6 +96,11 @@ export function HomeScreen() {
           </Badge>
         ) : null}
         <RangeControl value={query} today={today} onChange={(next: OverviewQuery) => setStored(storedRange(next))} />
+        <Button variant="outline" asChild>
+          <Link href={`/w/${workspace.slug}/reports` as Route}>
+            <FileText aria-hidden /> Weekly report
+          </Link>
+        </Button>
         <Button
           variant="outline"
           size="icon"

@@ -19,6 +19,7 @@ import type {
   ConversationListItem,
   KnowledgeGap,
   KnowledgeSource,
+  SitePage,
   Message,
   MessageAnalysis,
   MetricComparison,
@@ -307,8 +308,60 @@ export function knowledgeSource(overrides: Partial<KnowledgeSource> = {}): Knowl
     char_count: 1240,
     chunk_count: 1,
     last_ingested_at: "2026-09-28T10:00:00Z",
+    site: null,
     created_at: "2026-09-28T10:00:00Z",
     updated_at: "2026-09-28T10:00:00Z",
+    ...overrides,
+  };
+}
+
+/** A website source (GR-35) with its crawl; `site` overrides the crawl's fields. */
+export function siteSource(
+  site: Partial<NonNullable<KnowledgeSource["site"]>> = {},
+  overrides: Partial<KnowledgeSource> = {},
+): KnowledgeSource {
+  return knowledgeSource({
+    id: "site1",
+    type: "site",
+    title: "maple.example",
+    question: null,
+    body: null,
+    url: "https://maple.example/",
+    char_count: 0,
+    chunk_count: 0,
+    site: {
+      status: "done",
+      recrawl: "weekly",
+      excluded_paths: [],
+      pages_found: 3,
+      pages_done: 3,
+      pages_failed: 0,
+      pages_skipped: 0,
+      char_count: 5400,
+      chunk_count: 9,
+      page_cap: 25,
+      truncated: false,
+      error: null,
+      started_at: "2026-09-28T09:58:00Z",
+      finished_at: "2026-09-28T10:00:00Z",
+      next_crawl_at: "2026-10-05T10:00:00Z",
+      ...site,
+    },
+    ...overrides,
+  });
+}
+
+export function sitePage(overrides: Partial<SitePage> = {}): SitePage {
+  return {
+    id: "pg1",
+    url: "https://maple.example/shipping",
+    title: "Shipping policy",
+    status: "done",
+    error: null,
+    ingest_status: "ready",
+    char_count: 1800,
+    chunk_count: 3,
+    last_crawled_at: "2026-09-28T10:00:00Z",
     ...overrides,
   };
 }
@@ -436,6 +489,7 @@ export function template(overrides: Partial<AutomationTemplate> = {}): Automatio
     trigger: "comment_keyword",
     action: "send_message",
     requires_paid_plan: false,
+    steps: 0,
     ...overrides,
   };
 }

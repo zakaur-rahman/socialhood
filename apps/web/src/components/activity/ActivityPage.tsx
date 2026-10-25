@@ -10,16 +10,18 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { useActivity, useAutomations, useRetryActivity, useSocialAccounts } from "@/lib/api/queries";
+import { useActivity, useAutomations, useBroadcastAvailability, useRetryActivity, useSocialAccounts } from "@/lib/api/queries";
 import type { ActivityFilters } from "@/lib/api/queries";
 import type { ActivityItem, ActivityKind, ActivityOutcome } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { cn } from "@/lib/utils";
 
 const ALL = "all";
 
@@ -29,6 +31,9 @@ const KINDS: { value: ActivityKind; label: string }[] = [
   { value: "message", label: "Messages" },
   { value: "webhook_delivery", label: "Webhooks" },
   { value: "account", label: "Accounts" },
+  { value: "broadcast", label: "Broadcasts" }, // GR-23: shown only with broadcasts on
+  { value: "sequence", label: "Sequences" }, // GR-24
+  { value: "order", label: "Orders" }, // GR-32
 ];
 
 const OUTCOME: Record<ActivityOutcome, { label: string; tone: "success" | "warning" | "danger"; icon: ReactNode }> = {
@@ -53,6 +58,7 @@ export function ActivityPage() {
   const [kind, setKind] = useState<ActivityKind | null>(null);
   const [automationId, setAutomationId] = useState<string | null>(params.get("automation"));
   const [accountId, setAccountId] = useState<string | null>(null);
+  const broadcastsOn = useBroadcastAvailability(wid).data?.enabled === true; // GR-23
   const filters: ActivityFilters = { failuresOnly, kind, automationId, accountId };
   const filtered = Boolean(kind || automationId || accountId);
 
@@ -109,7 +115,7 @@ export function ActivityPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>All types</SelectItem>
-            {KINDS.map((option) => (
+            {KINDS.filter((option) => option.value !== "broadcast" || broadcastsOn).map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
@@ -170,7 +176,7 @@ function ActivityRow({ item, wid, slug }: { item: ActivityItem; wid: string; slu
   const outcome = OUTCOME[item.outcome];
   const ago = relativeTime(item.occurred_at);
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-start sm:justify-between">
+    <li className={cn(cardVariants(), "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between")}>
       <div className="flex min-w-0 gap-3">
         <span className="mt-0.5 flex size-5 shrink-0 items-center text-fg-secondary [&_svg]:size-5" aria-hidden>
           {outcome.icon}

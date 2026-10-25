@@ -33,7 +33,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field, TypeAdapter, model_validator
 
 from socialhood.models.agent import REQUEST_MAX_CHARS
 from socialhood.schemas.analytics import ChangeDirection
@@ -68,6 +68,12 @@ ApprovalStatusName = Literal["pending", "approved", "rejected", "expired", "supe
 # - scheduled_message: a scheduled message, in its conversation
 # - scheduled_post: a scheduled post, in the composer
 # - knowledge_source: a knowledge source (FAQ, note, page or file)
+# - product: a catalogue product (GR-31), on the Products page
+# - order: an order (GR-32), on the Orders page
+# - contact: a contact with no conversation, on the Contacts page
+# - report: a weekly report (GR-34, VIS-13): its Monday in ``week``, the account it is about in
+#   ``parent_id`` (none: every account); ``id`` is derived from both, so it is stable
+# - contact: a contact without a conversation (VIS-08), on the Contacts page
 AnswerRefKind = Literal[
     "post",
     "conversation",
@@ -76,8 +82,18 @@ AnswerRefKind = Literal[
     "scheduled_message",
     "scheduled_post",
     "knowledge_source",
+    "product",
+    "order",
+    "contact",
+    "report",  # VIS-13: a weekly report (GR-34); ``week`` and, for one account, ``parent_id``
 ]
-ActionKind = Literal["schedule_message", "reply_to_comment", "automation_draft"]
+ActionKind = Literal[
+    "schedule_message",
+    "reply_to_comment",
+    "automation_draft",
+    "flow_proposal",  # GR-36
+    "segment_proposal",  # GR-36
+]
 
 
 # ---- answers
@@ -92,6 +108,7 @@ class AnswerRef(ResponseModel):
     # Where the record is shown: the post of a comment, the conversation of a scheduled
     # message; None for records with a screen of their own.
     parent_id: uuid.UUID | None = None
+    week: date | None = None  # report refs only: the Monday of the week (VIS-13)
 
 
 class ScheduleMessagePrefill(ResponseModel):
@@ -155,9 +172,35 @@ class AutomationDraftAction(_ActionCardBase):
     prefill: AutomationDraftPrefill
 
 
-# FR-AGT-03: a prepared action the member completes in the existing screen.
+class _ProposalCardBase(_ActionCardBase):
+    """GR-36: a write the agent proposed. Nothing is saved until a member approves it; the card
+    shows what will happen in plain words and the web reads the approval (status, result, who
+    may decide) from …/agent/approvals. ``route`` opens the list the result will appear in."""
+
+    approval_id: uuid.UUID
+    title: str = Field(max_length=120)  # e.g. "New automation: Send the price list"
+    lines: list[str] = Field(max_length=20)  # what will happen, one line each (trigger, steps)
+
+
+class FlowProposalAction(_ProposalCardBase):
+    kind: Literal["flow_proposal"]
+    automation_id: uuid.UUID | None = None  # set when it changes an existing automation's flow
+    step_count: int
+
+
+class SegmentProposalAction(_ProposalCardBase):
+    kind: Literal["segment_proposal"]
+    match_count: int  # contacts that match the filter when it was proposed
+
+
+# FR-AGT-03: a prepared action the member completes in the existing screen (the first three), or
+# a proposed write that waits for the member's approval (GR-36, the last two).
 ActionCard = Annotated[
-    ScheduleMessageAction | CommentReplyAction | AutomationDraftAction,
+    ScheduleMessageAction
+    | CommentReplyAction
+    | AutomationDraftAction
+    | FlowProposalAction
+    | SegmentProposalAction,
     Field(discriminator="kind"),
 ]
 
@@ -282,9 +325,119 @@ class SentimentSummaryVisual(ResponseModel):
     topics: list[VisualTopic] = Field(max_length=MAX_TOPICS)
 
 
+MAX_TREND_POINTS = 92
+MAX_LEADS = 10
+LEAD_REPLY_MAX = 3  # leads one "Prepare replies" follow-up drafts for (credits: 2 each, cap 10)
+MAX_TABLE_ROWS = 10
+MAX_TABLE_COLUMNS = 6
+TrendMetricKey = Literal[
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+    "profile_link_taps",
+]
+LeadStage = Literal["new", "qualified", "follow_up", "won", "lost"]
+Align = Literal["left", "right"]
+# A link a visual carries: a plain workspace path (no scheme, host, ".." or "//"), the same rule
+# the web's SAFE_PATH applies before it draws one.
+WORKSPACE_PATH = r"^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9_=&-]*)?$"
+
+
+class TrendPoint(ResponseModel):
+    day: date  # the day, or the first day of the week
+    value: float | None = None  # None: no reading, drawn as a gap and never as zero
+    days_known: int = Field(ge=0, le=7)  # days of the point that had a reading
+
+
+class TrendVisual(ResponseModel):
+    """One series over time (metric_trend, VIS-07). One series only: a second hue waits for the
+    categorical palette (C-123). Every value, the extremes and the change come from the tool."""
+
+    kind: Literal["trend"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    metric_key: TrendMetricKey
+    metric_label: str = Field(max_length=40)
+    format: MetricFormat
+    granularity: Literal["day", "week"]
+    period: VisualPeriod
+    account_label: str | None = Field(default=None, max_length=60)
+    points: list[TrendPoint] = Field(max_length=MAX_TREND_POINTS)
+    known_points: int = Field(ge=0)
+    first: TrendPoint | None = None  # the earliest point with a value
+    last: TrendPoint | None = None
+    lowest: TrendPoint | None = None
+    highest: TrendPoint | None = None
+    change_pct: float | None = None  # first to last, from the service
+    direction: ChangeDirection | None = None
+    summary: str = Field(max_length=300)  # the chart in words: its aria label and text fallback
+    note: str | None = Field(default=None, max_length=200)  # e.g. "3 of 30 days have no reading"
+
+
+class LeadRow(ResponseModel):
+    """One lead. ``name`` is the customer's own text: render it as text."""
+
+    contact_id: uuid.UUID
+    conversation_id: uuid.UUID | None = None  # None: never messaged; the row opens the contact
+    name: str = Field(max_length=60)
+    platform: str = Field(max_length=20)
+    lead_score: int | None = Field(default=None, ge=0, le=100)
+    lead_stage: LeadStage = "new"
+    last_activity_label: str | None = Field(default=None, max_length=60)
+
+
+class LeadListVisual(ResponseModel):
+    """Leads waiting for a reply, best score first (list_contacts with awaiting_reply, VIS-08)."""
+
+    kind: Literal["lead_list"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    total: int = Field(ge=0)  # all that match, not only those listed
+    items: list[LeadRow] = Field(max_length=MAX_LEADS)
+    # VIS-12: the conversations "Prepare replies" drafts for, the best scores that have one, at
+    # most LEAD_REPLY_MAX. A draft sends nothing.
+    reply_ids: list[uuid.UUID] = Field(max_length=LEAD_REPLY_MAX)
+    more_route: str | None = Field(default=None, max_length=120, pattern=WORKSPACE_PATH)
+
+
+class TableColumn(ResponseModel):
+    key: str = Field(max_length=30)
+    label: str = Field(max_length=40)
+    align: Align = "left"  # figures are right-aligned
+    format: Literal["text", "count", "percent"] = "text"
+
+
+class TableRow(ResponseModel):
+    """Cells in the order of the table's columns. Text cells may be the customer's own words:
+    render them as text."""
+
+    cells: list[str | float | None] = Field(max_length=MAX_TABLE_COLUMNS)
+
+
+class TableVisual(ResponseModel):
+    """A short table of what a tool listed (VIS-09): at most 10 rows and 6 columns."""
+
+    kind: Literal["table"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    columns: list[TableColumn] = Field(min_length=1, max_length=MAX_TABLE_COLUMNS)
+    rows: list[TableRow] = Field(max_length=MAX_TABLE_ROWS)
+    total: int = Field(ge=0)  # all that match, not only those listed
+    more_route: str | None = Field(default=None, max_length=120, pattern=WORKSPACE_PATH)
+
+
 # GR-38 (docs/architecture/generative-ui/05): built by agent/visuals.py from service data.
 Visual = Annotated[
-    MetricComparisonVisual | RankedPostsVisual | SentimentSummaryVisual,
+    MetricComparisonVisual
+    | RankedPostsVisual
+    | SentimentSummaryVisual
+    | TrendVisual
+    | LeadListVisual
+    | TableVisual,
     Field(discriminator="kind"),
 ]
 VISUAL_ADAPTER: TypeAdapter[Visual] = TypeAdapter(Visual)
@@ -325,6 +478,32 @@ class AgentStep(ResponseModel):
     completed_at: datetime | None = None
 
 
+RangeDays = Literal[7, 30, 90]
+HintPlatform = Literal["all", "instagram", "facebook", "whatsapp"]
+HINT_REPLY_MAX = 3  # the same cap as a lead list's reply_ids
+
+
+class RunHints(RequestModel):
+    """VIS-11: a structured follow-up on the run before it, instead of free text from the screen.
+
+    Two kinds, never mixed: ``range_days`` and/or ``platform`` ask the same question again over
+    another range or platform (the controls on a visual); ``reply_conversation_ids`` asks for a
+    draft reply to each of those conversations (VIS-12). Keys and values are whitelisted; the
+    server words the member's question from them and the planner applies them as if the member had
+    asked. Conversations must be the workspace's (404 otherwise)."""
+
+    range_days: RangeDays | None = None
+    platform: HintPlatform | None = None
+    reply_conversation_ids: list[uuid.UUID] = Field(default_factory=list, max_length=HINT_REPLY_MAX)
+
+    @model_validator(mode="after")
+    def _one_kind(self) -> RunHints:
+        controls = self.range_days is not None or self.platform is not None
+        if controls == bool(self.reply_conversation_ids):  # neither, or both
+            raise ValueError("Give a range or platform, or conversations to prepare replies for.")
+        return self
+
+
 class AgentRun(ResponseModel):
     """A run in the history and a thread's exchanges (FR-AGT-01, FR-AGT-07); also the 202 answer
     of POST …/agent/runs."""
@@ -332,6 +511,8 @@ class AgentRun(ResponseModel):
     id: uuid.UUID
     thread_id: uuid.UUID
     request: str
+    # VIS-11: the structured follow-up this run was made from; None for a typed question.
+    hints: RunHints | None = None
     source: AgentRunSourceName
     mode: AgentModeName
     status: AgentRunStatusName
@@ -353,6 +534,7 @@ class AgentRunDetail(AgentRun):
     """GET …/agent/runs/{run_id}: the run with every step (TR-AGT-08)."""
 
     steps: list[AgentStep]
+    approvals: list[AgentApproval]  # GR-36: the writes it proposed, with their audit events
     plan: dict[str, Any] | None = None  # R2: agent/plan.Plan
     model: str | None = None
     prompt_version: str | None = None
@@ -370,9 +552,21 @@ class AgentRunList(ResponseModel):
 class AgentRunCreate(RequestModel):
     """POST …/agent/runs: a question in plain language (English, Hindi or Hinglish)."""
 
-    request: str = Field(min_length=1, max_length=REQUEST_MAX_CHARS)
+    # Required without ``hints``. With hints the server words the question itself and ignores this.
+    request: str = Field(default="", max_length=REQUEST_MAX_CHARS)
     # Continue one of the caller's threads; omitted: a new thread whose id is this run's id.
     thread_id: uuid.UUID | None = None
+    # VIS-11: a structured follow-up (a visual's range or platform control, "Prepare replies").
+    # Needs a thread to follow up on.
+    hints: RunHints | None = None
+
+    @model_validator(mode="after")
+    def _asked(self) -> AgentRunCreate:
+        if self.hints is None and not self.request:
+            raise ValueError("Write a question.")
+        if self.hints is not None and self.thread_id is None:
+            raise ValueError("A follow-up needs the thread it follows.")
+        return self
 
 
 class AgentThread(ResponseModel):
@@ -491,6 +685,33 @@ class AgentPolicyUpdate(RequestModel):
 # ---- approvals (R2; FR-AGT-09)
 
 
+ApprovalListStatus = Literal["pending", "approved", "rejected", "expired", "superseded", "all"]
+ApprovalEventName = Literal["proposed", "approved", "rejected", "expired", "executed", "failed"]
+ApprovalResourceKind = Literal["automation", "segment"]
+
+
+class ApprovalOutcome(ResponseModel):
+    """What approving did (GR-36). ``ok`` false: the service refused it, nothing was saved, and
+    the approval is still pending so the member can edit it or reject it."""
+
+    ok: bool
+    summary: str  # e.g. "Saved the draft automation “Send the price list”."
+    resource_kind: ApprovalResourceKind | None = None
+    resource_id: uuid.UUID | None = None
+    route: str | None = None  # the screen with the result, relative to /w/{slug}/
+    error_code: str | None = None
+
+
+class ApprovalEvent(ResponseModel):
+    """One line of an approval's audit trail (GR-36): who did what, and when."""
+
+    id: uuid.UUID
+    event: ApprovalEventName
+    actor: Actor | None = None  # None: the agent's own proposal for a deleted user, or an expiry
+    detail: dict[str, Any]
+    created_at: datetime
+
+
 class AgentApproval(ResponseModel):
     """A write waiting for a person: exactly what will happen (recipients, text, scope, count)."""
 
@@ -502,11 +723,20 @@ class AgentApproval(ResponseModel):
     label: str  # the tool in plain words
     tier: RiskTierName
     summary: str  # what will happen, in plain words
-    payload: dict[str, Any]  # {tool, args}: the exact call that will run
+    payload: dict[str, Any]  # {tool, args, preview}: the exact call that will run
+    # GR-36: what it said when it was shown, one line each, and the figures beside it.
+    lines: list[str] = Field(default_factory=list)
+    match_count: int | None = None  # segments: people the filter matched when proposed or approved
+    step_count: int | None = None  # flows
     status: ApprovalStatusName
     expires_at: datetime
+    # GR-36: whether the caller's role may decide it (Approve is disabled when false).
+    can_decide: bool = False
+    requested_by: Actor | None = None
     decided_by: Actor | None = None
     decided_at: datetime | None = None
+    outcome: ApprovalOutcome | None = None
+    events: list[ApprovalEvent] = Field(default_factory=list)
     created_at: datetime
 
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-picker";
+import { FieldDescription, FieldError } from "@/components/ui/field";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 
 /** F-10: the earliest time a message can be scheduled, and the margin before the window closes. */
@@ -76,34 +76,20 @@ export function ScheduleFields({
 }) {
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
-  // Native date and time pickers through Input (D-04): its edge, focus, 16 px text on phones and
-  // 40 px on coarse pointers; `lg` (36 px) is the closest to the old 38 px fields.
+  // The calendar and time pickers (ui/date-picker) take and give the same "YYYY-MM-DD" and "HH:mm"
+  // strings the native inputs did; `lg` (36 px) is the closest to the old 38 px fields.
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <Field id={`${idPrefix}-date`} density="compact">
-          <FieldLabel>Date</FieldLabel>
-          <Input
-            type="date"
-            size="lg"
-            value={value.date}
-            min={minDay}
-            max={maxDay}
-            aria-invalid={Boolean(error)}
-            onChange={(event) => onChange({ ...value, date: event.target.value })}
-          />
-        </Field>
-        <Field id={`${idPrefix}-time`} density="compact">
-          <FieldLabel>Time</FieldLabel>
-          <Input
-            type="time"
-            size="lg"
-            value={value.time}
-            aria-invalid={Boolean(error)}
-            onChange={(event) => onChange({ ...value, time: event.target.value })}
-          />
-        </Field>
-      </div>
+      <DateTimePicker
+        idPrefix={idPrefix}
+        value={value}
+        onChange={onChange}
+        min={minDay}
+        max={maxDay}
+        today={minDay}
+        density="compact"
+        invalid={Boolean(error)}
+      />
       <FieldDescription>Times are in {timeZone.replace(/_/g, " ")}.</FieldDescription>
       <FieldError>{error}</FieldError>
     </div>

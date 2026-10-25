@@ -29,6 +29,7 @@ export function newDraftBody(accounts: SocialAccount[], at: string | null, now: 
     targets: ready.length === 1 ? [{ social_account_id: ready[0].id, caption_override: null }] : [],
     asset_ids: [],
     caption: "",
+    kind: "post",
     first_comment: null,
     publish_at: publishAt,
   };

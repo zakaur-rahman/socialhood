@@ -24,7 +24,9 @@ TRIAL_DAYS: dict[Plan, int] = {"free": 0, "pro": 7, "max": 0}
 
 ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "accounts_per_platform": {"free": 1, "pro": 3, "max": 10},
-    "members": {"free": 1, "pro": 1, "max": 10},
+    # Seats (GR-19): the owner counts, and so does every pending invitation. PD-1, decided by the
+    # owner on 2026-10-24 ("for now"): Free 1, Pro 3, Max 10.
+    "members": {"free": 1, "pro": 3, "max": 10},
     "active_automations": {"free": 3, "pro": 50, "max": None},
     "ai_reply_automations": {"free": False, "pro": True, "max": True},
     "ai_modes": {
@@ -43,10 +45,46 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # metered (PD-2). Proposed values, pending the owner's plan decisions.
     "contact_fields": {"free": 5, "pro": 50, "max": 200},
     "webhook_endpoints": {"free": 1, "pro": 5, "max": 20},  # GR-04 (C-080)
+    # Google Sheets sync (GR-27): Pro and Max only (PD-6, decided 2026-10-24; webhooks stay on
+    # every plan). Set free to True to open it to every plan.
+    "sheets_sync": {"free": False, "pro": True, "max": True},
+    # The public API, API keys and the Zapier app (GR-25, GR-26): Pro and Max only. Outbound
+    # webhooks above stay on every plan. Owner decision PD-6 (2026-10-24).
+    "public_api": {"free": False, "pro": True, "max": True},
     # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.
     "flow_steps": {"free": 5, "pro": 50, "max": 50},
+    # Pages one site crawl reads (GR-35): the plan's cap on a site source's pages. Proposed values,
+    # pending the owner's plan decisions; the characters of knowledge limit still applies on top.
+    "crawl_pages": {"free": 25, "pro": 250, "max": 1000},
+    # Website chat widget (GR-28, PD-7 decided 2026-10-24): on every plan. Free shows "Powered by
+    # Social Hood"; Pro and Max can turn it off. New widget chats a day are capped on every plan
+    # to bound abuse (services/widget/chat.py); the cap counts new visitors, not messages.
+    "widget_remove_branding": {"free": False, "pro": True, "max": True},
+    "widget_conversations_daily": {"free": 50, "pro": 500, "max": 5000},
+    # Recipients a workspace may send WhatsApp broadcasts to in a billing period (GR-23, PD-4:
+    # Pro and Max, not Free; decided 2026-10-24). 0 means the plan has no broadcasts: the 402 is
+    # then entitlement_required, otherwise quota_exceeded. A recipient counts when its message is
+    # handed to the send queue (an attempt), failures included, skipped contacts never.
+    "broadcast_recipients_monthly": {"free": 0, "pro": 2500, "max": 25000},
+    # The product catalogue (GR-31, PD-8: commerce is on Pro and Max, not Free; one line to change).
+    # Without it adding, changing, importing and syncing products is refused with 402
+    # entitlement_required; what exists is still shown and still answers customers.
+    "commerce": {"free": False, "pro": True, "max": True},
+    # Products a workspace may hold, and the rows one CSV import may carry (a product with
+    # variants is one product, each variant a row). Proposed values, pending the owner's plan
+    # decisions: a Shopify sync stops at the product cap and says so.
+    "catalogue_products": {"free": 0, "pro": 1000, "max": 20000},
+    "catalogue_import_rows": {"free": 0, "pro": 500, "max": 5000},
+    # Orders a workspace may create in a calendar month (GR-32; proposed, pending the owner's
+    # confirmation, C-120): counted when the order is made, whatever happens to it after.
+    "orders_monthly": {"free": 0, "pro": 500, "max": 5000},
+    # Sequences (GR-24): sequences that can run at once, and steps in one. Proposed values, pending
+    # the owner's confirmation (C-118): a template step is still a message Meta bills the business
+    # for, and needs the contact's marketing consent, so the plan limits only how many there are.
+    "active_sequences": {"free": 1, "pro": 10, "max": 50},
+    "sequence_steps": {"free": 3, "pro": 10, "max": 20},
 }
 
 

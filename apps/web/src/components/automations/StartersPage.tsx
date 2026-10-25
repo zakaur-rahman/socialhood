@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/errors";
 import { useAutomations, useIceBreakers, useSaveIceBreakers, useSocialAccounts, useSyncIceBreakers } from "@/lib/api/queries";
-import type { IceBreaker } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import type { IceBreaker, Platform } from "@/lib/api/types";
+import { networkName } from "@/lib/automations/limits";
+import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -44,7 +45,7 @@ export function StartersPage() {
   const workspace = useCurrentWorkspace();
   const wid = workspace.id;
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
   const [chosen, setChosen] = useState<string | null>(null);
   const accountId = chosen ?? accounts[0]?.id ?? null;
 
@@ -70,17 +71,34 @@ export function StartersPage() {
       }
     >
       {accountId ? (
-        <Starters key={accountId} wid={wid} slug={workspace.slug} accountId={accountId} />
+        <Starters
+          key={accountId}
+          wid={wid}
+          slug={workspace.slug}
+          accountId={accountId}
+          platform={accounts.find((account) => account.id === accountId)?.platform}
+        />
       ) : (
         <Card className="p-4 text-sm text-fg-secondary">
-          Connect an Instagram account to set conversation starters.
+          Connect an Instagram account or a Facebook Page to set conversation starters.
         </Card>
       )}
     </PageFrame>
   );
 }
 
-function Starters({ wid, slug, accountId }: { wid: string; slug: string; accountId: string }) {
+function Starters({
+  wid,
+  slug,
+  accountId,
+  platform,
+}: {
+  wid: string;
+  slug: string;
+  accountId: string;
+  platform?: Platform;
+}) {
+  const network = networkName(platform);
   const list = useIceBreakers(wid, accountId);
   const options = useAutomations(wid, { accountId, status: null, trigger: "ice_breaker", q: "", sort: "created" });
   const save = useSaveIceBreakers(wid, accountId);
@@ -120,8 +138,8 @@ function Starters({ wid, slug, accountId }: { wid: string; slug: string; account
       {
         onSuccess: (result) => {
           setRows(rowsOf(result.items));
-          if (result.sync_error) toast.error("Saved here, but Instagram didn't take the list.");
-          else toast.success("Saved. Instagram shows these in new chats.");
+          if (result.sync_error) toast.error(`Saved here, but ${network} didn't take the list.`);
+          else toast.success(`Saved. ${network} shows these in new chats.`);
         },
         onError: (caught) => {
           if (caught instanceof ApiError && caught.errors.length > 0) {
@@ -139,7 +157,7 @@ function Starters({ wid, slug, accountId }: { wid: string; slug: string; account
   return (
     <div className="space-y-4">
       <p className="text-sm text-fg-secondary">
-        Up to {max} questions that show at the top of a new chat in the Instagram app. They don&apos;t show on
+        Up to {max} questions that show at the top of a new chat in the {network} app. They don&apos;t show on
         desktop. A tap starts the automation you choose, or the AI answers.
       </p>
       <Card className="space-y-3 p-4">
@@ -191,7 +209,7 @@ function Starters({ wid, slug, accountId }: { wid: string; slug: string; account
         </ul>
         {automations.length === 0 ? (
           <p className="text-xs text-fg-secondary">
-            To start an automation from a tap, make one with the &ldquo;Instagram conversation starter&rdquo;
+            To start an automation from a tap, make one with the &ldquo;{network} conversation starter&rdquo;
             trigger in{" "}
             <Link href={`/w/${slug}/automations` as Route} className="text-brand-fg underline underline-offset-4">
               Automations
@@ -218,6 +236,7 @@ function Starters({ wid, slug, accountId }: { wid: string; slug: string; account
         syncing={sync.isPending}
         onSync={() => sync.mutate(undefined, { onError: (caught) => toastError(caught) })}
         hasStarters={(saved?.length ?? 0) > 0}
+        network={network}
       />
     </div>
   );
@@ -229,25 +248,27 @@ function SyncStatus({
   syncing,
   onSync,
   hasStarters,
+  network,
 }: {
   syncedAt: string | null;
   error: string | null;
   syncing: boolean;
   onSync: () => void;
   hasStarters: boolean;
+  network: string;
 }) {
   if (!hasStarters && !error) return null;
   return (
     <Card className="flex flex-wrap items-center justify-between gap-3 p-4" role="status">
       <p className={error ? "text-sm text-danger-fg" : "text-sm text-fg-secondary"}>
         {error
-          ? `Instagram didn't take the list: ${error}`
+          ? `${network} didn't take the list: ${error}`
           : syncedAt
-            ? `On Instagram since ${new Date(syncedAt).toLocaleString()}.`
-            : "Not sent to Instagram yet."}
+            ? `On ${network} since ${new Date(syncedAt).toLocaleString()}.`
+            : `Not sent to ${network} yet.`}
       </p>
       <Button variant="secondary" onClick={onSync} disabled={syncing}>
-        {syncing ? "Sending…" : "Send to Instagram again"}
+        {syncing ? "Sending…" : `Send to ${network} again`}
       </Button>
     </Card>
   );

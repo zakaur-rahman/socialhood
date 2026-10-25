@@ -1,4 +1,5 @@
 import { Check, Coins } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 import { cn } from "@/lib/utils";
 
 import { MovingBorderFrame } from "./effects/moving-border";
-import { Container, CtaLink, SectionHeading } from "./primitives";
+import { Container, CtaLink, MARKETING_CARD_GLASS, SectionHeading } from "./primitives";
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -45,12 +46,12 @@ function PlanCardView({ card, index }: { card: PlanCard; index: number }) {
     <li data-reveal style={{ "--reveal-delay": `${index * 100}ms` } as CSSProperties} className="relative flex flex-col">
       {featured ? (
         // C-068: Pro's edge carries a moving brand glow (still with reduced motion).
-        <MovingBorderFrame className="flex-1 shadow-2xl shadow-brand/15">{body}</MovingBorderFrame>
+        <MovingBorderFrame className="flex-1 shadow-glow">{body}</MovingBorderFrame>
       ) : (
         <div
           className={cn(
             "flex-1 rounded-2xl border bg-panel transition-colors duration-slow",
-            card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel/50",
+            card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel-glass",
           )}
         >
           {body}
@@ -122,13 +123,14 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
  * the API; without one the card says the price is shown at sign-up. Pro's card has the moving
  * border (C-068); Max is "Coming soon".
  */
-export function Pricing({ pricing }: { pricing: PricingData }) {
+export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; headingLevel?: 1 | 2 }) {
   const { free, pro } = pricing.credits;
   return (
     <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="pricing-title"
+          level={headingLevel}
           eyebrow="Pricing"
           title="Start free, upgrade when you grow"
           intro="Pro adds Auto replies, more accounts, more automations and more AI credits. Cancel anytime: Pro stays until the end of the period you've paid for."
@@ -140,11 +142,19 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
         </ul>
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-fg-secondary">
           {pricing.source === "fallback" ? "Prices couldn't be loaded just now; you'll see the current price when you sign up. " : null}
+          {headingLevel === 2 ? (
+            <>
+              <Link href="/pricing" className="font-medium text-brand-fg underline-offset-4 hover:underline">
+                Compare every plan limit
+              </Link>
+              .{" "}
+            </>
+          ) : null}
           Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees,
           which Meta charges directly to your business.
         </p>
 
-        <div data-reveal className="mx-auto mt-12 max-w-5xl rounded-2xl border border-line bg-panel/60 p-6 sm:p-8">
+        <div data-reveal className={cn(MARKETING_CARD_GLASS, "mx-auto mt-12 max-w-5xl p-6 sm:p-8")}>
           <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div>
               <div className="flex items-center gap-3">

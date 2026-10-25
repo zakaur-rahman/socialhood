@@ -136,6 +136,16 @@ export function TargetAvatars({ post }: { post: Pick<ScheduledPostSummary, "targ
   );
 }
 
+/** GR-39: marks a Story in lists and on the calendar. Nothing for any other post. */
+export function StoryBadge({ post, className }: { post: Pick<ScheduledPostSummary, "format">; className?: string }) {
+  if (post.format !== "story") return null;
+  return (
+    <Badge size="md" className={className} data-testid="story-badge">
+      Story
+    </Badge>
+  );
+}
+
 export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummary, "status">; className?: string }) {
   const status = POST_STATUS[post.status];
   return (

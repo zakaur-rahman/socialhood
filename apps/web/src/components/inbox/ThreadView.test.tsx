@@ -7,6 +7,7 @@ import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { Conversation, Message, SendMessage } from "@/lib/api/types";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
 import { toZonedInputs } from "@/lib/tz";
+import { dayLabel } from "@/lib/day";
 import { scheduleCard } from "@/test/agent";
 import { account, conversation, json, listItem, message, noContent, problem, renderWithApi, type Call } from "@/test/api";
 
@@ -226,7 +227,7 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
     const popover = await screen.findByRole("dialog");
     expect(within(popover).getByText(/Prepared by Ask Social Hood/)).toBeInTheDocument();
     const expected = toZonedInputs(new Date(sendAt), "Asia/Kolkata");
-    expect(within(popover).getByLabelText("Date")).toHaveValue(expected.date);
+    expect(within(popover).getByLabelText("Date")).toHaveTextContent(dayLabel(expected.date) ?? "");
     expect(within(popover).getByLabelText("Time")).toHaveValue(expected.time);
     expect(screen.getByRole("textbox", { name: /Reply to/ })).toHaveValue("Your order ships Monday.");
     // Taken: it doesn't open again for the same hand-off.

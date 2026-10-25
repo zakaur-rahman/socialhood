@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { Heart, MessageSquare } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -18,8 +18,9 @@ export function postHref(slug: string, postId: string, filter?: "needs_reply"): 
 }
 
 /**
- * FR-CMT-03 / UX-SCR-05: square thumbnail, date, comment count, the 6 px sentiment bar and the spam
- * count. post.updated replaces the post in the cache, so the card follows new comments live (F-12).
+ * FR-CMT-03 / UX-SCR-05: square thumbnail, date, like and comment counts, the 6 px sentiment bar and
+ * the spam count. Likes come from the platform at the last sync; none when it gives no count (hidden
+ * likes, not synced yet), so a missing count never reads as 0. post.updated replaces the post in the cache, so the card follows new comments live (F-12).
  */
 export function PostCard({
   post,
@@ -57,10 +58,19 @@ export function PostCard({
               <time dateTime={post.posted_at} className="truncate text-fg-secondary">
                 {date}
               </time>
-              <span className="inline-flex shrink-0 items-center gap-1 font-medium text-fg" data-testid="comment-count">
-                <MessageSquare className="size-3.5 text-fg-secondary" aria-hidden />
-                <span className="tabular-nums">{formatCount(stats.total)}</span>
-                <span className="sr-only">{stats.total === 1 ? " comment" : " comments"}</span>
+              <span className="inline-flex shrink-0 items-center gap-3 font-medium text-fg">
+                {post.like_count != null ? (
+                  <span className="inline-flex items-center gap-1" data-testid="like-count">
+                    <Heart className="size-3.5 text-fg-secondary" aria-hidden />
+                    <span className="tabular-nums">{formatCount(post.like_count)}</span>
+                    <span className="sr-only">{post.like_count === 1 ? " like" : " likes"}</span>
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center gap-1" data-testid="comment-count">
+                  <MessageSquare className="size-3.5 text-fg-secondary" aria-hidden />
+                  <span className="tabular-nums">{formatCount(stats.total)}</span>
+                  <span className="sr-only">{stats.total === 1 ? " comment" : " comments"}</span>
+                </span>
               </span>
             </div>
             {waiting > 0 ? (

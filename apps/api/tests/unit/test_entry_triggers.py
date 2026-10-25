@@ -152,9 +152,11 @@ def test_an_ad_click_automation_answers_any_ad_or_needs_an_ad_id() -> None:
 
 
 def test_the_link_is_the_accounts_ig_me_address_with_the_code() -> None:
-    acct: Any = SimpleNamespace(username="maple.bakery", platform_account_id="178")
+    acct: Any = SimpleNamespace(
+        platform="instagram", username="maple.bakery", platform_account_id="178"
+    )
     assert link_url(acct, "spring") == "https://ig.me/m/maple.bakery?ref=spring"
-    bare: Any = SimpleNamespace(username=None, platform_account_id="178")
+    bare: Any = SimpleNamespace(platform="instagram", username=None, platform_account_id="178")
     assert link_url(bare, "x1y") == "https://ig.me/m/178?ref=x1y"
 
 

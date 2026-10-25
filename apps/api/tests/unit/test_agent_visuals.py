@@ -21,9 +21,12 @@ from socialhood.schemas.agent import (
     MAX_VISUALS,
     VISUAL_ADAPTER,
     AgentRun,
+    LeadListVisual,
     MetricComparisonVisual,
     RankedPostsVisual,
     SentimentSummaryVisual,
+    TableVisual,
+    TrendVisual,
     VisualMetricKey,
 )
 from socialhood.schemas.analytics import (
@@ -358,14 +361,19 @@ def test_an_invalid_stored_visual_is_dropped_not_raised(stored: Any) -> None:
 
 
 def test_the_union_is_closed_and_kind_is_required() -> None:
-    for model in (MetricComparisonVisual, RankedPostsVisual, SentimentSummaryVisual):
+    models = (
+        MetricComparisonVisual,
+        RankedPostsVisual,
+        SentimentSummaryVisual,
+        TrendVisual,
+        LeadListVisual,
+        TableVisual,
+    )
+    for model in models:
         assert model.model_fields["kind"].is_required()  # the web narrows on it
     with pytest.raises(ValidationError):
         VISUAL_ADAPTER.validate_python({"kind": "table", "title": "x"})
-    assert {
-        get_args(m.model_fields["kind"].annotation)[0]
-        for m in (MetricComparisonVisual, RankedPostsVisual, SentimentSummaryVisual)
-    } == set(visuals.KINDS)
+    assert {get_args(m.model_fields["kind"].annotation)[0] for m in models} == set(visuals.KINDS)
 
 
 def test_every_metric_has_a_label_and_the_names_agree_across_schemas() -> None:

@@ -80,6 +80,10 @@ class ToolContext:
     now: datetime  # the run's clock (UTC)
     principal: Principal
     run_id: uuid.UUID
+    # The step this call is, set by the executor before the handler runs (GR-36). A proposal tool
+    # files its approval against it; both are None outside an executed step.
+    step_id: uuid.UUID | None = None
+    step_key: str | None = None  # the step's idempotency key, "{run_id}:{ordinal}"
 
 
 # ---------------------------------------------------------------- what a tool returns

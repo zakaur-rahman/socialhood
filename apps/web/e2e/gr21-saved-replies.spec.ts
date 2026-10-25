@@ -5,7 +5,7 @@ import { expect, test, unique } from "./support/fixtures";
  * for the customer, with no {braces} left. Owners add replies in Settings. A flow can send one, read
  * when the step runs; a deleted reply fails that step with a plain reason.
  */
-type Run = { id: string; result: string; error_message: string | null; conversation_id: string | null };
+type Run = { id: string; result: string; error: { code: string; message: string } | null; conversation_id: string | null };
 type Message = { direction: string; text: string | null };
 
 test.describe("GR-21 saved replies", () => {
@@ -94,6 +94,6 @@ test.describe("GR-21 saved replies", () => {
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: keyword, fromId: "e2e_gr21_flow_b" });
     await expect.poll(async () => (await runs()).items.length, { timeout: 30_000 }).toBe(2);
     const failed = (await runs()).items.find((run) => run.result === "failed");
-    expect(failed?.error_message).toContain("saved reply");
+    expect(failed?.error?.message).toContain("saved reply");
   });
 });

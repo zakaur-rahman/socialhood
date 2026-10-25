@@ -126,7 +126,7 @@ function MonthCell({
       className={cn(
         "relative flex min-h-28 min-w-0 flex-col gap-1 border-b border-line p-1.5",
         !lastColumn && "border-r",
-        !inMonth && "bg-canvas/30",
+        !inMonth && "bg-canvas-veil",
         targeted && "outline-2 -outline-offset-2 outline-brand",
       )}
     >

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
+from socialhood.auth.accept_invitations import accept_for_user
 from socialhood.auth.deps import CurrentUser, Session
 from socialhood.auth.memberships import memberships_for
 from socialhood.schemas.workspaces import Me, WorkspaceList, WorkspaceSummary
@@ -11,7 +12,13 @@ from socialhood.schemas.workspaces import Me, WorkspaceList, WorkspaceSummary
 router = APIRouter(prefix="/v1", tags=["me"])
 
 
-async def _summaries(session: Session, user: CurrentUser) -> list[WorkspaceSummary]:
+async def _summaries(
+    request: Request, session: Session, user: CurrentUser
+) -> list[WorkspaceSummary]:
+    # GR-19: someone signing in who was invited joins the workspace before the list is built.
+    await accept_for_user(
+        session, user, http=request.app.state.http, settings=request.app.state.settings
+    )
     return [
         WorkspaceSummary.model_validate(
             {
@@ -28,18 +35,19 @@ async def _summaries(session: Session, user: CurrentUser) -> list[WorkspaceSumma
 
 
 @router.get("/me", operation_id="get_me")
-async def get_me(user: CurrentUser, session: Session) -> Me:
+async def get_me(request: Request, user: CurrentUser, session: Session) -> Me:
     """The current user, provisioned on first sight (TR-AUTH-03), with their workspaces."""
+    workspaces = await _summaries(request, session, user)  # may join an invited workspace
     return Me(
         id=user.id,
         email=user.email,
         name=user.name,
         avatar_url=user.avatar_url,
         last_workspace_id=user.last_workspace_id,
-        workspaces=await _summaries(session, user),
+        workspaces=workspaces,
     )
 
 
 @router.get("/workspaces", operation_id="list_workspaces")
-async def list_workspaces(user: CurrentUser, session: Session) -> WorkspaceList:
-    return WorkspaceList(items=await _summaries(session, user))
+async def list_workspaces(request: Request, user: CurrentUser, session: Session) -> WorkspaceList:
+    return WorkspaceList(items=await _summaries(request, session, user))

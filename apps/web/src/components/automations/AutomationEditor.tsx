@@ -45,6 +45,7 @@ import {
   useFlowFields,
   useFlowTags,
   usePauseAutomation,
+  useSavedReplies,
   useSocialAccounts,
   useStartFlow,
   useWorkspace,
@@ -55,6 +56,7 @@ import {
   DEFAULT_NAME,
   fieldErrors,
   firstIncompleteStep,
+  isCommentTrigger,
   stepComplete,
   stepOfField,
   stepsWithErrors,
@@ -63,7 +65,7 @@ import {
   type FieldErrors,
   type StepId,
 } from "@/lib/automations/definition";
-import { instagramAccounts } from "@/lib/automations/accounts";
+import { automationAccounts } from "@/lib/automations/accounts";
 import { flowComplete, placeErrors, type StepErrors } from "@/lib/automations/flow";
 import { queueBanner, shortDateTime, STATUS_LABEL, SURGE_LABEL } from "@/lib/automations/format";
 import { errorMessage } from "@/lib/copy";
@@ -138,9 +140,11 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const details = useWorkspace(wid);
   const disclosure = details.data?.automation_disclosure ?? null;
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
 
   const { draft, update, flush: flushSettings, discard, status: settingsStatus, error } = useAutosave(wid, initial);
+  // GR-29: a Facebook Page has other limits and no follow check, so the steps are told the platform.
+  const platform = accounts.find((item) => item.id === draft.social_account_id)?.platform;
   // GR-13: an automation saved as a flow edits its steps; one on its message settings shows its
   // message as the first step, and the first step added turns it into a flow.
   const flow = useFlowDraft(wid, server);
@@ -148,6 +152,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const startFlow = useStartFlow(wid, server.id);
   const flowTags = useFlowTags(wid, flowMode);
   const flowFields = useFlowFields(wid, flowMode);
+  const flowSavedReplies = useSavedReplies(wid, flowMode);
   const flowFlush = flow.flush;
   const flush = useCallback(async () => (await flushSettings()) && (await flowFlush()), [flushSettings, flowFlush]);
   const status: SaveStatus =
@@ -197,12 +202,15 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
       disclosure,
       fields: (flowFields.data ?? []).map((field) => ({ key: field.key, type: field.type })),
       tagIds: new Set((flowTags.data ?? []).map((tag) => tag.id)),
+      savedReplyIds: flowSavedReplies.data ? new Set(flowSavedReplies.data.items.map((reply) => reply.id)) : undefined,
+      commentFirstId: isCommentTrigger(draft.trigger) ? (flow.tree[0]?.id ?? null) : undefined,
+      platform,
     });
   const flowErrored = Object.keys(flow.saveErrors).length > 0 || Object.keys(flowActivationErrors).length > 0;
   const stateOf = (step: StepId): StepState => {
     if (errorSteps.has(step) || (step === "then" && flowErrored)) return "error";
     if (step === "then" && flowMode) return flowReady ? "complete" : "incomplete";
-    return stepComplete(step, draft, disclosure) ? "complete" : "incomplete";
+    return stepComplete(step, draft, disclosure, platform) ? "complete" : "incomplete";
   };
   const unplaced = Object.entries(errors).filter(([field]) => {
     const step = stepOfField(field);
@@ -422,6 +430,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                         errors={errors}
                         state={state}
                         plan={workspace.plan}
+                        platform={platform}
                         disclosure={disclosure}
                         upload={upload}
                         flow={flow}
@@ -437,6 +446,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                         errors={errors}
                         state={state}
                         plan={workspace.plan}
+                        platform={platform}
                         disclosure={disclosure}
                         mediaUrl={mediaUrl}
                         onMediaChange={setMediaUrl}
@@ -494,6 +504,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             beforeTest={flush}
             flow={flowMode ? flow.definition : null}
             tags={flowTags.data ?? []}
+            savedReplies={flowSavedReplies.data?.items}
           />
         </aside>
         </Card>

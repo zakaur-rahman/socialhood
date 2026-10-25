@@ -9,21 +9,34 @@ comparison"). Pure functions shared by the snapshot jobs and the analytics queri
 - Windows do not overlap, so a post has at most one window due at a time.
 - Formats: Reels are compared with Reels, feed posts (images, carousels, feed videos) with feed
   posts, stories with stories.
+- A Story is gone after 24 h, so it has its own windows (1 h, 6 h and 23 h, ``STORY_WINDOWS``) and
+  its grace ends before it expires; the functions below take the post's ``windows``.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from datetime import datetime, timedelta
 from typing import Literal
 
-from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, SnapshotWindow
+from socialhood.models.analytics import (
+    LIVE_COUNT_WINDOWS,
+    STORY_WINDOWS,
+    WINDOW_AGES,
+    SnapshotWindow,
+)
 from socialhood.models.media import MediaType
 from socialhood.schemas.analytics import AgeName
 
-WINDOWS: tuple[SnapshotWindow, ...] = tuple(sorted(WINDOW_AGES, key=WINDOW_AGES.__getitem__))
+# The windows of feed posts and Reels: every window but the Story-only one (23 h).
+STORY_ONLY_WINDOWS = frozenset({SnapshotWindow.H23})
+WINDOWS: tuple[SnapshotWindow, ...] = tuple(
+    sorted((w for w in WINDOW_AGES if w not in STORY_ONLY_WINDOWS), key=WINDOW_AGES.__getitem__)
+)
 MIN_GRACE = timedelta(minutes=30)
+STORY_LIFETIME = timedelta(hours=24)
+STORY_READ_MARGIN = timedelta(minutes=10)  # a Story's last reading ends this long before it goes
 # The 72 h run and every later one marks the post's earlier snapshots final (FR-ANL-01): by then
 # Instagram's lag (up to 48 h) has passed for everything read at 24 h.
 FINAL_FROM = SnapshotWindow.H72
@@ -39,33 +52,53 @@ FORMATS: dict[FormatName, tuple[str, ...]] = {
 }
 
 
-def grace(window: SnapshotWindow) -> timedelta:
-    """How long after it is due a window may still be captured."""
-    return max(MIN_GRACE, WINDOW_AGES[window] / 4)
+def grace(window: SnapshotWindow, *, story: bool = False) -> timedelta:
+    """How long after it is due a window may still be captured. A Story's windows end before the
+    Story is taken down (the 23 h reading has 50 minutes)."""
+    wide = max(MIN_GRACE, WINDOW_AGES[window] / 4)
+    if not story:
+        return wide
+    return min(wide, STORY_LIFETIME - WINDOW_AGES[window] - STORY_READ_MARGIN)
 
 
 # Posts older than this have no window left to capture.
 SNAPSHOT_HORIZON = max(WINDOW_AGES[w] + grace(w) for w in WINDOWS)
+STORY_HORIZON = max(WINDOW_AGES[w] + grace(w, story=True) for w in STORY_WINDOWS)
 
 
-def due_window(posted_at: datetime, taken: Collection[str], now: datetime) -> SnapshotWindow | None:
+def windows_for(media_type: str) -> tuple[SnapshotWindow, ...]:
+    """The snapshot windows of a post of this media type."""
+    return STORY_WINDOWS if media_type == MediaType.STORY else WINDOWS
+
+
+def due_window(
+    posted_at: datetime,
+    taken: Collection[str],
+    now: datetime,
+    windows: Sequence[SnapshotWindow] = WINDOWS,
+) -> SnapshotWindow | None:
     """The window to capture for a post now, if any: due, inside its grace, not taken yet."""
-    for window in WINDOWS:
+    story = tuple(windows) == STORY_WINDOWS
+    for window in windows:
         due = posted_at + WINDOW_AGES[window]
-        if due <= now < due + grace(window) and window not in taken:
+        if due <= now < due + grace(window, story=story) and window not in taken:
             return window
     return None
 
 
-def reached(posted_at: datetime, now: datetime) -> list[SnapshotWindow]:
+def reached(
+    posted_at: datetime, now: datetime, windows: Sequence[SnapshotWindow] = WINDOWS
+) -> list[SnapshotWindow]:
     """The windows a post is old enough for, youngest first."""
-    return [w for w in WINDOWS if posted_at + WINDOW_AGES[w] <= now]
+    return [w for w in windows if posted_at + WINDOW_AGES[w] <= now]
 
 
-def closest(taken: Collection[str], target: SnapshotWindow) -> SnapshotWindow | None:
+def closest(
+    taken: Collection[str], target: SnapshotWindow, windows: Sequence[SnapshotWindow] = WINDOWS
+) -> SnapshotWindow | None:
     """Of the windows a post has, the one nearest ``target`` (by ratio of ages; the younger one
     on a tie), or None when it has none."""
-    have = [w for w in WINDOWS if w in taken]
+    have = [w for w in windows if w in taken]
     if not have:
         return None
     goal = WINDOW_AGES[target].total_seconds()
@@ -73,7 +106,11 @@ def closest(taken: Collection[str], target: SnapshotWindow) -> SnapshotWindow | 
 
 
 def shown_age(
-    posted_at: datetime, taken: Collection[str], requested: AgeName | None, now: datetime
+    posted_at: datetime,
+    taken: Collection[str],
+    requested: AgeName | None,
+    now: datetime,
+    windows: Sequence[SnapshotWindow] = WINDOWS,
 ) -> AgeName:
     """The age a post's own figures are shown (and compared) at.
 
@@ -86,18 +123,22 @@ def shown_age(
     """
     if requested == "lifetime":
         return "lifetime"
-    old_enough = reached(posted_at, now)
+    old_enough = reached(posted_at, now, windows)
     if not old_enough:
         return SnapshotWindow.H1.value
     target = SnapshotWindow(requested) if requested in old_enough else old_enough[-1]
     if target in taken:
         return target.value
-    near = closest(taken, target)
+    near = closest(taken, target, windows)
     return (near or target).value
 
 
 def exact_age(
-    posted_at: datetime, taken: Collection[str], requested: AgeName, now: datetime
+    posted_at: datetime,
+    taken: Collection[str],
+    requested: AgeName,
+    now: datetime,
+    windows: Sequence[SnapshotWindow] = WINDOWS,
 ) -> AgeName | None:
     """The age a post joins a ranking at: ``requested`` when it has a snapshot there; when it is
     younger than that, its latest snapshot; otherwise None (it is left out)."""
@@ -108,7 +149,7 @@ def exact_age(
         return window.value
     if posted_at + WINDOW_AGES[window] <= now:
         return None
-    younger = [w for w in WINDOWS if w in taken and WINDOW_AGES[w] < WINDOW_AGES[window]]
+    younger = [w for w in windows if w in taken and WINDOW_AGES[w] < WINDOW_AGES[window]]
     return younger[-1].value if younger else None
 
 

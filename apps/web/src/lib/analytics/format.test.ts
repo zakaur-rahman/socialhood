@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import { comparison, performance } from "@/test/api";
 
 import {
+  agesFor,
   AGES,
   atAge,
   baselineText,
   diffTone,
   diffWords,
+  figuresOf,
   formatDiff,
+  formatFigure,
   formatMetric,
   notEnoughHistory,
   youngerNote,
@@ -82,5 +85,41 @@ describe("the age used is always stated (agent-architecture §6)", () => {
     expect(notEnoughHistory(comparison({ baseline_size: 0, enough_history: false }))).toBe(
       "No earlier feed posts have figures at 24 h yet. Comparisons need at least 3.",
     );
+  });
+});
+
+describe("Story and Page post figures (C-131)", () => {
+  it("reads a Story at 1 h, 6 h and 23 h", () => {
+    expect(agesFor("story")).toEqual(["1h", "6h", "23h", "lifetime"]);
+    expect(agesFor("image")).toEqual(AGES);
+    expect(atAge("23h")).toBe("at 23 h");
+  });
+
+  it("lists a Story's own figures, replies and taps included", () => {
+    const story = performance({
+      media_type: "story",
+      age: "23h",
+      metrics: { reach: 900, views: 1100, likes: null, comments: null, shares: 7, saves: null, engagement_rate: null },
+      extra_metrics: { replies: 5, taps_forward: 700, taps_back: 80, swipes_forward: 40, exits: 60, clicks: null },
+    });
+    const figures = figuresOf(story);
+    expect(figures.map((figure) => figure.label)).toEqual([
+      "Reach",
+      "Views",
+      "Shares",
+      "Replies",
+      "Taps forward",
+      "Taps back",
+      "Swipes forward",
+      "Exits",
+    ]);
+    expect(figures.map(formatFigure)).toEqual(["900", "1,100", "7", "5", "700", "80", "40", "60"]);
+  });
+
+  it("adds a Page post's clicks to the usual figures, and nothing for a post without them", () => {
+    expect(figuresOf(performance()).map((figure) => figure.key)).not.toContain("clicks");
+    const page = performance({ extra_metrics: { replies: null, taps_forward: null, taps_back: null, swipes_forward: null, exits: null, clicks: 31 } });
+    const figures = figuresOf(page);
+    expect(figures[figures.length - 1]).toMatchObject({ key: "clicks", label: "Clicks", value: 31 });
   });
 });

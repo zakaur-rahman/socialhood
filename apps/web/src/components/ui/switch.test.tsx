@@ -10,7 +10,7 @@ describe("Switch", () => {
   it("is brand when on and pressed inside an --input edge when off", () => {
     render(<Switch aria-label="Active" />);
     const control = screen.getByRole("switch", { name: "Active" });
-    expect(control).toHaveClass("data-checked:bg-brand", "data-checked:border-transparent", "data-unchecked:bg-pressed", "data-unchecked:border-input");
+    expect(control).toHaveClass("data-checked:bg-brand", "data-checked:border-transparent", "data-unchecked:bg-pressed", "data-unchecked:border-line-control");
   });
 
   it("never fills its track with --input (UI-018 moves --input to a 40% control edge)", () => {

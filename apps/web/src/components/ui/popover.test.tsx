@@ -31,7 +31,7 @@ describe("Popover (UI-013)", () => {
     await user.click(screen.getByRole("button", { name: "Why this reply?" }));
     await screen.findByRole("dialog");
     expect(content()).toHaveClass(...words(FLOATING_SURFACE));
-    expect(content()).toHaveClass("shadow-floating", "ring-1", "ring-line", "bg-popover", "rounded-lg", "w-72");
+    expect(content()).toHaveClass("shadow-floating", "ring-1", "ring-line", "glass-float", "rounded-lg", "w-72");
     expect(content()).not.toHaveClass("shadow-md", "shadow-xl", "ring-foreground/10");
   });
 

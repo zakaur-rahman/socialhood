@@ -67,7 +67,7 @@ weeks, **L** a month or more.
 | O-8 | **WhatsApp billing currency:** keep each business account in INR | Before 2026-12-31 | Meta stops delivering for Indian accounts not moved to INR from 2027-01-01 |
 | O-9 | **Pricing:** set the Pro price in Dodo; take the plan decisions in section C | Before launch | My suggestion is ₹1,500 to ₹2,500 (competitors.md) |
 | O-10 | **Later submissions:** Facebook Pages permissions (GR-29); Google OAuth verification if Sheets is native (GR-27); a Shopify app listing (GR-31) | When those waves start | |
-| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional |
+| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional. **Not done (2026-10-24):** GR-23 is built and merged behind the server setting `BROADCASTS_ENABLED`, off by default; turn it on in production only after this check |
 
 ---
 
@@ -77,14 +77,14 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 
 | ID | Decision | Options | Needed by |
 |---|---|---|---|
-| PD-1 | Team seats per plan | **Free 1, Pro 3, Max 10** (today Free 1, Pro 1, Max 10) · Pro 5 | GR-19 |
+| PD-1 | Team seats per plan | **Decided 2026-10-24 ("for now"): Free 1, Pro 3, Max 10** (was Free 1, Pro 1, Max 10; the alternative was Pro 5) | GR-19 |
 | PD-2 | Contacts metering | **Never meter contacts; flat plans** (the competitive edge) · a soft cap | GR-02 |
-| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell | GR-23 |
-| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |
+| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell. **Decided 2026-10-24: the first.** The cost shown on a broadcast is an estimate from Meta's rate card, not a charge | GR-23 |
+| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only. **Decided 2026-10-24: the first**: Pro 2,500 recipients a month, Max 25,000, none on Free (`broadcast_recipients_monthly` in `billing/plans.py`) | GR-23 |
 | PD-5 | Flow branching by plan | **All plans, with a step cap on Free** (for example 5 steps) · Pro only | GR-13 |
-| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Pro and Max** · webhooks on Free too | GR-04 |
-| PD-7 | Website chat widget | **Pro and Max, with "Powered by Social Hood" on Free** · paid only | GR-28 |
-| PD-8 | Commerce (catalogue, payments) | **Pro and Max** · Max only | GR-31 |
+| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Decided 2026-10-24 ("for now"): webhooks on all plans (Free 1, Pro 5, Max 20 endpoints); Sheets, API and Zapier on Pro and Max** | GR-04 |
+| PD-7 | Website chat widget | **Decided 2026-10-24 (C-111): on every plan; Free shows "Powered by Social Hood", Pro and Max can turn it off; abuse limits on all plans.** Was: Pro and Max with the link on Free · paid only | GR-28 |
+| PD-8 | Commerce (catalogue, payments) | **Pro and Max** · Max only. **Decided: the first** (`commerce` in `billing/plans.py`, C-116) | GR-31 |
 | PD-9 | Max plan contents at launch | **Team, broadcasts and higher quotas, so Max goes on sale** (today "Coming soon") · keep Max hidden | Wave 4 |
 | PD-10 | Contacts across channels | **One contact per channel identity; link them by hand later** (P6 decides automatic matching) · automatic matching by phone or email now | GR-02 |
 
@@ -426,7 +426,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Done when:** an agent invited in e2e can reply but gets 403 on automations and billing, and the
   UI hides what the role can't do.
 
-#### GR-20 · Assignment · M · needs GR-19
+#### GR-20 · Assignment · M · needs GR-19 · built 2026-10-25 (C-117)
 - **Do:**
   - Assign a conversation to a member, or to nobody.
   - An "Assigned to me" view and filter.
@@ -453,7 +453,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - Automations may require "inside hours" as a condition.
 - **Done when:** a message at 23:00 gets the away reply once and the Auto setting is respected.
 
-#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4
+#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4 · built 2026-10-24 behind `BROADCASTS_ENABLED` (C-112)
 - **Platform:**
   - Only approved templates, and only to contacts with marketing opt-in.
   - Meta prices per message by category (marketing, utility); India is billed in INR from 2026.
@@ -476,7 +476,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Done when:** a sandbox broadcast to 3 opted-in contacts reports each status, skips the
   opted-out one, and a STOP reply revokes consent.
 
-#### GR-24 · Sequences (multi-step follow-ups) · M · needs GR-03 and GR-23 · R3, brought forward
+#### GR-24 · Sequences (multi-step follow-ups) · M · needs GR-03 and GR-23 · R3, brought forward · built 2026-10-25 (C-118)
 - **Do:**
   - A sequence is timed steps after an entry event (captured, tagged, broadcast replied).
   - WhatsApp steps outside the window use templates and need opt-in. Instagram steps run only
@@ -509,7 +509,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   webhook machinery.
 - **Done when:** a capture appears as a row within a minute.
 
-#### GR-28 · Website chat widget · L · needs PD-7
+#### GR-28 · Website chat widget · L · PD-7 decided (C-110)
 - **Why:** Spur, respond.io and Tidio have one. We already own the inbox, the knowledge-based AI,
   the analysis and realtime, so a web channel reuses all of it.
 - **Do:**
@@ -529,10 +529,21 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Adds:** every wave 2 to 4 trigger and step works on Messenger where Meta allows (verify each).
 - It needs the second App Review submission (O-10).
 
+#### GR-39 · Instagram Story scheduling · S–M · owner request 2026-10-24
+- A "Story" post type for Instagram accounts beside image, Reel and carousel: one image or one
+  video, no caption, published through the Content Publishing API (`media_type: STORIES`), scheduled,
+  retried and reported like any post. After publishing it shows in the live stories the story-reply
+  picker lists, with its 24 hour expiry.
+- **Out of scope:** WhatsApp Status has no API; Facebook Page Stories (see GR-30).
+- **Done when:** a Story scheduled from the composer publishes on the sandbox, appears in the story
+  picker and says when it disappears.
+
 #### GR-30 · Facebook publishing and best posting times · M · needs GR-29
 - Publish to Pages from the composer.
 - **"Best times" (R2 in the spec):** from each account's own post insights, a suggested slot per
   weekday, shown in the composer and the Posting times drawer.
+- **Built as:** photos, several photos, a video and text posts through our own scheduler; best
+  times from the account's own post engagement (see C-115). Page Stories are not built.
 
 ### Wave 6: commerce
 
@@ -545,6 +556,8 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - A flow step "send product".
 - **Done when:** asking "price of the blue kurta in M?" in the sandbox gets the right price and
   link, from Suggest or Auto.
+- **Built as:** see C-116. PD-8 decided: Pro and Max. Shopify is built but off until the owner's
+  Partner account and listing (O-10); nothing Shopify-side is verified.
 
 #### GR-32 · Payment requests and order capture · L · needs GR-31
 - **Platform:** payments go to the business's own account, never through us.
@@ -557,11 +570,17 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - An Orders list and a timeline entry.
   - The R2 "order capture and UPI payment requests".
 - **Done when:** a test-mode Razorpay link marks the sandbox order paid.
+- **Built as:** see C-120. Razorpay with the business's own keys (partner OAuth needs Technology Partner
+  sign-up); UPI marked paid by hand; the flow step "request payment" is not built. Nothing Razorpay-side
+  is verified (`docs/verification.md` item 38).
 
 #### GR-33 · WhatsApp catalogue messages · M · needs GR-31 · *verify*
 - Sync products to a Meta commerce catalogue, and send product and product-list messages on
   WhatsApp.
 - Check the current Commerce Manager requirements and permissions first.
+- **Built as:** see C-121. Sync, product and product-list messages, the flow step's native message and
+  a cart becoming an order are built against a sandbox catalogue; nothing Meta-side is verified, and
+  which token may call the Catalog API is the open question (`docs/verification.md` item 39).
 
 ### Wave 7: intelligence and AI
 
@@ -588,6 +607,26 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - Every claim must be checkable against our own code and their public pages, as in
   competitors.md.
 
+### Later: agreed, not scheduled
+
+#### GR-40 · Google Drive import, media retention and backup · M · needs O-10 (Google verification) · agreed 2026-10-25
+- **Why:** customers want their scheduled and published posts to stay with them, and some don't
+  want their media kept on our storage.
+- **Not Drive as live storage.** Meta's servers fetch each image or video from a public URL when a
+  post publishes, so a private Drive file can't be used directly; making it public is a privacy
+  risk, and a file deleted, moved or unshared before the scheduled time fails the post. Reading
+  any Drive file (`drive.readonly`) is a restricted scope with a paid yearly security assessment.
+- **Do, in this order:**
+  1. **Import from Google Drive** in the composer and media library, with Google's file picker and
+     the `drive.file` scope (only the files the person picks; the scope GR-27 Sheets already uses).
+  2. **"Don't keep my media"**: a workspace setting that deletes our copy once the post is published
+     (at once or after N days), so the media lives with the customer and publishing stays reliable.
+  3. **Back up to my Drive** (optional): after each post publishes, copy its media and a small file
+     with the caption, time, accounts and links into a "Social Hood" folder in their Drive.
+- **Later still:** Dropbox and OneDrive the same way.
+- **Done when:** a Drive photo picked in the composer publishes; with "don't keep my media" on, our
+  copy is gone after publishing; with backup on, the media and its details appear in their Drive.
+
 ---
 
 ## E. Order, dependencies and lanes
@@ -604,6 +643,7 @@ Wave 4  GR-17 (← GR-02) → GR-18     GR-19 → GR-20     GR-21  GR-22     GR-
 Wave 5  GR-25 → GR-26    GR-27 (← GR-04, GR-14)    GR-28    GR-29 → GR-30
 Wave 6  GR-31 → GR-32, GR-33
 Wave 7  GR-34  GR-35  GR-36 (← GR-03, GR-23)  GR-37
+Later   GR-40 (← GR-27, O-10)
 ```
 
 **Suggested batches,** three parallel lanes as in the UI programme:

@@ -51,6 +51,18 @@ const RULES: Record<Platform, Partial<Record<FileKind, Rule>>> = {
     audio: { label: "Audio files", extensions: ["aac", "m4a", "wav"], maxBytes: 25 * MB },
     file: { label: "Files", extensions: ["pdf"], maxBytes: 25 * MB },
   },
+  // Messenger takes attachments by URL up to 25 MB (unverified, GR-29); the API accepts any format
+  // we store, so these are the ones the file picker offers.
+  facebook: {
+    image: { label: "Images", extensions: ["jpg", "jpeg", "png", "webp", "heic"], maxBytes: 25 * MB },
+    video: { label: "Videos", extensions: ["mp4", "mov", "webm", "avi"], maxBytes: 25 * MB },
+    audio: { label: "Audio files", extensions: ["aac", "m4a", "wav", "mp3", "ogg"], maxBytes: 25 * MB },
+    file: {
+      label: "Files",
+      extensions: ["pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx"],
+      maxBytes: 25 * MB,
+    },
+  },
   whatsapp: {
     image: { label: "Images", extensions: ["jpg", "jpeg", "png", "webp", "heic"], maxBytes: 5 * MB },
     video: { label: "Videos", extensions: ["mp4", "mov", "3gp"], maxBytes: 16 * MB },
@@ -61,9 +73,16 @@ const RULES: Record<Platform, Partial<Record<FileKind, Rule>>> = {
       maxBytes: 100 * MB,
     },
   },
+  // The website chat takes text only (GR-28, C-111: no attachments).
+  web: {},
 };
 
-const PLATFORM_NAME: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
+const PLATFORM_NAME: Record<Platform, string> = {
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "Website chat",
+};
 
 export function extensionOf(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -114,6 +133,8 @@ function acceptFor(platform: Platform): string {
 export const ATTACHMENT_RULES: Record<Platform, { accept: string; check: (file: File) => string | null }> = {
   instagram: { accept: acceptFor("instagram"), check: checkFor("instagram") },
   whatsapp: { accept: acceptFor("whatsapp"), check: checkFor("whatsapp") },
+  facebook: { accept: acceptFor("facebook"), check: checkFor("facebook") },
+  web: { accept: acceptFor("web"), check: checkFor("web") },
 };
 
 /** WhatsApp stickers: 512 x 512 WebP up to 500 KB (the API checks the size in pixels). */

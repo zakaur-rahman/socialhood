@@ -12,12 +12,12 @@ describe("Card (UI-020)", () => {
   it("is a flat panel with a line edge and the xl radius (D-02), standard padding by default", () => {
     render(<Card>Replies this week</Card>);
     const card = slot("card");
-    expect(card).toHaveClass("rounded-xl", "border", "border-line", "bg-panel", "p-(--card-padding)");
+    expect(card).toHaveClass("rounded-xl", "border", "border-line-glass", "glass-card", "p-(--card-padding)");
     expect(card).toHaveAttribute("data-padding", "standard");
     expect(card).toHaveAttribute("data-tone", "default");
     // standard: 16 px, through the variable the card pads with
-    expect(card).toHaveClass("[--card-padding:--spacing(4)]");
-    expect(classList(card).some((c) => /^shadow|^rounded-2xl$|^p-\d|^md:p-/.test(c))).toBe(false);
+    expect(card).toHaveClass("[--card-padding:--spacing(4)]", "shadow-glass");
+    expect(classList(card).some((c) => /^rounded-2xl$|^p-\d|^md:p-/.test(c))).toBe(false);
   });
 
   it("pads 20 px on phones and 24 px from md when roomy", () => {
@@ -32,14 +32,14 @@ describe("Card (UI-020)", () => {
     render(<Card tone="danger">Delete workspace</Card>);
     const card = slot("card");
     expect(card).toHaveAttribute("data-tone", "danger");
-    expect(card).toHaveClass("border", "border-line", "border-l-2", "border-l-danger", "bg-panel");
+    expect(card).toHaveClass("border", "border-line-glass", "border-l-2", "border-l-danger", "glass-card");
   });
 
   it("gives the brand tone a brand-line edge in place of the line edge", () => {
     render(<Card tone="brand">Pro</Card>);
     const card = slot("card");
     expect(card).toHaveAttribute("data-tone", "brand");
-    expect(card).toHaveClass("border", "border-brand-line", "bg-panel");
+    expect(card).toHaveClass("border", "border-brand-line", "glass-card");
     expect(card).not.toHaveClass("border-line");
     expect(card).not.toHaveClass("border-l-2");
   });
@@ -62,7 +62,7 @@ describe("Card (UI-020)", () => {
     const region = screen.getByRole("region", { name: "Payment history" });
     expect(region.tagName).toBe("SECTION");
     expect(region).toHaveAttribute("data-slot", "card");
-    expect(region).toHaveClass("rounded-xl", "bg-panel", "space-y-4", "[--card-padding:--spacing(5)]");
+    expect(region).toHaveClass("rounded-xl", "glass-card", "space-y-4", "[--card-padding:--spacing(5)]");
   });
 });
 

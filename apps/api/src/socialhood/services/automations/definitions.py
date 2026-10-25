@@ -196,6 +196,19 @@ async def create(
         _fill_from_template(automation, template)
     session.add(automation)
     await session.flush()
+    if template is not None and template.flow is not None:
+        # GR-16: a template with a flow starts saved as one (version 1); its steps replace the
+        # message settings, as after a save from the flow editor.
+        session.add(
+            AutomationFlow(
+                automation_id=automation.id,
+                version=1,
+                definition=template.flow.model_dump(mode="json"),
+                created_by_user_id=user_id,
+            )
+        )
+        automation.flow_version = 1
+        await session.flush()
     if template is not None and template.keywords:
         await repo.replace_keywords(session, automation.id, _keywords(template.keywords), now)
     await session.flush()

@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -85,6 +86,12 @@ class Workspace(IdMixin, TimestampMixin, Base):
     automation_disclosure: Mapped[str | None] = mapped_column(Text)
     # GR-18: days without a customer message before a qualified or follow-up lead goes cold.
     lead_cold_days: Mapped[int] = mapped_column(SmallInteger, server_default=text("7"))
+    # GR-20: hand new conversations to available members in turn (off by default), and the member
+    # who got the last one. Read and written under a row lock (services/assignment.py), so two
+    # inbound messages never take the same turn. Not a foreign key: a removed member just means
+    # the next turn starts from the first.
+    assignment_round_robin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    assignment_cursor_user_id: Mapped[uuid.UUID | None] = mapped_column()
 
     __table_args__ = (
         CheckConstraint("lead_cold_days BETWEEN 1 AND 90", name="lead_cold_days"),
@@ -106,6 +113,9 @@ class WorkspaceMember(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     role: Mapped[str] = mapped_column(Text, server_default=text("'owner'"))
+    # GR-20: whether round-robin may hand this member new conversations (per workspace). Manual
+    # assignment ignores it.
+    available_for_assignment: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     notification_prefs: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         server_default=text(

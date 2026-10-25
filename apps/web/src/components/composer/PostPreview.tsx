@@ -8,6 +8,7 @@ import {
   GalleryHorizontal,
   Heart,
   ImageIcon,
+  ThumbsUp,
   MessageCircle,
   MoreHorizontal,
   Music2,
@@ -17,6 +18,7 @@ import { Fragment, useState, type ReactNode } from "react";
 
 import { PostThumb } from "@/components/comments/PostThumb";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldControl, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -135,7 +137,7 @@ export function PostPreview({
      <section aria-labelledby="composer-preview-title">
       <CardHeader className="mb-3">
         <CardTitle id="composer-preview-title">Preview</CardTitle>
-        {captionsDiffer && accounts.length > 1 ? (
+        {(captionsDiffer || new Set(accounts.map((item) => item.platform)).size > 1) && accounts.length > 1 ? (
           <CardAction>
            <Field id="preview-account" orientation="horizontal" density="compact" className="w-auto">
             <FieldLabel>Account</FieldLabel>
@@ -157,6 +159,11 @@ export function PostPreview({
           </CardAction>
         ) : null}
       </CardHeader>
+      {format === "story" ? (
+        <StoryPreview account={account} identity={identity} asset={assets[0]} />
+      ) : account?.platform === "facebook" ? (
+        <FacebookPreview account={account} identity={identity} caption={caption} assets={assets} />
+      ) : (
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
         <TabsList aria-label="Preview">
           <TabsTrigger value="feed">Feed</TabsTrigger>
@@ -179,8 +186,104 @@ export function PostPreview({
           <GridPreview wid={wid} account={account} identity={identity} assets={assets} format={format} />
         </TabsContent>
       </Tabs>
+      )}
      </section>
     </Card>
+  );
+}
+
+/** GR-30: a post as a Facebook Page shows it: the Page, the text, the photos or the video. */
+function FacebookPreview({
+  account,
+  identity,
+  caption,
+  assets,
+}: {
+  account: SocialAccount;
+  identity?: AccountColor;
+  caption: string;
+  assets: AssetInfo[];
+}) {
+  const name = account.display_name ?? account.username ?? "Your Page";
+  const shown = assets.slice(0, 4);
+  return (
+    <article aria-label="Facebook preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
+      <AccountHeader account={account} identity={identity} subtitle="Just now" />
+      <div className="space-y-2 px-3 pb-3 text-sm">
+        {caption.trim() ? (
+          <p className="break-words whitespace-pre-line" data-testid="fb-caption">
+            {caption}
+          </p>
+        ) : (
+          <p className="text-fg-secondary">{name}&apos;s post text shows here.</p>
+        )}
+      </div>
+      {shown.length === 1 ? (
+        <div className="w-full bg-field">
+          <Media asset={shown[0]} className="max-h-96" />
+        </div>
+      ) : shown.length > 1 ? (
+        <ul className="grid grid-cols-2 gap-0.5" aria-label="Photos">
+          {shown.map((asset, index) => (
+            <li key={asset.id} className="relative aspect-square bg-field">
+              <Media asset={asset} />
+              {index === shown.length - 1 && assets.length > shown.length ? (
+                <Badge tone="media" size="md" className="absolute right-2 bottom-2 tabular-nums">
+                  +{assets.length - shown.length}
+                </Badge>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex items-center gap-6 border-t border-line px-3 py-2 text-sm text-fg-secondary" aria-hidden>
+        <span className="flex items-center gap-1.5">
+          <ThumbsUp className="size-4" /> Like
+        </span>
+        <span className="flex items-center gap-1.5">
+          <MessageCircle className="size-4" /> Comment
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Send className="size-4" /> Share
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/** GR-39: the Story as the phone shows it, full screen at 9:16 with no caption. */
+function StoryPreview({
+  account,
+  identity,
+  asset,
+}: {
+  account: SocialAccount | null;
+  identity?: AccountColor;
+  asset: AssetInfo | undefined;
+}) {
+  const name = account?.username ?? account?.display_name ?? "your.account";
+  return (
+    <div>
+      <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
+        {asset ? <Media asset={asset} /> : <NoMedia>Add one photo or video to see the Story.</NoMedia>}
+        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-chip to-transparent p-3" aria-hidden>
+          <div className="h-0.5 w-full rounded-full bg-line-strong">
+            <div className="h-full w-1/3 rounded-full bg-fg" />
+          </div>
+          <div className="flex items-center gap-2">
+            <AccountPicture account={account} identity={identity} size={24} />
+            <span className="truncate text-sm font-semibold">{name}</span>
+            <span className="text-xs text-fg-secondary">Now</span>
+          </div>
+        </div>
+        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-full border border-line-strong px-3 py-2 text-sm text-fg-secondary" aria-hidden>
+          <span className="flex-1">Send message</span>
+          <Heart className="size-4" />
+          <Send className="size-4" />
+        </div>
+      </article>
+      <p className="mt-2 text-center text-xs text-fg-secondary">Disappears 24 hours after it is published.</p>
+    </div>
   );
 }
 
@@ -221,24 +324,28 @@ function FeedPreview({
             </Badge>
             {/* Instagram's white arrows on the photo: 32 px, 40 px on coarse pointers. */}
             {index > 0 ? (
-              <button
+              <Button
                 type="button"
+                variant="inverse"
+                size="icon"
                 aria-label="Previous item"
                 onClick={() => setSlide(index - 1)}
-                className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute inset-y-0 left-2 my-auto"
               >
                 <ChevronLeft className="size-4" aria-hidden />
-              </button>
+              </Button>
             ) : null}
             {index < assets.length - 1 ? (
-              <button
+              <Button
                 type="button"
+                variant="inverse"
+                size="icon"
                 aria-label="Next item"
                 onClick={() => setSlide(index + 1)}
-                className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute inset-y-0 right-2 my-auto"
               >
                 <ChevronRight className="size-4" aria-hidden />
-              </button>
+              </Button>
             ) : null}
           </>
         ) : null}
@@ -296,7 +403,7 @@ function ReelPreview({
   return (
     <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
       {asset ? <Media asset={asset} /> : <NoMedia />}
-      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-canvas/90 to-transparent p-3 pr-12">
+      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-media-heavy to-transparent p-3 pr-12">
         <div className="flex items-center gap-2">
           <AccountPicture account={account} identity={identity} size={24} />
           <span className="truncate text-sm font-semibold">{name}</span>
@@ -355,7 +462,7 @@ function GridPreview({
             <span className="grid size-full place-items-center text-xs text-fg-secondary">New post</span>
           )}
           {Icon ? (
-            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70" aria-hidden>
+            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-chip" aria-hidden>
               <Icon className="size-3.5" />
             </span>
           ) : null}

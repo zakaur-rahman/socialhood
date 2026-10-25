@@ -13,7 +13,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from socialhood.db.tenancy import workspace_scope
-from socialhood.models.agent import APPROVAL_TTL, AgentApproval, AgentPolicy, AgentRun, AgentStep
+from socialhood.models.agent import (
+    APPROVAL_TTL,
+    AgentApproval,
+    AgentApprovalEvent,
+    AgentPolicy,
+    AgentRun,
+    AgentStep,
+)
 
 
 def _uuid(value: uuid.UUID | str) -> uuid.UUID:
@@ -134,6 +141,23 @@ async def make_agent_approval(
             row = AgentApproval(
                 run_id=_uuid(run_id), step_id=_uuid(step_id), **{**defaults, **values}
             )
+            session.add(row)
+            await session.commit()
+            return row.id
+
+
+async def make_approval_event(
+    engine: AsyncEngine,
+    *,
+    workspace_id: uuid.UUID | str,
+    approval_id: uuid.UUID | str,
+    event: str = "proposed",
+    **values: Any,
+) -> uuid.UUID:
+    """One line of an approval's audit trail (GR-36)."""
+    with workspace_scope(_uuid(workspace_id)):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            row = AgentApprovalEvent(approval_id=_uuid(approval_id), event=event, **values)
             session.add(row)
             await session.commit()
             return row.id

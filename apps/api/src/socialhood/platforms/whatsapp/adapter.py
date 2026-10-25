@@ -24,6 +24,7 @@ from socialhood.platforms.base import (
     MediaInsights,
     OutboundAttachment,
     OutboundMessage,
+    OutboundProducts,
     OutboundTemplate,
     PlatformMedia,
     PlatformThread,
@@ -36,6 +37,7 @@ from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.whatsapp.graph import WhatsAppHttp
+from socialhood.platforms.whatsapp.health import NumberHealth, parse_health
 from socialhood.platforms.whatsapp.templates import MessageTemplate, parse_template
 
 CAPABILITIES = frozenset(
@@ -90,12 +92,43 @@ def _template(template: OutboundTemplate) -> dict[str, Any]:
     return {"type": "template", "template": body}
 
 
+def _products(products: OutboundProducts, body: str | None) -> dict[str, Any]:
+    """An ``interactive`` product or product_list message (Meta's documented shapes; unverified
+    against a live number, C-121)."""
+    interactive: dict[str, Any] = {"type": products.type}
+    if products.type == "product_list":
+        interactive["header"] = {"type": "text", "text": products.header or ""}
+    if body:
+        interactive["body"] = {"text": body}
+    if products.footer:
+        interactive["footer"] = {"text": products.footer}
+    if products.type == "product":
+        interactive["action"] = {
+            "catalog_id": products.catalog_id,
+            "product_retailer_id": products.retailer_id,
+        }
+    else:
+        interactive["action"] = {
+            "catalog_id": products.catalog_id,
+            "sections": [
+                {
+                    "title": title,
+                    "product_items": [{"product_retailer_id": rid} for rid in retailer_ids],
+                }
+                for title, retailer_ids in products.sections
+            ],
+        }
+    return {"type": "interactive", "interactive": interactive}
+
+
 def outbound_payload(to: str, message: OutboundMessage) -> dict[str, Any]:
     """The POST /{phone_number_id}/messages body for one send (text, one attachment, or a
     template). Text with an image, video or document goes as its caption."""
     if message.sticker is not None:
         raise PlatformError("platform_rejected", message="WhatsApp has no built-in stickers")
-    if message.template is not None:
+    if message.products is not None:
+        content = _products(message.products, message.text)
+    elif message.template is not None:
         content = _template(message.template)
     elif message.attachment is not None:
         content = _media(message.attachment, message.text)
@@ -233,6 +266,19 @@ class WhatsAppAdapter:
                 break
         return sorted(found, key=lambda t: (t.name, t.language))
 
+    async def get_number_health(self, acct: SocialAccount) -> NumberHealth:
+        """The number's quality rating and messaging tier (GR-23 broadcasts pace themselves by
+        them). *Unverified against a live number*: the fields are quality_rating and
+        messaging_limit_tier (platforms/whatsapp/health.py)."""
+        body = await self.wa.request(
+            "GET",
+            acct.platform_account_id,
+            endpoint="phone_number.health",
+            token=self._token(acct),
+            params={"fields": "quality_rating,messaging_limit_tier"},
+        )
+        return parse_health(body)
+
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
         return []  # WhatsApp numbers have no posts
 
@@ -302,8 +348,17 @@ class WhatsAppAdapter:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
@@ -319,11 +374,16 @@ class WhatsAppAdapter:
     ) -> ContainerStatus:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
@@ -334,6 +394,7 @@ class WhatsAppAdapter:
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 

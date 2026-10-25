@@ -1,19 +1,25 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { FlowButton } from "@/lib/api/types";
 import type { SendNode } from "@/lib/automations/flow";
 import { formatCount } from "@/lib/automations/format";
-import { MAX_BUTTONS, MESSAGE_LIMIT_BYTES, MESSAGE_MAX_CHARS, worstCaseBytes } from "@/lib/automations/render";
+import { messageLimit, messageSize } from "@/lib/automations/limits";
+import { MAX_BUTTONS, MESSAGE_MAX_CHARS } from "@/lib/automations/render";
 import { cn } from "@/lib/utils";
+import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ImageAttach, InsertFieldMenu, LinkButtons } from "../../steps/ThenStep";
 import { useFlowEnv } from "../FlowContext";
+import { NativeSelect } from "../NativeSelect";
 
 /**
  * A Send step: the message, its image and its link buttons, with the builder's own parts (the
@@ -24,8 +30,9 @@ export function SendFields({ node }: { node: SendNode }) {
   const env = useFlowEnv();
   const problems = env.problemsOf(node.id);
   const textarea = useRef<HTMLTextAreaElement>(null);
-  const bytes = worstCaseBytes(node.text, env.disclosure);
-  const over = bytes > MESSAGE_LIMIT_BYTES;
+  const size = messageSize(node.text, env.disclosure, env.platform);
+  const { limit, unit } = messageLimit(env.platform);
+  const over = size > limit;
   const textProblem = problems.text?.message;
   const imageProblem = problems.image_asset_id?.message;
   // A comment's first message is a private reply: text and link buttons only (C-030).
@@ -53,8 +60,40 @@ export function SendFields({ node }: { node: SendNode }) {
     );
   };
 
+  const chooseSource = (value: string) => {
+    if (value === "saved" && !node.saved) {
+      // A saved reply goes alone, so what a written message carried is dropped with the choice.
+      set({ saved: true, saved_reply_id: node.saved_reply_id ?? null, image_asset_id: null, image_url: null, buttons: [] });
+    } else if (value === "text" && node.saved) {
+      set({ saved: false });
+    }
+  };
+  const source = (
+    <div className="space-y-1.5">
+      <ToggleGroup aria-label="What to send" size="sm" value={node.saved ? "saved" : "text"} onValueChange={chooseSource}>
+        <ToggleGroupItem value="text">Write a message</ToggleGroupItem>
+        <ToggleGroupItem value="saved" disabled={hasReplies}>
+          Send a saved reply
+        </ToggleGroupItem>
+      </ToggleGroup>
+      {hasReplies ? (
+        <p className="text-xs text-fg-secondary">A saved reply goes alone. Remove the quick replies to use one.</p>
+      ) : null}
+    </div>
+  );
+
+  if (node.saved) {
+    return (
+      <div className="space-y-5">
+        {source}
+        <SavedReplyPicker node={node} onChange={(id) => set({ saved_reply_id: id })} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
+      {source}
       <Field id={textId}>
         <div className="flex items-center justify-between gap-2">
           <FieldLabel>Message</FieldLabel>
@@ -82,7 +121,7 @@ export function SendFields({ node }: { node: SendNode }) {
             {env.disclosure ? " The disclosure line is added at the end and counts toward the limit." : ""}
           </p>
           <p className={cn("shrink-0 tabular-nums", over ? "text-danger-fg" : "text-fg-secondary")}>
-            {formatCount(bytes)} / {formatCount(MESSAGE_LIMIT_BYTES)} bytes
+            {formatCount(size)} / {formatCount(limit)} {unit}
           </p>
         </div>
         {textProblem ? (
@@ -136,7 +175,8 @@ export function SendFields({ node }: { node: SendNode }) {
                 <X aria-hidden />
               </Button>
             </div>
-          ) : (
+          ) : env.platform === "facebook" ? null : (
+            // The profile button opens the account's Instagram profile; a Page has none (GR-29).
             <Button
               variant="ghost"
               size="sm"
@@ -148,6 +188,49 @@ export function SendFields({ node }: { node: SendNode }) {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function SavedReplyPicker({ node, onChange }: { node: SendNode; onChange: (id: string | null) => void }) {
+  const env = useFlowEnv();
+  const workspace = useCurrentWorkspace();
+  const problem = env.problemsOf(node.id).saved_reply_id?.message;
+  const replies = env.savedReplies ?? [];
+  const chosen = replies.find((reply) => reply.id === node.saved_reply_id);
+  const errorId = `flow-${node.id}-saved-error`;
+  return (
+    <div className="space-y-2">
+      <NativeSelect
+        label="Saved reply"
+        value={node.saved_reply_id ?? ""}
+        onChange={(value) => onChange(value || null)}
+        invalid={Boolean(problem)}
+        describedBy={problem ? errorId : undefined}
+      >
+        <option value="">Choose a saved reply</option>
+        {replies.map((reply) => (
+          <option key={reply.id} value={reply.id}>
+            {reply.title}
+          </option>
+        ))}
+        {node.saved_reply_id && env.savedReplies && !chosen ? <option value={node.saved_reply_id}>Deleted saved reply</option> : null}
+      </NativeSelect>
+      {problem ? (
+        <p id={errorId} className="text-xs text-danger-fg">
+          {problem}
+        </p>
+      ) : null}
+      {chosen ? (
+        <p className="rounded-lg border border-line bg-raised px-3 py-2 text-sm break-words whitespace-pre-wrap">{chosen.body}</p>
+      ) : null}
+      <p className="text-xs text-fg-secondary">
+        {env.savedReplies && replies.length === 0 ? "You have no saved replies yet. " : ""}
+        The reply is read when the step runs, so editing it changes what people get.{" "}
+        <Link href={`/w/${workspace.slug}/settings/replies` as Route} className="underline">
+          Manage saved replies
+        </Link>
+      </p>
     </div>
   );
 }

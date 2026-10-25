@@ -25,10 +25,10 @@ credits and audit are ours (models/agent.py); nothing here stores anything itsel
   are out) and records the model, tokens and latency in ai_usage_events.
 - Failures (§15): a timeout, a 429 or a 5xx is retried once, then ``ModelUnavailable``; the
   credits of each failed call are refunded by ``metered``.
-- Prompt: ai/prompts/agent.v{n}.md (versioned like the other prompts; agent.v3 from GR-38,
-  agent.v2 from the TA.6 eval) with trusted settings only: the workspace, brand voice, connected
-  accounts, the time and the asking member's role. The request and the thread's earlier
-  exchanges travel as messages; tool results as tool returns (data, TR-AI-04).
+- Prompt: ai/prompts/agent.v{n}.md (versioned like the other prompts; agent.v4 from GR-36,
+  agent.v3 from GR-38, agent.v2 from the TA.6 eval) with trusted settings only: the workspace,
+  brand voice, connected accounts, the time and the asking member's role. The request and the
+  thread's earlier exchanges travel as messages; tool results as tool returns (data, TR-AI-04).
 - Plan first (R2): not built. Writes will be deferred (``ApprovalRequired``), decided by our
   gateway and resumed with ``DeferredToolResults``.
 
@@ -309,10 +309,11 @@ ROLE_WORDS: dict[Role, str] = {
 # GR-38: said only when the member's screen will draw the figures (AGENT_VISUALS_ENABLED), so the
 # answer doesn't repeat them. It never names a visual's layout: the model doesn't write one.
 VISUALS_NOTE = (
-    "- Some tools put their figures on the member's screen, as cards, a ranked list or a bar,\n"
-    "  beside your answer. When a tool you called does that (compare_periods, top_posts,\n"
-    "  sentiment_distribution, comment_topics), don't copy its table into your answer: lead with\n"
-    "  the one or two changes that matter, with their figures, and the caveats.\n"
+    "- Some tools put their figures on the member's screen, as cards, a ranked list, a line, a\n"
+    "  table or a bar, beside your answer. When a tool you called does that (compare_periods,\n"
+    "  top_posts, sentiment_distribution, comment_topics, metric_trend, list_contacts with\n"
+    "  awaiting_reply, search_conversations, list_orders), don't copy its table or list into your\n"
+    "  answer: lead with the one or two changes that matter, with their figures, and the caveats.\n"
 )
 
 

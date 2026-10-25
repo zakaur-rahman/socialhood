@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Calendar, ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { rangeFor } from "@/lib/schedule/dates";
 import { account, json, postDetail, problem, renderWithApi, workspace, type Call } from "@/test/api";
+import { pickDate } from "@/test/datepicker";
 import { calendar, calendarMessage, detail, ist, NOW, postingSlots, scheduledPost } from "@/test/schedule";
 
 import { SchedulePage } from "./SchedulePage";
@@ -381,10 +382,9 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Move to…" });
     const date = within(dialog).getByLabelText("Date");
     const time = within(dialog).getByLabelText("Time");
-    expect(date).toHaveValue("2026-09-29");
+    expect(date).toHaveTextContent("Tue 29 Sep 2026");
     expect(time).toHaveValue("12:00");
-    await user.clear(date);
-    await user.type(date, "2026-10-02");
+    await pickDate(user, date, "2026-10-02");
     await user.clear(time);
     await user.type(time, "18:30");
     await user.keyboard("{Enter}");
@@ -485,7 +485,7 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     await user.click(within(rail).getByRole("button", { name: "Actions for Diwali collection teaser" }));
     await user.click(await screen.findByRole("menuitem", { name: "Schedule for…" }));
     const dialog = await screen.findByRole("dialog", { name: "Schedule for…" });
-    fireEvent.change(within(dialog).getByLabelText("Date"), { target: { value: "2026-10-03" } });
+    await pickDate(user, within(dialog).getByLabelText("Date"), "2026-10-03");
     fireEvent.change(within(dialog).getByLabelText("Time"), { target: { value: "11:00" } });
     await user.click(within(dialog).getByRole("button", { name: "Schedule" }));
     await waitFor(() => expect(callsTo(calls, "POST", /d-diwali\/schedule$/)).toHaveLength(1));
@@ -501,7 +501,7 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
 
     await user.click(day("Wednesday 30 September").querySelector('[data-row="36"]')!); // 18:00
     await waitFor(() => expect(callsTo(calls, "POST", /scheduled-posts$/)).toHaveLength(1));
-    expect(callsTo(calls, "POST", /scheduled-posts$/)[0].body).toEqual({ caption: "", publish_at: "2026-09-30T12:30:00.000Z" });
+    expect(callsTo(calls, "POST", /scheduled-posts$/)[0].body).toEqual({ caption: "", kind: "post", publish_at: "2026-09-30T12:30:00.000Z" });
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/new1"));
   });
 

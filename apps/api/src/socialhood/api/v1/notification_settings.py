@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import AnyMember, CurrentUser, Session
+from socialhood.auth.deps import AnyMember, CanSelf, CurrentUser, Session
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import Workspace
@@ -53,7 +53,7 @@ async def get_notification_preferences(ctx: AnyMember, session: Session) -> Noti
 
 @router.put("/v1/w/{wid}/notification-preferences", operation_id="update_notification_preferences")
 async def update_notification_preferences(
-    body: NotificationPreferences, ctx: AnyMember, session: Session
+    body: NotificationPreferences, ctx: CanSelf, session: Session
 ) -> NotificationPreferences:
     """Replace the member's preferences (their own only; any role)."""
     prefs = await preferences.save(session, ctx.user.id, body.model_dump())

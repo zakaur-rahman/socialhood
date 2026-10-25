@@ -17,6 +17,10 @@ beforeAll(() => {
 });
 
 const TAG = { id: "tag-vip", name: "VIP", color: 0, contact_count: 0 };
+const REPLIES = [
+  { id: "r1", title: "Shipping times", shortcut: "shipping", body: "We ship in 2 days.", created_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-01T00:00:00Z" },
+  { id: "r2", title: "Returns", shortcut: "returns", body: "Returns are free for 30 days.", created_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-01T00:00:00Z" },
+];
 const FIELDS = [
   { id: "f1", key: "city", label: "City", type: "text", options: [], position: 0 },
   { id: "f2", key: "mail", label: "Work email", type: "email", options: [], position: 1 },
@@ -84,6 +88,7 @@ function renderEditor(props: Parameters<typeof Harness>[0]) {
     handlers: {
       "GET /v1/w/:wid/tags": () => json({ items: [TAG] }),
       "GET /v1/w/:wid/contact-fields": () => json({ items: FIELDS }),
+      "GET /v1/w/:wid/saved-replies": () => json({ items: REPLIES, max_items: 50 }),
       "GET /v1/billing/plans": () =>
         json({
           items: [
@@ -97,6 +102,14 @@ function renderEditor(props: Parameters<typeof Harness>[0]) {
           ],
         }),
       "DELETE /v1/w/:wid/automations/:id/flow": () => json({}),
+      "GET /v1/w/:wid/assignment": () =>
+        json({
+          round_robin: false,
+          members: [
+            { user_id: "u1", name: "Priya Nair", avatar_url: null, role: "owner", available: true, open_conversations: 0, is_you: true },
+            { user_id: "u2", name: "Sam Rao", avatar_url: null, role: "agent", available: true, open_conversations: 0, is_you: false },
+          ],
+        }),
     },
   });
 }
@@ -125,7 +138,7 @@ describe("the flow editor (GR-13)", () => {
     renderEditor({ initial: [send("a", "Hello")] });
     await user.click(screen.getByRole("button", { name: "Add step" }));
     const kinds = screen.getAllByRole("menuitem").map((item) => item.querySelector("span")?.textContent);
-    expect(kinds).toEqual(["Send", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
+    expect(kinds).toEqual(["Send", "Product", "Request payment", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
 
     await user.click(screen.getByRole("menuitem", { name: /^Delay/ }));
     expect(titles()).toEqual(["1Message", "2Wait 10 minutes"]);
@@ -278,6 +291,29 @@ describe("the flow editor (GR-13)", () => {
     expect(cards[0]).toHaveAttribute("data-state", "complete");
   });
 
+  it("marks a message that still says [price] and tells what to replace (C-105)", async () => {
+    const user = userEvent.setup();
+    renderEditor({ initial: [send("a", "Hello"), send("b", "The small one is [price]. Reply to order.")] });
+    const second = screen.getAllByRole("textbox", { name: "Message" })[1];
+    // Problems show once a step has been touched, as with every other check.
+    expect(screen.queryByTestId("flow-attention")).toBeNull();
+    await user.type(second, "!");
+    const summary = await screen.findByTestId("flow-attention");
+    expect(summary).toHaveTextContent("One step needs attention");
+    expect(summary).toHaveTextContent("Replace [price] with your price.");
+    expect(second).toHaveAttribute("aria-invalid", "true");
+    expect(second).toHaveAccessibleDescription(expect.stringContaining("Replace [price] with your price."));
+    expect(screen.getAllByRole("region")[0]).toHaveAttribute("data-state", "complete");
+  });
+
+  it("shows the API's placeholder error on the step it names", () => {
+    renderEditor({
+      initial: [send("a", "Your code is [code]")],
+      activationErrors: { a: { text: "Replace [code] with your code." } },
+    });
+    expect(screen.getByTestId("flow-attention")).toHaveTextContent("Replace [code] with your code.");
+  });
+
   it("jumps to the step an error names", async () => {
     const user = userEvent.setup();
     renderEditor({
@@ -349,6 +385,27 @@ describe("the flow editor (GR-13)", () => {
     expect(screen.getByRole("textbox", { name: "Then confirm with (optional)" })).toHaveValue("Thanks!");
   });
 
+  it("an Assign action hands the conversation to the next available member, a chosen member or nobody (GR-20)", async () => {
+    const user = userEvent.setup();
+    let tree: EditorStep[] = [];
+    renderEditor({
+      initial: [send("a", "Hi"), { kind: "action", id: "x", action: { kind: "assign", mode: "round_robin" } }],
+      onTree: (next) => (tree = next),
+    });
+    expect(titles()).toEqual(["1Message", "2Assign to the next available member"]);
+    expect(screen.getByText(/The next available member in turn/)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Assign to"), "member");
+    const member = await screen.findByLabelText("Member");
+    await user.selectOptions(member, "u2");
+    expect(tree[1]).toMatchObject({ kind: "action", action: { kind: "assign", mode: "member", user_id: "u2" } });
+    expect(titles()[1]).toBe("2Assign to a team member");
+
+    await user.selectOptions(screen.getByLabelText("Assign to"), "nobody");
+    expect(tree[1]).toMatchObject({ action: { kind: "assign", mode: "nobody" } });
+    expect(screen.queryByLabelText("Member")).not.toBeInTheDocument();
+  });
+
   it("asks before going back to one message", async () => {
     const user = userEvent.setup();
     const { calls } = renderEditor({ initial: [send("a", "One")] });
@@ -357,5 +414,62 @@ describe("the flow editor (GR-13)", () => {
     expect(within(dialog).getByText("Go back to one message?")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Keep the steps" }));
     expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(0);
+  });
+
+  describe("sending a saved reply (GR-21)", () => {
+    it("swaps the message for a picker, hiding the text, image, buttons and quick replies", async () => {
+      const user = userEvent.setup();
+      const seen: EditorStep[][] = [];
+      renderEditor({ initial: [send("a", "Hello", { buttons: [{ title: "Open", url: "https://example.com", profile: false }] })], onTree: (tree) => seen.push(tree) });
+      const source = screen.getByRole("radiogroup", { name: "What to send" });
+      expect(within(source).getByRole("radio", { name: "Write a message" })).toBeChecked();
+      expect(screen.getByRole("textbox", { name: "Message" })).toBeInTheDocument();
+
+      await user.click(within(source).getByRole("radio", { name: "Send a saved reply" }));
+      expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add a quick reply" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Add a button to your profile/ })).toBeNull();
+      expect(await screen.findByRole("option", { name: "Returns" })).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByRole("combobox", { name: "Saved reply" }), "r2");
+      expect(screen.getByText("Returns are free for 30 days.")).toBeInTheDocument();
+      const last = seen.at(-1)?.[0] as SendNode;
+      expect(last).toMatchObject({ saved: true, saved_reply_id: "r2", buttons: [], image_asset_id: null });
+      expect(compile(seen.at(-1) as EditorStep[]).definition.steps[0]).toMatchObject({ text: "", saved_reply_id: "r2" });
+
+      await user.click(within(source).getByRole("radio", { name: "Write a message" }));
+      expect(screen.getByRole("textbox", { name: "Message" })).toBeInTheDocument();
+    });
+
+    it("asks for a reply to be chosen", async () => {
+      const user = userEvent.setup();
+      renderEditor({ initial: [send("a", "Hello")] });
+      await user.click(screen.getByRole("radio", { name: "Send a saved reply" }));
+      expect((await screen.findAllByText("Choose a saved reply.")).length).toBeGreaterThan(0);
+    });
+
+    it("can't be chosen while the message has quick replies", () => {
+      renderEditor({ initial: [send("a", "Which?", { replies: [{ title: "A", steps: [] }] })] });
+      expect(screen.getByRole("radio", { name: "Send a saved reply" })).toBeDisabled();
+      expect(screen.getByText(/Remove the quick replies to use one/)).toBeInTheDocument();
+    });
+
+    it("is refused as the first step of a comment flow, and fine later", async () => {
+      const user = userEvent.setup();
+      renderEditor({ initial: [send("a", "Hi"), send("b", "Then")], comment: true });
+      const radios = screen.getAllByRole("radio", { name: "Send a saved reply" });
+      await user.click(radios[0]);
+      await user.selectOptions((await screen.findAllByRole("combobox", { name: "Saved reply" }))[0], "r1");
+      const refused = (await screen.findAllByText(/can't be a saved reply/)).length;
+      await user.click(screen.getAllByRole("radio", { name: "Send a saved reply" })[1]);
+      await user.selectOptions(screen.getAllByRole("combobox", { name: "Saved reply" })[1], "r2");
+      // The second step adds no refusal of its own.
+      expect(screen.getAllByText(/can't be a saved reply/)).toHaveLength(refused);
+    });
+
+    it("says when the chosen reply was deleted", async () => {
+      renderEditor({ initial: [send("a", "", { saved: true, saved_reply_id: "gone" })] });
+      expect(await screen.findByRole("option", { name: "Deleted saved reply" })).toBeInTheDocument();
+    });
   });
 });

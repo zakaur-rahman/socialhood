@@ -9,7 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
 
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import Admin, CanManageAutomations, Session
 from socialhood.schemas.entry_links import (
     EntryLink,
     EntryLinkCreate,
@@ -33,7 +33,9 @@ async def list_entry_links(
 
 
 @router.post("/entry-links", status_code=201, operation_id="create_entry_link")
-async def create_entry_link(body: EntryLinkCreate, ctx: Admin, session: Session) -> EntryLink:
+async def create_entry_link(
+    body: EntryLinkCreate, ctx: CanManageAutomations, session: Session
+) -> EntryLink:
     """A link on an Instagram account. Leave ``code`` out and one is made; it can't change later."""
     link = await service.create(session, body)
     await session.commit()
@@ -47,7 +49,7 @@ async def get_entry_link(link_id: uuid.UUID, ctx: Admin, session: Session) -> En
 
 @router.put("/entry-links/{link_id}", operation_id="update_entry_link")
 async def update_entry_link(
-    link_id: uuid.UUID, body: EntryLinkUpdate, ctx: Admin, session: Session
+    link_id: uuid.UUID, body: EntryLinkUpdate, ctx: CanManageAutomations, session: Session
 ) -> EntryLink:
     """Rename the link or change the automation it starts. The account and code stay."""
     link = await service.update(session, link_id, body)
@@ -56,7 +58,9 @@ async def update_entry_link(
 
 
 @router.delete("/entry-links/{link_id}", status_code=204, operation_id="delete_entry_link")
-async def delete_entry_link(link_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_entry_link(
+    link_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> Response:
     """Deleting a link stops its automation starting from it. Conversations it opened keep
     their entry."""
     await service.delete(session, link_id)

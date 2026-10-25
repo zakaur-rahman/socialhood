@@ -39,7 +39,13 @@ export default defineConfig({
       name: "chromium",
       testMatch: /.*\.spec\.ts/,
       dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"], storageState: AUTH_FILE },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: AUTH_FILE,
+        // The widget spec serves a "public" test page that embeds the widget from the API on
+        // loopback; recent Chromium asks permission for that (Local Network Access) and blocks it.
+        launchOptions: { args: ["--disable-features=LocalNetworkAccessChecks"] },
+      },
     },
   ],
 });

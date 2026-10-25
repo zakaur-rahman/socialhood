@@ -48,7 +48,7 @@ import {
   useUnschedulePost,
 } from "@/lib/api/queries/calendar";
 import type { ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel } from "@/lib/automations/accounts";
 import { isPlanLimitError } from "@/lib/api/errors";
 import { minWidth } from "@/lib/breakpoints";
 import { emptyStates } from "@/lib/copy";
@@ -77,8 +77,10 @@ import {
   POST_STATUS,
   STATUS_GROUPS,
 } from "@/lib/schedule/format";
+import { publishingAccounts } from "@/lib/publishing/rules";
 import { formatDayTime } from "@/lib/tz";
 import { useMediaQuery, useNow, useStoredString } from "@/lib/use-browser-state";
+import { STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -142,7 +144,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
   // ---- data
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => publishingAccounts(allAccounts.data ?? []), [allAccounts.data]);
   // Read in the List view too: the right rail's figures come from it.
   const calendar = useCalendar(wid, range.from, range.to);
   const drafts = useScheduledPostList(wid, "drafts");
@@ -417,7 +419,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           className={cn("w-full p-4 md:p-6", fillsHeight && "flex min-h-0 flex-1 flex-col")}
           data-shell-fill={fillsHeight ? "" : undefined}
         >
-          <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <header className={cn(STICKY_PAGE_HEADER, "mb-4 flex flex-wrap items-start justify-between gap-3")}>
             <div>
               <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
                 Schedule

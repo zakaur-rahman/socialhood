@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Conversation } from "@/lib/api/types";
 import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { ContactAvatar } from "./ContactAvatar";
 import { ReplyWindowChip } from "./ReplyWindowChip";
@@ -27,7 +28,12 @@ import { ReplyWindowChip } from "./ReplyWindowChip";
 const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as const;
 
 /** Platform colours are for glyphs and fills, never text (DESIGN_SYSTEM §1.6). */
-const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
+const PLATFORM_GLYPH = {
+  instagram: "text-instagram",
+  whatsapp: "text-whatsapp",
+  facebook: "text-facebook",
+  web: "text-web",
+} as const;
 
 type Props = {
   conversation: Conversation;
@@ -41,6 +47,10 @@ type Props = {
   onMarkUnread: () => void;
   /** The one AI mode control (a compact menu); without it the header shows a read-only chip. */
   aiControl?: ReactNode;
+  /** GR-20: who has the conversation, as a menu to change it. */
+  assigneeControl?: ReactNode;
+  /** GR-32 and GR-33: commerce actions in the More menu (create an order, send a product). */
+  commerceActions?: readonly { key: string; label: string; onSelect: () => void }[];
 };
 
 /**
@@ -64,6 +74,8 @@ export function ThreadHeader({
   onArchive,
   onMarkUnread,
   aiControl,
+  assigneeControl,
+  commerceActions,
 }: Props) {
   const name = contactName(conversation.contact, conversation.platform);
   const platform = PLATFORM_LABEL[conversation.platform];
@@ -78,7 +90,7 @@ export function ThreadHeader({
   const [detailsInMenu, setDetailsInMenu] = useState(false);
 
   return (
-    <header className="@container/header shrink-0 border-b border-line bg-panel">
+    <header className="@container/header shrink-0 border-b border-line glass-pane">
       <div className="@container/row flex h-16 items-center gap-2 px-4 @md/header:gap-3">
         {backHref ? (
           <Button asChild variant="ghost" size="icon-lg" className="-ml-2 text-fg-secondary">
@@ -98,9 +110,9 @@ export function ThreadHeader({
           <div className="flex min-w-0 items-center gap-2">
             {/* On a phone the list pane is gone, so the contact's name is the page's heading. */}
             {backHref ? (
-              <h1 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h1>
+              <h1 className={cn(ITEM_TITLE, "min-w-20 truncate @xl/header:min-w-0")}>{name}</h1>
             ) : (
-              <h2 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h2>
+              <h2 className={cn(ITEM_TITLE, "min-w-20 truncate @xl/header:min-w-0")}>{name}</h2>
             )}
             <ReplyWindowChip window={conversation.reply_window} now={now} className="hidden @xl/header:inline-flex" />
             {conversation.needs_human ? (
@@ -135,6 +147,7 @@ export function ThreadHeader({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {assigneeControl}
           {aiControl ?? (
             <Badge tone={paused ? "warning" : "brand"} size="md">
               {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
@@ -174,12 +187,24 @@ export function ThreadHeader({
               ) : null}
               <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
               <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
+              {commerceActions && commerceActions.length > 0 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  {commerceActions.map((action) => (
+                    <DropdownMenuItem key={action.key} onSelect={action.onSelect}>
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              ) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
-                  Open in {platform}
-                </a>
-              </DropdownMenuItem>
+              {conversation.platform === "web" ? null : (
+                <DropdownMenuItem asChild>
+                  <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
+                    Open in {platform}
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onSelect={() => {
                   void navigator.clipboard

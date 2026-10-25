@@ -8,7 +8,7 @@ import uuid
 
 from fastapi import APIRouter, Response
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageSettings, CanReply, Session
 from socialhood.schemas.saved_replies import (
     SavedReply,
     SavedReplyCreate,
@@ -17,6 +17,7 @@ from socialhood.schemas.saved_replies import (
     SavedReplyList,
     SavedReplyUpdate,
 )
+from socialhood.services import audit
 from socialhood.services import saved_replies as service
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["saved-replies"])
@@ -29,33 +30,40 @@ async def list_saved_replies(ctx: AnyMember, session: Session) -> SavedReplyList
 
 
 @router.post("/saved-replies", status_code=201, operation_id="create_saved_reply")
-async def create_saved_reply(body: SavedReplyCreate, ctx: Admin, session: Session) -> SavedReply:
+async def create_saved_reply(
+    body: SavedReplyCreate, ctx: CanManageSettings, session: Session
+) -> SavedReply:
     """409 when another reply has the shortcut; 422 names the field that doesn't fit."""
     out = await service.create(session, body, user_id=ctx.user.id)
+    await audit.record(session, ctx, "saved_reply.created", "saved_reply", out.id)
     await session.commit()
     return out
 
 
 @router.patch("/saved-replies/{reply_id}", operation_id="update_saved_reply")
 async def update_saved_reply(
-    reply_id: uuid.UUID, body: SavedReplyUpdate, ctx: Admin, session: Session
+    reply_id: uuid.UUID, body: SavedReplyUpdate, ctx: CanManageSettings, session: Session
 ) -> SavedReply:
     out = await service.update(session, reply_id, body)
+    await audit.record(session, ctx, "saved_reply.updated", "saved_reply", reply_id)
     await session.commit()
     return out
 
 
 @router.delete("/saved-replies/{reply_id}", status_code=204, operation_id="delete_saved_reply")
-async def delete_saved_reply(reply_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_saved_reply(
+    reply_id: uuid.UUID, ctx: CanManageSettings, session: Session
+) -> Response:
     """A flow step that sends this reply then fails with a plain reason in Activity."""
     await service.delete(session, reply_id)
+    await audit.record(session, ctx, "saved_reply.deleted", "saved_reply", reply_id)
     await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/saved-replies/{reply_id}/fill", operation_id="fill_saved_reply")
 async def fill_saved_reply(
-    reply_id: uuid.UUID, body: SavedReplyFill, ctx: AnyMember, session: Session
+    reply_id: uuid.UUID, body: SavedReplyFill, ctx: CanReply, session: Session
 ) -> SavedReplyFilled:
     """The reply with the conversation's contact filled in. Unknown fields are empty and no
     ``{braces}`` are left; 404 for a reply or conversation of another workspace."""

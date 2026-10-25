@@ -2582,3 +2582,2998 @@ copy and the editor's options. No migration, no new route.
   purge removes them with its automations and contacts.
 - **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
   `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.
+
+## C-099 · Template gallery, version 2 (GR-16, feature/gr-16-templates-v2)
+Five new templates on the new triggers and steps, and a saved-reply choice in the flow editor.
+
+### Templates that carry a flow
+- **Before:** a template only filled the message settings (text, link buttons, public replies),
+  so it could not make a question or a quick reply. *Deviation from the plan, which only said to
+  add templates: a template may now carry a flow, minimally.*
+  - `Template.flow` is an optional `FlowDefinition` (`services/automations/templates.py`).
+  - `definitions.create` saves it as version 1 in `automation_flows` and sets `flow_version`, so
+    the draft opens as a flow (`flow_source: flow`) and the settings are not used. No migration.
+  - Everything else (trigger, keywords, public replies, post scope) fills as before.
+  - The older templates stay single messages and compile from their settings.
+- **The gallery:** `AutomationTemplate.steps` is the number of steps a template starts with (0 for
+  a single message). The card shows "2 steps" next to its trigger and action.
+- **The five** (category, trigger, steps):
+  - *Story giveaway* (grow, story mention, 2): thanks them and says they are in the draw, then
+    when winners are announced.
+  - *Lead magnet* (grow, comment keyword GUIDE, 2): the private reply asks for their email (saved
+    to the contact), then sends the PDF with a link button. Public replies are on.
+  - *Price by option* (sell, comment keyword PRICE, 4): the private reply has quick replies for
+    Small, Medium and Large, each leading to its own price message.
+  - *Call requests* (sell, DM keyword CALL, 2): asks for a phone number (saved to the contact,
+    with a thank-you), then "Notify the team". *No new action was needed: `notify_team` already
+    exists (C-079).*
+  - *Coupon from a link* (sell, entry link, 1): sends the code with a link button. Entry links
+    (GR-08) are made on their own page.
+- **Names:** the older *Giveaway replies* and *Book a call* stay (comment-on-a-post giveaway and a
+  booking link by DM). The new ones have their own keys (`story_giveaway`, `lead_magnet`,
+  `price_by_option`, `call_request`, `entry_link_coupon`). The plan's "price please" is named
+  *Price by option*: no "please" in our copy.
+- **Placeholders and activation:**
+  - The link is left as `https://`, so activation asks for it, as for the other templates.
+  - Prices and the code are written as `[price]` and `[code]` in the message. *The activation
+    rules cannot tell that a bracket is unfilled, so they do not stop activation; the copy makes
+    it plain. A later check could flag square brackets.*
+  - Questions are an email or a phone answer saved to the contact, so no custom field has to exist.
+  - Tap first is off for these: a flow's first message is the opening itself.
+- **PD-5 (pending):** every template fits the Free plan's cap of 5 steps (the largest has 4); a
+  unit test reads the `flow_steps` entitlement, so it follows the decision.
+- **Ask Social Hood:** `prepare_automation` no longer reports "the message" missing for a template
+  that carries a flow. The tool still prefills the settings only; the draft it opens is the
+  template's.
+- **Tests:** `tests/unit/test_template_flows.py` (each flow validates, builds, needs only its link,
+  stays in the cap, has plain copy), `tests/integration/test_template_flows_api.py` (each creates a
+  flow draft that activates once filled, on Free and Pro), the gallery snapshot tests, vitest for
+  the card, and `apps/web/e2e/gr16-templates-v2.spec.ts`.
+- **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` for
+  `AutomationTemplate.steps`.
+
+### The saved-reply step in the flow editor (from GR-21, C-093)
+- A Send step has a choice, "Write a message" or "Send a saved reply".
+  - Choosing a saved reply shows a picker over `GET /saved-replies` (titles, with the body below)
+    and a link to Settings, Saved replies. The text, image, buttons and quick replies are hidden.
+  - Switching to a saved reply drops the image and link buttons the message had. It is disabled
+    while the message has quick replies, which would orphan their branches.
+  - Switching back keeps the (now empty) text; nothing is stored for the reply.
+- **Editor model:** `SendNode.saved` and `saved_reply_id`, both optional. `compile` writes a send
+  with `saved_reply_id` and no text; `decompile` reads it back. A chosen source with no reply
+  picked yet saves as an empty send, so it opens as "Write a message" after a reload; the step
+  check still says "Choose a saved reply" while it is chosen.
+- **Checks per step:** a reply must be chosen; a deleted reply is flagged; and not on a comment
+  flow's first step (the API's rule, `flow.start`, now shown on the step). The API still checks
+  the reply's length and "alone" on activation.
+- **Preview path:** the step shows "Saved reply: <title>" instead of the text, and is titled
+  "Saved reply".
+
+## C-097 · Trends and a weekly report (GR-34, feature/gr-34-trends-report)
+
+Roadmap P3. No migration.
+
+- **One service, three readers.** `services/reports.py` builds the report; the report page, the
+  digest email and the Home link all read it. Every number comes from `overview_stats` (Home and the
+  digest) or from GR-38's account metrics. No model writes, rounds or ranks a figure.
+- **Finished weeks only.** A week is Monday to Sunday in the workspace's zone and can be asked for
+  once Sunday is over; every comparison is seven days against seven (DST makes a span an hour longer
+  or shorter, as everywhere else). The latest week is the one before the current Monday. *Decided: no
+  "this week so far". A part-week against a whole one would mislead, and GR-38's rule for a running
+  period (cut the other one to the same days) would make the report's numbers differ from the
+  digest's.*
+- **Digest extended, not replaced.** `OverviewStats` gains story mentions, conversations from ads and
+  from links, and leads qualified and won (`lead_stage_changes`, each contact once per stage). Home
+  reads the first three from the same object, so the overview and the digest still agree (the test in
+  `test_overview.py` now compares them, with a link conversation seeded). Home's period has no
+  leads fields yet. `weekly_digests.stats` and the email's data also carry `trends` (each metric's
+  week, week before and change) and `account` (reach, views, accounts engaged, interactions,
+  followers, follows, unfollows, with days covered and the reason when missing). Old rows lack both
+  and the template leaves the sections out.
+- **Email.** Two new tables ("Against the week before", "Your Instagram account") and the button
+  "See the full report" to `/w/{slug}/reports?week={Monday}`. *The old "Open Social Hood" button is
+  gone; the text version still lists Home and the inbox.* Copy: "Up 18.3% on the week before (was
+  120)", "Down 2.6 points ...", "Up from 0 the week before", "No data for the week before",
+  "Counts 5 of 7 days".
+- **Trends.** Week against the week before, and 8 weeks ending with it (oldest first). The change is
+  GR-38's `change` (percent, one decimal, flat under 0.5%, a direction but no percent against 0). *A
+  rate (reply rate, handled by AI) changes in percentage points, not percent of a percent.* A faster
+  median first response is good news (`lower_is_better`).
+- **Gaps, the same as GR-38.** A rate with nothing to divide is null. A week that ended before the
+  workspace was created *and has nothing recorded* is null for every count (a workspace's earlier
+  weeks aren't zeros); if rows exist (an import) the real numbers show. Account figures sum the days
+  that have a reading and say how many; none gives null and the reason; followers is the latest
+  reading. The report week's account figures lack Sunday if the daily job hasn't written it yet (the
+  digest at 09:00 Monday often will): shown as "Counts 6 of 7 days", not as a drop.
+- **Account metrics in the digest job** need the platform capabilities (insights granted or not):
+  the task passes the real ones. Callers without adapters (tests) assume insights are granted, so a
+  missing reading reads "no readings", not "not allowed".
+- **Route.** `GET /v1/w/{wid}/reports/weekly?week=YYYY-MM-DD` (any member). `week` is a Monday that
+  has finished, at most 52 weeks back; anything else is 422 on `week`. Without it, the latest week.
+  The response has the week, the week before, the picker's 12 Mondays (newest first), each metric
+  with its series, the account metrics (figure plus series), `account_comparison` (a GR-38
+  `MetricComparisonVisual` built by the same builder, so tone, gap wording and day coverage match
+  Ask), top intents, top posts, "Open right now" counts and `notes`.
+- **Captures (GR-14) are not in the report.** Nothing counts them on this base; `notes` carries
+  `captures_not_built` and the page says so in one line. The slot is one more `MetricDef` once a
+  source exists (and a line in the digest follows from it).
+- **Page** `/w/{slug}/reports?week=`: tiles (`MetricTile`) with the change and a hand-built SVG
+  line under each (`SeriesChart`: one series colour `chart-series-1`, scale from 0, or 0 to 100 for
+  a share, a gap breaks the line and is counted under the chart, a dot on the latest week, the
+  picture labelled with every value in words). The account part is Ask's `MetricComparison` plus a
+  small chart per metric. Week picker: a select of the 12 weeks and Earlier/Later buttons; the week
+  is in the address. One column to 639 px, two from 640, three from 1280, no sideways scroll at 375.
+- **"Shareable".** *Decided: a stable address for members of the workspace. There is no public link
+  and no unsigned URL; someone outside the workspace gets the usual 404 from the API and the app's
+  sign-in. A public or expiring link would be a new surface and an owner's call.*
+- **Where it is linked.** The digest email, and a "Weekly report" button in Home's header. *Not in
+  the main nav (the sidebar lists are snapshotted and the report is a weekly read, not a daily
+  tool).* Not yet from Ask answers (VIS-13's "linked from answers"): that needs the agent session's
+  code, which is another branch's.
+- **Left from roadmap P3:** notable-change detection with thresholds (step 2), Home's "This week"
+  strip (step 3), the Ask `get_trends` tool (step 5), and trends for sentiment share, top topics and
+  post engagement at equal age (step 1 lists them). This task did the counts, rates, leads and
+  account figures the plan names. The series is 8 weeks; `SERIES_WEEKS` is a constant.
+- **Tests.** Unit: `test_reports.py` (week maths, DST, the 422 rules, changes in percent and points,
+  gaps stay gaps, the digest extras, the comparison reuse), `test_email_templates.py` (the new
+  tables and link, an old digest without them). Integration (written, not run): `test_weekly_report.py`
+  (the digest and the report give the same numbers, the week before and the series, weeks before the
+  workspace are gaps, story mentions/links/ads/leads in their week, account days and gaps, insights
+  not granted, no account, the route, 422s, roles, other workspaces and zones),
+  `test_weekly_digest.py` and `test_overview.py` updated. Vitest: `format.test.ts`,
+  `SeriesChart.test.tsx`, `WeeklyReportPage.test.tsx`, the Home link. E2E:
+  `gr34-weekly-report.spec.ts` (a finished week can't be seeded through the API, so it checks the
+  page against the API for the same week).
+- **For the coordinator:** regenerate the client (`get_weekly_report`, `WeeklyReport`, `ReportMetric`,
+  `ReportAccountMetric`, `ReportPoint`, `ReportIntent`, `ReportQuestion`, `ReportPost`); the web types
+  are aliases waiting for it. `test_isolation.py` needed nothing (no table, no path id). The route's
+  `week` parameter is a plain date. Nothing was added to the tenancy or purge lists.
+
+## C-098 · Website crawl into knowledge (GR-35, feature/gr-35-site-crawl)
+
+A whole website becomes knowledge: a crawl from a start address, a weekly re-crawl that only
+re-reads what changed, and each page listed under its site. It builds on the single-page web source
+(T5.3) and reuses its fetch, its extractor and its ingest job.
+
+- **A site is a source; each page is a source.** *The plan says "per-page sources in the knowledge
+  list". Decided: a new type `site` (the address, the settings) whose crawled pages are sources of
+  type `page` with `parent_source_id` pointing at it.* So the existing pipeline does the rest: the
+  same `ingest_knowledge_source` job chunks and embeds a page, retrieval and the test box find it,
+  `knowledge_characters` counts it, and deleting a site deletes its pages and chunks (ON DELETE
+  CASCADE). Pages are not in the main list (`GET /knowledge-sources` leaves out anything with a
+  parent) and cannot be reached as sources (404 on get, edit and delete); they live under
+  `…/pages`. A page's text is stored in its source's `body` (at most 20,000 characters, the column's
+  limit), and ingestion of a `page` takes it from there instead of fetching again, so the crawl is
+  the only thing that touches the site.
+- **Migration 0030** (after 0029), expand-only: the `type` check widened to `site` and
+  `page`; `knowledge_sources.parent_source_id`; the tables `site_crawls` (one row per site: re-crawl
+  setting, excluded paths, status, whether it is seeded, whether it hit the cap, the cap of that
+  crawl, error, start and finish times, `next_crawl_at`) and `site_pages` (one row per address:
+  status, depth, order found, title, content hash, ETag, Last-Modified, last crawled, and the page's
+  source). `uq_site_pages_site_source_id_url`. Both tables are workspace-level, so an account purge
+  leaves them (the purge test's kept list names them) and they are in the tenancy test's table list.
+- **The crawl (`services/knowledge/crawl.py`, rules in `crawl_rules.py`).**
+  - *Order.* robots.txt of the start address's site, then the sitemap addresses (the `Sitemap:`
+    lines and `/sitemap.xml`; a sitemap index is followed; at most 20 files), then the start page,
+    then breadth first: the shallowest queued page, then in the order found. One page at a time,
+    1 s apart, or the site's `Crawl-delay` up to 10 s.
+  - *What counts as the same site.* The same host, ignoring a leading `www.`; other hosts and
+    sub-domains are other sites and are not followed. *The plan says "same registrable host". There
+    is no public-suffix list in the stack and guessing one risks following a different business, so
+    this is the stricter rule.* A redirect that ends on another site is skipped.
+  - *Addresses.* Fragments, **all query strings**, default ports, a trailing slash and double slashes
+    are dropped, and the host is lowercased. *The plan says "query-duplicates". Dropping the query
+    is the simple rule that cannot fall into sort-order, filter and tracking-parameter traps; the
+    cost is that a site whose pages differ only by `?id=` is read as one page.* Links to files that
+    aren't pages (PDF, images, scripts, documents) are not followed; `rel="nofollow"` links and
+    pages with a robots meta of `nofollow` are not followed; `noindex` pages are skipped and not
+    stored. Depth is capped at 6 links from the start page.
+  - *robots.txt.* Our group (`SocialHoodBot`) wins over `*`; the longest matching rule decides and
+    Allow wins a tie; `*` and a closing `$` work. A missing file (any 4xx) allows everything; one
+    that errors (5xx, timeout) or can't be reached fails the crawl with a message, as does a site
+    whose robots.txt disallows the start page. *The crawl never reads a page robots.txt disallows,
+    including pages found in a sitemap.*
+  - *Limits.* Pages 2 MB and 15 s (the single-page fetch's), robots.txt 512 KB, a sitemap file
+    5 MB, text kept per page 20,000 characters. A failed page is tried twice, then marked failed;
+    the crawl goes on. The sitemap is read by pattern, not by an XML parser (nothing to expand).
+- **Plan cap.** New entitlement `crawl_pages`: **Free 25, Pro 250, Max 1,000** pages for one site.
+  *Proposed values, pending the owner's plan decisions (one line in `billing/plans.py`; the same
+  note as `contact_fields`).* The cap is taken when a crawl is requested and stored on the crawl
+  (`page_cap`); pages found past it are left out and the site says "Stopped at N pages". Pages the
+  owner removed or excluded do not count; `knowledge_characters` still applies on top.
+- **SSRF.** `security/ssrf.py` gains `fetch_document` (`fetch_html` is now a call to it): the same
+  rules (address checks with DNS, the connection pinned to the checked address, redirects by hand and
+  checked, size and time limits) for other content types, extra request headers and a 304 answer.
+  *Every address the crawl touches goes through it: the start page, robots.txt, each sitemap file
+  (including ones robots.txt names on another host), each page, each redirect.* A start address that
+  is a private literal is refused when adding (422 on `url`); one that resolves to a private
+  address fails the crawl with the usual message. Links and sitemap entries to other hosts are
+  filtered out before they are ever requested. `FetchError` gains `status`.
+  **`CRAWL_ALLOW_PRIVATE`** (default off, refused in production like `WEBHOOKS_ALLOW_PRIVATE`; on in
+  `.env.example` and the e2e stack) lets development and e2e crawl a local fixture site.
+- **Jobs.** `crawl_site(id, version)` (bulk lane, queueing lock `crawl:{id}:{version}`, run lock
+  `crawl:{id}`, 3 tries, RETRY in `RECOVERY`) and `dispatch_site_recrawls` (hourly at :20, RETRY).
+  - *One crawl at a time.* The site source's `version` numbers its crawls; asking for a crawl while
+    one is queued or running changes nothing. A job for an older number, a finished crawl or a
+    deleted site stops ("stale").
+  - *Resumable and idempotent.* The queue is the `site_pages` rows, so a job that dies carries on
+    where it stopped (a stalled one is re-run by recovery). A job reads pages for four minutes, then
+    queues itself again for the rest, so no crawl holds a worker for long. A page is committed with
+    its result in one transaction, and a page the owner removed meanwhile is left alone. The seed
+    runs once per crawl.
+  - *Re-crawl.* `dispatch_site_recrawls` starts a crawl for each weekly site whose `next_crawl_at`
+    has come (50 at a time, workspace-scoped), and queues again a crawl that has not moved for 30
+    minutes (a lost job). The setting is `weekly` (default) or `off`; `next_crawl_at` is a week after
+    the last crawl finished. *The plan says "e.g. weekly, per source setting"; weekly and off are
+    the two settings.*
+  - *Change detection.* A page we hold is asked for with `If-None-Match` and `If-Modified-Since` when
+    it has an ETag or Last-Modified (a 304 leaves it alone); otherwise its text is read and hashed
+    (whitespace-insensitive), and an equal hash leaves it alone. New or changed text gives its page
+    source the next version and queues the ingest job, which swaps the chunks. Unchanged pages keep
+    their chunks and cost no embedding. An unchanged page whose ingest never ran, or failed (the
+    knowledge limit, say), is queued again.
+  - *Gone pages.* A 404 or 410 removes the page's source and chunks and keeps the row as `gone`
+    (a gone page that is listed or linked again in a later crawl is read again; not twice in the
+    same crawl). A page that now answers with `noindex`, a disallow, another type or another site is
+    removed from knowledge the same way and shown as `skipped` with the reason.
+  - *Result.* The site is `ready` (`failed` with the reason when no page could be read or the crawl
+    could not start); the crawl is `done` or `failed`.
+- **API** (admins only, like the rest of knowledge).
+  - `POST /knowledge-sources` with `type: "site"`, `url`, optional `title`, `recrawl`
+    (`weekly`/`off`); `PATCH` takes `title`, `recrawl`, `excluded_paths` (the whole list, at most 50
+    paths) and `reingest` (crawl now). The address of a site can't be edited (a different site is
+    a new source). A site counts no characters itself; its pages do.
+  - `GET …/{id}/pages?status=&limit=&offset=` (shallowest first; default 200, at most 500);
+    `DELETE …/{id}/pages/{page_id}` (the page's knowledge goes, the row stays as `removed`, and later
+    crawls leave the address out); `POST …/{id}/excluded-paths` `{path}` (a path or a full address;
+    pages at the path or below it go now as `excluded`, and are not requested again; taking a path
+    off with `PATCH` lets the next crawl read it); `POST …/{id}/recrawl` (404 for anything that is
+    not a site).
+  - `KnowledgeSource` gains `site` (`SiteCrawlInfo`: status, recrawl, excluded paths, pages found,
+    done, failed and skipped, the characters and chunks of the ready pages, the cap, whether it was
+    cut at the cap, the error, started, finished, next crawl). `KnowledgeSourceCreate.type` gains
+    `site` (not `page`).
+- **Web.** The Knowledge page's Add menu gains **Website** (address, optional title, "Check for
+  changes every week" on). A site is a row in Sources with a chevron that opens its pages under it:
+  a summary of the crawl (found, read, failed, stopped at the cap, the next check), **Crawl now**,
+  the excluded paths (add one, or take one off), and the pages as stacked rows (title, path, status,
+  when it was read, the reason it failed or was skipped) with a menu per page: Remove page (asks
+  first) and Exclude that path. Stacked rows and a one-column panel, so it works at 375 px. The list
+  polls while the site is crawling or its pages are being built. Deleting a site says its pages go
+  too.
+- **Not built.** A way to bring back a removed page except deleting the site (excluding a path can be
+  undone; removing a page cannot); `.xml.gz` sitemaps; JavaScript-rendered pages (only the HTML the
+  server sends is read, as for a single page); a per-site page cap the owner picks below the plan's;
+  a crawl history.
+- **Tests.** Unit: `test_crawl_rules.py` (robots groups, longest match, wildcards, sitemap and index
+  parsing, an entity bomb, address normalisation, same-site, excluded paths, links and robots meta,
+  the hash), `test_crawl_fetch.py` (`fetch_document`, SSRF for robots, sitemap, link, redirect and
+  start addresses, the sitemap file and cap limits, one page's outcomes, `allow_private`),
+  `test_settings.py`. Integration: `test_site_crawl.py` (end to end on a fixture site, the cap,
+  a better plan, resume, stale jobs, breadth first, robots/noindex/other sites, failing pages, a
+  disallowed site, www redirects, re-crawl by ETag and hash, gone and returning pages, one crawl at
+  a time, remove a page, exclude a path, the scheduled re-crawl and a lost job, SSRF, roles,
+  tenancy, deletion, the knowledge limit). Tenancy: the new routes, body, param and tables in
+  `test_isolation.py`; the account deletion test seeds a site. Vitest: `SitePages.test.tsx`. E2E:
+  `gr35-site-crawl.spec.ts` (a local fixture site; `CRAWL_ALLOW_PRIVATE` in the e2e stack).
+- **Unsure / for the coordinator:** regenerate the client (`SiteCrawlInfo`, `SitePage`,
+  `SitePageList`, `ExcludePath`, `site`, `recrawl` and `excluded_paths` on the source models, `site`
+  and `page` in the type literals, the four new operations); the web types are aliases waiting for
+  it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
+  the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
+  config.
+
+## C-106 · Team members and roles (GR-19, feature/gr-19-team)
+
+- **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
+  role-to-permissions map (each role has everything below it). Routes ask for a permission with
+  `require_permission` (`CanReply`, `CanManageAutomations` and the other aliases in `auth/deps.py`),
+  never for a role. The old `Admin`/`Owner`/`AnyMember` aliases stay for read routes. Every write
+  route under `/v1/w/{wid}` now declares a permission; the tiers are the ones the routes already had
+  (agents reply, tag and assign, and use Ask; admins also automations, knowledge, settings, channels,
+  publishing, contact fields, segments, webhooks, the audit log and inviting agents; owners also
+  billing, members, ownership and deleting the workspace). `tests/unit/test_permission_routes.py`
+  walks the app's routes and fails for a workspace write route without a permission, and for a write
+  route outside a workspace that is not in its short, reasoned list.
+- **The web reads the matrix from the API.** `GET /v1/w/{wid}/permissions` returns the caller's role
+  and permission names; `useCan()` (`lib/permissions.ts`) answers `can(name)` and allows nothing
+  while it loads. The TypeScript side holds permission names only. The existing role-based hiding
+  (nav items, settings tabs, page layouts) is left as it was; the new pages and their buttons use
+  `can()`.
+- **Invitations.** Table `workspace_invitations` (email lower-cased, role admin or agent, invited by,
+  status pending, accepted or revoked, expiry, Clerk's invitation id). No token: Clerk sends the email
+  and holds the link. One pending invitation per workspace and email (a partial unique index). They
+  expire after 14 days; "expired" is worked out on read, and a resend starts the 14 days again.
+  *Only owners invite admins; admins invite agents* (a decision; the plan left it open). Routes:
+  `POST/GET /invitations`, `POST /invitations/{id}/resend`, `DELETE /invitations/{id}`.
+- **Clerk is behind an interface** (`auth/invitations.py`): the real sender calls the Backend API's
+  invitations; `CLERK_INVITATIONS_PROVIDER=fake` (refused in production, set in the e2e stack) and
+  `use_invitation_sender` in tests keep it in memory. A person who already has an account is not sent
+  to Clerk (it refuses a known address); they get a plain email from us and join at their next sign-in.
+  If Clerk fails the invitation is not created (503).
+- **Accepting.** `GET /v1/me` and `GET /v1/workspaces` call `auth/accept_invitations.py`: a pending,
+  unexpired invitation for the user's email joins them with the invited role, but only when Clerk says
+  that email is verified (an address typed at sign-up and never confirmed must not open a workspace).
+  Their last workspace becomes the new one, so `/app` lands there. A Clerk outage skips the step and
+  the next call retries. No webhook is needed.
+- **Members.** `GET /members` (with seats), `PATCH /members/{user_id}` (admin or agent; owners only),
+  `DELETE /members/{user_id}` (owners only), `POST /ownership-transfer` (owners only, needs the
+  workspace name; the old owner becomes an admin and the new one the owner of record). The owner of
+  record cannot be demoted or removed (409): transfer first, so a workspace always has an owner. You
+  cannot remove yourself. Removing a member deletes the membership only; their past messages,
+  automations and audit rows keep their user id and name. *The inbox has no per-member assignment yet
+  (GR-20), so there is nothing to clear on removal;* GR-20 adds that to `services/team.remove_member`.
+- **Seats.** `members` entitlement: **Free 1, Pro 3, Max 10, decided by the owner on 2026-10-24
+  ("for now")** (PD-1). Members plus unexpired pending invitations count; one more past the cap is a
+  402 `quota_exceeded` naming `members`. Revoking or an expiry frees the seat.
+- **Audit.** Table `audit_events` (actor, actor name at the time, action, target type and id, small
+  detail JSON, time). `services/audit.record` adds a row to the caller's session, never commits, and
+  drops detail keys that could hold message text or a credential (body, text, content, token, secret,
+  password, key, caption) and long values. *Deviation: rows are written from the route handlers, next
+  to the commit, where the member is known; the service functions do not carry the user.* Recorded:
+  message sent, automation created/updated/deleted/activated/paused, knowledge source
+  created/updated/deleted, settings (workspace, AI, business hours, lead settings, saved replies,
+  webhook endpoints, social accounts), billing (checkout started, cancelled, resumed), members
+  (invited, resent, revoked, joined, role changed, removed, ownership transferred). Not recorded yet:
+  contact tags/fields/segments, comment replies, scheduled posts, plan changes that arrive by Dodo's
+  webhook. `GET /audit-events` (owners and admins) filters by member, action and date, 30 a page with
+  `offset` and `has_more`, and lists the actions present for the filter.
+- **Web.** Settings gains Members and Audit log tabs (owners and admins). Members: list with role and
+  last active, a role select, Remove (asks first), Make owner (type the workspace name), the seat
+  summary, pending invitations with Resend and Revoke, and an Invite dialog (the admin role only for
+  owners). Audit log: member, action and date filters, Newer and Older. Both stack at 375 px.
+- **Tests.** Unit: `test_team_rules.py` (matrix, who invites whom, seat counting, invitation states,
+  audit detail, the fake sender), `test_permission_routes.py`, `test_settings.py`. Integration:
+  `test_team.py` (invite, accept, unverified email, existing account, expiry and resend, revoke,
+  duplicates, Clerk failing, seats on Free and Pro, role changes, the owner rules, transfer, removal
+  keeping attribution, 403s for agents and admins, audit writes, filters and paging, tenancy);
+  tenancy: the new routes, params and tables in `test_isolation.py`; the workspace deletion test seeds
+  an invitation and an audit row. Vitest: `MembersPage`, `AuditLogPage`, `permissions`, the settings
+  tab lists. E2E: `gr19-team.spec.ts` (an invited agent signs up, replies' inbox opens, 403 on
+  automations and billing, the UI hides them; a `plan` seed route in the e2e API).
+- **Unsure / for the coordinator:** regenerate the client (`WorkspacePermissions`, `Member`,
+  `MemberList`, `Seats`, `Invitation`, `InvitationList`, `InvitationCreate`, `MemberRolePatch`,
+  `OwnershipTransfer`, `AuditEvent`, `AuditEventList` and the new operations); the web types are
+  aliases waiting for it. Migration `0032` follows `0031`. The e2e stack
+  needs `CLERK_INVITATIONS_PROVIDER=fake` (added to `scripts/e2e-stack.mjs`).
+
+## C-103 · Native Google Sheets sync (GR-27, feature/gr-27-sheets-followups)
+
+Roadmap P5. Migration `0031_google_sheets` (expand-only; the coordinator re-chains it).
+
+- **Access.** Google OAuth with the narrow `drive.file` scope (plus `openid email`, only to show
+  which account is connected). Offline access with `prompt=consent` so Google always returns a
+  refresh credential. The credential is stored encrypted like platform tokens
+  (`google_connections.credential_enc`, Fernet via `TokenCipher`) and never returned; responses carry
+  no field with token, secret or password in its name.
+- **Unverified (cannot be checked from here; no Google account or app was used).**
+  - *Existing sheets under `drive.file`.* From Google's documentation, `drive.file` gives per-file
+    access: files the app created, or files the person opened with the app through the Google
+    Picker. So a link pasted into a form is **not** enough to grant access to a sheet Social Hood
+    didn't make; the Sheets API answers 404 or 403. *Decided: the supported path is "Create sheet"
+    (Social Hood makes the sheet and writes its header row). "Use a sheet by its link" is offered and
+    works only for a sheet Google already lets the app see (one it made earlier, for example after
+    disconnecting and connecting again); otherwise it says so in plain words on the field.* The
+    Picker (a browser script and a Google API key) would let a person grant a sheet they already
+    have; it is left for later because it can't be tested without Google.
+  - *App verification (O-10).* `drive.file` is documented as a non-sensitive scope, which does not
+    need Google's sensitive-scope review; the OAuth consent screen still needs the app name, logo,
+    privacy policy and terms links and a verified domain, and an app in "testing" mode only lets the
+    listed test users in and expires refresh credentials after 7 days. Plan on moving the consent
+    screen to "In production" before real customers connect. If the Picker or a broader scope is ever
+    added, the review is longer. Not confirmed with Google.
+  - The real client follows Google's documented endpoints and is tested against recorded shapes with
+    respx (`tests/contract/test_google_sheets_client.py`); it has never run against Google.
+- **Setting up.** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+  (`<API>/v1/oauth/google/callback`), `GOOGLE_PROVIDER` (`google` or `fake`; `fake` is refused in
+  production). Not required in production: without them the card says Google isn't set up.
+- **Connecting.** Like Instagram's (X-1) the public callback connects nothing: it parks the code
+  (encrypted) under a one-time nonce bound to the member and workspace from the state, and redirects
+  to `/w/{slug}/settings/integrations?google={nonce}`; the signed-in page posts it to `…/complete`.
+  Only the starter can finish it (404 expired or used, 403 someone else). A state made for another
+  platform is refused at this callback. Reconnecting keeps the sheet and mapping unless the Google
+  account changed.
+- **API** (`/v1/w/{wid}/integrations/google-sheets`, owners and admins, Pro and Max). `GET` (status:
+  connection, sheet, columns, the fields a column can hold, counts and the latest 10 rows),
+  `POST /connect`, `POST /complete`, `POST /sheet` (create), `PUT /sheet` (by link), `PUT /mapping`,
+  `POST /test` (a sample row now; 409 with the reason in plain words), `DELETE` (revokes at Google
+  as far as Google answers, removes the connection and its waiting rows).
+- **Plan: PD-6 decided 2026-10-24 ("for now").** Webhooks stay on every plan (Free 1, Pro 5, Max 20
+  endpoints); Google Sheets, the public API and Zapier are Pro and Max. New entitlement
+  `sheets_sync` (Free no, Pro yes, Max yes); 402 `entitlement_required` "Google Sheets sync is part of
+  Pro." The card shows the plan message with a link to the plans. A workspace that drops to Free
+  keeps its connection but queues no new rows.
+- **Mapping.** An ordered list of `{field, header}`, at most 30. Fields: name, @username, platform,
+  email, phone, automation, captured at, consent, and any custom contact field (`field:<key>`); a
+  field appears once. The default is the eight fixed fields. The header row is written only to a
+  sheet Social Hood made (on create and when the mapping is saved); a sheet that was already the
+  person's is never overwritten.
+- **Rows.** `lead.captured` also queues a `sheet_rows` row in the same transaction
+  (`sheets.queue_lead`, called from `events.lead_captured`, only with a connection, a chosen sheet and
+  a plan that includes Sheets sync). The `append_sheet_row` job (bulk lane, recovery class RETRY) adds
+  it with `valueInputOption=RAW`, so a customer's text starting with `=` is never a formula. The row
+  keeps only the custom fields the mapping uses. *A sibling table and job rather than a new
+  webhook delivery kind: `webhook_deliveries` belongs to an endpoint (address, signing secret,
+  failure count) and a Google row has none of those.* It reuses the webhook machinery's backoff
+  (`delivery.backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours; 7 attempts).
+  Only Google being busy (429, 5xx, no connection) is retried; the other answers fail at once.
+- **Failure reasons (plain words, stored with a code).**
+  - `access_removed`: "Access was removed: reconnect Google in Settings, under Integrations." The
+    connection becomes `needs_reconnect`; waiting rows fail without calling Google.
+  - `sheet_gone`: "Google said the sheet was deleted. Pick or create a sheet again."
+  - `sheet_refused`: "Google won't let Social Hood write to that sheet. Pick or create a sheet
+    again."
+  - `no_sheet`, `google_busy` (retries ran out), `google_refused`.
+
+  Owners and admins are told once a day per reason (new notification type `sheets_failing`, in app
+  only). Reconnecting sends the rows that failed with `access_removed`; creating or choosing a sheet
+  sends those that failed for the sheet reasons.
+  *Deviation from the plan: the failures are on the Sheets card (status, last error, latest rows),
+  not in the Activity feed.* The feed's kinds are a closed list shared with the web types, and a new
+  one is a change to GR-05's schema and page; left for a later pass.
+- **Consent column.** The row carries the marketing consent recorded for the contact's channel when
+  it is queued. A flow's consent question comes after the answer it follows, so the row for the
+  first capture usually has an empty consent cell. *Limitation, not fixed.*
+- **More than one row per person.** One row per capture event: a flow that asks for an email and then
+  a phone adds two rows, the second with both. Updating the first row in place needs the row's
+  address from Google and was left out.
+- **Duplicates.** Google's append isn't idempotent: a worker killed after Google accepted a row and
+  before it was recorded sends it again on recovery. Rare, accepted.
+- **Retention.** Finished `sheet_rows` (they hold names, emails and phones) are deleted with the
+  webhook deliveries' window by the purge job.
+- **Fake Google.** `google/fake.py`, chosen by `GOOGLE_PROVIDER=fake` or `use_google` in tests
+  (`tests/support/google.py`, on in every test). It sees only the sheets it made, can revoke access,
+  delete a sheet and fail the next call. With a Redis client the sheets live in Redis, so the e2e API
+  and worker share them; the e2e API has `GET /__e2e/google-sheets/{id}`, `POST …/{id}/delete` and
+  `POST /__e2e/workspaces/{wid}/plan`.
+- **Web.** A Google Sheets card at the top of Settings, Integrations: connect (or reconnect), the
+  sheet (create with a name, or use a link, with the API's reason on the field), the columns (header
+  field, move up and down, remove, add an unused field, save, undo), a test row, the latest rows with
+  their plain reasons, and Disconnect (asks first). Free sees the plan message.
+- **Tests.** Unit: `test_sheets.py`. Contract: `test_google_sheets_client.py`. Integration:
+  `test_google_sheets.py` (callback and nonce, forged and foreign states, create, mapping and header,
+  existing sheets, test rows, revoked access and reconnect, disconnect, plan and roles, a capture
+  becoming a row, retries and the backoff, running out of attempts, a deleted sheet, consent and
+  custom fields, retention). Tenancy: the four new bodies and both tables in `test_isolation.py`.
+  Vitest: `GoogleSheetsCard.test.tsx`, `sheetMapping.test.ts`. E2E: `gr27-sheets-sync.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`GoogleSheetsStatus`, `GoogleConnectStart`,
+  `SheetColumnOut`, `SheetFieldOption`, `SheetRowOut`, `SheetOut`, `SheetMappingPut`,
+  `SheetTestResult` and the seven operations); the web calls the new paths through the typed client.
+  The plan comparison tables (`lib/billing/plan.ts`, `lib/marketing/plans.ts`) don't list Sheets sync
+  yet. Add the Google OAuth client to the production config before turning this on.
+
+## C-104 · Captures in the weekly report (GR-34 follow-up, feature/gr-27-sheets-followups)
+
+No migration.
+
+- **The count.** `overview_stats.captures_received`: the flow step log rows of kind `ask` whose
+  `detail` has an `answer`, in the week. That is the stored source of truth: an ask step gets an
+  `answer` only when the answer was accepted and saved (a question skipped after its tries has
+  `skipped` instead; a send step's tap also has an `answer` and is not counted), and it is the same
+  predicate the flow funnel (GR-15) counts. *Not the `lead.captured` events: those are stored only as
+  deliveries to an endpoint, so a workspace without one would show zero.*
+- **Dated by `updated_at`,** which is when the answer was taken (the row is created when the question
+  is asked, which can be days earlier). A consent follow-up a few minutes after the answer touches the
+  row again and could move a Sunday-night capture into the next week; accepted.
+- **One list.** `OverviewStats.captures` (so the digest stores it in `weekly_digests.stats`) and a
+  new `captures` metric ("Leads captured", a count) in the report's `COUNT_METRICS`, before leads
+  qualified: the week, the week before, the change and the 8-week series like the others. The
+  digest's trends table carries it automatically; `test_weekly_report.py` still compares every
+  report metric with the stored digest. A week before the workspace existed with nothing in it is a
+  gap, as for the other counts (`captures` joins `QUIET_KEYS`).
+- **Note removed.** `ReportNote`, `WeeklyReport.notes`, `reports.NOTES` and the report page's "aren't
+  counted here yet" line are gone. *The API field `notes` is removed, not emptied: it had one value
+  and nothing else reads it.*
+- **Tests.** `test_reports.py` (the metric and its place), `test_weekly_report.py` (a skipped, a
+  tapped and a waiting step are not counted; the week, the week before, after the week; the series;
+  no `notes`), `test_weekly_digest.py` (the stored stats carry `captures`), `WeeklyReportPage.test.tsx`.
+- **Unsure / for the coordinator:** regenerate the client (`captures` in the metric keys, `notes`
+  removed from `WeeklyReport`).
+
+## C-105 · Template placeholders are checked at activation (GR-16 follow-up, feature/gr-27-sheets-followups)
+
+No migration. Closes the open point in C-099: a flow template's `[price]` or `[code]` looked filled
+to activation.
+
+- **One list.** `templates.PLACEHOLDERS` maps each bracket token a template uses to what goes there
+  (`[price]`: your price, `[code]`: your code). `templates.unfilled(text)` finds the tokens still in a
+  text (case-insensitive, each once, in order of appearance) and `unfilled_copy(token)` words the
+  error: "Replace [price] with your price." Only listed tokens count, so a user's own brackets
+  ("[incl. GST]", "[1]", "[prices]", "[Shop link]") never trip it. A unit test checks that every
+  bracket token the templates use is in the list.
+- **Where it refuses.** Activation of a flow (`flows._text_errors`, so a send step's text, a
+  question's text, retry, consent and confirm lines, and the body of a saved reply a step uses) and
+  of an automation on the message settings (`message_text`, the tap-first `opening_text`, the
+  `follow_nudge_text`). The error sits on that field, so the step shows it like any other activation
+  error; two tokens in one text give two errors; `missing_for_activation` lists the field. Button
+  titles, public replies and AI instructions are not send text and aren't checked.
+- **Editor.** The step checker (`stepProblems`) marks the same texts as you type, from a mirror of
+  the list (`PLACEHOLDERS` in `lib/automations/flow.ts`; the comment names the Python list to keep in
+  step). The API's answer is merged as before, so a token the editor doesn't know still shows when
+  activation is refused.
+- **Template tests changed.** The price-by-option and coupon templates now need their price or code
+  as well as their link: `test_template_flows.py` (what each holds, and that they activate once
+  filled), `test_template_flows_api.py` (fields still to fill, 422 per step, filling one at a time),
+  and the GR-16 e2e spec fills them.
+- **Tests.** Unit `test_template_placeholders.py` (the list, the tokens found, ordinary brackets left
+  alone, flows, questions, the message settings, the opening and follow line); integration
+  `test_template_flows_api.py` (refused on each step, the coupon code, a message on the settings);
+  vitest `flow.test.ts`, `FlowEditor.test.tsx`.
+
+## C-107 · Copilot write actions (GR-36, feature/gr-36-copilot-writes)
+
+The agent can propose a flow or a segment; a member approves it; only then is it saved, by the same
+service the screen calls. It builds on the approval tables and routes the agent contract already
+had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, GR-13) and segments
+(GR-17).
+
+- **The action gateway** is `services/agent_actions.py`, with the actions it knows in
+  `agent/actions.py`. *`agent/gateway.py` (the R2 tier, mode and policy table) stays as it was: it
+  decides what an agent may do on its own, which nothing does yet.* Proposals never execute.
+  - *Propose* (from the tool, in the model's turn): the action must exist and not be an unavailable
+    one; the principal's role must allow it (403 `forbidden`); the arguments are checked with the
+    UI's own service validation (the flow graph, the plan step cap, tags and fields that exist,
+    the segment's name and limit); then a pending approval is stored with the proposing step's
+    idempotency key and the step is marked `approval`. A retried step finds its approval instead of
+    adding another. Nothing in the workspace changes.
+  - *Approve* (a member, `POST …/approvals/{id}/approve`): the approval row is locked and must still
+    be pending and not past its time; the approver's role must allow the action; the arguments (as
+    shown, or edited) are checked again; then the normal service function runs in a savepoint in
+    the same transaction that marks the approval `approved` and stores its outcome. A flow is saved
+    with `definitions.create`, `definitions.update` and `flow_store.save`; a segment with
+    `contact_segments.create_segment`. A second approve is 409, so a write never runs twice.
+  - *If the service refuses on approval* (a name taken since, a plan limit): nothing is saved, the
+    approval stays pending, its `outcome` says `ok: false` and why, the trail gets `failed`, and
+    the response is 200. The member can edit it (`args`) or reject it. *This differs from the
+    contract's "409 when no longer pending" only for this case, which is not a state change.*
+  - *Reject*: `rejected`, nothing saved. Anyone who can see the approval may reject (it changes
+    nothing); 409 when decided.
+  - *Expiry*: a proposal lasts **24 hours** (`APPROVAL_TTL`, already in the models; recorded here).
+    `expire_agent_approvals` runs every 15 minutes, and the list and decision routes expire what is
+    due first, so a stale card never approves. Expired is final: the member asks again.
+- **The agent never executes on its own.** *Decided: the proposal tools are draft tier, not write
+  tier, and the workspace's agent policy (mode, `create_automations` switch) does not gate
+  proposing.* The policy is about what the agent may do without asking, and no tool does; a
+  proposal only files a request that a member must approve, as if they had opened the screen. The
+  policy stays read-only by default and its PUT stays R2. When a write tool that runs on its own is
+  built, it goes through `gateway.decide` and the policy as designed.
+- **Roles.** Both screens are for owners and admins (`Admin` on the automation, flow and segment
+  routes), so `min_role` is admin for both actions: the proposal tools are not offered to a team
+  member, and approving needs the same. A team member sees the approvals of their own runs (and can
+  reject them); `can_decide` on each approval tells the web whether to enable Approve. *GR-19:*
+  `agent.actions.required_role(spec)` is the one place to replace with the permission matrix
+  (`automations.manage` for a flow, `contacts.manage` for a segment); callers don't change. The
+  propose and approve checks both call it.
+- **Audit.** Every proposal, approval, rejection, expiry, execution and refused execution is a row
+  in `agent_approval_events` (who, when, what, outcome as plain facts), shown in the run trace
+  (`approvals` on `GET …/agent/runs/{id}`, and "Proposed writes" in Settings → Agent's trace) and
+  logged as `agent_approval`. *Kept in the agent's own tables: GR-19's general `audit_events` is
+  not a dependency.* The hook is `_record` in `services/agent_actions.py`; mirror each event there.
+- **Write tools** (`agent/tools/proposals.py`, admins):
+  - `propose_flow`: a new automation (trigger, keywords, public replies, account) with a flow, or
+    a new flow for an existing automation (`automation_id`). The model writes steps in order
+    (send, ask, action, delay, branch, ai_reply, end) and names tags; the tool resolves names to
+    ids and builds the typed `FlowDefinition`, chaining each step to the next unless a `goto`, a
+    branch rule or a quick reply says otherwise. An unknown tag is refused with the tags the
+    workspace has. Approving saves a **draft** automation (never activated); an existing
+    automation keeps its status, and the card says so when it is live.
+  - `propose_segment`: tags (by name, all required), platform, account, email or phone given,
+    marketing consent, lead stages, score, activity and fields, as the contacts filter has them.
+    The card shows the count it matches; the count is read again on approval.
+  - `propose_broadcast`: **unavailable**. Registered for R2 so the model is never offered it; the
+    plain reason is `agent.actions.UNAVAILABLE` ("Broadcasts aren't available yet…") and the
+    gateway refuses the action with it. When GR-23 lands: add its action to `agent/actions.py`,
+    register the tool in R1 and drop the entry.
+  - `ToolContext` gains `step_id` and `step_key`, set by the executor, so a proposal files its
+    approval against the step that made it.
+- **Prompt.** `agent.v4`: the agent may propose flows and segments, must say a proposal is waiting
+  for approval and what the card shows, that an approved flow is a draft that stays off, never says
+  it is created, saved, live or sent, says plainly when a tool refuses, and says broadcasts can't be
+  drafted yet. Eval cases (`area: writes`): the PRICE flow (English and Hinglish), the vip segment,
+  an unknown tag, a team member (no tools; the answer names owners and admins), and a broadcast.
+  The two earlier `prepare_automation` cases accept either tool. The eval seed gains the tags `vip`
+  and `wholesale`.
+- **Migration 0033** (after 0032), expand-only: `agent_approvals.idempotency_key` (unique per
+  workspace), `outcome`, `executed_at`, an index on pending expiry, and the table
+  `agent_approval_events`. The coordinator re-chains it.
+- **API.** `GET …/agent/approvals` (`status` now also takes `all`, plus `run_id`), `POST
+  …/approvals/{id}/approve` (body `args` optional) and `…/reject` are built (no longer `x-pending`).
+  `AgentApproval` gains `lines`, `match_count`, `step_count`, `can_decide`, `requested_by`,
+  `outcome` and `events`; `AgentRunDetail` gains `approvals`; the action cards gain
+  `flow_proposal` and `segment_proposal` (`approval_id`, `title`, `lines`, and `step_count` or
+  `match_count`). New schemas: `ApprovalOutcome`, `ApprovalEvent`, `ApprovalListStatus`.
+- **Web.** An answer's proposal card says in plain words what will happen (the flow's steps, or the
+  segment's filters and count), when it expires, and has Approve and Reject. Approve is disabled,
+  with the reason, for roles that can't do it. After a decision the card shows the result and an
+  Open button (the automation or the segment), or why nothing was saved. **Waiting for you** sits
+  above the question box in the panel and the page, collapsed, with a count, and decides the same
+  approvals. The cards read the approval from the API, so they are right after a reload. No new
+  real-time event: a decision refreshes the lists, and the list refetches on focus.
+- **Not built.** Editing a proposal in the web (the API takes edited `args`; the card only approves
+  or rejects as shown); a real-time event when someone else decides; resuming a run after an
+  approval (a run ends when it has proposed; the answer says it is waiting); proposals that change
+  or delete things other than a flow and a segment.
+- **Tests.** Unit: `test_agent_actions.py` (the flow built from steps, branches, quick replies,
+  tags, missing parts; strict inputs; the registry; the refusals before any database; plain-words
+  filters; vocabulary). Integration: `test_agent_actions.py` (propose, nothing saved, approve to a
+  segment and a draft automation with its flow and keywords, tags, a change to an existing
+  automation, the step cap, reject, expiry on list and on decision, a refused approval then an
+  edit, idempotent proposals, roles, the run trace). Tenancy: `agent_approval_events` in
+  `test_isolation.py`; the approvals routes are no longer pending. Vitest: `ProposalCardView.test.tsx`,
+  `WaitingForYou.test.tsx`. E2E: `gr36-copilot-writes.spec.ts` with the seed route
+  `POST /__e2e/workspaces/{wid}/agent-proposals`.
+- **Unsure / for the coordinator:** regenerate the client (`FlowProposalAction`,
+  `SegmentProposalAction`, `ApprovalOutcome`, `ApprovalEvent`, the new fields of `AgentApproval`
+  and `AgentRunDetail.approvals`, `ApprovalListStatus`, `run_id` on the list); the web types are
+  aliases waiting for it. Run `alembic check` (the model and migration
+  declare the same index and unique constraint). The agent eval needs a live key; I did not run it.
+
+## C-108 · Facebook Pages, Messenger and comments (GR-29, feature/gr-29-facebook)
+A Facebook Page is a third platform: connect Pages, answer Messenger in the inbox, answer comments
+on Page posts, and run the wave 2 to 4 automations on it where Messenger allows. **Every Meta
+behaviour below was written from Meta's docs and none has been seen on a real Page.** Each one is
+marked *unverified* and listed in `docs/verification.md` item 36. The second App Review submission
+(O-10) is `docs/ops/app-review.md` section 8.
+
+### The platform
+- **Account.** `social_accounts.platform = "facebook"` (the check already allowed it).
+  `platform_account_id` is the Page id (the webhook `entry.id`), `app_scoped_id` the connecting
+  person's Facebook id (so Meta's deauthorize and data-deletion callbacks, which look accounts up by
+  that id, find every Page they connected), `username` the Page's username, `display_name` its name.
+  The Page access token is stored encrypted like every token. *Unverified:* a Page token made from a
+  long-lived user token does not expire, so `token_expires_at` is null and nothing refreshes it
+  (`FacebookAdapter.refresh_token` returns the token as it is).
+- **Adapter** (`platforms/facebook/`): `FacebookAdapter` implements `PlatformAdapter` on
+  `graph.facebook.com` (`me` is the Page). Capabilities: DM send, DM attachments, read receipts,
+  conversation backfill, comments and private reply; Human Agent follows `IG_HUMAN_AGENT_ENABLED`
+  (below). No templates, no heart sticker, no stories. Publishing, post insights and account
+  insights raise `capability_unavailable` until GR-30; `get_account_insights` returns the Page's
+  followers only. Modules mirror Instagram's: `oauth`, `webhooks` (split), `parse`, `reads`
+  (posts, counts, followers, profile, threads), `comments`, `moderation`, `profile` (ice breakers).
+  Messenger's message shapes go through the Instagram parser (they are the same), so only reads,
+  deliveries, postbacks without an id and `feed` comments are parsed here.
+- **Sandbox.** `SandboxAdapter` serves any account with a `sandbox_` id; for a Facebook one it
+  reports the Page's capabilities plus Human Agent. `POST /dev/sandbox/accounts` takes an optional
+  `{platform: "instagram" | "facebook"}`; `POST /dev/sandbox/inbound` on a sandbox Page builds Page
+  webhook bodies (a DM, a comment as a `feed` change on the Page's first sandbox post, a referral
+  with `source: SHORTLINK` or `ADS`, a postback, an opt-in) and stores them as `facebook` events.
+  Live comments and the story kinds are refused there with 422 on `kind`.
+- **Migration 0034** (after 0033). `webhook_events.provider` accepts `facebook`. Nothing else changes: no new
+  table, so the account purge, tenancy seeds and `B_TABLES` need no change.
+
+### Connect
+- Facebook Login for Pages, in two steps so the person picks which Pages (the plan asks "pick which
+  Pages"). `POST /social-accounts/facebook/connect` returns the authorize URL (state in Valkey, single
+  use, 10 minutes; 503 until `META_APP_ID`, `META_APP_SECRET` and `FB_REDIRECT_URI` are set; 402 over
+  `accounts_per_platform`). The public callback `GET /v1/oauth/facebook/callback` never connects
+  anything (X-1, as Instagram): it parks the code, encrypted, under a one-time nonce bound to the
+  member and workspace, and redirects to Connections with `?facebook=<nonce>` (errors:
+  `?error=…&platform=facebook`).
+- `POST …/facebook/pages {nonce}` exchanges the code, makes a long-lived user token, reads
+  `/me/accounts` and keeps the Page tokens (encrypted, 10 minutes) under the same nonce; it returns
+  each Page with `connected`, `can_connect` and a `problem` (a person without the MESSAGING task
+  can't answer messages). Asking again returns the same list. 403 for another member or workspace,
+  404 when expired, 502 when Facebook fails.
+- `POST …/facebook/connect-pages {nonce, page_ids}` connects the picked Pages: the plan's limit is
+  checked for all of them first (402, nothing added, the nonce stays valid), then each is upserted
+  (a reconnect updates in place; 409 `account_in_use` when another workspace has it live), subscribed
+  to webhooks and queued for the first sync. The nonce is spent only on success. A failed
+  subscription leaves the Page in `error` with Retry, as for Instagram.
+- The Instagram connect now tags the held code with its platform, so a Facebook nonce can't finish an
+  Instagram connect and the reverse.
+- Settings: `fb_redirect_uri`, `fb_webhook_verify_token`. They are not in the production-required
+  list (Facebook is off until set).
+
+### Messenger
+- **Webhook.** `GET/POST /webhooks/facebook`, signed with `META_APP_SECRET`, verify token
+  `FB_WEBHOOK_VERIFY_TOKEN`; events stored once per `fb:` key and processed by a `facebook` handler
+  that routes by Page id exactly like Instagram's (messages and echoes, postbacks, referrals, reads,
+  deliveries, reactions, edits, opt-ins). A delivery receipt names several messages: one event each.
+  A read is a watermark, so every message we sent before it is read. *Unverified:* all payload shapes.
+- **Sending** follows the Instagram pipeline: the 24-hour window, `messaging_type: RESPONSE`;
+  text up to 2,000 characters (`TEXT_LIMITS`), attachments by URL up to 25 MB, quick replies (13),
+  link buttons as the button template (3 buttons, 640 characters). **Message tags:** the app models
+  only HUMAN_AGENT, so a Page gets the same 7-day human window as Instagram when
+  `IG_HUMAN_AGENT_ENABLED` is on (Meta approves Human Agent once for the app, so there is no
+  separate setting); nothing else is sent outside the 24 hours, and the existing
+  `reply_window_closed` error says so with "Facebook". Meta's closed-window error for Messenger
+  (10 / 2018278) maps to the same code. The send buckets are per account, so the Instagram ones are
+  reused (they only pace us; Messenger's limits are higher).
+- **Inbox.** Conversations have `platform: "facebook"`; the platform filter and badges include it.
+  The contact's name and picture come from the Messenger profile; people have no handle.
+- **Backfill** reads `/me/conversations?platform=messenger` through the Instagram thread parser.
+
+### Comments
+- Comments arrive as the `feed` field (`item: comment`, `verb: add`); edits, removals, hides and
+  other items are ignored. Post ids are the Page post ids; a post we don't have is read with
+  `GET /{post_id}` and stored like Instagram's. The Page's own comments are skipped. *Unverified:*
+  the commenter's `from.id` may differ from the Page-scoped id their messages carry; then the
+  comment's contact and the person's Messenger contact are two contacts until they write.
+- Public reply `POST /{comment_id}/comments`; private reply the Send API addressed by
+  `recipient.comment_id` (text, link buttons and quick replies; no attachments, as Instagram);
+  hide and unhide `is_hidden`; delete (already gone counts as done). Backfill reads
+  `/{post_id}/comments` with the replies expansion. The private-reply bucket (750 an hour), the
+  7-day limit and one per comment are shared with Instagram.
+
+### Automations
+Every trigger and step works on a Page except what Messenger lacks, which activation refuses in plain
+words (`validation.py`, `flows.py`; copy shared with the web):
+- **Allowed:** DM keyword, comment keyword and any comment (with public replies and private replies,
+  tap first, link buttons, tracked links), entry link (`https://m.me/<username or id>?ref=<code>`),
+  ad click (a click-to-Messenger ad's `referral` with `source: ADS`), conversation starters
+  (Messenger's `ice_breakers`, the same editor and `ib:{id}` payloads; a tap is a postback),
+  welcome and default reply, AI replies, flows (send, quick replies, ask, branch, action, delay,
+  split, saved replies), data capture, business hours, lead scoring.
+- **Refused:** story reply and story mention ("Facebook Pages have no story replies or story
+  mentions"), Live comments ("Live comments on Facebook aren't supported yet"), the follow message
+  and a flow branch on following (Messenger doesn't say who follows a Page), the flow's profile
+  button (it opens an Instagram profile), and an Ask step's marketing-consent question (there is no
+  Facebook consent channel yet; adding one means a new `contact_consents.channel` value and
+  contact-list column). *Deviation from "every trigger and step": these four groups are the ones
+  Messenger doesn't have; the first two because Pages have no such surface, the last two because the
+  data isn't there.*
+- **Limits.** A message may be 2,000 characters (not 1,000 bytes) in its longest rendering;
+  button-template text stays 640; public replies stay 300 (our own cap). Copy written for Instagram
+  is said with "Facebook" (`validation.localize`).
+- Automations created without an account still pick the workspace's only live **Instagram** account
+  (`live_instagram_accounts`); with a Page and an Instagram account the member chooses.
+
+### Other
+- Ask Social Hood no longer says "Facebook isn't connected" when a Page is; the tools check for a
+  connected Page (`facebook_unconnected`) and treat `facebook` as a platform name like the others.
+  Analytics tools cover a Page's posts and comments; insights are absent until GR-30.
+- Billing: a `facebook_accounts` usage meter (plan limit `accounts_per_platform`, per platform).
+- Webhook health (`check_webhook_health`) still watches Instagram only. *Not built.*
+- Marketing pages, the privacy policy and terms still say Instagram and WhatsApp; they change with
+  the second App Review submission. *Not built, needs the owner's wording.*
+
+### Web
+- `FacebookGlyph`, `PlatformGlyph` and `PLATFORM_BG` (the existing `facebook` colour token);
+  Connections gets **Connect Facebook** (and **Add sandbox Page** in development), a Pages dialog
+  after Facebook's redirect (tick Pages; a Page that can't be connected says why; a refusal keeps the
+  list), Page cards ("Facebook Pages API"), search and filter. The inbox platform strip, thread
+  header, unsupported-message link, attachment rules (25 MB), contact filter, Home, Billing and the
+  send-failure copy include Facebook. Comments, entry links and conversation starters list Pages and
+  say Facebook; the post panel opens the post in Facebook.
+- The automation editor knows the account's platform: Facebook trigger names, the story triggers
+  disabled with the reason, message counters in characters out of 2,000, no follow message, and in
+  flows no follows condition, profile button or consent question.
+- `instagramAccounts` stays for story mentions and publishing; `automationAccounts` (Instagram and
+  Facebook) is what automations, comments, entry links and starters list.
+
+### Tests
+- Unit: `test_facebook_platform.py` (splitting, every parse, send payloads, ice breakers, connect URL,
+  Page list, registry, sandbox payloads), `test_facebook_automations.py` (activation rules and flow
+  rules on a Page). Integration: `test_facebook_connect.py` (the whole connect, X-1, quota, expiry,
+  reconnect, deauthorize), `test_facebook_messenger.py` (webhook route, intake, echo/delivery/read,
+  postback, m.me, ad referral, reply, window, limits), `test_facebook_comments.py` (comment intake,
+  automations on a Page, comment actions, refusals, entry links, starters, purge); tenancy bodies for
+  the three new routes and the sandbox body. Vitest: `FacebookPagesDialog`, `PlatformGlyph`,
+  `facebook-rules`, `steps/facebook`, `upload-facebook`, `inbox/facebook`, additions to the
+  Connections page, platform strip and Billing tests. E2E: `gr29-facebook.spec.ts` on the sandbox.
+- *Existing tests changed:* the automation notice's link is now "Connect an account" and says
+  "Instagram and Facebook"; the empty Connections text names Facebook; `test_entry_triggers.py`'s
+  account stubs carry a platform.
+
+### Unsure / for the coordinator
+- Regenerate the client: `FacebookConnectPages`, `FacebookPageList`, `FacebookPageOption`,
+  `FacebookPagesRequest`, `SandboxAccountCreate`, `facebook` in the platform literals
+  (`SocialAccountOut`, conversations, contacts filters, flow platform condition), the four new
+  operations (`start_facebook_connect`, `list_facebook_pages`, `connect_facebook_pages`, the
+  optional body of `create_sandbox_account`), then typecheck: web code calls them through the typed
+  client and keys several `Record<Platform, …>` by `facebook`.
+- `alembic check` for 0034 (after 0033).
+- Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
+  private replies take buttons and quick replies, ice breakers without a Get Started button, the
+  `tasks` field, and the Messenger text limit.
+
+## C-109 · Public API and API keys (GR-25, feature/gr-25-26-api-zapier)
+
+- **Owner decision PD-6 (decided 2026-10-24):** outbound webhooks stay on every plan (Free 1, Pro 5,
+  Max 20 endpoints, GR-04); the public API, API keys and the Zapier app are **Pro and Max only**.
+  It is the `public_api` entitlement in `billing/plans.py` (`free: False`), checked with
+  `check_entitlement`, so the 402 is `entitlement_required` with `entitlement: "public_api"`
+  ("The public API, API keys and Zapier are part of Pro."). Making a key on Free is 402. Listing
+  and revoking keys stay open, so a workspace that downgraded can clean up. A key made on Pro stops
+  working (402, same body) the moment the workspace is on Free again, and works again if it comes
+  back. *Decided, not pending.*
+- **Keys.** `api_keys` (migration 0035 (after 0034), shared with C-110's column): name (1 to 80), the first 12
+  characters (`key_prefix`, `shk_` and 8 more), the SHA-256 of the whole key (`key_hash`, unique),
+  scopes, `last_used_at`, `revoked_at`, who made it. A key is `shk_` and 43 random characters
+  (`secrets.token_urlsafe(32)`), shown once in the create response (`ApiKeyWithKey.key`) and never
+  stored or logged. *A plain SHA-256, not a slow hash: the key is 256 random bits, so there is
+  nothing to guess.* A key never changes after it is made (no edit; make another); revoking sets
+  `revoked_at` and is the end of it. At most 20 unrevoked keys per workspace (409 over it).
+- **Scopes** (`schemas/api_keys.py`): `contacts:read`, `contacts:write`, `tags:read`, `tags:write`,
+  `conversations:read`, `messages:send`, `automations:read`, `webhooks:subscribe` (C-110's REST
+  hooks). The key form starts read-only (`contacts:read` ticked). A route needs exactly one scope;
+  a key without it gets 403 `forbidden`, naming the scope.
+- **Managing keys** (owners and admins, `/v1/w/{wid}/api-keys`): list (with the scope catalogue),
+  create (201), revoke (`DELETE`, returns the key; again is a no-op). In Settings > Integrations
+  below the webhook endpoints: a list (name, prefix, scopes, made, last used or revoked), a create
+  dialog (name and scopes), a copy-once dialog and a revoke confirmation. A Free workspace sees
+  "part of Pro" and a link to plans instead of the form. *The routes carry a TODO for GR-19: they
+  move to the same `require_permission` as the webhook endpoints.*
+- **Authentication** (`auth/api_key.py`): `Authorization: Bearer shk_...` on `/public/v1`. The key's
+  hash finds the key (the one cross-workspace lookup, in `tenant_bypass_scope`, as `auth/` may); it
+  must be unrevoked and its workspace active (401 `unauthorized` otherwise; an unknown key also
+  counts against the caller's IP, 60 a minute, so guessing is slow); then the per-key limit, then
+  the plan. The key's workspace becomes the request's tenant exactly as for a member, so every
+  service query is scoped and a key can never reach another workspace (404 for another workspace's
+  id, like the app). `last_used_at` is written at most once a minute (Valkey `SET NX`). Every
+  request's log line carries `api_key_id` and `workspace_id`; the key never reaches a log.
+- **Rate limit.** *New limit `api_key`: 120 requests a minute per key* (a sliding window like the
+  others, `security/ratelimit.py`). Sending a message also counts against the workspace's existing
+  60 sends a minute (`sends`), the same budget as the app's. 429 `rate_limited` with `Retry-After`.
+  *The numbers are proposals; changing them is one line each.*
+- **Routes** (`api/public.py`, all call the app's services, no forked logic):
+  `GET /accounts`, `GET/POST /contacts`, `GET/PATCH /contacts/{id}`, `GET /contact-fields`,
+  `GET /tags`, `POST /contacts/{id}/tags` (add and remove by id), `GET /conversations`,
+  `GET /conversations/{id}`, `GET/POST /conversations/{id}/messages`, `GET /automation-runs`
+  (`automation_id`, `result`), `GET /openapi.json`. Responses are the app's schemas where they fit
+  (`ContactList`, `ContactRecord`, `TagList`, `MessageList`, `AutomationRunList`) and lean ones where
+  the app's carry internals (`PublicConversation`: no AI analysis, suggestion or summary).
+  - *Create a contact* adds a customer to a **WhatsApp** account by phone number (the app's E.164
+    rules; 409 for a number already there; 422 for an Instagram account, a phone without a country
+    code or an email or field that doesn't fit). Instagram contacts exist only once they message or
+    comment, so they cannot be added. `contact.created` is raised like for any new contact.
+  - *Custom fields set* is `PATCH /contacts/{id}` with `fields` (merge, null removes), the app's
+    validation and its `contact.updated` event.
+  - *Send a message* is text only, through `sending.queue_outbound` with the app's rules and errors:
+    409 `reply_window_closed` outside the window, 409 for an account that needs reconnecting, 402 for
+    an account the plan made read-only. The message is "human" with no sender (`sent_by` null).
+    `Idempotency-Key` is optional (the app's is required): the same key and body again returns the
+    first response; a derived `client_id` also stops a double send when Valkey is down.
+  - `GET /contacts` gains `sort=created` (newest contact first, for polling lists) in the service
+    (`services/contacts.list_contacts(sort=)`); the app's own list is unchanged.
+    `queries.list_runs` takes no `automation_id` for the workspace-wide list.
+  - Errors are the app's problem+json, one format.
+- **The document.** The public routes are **not** in the app's OpenAPI document (it is for the
+  generated web client; `problem_openapi` leaves the public routers out). `api/public_openapi.py`
+  builds a separate one: only `/public/v1`, bearer security, each operation's `x-required-scope`
+  (also in its description), problem responses, and the scope list. It is served without sign-in at
+  `GET /public/v1/openapi.json` (60 a minute per IP) and cached on the app.
+- **Docs page.** `/developers/api` in the marketing group, server-rendered from that JSON and
+  revalidated hourly: how to authenticate, the scopes, then each operation (method, path, scope,
+  parameters, body fields, responses, a curl line). No viewer library (nothing in `package.json`
+  renders OpenAPI); `lib/marketing/public-api.ts` reads the document with zod and builds the page's
+  model. When the API can't be reached the page says so. *Not added to the sitemap or footer* (the
+  sitemap test lists its pages exactly); one line in `PUBLIC_PATHS` adds it.
+- **Not built.** An audit log of key use beyond the access log's `api_key_id`; an IP allow list; key
+  expiry; a per-key rate limit setting; the webhook event catalogue in the document (GR-04's).
+- **Tests.** Unit `test_public_api.py` (hashing and shape, scope check, limit numbers, entitlement
+  values, the public document: every operation has a known scope, strings bounded, no credential
+  names, nothing public in the app's document). Integration `test_public_api.py` (key management and
+  roles, shown once and stored as a hash, Pro/Max gating both ways, 401s, the done-when read key
+  lists and is 403 on a write, each scope, each endpoint, the window and idempotency, the per-key
+  and sends limits, last used, revoke, tenancy with two workspaces). Tenancy: the `api_keys` table,
+  `key_id`, the create body, and `test_public_routes_hide_other_workspaces` (a workspace A key
+  calls every public route with B's ids: 404 and B unchanged). Vitest: `ApiKeysSection.test.tsx`,
+  `public-api.test.ts`, `ApiReference.test.tsx`. E2E: `gr25-public-api.spec.ts` (the stack gets a
+  `PUT /__e2e/workspaces/{wid}/plan` seed route).
+- **For the coordinator:** regenerate the client (`ApiKey`, `ApiKeyWithKey`, `ApiKeyList`,
+  `ApiKeyCreate`, `ApiScope`, the three `/api-keys` operations; the public routes are not in it);
+  the web types are aliases waiting for it. `alembic check` should be clean (the partial index on
+  `webhook_endpoints.api_key_id` is in the model). Migration 0035 is chained on 0030; re-chain it.
+
+## C-110 · Zapier app (GR-26, feature/gr-25-26-api-zapier)
+
+- **Plan gate (PD-6, decided 2026-10-24, see C-109):** Zapier is Pro and Max only, because it runs on
+  the public API. The REST hooks Zapier subscribes stop receiving events when the workspace is no
+  longer on a plan with `public_api` (the plan is read only when a hook is among the endpoints an
+  event would go to), and work again when it comes back. A member's own webhook endpoints are
+  untouched: outbound webhooks stay on every plan.
+- **REST hooks** (`api/public_hooks.py`, `services/api_hooks.py`, scope `webhooks:subscribe`):
+  `POST /public/v1/hooks {trigger, target_url}` (201: id, trigger, address, status and the
+  `signing_secret`, once), `GET /public/v1/hooks`, `DELETE /public/v1/hooks/{id}` (204).
+  - *Backed by GR-04, not beside it.* A subscription is a `webhook_endpoints` row with the new
+    `api_key_id` (migration 0035 (after 0034), `ON DELETE CASCADE`, partial index), described as "Zapier: new
+    contact" and subscribed to one event. So delivery, Standard Webhooks signing, the retry schedule,
+    the delivery log, turning an endpoint off after repeated failures (with its Activity reason and
+    notification) and replays are GR-04's code, unchanged. The hooks show in Settings > Integrations
+    beside the member's endpoints.
+  - **Triggers to events:** `new_contact` is `contact.created`, `lead_captured` is `lead.captured`,
+    `tag_added` is `contact.tagged`, `new_message` is `message.received`, `run_completed` is
+    `automation.run.completed`. *"Tag added" gets removals too (one event carries `action`); the
+    Zapier trigger drops them, so there is no per-endpoint filter on the server.*
+  - **Rules.** The address follows the endpoint rules (https, no user name, not a private address;
+    `WEBHOOKS_ALLOW_PRIVATE` allows a local one in development and e2e). Hooks do not count against
+    the plan's `webhook_endpoints` (Zapier can have one per Zap); a workspace holds at most 100.
+    Unsubscribing removes only a hook a key made (404 for a member's endpoint), and any key with the
+    scope in the workspace may do it (Zapier unsubscribes with the connection's key, which may have
+    been replaced). Revoking a key removes its hooks (C-109).
+  - `GET /public/v1/me` (any valid key) returns the workspace's name, the key and its scopes: the
+    Zapier connection test and its label.
+- **Polling fallbacks** (Zapier uses them to test a trigger and fetch a sample; nothing new in the API
+  beyond `sort=created`): new contact is `GET /contacts?sort=created`, lead captured is the same with
+  `has_email=true`, tag added is `GET /contacts?tag_id=…&sort=created`, new message is `GET
+  /conversations`, run completed is `GET /automation-runs`. *They are approximations of the event
+  (a contact's email is not stamped with when it was captured), good enough for a sample; the real
+  trigger is the hook.* Each polled item has the shape of a delivery, with an `id` per event.
+- **The integration** is Zapier Platform CLI source in `integrations/zapier/` (not in the pnpm
+  workspace, which lists `apps/web` and `packages/*`; no lock file, so nothing changes `pnpm-lock.yaml`).
+  `package.json` (`zapier-platform-core` 16, jest and nock), `index.js`, `authentication.js` (a custom
+  `api_key` field; the test call is `GET /me`, the label is the workspace's name), five hook triggers
+  and two hidden ones for dropdowns (`tag`, `contact_field`), four actions (Add Tag, Remove Tag, Set
+  Contact Field, Send Message), samples and output fields on each, `lib/` helpers, and jest tests in
+  the CLI's pattern (`createAppTester`, nock). *Written, not installed or run.*
+  - **Send Message** sends an `Idempotency-Key` from the conversation, the text and a five-minute
+    window, so Zapier retrying a step does not message a customer twice; outside the 24-hour window
+    the API's `reply_window_closed` text is the Zap's error.
+  - **Set Contact Field** sets one custom field (empty clears it) through the same validation as the
+    app.
+  - Errors from the API (problem+json) become the Zap's error with the API's own words; a 401 says to
+    make a new key.
+- **README** (`integrations/zapier/README.md`): what it does, scopes, first run (`npm install`, `npm
+  test`, `zapier validate`), pushing a private version, the manual test (captured leads to a Google
+  Sheet, step by step), and the directory submission steps for the owner. The 256 px `icon.png` is
+  not in the repo (resize `icon-512.png`); `zapier register` writes `.zapierapprc`.
+- **Make:** *follows with the same building blocks* (the API key and scopes, the REST hooks, the
+  polling lists); its own app definition is not started.
+- **Not built.** Searches ("Find Contact") and "Create Contact" as Zapier actions (the API has them:
+  `GET /contacts?q=`, `POST /contacts`); a per-hook event filter on the server; verifying the
+  delivery signature inside the Zap (Zapier's hook URL is unguessable; the signature is there for
+  other receivers).
+- **Tests.** Unit `test_zapier_hooks.py` (trigger mapping, the hook routes and their scope in the
+  public document, the signing secret only in the subscribe response). Integration
+  `test_zapier_hooks.py` (subscribe and unsubscribe for each trigger, address rules, scope, no slot
+  from the plan's endpoints, workspace isolation, a member's endpoint is never removed, revoking a key
+  removes its hooks, a signed `message.received` through the real deliver step, only the trigger's
+  event, retries, stopping and resuming with the plan, a member's endpoint on Free, the polling
+  lists). The public tenancy walk (C-109) also calls `DELETE /hooks/{id}` with B's hook. E2E:
+  `gr26-zapier.spec.ts` (subscribe a local receiver, a signed `contact.created`, the polling list,
+  unsubscribe, scope, plan). Jest in `integrations/zapier/test/` (for the owner's first run).
+- **Unsure / for the coordinator:** nothing to regenerate beyond C-109's (the public routes are not in
+  the app's document). The jest tests and `zapier validate` have never run: expect small fixes on the
+  first `npm test` (Zapier's `bundle` shapes are written from the docs). The `API_BASE_URL` default
+  `https://api.socialhood.com` is a guess at the production host.
+
+## C-111 · Website chat widget (GR-28, feature/gr-28-widget)
+
+Decided by the owner on 2026-10-24: **PD-7**. The widget is on every plan. Free shows "Powered by
+Social Hood" (a small link in the widget); Pro and Max turn it off in the widget settings. The abuse
+limits below apply to all plans. *The plan's recommended option was "Pro and Max, with the link on
+Free"; the owner chose to give the widget itself to every plan.* The PD table in the plan says so.
+
+- **A `web` platform, one widget per workspace.** A widget is a `social_accounts` row of platform
+  `web` (its `platform_account_id` is the public widget id, `wgt_` and 22 random characters) and a
+  `widget_settings` row. One per workspace (a partial unique index), not one per site: several
+  sites share it through the allowed-domains list. The first time an owner or admin opens Settings →
+  Website chat, the web account is made (`GET …/widget` writes once); a disconnected one comes back
+  with the same id. Visitors are contacts of that account and chats are ordinary conversations
+  (platform `web`), so the inbox, filters, search, AI, analysis, leads, webhooks and the Needs you
+  queue need nothing special. The account is listed with the others; Connections hides it (it is
+  not a connection) and AI rules and takeover shows it like any account, so the AI mode is set
+  there, not copied. Migration `0036` (after 0035): `web` in the
+  platform check, `widget` in the consent source check, the unique index and `widget_settings`.
+- **Adapter** (`platforms/web/adapter.py`). Capability `dm_send` only. `send_message` mints an id
+  (`web_<uuid>`): the reply is already in the conversation and the widget reads it from there.
+  Everything a platform with posts, comments, tokens or profiles does is `capability_unavailable`.
+  Replies go through the normal send pipeline (queue, job, `sent`), so scheduled messages, AI
+  replies and automations that send text work. Text limit 2,000 characters. No buttons or quick
+  replies (the web has no template for them), no attachments.
+- **No reply window** (`services/reply_window.py`): a page can stay open for days and nothing is
+  sent through a platform that could refuse a late reply. Always `open`, so Auto mode, scheduled
+  messages and automations are never blocked by a closed window. *Recorded as the plan asked.*
+- **The embed and its isolation.** `<script src="https://<api>/widget.js" data-widget="wgt_…" async>`
+  (`data-workspace` is accepted as an alias: the plan's name, though the value is the widget id, not
+  the workspace id). The API serves three plain files from `socialhood/widget/assets/`: `loader.js`
+  (2.9 KB, 1.2 KB gzipped), `frame.js` (16.2 KB, 5.1 KB) and `frame.css` (5.9 KB, 1.9 KB), about 9 KB
+  over the wire in all. No framework and no build step: *not TypeScript compiled by the repo's
+  toolchain*, because a new build target could not be tried here and a 16 KB script does not need
+  one; they are checked with `node --check` and the e2e test. The loader adds one **iframe** from
+  the API's own origin and resizes it; the chat lives inside it. *Iframe, not a shadow DOM:* a
+  frame isolates scripts and CSS both ways, keeps the visitor's session out of the host page, and
+  its `Content-Security-Policy` can name the sites allowed to frame it. The host page's CSP only
+  needs `frame-src` for the API origin. The widget never loads the app's CSS: it has its own small
+  stylesheet, its accent colour from the settings, and light and dark from `prefers-color-scheme`.
+- **Allowed domains are required** (`services/widget/origin.py`). Host names without scheme or port
+  (`example.com`, `*.example.com`; a pasted address is cleaned; `www.` of a bare domain is included;
+  `localhost` and IPs work for testing). A new widget allows nothing, so it shows nowhere until a
+  domain is added. Enforced three ways: the frame page is served only when the loader's `h`
+  (`location.hostname`) is allowed and carries `frame-ancestors` naming the allowed sites, which the
+  browser enforces; the session endpoint checks the same host; the visitor token carries that host and
+  every call checks it again, so removing a domain or switching the widget off stops live sessions
+  within one poll. *Honest limit:* the API is public, so a script outside a browser can call it with
+  any host; what stops it is the rate limits and the abuse rules, not the domain list. Browser calls
+  from another site are refused (`Origin` must be this server's own).
+- **Visitors and tokens** (`security/widget_tokens.py`). The frame keeps a random *visitor key* in
+  its own storage; the contact is keyed by `v_` and 24 hex characters of its SHA-256, so the id in
+  the inbox and exports cannot read the chat. `POST /v1/widget/session` turns the key into a signed
+  *session key* (6 hours; HMAC with a key derived from `TOKEN_ENCRYPTION_KEYS`, like the digest
+  unsubscribe links, so no new secret and rotation works), which the frame holds in memory and sends
+  as a bearer. No secret is in the page. The public routes avoid `token`, `secret` and `password` in
+  field names (SEC-02), so they are `session_key` and `visitor_key`. Nothing is stored for a visitor
+  who never writes; the contact and conversation are made by the first message.
+- **Public API** (`/v1/widget/*`, not in the OpenAPI document): `POST /session`, `GET /messages`
+  (a long poll: `version` and `wait` up to 20 s, rechecked every 1.5 s on a query that holds no
+  connection while sleeping), `POST /messages` (`client_id` makes a retry idempotent), `POST /email`.
+  *Real time is a long poll, not SSE or the inbox stream:* the workspace's Redis stream belongs to
+  members and carries more than a visitor may see; a long poll needs nothing new, works through any
+  proxy and delivers a reply within about 1.5 s of it being sent. The frame stops polling in a
+  hidden tab and before the visitor has written.
+- **Email and consent.** The email form is `off`, `optional` (after the first message, skippable) or
+  `required` (before the first message; the API refuses a message without it). The address is
+  normalised like a flow's question, set on the contact (`email_source = widget`, unverified),
+  qualifies a new lead (GR-18) and fires `contact.updated`/`contact.created`. *`lead.captured` is
+  not fired: it names an automation run, and there is none.* With "Ask for marketing consent" on, an
+  unticked box is shown; ticked, a granted **email** consent is recorded (source `widget`, new)
+  with the exact words shown, the site's host, the address and the time as evidence, as GR-14 does.
+  Unticked records nothing (silence is not a refusal). Consent is for email, the channel the
+  address is for.
+- **Abuse limits, all plans.** Per IP a minute: 120 frame loads, 20 sessions, 40 sends, 240 polls,
+  10 email forms. Per visitor: 10 sends a minute, 300 sends a day, 60 polls a minute. Message
+  length 1,000 characters (the API schema allows 2,000 so the sentence comes from the rules, not a
+  422 with no words). Rules (`services/widget/abuse.py`, new: the app has no DM spam detection to
+  reuse; comment spam is the AI's sentiment): no control characters, at most 2 links, no run of 30
+  of one character, no fourth identical message in a row. **New chats a day, by plan**
+  (`widget_conversations_daily`): Free 50, Pro 500, Max 5,000; over it a visitor sees "try again in a
+  little while" (429 with `Retry-After`), open chats carry on. *The numbers are proposals.*
+- **Plan rules.** New entitlement `widget_remove_branding` (Free false, Pro and Max true).
+  `PUT …/widget` with `show_branding: false` on Free is 402 `entitlement_required`; the choice
+  stays stored across a downgrade and the visitor sees the link again (`show_branding` in the
+  response is what is shown, `can_remove_branding` says whether the switch is locked).
+- **Settings routes** (`GET`/`PUT /v1/w/{wid}/widget`): owners and admins. *Waiting on GR-19:* both
+  should move to `require_permission` when the matrix lands (TODO in `api/v1/widget.py`).
+- **Web.** Settings → Website chat (owners and admins): sites (chips), the embed code with Copy, an
+  on/off switch, title, greeting, accent colour from six brand hues (`widgetAccents` in
+  `styles/tokens.ts`: the widget runs on the visitor's page and needs hex values), position, a
+  preview, the email form and consent, branding (locked on Free, with the upgrade dialog) and a link to
+  the AI settings. One new token, `--color-web` (`#0F766E`, 5.5:1 with white), for the platform
+  badge; a globe glyph; "Website" in the inbox's platform strip, the thread header, the contacts
+  filter, the contact drawer and the AI settings. A website visitor has no profile elsewhere, so
+  "Open in …" is hidden for them. *The theme refactor is pending: the token is one line in
+  `globals.css` and `tokens.ts` to port.*
+- **Not built.** Attachments, a typing indicator, read receipts and a visitor's "seen"; a page URL
+  or title on the conversation (the entry source is `organic`); push or email to the visitor when
+  they close the page (the email they gave could carry it later); several widgets per workspace;
+  per-page rules; a custom domain for the embed; `lead.captured` for the widget form; a custom
+  colour picker (only the six hues, plus an API-set colour shown as "Current colour"); minifying
+  the three files.
+- **Tests.** Unit: `test_widget_origin.py`, `test_widget_tokens.py`, `test_widget_abuse.py`,
+  `test_web_adapter.py` (adapter, registry, window, text limit); `test_account_purge_tables.py`
+  lists `widget_settings`. Integration: `test_website_widget.py` (settings and roles, the branding
+  rule per plan, sessions and sites, a removed domain, the same-origin guard, expired and forged
+  keys, start and receive, idempotency, email and consent, required email, spam rules, the daily
+  cap, per-visitor and per-IP limits, an inbox reply reaching the widget, a waiting poll, the AI
+  answer from knowledge, an escalation to Needs you, the served files and the frame policy).
+  Tenancy: `tests/tenancy/test_widget_tenancy.py` (public routes across two workspaces: same
+  visitor key, forged tokens, widget ids on the wrong site, deleting workspaces) and the settings
+  route and `widget_settings` in `test_isolation.py`; the account deletion test seeds a row. Vitest:
+  `WidgetSettingsPage.test.tsx`, `lib/widget/form.test.ts`, `PlatformGlyph.test.tsx`, a Website
+  segment in `PlatformStrip.test.tsx`; the settings tab lists. E2E: `gr28-widget.spec.ts` (a test
+  page served by the test on `http://localhost`, the chat to the inbox with the AI's draft, the
+  reply back to the open widget, the unread badge, email, keyboard, phone width, a site not on the
+  list, the settings page).
+- **Unsure / for the coordinator:** regenerate the client (`WidgetSettingsOut`, `WidgetSettingsUpdate`,
+  `get_widget_settings`, `update_widget_settings`, `web` in `platform` literals and `widget` in
+  `ConsentSourceName`); the web types are aliases waiting for it. Migration 0036 re-chains and it
+  edits the `ck_contact_consents_source` check: any other branch that recreates it must keep
+  `widget`. The e2e stack needs `TOKEN_ENCRYPTION_KEYS` (it has one) and its rate limits may stay on.
+  `frame-ancestors` for `localhost` allows any port over http and https.
+
+## C-112 · WhatsApp broadcasts (GR-23, feature/gr-23-broadcasts)
+
+- **Owner decisions (2026-10-24), recorded as decided.**
+  - **PD-3, who pays Meta: the business, directly.** Each WhatsApp Business Account carries its own
+    payment method (set up in Embedded Signup); no markup, no money through Social Hood. The cost on
+    a broadcast is an estimate from Meta's rate card and the pages say Meta bills the account
+    directly. Nothing in the product charges for a message.
+  - **PD-4, plans: Pro and Max with a monthly recipient quota, none on Free.** The entitlement
+    `broadcast_recipients_monthly` in `billing/plans.py`: Free 0, Pro 2,500, Max 25,000 (one line to
+    change each). The 402 is the app's own: `entitlement_required` ("WhatsApp broadcasts are part of
+    Pro.") on a plan with 0, `quota_exceeded` with the plan's limit and the numbers otherwise.
+  - **O-11, the legal check of marketing consent in India (TRAI TCCCPR, DPDP Act): not done.** So
+    GR-23 ships behind the server setting **`BROADCASTS_ENABLED`, off by default** (like GR-38's
+    `AGENT_VISUALS_ENABLED`; in `.env.example` as false, on in the e2e stack and in the tests'
+    fixture). Off: every broadcast route except `GET /broadcasts/availability` answers 404 "Broadcasts
+    aren't available yet.", the dispatch and sweeper jobs do nothing, and the web shows nothing (the
+    Automations and Activity pages hide their Broadcasts link and filter; the broadcast pages show
+    one plain notice). *Turn it on in production only after O-11.*
+- **A broadcast** (`broadcasts`): one approved template (marketing or utility; an authentication
+  template is a one-time code and is refused) from one connected WhatsApp number to a saved segment
+  (GR-17). The template's name, language, category and body are copied when it is made, so the
+  preview and the estimate need no call to Meta. Each variable `{{n}}` is a contact field (first
+  name, name, username, email, phone or a custom field's key) with an optional text to write when
+  the person has none, or a fixed text. `first_name` falls back to "there". A field with no value
+  and no fallback leaves that person out (skipped as "missing value") rather than sending a hole.
+  WhatsApp's parameter rules are applied (no line breaks or tabs, no run of four spaces, at most
+  1,024 characters; *unverified*). A draft can be changed (`PATCH`) and deleted; a started one can
+  be paused, resumed and cancelled.
+- **The audience** (`services/broadcasts/audience`). The segment's own filter, with its platform and
+  number replaced by the broadcast's (*a segment saved for Instagram still means "these people, on
+  this number"*), then each contact's **latest WhatsApp marketing record** decides (GR-02, latest
+  `occurred_at` wins): `granted` is sent to; `revoked` is skipped as `opted_out`; no record is
+  skipped as `no_consent` (not knowing is not agreeing). Skipped contacts are rows with their
+  reason, counted on the page and never sent. The audience is fixed when the broadcast **starts**
+  (up to 30,000 contacts; a bigger segment is refused), and each person's consent is checked again at
+  their turn, so a STOP between the two still wins.
+- **Preview** (`POST /broadcasts/preview`): the counts (matching, eligible, opted out, no consent,
+  missing value), the cost, the quota left, the number's daily limit and how many days that means,
+  the message drawn with a sample contact, and the sentences that stop it being sent. It is the same
+  audience code the send uses.
+- **Cost estimate** (`services/broadcasts/rates.py`): Meta's rate card as data (India, INR, per
+  message by category: marketing 0.7846, utility and authentication 0.1150) with its `as_of` date
+  and `verified = False`. **The figures are unverified**: typed in by hand, not read from Meta,
+  and Meta revises its rates. Update `RATE_CARD` when its pricing page changes; the pages say "typed in
+  by hand, not yet checked against Meta" while it is unverified. An unknown category is priced as
+  marketing (the dearest). The estimate is stored on the broadcast when it starts.
+- **Schedule.** `POST /broadcasts/{id}/start` with no time sends now; with `scheduled_at` (a time
+  zone is required, at least a minute and at most 90 days ahead) it schedules, and the quota is
+  checked then too. The minutely job `run_broadcasts` starts the ones that are due: it fixes the
+  audience, and a broadcast whose number or segment is gone, or that has no one left to send to,
+  becomes `failed` with the reason and tells the owners and admins. A scheduled broadcast does not
+  call Meta when it starts: a template withdrawn since then fails each message with WhatsApp's own
+  reason.
+- **Sending and throttling** (`services/broadcasts/dispatch`, `throttle`, job `dispatch_broadcast`).
+  - A batch hands up to 60 waiting people to the normal send queue (`sending.queue_outbound` with
+    the template, source `broadcast`, so the send job, token bucket, retries, statuses, inbox and
+    realtime all work as for any message), then the job queues itself a minute later: about 40
+    minutes for 2,500 people. *Source `broadcast` is new on `messages` (migration widens the check),
+    so the inbox says "Sent as part of a broadcast" and Activity words it.*
+  - **Idempotent per recipient**: the message's client id is derived from the recipient's id, rows are
+    locked (SKIP LOCKED) while a batch works, and the state of each recipient is the progress, so a
+    retried or stalled job sends nobody twice and a lost job is picked up by the minutely sweeper.
+  - **Pacing to the tier**: the number's daily limit by messaging tier (50, 250, 1,000, 10,000,
+    100,000, unlimited), 90% of it usable, less the people already messaged by broadcasts in the last
+    24 hours (the room is counted from `dispatched_at`; WhatsApp counts unique people in a rolling 24
+    hours, *unverified*). At the limit the next batch waits until the oldest message leaves the
+    window. **When the tier is not known the default is 250** (conservative), and the preview says
+    so. The tier and quality come from `whatsapp_number_health`, read from the number
+    (`adapter.get_number_health`: `quality_rating`, `messaging_limit_tier`; *unverified*) when it
+    has not been read for 30 minutes, and from the webhook below. An unknown rating never replaces a
+    known one.
+  - **Pause on a quality drop**: the `phone_number_quality_update` webhook (FLAGGED, UNFLAGGED,
+    UPGRADE, DOWNGRADE, ONBOARDING; *unverified*) names the WhatsApp Business Account, not the number
+    (no `metadata.phone_number_id`), so it is routed by `social_accounts.waba_id`
+    (`webhooks/routing.resolve_waba_accounts`) to each of its numbers connected here. FLAGGED is rating
+    Low (red); UNFLAGGED is taken as Medium until the number is read again. A sending broadcast
+    **pauses with a plain reason** when the rating falls to Medium or Low, when it is Low at a batch,
+    or when the tier is lowered. The owners and admins get an in-app notification
+    (`broadcast_paused`) and Activity shows it with a link. **The owner resumes**; resuming while the
+    rating is Low is refused (409) with the reason.
+  - Other pauses, each with its own sentence and code: `member` (the owner paused), `plan` (the plan no
+    longer has broadcasts), `limit` (the month's recipients ran out), `account` (the number needs
+    reconnecting or cannot send templates). A recipient the queue refuses for its own reason is
+    marked failed with the reason and the batch carries on.
+- **Per-recipient status.** Not stored twice: a recipient shows queued, sent, delivered, read,
+  failed or skipped **from its message** (`repositories/broadcasts.status_expr`), so WhatsApp's
+  delivery statuses (`whatsapp_status.apply_status`, which never moves a status backwards) are the
+  only thing that changes it. A failure's reason is the existing mapped wording (a number that is
+  not on WhatsApp is "This person can't receive messages right now."); an unmapped code shows
+  WhatsApp's own reason. `replied_at` and `stopped_at` are set by ingest. The detail page has the
+  counts at each stage, a progress bar, and the audience in pages of 25 with a status filter; it
+  polls every 5 seconds while sending.
+- **STOP** (`services/broadcasts/stop`, `inbound`). A WhatsApp text that is **only** a stop phrase
+  revokes marketing consent: a `revoked` record, source `stop_reply`, evidence `{message_id, text}`.
+  It is recorded even when the contact had no consent on file, and a record in the same second as a
+  grant still wins (WhatsApp stamps messages to the second). The list, in one place (the module's
+  docstring and `PHRASES`): English (stop, stop all, unsubscribe, unsub, opt out, optout, cancel, end,
+  quit, remove me, no more messages, do not / dont message me or contact me, stop messaging me),
+  Hinglish (band karo, band kar do, mat bhejo, msg mat bhejo, bhejna band karo, nahi chahiye ...)
+  and Hindi (the same in Devanagari), after lower-casing, dropping punctuation, emoji and polite
+  fillers (please, pls, kindly, thanks, kripya ...). The whole message must match, so "please don't
+  stop the delivery" does not. *The list is the usual set, not a legal one (O-11 covers wording).* No
+  confirmation message is sent back. A message within seven days after a broadcast message counts as
+  a reply to it.
+- **Quota rule**: a recipient counts when its message is handed to the send queue in the current
+  billing period (the subscription's anchor day, as for credits), failures after that included,
+  skipped contacts and hand-over failures never. Starting or scheduling a broadcast that would not
+  fit is refused with the numbers; one that runs out while sending pauses (`limit`).
+- **Activity (GR-05).** Failed broadcast messages are Activity's "A broadcast message to X wasn't
+  sent" with the reason; a new `broadcast` kind lists paused and failed-to-start broadcasts with the
+  reason and an action to open the broadcast. **Contact timeline (GR-17)**: "Received broadcast X"
+  with how far it got (Sent, Delivered, Read, Couldn't be delivered).
+- **Sandbox WhatsApp number** (`platforms/sandbox/whatsapp.py`). `POST /dev/sandbox/accounts?platform=whatsapp`
+  connects a fake number (`sandbox_` phone number id, `sandbox_waba_` business account) whose
+  adapter lists four approved templates (two marketing, one utility, one authentication), records
+  template sends (a parameter containing `[sandbox:fail=<code>]` fails that send) and reports its
+  tier. `POST /dev/sandbox/inbound` takes, for such a number, `dm` (a customer's WhatsApp message),
+  `status` (a delivery status for the last message sent to `from_id`: `delivery_status`,
+  `error_code`, `error_text`) and `quality` (`quality_event`, `tier`), as the webhook bodies Meta
+  would deliver, through the real intake. The e2e stack has a seed route to put a workspace on a plan.
+- **API** (owners and admins, through GR-19's automations permission for reads and
+  writes): `GET /broadcasts/availability`, `GET /broadcasts`,
+  `POST /broadcasts/preview`, `POST /broadcasts`, `GET|PATCH|DELETE /broadcasts/{id}`,
+  `GET /broadcasts/{id}/recipients?status=&limit=&offset=`, `POST /broadcasts/{id}/start|pause|resume|cancel`.
+  A number, segment or broadcast of another workspace is 404 `not_found` before any plan check.
+- **Migration 0037** (after 0036), expand-only: `messages.source` accepts
+  `broadcast`; tables `broadcasts`, `broadcast_recipients` (`uq_broadcast_recipients_broadcast_id_contact_id`)
+  and `whatsapp_number_health` (`uq_whatsapp_number_health_social_account_id`). All three reference the
+  account, so the account purge deletes them (children first); the purge test's list, the
+  account-deletion seed and the tenancy test's table list and seeds include them.
+- **Web.** `/w/{slug}/broadcasts` (list with the month's quota meter, a note that Meta bills the
+  account directly), `/new` (the composer: number, segment, approved template, a row per variable,
+  send now or schedule in the workspace's time zone, a live preview with the audience, the skipped
+  and why, the sample message, the estimate and the number's daily limit, and a confirmation) and
+  `/{id}` (counts, progress, the reason it paused with Resume, Pause, Cancel and Delete, the
+  message and its mapping, the estimate, and the people with their status). Shown only through a
+  "Broadcasts" button on Automations when the setting is on. Owners and admins. Stacked cards and
+  rows, so it works at 375 px.
+- **Not built.** An outbound webhook event for broadcasts (GR-04's catalogue); a STOP
+  acknowledgement message; a re-engagement of people with no consent record; a template's media
+  header, buttons with variables and named parameters (the same limits as the template picker);
+  editing a broadcast after it started; a CSV of the results; Instagram broadcasts (no API).
+- **Unverified (Meta), everything above that says so:** the rate card's figures; the messaging tier
+  names and limits and that the limit is unique people in a rolling 24 hours; the quality rating and
+  tier fields of the phone number; the `phone_number_quality_update` event names and its routing by
+  business account; that FLAGGED means rating Low; WhatsApp's parameter rules. Only a real number
+  settles them.
+- **Tests.** Unit: `test_broadcast_stop.py`, `test_broadcast_throttle.py`, `test_broadcast_rules.py`
+  (variables, the rate card, the plan's numbers), the purge list. Contract: `test_whatsapp_health.py`
+  (the health parsers and the sandbox bodies through the real WhatsApp parsers). Integration:
+  `test_broadcasts.py` (the setting off, the plan, preview, create, schedule, the sandbox broadcast
+  to three with each status and the opted-out one skipped, STOP, pacing, the quality pause and resume,
+  the month's recipients, Activity and the timeline, roles, the job). Tenancy: the new routes, bodies
+  and tables in `test_isolation.py` (the walk turns the setting on). Vitest: `BroadcastComposer`,
+  `BroadcastDetailPage`, `BroadcastsPage`, `lib/broadcasts/format`. E2E: `gr23-broadcasts.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (the new schemas, 10 operations, the
+  `broadcast` message source, activity kind and timeline kind, the `platform` query on
+  `create_sandbox_account`, and `status` and `quality` plus four fields on `SandboxInbound`); the web
+  types are aliases waiting for it, and the web calls the paths through the typed client, so typecheck
+  after regenerating. Decimal fields (`per_message`, `total`, the rate card) arrive as strings and the
+  web formats them. For production the Meta app's WhatsApp webhook needs the
+  `phone_number_quality_update` field subscribed (*unverified* that it is delivered to the same
+  callback as `messages`). `BROADCASTS_ENABLED` belongs on in staging only until
+  O-11.
+
+## C-113 · Combined GR batch E: integration fixes between the GRs (feature/gr-batch-e)
+
+Each GR was written on its own base, so these only showed once they were stacked. None changes a
+migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was never altered.
+
+- **Widget frame policy (GR-28 against the security headers).** The outermost middleware replaced
+  every response's `Content-Security-Policy` with `frame-ancestors 'none'`, which erased the widget
+  frame's own list of allowed sites. The middleware now keeps the app's policy on `/widget/frame`
+  when the route set one (a refusal without one still gets `'none'`); every other route keeps `'none'`.
+- **Private reply length (GR-29).** `PrivateReplyCreate.text` was capped at 1,000 characters in the
+  schema, so a Page's 2,000-character limit never reached the service's per-platform check. The schema
+  now only bounds the body (4,096) and the service enforces the account's own limit. The OpenAPI
+  `maxLength` of that body changes, so the client is regenerated.
+- **A re-delivered Messenger message is `processed`, not `ignored`.** The Facebook handler gives the
+  same status as Instagram's for a replay (ingest stores nothing and records no reason), so the
+  GR-29 test expected the wrong status; it still asserts that nothing new is stored.
+- **A Page's webhook payloads are deleted with its data.** The purge (C-067) deletes `webhook_events`
+  routed to the account whatever the provider; the GR-29 test asserted they remained. Now it asserts
+  none do.
+- **Tests, not behaviour.** `Ws.call` merges extra headers instead of passing `headers` twice;
+  `make_run` borrows a message when a seed names no trigger (the one-trigger check holds);
+  the sheets `capture_email` helper picks the still-queued question when called twice in a test; a
+  public-API send outside the window uses 8 days because the sandbox account has Human Agent (7 days);
+  the DM keyword test sends the message the run queues; a Page test needs Pro for four active
+  automations (Free includes three); the tenancy walk lists `/public/v1/me` with the other routes that
+  name no id (it still must show none of B's data); Idempotency-Key needs 8 characters.
+
+## C-114 · Instagram Story scheduling (GR-39, feature/gr-39-30-stories-fb-publishing)
+
+- **A Story is a choice, not a shape.** One image or one video could be an image post, a Reel or a
+  Story, so the composer sends `kind: "story"` (`ScheduledPostDraft.kind`, default `post`) and the
+  stored `scheduled_posts.format` becomes `story` (`derive_format(..., story=True)`). Exactly one
+  image or video makes a Story; two or more files are refused ("A Story is one image or one
+  video."), so a Story can't be a carousel. Duplicate keeps the format.
+- **No caption.** The caption and first comment stay on the draft (switching back to Post brings
+  them back) but are never sent: `_caption` returns "" for a Story, the container body has none, and
+  no first comment job is queued. The checklist replaces the caption, hashtag and mention checks with
+  one passing line, "Stories are published without a caption".
+- **Container.** `POST /{ig}/media` with `{media_type: "STORIES", image_url | video_url}`, then the
+  same status polling (videos process like Reels, images are FINISHED) and `media_publish`. A lost
+  publish answer is found again in `GET /me/stories` by time (`/me/media` does not list stories; a
+  Story has no caption to match on), and the new Story is read back with the story fields only
+  (`id,media_type,media_url,thumbnail_url,permalink,timestamp`). New adapter method
+  `create_story_container`; `get_published_media` and `find_published_media` take `story`.
+- **Validation.** Videos 3 to 60 seconds (refused outside, even though a Reel may run 90 s); image
+  size and format as for posts; any shape passes, with a note on the media line when the file is not
+  about 9:16 ("9:16 fits a Story best. Instagram may crop or add bars to this file."). A Facebook Page
+  target of a Story is refused on `targets.{i}` ("can't publish Stories"). Quota: a Story is a
+  scheduled post like any other (`scheduled_posts_monthly`, once per billing period, C-043) and
+  counts in the 24 hour publishing limit the checklist shows.
+- **Errors.** `STORY_REASONS` re-words 2207004, 2207005, 2207009, 2207026 and 2207052 for a Story
+  (size, format, shape, link); every other known subcode keeps its reason from C-043 and an unknown
+  one falls back to the generic reason. The processing timeout names the account's platform
+  ("Instagram took too long to process the video"). The failure notification says "Your Story".
+- **After publishing.** The `media_items` row has `media_type = story` (no "next post" automation
+  links to it, as before). The live-stories route (`GET /stories`, the story-reply picker) reads
+  Instagram, so the new Story appears there on its own; the sandbox now lists its published stories
+  (24 hours) before the two seeded ones, and keeps them out of feed posts. Each published Story target
+  carries `expires_at` (published time + 24 hours), which the composer's banner shows ("Disappears
+  Wed 10:00").
+- **Web.** A "Type" section (Post | Story) in the composer; with Story chosen the caption and first
+  comment sections are hidden, the media tray stops asking for crops and checks 3 to 60 s, the
+  preview becomes a 9:16 phone ("Story preview") and the format pill says Story. The List, Agenda and
+  calendar show a "Story" badge, and name the post "Story" instead of "No caption yet".
+- **Story insights: not built.** The insight metrics for stories exist (`STORY_METRICS`), but
+  `snapshot_post_metrics` leaves stories out on purpose (the windows are 1 h to 72 h, a Story is gone
+  after 24 h) and the analytics reads skip them. Fetching reach and replies needs its own early
+  windows; left for a follow-up.
+- **WhatsApp Status** has no API, so it is out of scope.
+- **Unverified (Meta), until a real account publishes a Story:** that `media_type: STORIES` with
+  `image_url` or `video_url` is accepted under Instagram Login; that images must be JPEG and at most
+  8 MB; the video limits (3 to 60 seconds, 100 MB, MP4 or MOV) and that 9:16 is recommended, not
+  required; whether Stories count against `content_publishing_limit`; whether `GET /{id}` takes the
+  story field list and `GET /me/stories` lists a Story right after publishing; the Story-specific
+  error subcodes (we know no subcode that is only for Stories, so `STORY_REASONS` re-words general
+  ones); that `me/stories` timestamps allow the time match used for a lost answer.
+- **Migration 0038** (after 0037), expand-only: `ck_scheduled_posts_format` accepts `story`
+  (downgrade turns stories back into drafts without a format).
+- **Tests.** Unit: `test_story_scheduling.py` (format, checklist, container bodies, error wording,
+  the lost-answer lookup, the sandbox lifecycle and the expiry). Integration:
+  `test_story_publishing.py` (kind and format, the carousel and length refusals, the Facebook Page
+  refusal, the plan quota, schedule to publish to media item, the video wait, a failed Story and its
+  notification, a lost answer, the live story list). Vitest: the checklist, the composer's Story
+  mode, the preview. E2E: `gr39-story-scheduling.spec.ts`.
+- **For the coordinator:** regenerate the client (`PostFormatName` gains `story`,
+  `ScheduledPostDraft.kind`, `ScheduledPostTarget.expires_at`); the web reads `kind` and `expires_at`
+  from the generated types.
+- *Added in the combined batch:* the composer's choice is stored as `scheduled_posts.kind` (`post` or `story`, default `post`, in migration 0038) instead of being read from `format`. A Story draft with the wrong media has no format yet and was checked as a carousel once saved; now it keeps its Story checks, duplicating a Story copies the kind, and a check ties `format = 'story'` to `kind = 'story'`. Responses carry `kind`; the web reads it.
+
+## C-115 · Facebook publishing and best posting times (GR-30, feature/gr-39-30-stories-fb-publishing)
+
+- **One composer, Pages included.** A Facebook Page shows in the composer's Accounts beside
+  Instagram accounts (tagged "Facebook Page"); choosing both posts to both at once (the composer
+  already took up to 10 accounts; the preview gets an account switcher when the platforms differ and
+  a Facebook-style preview for a Page). Pages also appear in the Schedule page's account filter and
+  colours. The publish jobs, states, retries, failure reasons and notifications are the same ones
+  (`services/post_publishing`); only the platform calls differ.
+- **Permission.** The Page connect now asks for `pages_manage_posts` (`oauth.SCOPES`). A Page
+  gets `Capability.PUBLISH` only if that scope is on the account, so a Page connected before this
+  must be reconnected ("Reconnect to allow publishing", the same wording as Instagram). Sandbox Pages
+  can always publish. `read_insights` is still not asked for.
+- **Containers are references** (`platforms/facebook/publishing.py`): Facebook has none, so the
+  adapter returns `photo:{id}` (an unpublished `POST /me/photos`), `photos:{id,id}` (the parent of 2
+  to 10 photos, no call), `video:{id}` (an unpublished `POST /me/videos` with `file_url`, polled with
+  `GET /{id}?fields=status`) or `text:post`; `publish_container` then posts it: photos as
+  `POST /me/feed` with `attached_media`, a video with `POST /{id}` `{published: true}`, text as
+  `POST /me/feed` `{message, link?}` (the first URL in the text becomes `link`). The adapter
+  protocol gained `create_text_container`, and `publish_container` takes the post's `caption` (the
+  jobs pass it; Instagram ignores it).
+- **Our scheduler, not Meta's.** Every call publishes at once; `scheduled_publish_time` is not used,
+  so Social Hood's states, retries, calendar and Activity stay the one source of truth and a Page
+  post can be moved or canceled until the moment it publishes. *No good reason found to use Meta's.*
+- **Formats.** The same derived formats (one photo, one video, 2 to 10 photos), plus **text**
+  (`scheduled_posts.format = text`, migration 0039): no media, a caption, only when every account is
+  a Page. A Page video is a normal Page video (media item type `video`, not a Reel). The checklist is
+  per platform (`TargetFacts.platform`): a Page takes any photo shape (4:5 to 1.91:1 is Instagram's),
+  refuses photos mixed with a video ("A Facebook post can have several photos or one video, not
+  both."), has no hashtag or mention limit and no publishing limit; text for a post that also goes
+  to Instagram is refused ("Add an image or video."); a Story cannot go to a Page. *Deviation:* the
+  2,200 character caption limit stays for Pages too (the column check and the API schemas share it);
+  Facebook allows far more, so lifting it is a later change.
+- **Lost answers are not retried on a Page.** Instagram can tell from the container's `PUBLISHED`
+  status that a lost publish answer went out; a Page post has no such state, so a `delivery_unknown`
+  ends the target as unconfirmed ("We couldn't confirm Facebook published this post. Check ...
+  before trying again.") instead of publishing again. A worker that dies between Facebook accepting
+  the post and our storing it could still publish twice on the sweeper's retry (a window of
+  milliseconds; no cheap fix). Reasons are mapped for Facebook error codes 200, 324, 368 and 506;
+  anything else falls back to the generic reason.
+- **Not built: Page Stories** (`/photo_stories`, `/video_stories`). They need their own two step
+  upload, and there is no read API to list them for the story picker. The composer says Pages can't
+  publish Stories. Also not built: Facebook Reels, Meta's own scheduling, post insights for Pages
+  (`get_media_insights` still raises `capability_unavailable`).
+- **Best times.** `GET /social-accounts/{id}/best-times` (owners and admins, like posting times;
+  another workspace's account is 404) returns a suggested hour per weekday (`BestTimes`). It is
+  computed in `services/scheduled_posts/best_times.py`, cached in Valkey for 6 hours per account, and
+  never by an AI model. **Method:** the account's last 90 posts of the last 180 days (stories left
+  out) with a known engagement (the latest snapshot's likes + comments + shares + saves, else the
+  live like and comment counts, so a Page without insights works); each post is scored against the
+  account's median post; posts are grouped by weekday and hour in the workspace time zone; an hour
+  needs 2 posts, and a weekday gets the hour with the best median score (the earlier on a tie);
+  fewer than 10 scored posts: `enough_history` false and no suggestion ("not enough history").
+  `lift_percent` is how far the hour beats a typical post (null when the median is 0). The
+  constants are at the top of the module.
+- **Web.** The time picker shows the best time for the chosen weekday with a "Use 18:00" button (or
+  the top three days to start from, before a day is chosen) and says when there is not enough
+  history; the Posting times drawer lists the suggestion per weekday with an "Add" button. Both read
+  the cached route.
+- **Migration 0039** (after 0038), expand-only: `ck_scheduled_posts_format` accepts `text`
+  (downgrade turns text posts back into drafts without a format). No new tables; the best times
+  need none.
+- **Unverified (Meta), until a real Page publishes:** JSON bodies on `/photos`, `/videos` and
+  `/feed` (Meta's examples are form encoded, and `attached_media` is documented as a list of JSON
+  strings); `file_url` on `graph.facebook.com` rather than `graph-video.facebook.com`; that an
+  unpublished video is published by `POST /{id}` with `published: true`; the `status.video_status`
+  values (`ready`, `processing`, `uploading`, `error`, `expired`); that `GET /{post-id}` and the video
+  fields in `VIDEO_FIELDS` return a permalink (a video's is relative); the `link` field's preview
+  behaviour; the error codes 200, 324, 368 and 506 and their reasons; that `pages_manage_posts` is
+  enough (App Review: O-10); that a post id has `_` and a video id is a bare number (how the read
+  back tells them apart); `POST /{id}/comments` for a Page's own first comment.
+- **Tests.** Unit: `test_facebook_publishing.py` (the permission gate, every call body, the video
+  status, errors, the read back, the per-platform checklist, the best-times arithmetic with the
+  zone, the minimum bucket, too little data and a zero median); `test_facebook_platform.py` updated
+  (Pages publish, no insights). Integration: `test_facebook_publishing.py` (text, photos, video,
+  no limit, first comment, a refused post and its notification, a lost answer never published twice,
+  a Page without the permission; the composer API per platform; the best-times route: too little
+  history, the busy weekday, a Page from its counts, the time zone and the cache, 401 and 404);
+  `test_facebook_connect.py` updated. Tenancy: the new route has an account id, so the walk covers
+  it. Vitest: the best-times helpers and components, the Page checklist, the account picker, the
+  preview, the composer. E2E: `gr30-facebook-publishing.spec.ts`.
+- **For the coordinator:** regenerate the client (`BestTimes`, `BestTimeDay`, the `get_best_times`
+  operation, `PostFormatName` gains `text`); the web types are aliases waiting for it. The Meta app
+  needs `pages_manage_posts` added to the Facebook Login permissions for production (O-10). Roles:
+  the route uses the same `Admin` dependency as posting times; there is no member-role integration
+  test for it (none exists for posting times either).
+
+## C-116 · Product catalogue (GR-31, feature/gr-31-catalogue)
+
+Products with variants, added by hand, by CSV or from Shopify; the AI answers price, stock and link
+questions from them; a flow step sends a product. **PD-8 is decided: commerce is on Pro and Max, not
+Free.** *Every Shopify behaviour below was written from Shopify's documentation and none has run
+against a real store: it waits for the owner's Partner account and app listing (O-10). Each one is
+marked unverified and listed in `docs/verification.md` item 37.*
+
+### Decisions
+- **PD-8 in code.** `ENTITLEMENTS["commerce"]` in `billing/plans.py` (Free off, Pro and Max on; one
+  line to change). Adding, changing, deleting, importing and syncing products, connecting Shopify and
+  saving a flow with a product step are refused with 402 `entitlement_required` ("The product
+  catalogue is part of Pro."). **Reading is never refused**: the list, a product and the Shopify
+  status answer on Free, and products that exist still answer customers and run in flows after a
+  downgrade (a flow's *saving* needs Pro; a saved one keeps working). Webhooks from Shopify are
+  ignored on a plan without the catalogue.
+- **Caps** (proposed, `billing/plans.py`; one line each): `catalogue_products` Pro 1,000, Max 20,000
+  (counted live; a Shopify sync skips what doesn't fit and says so), `catalogue_import_rows` Pro 500,
+  Max 5,000 lines in one CSV file (402 `quota_exceeded` before anything is read further). A file is
+  at most 900,000 characters (the API's 1 MB body limit), sent as JSON text.
+- **Money.** An ISO 4217 code per product and integer minor units (`services/catalogue/money.py`:
+  0, 2 and 3 decimal currencies). The default currency is the connected Shopify store's, else the
+  newest product's, else INR (the workspace has no currency of its own). Requests carry prices as
+  text ("799.50", checked against the currency); responses give `price_minor` and the same text. The
+  web formats with Intl.
+- **Stock.** `null` means "not recorded", which is not 0. The AI is told "stock not recorded" and
+  must say it doesn't know; a flow's message mentions stock only when it is recorded; the list says
+  "Not tracked". Shopify variants whose inventory isn't tracked are stored as not recorded.
+- **Where it lives in the app.** A **Products** page under **Grow**, after Knowledge (owners and
+  admins, like Knowledge; a direct link from an agent explains). The Shopify card is on that page
+  (`/w/{slug}/products?shopify=<nonce>` is the OAuth return), not in Integrations: it is about
+  products. Without the plan the page says so and Add, Import and Connect open the upgrade dialog.
+- **Permissions (GR-19).** Writes use `CanManageKnowledge` (products are what the AI may say);
+  the Shopify connect, complete, sync and disconnect use `CanManageIntegrations`. Reads use `Admin`.
+  No new permission.
+- **No prompt version bump.** The catalogue is a `PRODUCTS` section next to `KNOWLEDGE` in the
+  contents, with its own rules in its header (quote exactly as listed, only for what is listed,
+  "stock not recorded" means you don't know), so `suggest.v3` and the tests that pin it are
+  unchanged. The existing rule "never state a price, stock level... or link not in KNOWLEDGE" covers
+  it.
+
+### Data (migration 0040, after 0039, expand-only)
+- `products` (name, description, SKU, currency, `price_minor`, `stock`, `url`, `image_asset_id`,
+  `image_url`, `active`, `source` manual/csv/shopify, `external_id`, `search_text`), `product_variants`
+  (title, `options` JSON up to 3, SKU, `price_minor`, `stock`, `position`, `external_id`) and
+  `shopify_connections` (one per workspace, one store per workspace: unique `shop_domain`; the token
+  encrypted like every platform token). Unique: SKU per workspace on products and on variants, Shopify
+  id per workspace, variant title per product. `webhook_events.provider` accepts `shopify`.
+- A product with variants is priced per variant; its own price and stock are only the form's default.
+  A product may have up to 100 variants (the rest of a Shopify product's are counted and dropped).
+- *No table references `social_accounts` or contacts, so the account purge, `seed_account` and the
+  purge tables test need no change.* The tenancy walk got a seeded product, variant and store, three
+  `B_TABLES` and the example bodies of the new routes.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/catalogue.py`)
+`GET/POST /products`, `GET/PATCH/DELETE /products/{product_id}`, `POST /products/import/preview`,
+`POST /products/import`, `GET /integrations/shopify`, `POST .../connect`, `POST .../complete`,
+`POST .../sync` (202), `DELETE /integrations/shopify?keep_products=`. Public: `GET
+/v1/oauth/shopify/callback` and `POST /webhooks/shopify`. A request naming another workspace's
+picture or product is a 404 *before* any plan check, so the isolation walk (a Free workspace) proves
+isolation. A `PATCH` replaces the variant list: a variant with its id is kept (so a flow step that
+names it keeps working), one without is new, one left out is removed.
+
+### CSV import
+- **Header row** (any order and case; `name` and `price` required, other columns ignored and
+  listed): `name, description, sku, variant, option1_name, option1_value, option2_name,
+  option2_value, option3_name, option3_value, price, currency, stock, url, image_url, active`. The
+  starter file is downloadable from the dialog; the dialog and `csv_import.py` document the rules.
+- One line is a product or one variant of it; lines with the same name (ignoring case) are one
+  product. **Upsert** by SKU (a product's or a variant's), else by product name and variant name; a
+  match is updated, the rest created. A blank cell never clears a value; variants the file doesn't
+  mention stay. A variant's SKU on a line with no variant is an error, a currency different from the
+  saved product's is an error ("change it in the product first"), a SKU twice in a file is an error.
+- **Preview before saving** (`POST /products/import/preview`): every line is New, Update or Left
+  out with the reason (first 500 shown, the counts cover all). The import re-reads the same text, so
+  the preview can't go stale. Lines with problems are skipped; the rest are saved. Semicolon and tab
+  files and a byte order mark are read.
+
+### The AI
+- `services/catalogue/facts.py`: a question is matched to products by words (no embeddings): lower
+  case, a plural "s" dropped, filler removed (English and the Hinglish customers write: price,
+  kitna, hai...). A product matches when a question word is in its name or is its SKU; the variants
+  whose title, options or SKU hold the most question words are marked "matches the question".
+  Up to 3 products, 20 variants each, active products only. Candidates come from `products.search_text`
+  (a lower-case column kept by the service), ranked in Python (`rank` is pure and unit tested).
+- It feeds the suggest prompt (`drafting.render_contents`), the Knowledge test box and Ask Social
+  Hood's answer_from_knowledge. The model cites `p1`..: the product's id is stored in
+  `reply_suggestions.used_chunk_ids` (the column has no foreign key) and `top_similarity` becomes
+  1.0, so **Auto mode treats a cited product as grounded** (check 11) and re-checks the reply's links
+  against the product's lines (`knowledge_port.product_texts`). A reply may quote a product's link
+  (the output filter's allowed texts include the lines offered); an invented link is still
+  withheld. *The filter checks links, emails and phone numbers, not prices*: a wrong price is
+  prevented by exact lines and the prompt rule, not by a check. *Not built:* a price check in the
+  output filter (it would flag a price the customer typed, or a discount in knowledge).
+- Ask: `search_products` (admin role, read) returns each product's variants with price, stock text
+  and link, marking the variants the words name; it falls back to a plain text search (switched-off
+  products included, labelled) and says when nothing matches. New answer-ref kind `product` (opens
+  Products).
+- E2E worker (`apps/api/scripts/e2e/worker.py`): the fake AI answers from the marked PRODUCTS line,
+  as a faithful model would. The done-when ("price of the blue kurta in M?" gets INR 799.00 and the
+  link, from Suggest or Auto) is `tests/integration/test_catalogue_ai.py` and `gr31-catalogue.spec.ts`.
+
+### Flow step "send product"
+`type: "product"` (`product_id`, optional `variant_id`, `intro` up to 300 characters, `next`). It
+reads the catalogue when it runs and sends one message: the intro, then `Name - Variant`, the price
+(`INR 799.00`), "In stock" or "Out of stock" only when stock is recorded, and the link. With no
+variant chosen it sends the product (its price, or up to six variants with prices). Cut to 900
+bytes for Instagram. The product's uploaded picture goes as the message's attachment.
+- *Deviations from "name, price, image and link as the send step does":* the link is in the text, not
+  a button (the text always carries it, and buttons differ per platform); a picture that is only an
+  address (Shopify, CSV) can't be attached (attachments are media-library files), so the link in the
+  text stands in for it. WhatsApp catalogue messages are GR-33.
+- Fails with a plain reason ("The product was deleted or switched off, so nothing was sent." /
+  "...variant was deleted...") like a deleted saved reply: the step is logged failed and the run ends.
+- Activation checks the product exists, is on, and that the variant belongs to it; saving needs the
+  plan. A product step after a comment's private reply is refused like any message. The editor adds a
+  **Product** step with a product picker (read from the catalogue) and a variant picker.
+
+### Shopify (built like GR-29 Facebook and GR-27 Sheets)
+- **Off by default.** `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` (also signs webhooks and the install
+  redirect), `SHOPIFY_REDIRECT_URI`, `SHOPIFY_SCOPES` (default `read_products`), `SHOPIFY_API_VERSION`
+  (default 2025-07); unset, connecting answers 503 "Shopify isn't set up on this server." and the
+  webhook route 503. `SHOPIFY_PROVIDER=fake` is a built-in store (a kurta with colour and size
+  variants, a scarf with untracked stock, a draft jacket) for development and the e2e stack, its
+  products in Redis; refused in production.
+- **Connect.** `POST .../connect {shop}` (only `*.myshopify.com` is ever called; "my-store" works)
+  returns the install address with a single-use state; the public callback checks Shopify's `hmac`
+  over the sorted query (not for the built-in store), parks the code under a one-time nonce bound to
+  the member and workspace (X-1, as Instagram and Google) and redirects to Products with `?shopify=`;
+  `POST .../complete` exchanges it, saves the connection (token encrypted), subscribes the webhooks
+  and starts the first sync. A store belongs to one workspace (409 `account_in_use`).
+- **Sync** (`sync_shopify_products`, bulk lane, recovery RETRY): Admin GraphQL, 50 products a page;
+  each is saved by Shopify id with variants (a single "Default Title" variant is a plain product);
+  a product no longer in the store is removed after a pass that read them all; a SKU another product
+  uses is dropped (Shopify allows duplicates); a picture uploaded here is kept; prices are in the
+  store's currency. A pass beyond the plan's products skips the rest and says so on the card.
+- **Webhooks** (`products/create|update|delete`, `app/uninstalled`, and the mandatory privacy
+  topics `customers/data_request`, `customers/redact`, `shop/redact`): `POST /webhooks/shopify`
+  verifies `X-Shopify-Hmac-Sha256` over the raw bytes, stores the event once (`shopify:{webhook id}`)
+  and a job applies it through the same save the sync uses (`services/webhook_handlers/shopify.py`).
+  `app/uninstalled` marks the store "needs reconnect"; `shop/redact` deletes the store and its
+  products; the customer topics change nothing (no customer data is held).
+- **Disconnect** revokes the token (best effort) and removes the store and, unless asked to keep
+  them, the products it made: a price no longer kept in step must not be quoted.
+- **Unverified (Shopify), until a real store connects:** the install and token endpoints and the
+  `hmac` rule (sorted decoded parameters, hex); that `read_products` is enough for stock (it may need
+  `read_inventory`); the GraphQL fields (`products`, `variants`, `inventoryQuantity`,
+  `inventoryItem.tracked`, `onlineStoreUrl`, `selectedOptions`, `shop.primaryDomain`) and API
+  version; `webhookSubscriptionCreate` with these topics and how it reports an existing subscription
+  (read here as an error containing "already"); the webhook payload shape (`variants[].option1..3`,
+  `options[].name`, `inventory_quantity`, `inventory_management`) and headers; that a listed app
+  must answer the three privacy topics this way; `DELETE /admin/api_permissions/current.json` to
+  revoke; the storefront link built from `handle` (`onlineStoreUrl` when GraphQL gives it; a custom
+  domain comes from `shop.primaryDomain`); whether `app/uninstalled` arrives for a custom app.
+
+### Tests
+Unit: `test_catalogue_money_csv.py` (money, header, per-line problems, grouping, currency),
+`test_catalogue_facts.py` (words, ranking, the prompt lines, the output filter with a product link,
+the drafting prompt, the flow message), `test_shopify.py` (store address, both signatures, both
+product shapes, the mapping, the built-in store, the flow step's activation); registry test updated.
+Integration: `test_catalogue.py` (plan gate, caps, money, variants by id, SKUs, search, roles, a
+foreign picture, audit), `test_catalogue_import.py` (preview, import, upsert by SKU and by name and
+variant, blank cells, caps), `test_catalogue_ai.py` (Suggest, Auto, an invented link, a switched off
+product, the test box, `search_products`), `test_flow_product.py` (running, saving, activating),
+`test_shopify.py` (connect, nonce, signatures, sync, caps, webhooks, disconnect); tenancy updated.
+Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCard`, the sidebar. E2E:
+`gr31-catalogue.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run
+(the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `ProductOut`, `VariantOut`, `VariantIn`, `ProductList`,
+  `ProductCreate`, `ProductPatch`, `CatalogueLimits`, `ImportPreview`, `ImportRowOut`,
+  `ImportResult`, `CsvImport`, `ShopifyStatus`, `ShopifyConnectRequest`, `ShopifyConnectStart`,
+  `ShopifyConnectComplete`, `ProductStep` in the flow step union, `product` in `AnswerRefKind`, and
+  the operations `list_products`, `create_product`, `get_product`, `update_product`,
+  `delete_product`, `preview_product_import`, `import_products`, `get_shopify`,
+  `start_shopify_connect`, `complete_shopify_connect`, `sync_shopify`, `disconnect_shopify`. The web
+  types are aliases waiting for it (`lib/api/types.ts`).
+- `alembic check` for 0040 (after 0039). The e2e stack gained `SHOPIFY_*` env and
+  `/__e2e/shopify/sign`.
+- Owner track O-10: the Shopify Partner account, the app listing, the callback and webhook
+  addresses, and the three privacy webhooks' wording. `.env.example` has the new settings.
+- *Fixed in the combined batch:* the Shopify callback checked the install redirect's signature
+  whenever `SHOPIFY_PROVIDER` was not `fake`, even with the built-in store in use; it now asks
+  `registry.is_fake` (the setting or a test override). The built-in store kept a disconnected
+  store's token revoked for ever, so reconnecting failed with "Shopify didn't respond"; installing
+  again now clears the revocation, as a real reinstall gives a fresh token. A one-letter store
+  ("x") passed as a valid address; handles need two characters, and the connect body no longer has
+  a `min_length` so the friendly message (not Pydantic's) is what the person sees. A CSV line whose
+  product name differs from the stored one only by case no longer renames the product. The CSV
+  starter file in the web app had rows with 11 fields under a 16-column header.
+
+## C-117 · Conversation assignment (GR-20, feature/gr-20-24-assign-sequences)
+
+- **Model.** `conversations.assignee_user_id` (null: nobody; `ON DELETE SET NULL`) and `assigned_at`,
+  `workspace_members.available_for_assignment` (default true, per workspace membership),
+  `workspaces.assignment_round_robin` (default false) and `workspaces.assignment_cursor_user_id` (the
+  member who had the last turn; not a foreign key, so a removed member just restarts the turn). Migration
+  `0041` (after `0040`), expand-only, one partial index for the "Assigned to me" view. No new tables.
+- **Who may assign whom (a decision; the plan left it open).** Owners and admins assign any conversation
+  to any member or to nobody. Agents *take* a conversation nobody has (assign it to themselves) and
+  *release or hand on* one they have (to anyone, or to nobody); they cannot give a free conversation to a
+  colleague or take one from a colleague (403 "Agents can take a conversation nobody has, or hand on one
+  they have."). The rule is `assignment.may_assign` and is unit tested; the web menu disables what the API
+  would refuse. The route stays behind GR-19's `assign` permission (`CanAssign`, agent tier). An assignee
+  who is not a member of this workspace is 404 `not_found` (checked before the role rule). Assignment
+  works on every plan (on Free the one member is the only choice).
+- **Every change does the same things, in one transaction** (`services/assignment.apply`): the
+  conversation row is locked, then `assignee_user_id` and `assigned_at` are set; a system note goes in the
+  thread ("Sam assigned this to Priya", "Priya took this conversation", "Assigned to Priya
+  (round-robin)", "An automation assigned this to Priya"); an audit row `conversation.assigned` or
+  `conversation.unassigned` (target the conversation, detail `via` member / round_robin / automation, the
+  names and ids of the new and old assignee); `conversation.updated` for open inboxes; the
+  `conversation.assigned` webhook (now emitted); and a notification to the new assignee. *The note and
+  the audit row are the conversation's activity:* the contact timeline (GR-17) reads the audit rows for
+  the contact's conversations ("Assigned to Priya", "By Sam. From Kim.", "Round-robin", "By an
+  automation"; new timeline kind `assignment`). *Deviation: audit rows from a round-robin turn or a flow
+  step have no member, so `audit.record_system(label, ...)` is new; the actor name is "Round-robin" or
+  "Automation: name".*
+- **Round-robin** (workspace setting, off by default; `PUT /assignment/settings`, admins). With it on, a
+  customer message in a conversation nobody has hands it to the next *available* member (ingest hook
+  `ingest._assign`, after the broadcast hook, with the conversation already locked). Members are taken in
+  the order they joined; a member whose availability is off is skipped; nobody available leaves the
+  conversation unassigned. The turn is read and moved under a `FOR UPDATE` lock on the workspace row, so
+  concurrent inbound messages take different turns (tested with six at once); the lock lasts until the
+  ingest transaction commits. *Accepted:* a workspace being deleted at the same moment could meet it in a
+  lock cycle; the job retries. Manual assignment ignores availability. The flow action can ask for a
+  round-robin turn whatever the setting says.
+- **Availability.** `PUT /members/{user_id}/availability` (`CanSelf`): your own, or anyone's if you can
+  manage settings (403 otherwise; a stranger is 404). Audited when it changes. The switch is in the
+  assignee menu (your own, for agents) and on the Members page (everyone's, for owners and admins).
+- **Notification** (`conversation_assigned`, new type; `notify_user` is new in `services/notifications`).
+  In app always; push when the member's **"needs you" switch is on** (*decided: no new switch, so the
+  notification settings page and its tests stay as they are*; `PUSH_EVENT_OF_TYPE` maps it to `NEEDS_YOU`).
+  No notification when someone assigns a conversation to themselves. Title "Priya Shah was assigned to
+  you", body says who or what handed it over, link `/inbox/{id}`. Never emailed.
+- **Views and filters.** `GET /conversations` gains the views `mine` (open, assigned to the caller) and
+  `unassigned`, and `assignee_id`. `GET /conversations/counts` gains `mine`. Each list item carries
+  `assignee` ({user_id, name, avatar_url}; the name is the member's, else the part of their email before
+  the @) and `assigned_at`. The live event (`conversation.updated`) carries the same, with the name
+  looked up, so an open inbox updates without a refetch. A caller that cannot look the name up still
+  sends the id, and the web falls back to the members it holds.
+- **Removing a member** clears their conversations (`assignment.clear_for_member`, counted in the
+  `member.removed` audit detail); the note in C-106 is closed.
+- **Routes** (`/v1/w/{wid}`): `PUT /conversations/{id}/assignee` (body `{user_id | null}`, returns the
+  conversation), `GET /assignment` (any member: who can be assigned, with availability and open
+  conversations, and the setting), `PUT /assignment/settings`, `PUT /members/{user_id}/availability`.
+- **Flow action `assign`** (`schemas.flows.Assign`): `mode` member (a chosen `user_id`), round_robin or
+  nobody. Activation and the draft check say "Choose who gets the conversation." or "That person isn't on
+  your team any more." (`Context.member_ids`). At run time a member who has left, or nobody available,
+  skips the step with `skipped: member_missing` or `nobody_available` and the flow goes on. A flow's
+  assign step overrides what round-robin did for the same message (two notes, two audit rows, and the
+  last assignee is notified). Its fields are in the flow editor's Action step.
+- **Web.** Inbox: an "Assigned to me" chip (with the count) before Leads; the row shows the assignee's
+  initials or picture (the name for screen readers); the thread header has an assignee menu (Nobody, each
+  member with open conversations and "away", and the caller's own availability); the details panel has
+  the same as a field. Settings, Members: a "Hand out new conversations" card (the round-robin switch and
+  everyone's availability). The contact timeline shows assignments. *Limit:* the cache keeps a row in the
+  "Assigned to me" list until the next fetch when another member takes it away (only the server knows who
+  is asking); assigning from the app refetches the lists.
+- **Not built.** Per-account or per-skill routing; assignment by workload or by business hours;
+  reassigning on a member's availability change; a daily cap per member; an "unassigned" count chip.
+- **Tests.** Unit: `test_assignment_rules.py` (who may assign, the turn, the note, the flow action's
+  checks, the push mapping). Integration: `test_assignment.py` (the rules, the note, audit and timeline,
+  the notification and its channels, the views and counts, round-robin on and off, an away member,
+  nobody available, availability rights, six concurrent messages, removing a member, live events, the
+  flow action in three modes, activation refusing a stranger); `test_conversations.py` counts updated.
+  Tenancy: the two new routes with ids in `test_isolation.py`. Vitest: `AssigneeMenu`, `AssignmentCard`,
+  `ConversationRow`, `lib/inbox/assignee`, `lib/inbox/cache`, the flow editor's assign action. E2E:
+  `gr20-assignment.spec.ts`.
+- **For the coordinator:** regenerate the client (`Assignee`, `Assignable`, `AssignmentOverview`,
+  `AssigneeUpdate`, `AssignmentSettingsPut`, `AvailabilityPut`, `Assign` in the flow action union, the
+  `mine` and `unassigned` views, `assignee_id`, `mine` on `InboxCounts`, `assignment` on `TimelineKind`
+  and the four operations); the web types are aliases waiting for it. `ContactTimeline`'s icon map and
+  `ListHeader`'s chips will not typecheck until then. Migration `0041` follows `0040` (GR-31).
+- *Fixed in the combined batch:* picking the next member took `FOR UPDATE` on the workspace row
+  while ingest already held `KEY SHARE` on it (the new conversation's foreign key), so two messages
+  arriving together deadlocked; it now takes `FOR NO KEY UPDATE` (`with_for_update(key_share=True)`),
+  which waits for the other turn instead. The inbox details panel's "Assigned to" group is a
+  `CardInset` like the others.
+
+## C-118 · Sequences (GR-24, feature/gr-20-24-assign-sequences)
+
+- **What it is.** A sequence is timed messages after an entry event, on one connected account
+  (Instagram, WhatsApp or Messenger). It starts when a lead is captured (GR-14), a tag is added (GR-02)
+  or someone replies to a WhatsApp broadcast (GR-23), and stops on a reply, a tag or a lead stage.
+  Migration `0042` (after `0041`), expand-only: `sequences`, `sequence_steps`, `sequence_enrolments`,
+  `sequence_step_runs` (all reach the account by a foreign key, so the account purge deletes them; the
+  purge test's list, the account-deletion seed and the tenancy tables and seeds include them).
+- **Model.**
+  - `sequences`: account, name, status (draft, active, paused), entry type with `entry_tag_id`,
+    `entry_broadcast_id` (null: any broadcast) and `entry_capture_kind` (email, phone or field; null:
+    any), the stop rules (`stop_on_reply`, `stop_tag_ids`, `stop_stages`), `allow_reentry`.
+  - `sequence_steps`: position, `delay_seconds` (0 to 30 days), `delay_from` (`entry` or `previous`;
+    the first step always counts from entry), a text and/or an approved WhatsApp template (name,
+    language, category and body copied when saved, variables mapped as in a broadcast), and
+    `respect_hours`.
+  - `sequence_enrolments`: contact, `current_step`, `next_due_at`, status (active, completed,
+    stopped), why it started (`entry_event`) and why it stopped (`stop_reason`, `stop_detail`).
+  - `sequence_step_runs`: sent, skipped (with a code and a plain sentence) or failed, one row per
+    (enrolment, step position) by a unique constraint.
+- **Entry events reuse the existing points; nothing new fires them.** `webhooks.events.lead_captured`
+  (a capture step saved an email, phone or answer), `webhooks.events.contacts_tagged` (every way a tag
+  is added: the API, a flow step, the agent) and `webhooks.events.lead_stage_changed` (GR-18) each call
+  `services/sequences/entry`, whether or not a webhook endpoint wants the event. A customer message
+  calls it from `ingest` (after GR-23's broadcast hook, which now returns the broadcasts the message is
+  a reply to). Only an *active* sequence on the contact's own account takes people in.
+- **At most one active enrolment per contact and sequence** (a partial unique index, so two events at
+  once cannot both enter them). *Added by me: `allow_reentry`, off by default.* With it off a contact who
+  finished or was stopped is not taken in again (a "captured" sequence would otherwise start again at
+  every answer); with it on they can enter again once the first is over. The brief said "at most once
+  while active"; this is the same rule plus a setting for the case after it.
+- **Stop rules.** A reply (any customer message, on by default per sequence), one of the sequence's stop
+  tags being added, the lead stage becoming one of its stop stages (stages exist: GR-18, so all three are
+  supported). The reply stops the contact's sequences *before* a reply to a broadcast starts the ones
+  that begin on it, so a message never stops the sequence it started. A stopped enrolment keeps its
+  history and says why ("They replied", "A stop tag was added: Bought", "Their lead stage changed: Won",
+  "Taken out by your team"). A person can be taken out by hand
+  (`POST /sequences/{id}/enrolments/{eid}/stop`).
+- **Sweeper** (`jobs/tasks/sequences.run_sequences`, every minute, bulk lane, one waiting job; recovery
+  class RETRY). It finds up to 100 due enrolments across workspaces (active sequences on accounts that are
+  `active`; an account that needs reconnecting is not picked up at all until it works) and runs each in
+  its own transaction under `FOR UPDATE SKIP LOCKED`. A step is sent **once** however the job is retried
+  or two workers meet: the row lock, the message's client id (`uuid5(enrolment, step)`, so
+  `queue_outbound` returns the message already queued) and the unique step run all agree. The send goes
+  through the normal queue (`sending.queue_outbound`, so the token bucket, retries, statuses, the inbox
+  and realtime are the ones every message uses). *Deviation: no new message source.* A sequence's
+  messages are source `automation` with no run, so the inbox shows them as automation messages and the
+  `messages.source` check is unchanged; Activity tells sequence sends apart through its own kind.
+- **What a step sends** (`services/sequences/rules`, pure, unit tested).
+  - Instagram and Messenger: the text while the 24-hour window is open; otherwise skipped, "The messaging
+    window had closed" (Human Agent never applies to an automated message). A template step is refused
+    at save ("Only WhatsApp has templates.").
+  - WhatsApp inside the window: the text, no consent needed. Outside it: the approved template, only to a
+    contact whose latest WhatsApp marketing record is a grant (GR-23's `dispatch.consent_skip`, now
+    public); no record is skipped as "no consent", a withdrawal as "opted out". A text-only step outside
+    the window is skipped ("has no template"). A template-only step always needs consent.
+  - *WhatsApp templates are marketing messages, so they also wait on `BROADCASTS_ENABLED` (O-11, the
+    legal check of marketing consent); off, such a step is skipped as "marketing_off".* Text inside the
+    window is not affected. Remove the check when O-11 is done.
+  - A skipped or failed step is a finished step: the sequence moves on to the next.
+  - The text is filled like a saved reply (`{first_name}`, fields), with the workspace's automation
+    disclosure line; a template variable with no value and no fallback skips the step ("missing_value").
+- **Limits and holds.**
+  - *Business hours (GR-22):* a step with `respect_hours` waits for the account's next opening (its own
+    hours, else the workspace's; no hours means always open). Hours that never open look again a day later.
+  - *The number's daily limit (GR-23):* template sends count with broadcasts' against the number's tier
+    limit in the rolling 24 hours (`broadcasts/dispatch` now counts sequence template sends too). A
+    sequence step that finds no room waits until a place frees; none is dropped.
+  - *Quality:* while the number's rating is Low a template step waits 30 minutes at a time.
+  - An account error at send time (needs reconnecting, can't send) holds the step 15 minutes.
+  - Template sends do not use the broadcast recipient quota (that is for broadcasts).
+- **Plans (a decision, pending owner confirmation; one line each in `billing/plans.py`).** Two
+  entitlements: `active_sequences` (Free 1, Pro 10, Max 50) and `sequence_steps` (Free 3, Pro 10, Max
+  20; whatever the plan, a sequence has at most 20 steps). Past a limit the write is 402 `quota_exceeded`
+  naming the key, and the page shows the limit. Saving a draft never counts; turning one on does. *Pending
+  the owner:* whether Free gets sequences at all, and the numbers. A template step is still a message
+  Meta bills the business for, and needs marketing consent, so the plan limits how many sequences there
+  are, not how many messages go.
+- **Editing.** Steps and rules change only while the sequence is a draft or paused (409 "Pause the
+  sequence to change it."); a person already in it keeps their place, and a step removed from under them
+  ends it (completed) if no step is left. A sequence with people in it cannot change account. Delete is
+  for a draft or paused sequence and takes its enrolments and history. A deleted start tag is shown as a
+  problem on the sequence and stops it being turned on.
+- **Routes** (`/v1/w/{wid}`, owners and admins through the automations permission, except the contact's
+  list): `GET|POST /sequences`, `POST /sequences/preview`, `GET|PUT|DELETE /sequences/{id}`,
+  `POST /sequences/{id}/activate|pause`, `GET /sequences/{id}/enrolments?status=&limit=&offset=`,
+  `POST /sequences/{id}/enrolments/{eid}/stop`, and `GET /contacts/{id}/sequences` (any member). The
+  preview is the steps as a sample contact ("Priya") would meet them in a straight run: when each is due
+  after entry, what it would send and a plain note (a template needs consent, a text-only WhatsApp step
+  after 24 hours sends nothing); nothing is saved. A tag, broadcast or account of another workspace is 404.
+- **Activity and the contact (GR-05, GR-17).** Activity has a `sequence` kind: each step sent (worked),
+  skipped (with the reason) or failed, with a link to the sequence; "failures only" (the default) shows
+  the skips and failures. The contact's timeline has the same ("Sent step 1 of Three days", "Skipped step
+  2 of ..." with the reason), and the contact drawer has a Sequences section: each sequence they are or
+  were in, the step they are on and when it is due, what happened at each step, and why a stopped one
+  stopped.
+- **Ask.** `list_sequences` (owners and admins; read-only): each sequence's status, what starts it, steps,
+  people in it, finished, stopped, what stops it, and any problem. Never a message.
+- **Web: decided to put Sequences on its own page, `/w/{slug}/sequences`, linked from Automations** (a
+  button beside Broadcasts) rather than a tab: it has its own list, editor and people, like Broadcasts.
+  The list shows the plan's limit; the editor is a form (name and account, what starts it, the steps with
+  their wait, message, WhatsApp template and variables and a business-hours switch, what stops it) with a
+  live preview from the server beside it; a sequence that is on is read-only until paused; the detail
+  page has the people (filter by status, why each stopped, take one out). Agents get a plain notice.
+- **Not built.** Stopping on a tag *removed*, or entering on a stage; branching inside a sequence (use a
+  flow); a send time of day other than business hours; a step that sends an image or buttons; sequence
+  analytics (opens, replies per step); entering existing contacts in bulk; a webhook event for sequences.
+  A sequence's WhatsApp text inside the window ignores consent, as every WhatsApp reply does.
+- **Tests.** Unit: `test_sequence_rules.py` (what a step sends and why not, the due time, business hours,
+  the bodies, the client id, the plan's numbers), the purge list and the tool registry. Integration:
+  `test_sequences.py` (the done-when: a three-day sequence sends day 1 and day 3 to an opted-in sandbox
+  contact and stops when they reply; completion; consent and opt-out skipped with their reasons; text
+  inside the window and skipped outside it; the marketing setting off; Instagram open and closed
+  windows; once at a time and re-entry; paused; stop tag, stage and reply off; a reply to a broadcast
+  starting it; a capture starting it; business hours holding a step; the shared daily limit; low quality;
+  a step sent once; a reconnecting account; validation, editing rules, a deleted tag, the plan's limits,
+  the preview, taking a person out, Activity, the timeline and the contact's list, roles).
+  Tenancy: the new routes, bodies and tables in `test_isolation.py`. Vitest: `lib/sequences/format`,
+  `SequencesPage`, `SequenceForm`, `SequencePeople`, `ContactSequences`. E2E: `gr24-sequences.spec.ts`
+  (a tag starts a sequence, two steps are sent by the worker, a reply stops it, the page says why; the
+  editor saves a draft).
+- **Unsure / for the coordinator:** regenerate the client (the `Sequence*`, `StepIn`, `StepOut`,
+  `EntryRule`, `EntryOut`, `StopRules`, `StopOut`, `Enrolment*`, `ContactSequence*`, `PreviewStep`
+  schemas, 11 operations, the `sequence` activity kind and timeline kind); the web types are aliases
+  waiting for it, and `ContactTimeline`'s icon map will not typecheck until then. Migration `0042` follows
+  `0041` (GR-20), which follows `0040` (GR-31). The e2e spec relies on the worker's minutely sweep
+  running in the e2e stack (the broadcast spec relies on the same). A sequence created while
+  `BROADCASTS_ENABLED` is off still saves; only its template steps are skipped.
+- *Fixed in the combined batch:* a tag added through the contacts API never entered a sequence unless
+  a webhook endpoint wanted `contact.tagged`, because `contacts.py` gated the call to
+  `events.contacts_tagged` (which also feeds sequences) on `wanted`; the gate is gone and
+  `contacts_tagged` still decides whether to emit. The web sequence form and pages read `problems`
+  as possibly absent (the generated type marks defaulted response fields optional).
+
+## C-120 · Payment requests and order capture (GR-32, feature/gr-32-33-orders-wa-catalogue)
+
+An order made in a conversation from the catalogue, a payment link or UPI request sent in the chat,
+and a paid order marked by Razorpay's signed webhook. **Payments go to the business's own account,
+never through us.** *Nothing here has run against a real Razorpay account: it is built like Shopify
+(C-116), with a sandbox for development and the end-to-end stack, and listed as unverified in
+`docs/verification.md` item 38.* PD-8 applies: commerce is Pro and Max.
+
+### Decisions
+- **Razorpay with the business's own keys, not partner OAuth.** *Verified from Razorpay's docs
+  (2026-10-25): the OAuth route is for Technology Partners and needs sign-up with Razorpay support
+  before an app can be registered, so it is not available to us by default.* Each workspace saves its
+  own key id and key secret (`payment_connections`, the secrets encrypted with the existing token
+  encryption and never returned). If the owner later becomes a Technology Partner, OAuth can replace
+  the key form without changing orders. Pending the owner: whether to apply for partner status.
+- **Unset means "not configured".** With no keys, asking for a Razorpay link answers 409 "Razorpay
+  isn't set up for this workspace. Add your keys in Integrations first."; with no UPI address, the same
+  for UPI. `RAZORPAY_PROVIDER=fake` is a sandbox that accepts `rzp_test_` keys and hands out
+  `plink_fake_<n>` links; refused in production like the other fakes. There are no app-wide Razorpay
+  credentials.
+- **Connect checks the keys first** (`GET /payment_links?count=1`): refused keys are a 422 "Razorpay
+  doesn't accept these keys", Razorpay not answering is a 502, and nothing is saved either way. The
+  business makes up a **webhook secret** (8 or more characters), enters it here and in its Razorpay
+  dashboard; the card shows the webhook address and the events to turn on, and when the last signed
+  event arrived.
+- **Money** as in GR-31: integer minor units and ISO 4217. The total is computed on the server from the
+  catalogue's prices when the order is made; the lines are a snapshot (name, variant, SKU, unit price),
+  so a later price change does not alter an order. A request carries product ids and quantities, never
+  a price. All lines must share one currency. Stock, when recorded, is checked (more than is left is a
+  422 "Only 4 left of Cotton kurta") **but is not reduced** by an order: the catalogue's stock is a
+  number the business keeps. *Not built:* reserving or reducing stock, delivery fees, tax and discounts
+  (the total is the sum of the lines).
+- **Status:** `draft`, `awaiting_payment`, then `paid`, `cancelled` or `expired`. Asking for payment can
+  be repeated (a new link replaces the old one, which is cancelled with Razorpay as far as it answers).
+  A payment that arrives for a cancelled or expired order still marks it paid, because the money has
+  arrived. A paid order cannot be cancelled. A Razorpay link lasts 3 days (`LINK_TTL`).
+- **UPI has no webhook.** The request is a `upi://pay?pa=<VPA>&pn=<name>&am=<amount>&cu=INR&tn=Order <n>`
+  link plus the VPA in the message ("send it to shop@okbank and tell us when it's done"); only INR.
+  A member marks the order paid ("Mark as paid", with an optional reference); who and when are kept on
+  the order and in the audit row `order.marked_paid`. The Orders sheet, the inbox dialog and the card
+  all say so.
+- **Webhooks** (`POST /webhooks/razorpay/{token}`): the token is a random per-workspace part of the
+  address; an unknown token and a bad signature are both 401. `X-Razorpay-Signature` is the hex
+  HMAC-SHA256 of the raw body with the workspace's webhook secret, checked before the body is read. A
+  verified event is stored once per `X-Razorpay-Event-Id`, then applied by the webhook job
+  (`services/webhook_handlers/razorpay.py`): `payment_link.paid` marks the order paid when the amount
+  paid equals the total (another amount is ignored and logged), `payment_link.expired` expires an
+  order still waiting, everything else is ignored. Idempotent: an order already paid stays as it is.
+- **Plans.** `commerce` (reused) gates making orders, asking for payment, marking paid and saving
+  payment settings (402 `entitlement_required`, "Orders are part of Pro."); reading orders and the
+  settings status is never refused. *Proposed, pending owner confirmation:* `orders_monthly` Free 0,
+  Pro 500, Max 5,000, counted when the order is made (`billing/plans.py`; one line to change). A
+  request naming another workspace's conversation, product or order is a 404 before any plan check.
+- **Permissions.** Any member who can reply (`CanReply`) makes orders, asks for payment, marks paid and
+  cancels; payment settings need `integrations.manage`. Orders are listed for every member (agents see
+  the customer's address in the order they made; the settings card is for owners and admins).
+
+### Data (migration 0043, after 0042, expand-only)
+`payment_connections` (one per workspace: Razorpay key id, encrypted key secret and webhook secret, the
+address token, UPI address and name, last event seen), `orders` (number per workspace, contact,
+conversation, status, source, currency, `total_minor`, address JSON, note, payment method, link id and
+address, reference, `paid_at`, `paid_by_user_id`, `cancelled_at`) and `order_items`; `webhook_events.
+provider` accepts `razorpay`. Orders reference contacts, so they and their lines are account tables
+for the purge (`orders`, `order_items` in the expected list, a seeded row in `seed_account`). The
+tenancy walk got a seeded order, line and payment settings, three `B_TABLES` and the example bodies.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/orders.py`)
+`GET/POST /orders`, `GET /orders/{order_id}`, `POST /orders/{order_id}/payment-request`,
+`.../mark-paid`, `.../cancel`; `GET /integrations/payments`, `PUT/DELETE /integrations/payments/razorpay`,
+`PUT/DELETE /integrations/payments/upi`. Public: `POST /webhooks/razorpay/{token}`. Sending the link
+uses the ordinary send pipeline (reply window, takeover and read-only rules apply; a closed window is
+a 409 and the order keeps its link, which can be sent again).
+
+### Where it shows
+- **Inbox:** More, **Create order** on any conversation: products, variants and quantities from the
+  catalogue (an estimated total is shown while typing; the server's is what counts), the delivery
+  address, a note; then Send Razorpay link or Send UPI request in the same dialog.
+- **Orders page** (Engage, every member): the list with a status filter, an order sheet (lines, address,
+  how it is being paid, send a link, mark paid, cancel), and for owners and admins the **Payments** card.
+- **Events** `order.created` and `order.paid` through GR-04's catalogue (the address is left out of the
+  payload). **Activity** (kind `order`): paid orders, and orders that expired (needs a new link). **Contact
+  timeline** (kind `order`): one entry per order at its latest step ("Order #12 paid. Paid with
+  Razorpay"). **Ask:** the `list_orders` tool (admin tier, read), with paid totals per currency and
+  citations that open the Orders page (answer-ref kind `order`).
+
+### Not built
+- *The flow step "request payment"* (optional in the plan): a flow has no order to attach it to until a
+  cart exists (the WhatsApp cart is GR-33); a payment request needs the member's chosen products and
+  address, which a flow does not collect yet. Recorded as not built.
+- Refunds, partial payments (a payment link is created with `accept_partial: false`), reminders,
+  editing an order's lines after it is made (cancel and make a new one), a customer-facing order page.
+
+### Tests
+Unit: `test_orders.py` (the Razorpay signature, the HTTP client's request and error kinds against a mock
+transport, the sandbox, the UPI link, the payment message, the timeline and Activity wording), the
+purge list, the tool registry and the event catalogue (11 events). Integration: `test_orders.py` (the
+plan, pricing and the snapshot, numbering and refused lines, "not configured", keys checked and stored
+encrypted, **the done-when: a test-mode link marks the order paid** and a replay changes nothing,
+unsigned, forged and unknown webhooks, the wrong amount, expiry then a late payment, UPI marked paid
+by hand and audited, cancelling, events, timeline and Activity). Tenancy: the new routes, bodies and
+tables. Vitest: `lib/orders/format`, `OrdersPage`, the sidebar and the agent route test. E2E:
+`gr32-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run (the
+coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `OrderOut`, `OrderLineOut`, `OrderList`, `OrderCreate`,
+  `OrderLineIn`, `AddressIn`, `PaymentSettings`, `RazorpayConnect`, `UpiSave`, the operations
+  `list_orders`, `create_order`, `get_order`, `request_order_payment`, `mark_order_paid`, `cancel_order`,
+  `get_payment_settings`, `connect_razorpay`, `disconnect_razorpay`, `save_upi`, `remove_upi`, the
+  `order` activity, timeline and answer-ref kinds and the two new `EventName`s. The web types are
+  aliases waiting for it (`lib/api/types.ts`); `ContactTimeline`'s icon map will not typecheck until then.
+- `alembic check` for 0043 (after 0042). The e2e stack gained `RAZORPAY_PROVIDER=fake`; the suite signs
+  its own webhooks with the secret it types into the card. Owner track: Razorpay account(s) for a live
+  test, and whether to become a Technology Partner (OAuth).
+
+- *Fixed in the combined batch:* (1) the payment settings showed no webhook address unless
+  `API_BASE_URL` was set; it now falls back to the address the request came to, as the widget snippet does.
+  (2) Asking for a payment link returned 500: `updated_at` was expired by the update and read lazily
+  in the response (`MissingGreenlet`); `orders.views` now refreshes it. (3) Test fixes: the Razorpay
+  webhook column is `razorpay_webhook_secret_enc`; two orders in one workspace reuse one kurta (SKUs are
+  unique per workspace); the Activity feed hides successes unless `failures_only=false`, and names the
+  contact as `@username`. The account-deletion seed adds one catalogue connection per workspace
+  (the table allows one).
+
+## C-121 · WhatsApp catalogue messages (GR-33, feature/gr-32-33-orders-wa-catalogue)
+
+Products copied to a Meta commerce catalogue, product and product-list messages sent from the inbox,
+the flow step "send product" as a native WhatsApp message when it can be one, and a customer's cart
+becoming a GR-32 order. *Nothing here has run against Meta: it is built like Facebook (GR-29) and
+Shopify (GR-31), against a sandbox catalogue for sandbox WhatsApp numbers, and listed as unverified in
+`docs/verification.md` item 39.* PD-8 applies: commerce is Pro and Max.
+
+### What Meta's documentation says (read 2026-10-25) and what is unverified
+Read from Meta's current pages for the Cloud API (Graph v26.0 in the examples; the app uses
+`META_GRAPH_VERSION`, v25.0) and the Catalog API:
+- **Product message** (`messages`, `type: interactive`): `interactive.type = product`, optional `body`
+  and `footer` text, `action.catalog_id` and `action.product_retailer_id`. The retailer id must match
+  an item in the catalogue or the API returns an error and nothing is sent. Free-form: only inside an
+  existing chat (the 24-hour window), no template. A customer on an old WhatsApp version sees a
+  failure and the business gets a delivery-failed webhook.
+- **Product list**: `interactive.type = product_list`; `header` (type `text`) **required**, `body`
+  required, `footer` optional; `action.catalog_id` and `action.sections[]` each with a `title` and
+  `product_items[].product_retailer_id`. Up to 30 products across up to 10 sections. If at least one
+  item matches the catalogue it is sent and unmatched ones are dropped with an error; if none match
+  nothing is sent.
+- **Order webhook**: a message with `type: order` and `order.catalog_id`, `order.text` and
+  `order.product_items[]` with `product_retailer_id`, `quantity`, `item_price` and `currency` (numbers
+  in Meta's examples, quoted strings in one partner's; the parser reads both).
+- **Catalog Batch API**: `POST /{catalog_id}/items_batch` with `item_type` (`PRODUCT_ITEM`) and
+  `requests` (up to 5,000, Meta suggests under 3,000; 28 MB), each `{method: CREATE | UPDATE | DELETE,
+  data: {...}}`; `allow_upsert` defaults to true so `UPDATE` creates a missing item; `DELETE` needs only
+  the identifying `id`; the answer has `handles` and `validation_status[]` (`retailer_id`, `errors`,
+  `warnings`); `GET /{catalog_id}/check_batch_request_status?handle=` reports progress. The older
+  `/batch` endpoint is deprecated (unavailable from API v27), so `items_batch` is used.
+- **Commerce settings**: a phone number's catalogue is shown with `is_catalog_visible` on
+  `POST /{phone_number_id}/whatsapp_commerce_settings` (default false); a catalogue is connected to the
+  WhatsApp Business Account in WhatsApp Manager (one catalogue per business account, shared by its
+  numbers, from the same Business Manager). *Not called by us:* the owner connects it in Meta's tools.
+- **Unverified, in code as written** (`metacatalog/http.py`, `platforms/whatsapp/adapter.py`):
+  the exact fields a commerce catalogue item requires (this sends `id`, `title`, `description`,
+  `availability`, `condition`, `price` as "799.00 INR", `link`, `image_link`, `brand`); that the
+  header limit is 60 and a section title 24 characters (the body's 1,024 is Meta's documented limit);
+  the shape of `check_batch_request_status`; **which permission the Embedded Signup business token
+  carries**: Meta's pages did not name `catalog_management` for these calls, and the token WhatsApp
+  Embedded Signup issues may lack it or `business_management`, in which case connecting answers 409
+  with "Meta doesn't let this number use that catalogue ..." and the owner must grant catalogue access;
+  that the same token that sends messages can call the Catalog API at all (it may need a system-user
+  token); and error codes (190, 200, 100, 803, 80014 are mapped to auth, not found and rate limited).
+  If catalogue access can't come from the number's token, the connection will need its own token
+  (a follow-up; the card and sync already read the token through one function, `token_of`).
+
+### Decisions
+- **Sync** (`services/catalogue/wa_catalogue.py`, job `sync_whatsapp_catalogue`, bulk lane, 3 tries):
+  one catalogue item per variant, or per product without variants; the retailer id is our variant or
+  product id. The job compares what the catalogue should hold with a hash per item
+  (`catalogue_items.content_hash`) and sends only what changed (upserts via `UPDATE`) and deletes what is
+  gone or switched off. Triggered 8 seconds after a product is created, changed, deleted or imported,
+  after a Shopify sync, when Sync now is pressed, and by a 5-minute sweep (`sweep_whatsapp_catalogue`),
+  so a missed trigger heals. Items go in batches of 200. Deletion is found by comparison, not by hooks,
+  so every way a product disappears (Shopify, CSV, the API) is covered.
+- **What an item needs.** Meta needs a price, a link and a picture: a product without them is not sent
+  and the card lists it with the reason ("Add a link to this product. Meta needs one for every catalogue
+  item."). Out of stock only when stock is recorded as 0 (stock not recorded is "in stock", the catalogue
+  has no unknown). The brand is the workspace's name unless the connect request gives one. A picture
+  uploaded here wins over one given as an address.
+- **Per-workspace catalogue** (`catalogue_connections`, one per workspace): the catalogue id, the WhatsApp
+  number it was connected through (its token makes the calls), the brand and the sync state. Connecting
+  checks the catalogue with Meta first (`GET /{catalog_id}`); a catalogue Meta won't show is a 409 with
+  Meta's reason in words, Meta not answering a 502, a non-WhatsApp account a 422, another workspace's
+  account a 404. Reconnecting marks every item to be sent again. Disconnecting forgets the connection
+  and the item records; the Meta catalogue is left as it is.
+- **Sandbox.** A sandbox WhatsApp number (`sandbox_...`, which exists only where the sandbox platform is
+  on) uses the built-in catalogue (`metacatalog/fake.py`); the catalogue id `missing` is refused as not
+  found and `denied` as access refused; a title containing `[fail]` is refused item by item. Tests swap
+  the client with `use_catalogue`. No new setting.
+- **Sending** (`services/catalogue/wa_send.py`, `POST /conversations/{id}/product-message`): "Send
+  product" and "Send product list" in the inbox's More menu on WhatsApp conversations. Every item must
+  be in the catalogue as last synced ("... isn't in the WhatsApp catalogue yet. Wait for the sync, or
+  press Sync now."), the conversation must be on the number the catalogue was connected through (409
+  otherwise), the message is a free-form send (window, takeover and read-only rules of the ordinary
+  send pipeline), and the typed text is the message body and what the thread shows. The message is
+  stored in the new `messages.interactive` JSON column (migration 0044) and sent by
+  `sending.pending_parts` as `OutboundMessage.products`; no change to message kinds.
+- **Flow step "send product"**: on WhatsApp, with a catalogue connected through the conversation's number
+  and every needed item synced, it sends a native message: a product message for a named variant or a
+  product without variants, a product list (one section, up to 30 variants) for a product with variants
+  and none named; the step's intro is the body, else the product's name. Otherwise (another platform, no
+  catalogue, another number, an item not synced yet) it sends the text and link of GR-31, unchanged.
+- **Cart to order.** An `order` message becomes an inbound text ("Sent an order of 3 items") and, with
+  commerce on the plan and room under `orders_monthly`, a GR-32 order for that contact in that
+  conversation with status `awaiting_payment`, source `whatsapp`, priced from the catalogue now (the
+  price the customer saw is not trusted; if it differs, the order's note says so). Items that are gone,
+  switched off, unpriced or in another currency are left out and counted in the note; stock is not
+  enforced for a cart. No usable item or no plan means no order, and the message stays in the thread.
+  The message text is then rewritten to name the order ("... Order #12."). Audit: `order.created` by
+  "WhatsApp cart".
+- **Plan.** Connecting, syncing and sending need `commerce` (PD-8). Reading the status is open to every
+  member (the inbox needs to know a catalogue is connected). A downgrade stops the sync ("The catalogue is
+  part of Pro, so the sync stopped."); what is in Meta stays.
+
+### Data (migration 0044, after 0043, expand-only)
+`catalogue_connections`, `catalogue_items` and a nullable `messages.interactive`. The connection
+references the WhatsApp account with `ON DELETE CASCADE`, so it is an account table for the purge
+(`catalogue_connections` in the expected list, a seeded row in `seed_account`). The tenancy walk got a
+seeded connection and item, two `B_TABLES` and the example bodies of the two routes that name B's
+resources.
+
+### Routes
+`GET/PUT/DELETE /v1/w/{wid}/integrations/whatsapp-catalogue`, `POST .../whatsapp-catalogue/sync` (202),
+`POST /v1/w/{wid}/conversations/{conversation_id}/product-message` (202). The sandbox inbound gained kind
+`order` (with `cart`) for development and the end-to-end stack.
+
+### Not built
+Reading Meta's catalogue back (importing from it), creating a catalogue, setting `is_catalog_visible`
+or connecting the catalogue to the business account (done in Meta's tools), product messages on
+Instagram or Facebook, a "catalogue" or cart request message, order status updates back to the
+customer through WhatsApp's order templates, sending a product message outside the 24-hour window
+(a template would be needed), and per-item sync of a single product (a pass is cheap, it compares
+hashes).
+
+### Tests
+Unit: `test_wa_catalogue.py` (the item built from a variant or product, availability, the link and
+picture rules, the digest, the stored message round trip, Meta's interactive payloads, the cart parsed
+from an `order` webhook, the batch client's requests and error kinds, the sandbox catalogue), the
+purge list and the job recovery table. Integration: `test_wa_catalogue.py` (the plan, the connect
+checks, the sync sending only what changed, deletes, unsendable items with their reasons, Meta
+refusing access, disconnecting, a product and a product-list message and the sandbox receiving them,
+an item not synced yet, the flow step native and fallback, a cart becoming an order, a cart with
+nothing orderable). Tenancy: the new routes, bodies and tables. Vitest: `WhatsAppCatalogueCard`. E2E:
+`gr33-wa-catalogue.spec.ts` (connect, sync, send a product; a cart becomes an order). *The integration,
+tenancy, vitest and e2e tests were written but not run (the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `WaCatalogueStatus`, `WaCatalogueConnect`, `ProductMessageSend`,
+  `ItemRef`, `SectionIn`, `WaCatalogueProblem`, the operations `get_whatsapp_catalogue`,
+  `connect_whatsapp_catalogue`, `sync_whatsapp_catalogue`, `disconnect_whatsapp_catalogue`,
+  `send_product_message`, and the `order` sandbox-inbound kind with `cart`. The web types are aliases
+  waiting for it.
+- `alembic check` for 0044 (after 0043). New periodic task `sweep_whatsapp_catalogue` (every 5
+  minutes) and task `sync_whatsapp_catalogue`; both are in the recovery table. No new environment
+  setting.
+- Owner track: a real WhatsApp number with a commerce catalogue connected in WhatsApp Manager, and a
+  check of which token can call the Catalog API (item 39).
+
+- *Fixed in the combined batch:* the sync test patched a product's variants without their stock, which
+  clears it and flipped Blue / L to "in stock", so two items were sent instead of one. The test now
+  sends the stock too. (Test only: the sync was right to resend a changed item.)
+
+## C-122 · Go-to-market pages (GR-37, feature/gr-37-gtm-pages)
+
+Seven public pages: Switch from Manychat, Social Hood vs Manychat, Social Hood vs Interakt, three
+feature pages (comment intelligence, the AI inbox, publishing) and Pricing. Web only: no API
+change, no migration. The footer has a "Compare and learn" column, every page is in the sitemap
+(`PUBLIC_PATHS`), and the landing page's pricing links to `/pricing`.
+
+### Pages
+- **Content is data.** `lib/marketing/gtm-pages.ts` holds each page (blocks, the comparison rows,
+  the honesty notes, the sources); `components/marketing/GtmPageView.tsx` renders it; each route is a
+  six-line `page.tsx` using `pageMetadata` (title, description, canonical, Open Graph, Twitter).
+  Static pages, one h1, h2 sections, tables with row headers inside a scrolling box (the page never
+  scrolls sideways), only theme tokens.
+- **Screenshots, not the lazy illustrations.** The pages use the existing `SHOTS` images (the
+  illustrations load on scroll in the browser only).
+- **`/pricing`** reuses the landing page's `Pricing` (prices from Dodo, hourly, `revalidate = 3600`
+  as a literal) with its heading as the page's h1 (`SectionHeading level`), then `PlanMatrix`.
+
+### Pricing without drift
+- **One typed module, one exported table.** `plan-table.json` is `ENTITLEMENTS` and `TRIAL_DAYS`
+  exported from `billing/plans.py`. `tests/unit/test_marketing_plan_table.py` (DB-free) fails when
+  plans.py and the file differ and rewrites the file with `UPDATE_PLAN_TABLE=1`. The web reads the
+  file in two places: `plan-matrix.ts` (the comparison table) and the landing page's offline
+  fallback (`FALLBACK_ENTITLEMENTS`, which used to be a hand-written copy). `plan-matrix.test.ts` fails
+  when an entitlement in the file has no row (or an entry in `NOT_SHOWN`), so a new limit has to be
+  worded before it ships. *Chosen over reading openapi.json, which carries no plan values.*
+- **Plan cards** gain team members, "Public API and Zapier app", "Google Sheets sync" and "Product
+  catalogue" lines (from the API's plan list as before). Broadcasts are not a card line (see below).
+- **Proposed values shown as they are now:** the catalogue caps (C-116) and sequence caps (C-118) are
+  in the table, with a line under it saying they may change. *If the owner changes them, change
+  plans.py, refresh the file, nothing else.*
+- Seats (PD-1), broadcasts (PD-4), webhooks, API, Zapier and Sheets (PD-6), widget branding (PD-7)
+  and commerce (PD-8) are shown as decided in plans.py.
+
+### What waits on the owner, and how it is worded
+- **Broadcasts (O-11):** "Coming soon" with the reason (India's consent rules), in the table and on
+  both comparison pages. *Not on the plan card: the web can't tell whether `BROADCASTS_ENABLED` is on.*
+- **Shopify sync (O-10):** "arrives with our Shopify app listing". The catalogue itself is described
+  as built.
+- **Facebook and the Instagram events that need Advanced Access (C-077, C-108, C-115):** "coming
+  soon" or "with Meta's approval". Story replies and mentions arrive as ordinary messages and are
+  stated plainly.
+- **Not claimed:** payments in chat, contact import, share-to-DM, follow triggers, TikTok, Telegram,
+  SMS, email, a free-form canvas. The Switch page says so in a "what is different" section.
+
+### Competitor claims
+- Only what `docs/competitors.md` and `docs/competitor-manychat.md` record with a source (read
+  2026-10-22), or what was read from the vendor's own page. A comment above every competitor cell
+  names the source and date, and a test (`gtm-pages.test.tsx`) fails if one is missing. Each page
+  lists its sources and when they were read.
+- **Interakt's pricing page was read on 2026-10-25** (WebFetch): Starter 999 rupees (Instagram only),
+  Growth 2,799 and Advanced 3,799, plus taxes; campaigns, a catalogue and unlimited agents on the
+  higher plans (the page is inconsistent about agent roles, and the page says so). Checkout and
+  WhatsApp Pay come only from third-party guides and are worded that way.
+- **Manychat's pages refuse automated reads (403, again on 2026-10-25),** so its column stays on the
+  third-party guides and says so on the page. *Prices are indicative; the owner should check
+  manychat.com and interakt.shop before launch.*
+- A competitor "lacks" something only as "Not found" (a test forbids "Not offered" on their side).
+  No logos, no "best" or "#1" (a test checks the words).
+
+### Tests
+- vitest: `plan-matrix.test.ts`, `app/(marketing)/gtm-pages.test.tsx` (metadata, one h1, links,
+  sources, the status words, the pricing page with and without the API), `app/seo.test.ts` (sitemap),
+  and `plans.test.ts` / `test/plans.ts` for the new card lines.
+- pytest: `tests/unit/test_marketing_plan_table.py`.
+- Playwright: `e2e/gr37-gtm-pages.spec.ts` visits every page signed out, at desktop and phone width.
+- *Written but not run in this session (the coordinator builds and runs the web checks).*
+
+- *Fixed in the combined batch:* the pages said in-chat payments were "Not offered" and the plan
+  table had no row for `orders_monthly` (added by GR-32). The Interakt comparison now says what we
+  offer (Razorpay link to the business's own account, or UPI marked paid by hand; no WhatsApp Pay) and
+  the catalogue row says WhatsApp product messages need the owner's Meta catalogue and Meta's approval
+  (C-121). The plan matrix shows "Orders a month" under commerce (Pro and Max).
+
+## C-123 · More visual answers in Ask (VIS-07 to VIS-10, VIS-12, feature/vis-07-12)
+
+Backlog items VIS-07 (trend), VIS-08 (lead list), VIS-09 (table), VIS-10 (progressive visuals) and
+VIS-12 (prepare replies for leads), on top of GR-38 (C-089). Option C still holds: the API builds
+every visual from the numbers a tool returned, the model neither writes nor sees one, and
+everything stays behind `AGENT_VISUALS_ENABLED` (off by default). No migration, no new route, no
+new setting. Built on the combined batch G (migrations to 0044).
+
+### What every new visual shares
+- **Closed union, three new kinds:** `trend`, `lead_list`, `table` join `metric_comparison`,
+  `ranked_posts` and `sentiment_summary` in `schemas/agent.py` (`Visual`), `agent/visuals.KINDS`
+  and the web's `VisualView` switch. `kind` is required; an unknown kind draws nothing.
+- **Caps in the types:** 92 trend points, 10 leads, 3 `reply_ids`, 10 table rows, 6 columns, 6
+  cells a row. Each visual at most 8 KB (a test builds the worst case of each). A build that fails
+  or is too big drops only the visual.
+- **Same text answer without visuals.** Each visual repeats numbers the tool result already holds
+  (its `summary`, `contacts`, `points`, `items`), so the answer reads the same with the setting
+  off. The trend carries its own sentence (`summary`) as the chart's aria label and its text
+  fallback.
+- **Links** (`more_route`) carry a pattern in the type (`WORKSPACE_PATH`: plain workspace paths
+  with an optional query, no scheme, host, `..`, `//` or fragment), checked again on the web by
+  the same rule as action cards (`visualPath`).
+- **The tool's role check is the visual's.** A builder runs inside the tool after the role gate
+  and only from the rows the tool returns, so a visual can never show more than the tool does.
+- Prompt: `VISUALS_NOTE` names the new tools so the answer doesn't copy their lists. *The prompt
+  file (`agent.v4`) is unchanged, so no version bump; the eval was not run (no key here).*
+
+### Trend (VIS-07)
+- `metric_trend` builds a `trend` visual when at least one point has a reading; with none, the
+  caveats say why and there is nothing to draw.
+- `TrendChart`: a hand-built SVG in `text-chart-series-1` (the brand chart token), the same recipe
+  as the weekly report's `SeriesChart` (scale from 0). A day or week with no reading breaks the
+  line; a lone reading is a dot; nothing is drawn through a gap or in its place. Under the chart:
+  latest, lowest and highest with their days (text, not the picture), and "N of M days have a
+  reading". The SVG's label is the API's `summary`; an `sr-only` table lists every point, a gap as
+  "No reading". The SVG scales with its column (viewBox 300 x 96, `w-full`), so 375 px and the
+  panel need no special case.
+- **One series only.** *Two-series trends (for example this month against last month on one
+  chart) are out of scope: the categorical palette is still on a local branch, and a second hue
+  without it would break the palette lock.* Revisit when it lands.
+- *The scale starts at 0, so followers (1,000 plus a few) looks flat; the facts under the chart
+  carry the real range. Chosen over a floating axis, which exaggerates small moves.*
+- *A range of more than 92 weekly points (about 21 months) fails the build and drops the
+  visual; the tool result and answer stand. The agent's default is 30 days.*
+
+### Lead list (VIS-08)
+- **Filter:** `ContactFilter.awaiting_reply` (the conversation's `awaiting_reply` flag, the one
+  the inbox's "Needs reply" view uses); `list_contacts` gains `awaiting_reply: bool | None`. A
+  contact with no conversation never matches `True`.
+- **Order:** new `services.contacts.top_leads`: lead score highest first, no score last, then the
+  latest activity, with the total that match. The cursor-paged `list_contacts` stays
+  activity-ordered. With `awaiting_reply` the result also has `total`.
+- **Visual:** top 10 (the tool's `limit` still goes to 25; the visual shows 10 and "+N more"
+  links to `inbox?view=needs_reply`). A row has the name (customer text, drawn as text), the
+  platform, the score ("No score" when none, never 0), the GR-18 lead stage and the last-activity
+  words the tool already returns. A row opens the conversation; a contact who never wrote opens the
+  Contacts page.
+- **`contact` ref kind:** `AnswerRefKind` gains `contact`; `list_contacts` cites a contact with no
+  conversation as `contact` (before, such contacts were left out of `refs`). The web opens
+  `contacts` (*the Contacts page has no per-contact route, so the ref opens the list*), labels it
+  "Contact", and has a follow-up for it.
+- **Roles:** unchanged. `list_contacts` is for any member, as before; `awaiting_reply` shows what
+  the inbox shows them.
+- *Doc 05 had `ref (conversation)` on each lead row. A row holds `conversation_id` and
+  `contact_id` instead, and the web builds the link, as `RankedPosts` does.*
+- *The lead's cold flag (GR-18) is not shown: a lead waiting for us is not cold.*
+
+### Table (VIS-09)
+- Used only for tools whose result is a list of like rows:
+  - `search_conversations` (any member): customer, platform, last message, when, lead score.
+    More: `inbox` or `inbox?view=<view>`.
+  - `list_orders` (owners and admins, like the tool): order, customer, status, total (the money
+    text the tool already formats, right-aligned), date. More: `orders`.
+- Not used for tools whose rows are nested or single records (`search_products` has variants,
+  `get_*` and the knowledge tools return one thing). *The risk the backlog names is overuse; the
+  rule is a tool opts in by calling `visuals.table` with its own rows.*
+- Figures are right-aligned with tabular digits; text cells are clipped to 80 characters and drawn
+  as text; a missing cell is a dash. The table scrolls inside its card at 375 px (`Table` with a
+  scroll label), never the page. "+N more" is a link when the API gave a safe path.
+- *Rows are `{cells: [...]}` in column order, not a dict by column key: smaller, and OpenAPI
+  generates a plain tuple-like list.*
+
+### Progressive visuals (VIS-10)
+- `applyAgentStepEvent` (`lib/agent/cache.ts`): when a step of a tool in `VISUAL_TOOLS` succeeds
+  and the run is open in this browser (it has a cached detail), the run detail is invalidated,
+  debounced at 300 ms (steps that finish together share one fetch; a later step waits again).
+  Events still carry no result: the set of tools is the only signal.
+- `RunView` shows `run-visuals` under the working steps, so the visual appears before the answer
+  is written. When the run finishes it moves to its usual place under the answer.
+- `VISUAL_TOOLS` mirrors the API's tools that have a `visual` in their result. *A DB-free API test
+  (`test_the_web_refetches_for_exactly_the_tools_that_can_carry_a_visual`) reads `cache.ts` and
+  fails when the two differ, so a new visual tool can't ship without it.*
+- *With the setting off a visual-tool step still costs one extra GET that returns `visuals: []`.
+  Left as is: the web can't see the setting, and the fetch is tiny and debounced.*
+
+### Prepare replies for these leads (VIS-12)
+- The lead list shows "Prepare replies" on the latest answer (the same rule as follow-up
+  questions). It asks, in the same thread, for a `draft_reply` on each of the conversations in
+  `reply_ids`: the best-scored leads that have a conversation, **at most 3**, chosen by the API.
+- **The request carries ids only** (no customer name or text goes into a prompt): "Prepare replies
+  for these leads. Use draft_reply once for each of these conversations, one at a time, and send
+  nothing: ... If a reply window is closed, skip that conversation and say so." It is shown as the
+  member's question, ids included. *Cleaner would be a structured hint on the run (VIS-11's
+  `AgentRunCreate.hints`); not built.*
+- **Caps:** a draft is 2 credits and one tool call; a run has 10 credits and 8 tool calls
+  (`RUN_CREDIT_CAP`, `MAX_TOOL_CALLS`). 3 drafts plus the turns that call them fit; 8 would not.
+  *The backlog's "8 tools" is the call cap, but the credit cap binds first.* A unit test checks the
+  arithmetic against both constants.
+- **Never sent:** `draft_reply` is a draft-tier tool; it drafts and returns the text. Nothing in
+  this path sends (a test checks no outbound message exists and that each draft is metered at 2
+  credits).
+- **Cards:** each draft is the existing `schedule_message` card that opens
+  `inbox/<id>?schedule=1` with the text, no time. *Its label is now "Schedule a reply to <name>"
+  (it was "Schedule this reply") so several cards can be told apart.* The name is customer text,
+  clipped and drawn as text.
+- *A lead whose reply window is closed fails its own draft with the tool's usual message and the
+  others go on; the request says to skip and say so. Not pre-filtered: the contacts service
+  doesn't hold the window, and a pre-check would cost one query a lead.*
+
+### Evals and tests
+- Eval: `trend-reach-30` now expects a `trend` visual holding the first and last days' readings;
+  new `visual-leads-waiting` expects a `lead_list` whose scores are the seeded needs-reply
+  conversations'. The visual-number check already requires every figure to be one a tool returned.
+- API unit (run here): builders (gaps, summary, caps, size, links), the credit arithmetic, the
+  `awaiting_reply` SQL, the orders table, the web/API tool list, kinds read back.
+  `tests/unit/test_agent_visuals.py` was updated for the six kinds.
+- API integration (written, not run): `tests/integration/test_agent_visuals_vis.py`: order and
+  total, 10 cap, roles, the setting off, another workspace, the drafts and their credits, the
+  trend from seeded days with a gap, the table, the run API with the new kinds.
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (layout, words, links, cache and debounce),
+  `components/agent/VisualViewVis.test.tsx` (each visual, malicious text, the follow-up, the run
+  while working), fixtures in `src/test/visuals.ts`.
+- E2E `e2e/vis-07-12.spec.ts` (written, not run). The e2e API (`scripts/e2e/api.py`) gains `trend`
+  on `/agent-runs` and `POST /__e2e/workspaces/{wid}/agent-leads`, which sets lead scores and runs
+  the real `list_contacts`, `search_conversations` and (with `drafts`) `draft_reply` as steps,
+  because the fake model calls no tools.
+- **Checked centrally:** regenerate `apps/api/openapi.json` and `packages/api-client`
+  (`TrendVisual`, `LeadListVisual`, `TableVisual`, `TrendPoint`, `LeadRow`, `TableColumn`,
+  `TableRow`, `AnswerRef.kind` with `contact`, `list_contacts` is a tool not a route so no route
+  change); typecheck, build, the integration and tenancy suites, vitest, the e2e spec.
+
+### Left for later
+VIS-11 (range controls), VIS-13 (the report page), VIS-14 (the OpenUI spike), VIS-X2 (quote
+account names in the prompt), VIS-X4 (design-system entries for `TrendChart`, `LeadList` and
+`DataTableVisual`), a two-series trend, a reply-window pre-check for the lead follow-up, and
+localised labels.
+
+## C-124 · Sequence follow-ups (GR-24, feature/followups-24-32-ask)
+
+The four items C-118 left as "not built", on the same tables and hooks. Migration `0046` (after `0044`;
+`0045` is the visuals branch's), expand-only.
+
+- **Stop when a tag is removed.** New stop rule `stop_removed_tag_ids` (up to 20 tags) beside the
+  existing `stop_tag_ids`. A removal arrives through `webhooks.events.contacts_tagged` like an addition
+  (the contacts API, a flow's "remove tag" step and the agent already call it with `added=False`);
+  `entry.on_tagged` now handles both. The enrolment is stopped with the new reason `tag_removed` and
+  says "A tag they needed was taken off: VIP". Only the contact's *active* enrolments in sequences that
+  list the tag are touched. The stop-reason check on `sequence_enrolments` is widened.
+- **Start on a lead stage.** New entry type `lead_stage` with `entry_stage` (new, qualified, follow up,
+  won or lost; every stage can start a sequence, "new" included). `entry.on_stage`, called by
+  `webhooks.events.lead_stage_changed` (GR-18), now first stops the sequences that stop on the new
+  stage and then enrols the contact in those that start on it, so a stage never stops the sequence it
+  just started. The enrolment says "Lead stage: Qualified". It follows the usual rules: only an active
+  sequence on the contact's own account, one active enrolment at a time, re-entry only if allowed.
+  The `entry_type` check is widened; `entry_stage` has its own check.
+- **Analytics** (`GET /sequences/{id}/analytics`, owners and admins, `services/sequences/analytics.py`).
+  Computed on the server from the enrolments and step runs and cached in Redis for 5 minutes
+  (`seqstats:<workspace>:<sequence>`; a cache outage only costs the query). Definitions:
+  - entered, in it now, finished, stopped, with stopped split by reason (most first);
+  - sent, skipped (split by reason code, with the sentence) and failed, from the step runs;
+  - **replied** = a *sent* run followed by a customer message in the contact's conversation on the same
+    account within 24 hours of the run (`window_hours` in the answer). Someone who answers two steps
+    counts once for each. *My choice of window; the brief said "within the window after a step".*
+  - per step: reached (the runs at that step plus the people it is next for), waiting, sent, skipped,
+    failed, replied, reply rate and the share of everyone who entered, which is the funnel.
+  The reply count is one `EXISTS` over `messages` (`ix_messages_thread` serves it). *Not built:* opens
+  and reads, a date range, per-variable breakdowns.
+- **Webhook events** `sequence.enrolled`, `sequence.step_sent`, `sequence.completed` and
+  `sequence.stopped` through GR-04's catalogue (now 16 events with `order.refunded`; the catalogue test
+  counts them). Payload: the contact, `sequence` (id, name), `enrolment_id`, plus the step (1-based),
+  `step_count`, `sent_as` and `message_id` on a step, and `reason` and `reason_text` on a stop. `emit` is
+  skipped when no endpoint wants the event. A person taken out by hand emits `sequence.stopped` with
+  reason `member`. *The Zapier trigger list (GR-26) is unchanged: it has five triggers and does not
+  expose `order.created` or `order.paid` either, so the sequence events are not added there.*
+- **Web.** The editor offers "A lead moves into a stage" (with a stage picker) and a "One of these tags is
+  taken off" group under "Stops when". The sequence page has a Numbers section (stat figures, the
+  skip and stop reasons, and a `Meter` per step for the funnel) between the form and the people; it
+  stays out of the way if the numbers can't load.
+- **Ask.** `list_sequences` also lists the removed-tag stops ("the tag VIP being removed").
+- **Tests.** Unit: `test_sequence_analytics.py` (the counts, rates and funnel from grouped numbers, the
+  new entry and stop rules, the words). Integration: `test_sequence_follow_ups.py` (tag removed stops
+  and leaves the others, a stage starts a sequence, validation, the numbers with a skip, a stop and a
+  reply, the empty sequence, 404, the four events, the catalogue). Vitest: `SequenceNumbers`, `format`.
+  E2E: `followups-sequences.spec.ts`. *Integration, vitest and e2e were written, not run.*
+- **For the coordinator:** regenerate the client (`SequenceAnalytics`, `StepStats`, `ReasonCount`, the
+  `lead_stage` entry type and `stage`, `removed_tag_ids` / `removed_tag_names`, `tag_removed` stop
+  reason, `get_sequence_analytics`, the four `EventName`s). Migration `0046` follows `0044`; the
+  coordinator re-chains it with the others.
+- *Fixed in the combined batch:* a reply in the same second as the step's send now counts ("replied" compares at whole seconds, since Meta's webhook timestamps have no fractions); CI's fast runner caught it.
+
+## C-125 · Order follow-ups (GR-32, feature/followups-24-32-ask)
+
+Part payments, refunds, shipping, editing, status messages and the "request payment" flow step, on the
+GR-32 tables. Migration `0047` (after `0046`), expand-only: `orders` gains `amount_paid_minor`,
+`amount_refunded_minor`, `accept_partial`, `fulfilled_at` and `fulfilment_note`; two new tables,
+`order_payments` and `order_refunds`; the status check gains `partially_paid`, `fulfilled` and
+`refunded`, and the source check gains `flow`. Orders paid before it are backfilled with their one
+payment. *Everything Razorpay-side below is unverified against a real account; see
+`docs/verification.md` item 38.* PD-8 (commerce is Pro and Max) applies to all of it; nothing here is
+pending another PD.
+
+### Status and money
+- **Statuses:** draft, awaiting payment, **partly paid**, paid, **shipped** (`fulfilled`), **refunded**,
+  cancelled, expired. The money is rows, not a status: every payment is an `order_payments` row and
+  every refund an `order_refunds` row, and the two totals on the order are kept equal to their sums by
+  `services/orders/ledger.py`. Partly paid means some of the total is paid; paid means all of it.
+  Refunded means everything paid has been given back; a part refund leaves the status as it is (the
+  sheet shows "Partly refunded" and the amounts).
+- **Part payments.** *Razorpay:* the payment request can set `allow_partial`, which creates the link
+  with `accept_partial: true`; Razorpay's `payment_link.partially_paid` and `payment_link.paid` events
+  each record the payment entity's own amount (the link's running total is only a fallback). A Razorpay
+  payment is unique per order by its payment id, so a re-delivered event and the final `paid` event never
+  count twice. A link that does not take part payments ignores a part (and logs it), as before. *In
+  rupees only: unverified whether Razorpay allows part payments in other currencies, so the API refuses
+  `allow_partial` for a non-INR order until a real account says otherwise.* *UPI:* a member records each
+  payment (`POST .../mark-paid` with `amount_minor`; blank is everything left); more than is left is a
+  422. Asking for payment again on a partly paid order asks for what is left (the link or UPI amount and
+  the message say "Paid so far" and "Left to pay").
+- **Cancelling** an order with payments is a 422 ("Refund them before you cancel it"); *a paid order was
+  already final, and a partly paid one now is too.* Unpaid and expired orders behave as before.
+- **Refunds** (`POST /orders/{id}/refunds`: `amount_minor` blank for everything, a required `reason`).
+  Taken from the newest payments first. A Razorpay payment is refunded through the business's own keys
+  (`POST /payments/{id}/refund`, normal speed, our reason in the notes); the refund is **pending** until
+  Razorpay's `refund.processed` (or `refund.failed`) webhook arrives, or processed at once when
+  Razorpay answers so. A UPI payment can't be sent back by us: the member pays it back themselves and
+  the refund is recorded as processed at once ("paid back by you"). The refundable amount is paid,
+  less processed refunds, less pending ones, so two refunds can't promise the same money; a failed
+  refund frees it again. If Razorpay refuses or can't be reached on the first part the request fails
+  (422 or 502) and nothing is recorded; on a later part the failed part is recorded as failed. **A
+  refund made in the Razorpay dashboard** arrives as the same webhook and is recorded as "Refunded in the
+  Razorpay dashboard" (ignored if it is more than was paid or the payment is unknown). The webhook card
+  lists `refund.processed` and `refund.failed` to turn on.
+- **Event** `order.refunded` (payload as for the other order events, plus `refund`: id, amount, reason,
+  method, and `full`), emitted once when a refund becomes processed. `order.created` and `order.paid`
+  also carry `amount_paid_minor` and `amount_refunded_minor`. `RAZORPAY_PROVIDER=fake` refunds
+  (`rfnd_fake_<n>`, processed; `refund_status = "pending"` leaves one for the suite to finish with a
+  signed `refund.processed`).
+- **Shipping.** `POST /orders/{id}/fulfil` with an optional note (courier and tracking number) moves a
+  paid order to `fulfilled`; shown on the order, in Activity and on the contact timeline ("Order #12
+  shipped"). A shipped order can still be refunded.
+- **Audit.** Every change writes a row: `order.edited` (changed parts, totals before and after, whether
+  the link was cancelled), `order.marked_paid` (amount), `order.payment_requested` (method, partial),
+  `order.cancelled`, `order.fulfilled`, `order.refunded` (amount, reason, methods) and
+  `order.status_message` (sent or not); Razorpay-driven changes are system rows labelled "Razorpay"
+  (`order.payment_recorded`, `order.refund_updated`); the flow step's rows are "Automation: name".
+
+### Editing
+- `PATCH /orders/{id}` while the order is a draft or awaiting payment (422 after that, with the status in
+  words): `items` replaces the lines and re-prices them from the catalogue now (the same checks as
+  making an order: switched off, no price, stock, one currency; another workspace's product is 404),
+  `address` and `note` replace theirs (an empty note clears it). **A new total makes the payment link
+  useless:** the old Razorpay link is cancelled (best effort) and the order goes back to a draft, unless
+  the request carries `payment`, which asks for a new request straight after (and sends it). An edit that
+  keeps the total leaves the link alone. The sheet's "Edit order" dialog shares the line and address
+  fields with "Create order" (`OrderLinesFields`).
+
+### Messages to the customer
+- Every status change (`mark-paid`, `cancel`, `fulfil`, `refunds`) accepts an optional `notice`
+  (`message`, `template_name`, `template_language`). The change is made first; the answer's `notice`
+  says `{sent, reason}`, and the sheet toasts the reason when it didn't go.
+  - **Inside the 24-hour window** it goes as text, the member's own words or the default ("Thanks, we've got
+    your payment for order #12 (INR 1598.00).", "We've received INR 500.00 for order #12. INR 1098.00 is
+    still to pay.", "Good news: order #12 is on its way. Delhivery 123", "Order #12 has been cancelled.",
+    "We've refunded INR 200.00 for order #12. It can take a few days to show in your account.").
+    Human Agent applies as for any member's message.
+  - **Outside it on WhatsApp** only an approved *utility* template can go (an order update is not
+    marketing, so marketing consent is not involved; GR-23's `approved_templates` is the source). Its
+    variables are filled in this order: the customer's first name, the order number, the total, the new
+    status in words; a template with more than four is refused. With no template chosen the message is
+    not sent and the answer says "The 24-hour window has closed. WhatsApp only allows an approved
+    template now. Choose a utility template to send this update."
+  - **Outside it on Instagram or Messenger** it can't be sent, and the answer says why.
+  - No conversation (the order has none) or an account that needs reconnecting also say so.
+  The template picker in the sheet lists the number's approved utility templates with up to four
+  variables (`OrderOut` now carries the conversation's `social_account_id` and `platform`).
+  *Unverified:* that a utility template is accepted by Meta for these updates; the sandbox's
+  `order_shipped` (two variables) is what the tests use.
+
+### The flow step "request payment"
+- New step type `payment` (`schemas.flows.PaymentStep`): `source` `items` (up to ten products, with a
+  variant when the product has some, and a quantity) or `draft` (the conversation's latest order that is
+  not paid yet: a draft, a WhatsApp cart, one awaiting payment, or one only partly paid), a `method`
+  (Razorpay or UPI) and an optional `intro`. Like the product step it needs the `commerce` plan to be
+  saved (402 "Asking for payment is part of Pro.") and is checked at activation: the method must be set
+  up under Payments, the products exist, are switched on and have a variant chosen when they have
+  variants, and `items` is not empty; it can't follow a comment's private reply. The flow editor has the
+  step (`PaymentFields`).
+- **At run time** (`services/orders/flow_payment.py`) the plan is checked again, a new order is made at
+  the catalogue's prices *when the step runs* (source `flow`, nobody made it; the monthly cap applies),
+  and the payment message goes as an automation message. Failures end the run with a plain reason in the
+  step log and Activity: no plan, no unpaid order to ask for, a product gone or switched off or out of
+  stock, the method not set up. A refused Razorpay key from inside a run is not written to the payment
+  card (the run commits as a whole). The step's run row carries the `order_id`.
+
+### Other places
+Activity shows paid, shipped and refunded orders; the contact timeline has words for every status; Ask's
+`list_orders` knows the new statuses and counts paid or shipped orders as paid; the orders page filters
+by partly paid, shipped and refunded.
+
+### Not built
+Reminders for unpaid orders; refunds by the line (a refund is an amount, with a reason); automatic
+restocking; shipping labels or courier tracking; delivery fees, tax and discounts; a customer-facing
+order page; editing the lines of a partly paid order (refund and make a new one).
+
+### Tests
+Unit: `test_order_follow_ups.py` (what is left to pay or refund, the split of a refund over payments,
+the default messages, the payment message of a part-paid order, the UPI amount, the Razorpay refund call
+and statuses with a mock transport and the sandbox, the request shapes, the payment step's activation
+checks). Integration: `test_order_follow_ups.py` (UPI parts and the rest, a Razorpay link taking parts
+and each payment counted once, a part and then a full refund with the events and audit, the refund
+rules, a pending refund finished by the webhook and a failed one freeing the money, a dashboard refund,
+Razorpay failures, a UPI refund, shipping, editing and the link, status messages in and out of the
+window, on WhatsApp with templates), `test_flow_payment.py` (the step's order and message, the price
+read when it runs, draft mode, a plan that was left, a method not set up, saving and activating).
+Tenancy: the new routes and tables in `test_isolation.py`; the purge and account-deletion lists have
+the two tables. Vitest: `OrderSheet.test.tsx`, `lib/orders/format`, `lib/automations/flow`. E2E:
+`followups-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written, not run.*
+
+### For the coordinator
+- Regenerate the client: `OrderOut` (new money fields, `payments`, `refunds`, `notice`,
+  `social_account_id`, `platform`), `OrderPaymentOut`, `OrderRefundOut`, `NoticeIn`, `NoticeOut`,
+  `MarkPaid`, `CancelOrder`, `FulfilOrder`, `RefundCreate`, `OrderEdit`, `PaymentRequest.allow_partial`,
+  `PaymentStep` / `PaymentItem` in the flow step union and `StepType`, the new statuses, `flow` order
+  source, the operations `edit_order`, `fulfil_order`, `refund_order`, and the `order.refunded` and
+  `sequence.*` event names. The web types are aliases waiting for it.
+- `alembic check` for `0047` (after `0046`, which follows `0044`). Add the two refund events to the
+  Razorpay dashboard's webhook for the live test. Owner track: a real test account to verify item 38.
+
+## C-126 · The assign action in Ask's flow proposals (GR-36 + GR-20, feature/followups-24-32-ask)
+
+GR-20 added the flow action `assign`; `propose_flow` could not draft it. Now it can.
+
+- **The model's side** (`agent/tools/proposals.py`): an action step may be `assign`, with `assign_to`
+  `member`, `round_robin` or `nobody` and, for a member, `member` (the member's name or email as the
+  workspace lists them; never an id, like tags). `build_flow` resolves it with the workspace's roster
+  (`assignment.roster`). A name is matched ignoring case against the member's name (or the part of the
+  email before the @) and their email; no match is a `validation_error` that names the step and lists
+  the team ("There's no team member called "X". Members of this workspace: ..."), which the model can
+  correct; two members with the same name is "More than one member is called ... Use their email
+  address instead."; a missing `assign_to`, a member with no name, or a member named for `nobody` or
+  `round_robin` is refused with what to fix.
+- **Validation is the editor's.** The gateway's `check_flow` already ran `flow_store.reference_errors`,
+  which refuses an assign step whose member is not on the team ("That person isn't on your team any
+  more.") or is missing ("Choose who gets the conversation."); no second rule was added. Approving
+  saves a draft as for any flow.
+- **Round-robin** works in a flow whatever the workspace's own setting says (C-117), but only to an
+  *available* member. *Decision (the brief said "needs the workspace setting or says what to switch
+  on"; the editor and the engine have no such requirement, and "same validation as the editor" won):*
+  the proposal is accepted and its summary says what to switch on: "Nobody is available for assignment
+  now, so the assign step would be skipped. Turn on availability for a member under Members." and/or
+  "New conversations are not handed out in turn yet (Settings, Members). This step still assigns in turn
+  when it runs." (`actions.assign_notes`, from `assignment.overview`.)
+- **The summary** names the member ("assign to Ben Das"), "assign to the next available member" or
+  "remove the assignee" (`flows.describe` takes the member names; without them it says "assign to a team
+  member"), in the proposal card's lines. Ask's reading of an existing flow uses the generic wording.
+- **Schema and prompts.** `ProposedStep` has `assign_to` and `member`; the tool description lists the
+  actions in 500 characters (the registry test caps it). The eval set has `write-flow-assign`.
+- **Tests.** Unit (`test_agent_actions.py`): resolving by name or email, in turn and nobody, every
+  refusal, the stranger message listing the team, the card lines, the round-robin notes, the schema.
+  Integration (`test_agent_actions.py`): a member is saved as an assign step in a draft, a stranger is
+  refused before anything is stored, the round-robin notes with the setting off and nobody available.
+- *Not changed:* the web proposal card shows the summary lines as they are; nothing there lists actions.
+
+
+## C-127 · Theme single source and exception list (feature/theme-single-source)
+
+Implements the theme audit (F-01 to F-17, exceptions E-01 to E-12). Visual consistency only: no
+logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
+
+- **One source.** `styles/globals.css` is the only place a theme value is written. New
+  `scripts/gen-tokens.mjs` (no dependencies; `pnpm tokens`, also `predev` and `prebuild`) parses it
+  and writes `styles/tokens.generated.ts` and `.json`, both committed. `tokens.ts` keeps only the
+  descriptions (name, use, swatch) and the type-role constants and reads the values from the
+  generated file; `colorValue()` reads them too, and a chart alias resolves to its token. New
+  `radiusValue()`. `tokens.test.ts` regenerates in memory and fails on drift, requires a `use` entry
+  for every `--color-*` and none for a token that is gone, and forbids a theme literal in
+  `tokens.ts`. `scripts/generate-icons.mjs` reads shell-1, shell-2 and fg from the JSON (the icons
+  come out byte-identical). The brand gradient is `--gradient-brand` in `:root`, used by
+  `bg-brand-gradient` and by Clerk's primary button (`var(--gradient-brand)`); the other gradients
+  are variables too. Clerk's radii read `radiusValue("lg")` and `var(--radius-xl)`; the global error
+  page reads `radiusValue("lg")`. DESIGN_SYSTEM §1.13 points to globals.css and is marked
+  historical; §1.10 and §1.12 are updated.
+- **Light mode is not built.** Dark only, as decided; THEME.md §1 lists the prerequisites.
+- **Semantic names everywhere (F-03, F-04).** Hand-written code, `components/ui` included, uses the
+  tokens: `bg-popover` to `bg-overlay`, `text-muted-foreground` to `text-fg-secondary`,
+  `border-input` to `border-line-control`, `bg-primary` to `bg-brand-strong`, `border-border` to
+  `border-line`, `bg-border` to `bg-line`, `ring-background` to `ring-canvas`, `text-foreground` to
+  `text-fg`, `outline-ring`/`border-ring`/`ring-ring` to `outline-brand`/`border-brand`/`ring-brand`.
+  Every mapping is the alias's own target, so no pixel moves. The `:root` aliases and `@theme inline`
+  stay for `shadcn add` output, with a comment and a manifest entry; the lint bans the class names
+  in all of `src`. The inert `--radius` is removed. `SavedReplyPicker` uses `FLOATING_SURFACE`.
+- **F-01.** `bg-surface` (undefined, transparent) was in ActivityPage, ContactsPage, LeadsPage,
+  SegmentBar and TagChip. The three cards and the table wrapper use `cardVariants()` (`panel`,
+  `line` edge); the two chips use `bg-hover` (the neutral chip fill). This is a visible fix: those
+  surfaces were transparent on `canvas` and are now `panel`.
+- **Named shades instead of opacity modifiers (F-05).** 58 modifiers to 0. New tokens, all derived
+  with `color-mix` from their base so they follow it: `media-wash` 20%, `media-chip` 70%,
+  `media-heavy` 85% (media scrim: /20 to wash, /50 /60 /70 to chip, /80 /85 and `from-canvas/90` to
+  heavy); `panel-glass` 50% (panel /30 /40 /50 /60 /70) and `panel-veil` 85% (the floating nav);
+  `canvas-veil` 30% (canvas /20 /30 /40); `on-brand-soft` 15%, `on-brand-line` 30%,
+  `on-brand-line-strong` 60%; `danger-line` 30%, `warning-line` 40%; `danger-fill-hover`;
+  `fg-hover`. Exact duplicates use existing tokens: `success-soft`, `warning-soft`; `brand-soft/20`
+  to `brand-soft`; `bg-raised/60` to `bg-hover`; the dialog footers' `bg-muted/50` to `bg-field`.
+- **Gradients (F-06).** New `bg-glow-brand-top` (50% 55% at the top, as the hero had) used by Hero
+  and LazyIllustration. AutomationShowcase's circular glow, the moving border, the lamp and the
+  spotlight stay as listed marketing-effect exceptions.
+- **Charts (F-07).** Legends use the `chart-*` tokens their bars use; data bars are
+  `bg-chart-series-1` (TopIntentsCard was the gradient); gradients stay for meters and progress. The
+  series chart axis is `stroke-line-strong` with no stroke opacity.
+- **Cards (F-08).** App cards use `cardVariants` (SuggestionCard keeps its `rounded-lg` and padding).
+  Marketing cards use `MARKETING_CARD`, `MARKETING_CARD_GLASS` and `MARKETING_CARD_HOVER` in
+  `marketing/primitives.tsx`, static edges `line` (hover `line-strong`). Left: the PostComposer sticky
+  bar (a bar that is a card only from `md`), the app chrome frames (sidebar, shell, inbox), the
+  mock-UI cards inside `Illustrations.tsx`, and the Languages and Trust cards (a `canvas` fill).
+- **States (F-09).** Hover on SuggestionCard's and EmojiPicker's small buttons and on the
+  TemplatePicker option is `hover:bg-hover`; `disabled:opacity-30` is 50. `hover:bg-pressed` stays
+  on three elements that already sit on a `hover` or tinted fill, where `hover` would be invisible:
+  the Ask source chip and suggestion rows (AnswerText, AskConversation) and the download button on a
+  file card inside a bubble (AttachmentView). The empty send buttons keep `disabled:opacity-100`
+  (listed).
+- **Inverse button (F-11).** New Button variant `inverse` (`bg-fg text-canvas hover:bg-fg-hover`)
+  for Ask's stop button and the carousel arrows in PostPreview.
+- **Type (F-12).** `tracking-eyebrow` and `leading-display` are theme tokens, so no arbitrary
+  tracking or leading remains. SiteFooter headings use `EYEBROW`. Headings use the roles:
+  `ITEM_TITLE`, `CARD_TITLE`, `SECTION_TITLE`, `PAGE_TITLE`.
+- **Radius and shadow (F-13, F-14).** SiteFooter `rounded` to `rounded-sm`. The radius scale is
+  written in `@theme`. New `--shadow-glow`, `-hover` and `-button` replace the 2xl, xl and lg shadows
+  tinted with `shadow-brand/N`. Stale comments in `ui/floating.ts` and `lib/utils.ts` updated;
+  tailwind-merge knows the new names.
+- **Left as is.** F-10 (marketing border colours are now consistent through the shared constants;
+  the implicit-colour borders are fine), F-15 (arbitrary sizes, not colour), F-16 (test literals, now
+  listed), F-17 (emails: out of the web app and email clients can't use CSS variables; listed with
+  the reason, not changed).
+- **Lint and manifest.** `styles/colour-exceptions.ts` lists every intentional literal, allowed
+  shade, runtime channel, token group, the shadcn layer, dark-only choice and static asset with a
+  reason. `design-lint.test.ts` now also checks undefined colour tokens (built from globals.css),
+  arbitrary colour/shadow/gradient values, colour literals and inline colour styles (ts, tsx, other
+  css, `scripts/*.mjs`), shadcn alias class names anywhere in `src`, opacity modifiers on tokens,
+  the focus names, disabled opacity, arbitrary tracking and leading, a bare `rounded` and `dark:`,
+  with positive and negative self-tests, and it fails on a listed entry that is gone.
+- *Deviation: the audit said a file that uses `colorValue()` may hold literals. It may not: the five
+  such files are held to none by `tokens.test.ts`, and the one literal among them (the OG glow's
+  `rgba(0,0,0,0)`) is a manifest entry.*
+- *Deviation: the audit suggested `hover:bg-pressed` become `hover:bg-hover` everywhere; three stay,
+  for the reason above.*
+- *Deviation: shades are `color-mix` of a base token, not repeated rgb literals, so a base change
+  carries to them. `colorValue()` therefore returns a `color-mix(...)` string for those tokens; none
+  of its consumers uses one.*
+- **On-screen changes** (for screenshots): the five F-01 surfaces; marketing: `panel` cards at 30, 40
+  and 60 or 70% are now 50%, the sticky nav veil unchanged, static framed shots (hero, auth, the
+  automation showcase) have a `line` edge, not `line-strong`, the footer headings are 11 px,
+  secondary-coloured; the Hero glow is as before and the illustration cards' glow is narrower; calendar
+  cells outside the month (30%) and closed hours (20% to 30%); media chips and captions at 70% where
+  they were 50 or 60% (attachment tray) and 85% where 80 (media tray); the carousel arrows are solid
+  white at rest; the Stop button is now a Button (a disabled Button ignores the pointer, so its tooltip does not show while it is disabled); the
+  chart axis is white 20% (it was the brand colour at 20%); the Top topics bars are solid brand; the
+  dialog footers are `field` (it was `field` at 50%); the sentiment card and metric comparison
+  titles are semibold where they were medium; the plans heading on the billing page loses
+  `tracking-tight` at 18 px.
+
+## C-128 · Midnight palette, indigo brand and glass surfaces (feature/theme-midnight-glass)
+
+The owner approved a preview ("Midnight + indigo + glass") that ran as an override stylesheet on
+local-dev. This entry makes it real in the theme system (C-127), and the preview stylesheet is gone.
+
+- **Palette.** The values are exactly the approved ones: canvas `#131520`, panel `#1B1E2A`, field
+  `#181B26`, raised `#252937`, overlay `#222633`, lines and states as cool `214 219 255` alpha, fg
+  `#F3F4F8`, fg-secondary `#A6A9BC`, brand `#6D6AF5`, brand-strong `#5550E0`, brand-deep `#2B2585`,
+  brand-fg `#B5B3FF`, shell `#4B44C9` / `#231E6B`. Indigo, because the old blue sat next to Facebook
+  and LinkedIn (platform fills) and next to the info and focus colours; Midnight was lifted from
+  near-black to a charcoal-indigo at the owner's request. Measured: brand-strong carries white at
+  5.82:1, fg-secondary is 5.4:1 or more on every surface, line-control 3.16:1 or more (3.55 on panel).
+  Comments that quoted older ratios are updated.
+- **Glass is tokens and utilities, not overrides.** New colours: `panel-frost` (82%), `card-glass`
+  (68%), `overlay-frost` (86%), `raised-frost` (72%), `frost-outline` (45%), `line-glass` (8%); new
+  shadows: `shadow-glass`, `shadow-highlight`, `shadow-button-primary`, `shadow-button-secondary`; the
+  ambient light is `--gradient-ambient` on the body (base layer). The blur is in five `@utility`
+  rules (`glass-pane`, `glass-card`, `glass-float`, `glass-raised`, `glass-outline`) that bundle the
+  frost colour and the blur and fall back to solid under `prefers-reduced-transparency`. Chosen over
+  Tailwind's `backdrop-blur-*` plus a colour class so that colour and blur can't drift apart and
+  the fallback lives in one place. Every new colour has a `use` entry and appears on `/dev/tokens`.
+- **Work panes are subtler than cards** (owner): 82% with a 10 px blur, because inbox and thread
+  text sits on them; cards show the glass fully.
+- **Where it applies.** I chose call-site utilities over making `--color-panel` itself translucent:
+  `panel` is also the colour of chips, the date pill, marketing cards and `Alert`, which must stay
+  solid, and a translucent token would break every `bg-panel` that sits on another surface. The work
+  panes (about a dozen call sites in shell, inbox, Ask and the post composer) switched to
+  `glass-pane`; `Card` / `cardVariants`, `FLOATING_SURFACE`, dialog, alert dialog, sheet, tooltip,
+  sonner and `buttonVariants` (default, secondary, outline) carry the glass in their recipes.
+  `CardInset` stays solid (a card on a card). The Save bar stays opaque (its test says so) and the
+  marketing cards stay solid.
+  *Deviation from the preview: the preview frosted every `.bg-panel` and `.bg-overlay` on the page,
+  including marketing cards, small chips and the Save bar; those are now solid.*
+- **Identity rings.** brand (indigo) and facebook (blue) are 1.24:1 apart in luminance; the identity
+  test's floor went from 1.3 to 1.2, since the hues differ. Rings are still 3:1 on panel.
+- **Icons.** `node scripts/generate-icons.mjs` was run; the PNGs use the new shell gradient.
+- Tests that quoted the old classes or values were updated (card, button, floating family, sonner,
+  tooltip 13:1, manifest, tone).
+
+## C-129 · Light mode (feature/theme-midnight-glass)
+
+Light mode with a Dark / Light / System switch. Dark stays the default and the marketing site stays dark.
+
+- **Mechanism: `light-dark()` pairs.** Each differing colour is one declaration, `light-dark(LIGHT,
+  DARK)`, in the same `@theme` entry, so the two values sit side by side and a token can't exist in one
+  theme only. `<html data-theme>` sets `color-scheme` (dark, light, or both for System, which therefore
+  follows the OS with no script). Chosen over a second block of overrides under a selector because that
+  needs the dark values written twice to pin a subtree dark (the marketing pages), and over a `dark`
+  class because `dark:` is banned. Checked that Tailwind's optimizer keeps `light-dark()` intact in
+  custom properties. Needs a 2024 browser (Chrome 123, Safari 17.5, Firefox 120).
+  `scripts/gen-tokens.mjs` splits the pairs (`colors`/`colorsLight`, `shadows`/`shadowsLight`);
+  `themeInvariant` lists single-valued colours with reasons.
+- **Choice and first paint.** Cookie `sh_theme` (dark | light | system, default dark), applied by a small
+  script in `<head>`. *Deviation from the brief: no server read in the root layout.* The root layout is
+  shared with the marketing pages, which are static and revalidated hourly; `cookies()` there would make
+  them all dynamic. The CSP already allows inline scripts. Only a no-JS visitor differs: they get Dark.
+- **Switch.** Settings → Appearance (new tab, everyone) and a Theme radio group in the workspace menu (the
+  shell's account area; Clerk's own user menu can't hold a three-way control). It is the member's, per
+  browser; no Save bar.
+- **Palette.** Soft cool canvas `#F5F6FB`, white panels, cool ink alpha for lines and states, text
+  `#14161F` / `#585C73`, the same indigo family (`brand` `#5B57EA`, `brand-fg` `#4640C8`,
+  `brand-strong` and `brand-deep` unchanged, 5.82:1 with white). Status colours are darker on light so they
+  read as text on their soft fills (success `#166534`, warning `#92400E`, danger-fg `#B91C1C`). Glass on
+  light: panes 88%, cards 72%, floating 92% white frost with the same blurs; shadows are cool ink; the
+  ambient glows are lighter (new tokens `ambient-1..3`). Every key pair is measured and held by
+  `styles/contrast.test.ts`.
+- **Marketing stays dark.** The layout wrapper carries `scheme-dark` and `bg-ambient`; `<html>` is pinned
+  by an inline script on a first load and by `ThemePin` on a client navigation, so scrollbars, overscroll
+  and portals match. Auth pages and the app follow the choice.
+- **Runtime-literal consumers.** Clerk gets per-theme variables and base (component-level appearance);
+  viewport `themeColor` starts dark and `ThemeSync` moves it; manifest, OG image, icons and the global
+  error page stay dark; `statusBarStyle` stays black (read once by iOS). See THEME.md section 1.
+- **Dark-only spots.** Shadows are pairs; the avatar edge lost `mix-blend-lighten` for a plain `line` ring;
+  the grain is `--grain-opacity` (0 on light); `dark:` variant now follows `data-theme="dark"`; the
+  inverse button works by token (near-black pill in light, also on photos).
+- Not verified in a browser (no build or screenshots by brief): Clerk's merge of the per-component
+  appearance over the provider's, and iOS status bar in light.
+
+## C-130 · The weekly report per account, and the categorical chart palette (feature/weekly-report-accounts)
+
+Owner: the report did not tell accounts apart and had one chart colour. Decided here, small calls:
+
+- **`account_id` on `GET …/reports/weekly`.** Every figure, series, top intent and top post is that account's (`overview_stats` functions take an optional `account_id`); another workspace's account is 404 `not_found`. Leads and captures follow the contact's account and the automation's account. Knowledge-gap questions belong to the workspace, so an account's report returns 0 and none for them and the page hides the line. The digest is unchanged (workspace-wide).
+- **Breakdown** (workspace-wide report only, additive `breakdown`, plus `accounts` for the picker and `account` when one is picked): per account messages received, people who wrote in, comments, replies sent (the reply rate's own definition), automation runs, reach and followers, each this week against last with 8 weekly points. Counts are never None except for a week before the workspace existed. Reach and followers are None with `unavailable` (`insights_not_granted`, `no_readings`) where the platform gives no insights, e.g. WhatsApp. Leads, response time and rates are not broken down by account.
+- **Palette.** `--color-chart-series-2` to `-6` (orange, aqua, sky, yellow, magenta) join series 1 (brand indigo) in a fixed order, validated per theme with the data-viz checker (adjacent colour-blind separation and normal-vision floor pass in light and dark; the light yellow, aqua and magenta are under 3:1, so every chart has a legend, tooltip and table). A seventh entity folds into the neutral token. Shared pieces live in `components/charts/`.
+
+
+## C-132 · Range and platform controls, report links, and the OpenUI spike (VIS-11, VIS-13, VIS-14, feature/vis-11-13-14)
+
+The last three backlog items for Ask, on top of C-123 (branch `feature/vis-07-12`). Option C still
+holds: the API builds every visual, the model neither writes nor sees one, and everything stays
+behind `AGENT_VISUALS_ENABLED`. **One migration, 0045** (`agent_runs.hints`, nullable JSON,
+expand-only). No new route, no new setting.
+
+### Structured follow-ups (VIS-11)
+- **`AgentRunCreate.hints`** (`RunHints`, `schemas/agent.py`): whitelisted keys and values only,
+  `extra="forbid"`. Two kinds, never mixed: `range_days` (7, 30 or 90) and/or `platform` (`all`,
+  `instagram`, `facebook`, `whatsapp`) repeat the question over another range or platform;
+  `reply_conversation_ids` (at most 3, the same cap as the lead list) is VIS-12's "Prepare
+  replies". Never free text from the screen. A follow-up needs a `thread_id` (422 without).
+- **`request` is optional with hints.** The server words the member's side itself
+  (`agent/hints.bubble`: "Same, for the last 90 days on Instagram", "Same, across all platforms",
+  "Prepare replies for these leads") and ignores any text sent with hints, so the thread shows
+  words, never ids, and the screen can't put its own words in the thread. *This fixes the gap
+  C-123 recorded: the bubble no longer shows UUIDs.*
+- **The planner applies the hint as if the member had asked** (`hints.instruction`): the member's
+  earlier typed question (`AgentContext.last_typed`, carried as quoted data) asked again with the
+  range and platform as tool arguments, same tools. Earlier follow-ups in the thread reach the
+  model as their instruction, not their bubble. When the earlier question is out of the context
+  window (six runs) the instruction says "your previous answer's question".
+- **Stored:** `agent_runs.hints` holds the validated hints (defaults left out) and `request` the
+  bubble; run responses return `hints` (null for a typed question) so the web shows what is
+  chosen. *A migration was needed: the bubble must be words and the planner must still know the
+  structure, and the run table had nowhere to keep it.*
+- **Conversations are checked.** `reply_conversation_ids` that aren't the workspace's give 404
+  `not_found`, the rule for every body that names a resource. An integration test covers it (the
+  tenancy example body can hold only one resource per route, and `thread_id` already uses it).
+- **Controls on the visual** (`VisualControls`, `lib/agent/controls.ts`): range chips and
+  platform chips under `trend`, `metric_comparison`, and `ranked_posts` and `sentiment_summary`
+  when they have a period (a single post has no range). Not on `lead_list` and `table` (their
+  tools take neither). Shown on the latest answer only, like the other follow-ups. The chosen
+  range comes from the visual's own period when it is 7, 30 or 90 days, the platform from the
+  run's hints; none is shown as chosen otherwise. A change sends the whole selection, so one
+  control keeps the other's choice. Clicking the chosen chip does nothing (no run for no change).
+- **Credits, before the run.** Under the controls: "Changing this asks again. About 2 to 4 AI
+  credits." (`agent_turn` is 1 credit a model call and a typical question takes 2 to 4,
+  `billing/plans.py`; the same run, so the same price as typing the question). The controls turn
+  off, with the reason in that line, when the plan has no AI credits, none are left (the
+  composer's own message with the reset date), or fewer are left than the upper estimate (4):
+  "You have 3 AI credits left this month, and a change can use up to 4." *The API only needs one
+  credit to start a run; the stricter line is a choice so a change doesn't stop half way. Easy to
+  loosen in `controlGate`.* The API still answers 402 `quota_exceeded` as before.
+- **Retry** on a failed follow-up resends its hints, not its bubble words.
+
+### Weekly report links (VIS-13)
+- **`report` answer-ref kind** with `AnswerRef.week` (the Monday). `parent_id` is the account when
+  the question was about one; `id` is derived from week and account (`uuid5`), so the same report
+  is one source however often it is cited. The web opens `reports?week=<monday>[&account=<id>]`
+  (`lib/agent/routes.ts`, both values re-checked there; a malformed ref opens `reports`) and
+  labels it "Weekly report". Nothing in `components/reports` and no change to the page.
+- **Which week matches:** the latest finished week (Monday to Sunday in the workspace's zone,
+  within the report's 52 weeks) that lies wholly inside the tool's period (`report_week`, a
+  function of dates only). A period with no whole finished week cites none; a running week is
+  never linked, as the report page itself refuses it.
+- **Tools:** `metric_trend` and `compare_periods` (the current period) cite it, for the account
+  when the question named one. *There is no overview tool in the agent (Home's figures come from
+  `compare_periods`); nothing else cites a report.* The label is "Weekly report, 12-18 Oct 2026"
+  (with the handle for an account). It works with the visuals setting off: refs are not visuals.
+- *The `?account=` parameter belongs to the report page work on `feature/ui-refresh`; until it
+  lands the page shows the workspace report for the week and ignores the account.*
+
+### The OpenUI spike (VIS-14), not shipped
+- Done offline on the scratch branch `spike/openui` (`spike/openui/`), packages installed only
+  there, `OPENUI_TELEMETRY_DISABLED=1`. Result and numbers:
+  `docs/architecture/generative-ui/11-openui-spike-result.md` (on this branch too).
+- **Decision: do not adopt; keep C.** 30 of 30 valid, 0 number errors in 521 numbers, p95 1.54 s
+  as a separate call (about 0.25 s written inside the answer's own turn, an estimate); but no
+  open-ended use the catalogue can't serve was found, which the gate requires.
+- The Gemini key was read through the API's `Settings` (`apps/api/.env`), held in memory, never
+  printed or written; about 140 calls in all.
+
+### Tests
+- API unit (run here): `tests/unit/test_agent_hints.py` (the words, the instruction, the
+  whitelist, the request rules, which week a period links, the ref).
+- API integration (written, not run): `test_agent_api.py` (a follow-up is worded by the server and
+  keeps its hints; thread and whitelist; 404 for another workspace's conversation; 402 without
+  credits), `test_agent_visuals_vis.py` (the trend and the comparison cite the week, for an
+  account, none for a period without a whole week).
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (selection, hints, the credit gate, which
+  visuals offer controls, the report path), `VisualViewVis.test.tsx` (the controls, the cost
+  line, the explanation, busy). E2E `e2e/vis-11-13.spec.ts` (written, not run); the e2e seed
+  (`scripts/e2e/api.py`) gains `report_week`; `vis-07-12.spec.ts` now expects the new bubble.
+- **Checked centrally:** apply migration 0045; regenerate `apps/api/openapi.json` and
+  `packages/api-client` (`RunHints`, `AgentRunCreate.hints` and an optional `request`,
+  `AgentRun.hints`, `AnswerRef.week` and `kind` with `report`), then drop the hand-added
+  `RunHints`, `AgentRun`, `AgentRunDetail`, `AgentRunCreate` and `AnswerRef` additions in
+  `lib/api/types.ts`; typecheck, build, the integration and tenancy suites, vitest, the e2e specs.
+
+### Left for later
+VIS-X2 (quote account names in the prompt), VIS-X4 (design-system entries for the visuals and
+their controls), a platform control on the lead list, a two-series trend, a reply-window
+pre-check for the lead follow-up, and localised labels.
+
+## C-131 · Facebook and Stories follow-ups (feature/followups-fb-stories)
+
+What C-114 (Instagram Stories) and C-115 (Facebook publishing) recorded as "not built", built after
+the owner approved it. **Every Meta behaviour below was written from Meta's docs and none has been
+seen on a real Page or account.** Each is marked *unverified* and listed in `docs/verification.md`
+item 50. The permission work is part of the second App Review submission (O-10,
+`docs/ops/app-review.md` section 8).
+
+### 1. A caption limit per platform
+- **The numbers.** Instagram 2,200 characters (as before). A Facebook Page post 63,206 characters,
+  the figure Meta's Pages documentation and Page tools give (*unverified*). They are
+  `CAPTION_MAX_CHARS` and `FACEBOOK_CAPTION_MAX_CHARS` in `models/publishing.py`. The first comment
+  stays at 2,200 for every platform (Instagram's; Facebook allows more, nobody asked for it).
+- **Where they apply.** The columns and the request bodies hold the longest
+  (`STORED_CAPTION_MAX_CHARS`; migration 0048 re-creates `ck_scheduled_posts_caption_length` and
+  `ck_scheduled_post_targets_caption_override_length`), so a draft can hold a long caption. The
+  checklist and the scheduling rules apply the platform's limit (`rules.caption_limit`): an account's
+  own caption to its platform's; the shared caption to the strictest of the accounts that use it
+  (those without their own caption). A Page-only post may be long; add an Instagram account and the
+  caption fails with "Shorten the caption to 2,200 characters (now N)". The composer's counter and
+  checklist (`captionLimit`, `checklist.ts`) do the same; the counter under each caption shows its
+  own limit.
+- **Not changed.** The AI caption writer and "improve" still work to 2,200 characters
+  (`CaptionRequest`), so improving a longer Page caption is refused by the schema; hashtag
+  suggestions likewise.
+- **Migration 0048** (after 0047; written as 0050 after 0044, renumbered when stacked), expand-only. *Numbering:* 0046 to 0049 belong to the other
+  follow-ups branch; the coordinator re-chains.
+
+### 2. Story insights
+- **Windows.** A Story is gone after 24 hours, so it has its own snapshot windows: 1 h, 6 h and 23 h
+  (`STORY_WINDOWS`, new `SnapshotWindow.H23`, `ck_post_metric_snapshots_window` re-created in
+  migration 0049). Feed posts and Reels never get 23 h (`ages.WINDOWS` leaves it out). A Story's
+  grace ends 10 minutes before it goes down (the 23 h reading has 50 minutes), the 15 minute tick
+  (`due_condition`) now includes Stories, and every `ages` function takes the post's windows
+  (`windows_for(media_type)`).
+- **What is read.** Every Story window reads the insights (a Story has no like or comment counts to
+  read early) and is final when written (`insights_final`). The metrics: `reach`, `views`,
+  `shares`, `replies`, `total_interactions`, `follows`, `profile_visits`, and from the `navigation`
+  metric with `breakdown=story_navigation_action_type` the `taps_forward`, `taps_back`,
+  `swipes_forward` and `exits` (`tap_forward`, `tap_back`, `swipe_forward`, `tap_exit`). The
+  breakdown is asked for on its own, like `follows_and_unfollows`. A kind with no row in the
+  breakdown is 0; a refused call leaves the figures unknown (never 0). Without the insights scope a
+  Story gets an empty snapshot, so it is not asked for again.
+- **Stored like other metrics:** `post_metric_snapshots.metrics` (new `PostMetric` keys `replies`,
+  `taps_forward`, `taps_back`, `swipes_forward`, `exits`, `clicks`).
+- **Shown.** The analytics reads already take any post: `PostPerformance` gains `extra_metrics`
+  (`ExtraMetrics`: the Story and Page figures that `PostMetrics` does not carry, so every post's
+  shared metrics and their comparisons are unchanged), and `AgeName` gains `23h`. A Story is shown
+  at the latest reading it has reached and is compared only with the account's other Stories (and
+  no other post with a Story); rankings (`top_posts`) and other posts' baselines still leave Stories
+  out. Web: the published Story in the composer's status banner (the schedule's published view)
+  shows "Reach 900 · Views 1,100 · Shares 7 · Replies 5 · at 6 h" (`story-insights`); "Comments and
+  results" in the schedule menu opens the Performance card, which for a Story lists reach, views,
+  shares, replies, taps forward, taps back, swipes forward and exits at 1 h, 6 h, 23 h or lifetime.
+- *Unverified:* the metric names and the breakdown values; that insights can be read while the Story
+  is up and for how long after it goes down; that `replies` and `navigation` are offered under
+  Instagram Login.
+
+### 3. Facebook Page post insights
+- **Metrics.** `GET /{post_id}/insights?metric=post_media_view,post_total_media_view_unique,post_clicks&period=lifetime`
+  gives `views`, `reach` and `clicks`; `GET /{post_id}?fields=shares` gives `shares`. Likes
+  (reactions) and comments come from the live counts, as before. Meta replaced the old impressions
+  metrics with these "media view" ones, so the old names are not used. A refused metric is read
+  alone and left unknown (the Instagram helpers).
+- **Schedule.** The same windows as Instagram posts: live counts at 1 h and 6 h, insights from 24 h,
+  the 72 h run marks them final (no change to `snapshot_account_posts`; a Page now has
+  `Capability.POST_INSIGHTS`).
+- **Permission.** `read_insights`, asked for only with `FB_REQUEST_INSIGHTS_SCOPE` (default off, like
+  `IG_REQUEST_INSIGHTS_SCOPE`); a Page connected without it has no `POST_INSIGHTS` and the
+  Performance card says to reconnect. Sandbox Pages always have it. Account-level insights for Pages
+  are still not built (account insights stay followers only).
+- **Shown** where Instagram post metrics are: the Performance card on the post detail (reach, views,
+  likes, comments, shares, saves, engagement rate, and a Page post's clicks; the wording names
+  Facebook for a Page). Saves, profile visits and follows are Instagram's, so a Page shows "—".
+- *Unverified:* the three metric names and `period=lifetime`; `values[0].value`; `shares.count`; how
+  soon after posting the figures exist; that reactions are a fair "likes".
+
+### 4. Facebook Reels
+- **A choice, not a shape.** A Page video stays a normal video. The composer's Type section offers
+  **Reel** when a Facebook Page is chosen (`kind: "reel"`, `PostKind.REEL`; migration 0050 widens
+  `ck_scheduled_posts_kind`). A Reel is exactly one video of 3 to 90 seconds (*unverified limits*,
+  `FACEBOOK_REEL_MIN_S`, `FACEBOOK_REEL_MAX_S`); 9:16 is only recommended, so another shape passes
+  with a note ("9:16 fits a Reel best. Facebook may crop or add bars to this file."). It needs a
+  Page ("Choose a Facebook Page for a Reel. Instagram already publishes a single video as a
+  Reel."); with an Instagram account chosen too, the Instagram side is its usual Reel. The caption,
+  hashtag and first comment rules are a normal post's. The stored `format` is `reel` (as for any
+  single video).
+- **Calls** (`platforms/facebook/publishing.py`): `reel:{video_id}`. Create is
+  `POST /me/video_reels {upload_phase: start}` then the hosted file handed to the answer's
+  `upload_url` with `Authorization: OAuth {token}` and a `file_url` header; the token is only sent
+  to an https address on facebook.com. Status is `GET /{video_id}?fields=status`: FINISHED when
+  `uploading_phase` is complete, ERROR when a phase failed, PUBLISHED once `publishing_phase` has
+  started. Publish is `POST /me/video_reels {upload_phase: finish, video_id, video_state: PUBLISHED,
+  description}`. The video id is the media id, read back as a video and stored as `reel`.
+  `PlatformHttp.request` gained a `headers` argument for the upload call; `create_reel_container`
+  gained `page_reel` (Instagram and the others ignore it).
+- **Lost answers.** A plain Page post cannot tell a lost publish answer from one that never went
+  out, so it still ends unconfirmed (C-115). A Reel's status shows the publishing phase, so after a
+  lost answer the job reads the status first: PUBLISHED finds the post again
+  (`find_published_media` reads the video), anything else ends unconfirmed. The check runs for every
+  non-Instagram lost answer, and only a Reel or a video Story ever answers PUBLISHED. The sandbox
+  does the same.
+- *Deviation:* once `finish` is accepted the target is marked published, though Facebook may still
+  be processing the Reel (the publishing phase); a later processing failure is not followed up.
+- *Unverified:* the whole flow (`video_reels` bodies and answers, the upload host and header,
+  `file_url` for a hosted file there, the phase and `status` values, `video_state`), the limits, and
+  that `pages_manage_posts` covers Reels.
+
+### 5. Facebook Page Stories
+- **Same Type switch and rules as Instagram's:** one photo or one video, no caption (kept on the
+  draft, never sent), no first comment, 3 to 60 second videos, any image shape (a note says who may
+  crop), 24 hours (the banner says "Disappears ..."). The composer no longer disables Story for a
+  Page (the old "Pages can't publish Stories" is gone). A Page has no publishing limit to check.
+- **Calls:** a photo Story is an unpublished `POST /me/photos` (`storyphoto:{id}`) then
+  `POST /me/photo_stories {photo_id}`; a video Story is the Reel's start and upload on
+  `video_stories` (`storyvideo:{id}`), the same status, then
+  `POST /me/video_stories {upload_phase: finish, video_id}`. The answer's `post_id` is stored as the
+  media id (else the upload id). The target is a `story` media item, so "next post" automations
+  never link to it.
+- **Not readable, honestly.** Facebook has no read API for Page Stories: the permalink stays empty
+  (no "View on Facebook"), the story picker's live list is empty for a Page (`list_stories` returns
+  `[]`; the sandbox too), `get_published_media` returns nothing for a Story (the job keeps what it
+  knows), and a Page Story has no insights (the published banner says "Facebook doesn't share
+  figures for Page Stories"; its snapshots are empty). A photo Story's lost answer ends unconfirmed
+  like any plain Page post; a video Story's is found through its status like a Reel's.
+- *Unverified:* `photo_stories` and `video_stories` bodies and answers, the Page video Story limits
+  (the Instagram ones are used), and that `pages_manage_posts` is enough.
+
+### Shared notes
+- **Migrations** 0048 (caption checks), 0049 (snapshot window 23h), 0050 (post kind reel), all
+  expand-only, each with a downgrade that removes or rewrites what the old check would refuse.
+- **Settings:** `FB_REQUEST_INSIGHTS_SCOPE` (default false) in `.env.example` and
+  `docs/ops/deploy.md`.
+- **Tests.** Unit: `test_page_caption_limit.py`, `test_story_insights.py`,
+  `test_facebook_insights.py`, `test_facebook_reels_stories.py`; `test_story_scheduling.py`,
+  `test_facebook_publishing.py` and `test_analytics_rules.py` updated. Contract:
+  `test_story_insights.py`. Integration (written, not run): `test_facebook_reels_stories.py`, plus
+  new cases in `test_metric_snapshots.py` (Stories read at 1 h, 6 h and 23 h; Page post insights; a
+  Page Story), `test_analytics_api.py` (Story figures, the 23h age, Story comparison) and
+  `test_story_publishing.py` (a Story may go to a Page). Vitest (written, not run):
+  `checklist.test.ts`, `format.test.ts`, `PostPerformanceCard.test.tsx`, `StatusBanner.test.tsx`,
+  `PostComposer.test.tsx`. E2E: `followups-fb-stories.spec.ts` (a long Page caption, a Page Reel, a
+  Page Story) and `gr30-facebook-publishing.spec.ts` updated; the e2e seed can now add a video
+  (`videoAsset`).
+- **For the coordinator:** regenerate the client: `AgeName` gains `23h`,
+  `PostPerformance.extra_metrics` and `ExtraMetrics`, `ScheduledPostDraft.kind` and
+  `ScheduledPostSummary.kind` gain `reel`. The web uses the generated types for all of these
+  (`ExtraMetrics` is an alias in `lib/api/types.ts`). Migrations re-chained as 0048 to 0050 after the
+  other branch's 0046 to 0049. The shared lists (nav, plans, tenancy) are untouched (no new table
+  or route).
+
+## C-133 · Final batch: what the end-to-end run caught (feature/final-batch)
+
+The final batch (VIS-07 to VIS-14, the GR-24, GR-32 and Ask follow-ups, the Facebook and Stories
+follow-ups and the UI release) was written first and tested once at the end. Locally only the
+checks CI doesn't run on a PR were run (e2e and the UI screenshots); CI runs the rest on the PR.
+The e2e run found these in production code:
+
+- **Conversation starters were never saved (GR-11).** `PUT` and `sync` in `api/v1/ice_breakers.py`
+  didn't commit. The integration tests called the service directly, so they never saw it.
+- **WhatsApp number health, first read.** The broadcast preview sends two requests at once; both
+  inserted the `whatsapp_number_health` row and one failed on the unique key with a 500. The insert
+  now runs in a savepoint (`services/broadcasts/health.py`).
+- **Popups inside a dialog or sheet couldn't be clicked (C-128 Select upgrade).** `ModalInert`
+  marked the modal's own portalled popups inert (`components/ui/modal-inert.tsx`).
+- **Flow preview branch picks.** Choosing a second fork before the first one became the first
+  fork's choice (`withChoice` in `automations/flow/PathView.tsx`, used by the preview and the match
+  tester).
+- **Flow editor at 375 px.** The "Send a saved reply" switch overflowed sideways (`size="sm"`).
+- **The e2e stack** now starts the API before the web build, or the public API reference page was
+  prerendered as "unavailable" and cached for an hour.
+- *Not kept:* gr39's "a published story is in the live stories" check: the sandbox keeps published
+  stories in the worker's memory, which the API process can't see in the e2e stack.
+- *Open:* the UI shots inbox-list-1536 and conversation-1536 failed on a network error
+  (`ERR_NAME_NOT_RESOLVED`); axe reports two contrast issues on sign-in.

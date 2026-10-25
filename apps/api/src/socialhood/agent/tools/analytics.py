@@ -20,7 +20,8 @@ R1 (all read; any member, as the analytics routes):
 - metric_trend(metric, range, account): one account metric by day (up to 31 days) or week, with
   its first, last, lowest and highest points and the change between first and last.
 
-Visuals (GR-38): top_posts, sentiment_distribution, comment_topics and compare_periods put a
+Visuals (GR-38): top_posts, sentiment_distribution, comment_topics, compare_periods and
+metric_trend (a line, VIS-07; none when no point has a reading) put a
 ``visual`` in their result, built by agent/visuals.py from the same numbers; the web draws it. The
 model never sees it (agent/report.model_view) and never writes one.
 
@@ -40,7 +41,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from typing import Literal
 
@@ -55,7 +56,7 @@ from socialhood.agent.tools.common import (
     analytics_view,
     clip,
     days,
-    facebook_asked,
+    facebook_unconnected,
     find_account,
     handle,
     limit_field,
@@ -65,16 +66,18 @@ from socialhood.agent.tools.common import (
     post_ref,
     quoted,
     ref,
+    report_ref,
     tool,
     when,
 )
+from socialhood.agent.tools.common import visual as _visual
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import Sentiment
 from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, SnapshotWindow
 from socialhood.models.connections import Platform, SocialAccount
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts
-from socialhood.schemas.agent import SentimentSummaryVisual, Visual
+from socialhood.schemas.agent import SentimentSummaryVisual, TrendPoint, Visual
 from socialhood.schemas.analytics import (
     MIN_COMPARABLE_POSTS,
     AccountMetricFigure,
@@ -90,7 +93,7 @@ from socialhood.schemas.analytics import (
 from socialhood.schemas.posts import SentimentName
 from socialhood.services.analytics import account_metrics, queries, sentiment
 from socialhood.services.analytics.account_metrics import SeriesPoint
-from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, format_of
+from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, WINDOWS, format_of
 from socialhood.services.analytics.common import capabilities_from, load_post
 from socialhood.services.analytics.queries import BaselineQuery
 
@@ -100,6 +103,7 @@ LIFETIME_WORDS = frozenset(
 AGE_WORDS: dict[str, str] = {
     "1h": "1 hour",
     "6h": "6 hours",
+    "23h": "23 hours",
     "24h": "24 hours",
     "72h": "72 hours",
     "7d": "7 days",
@@ -144,7 +148,7 @@ def snapshot_age(phrase: str | None) -> tuple[AgeName | None, str | None]:
         ) from error
     goal = resolved.age.total_seconds()
     window = min(
-        WINDOW_AGES,
+        WINDOWS,  # a Story's 23 h reading is not a window to ask the agent for
         key=lambda w: (abs(math.log(WINDOW_AGES[w].total_seconds() / goal)), WINDOW_AGES[w]),
     )
     if WINDOW_AGES[window] == resolved.age:
@@ -178,14 +182,6 @@ class Metrics(BaseModel):
     engagement_rate: float | None = None  # % of reach, at the same age
 
 
-def _visual[V: Visual](ctx: ToolContext, kind: str, build: Callable[[], V]) -> V | None:
-    """The tool's visual (GR-38), or None with AGENT_VISUALS_ENABLED off or when it can't be
-    built (the result and the answer stand)."""
-    if not ctx.platform.settings.agent_visuals_enabled:
-        return None
-    return visuals.safe(kind, build)
-
-
 def _age_caveats(ctx: ToolContext, perf: PostPerformance, rule: str | None) -> list[str]:
     """Why the figures are at another age than asked, or missing (FR-AGT-06)."""
     caveats = [rule[0].upper() + rule[1:] + "."] if rule else []
@@ -206,7 +202,7 @@ def _age_caveats(ctx: ToolContext, perf: PostPerformance, rule: str | None) -> l
             )
     if perf.captured_at is None:
         caveats.append(f"No figures have been recorded for this post at {AGE_WORDS[perf.age]} yet.")
-    elif perf.age in {w.value for w in LIVE_COUNT_WINDOWS}:
+    elif perf.age in {w.value for w in LIVE_COUNT_WINDOWS} and perf.media_type != "story":
         caveats.append(
             "At 1 and 6 hours only likes and comments are recorded; reach and the other insights "
             "start at 24 hours."
@@ -476,7 +472,7 @@ class TopPostsResult(ToolResult):
     result_model=TopPostsResult,
 )
 async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return TopPostsResult(
             summary="Facebook isn't connected, so there are no Facebook posts to rank",
             metric=args.metric,
@@ -654,7 +650,7 @@ def _sentiment_visual(
     result_model=SentimentResult,
 )
 async def sentiment_distribution(ctx: ToolContext, args: ScopeInput) -> SentimentResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return SentimentResult(
             summary="Facebook isn't connected, so there are no Facebook comments",
             scope="Facebook",
@@ -784,7 +780,7 @@ class TopicsResult(ToolResult):
     result_model=TopicsResult,
 )
 async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return TopicsResult(
             summary="Facebook isn't connected, so there are no Facebook comments",
             scope="Facebook",
@@ -1000,7 +996,7 @@ def _metric_out(figure: AccountMetricFigure, who: str) -> MetricOut:
     result_model=ComparePeriodsResult,
 )
 async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> ComparePeriodsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return ComparePeriodsResult(
             summary="Facebook isn't connected, so there are no Facebook figures to compare",
             metrics=[],
@@ -1083,6 +1079,7 @@ async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> Compar
         note=matched.note,
         metrics=metrics,
         visual=comparison,
+        refs=report_ref(ctx, matched.current.since, matched.current.until, acct),
         caveats=caveats,
     )
 
@@ -1140,6 +1137,11 @@ class MetricTrendResult(ToolResult):
     highest: TrendPointOut | None = None
     change_pct: float | None = None  # first to last
     direction: ChangeDirection | None = None
+    visual: Visual | None = None  # GR-38 (VIS-07): the series as a line (agent/visuals.py)
+
+
+def _trend_point(p: TrendPointOut | None) -> TrendPoint | None:
+    return None if p is None else TrendPoint(day=p.day, value=p.value, days_known=p.days_known)
 
 
 def _point(p: SeriesPoint | None) -> TrendPointOut | None:
@@ -1160,7 +1162,7 @@ def _point(p: SeriesPoint | None) -> TrendPointOut | None:
 )
 async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendResult:
     label = visuals.metric_label(args.metric)
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return MetricTrendResult(
             summary="Facebook isn't connected, so there are no Facebook figures to chart",
             metric=args.metric,
@@ -1205,20 +1207,52 @@ async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendR
             summary += f" ({stats.change_pct:+.1f}%)"
     elif not stats.known:
         summary += ": no readings"
+    out = [TrendPointOut(day=p.day, value=p.value, days_known=p.days_known) for p in series]
+    first, last = _point(stats.first), _point(stats.last)
+    lowest, highest = _point(stats.low), _point(stats.high)
+    # Nothing to draw without a single reading: the caveats say why.
+    line = (
+        _visual(
+            ctx,
+            "trend",
+            lambda: visuals.trend(
+                metric=args.metric,
+                granularity="week" if weekly else "day",
+                period=visuals.period_of(closed.span.since, closed.span.until),
+                account_label=handle(acct) if acct else None,
+                points=[TrendPoint(day=p.day, value=p.value, days_known=p.days_known) for p in out],
+                known_points=stats.known,
+                first=_trend_point(first),
+                last=_trend_point(last),
+                lowest=_trend_point(lowest),
+                highest=_trend_point(highest),
+                change_pct=stats.change_pct,
+                direction=stats.direction,
+                note=None
+                if stats.known >= len(series)
+                else f"{len(series) - stats.known} of {len(series)} "
+                f"{'weeks' if weekly else 'days'} have no reading.",
+            ),
+        )
+        if stats.known
+        else None
+    )
     return MetricTrendResult(
+        visual=line,
         summary=clip(summary, 300) or "Traced a trend",
         account=handle(acct) if acct else None,
         metric=args.metric,
         label=label,
         period=_period_out(closed.span),
         granularity="week" if weekly else "day",
-        points=[TrendPointOut(day=p.day, value=p.value, days_known=p.days_known) for p in series],
+        points=out,
         known_points=stats.known,
-        first=_point(stats.first),
-        last=_point(stats.last),
-        lowest=_point(stats.low),
-        highest=_point(stats.high),
+        first=first,
+        last=last,
+        lowest=lowest,
+        highest=highest,
         change_pct=stats.change_pct,
         direction=stats.direction,
+        refs=report_ref(ctx, closed.span.since, closed.span.until, acct),
         caveats=caveats,
     )

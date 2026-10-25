@@ -21,14 +21,14 @@ import type {
   FlowDefinition,
   FlowPreviewStep,
   FlowStep,
+  Platform,
 } from "@/lib/api/types";
 
+import { messageLimit, messageSize, networkName, overLimitCopy } from "./limits";
 import {
   BUTTON_TEXT_MAX_CHARS,
-  MESSAGE_LIMIT_BYTES,
   renderFields,
   withDisclosure,
-  worstCaseBytes,
   worstCaseChars,
   type FieldValues,
 } from "./render";
@@ -51,6 +51,38 @@ export type SendNode = {
   buttons: FlowButton[];
   replies: Reply[];
   typed: TypedAnswer;
+  /**
+   * GR-21: send a saved reply instead of writing the message. ``saved`` is the choice, so it holds
+   * before a reply is picked; the reply goes alone (no text, image, buttons or quick replies).
+   */
+  saved?: boolean;
+  saved_reply_id?: string | null;
+};
+/** GR-31: send a product from the catalogue (name, price, stock when recorded, picture and link, read when the step runs). */
+export type ProductNode = {
+  kind: "product";
+  id: string;
+  product_id: string | null;
+  /** One variant (size, colour…), or null for the product: its price, or a short list of its variants. */
+  variant_id: string | null;
+  /** A line of your own above it. */
+  intro: string;
+};
+/** One product (and variant) a payment step orders. */
+export type PaymentItemInput = { product_id: string; variant_id: string | null; quantity: number };
+/**
+ * GR-32: ask the customer to pay. Orders the chosen products at the catalogue's prices when the
+ * step runs ("items"), or asks for the conversation's latest unpaid order ("draft"), then sends the
+ * Razorpay link or UPI request.
+ */
+export type PaymentNode = {
+  kind: "payment";
+  id: string;
+  source: "items" | "draft";
+  items: PaymentItemInput[];
+  method: "razorpay" | "upi";
+  /** A line of your own above the payment message. */
+  intro: string;
 };
 export type AskNode = {
   kind: "ask";
@@ -75,12 +107,14 @@ export type SplitNode = { kind: "split"; id: string; paths: SplitPath[] };
 export type AiNode = { kind: "ai"; id: string; instructions: string };
 export type EndNode = { kind: "end"; id: string };
 
-export type EditorStep = SendNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
+export type EditorStep = SendNode | ProductNode | PaymentNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
 export type StepKind = EditorStep["kind"];
 
 /** What the "Add step" menu offers, in order. AI replies are chosen above the steps. */
 export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: string }[] = [
   { kind: "send", label: "Send", hint: "A message, with an image, link buttons or quick replies" },
+  { kind: "product", label: "Product", hint: "Send a product from your catalogue with its price and link" },
+  { kind: "payment", label: "Request payment", hint: "Make an order and send a payment link or UPI request" },
   { kind: "ask", label: "Ask", hint: "Ask a question and save the answer" },
   { kind: "branch", label: "Branch", hint: "Go different ways by a tag, a field or who they are" },
   { kind: "action", label: "Action", hint: "Tag them, set a field, tell the team or hand off" },
@@ -91,6 +125,8 @@ export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: stri
 
 export const KIND_LABEL: Record<StepKind, string> = {
   send: "Send",
+  product: "Product",
+  payment: "Request payment",
   ask: "Ask",
   branch: "Branch",
   action: "Action",
@@ -126,6 +162,10 @@ export function makeStep(kind: StepKind, taken: ReadonlySet<string> = new Set())
   switch (kind) {
     case "send":
       return { kind, id, text: "", image_asset_id: null, buttons: [], replies: [], typed: { mode: "none" } };
+    case "product":
+      return { kind, id, product_id: null, variant_id: null, intro: "" };
+    case "payment":
+      return { kind, id, source: "items", items: [], method: "razorpay", intro: "" };
     case "ask":
       return { kind, id, text: "", expect: "email",
         field_key: null,
@@ -345,6 +385,10 @@ export function compile(tree: EditorStep[]): Compiled {
             if (node.typed.mode === "own") on_text = first(node.typed.steps);
             else if (node.typed.mode === "same") on_text = quick_replies[node.typed.index]?.next ?? null;
           }
+          if (node.saved) {
+            steps.push({ type: "send", id: node.id, text: "", saved_reply_id: node.saved_reply_id ?? null, next });
+            break;
+          }
           steps.push({
             type: "send",
             id: node.id,
@@ -357,6 +401,27 @@ export function compile(tree: EditorStep[]): Compiled {
           });
           break;
         }
+        case "product":
+          steps.push({
+            type: "product",
+            id: node.id,
+            product_id: node.product_id ?? "",
+            variant_id: node.variant_id,
+            intro: node.intro,
+            next,
+          });
+          break;
+        case "payment":
+          steps.push({
+            type: "payment",
+            id: node.id,
+            source: node.source,
+            items: node.source === "items" ? node.items : [],
+            method: node.method,
+            intro: node.intro,
+            next,
+          });
+          break;
         case "ask":
           steps.push({
             type: "ask",
@@ -425,6 +490,8 @@ export function successors(step: FlowStep): (string | null)[] {
       return step.paths.map((path) => path.next ?? null);
     case "action":
     case "delay":
+    case "product":
+    case "payment":
       return [step.next ?? null];
     default:
       return [];
@@ -496,6 +563,31 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
           list.push({ kind: "delay", id: step.id, seconds: step.seconds });
           current = step.next ?? null;
           break;
+        case "product":
+          list.push({
+            kind: "product",
+            id: step.id,
+            product_id: step.product_id || null,
+            variant_id: step.variant_id ?? null,
+            intro: step.intro ?? "",
+          });
+          current = step.next ?? null;
+          break;
+        case "payment":
+          list.push({
+            kind: "payment",
+            id: step.id,
+            source: step.source ?? "items",
+            items: (step.items ?? []).map((item) => ({
+              product_id: item.product_id,
+              variant_id: item.variant_id ?? null,
+              quantity: item.quantity ?? 1,
+            })),
+            method: step.method ?? "razorpay",
+            intro: step.intro ?? "",
+          });
+          current = step.next ?? null;
+          break;
         case "end":
           list.push({ kind: "end", id: step.id });
           return list;
@@ -536,6 +628,7 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
             text: step.text,
             image_asset_id: step.image_asset_id ?? null,
             buttons: step.buttons ?? [],
+            ...(step.saved_reply_id ? { saved: true, saved_reply_id: step.saved_reply_id } : {}),
           };
           if (replies.length === 0) {
             list.push({ ...base, replies: [], typed: { mode: "none" } });
@@ -667,6 +760,8 @@ export function describeAction(action: FlowAction, tagName?: (id: string) => str
       return "Notify the team";
     case "hand_off":
       return "Hand off to a person";
+    case "assign":
+      return action.mode === "member" ? "Assign to a team member" : action.mode === "nobody" ? "Remove the assignee" : "Assign to the next available member";
   }
 }
 
@@ -683,7 +778,11 @@ export function describeDelay(seconds: number): string {
 export function stepTitle(node: EditorStep, tagName?: (id: string) => string | undefined): string {
   switch (node.kind) {
     case "send":
-      return "Message";
+      return node.saved ? "Saved reply" : "Message";
+    case "product":
+      return "Send a product";
+    case "payment":
+      return "Request payment";
     case "ask":
       return node.expect === "email" ? "Ask for an email" : node.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":
@@ -709,7 +808,21 @@ export type FlowContext = {
   /** Custom contact fields by key, with their type. */
   fields: { key: string; type: string }[];
   tagIds: ReadonlySet<string>;
+  /** GR-21: the ids of the workspace's saved replies (undefined: not loaded, so not checked). */
+  savedReplyIds?: ReadonlySet<string>;
+  /** The id of a comment flow's first step, which can't be a saved reply (undefined: not a comment flow). */
+  commentFirstId?: string | null;
+  /** GR-29: the account's platform, which sets the text limit and what Messenger lacks (default Instagram). */
+  platform?: Platform;
 };
+
+/** What a Facebook Page can't do in a flow, in the API's words (services/automations/flows.py). */
+export const FACEBOOK_FLOW_COPY = {
+  follows:
+    "Messenger doesn't say whether someone follows your Page. Remove this branch or use another condition.",
+  profileButton: "The profile button opens an Instagram profile. Give this button a link instead.",
+  consent: "Facebook doesn't record marketing consent yet. Turn off the consent question.",
+} as const;
 
 /** Which field types hold which kind of answer (the same table as the API's). */
 const ANSWER_TYPES: Record<AskNode["expect"], string[]> = {
@@ -729,6 +842,20 @@ export function isHttps(value: string): boolean {
 export type StepProblems = Record<string, string>;
 
 /**
+ * The bracket tokens the flow templates leave for the user to fill (C-105). Activation refuses a
+ * message that still holds one. Keep in step with PLACEHOLDERS in services/automations/templates.py;
+ * only these tokens count, so other brackets in a message are fine.
+ */
+export const PLACEHOLDERS: Record<string, string> = { "[price]": "your price", "[code]": "your code" };
+const PLACEHOLDER = new RegExp(Object.keys(PLACEHOLDERS).map((token) => token.replace(/[[\]]/g, "\\$&")).join("|"), "gi");
+
+/** "Replace [price] with your price." for the first placeholder still in the text, else null. */
+export function placeholderProblem(text: string): string | null {
+  const found = text.match(PLACEHOLDER)?.[0]?.toLowerCase();
+  return found ? `Replace ${found} with ${PLACEHOLDERS[found]}.` : null;
+}
+
+/**
  * Plain-words problems with one step, keyed by the field the API uses for it (``text``,
  * ``buttons.0.url``, ``quick_replies.1.title``...). The API checks the same things and more (what
  * Instagram allows along each path); its answers are merged with these.
@@ -737,18 +864,32 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
   const out: StepProblems = {};
   const textProblems = (text: string, buttons: boolean, what: string) => {
     if (!text.trim()) out.text = `Write the ${what}.`;
-    else if (worstCaseBytes(text, ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
-      out.text = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM, counting the longest name. Shorten it.`;
+    else if (placeholderProblem(text)) out.text = placeholderProblem(text) ?? "";
+    else if (messageSize(text, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+      out.text = overLimitCopy(ctx.platform, "it");
     } else if (buttons && worstCaseChars(text, ctx.disclosure) > BUTTON_TEXT_MAX_CHARS) {
-      out.text = `With link buttons Instagram allows ${BUTTON_TEXT_MAX_CHARS} characters, counting the longest name. Shorten it.`;
+      out.text = `With link buttons ${networkName(ctx.platform)} allows ${BUTTON_TEXT_MAX_CHARS} characters, counting the longest name. Shorten it.`;
     }
   };
   switch (node.kind) {
     case "send": {
+      if (node.saved) {
+        // A saved reply goes alone, so only the choice is checked here (the API checks its length).
+        if (!node.saved_reply_id) out.saved_reply_id = "Choose a saved reply.";
+        else if (ctx.savedReplyIds && !ctx.savedReplyIds.has(node.saved_reply_id)) {
+          out.saved_reply_id = "That saved reply was deleted. Choose another.";
+        } else if (ctx.commentFirstId === node.id) {
+          out.saved_reply_id = "A reply to a comment can't be a saved reply. Write it, or use a saved reply in a later step.";
+        }
+        return out;
+      }
       if (!node.text.trim() && !node.image_asset_id) out.text = "Write the message to send.";
       else if (node.text.trim()) textProblems(node.text, node.buttons.length > 0, "message to send");
       node.buttons.forEach((button, index) => {
-        if (button.profile) return;
+        if (button.profile) {
+          if (ctx.platform === "facebook") out[`buttons.${index}`] = FACEBOOK_FLOW_COPY.profileButton;
+          return;
+        }
         if (!button.title.trim()) out[`buttons.${index}.title`] = "Give the button a title.";
         if (!(button.url ?? "").trim()) out[`buttons.${index}.url`] = "Add a link, or make it the profile button.";
         else if (!isHttps(button.url ?? "")) out[`buttons.${index}.url`] = "Use a link that starts with https://.";
@@ -768,10 +909,12 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       textProblems(node.text, false, "question to ask");
       for (const part of ["retry_text", "consent_text", "confirm_text"] as const) {
         if (part === "consent_text" && !node.consent) continue;
-        if (node[part].trim() && worstCaseBytes(node[part], ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
-          out[part] = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM. Shorten it.`;
+        if (placeholderProblem(node[part])) out[part] = placeholderProblem(node[part]) ?? "";
+        else if (node[part].trim() && messageSize(node[part], ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+          out[part] = overLimitCopy(ctx.platform, "it", false);
         }
       }
+      if (node.consent && ctx.platform === "facebook") out.consent = FACEBOOK_FLOW_COPY.consent;
       if (node.field_key === null) {
         if (node.expect === "text") out.field_key = "Choose the field to save the answer to.";
       } else {
@@ -788,6 +931,8 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
         const when = rule.when;
         if (when.kind === "tag" && !ctx.tagIds.has(when.tag_id)) {
           out[`rules.${index}.when`] = "Choose a tag.";
+        } else if (when.kind === "follows_business" && ctx.platform === "facebook") {
+          out[`rules.${index}.when`] = FACEBOOK_FLOW_COPY.follows;
         } else if (when.kind === "field") {
           if (!ctx.fields.some((field) => field.key === when.key)) out[`rules.${index}.when`] = "Choose a field.";
           else if (when.op === "equals" && !(when.value ?? "").trim()) out[`rules.${index}.when`] = "Write the value to compare with.";
@@ -805,6 +950,18 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       }
       return out;
     }
+    case "product":
+      if (!node.product_id) out.product_id = "Choose a product.";
+      else if (node.intro.trim() && messageSize(node.intro, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+        out.intro = overLimitCopy(ctx.platform, "it", false);
+      }
+      return out;
+    case "payment":
+      if (node.source === "items" && node.items.length === 0) out.items = "Choose at least one product to sell.";
+      else if (node.intro.trim() && messageSize(node.intro, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+        out.intro = overLimitCopy(ctx.platform, "it", false);
+      }
+      return out;
     case "ai":
       if (!node.instructions.trim()) out.instructions = "Write the instructions for the AI.";
       return out;
@@ -884,6 +1041,8 @@ export function walk(
     values: FieldValues;
     disclosure: string | null;
     tagName?: (id: string) => string | undefined;
+    /** GR-21: a saved reply's title, shown in place of its text. */
+    savedReplyTitle?: (id: string) => string | undefined;
   },
 ): PathStep[] {
   const byId = new Map(definition.steps.map((step) => [step.id, step]));
@@ -899,10 +1058,13 @@ export function walk(
     const forks = targets.length > 1;
     const picked = forks ? Math.min(remaining.shift() ?? 0, targets.length - 1) : null;
     const following: string | null = forks ? targets[picked as number] : (targets[0] ?? null);
+    const savedTitle = step.type === "send" && step.saved_reply_id ? options.savedReplyTitle?.(step.saved_reply_id) : undefined;
     const text =
-      (step.type === "send" || step.type === "ask") && step.text.trim()
-        ? withDisclosure(renderFields(step.text, options.values), options.disclosure)
-        : null;
+      step.type === "send" && step.saved_reply_id
+        ? `Saved reply: ${savedTitle ?? "(not found)"}`
+        : (step.type === "send" || step.type === "ask") && step.text.trim()
+          ? withDisclosure(renderFields(step.text, options.values), options.disclosure)
+          : null;
     out.push({
       step_id: step.id,
       kind: step.type,
@@ -921,7 +1083,11 @@ export function walk(
 function wireTitle(step: FlowStep, tagName?: (id: string) => string | undefined): string {
   switch (step.type) {
     case "send":
-      return "Message";
+      return step.saved_reply_id ? "Saved reply" : "Message";
+    case "product":
+      return "Send a product";
+    case "payment":
+      return "Request payment";
     case "ask":
       return step.expect === "email" ? "Ask for an email" : step.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":

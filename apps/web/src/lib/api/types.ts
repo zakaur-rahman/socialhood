@@ -35,6 +35,11 @@ export type ConversationEntry = Schemas["ConversationEntry"];
 export type ConversationPatch = Schemas["ConversationPatch"];
 export type ContactSummary = Schemas["ContactSummary"];
 export type InboxCounts = Schemas["InboxCounts"];
+// Assignment (GR-20)
+export type Assignee = Schemas["Assignee"];
+export type Assignable = Schemas["Assignable"];
+export type AssignmentOverview = Schemas["AssignmentOverview"];
+export type AssignmentSettingsPut = Schemas["AssignmentSettingsPut"];
 export type ReplyWindow = Schemas["ReplyWindow"];
 export type WindowState = ReplyWindow["state"];
 export type Signal = NonNullable<ConversationListItem["signal"]>;
@@ -60,6 +65,9 @@ export type ResourceType = MediaAsset["resource_type"];
 export type AssetPurpose = Schemas["UploadSignatureRequest"]["purpose"];
 export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
+export type FacebookPageOption = Schemas["FacebookPageOption"];
+export type FacebookPageList = Schemas["FacebookPageList"];
+export type SandboxAccountCreate = Schemas["SandboxAccountCreate"];
 
 // ---- automations (P4: FR-AUT-01…19, UX-SCR-02, 03, 11, 12)
 
@@ -113,6 +121,42 @@ export type SavedReplyList = Schemas["SavedReplyList"];
 export type SavedReplyCreate = Schemas["SavedReplyCreate"];
 export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
 export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-23: WhatsApp broadcasts (aliases of the Pydantic classes; the client is regenerated centrally).
+export type Broadcast = Schemas["Broadcast"];
+export type BroadcastList = Schemas["BroadcastList"];
+export type BroadcastCreate = Schemas["BroadcastCreate"];
+export type BroadcastDraft = Schemas["BroadcastDraft"];
+export type BroadcastUpdate = Schemas["BroadcastUpdate"];
+export type BroadcastStart = Schemas["BroadcastStart"];
+export type BroadcastPreview = Schemas["BroadcastPreview"];
+export type BroadcastAvailability = Schemas["BroadcastAvailability"];
+export type BroadcastCounts = Schemas["BroadcastCounts"];
+export type BroadcastStatus = Broadcast["status"];
+export type BroadcastRecipient = Schemas["Recipient"];
+export type BroadcastRecipientList = Schemas["RecipientList"];
+export type RecipientStatus = BroadcastRecipient["status"];
+export type VariableSpec = Schemas["VariableSpec"];
+
+// ---- sequences (GR-24)
+
+export type Sequence = Schemas["Sequence"];
+export type SequenceList = Schemas["SequenceList"];
+export type SequenceBody = Schemas["SequenceBody"];
+export type SequenceStep = Schemas["StepOut"];
+export type SequenceStepIn = Schemas["StepIn"];
+export type SequenceEntry = Schemas["EntryOut"];
+export type SequenceStatus = Sequence["status"];
+export type SequenceEntryType = SequenceEntry["type"];
+export type SequencePreview = Schemas["SequencePreview"];
+export type SequenceEnrolment = Schemas["Enrolment"];
+export type SequenceEnrolmentList = Schemas["EnrolmentList"];
+export type EnrolmentStatus = SequenceEnrolment["status"];
+export type SequenceAnalytics = Schemas["SequenceAnalytics"];
+export type SequenceStepStats = Schemas["StepStats"];
+export type ContactSequence = Schemas["ContactSequence"];
+export type ContactSequenceList = Schemas["ContactSequenceList"];
+export type CostEstimate = Schemas["CostEstimate"];
+export type RateCard = Schemas["RateCardOut"];
 // GR-22: business hours and the away message.
 export type BusinessHours = Schemas["BusinessHours"];
 export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];
@@ -121,6 +165,12 @@ export type AccountBusinessHours = Schemas["AccountBusinessHours"];
 export type DaySchedule = Schemas["DaySchedule"];
 export type TimeRange = Schemas["TimeRange"];
 export type AutoModeName = BusinessHours["auto_mode"];
+
+// GR-28: the website chat widget's settings.
+export type WidgetSettings = Schemas["WidgetSettingsOut"];
+export type WidgetSettingsUpdate = Schemas["WidgetSettingsUpdate"];
+export type WidgetEmailCapture = WidgetSettings["email_capture"];
+export type WidgetPosition = WidgetSettings["position"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];
@@ -170,6 +220,12 @@ export type KnowledgeSourceList = Schemas["KnowledgeSourceList"];
 export type KnowledgeSourceCreate = Schemas["KnowledgeSourceCreate"];
 export type KnowledgeSourcePatch = Schemas["KnowledgeSourcePatch"];
 export type KnowledgeType = KnowledgeSource["type"];
+/** What can be added: a page of a website is made by a crawl (GR-35). */
+export type KnowledgeCreateType = KnowledgeSourceCreate["type"];
+export type SiteCrawlInfo = Schemas["SiteCrawlInfo"];
+export type SitePage = Schemas["SitePage"];
+export type SitePageList = Schemas["SitePageList"];
+export type SitePageStatus = SitePage["status"];
 export type KnowledgeStatus = KnowledgeSource["status"];
 export type KnowledgeUsage = Schemas["KnowledgeUsage"];
 export type KnowledgeTestResult = Schemas["KnowledgeTestResult"];
@@ -197,6 +253,8 @@ export type PostSort = NonNullable<NonNullable<operations["list_posts"]["paramet
 export type PostPerformance = Schemas["PostPerformance"];
 export type PostComparison = Schemas["PostComparison"];
 export type PostMetrics = Schemas["PostMetrics"];
+/** Story replies and taps, Page post clicks: the figures only some posts have (C-131). */
+export type ExtraMetrics = Schemas["ExtraMetrics"];
 export type MetricComparison = Schemas["MetricComparison"];
 export type Baseline = Schemas["Baseline"];
 /** A post's age after publishing: a snapshot window, or its latest known values. */
@@ -248,12 +306,22 @@ export type CalendarSlot = Schemas["CalendarSlot"];
 export type CalendarAccount = Schemas["CalendarAccount"];
 export type PostingSlot = Schemas["PostingSlot"];
 export type PostingSlots = Schemas["PostingSlots"];
+export type BestTimes = Schemas["BestTimes"];
+export type BestTimeDay = Schemas["BestTimeDay"];
 export type HashtagGroup = Schemas["HashtagGroup"];
 export type HashtagGroupCreate = Schemas["HashtagGroupCreate"];
 export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
 
 // ---- Ask Social Hood: the read-only agent (PA: FR-AGT-01…07, agent-architecture.html §11, §12)
 
+/**
+ * VIS-11: a structured follow-up on the run before it (schemas/agent.py RunHints): the same
+ * question over another range or platform, or a draft reply for each of a few conversations.
+ * Whitelisted values only; the API words the member's question from them.
+ */
+export type RunHints = Schemas["RunHints"];
+/** What the Ask thread can send: a question in words, or a structured follow-up (VIS-11). */
+export type AskInput = string | RunHints;
 export type AgentRun = Schemas["AgentRun"];
 export type AgentRunDetail = Schemas["AgentRunDetail"];
 export type AgentRunList = Schemas["AgentRunList"];
@@ -277,9 +345,23 @@ export type ActionKind = ActionCard["kind"];
 export type ScheduleMessageAction = Schemas["ScheduleMessageAction"];
 export type CommentReplyAction = Schemas["CommentReplyAction"];
 export type AutomationDraftAction = Schemas["AutomationDraftAction"];
+export type FlowProposalAction = Schemas["FlowProposalAction"];
+export type SegmentProposalAction = Schemas["SegmentProposalAction"];
+/** GR-36: a write the agent proposed. Nothing is saved until a member approves it. */
+export type ProposalCard = FlowProposalAction | SegmentProposalAction;
+/** A prepared action (FR-AGT-03): it opens an existing screen pre-filled. */
+export type PreparedCard = Exclude<ActionCard, ProposalCard>;
+export type PreparedKind = PreparedCard["kind"];
 export type ScheduleMessagePrefill = Schemas["ScheduleMessagePrefill"];
 export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
 export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
+
+/** GR-36: the agent's proposed writes: waiting, decided or expired, with the audit trail. */
+export type AgentApproval = Schemas["AgentApproval"];
+export type AgentApprovalList = Schemas["AgentApprovalList"];
+export type ApprovalOutcome = Schemas["ApprovalOutcome"];
+export type ApprovalEvent = Schemas["ApprovalEvent"];
+export type ApprovalStatus = AgentApproval["status"];
 
 /**
  * A visual answer (GR-38): built by the API's tools from service numbers and listed in the run's
@@ -291,6 +373,13 @@ export type VisualKind = Visual["kind"];
 export type MetricComparisonVisual = Schemas["MetricComparisonVisual"];
 export type RankedPostsVisual = Schemas["RankedPostsVisual"];
 export type SentimentSummaryVisual = Schemas["SentimentSummaryVisual"];
+export type TrendVisual = Schemas["TrendVisual"];
+export type LeadListVisual = Schemas["LeadListVisual"];
+export type TableVisual = Schemas["TableVisual"];
+export type TrendPoint = Schemas["TrendPoint"];
+export type LeadRow = Schemas["LeadRow"];
+export type TableColumn = Schemas["TableColumn"];
+export type TableRow = Schemas["TableRow"];
 export type MetricDelta = Schemas["MetricDelta"];
 export type RankedPostRow = Schemas["RankedPostRow"];
 export type VisualPeriod = Schemas["VisualPeriod"];
@@ -332,6 +421,68 @@ export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
 export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
 export type WebhookDelivery = Schemas["WebhookDelivery"];
 export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];
+
+// ---- Google Sheets sync (GR-27)
+
+export type GoogleSheetsStatus = Schemas["GoogleSheetsStatus"];
+export type GoogleSheetsConnectStart = Schemas["GoogleConnectStart"];
+export type GoogleSheetColumn = Schemas["SheetColumnOut"];
+export type GoogleSheetFieldOption = Schemas["SheetFieldOption"];
+export type GoogleSheetRow = Schemas["SheetRowOut"];
+export type GoogleSheetInfo = Schemas["SheetOut"];
+export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
+export type GoogleSheetTestResult = Schemas["SheetTestResult"];
+
+// ---- product catalogue (GR-31)
+
+export type Product = Schemas["ProductOut"];
+export type ProductVariant = Schemas["VariantOut"];
+export type ProductList = Schemas["ProductList"];
+export type ProductCreate = Schemas["ProductCreate"];
+export type ProductPatch = Schemas["ProductPatch"];
+export type ProductVariantInput = Schemas["VariantIn"];
+export type ProductSource = Product["source"];
+export type CatalogueLimits = Schemas["CatalogueLimits"];
+export type CsvImportPreview = Schemas["ImportPreview"];
+export type CsvImportRow = Schemas["ImportRowOut"];
+export type CsvImportResult = Schemas["ImportResult"];
+export type ShopifyStatus = Schemas["ShopifyStatus"];
+
+// ---- orders and payment requests (GR-32)
+
+export type Order = Schemas["OrderOut"];
+export type OrderLine = Schemas["OrderLineOut"];
+export type OrderList = Schemas["OrderList"];
+export type OrderCreate = Schemas["OrderCreate"];
+export type OrderLineInput = Schemas["OrderLineIn"];
+export type OrderAddressInput = Schemas["AddressIn"];
+export type OrderStatus = Order["status"];
+export type OrderPayment = NonNullable<Order["payments"]>[number];
+export type OrderRefund = NonNullable<Order["refunds"]>[number];
+export type OrderNotice = NonNullable<Order["notice"]>;
+export type OrderNoticeInput = Schemas["NoticeIn"];
+export type OrderEditInput = Schemas["OrderEdit"];
+export type OrderRefundInput = Schemas["RefundCreate"];
+export type OrderPaymentMethod = NonNullable<Order["payment_method"]>;
+export type PaymentSettings = Schemas["PaymentSettings"];
+export type RazorpayConnectInput = Schemas["RazorpayConnect"];
+export type UpiSaveInput = Schemas["UpiSave"];
+
+// ---- WhatsApp catalogue messages (GR-33)
+
+export type WaCatalogueStatus = Schemas["WaCatalogueStatus"];
+export type WaCatalogueConnectInput = Schemas["WaCatalogueConnect"];
+export type ProductMessageSend = Schemas["ProductMessageSend"];
+export type ProductMessageItem = Schemas["ItemRef"];
+
+// ---- API keys (GR-25)
+
+export type ApiKey = Schemas["ApiKey"];
+export type ApiKeyWithKey = Schemas["ApiKeyWithKey"];
+export type ApiKeyList = Schemas["ApiKeyList"];
+export type ApiKeyCreate = Schemas["ApiKeyCreate"];
+export type ApiScope = Schemas["ApiScope"];
+export type ApiScopeName = ApiScope["scope"];
 
 // Activity (GR-05)
 export type ActivityItem = Schemas["ActivityItem"];
@@ -377,3 +528,30 @@ export type LeadStageCount = Schemas["LeadStageCount"];
 export type LeadWeek = Schemas["LeadWeek"];
 export type LeadSettings = Schemas["LeadSettings"];
 export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];
+
+// Weekly report (GR-34)
+export type WeeklyReport = Schemas["WeeklyReport"];
+export type ReportMetric = Schemas["ReportMetric"];
+export type ReportAccount = Schemas["ReportAccount"];
+export type AccountBreakdown = Schemas["AccountBreakdown"];
+export type BreakdownMetric = Schemas["BreakdownMetric"];
+export type ReportMetricKey = ReportMetric["key"];
+export type ReportAccountMetric = Schemas["ReportAccountMetric"];
+export type ReportPoint = Schemas["ReportPoint"];
+export type ReportIntent = Schemas["ReportIntent"];
+export type ReportQuestion = Schemas["ReportQuestion"];
+export type ReportPost = Schemas["ReportPost"];
+
+// ---- team (GR-19)
+
+export type WorkspacePermissions = Schemas["WorkspacePermissions"];
+export type TeamMember = Schemas["Member"];
+export type TeamMemberList = Schemas["MemberList"];
+export type TeamSeats = Schemas["Seats"];
+export type TeamInvitation = Schemas["Invitation"];
+export type TeamInvitationList = Schemas["InvitationList"];
+export type TeamInvitationCreate = Schemas["InvitationCreate"];
+export type TeamInvitableRole = TeamInvitationCreate["role"];
+export type OwnershipTransfer = Schemas["OwnershipTransfer"];
+export type AuditEvent = Schemas["AuditEvent"];
+export type AuditEventList = Schemas["AuditEventList"];

@@ -36,7 +36,7 @@ from socialhood.security.signatures import sign_request
 from socialhood.services import account_deletion as deletion
 from socialhood.services.connections import BEING_DELETED
 from socialhood.services.scheduled_posts import views as scheduled_post_views
-from tests.support.ai import make_analysis, make_decision, make_source, make_suggestion
+from tests.support.ai import make_analysis, make_decision, make_site, make_source, make_suggestion
 from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import IG_APP_SECRET, Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
@@ -44,6 +44,7 @@ from tests.support.billing import set_subscription
 from tests.support.inbox import make_account, make_asset, make_scheduled, make_thread
 from tests.support.instagram import FakeInstagram, connect
 from tests.support.publishing import make_posting_slot, make_scheduled_post
+from tests.support.sequences import make_sequence_rows
 from tests.tenancy.test_isolation import seed_workspace_b
 
 ACCOUNT_TABLES = [table.name for table in account_tables()]
@@ -269,6 +270,12 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-28: the website chat's settings
+        engine,
+        "INSERT INTO widget_settings (workspace_id, social_account_id) VALUES (:w, :a)",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-07: a story mention
         engine,
         "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"
@@ -284,6 +291,64 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         " VALUES (:w, :a, 'spring', 'Spring')",
         w=wid,
         a=account_id,
+    )
+    await execute(  # GR-23: a broadcast from the account, a recipient and the number's health
+        engine,
+        "WITH b AS (INSERT INTO broadcasts (workspace_id, social_account_id, name, segment_name,"
+        " template_name, template_language, template_category, template_body)"
+        " VALUES (:w, :a, 'Diwali', 'Everyone', 'sale_offer', 'en', 'marketing', 'Hi')"
+        " RETURNING id)"
+        " INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, position,"
+        " state, message_id) SELECT :w, id, :c, 0, 'dispatched', :m FROM b",
+        w=wid,
+        a=account_id,
+        c=thread.contact_id,
+        m=thread.message_ids[0],
+    )
+    await execute(
+        engine,
+        "INSERT INTO whatsapp_number_health (workspace_id, social_account_id, quality_rating,"
+        " checked_at) VALUES (:w, :a, 'green', now())",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-33: the catalogue connected through the account (one per workspace)
+        engine,
+        "INSERT INTO catalogue_connections (workspace_id, social_account_id, catalog_id, brand)"
+        " VALUES (:w, :a, 'cat-1', 'Maple') ON CONFLICT (workspace_id) DO NOTHING",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-32: an order for the contact, and a line on it
+        engine,
+        "WITH o AS (INSERT INTO orders (workspace_id, number, contact_id, conversation_id, status,"
+        " currency, total_minor) VALUES (:w, (SELECT coalesce(max(number), 0) + 1 FROM orders"
+        " WHERE workspace_id = :w), :c, :v, 'draft', 'INR', 100) RETURNING id)"
+        " INSERT INTO order_items (workspace_id, order_id, name, quantity, unit_price_minor,"
+        " line_total_minor) SELECT :w, id, 'Kurta', 1, 100, 100 FROM o",
+        w=wid,
+        c=thread.contact_id,
+        v=thread.conversation_id,
+    )
+    await execute(  # GR-32 follow-up: a payment on that order, and a refund of part of it
+        engine,
+        "INSERT INTO order_payments (workspace_id, order_id, amount_minor, method, paid_at)"
+        " SELECT :w, id, 100, 'upi', now() FROM orders WHERE workspace_id = :w",
+        w=wid,
+    )
+    await execute(
+        engine,
+        "INSERT INTO order_refunds (workspace_id, order_id, payment_id, amount_minor, reason,"
+        " method, status) SELECT :w, order_id, id, 40, 'Returned', 'manual', 'processed'"
+        " FROM order_payments WHERE workspace_id = :w",
+        w=wid,
+    )
+    await make_sequence_rows(  # GR-24: a sequence on the account, the contact in it, a step run
+        engine,
+        workspace_id=wid,
+        account_id=account_id,
+        contact_id=thread.contact_id,
+        message_id=thread.message_ids[0],
     )
     return Seeded(
         conversation_id=thread.conversation_id,
@@ -321,6 +386,7 @@ async def test_the_purge_leaves_nothing_of_the_account_and_spares_everything_els
     x = await seed_account(engine, wid, doomed)
     y = await seed_account(engine, wid, kept)
     await make_source(engine, workspace_id=wid)
+    await make_site(engine, workspace_id=wid)  # GR-35: workspace-level, kept with the workspace
 
     # Posts: one to both accounts, one published only to the doomed one, one scheduled for it.
     both = await make_scheduled_post(

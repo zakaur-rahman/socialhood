@@ -10,6 +10,8 @@ import type { Tone } from "@/lib/ui/tone";
 import type { PostAsset, PostFormat, ScheduledPostStatus } from "./types";
 
 export const CAPTION_MAX_CHARS = 2200;
+/** A Facebook Page post's text (Meta's figure, unverified until a real Page publishes, C-131). */
+export const FACEBOOK_CAPTION_MAX_CHARS = 63206;
 export const FIRST_COMMENT_MAX_CHARS = 2200;
 export const MAX_HASHTAGS = 30;
 export const MAX_MENTIONS = 20;
@@ -203,7 +205,46 @@ export function deriveFormat(assets: Pick<AssetInfo, "resource_type">[]): PostFo
   return "carousel";
 }
 
-export const FORMAT_LABEL: Record<PostFormat, string> = { image: "Image", carousel: "Carousel", reel: "Reel" };
+export const FORMAT_LABEL: Record<PostFormat, string> = { image: "Image", carousel: "Carousel", reel: "Reel", story: "Story", text: "Text" };
+
+// ---- Stories (GR-39; Meta's limits, unverified until a real account publishes one, C-114)
+
+/** A Story video runs 3 to 60 seconds. */
+export const STORY_VIDEO_MIN_SECONDS = 3;
+export const STORY_VIDEO_MAX_SECONDS = 60;
+/** A Facebook Reel is one video of 3 to 90 seconds (Meta's limits, unverified, C-131). */
+export const FACEBOOK_REEL_MIN_SECONDS = 3;
+export const FACEBOOK_REEL_MAX_SECONDS = 90;
+
+/** A Story lives for 24 hours. */
+export const STORY_LIFETIME_HOURS = 24;
+const STORY_RATIO = 9 / 16;
+const STORY_RATIO_TOLERANCE = 0.05;
+
+/** A Story file that is not 9:16 still publishes, but Instagram crops it or adds bars. */
+export function storyShapeOff(asset: Pick<AssetInfo, "width" | "height">): boolean {
+  const ratio = ratioOf(asset);
+  return ratio !== null && Math.abs(ratio - STORY_RATIO) > STORY_RATIO * STORY_RATIO_TOLERANCE;
+}
+
+/** Why a video can't be a Story, or null: shorter than 3 s or longer than 60 s. */
+export function storyVideoProblem(asset: Pick<AssetInfo, "resource_type" | "duration_s">): string | null {
+  if (asset.resource_type !== "video" || asset.duration_s == null) return null;
+  if (asset.duration_s > STORY_VIDEO_MAX_SECONDS) return `Story videos can be up to ${STORY_VIDEO_MAX_SECONDS} seconds.`;
+  if (asset.duration_s < STORY_VIDEO_MIN_SECONDS) return `Story videos must be at least ${STORY_VIDEO_MIN_SECONDS} seconds.`;
+  return null;
+}
+
+/** Why a video can't be a Facebook Reel, or null: shorter than 3 s (the longest is the usual 90 s). */
+export function reelVideoProblem(asset: Pick<AssetInfo, "resource_type" | "duration_s">): string | null {
+  if (asset.resource_type !== "video" || asset.duration_s == null) return null;
+  if (asset.duration_s < FACEBOOK_REEL_MIN_SECONDS) return `Reel videos must be at least ${FACEBOOK_REEL_MIN_SECONDS} seconds.`;
+  return null;
+}
+
+export const REEL_ONE_VIDEO = "A Facebook Reel is one video.";
+export const REEL_NEEDS_VIDEO = "Add a video for the Reel.";
+export const REEL_NEEDS_PAGE = "Choose a Facebook Page for a Reel. Instagram already publishes a single video as a Reel.";
 
 /** "Photo 2" or "Video 3": items are named by their place in the post. */
 export function assetLabel(asset: Pick<AssetInfo, "resource_type">, index: number): string {
@@ -214,8 +255,31 @@ export function assetLabel(asset: Pick<AssetInfo, "resource_type">, index: numbe
 
 /** Instagram accounts are the ones that can publish (WhatsApp can't, C-043). */
 export function publishingAccounts(accounts: SocialAccount[]): SocialAccount[] {
-  return accounts.filter((account) => account.platform === "instagram");
+  return accounts.filter((account) => account.platform === "instagram" || account.platform === "facebook");
 }
+
+/** GR-30: the platforms the post goes to; before the accounts load, Instagram's rules apply. */
+export function postPlatforms(accounts: Pick<SocialAccount, "platform">[]): { instagram: boolean; facebook: boolean } {
+  const facebook = accounts.some((account) => account.platform === "facebook");
+  const instagram = accounts.some((account) => account.platform === "instagram") || accounts.length === 0;
+  return { instagram, facebook };
+}
+
+/**
+ * The caption length for a post to these platforms (the API's ``caption_limit``): Instagram's
+ * 2,200 unless every account is a Facebook Page; a cross-posted post is held to the strictest.
+ * No accounts yet: Instagram's.
+ */
+export function captionLimit(platforms: readonly string[]): number {
+  return platforms.length > 0 && platforms.every((platform) => platform === "facebook") ? FACEBOOK_CAPTION_MAX_CHARS : CAPTION_MAX_CHARS;
+}
+
+/** No media and some text, for Facebook Pages alone: a text post (GR-30). */
+export function pagesOnlyText(accounts: Pick<SocialAccount, "platform">[], caption: string): boolean {
+  return accounts.length > 0 && accounts.every((account) => account.platform === "facebook") && caption.trim().length > 0;
+}
+
+export const FACEBOOK_NO_MIX = "A Facebook post can have several photos or one video, not both.";
 
 export function handleOf(account: Pick<SocialAccount, "username" | "display_name"> | null | undefined): string {
   if (!account) return "This account";

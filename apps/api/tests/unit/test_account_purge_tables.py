@@ -26,7 +26,10 @@ EXPECTED = {
     "automation_run_steps",
     "automation_runs",
     "automations",
+    "broadcast_recipients",
+    "broadcasts",
     "business_hours",
+    "catalogue_connections",  # GR-33
     "comment_analyses",
     "comments",
     "contact_consents",
@@ -39,14 +42,24 @@ EXPECTED = {
     "media_items",
     "message_analyses",
     "messages",
+    "order_items",  # GR-32
+    "order_payments",  # C-125
+    "order_refunds",
+    "orders",
     "post_metric_snapshots",
     "posting_slots",
     "reply_suggestions",
     "scheduled_messages",
+    "sequence_enrolments",  # GR-24
+    "sequence_step_runs",
+    "sequence_steps",
+    "sequences",
     "scheduled_post_targets",
     "story_mentions",
     "tracked_links",
     "link_clicks",
+    "widget_settings",  # GR-28
+    "whatsapp_number_health",
 }
 
 
@@ -116,6 +129,8 @@ def test_workspace_level_data_is_never_an_account_table() -> None:
         "knowledge_sources",
         "knowledge_chunks",
         "knowledge_gaps",
+        "site_crawls",
+        "site_pages",
         "media_assets",
         "scheduled_posts",
         "scheduled_post_assets",

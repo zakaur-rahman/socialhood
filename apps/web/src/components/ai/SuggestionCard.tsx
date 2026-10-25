@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { DisabledReason } from "@/components/ui/disabled-reason";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -70,7 +71,7 @@ export function SuggestionCard({
 }) {
   if (generating || !suggestion) {
     return (
-      <section aria-label="Suggested reply" className={cn(BAR, "rounded-lg border border-brand-line bg-panel px-3 py-2")} data-state="generating">
+      <section aria-label="Suggested reply" className={cn(BAR, cardVariants({ tone: "brand" }), "rounded-lg px-3 py-2")} data-state="generating">
         <div className="flex items-center gap-2">
           <Sparkles className="size-3.5 shrink-0 text-brand-fg" aria-hidden />
           <span className="shrink-0 text-xs font-medium text-brand-fg">AI draft:</span>
@@ -139,7 +140,7 @@ function ReadyBar({
   const left = suggestion.regenerations_left;
 
   return (
-    <section aria-label="Suggested reply" className={cn(BAR, "rounded-lg border border-brand-line bg-panel px-3 py-2")} data-state="ready">
+    <section aria-label="Suggested reply" className={cn(BAR, cardVariants({ tone: "brand" }), "rounded-lg px-3 py-2")} data-state="ready">
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-fg" aria-hidden />
         <div className="min-w-0 flex-1">
@@ -246,7 +247,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
           aria-label="Stop editing the suggestion"
           onClick={onStop}
           // The chip's ×: 16 px, with a 40 px hit area on coarse pointers (DESIGN_SYSTEM §8.4).
-          className="relative grid size-4 place-items-center rounded-md after:absolute after:-inset-1 hover:bg-pressed pointer-coarse:after:-inset-3"
+          className="relative grid size-4 place-items-center rounded-md after:absolute after:-inset-1 hover:bg-hover pointer-coarse:after:-inset-3"
         >
           <X aria-hidden />
         </button>

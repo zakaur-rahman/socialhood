@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
-import { BackLink } from "@/components/shell/PageFrame";
+import { BackLink, STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -59,12 +59,14 @@ import { itemsFromErrors, localChecklist, mergeChecklist } from "@/lib/publishin
 import { renderCrop, type Cropper } from "@/lib/publishing/crop";
 import {
   assetLabel,
+  captionLimit,
   checkPostFile,
   deriveFormat,
   fromMediaAsset,
   fromPostAsset,
   handleOf,
   isEditable,
+  pagesOnlyText,
   MAX_ASSETS,
   MIN_SCHEDULE_LEAD_MS,
   publishingAccounts,
@@ -88,6 +90,7 @@ import { MediaLibraryDialog } from "./MediaLibraryDialog";
 import { MEDIA_ADD_ID, mediaTileId, MediaTray, moveItem, type TrayEntry } from "./MediaTray";
 import { PostChecklist } from "./PostChecklist";
 import { PostPreview } from "./PostPreview";
+import { PostTypeSection } from "./PostTypeSection";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
 import { useMediaUploads, type Uploader } from "./use-media-uploads";
@@ -293,16 +296,29 @@ function Composer({
     replacing: uploads.items.find((item) => item.replaces === id) ?? null,
   }));
   const postAssets = entries.map((entry) => entry.asset);
-  const format = deriveFormat(postAssets);
+  // Before the format: a text post needs to know whether every chosen account is a Page (GR-30).
+  const selectedIds = draft.targets.map((target) => target.social_account_id);
+  const selectedAccounts = selectedIds
+    .map((accountId) => allAccounts.find((account) => account.id === accountId))
+    .filter((account): account is NonNullable<typeof account> => Boolean(account));
+  const isStory = draft.kind === "story";
+  const isReel = draft.kind === "reel";
+  const format = isStory
+    ? postAssets.length === 1
+      ? "story"
+      : null
+    : isReel
+      ? postAssets.length === 1 && postAssets[0].resource_type === "video"
+        ? "reel"
+        : null
+      : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
+      ? "text"
+      : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
   const cropAsset = cropId ? assets[cropId] : undefined;
 
   // ---- accounts and captions (per account when switched on)
   const [perAccount, setPerAccount] = useState(() => initial.targets.some((target) => target.caption_override != null));
-  const selectedIds = draft.targets.map((target) => target.social_account_id);
-  const selectedAccounts = selectedIds
-    .map((accountId) => allAccounts.find((account) => account.id === accountId))
-    .filter((account): account is NonNullable<typeof account> => Boolean(account));
 
   const toggleAccount = (accountId: string) => {
     const removing = draft.targets.some((target) => target.social_account_id === accountId);
@@ -579,7 +595,7 @@ function Composer({
     <div className="w-full p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
-      <header className="flex items-center gap-3 border-b border-line pb-4">
+      <header className={cn(STICKY_PAGE_HEADER, "flex items-center gap-3")}>
         <div className="min-w-max flex-1">
           <BackLink href={scheduleHref(slug)} label="Schedule" />
           <h1 className={PAGE_TITLE}>Post</h1>
@@ -625,6 +641,7 @@ function Composer({
         now={now}
         onEditAndRetry={onEditAndRetry}
         retrying={put.isPending}
+        wid={wid}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -637,6 +654,12 @@ function Composer({
               selected={selectedIds}
               onToggle={toggleAccount}
               slug={slug}
+            />
+            <PostTypeSection
+              value={draft.kind}
+              onChange={(kind) => change({ kind })}
+              reelAvailable={selectedAccounts.some((account) => account.platform === "facebook")}
+              instagramToo={selectedAccounts.some((account) => account.platform === "instagram")}
             />
             <MediaTray
               entries={entries}
@@ -652,6 +675,8 @@ function Composer({
               onRetryUpload={uploads.retry}
               onRemoveUpload={uploads.remove}
             />
+            {isStory ? null : (
+            <>
             <CaptionEditor
               wid={wid}
               slug={slug}
@@ -666,7 +691,13 @@ function Composer({
                 accountId: target.social_account_id,
                 label: handleOf(allAccounts.find((account) => account.id === target.social_account_id)),
                 value: target.caption_override ?? draft.caption,
+                maxChars: captionLimit([allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"]),
               }))}
+              maxChars={captionLimit(
+                draft.targets
+                  .filter((target) => target.caption_override == null)
+                  .map((target) => allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"),
+              )}
               onAccountCaptionChange={(index, value) =>
                 change((current) => ({
                   targets: current.targets.map((target, position) => (position === index ? { ...target, caption_override: value } : target)),
@@ -682,6 +713,8 @@ function Composer({
               value={draft.first_comment ?? ""}
               onChange={(value) => change({ first_comment: value })}
             />
+            </>
+            )}
             <AutomationSection
               wid={wid}
               slug={slug}
@@ -705,6 +738,9 @@ function Composer({
                 allowQueue={isDraft}
                 slug={slug}
                 now={now}
+                bestFor={
+                  selectedAccounts[0] ? { wid, accountId: selectedAccounts[0].id, handle: handleOf(selectedAccounts[0]) } : null
+                }
               />
             ) : null}
           </fieldset>
@@ -723,7 +759,7 @@ function Composer({
                 role="region"
                 aria-label="Post actions"
                 className={cn(
-                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
+                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:glass-pane",
                   BOTTOM_BAR,
                 )}
               >

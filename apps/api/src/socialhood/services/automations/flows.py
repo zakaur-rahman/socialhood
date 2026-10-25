@@ -16,6 +16,10 @@ Structure, checked on every save (a broken graph is never stored):
 - the tags and fields a branch or an action names exist, and a set value fits its field;
 - an AI reply has its instructions.
 
+On a Facebook Page (GR-29) a message is at most 2,000 characters, and three things Messenger lacks
+are refused: a branch on following the Page, the "View profile" button (Instagram's profile) and
+a question that asks for marketing consent (no consent record for Facebook yet).
+
 And what Instagram allows along every path from the start (``_path_errors``):
 - a comment's flow starts with its first message, a private reply: text and buttons only, no
   image. Until the person answers (a quick reply, or a question), nothing more can be sent;
@@ -42,10 +46,12 @@ from pydantic import ValidationError
 from socialhood.errors import FieldError
 from socialhood.models.automations import Automation, AutomationAction
 from socialhood.schemas.flows import (
+    Action,
     ActionStep,
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchRule,
     BranchStep,
     Condition,
@@ -57,7 +63,9 @@ from socialhood.schemas.flows import (
     FollowsCondition,
     LeadScoreCondition,
     LeadStageCondition,
+    PaymentStep,
     PlatformCondition,
+    ProductStep,
     QuickReply,
     RandomizeStep,
     RemoveTag,
@@ -93,17 +101,40 @@ COPY = {
         "after a quick reply or a question."
     ),
     "ai_not_first": "An AI reply has to be the first step.",
+    "facebook_follows": (
+        "Messenger doesn't say whether someone follows your Page. Remove this branch or use "
+        "another condition."
+    ),
+    "facebook_profile_button": (
+        "The profile button opens an Instagram profile. Give this button a link instead."
+    ),
+    "facebook_consent": (
+        "Facebook doesn't record marketing consent yet. Turn off the consent question."
+    ),
     "ai_instructions": validation.COPY["ai_instructions_missing"],
     "answer_field": "Choose the field to save the answer to.",
     "field_missing": "That field doesn't exist any more. Choose another.",
     "field_type": "This field can't hold that kind of answer. Choose a field of the same type.",
     "tag_missing": "That tag doesn't exist any more. Choose another.",
+    "member_needed": "Choose who gets the conversation.",
+    "member_missing": "That person isn't on your team any more. Choose another.",
     "value_missing": "Write the value to compare with.",
     "saved_reply_missing": "That saved reply doesn't exist any more. Choose another.",
     "saved_reply_alone": (
         "A saved reply goes on its own. Remove the image, buttons and quick replies, or write "
         "the message here instead."
     ),
+    "product_missing": "That product doesn't exist any more. Choose another.",
+    "product_off": "That product is switched off. Turn it on, or choose another.",
+    "variant_missing": "That variant doesn't exist any more. Choose another.",
+    "variant_needed": "Choose a variant of this product.",
+    "product_plan": "Sending products is part of Pro.",
+    "payment_plan": "Asking for payment is part of Pro.",
+    "payment_items": "Choose at least one product to sell.",
+    "payment_razorpay": (
+        "Razorpay isn't set up for this workspace. Add your keys in Integrations first."
+    ),
+    "payment_upi": "A UPI address isn't set up for this workspace. Add it in Integrations first.",
     "comment_saved_reply": (
         "A comment's first message is written here, not a saved reply. Start with a message "
         "step, then use the saved reply."
@@ -131,7 +162,7 @@ def successors(step: Step) -> list[str | None]:
     match step:
         case SendStep(quick_replies=replies) if replies:
             return [r.next for r in replies] + [step.on_text]
-        case SendStep() | ActionStep() | DelayStep():
+        case SendStep() | ProductStep() | PaymentStep() | ActionStep() | DelayStep():
             return [step.next]
         case AskStep():
             return [step.next, step.on_skip]
@@ -296,6 +327,16 @@ class Context:
     # GR-21: the workspace's saved replies, id to body (their length is checked now; a body
     # edited later is checked by the send).
     saved_replies: Mapping[uuid.UUID, str] = field(default_factory=dict)
+    # GR-29: the account's platform, which sets the text limit and what Messenger lacks.
+    platform: str = "instagram"
+    # GR-31: the catalogue's products, id to (switched on, variant ids), and whether the plan
+    # includes the catalogue (a product step is refused without it).
+    products: Mapping[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]] = field(default_factory=dict)
+    commerce: bool = True
+    # GR-32: the payment methods the workspace has set up (a payment step needs its method).
+    payment_methods: frozenset[str] = frozenset({"razorpay", "upi"})
+    # GR-20: the workspace's members, for an "assign to a member" action.
+    member_ids: frozenset[uuid.UUID] = frozenset()
 
     @property
     def comment(self) -> bool:
@@ -330,6 +371,10 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
     match step:
         case SendStep():
             return _send_errors(i, step, ctx)
+        case ProductStep():
+            return _product_errors(i, step, ctx)
+        case PaymentStep():
+            return _payment_errors(i, step, ctx)
         case AskStep():
             return _ask_errors(i, step, ctx)
         case BranchStep():
@@ -342,22 +387,60 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
             return []
 
 
+def _product_errors(i: int, step: ProductStep, ctx: Context) -> list[FieldError]:
+    if not ctx.commerce:
+        return [FieldError(path(i, "product_id"), COPY["product_plan"])]
+    known = ctx.products.get(step.product_id)
+    if known is None:
+        return [FieldError(path(i, "product_id"), COPY["product_missing"])]
+    active, variants = known
+    if not active:
+        return [FieldError(path(i, "product_id"), COPY["product_off"])]
+    if step.variant_id is not None and step.variant_id not in variants:
+        return [FieldError(path(i, "variant_id"), COPY["variant_missing"])]
+    return []
+
+
+def _payment_errors(i: int, step: PaymentStep, ctx: Context) -> list[FieldError]:
+    if not ctx.commerce:
+        return [FieldError(path(i, "method"), COPY["payment_plan"])]
+    if step.method not in ctx.payment_methods:
+        return [FieldError(path(i, "method"), COPY[f"payment_{step.method}"])]
+    if step.source == "draft":
+        return []
+    if not step.items:
+        return [FieldError(path(i, "items"), COPY["payment_items"])]
+    errors: list[FieldError] = []
+    for j, item in enumerate(step.items):
+        known = ctx.products.get(item.product_id)
+        if known is None:
+            errors.append(FieldError(path(i, f"items.{j}.product_id"), COPY["product_missing"]))
+            continue
+        active, variants = known
+        if not active:
+            errors.append(FieldError(path(i, f"items.{j}.product_id"), COPY["product_off"]))
+        elif item.variant_id is not None and item.variant_id not in variants:
+            errors.append(FieldError(path(i, f"items.{j}.variant_id"), COPY["variant_missing"]))
+        elif item.variant_id is None and variants:
+            errors.append(FieldError(path(i, f"items.{j}.variant_id"), COPY["variant_needed"]))
+    return errors
+
+
 def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[FieldError]:
-    size = validation.message_bytes(text, ctx.disclosure)
-    limit = validation.INSTAGRAM_MESSAGE_BYTES
-    errors = []
-    if size > limit:
-        errors.append(
-            FieldError(
-                where,
-                f"Instagram allows {limit:,} bytes. With a long name"
-                f"{' and the disclosure line' if ctx.disclosure else ''} this message is "
-                f"{size:,}. Shorten it.",
-            )
-        )
+    size = validation.message_size(ctx.platform, text, ctx.disclosure)
+    errors = validation.placeholder_errors(where, text)
+    problem = validation.too_long_copy(
+        ctx.platform, size, what="message", disclosure=ctx.disclosure
+    )
+    if problem:
+        errors.append(FieldError(where, problem))
     longest = render.with_disclosure(render.longest_render(text), ctx.disclosure)
     if buttons and len(longest) > validation.BUTTON_TEXT_CHARS:
-        errors.append(FieldError(where, validation.COPY["button_text_long"]))
+        errors.append(
+            FieldError(
+                where, validation.localize(validation.COPY["button_text_long"], ctx.platform)
+            )
+        )
     return errors
 
 
@@ -386,6 +469,8 @@ def _send_errors(i: int, step: SendStep, ctx: Context) -> list[FieldError]:
     for b, button in enumerate(step.buttons):
         where = path(i, f"buttons.{b}.url")
         if button.profile:
+            if ctx.platform == "facebook":
+                errors.append(FieldError(path(i, f"buttons.{b}"), COPY["facebook_profile_button"]))
             continue
         if not button.url:
             errors.append(FieldError(where, COPY["button_link"]))
@@ -411,6 +496,8 @@ def _ask_errors(i: int, step: AskStep, ctx: Context) -> list[FieldError]:
         extra = getattr(step, part)
         if extra.strip():
             errors += _text_errors(path(i, part), extra, ctx, buttons=False)
+    if step.consent and ctx.platform == "facebook":
+        errors.append(FieldError(path(i, "consent"), COPY["facebook_consent"]))
     where = path(i, "field_key")
     if step.field_key is None:
         if step.expect == "text":
@@ -433,6 +520,8 @@ def _branch_errors(i: int, step: BranchStep, ctx: Context) -> list[FieldError]:
                 errors.append(FieldError(where, COPY["field_missing"]))
             case FieldCondition(op="equals", value=value) if not (value or "").strip():
                 errors.append(FieldError(where, COPY["value_missing"]))
+            case FollowsCondition() if ctx.platform == "facebook":
+                errors.append(FieldError(where, COPY["facebook_follows"]))
     return errors
 
 
@@ -441,6 +530,10 @@ def _action_errors(i: int, step: ActionStep, ctx: Context) -> list[FieldError]:
     match step.action:
         case AddTag(tag_id=tag_id) | RemoveTag(tag_id=tag_id) if tag_id not in ctx.tag_ids:
             return [FieldError(where, COPY["tag_missing"])]
+        case Assign(mode="member", user_id=None):
+            return [FieldError(f"{where}.user_id", COPY["member_needed"])]
+        case Assign(mode="member", user_id=user_id) if user_id not in ctx.member_ids:
+            return [FieldError(f"{where}.user_id", COPY["member_missing"])]
         case SetField(key=key) if key not in ctx.fields:
             return [FieldError(where, COPY["field_missing"])]
         case SetField(key=key, value=value):
@@ -469,7 +562,7 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
         step = g.by_id[step_id]
         problem, after = _allowed(step, window, ctx, g.definition.start)
         if problem is not None:
-            errors.setdefault(step_id, COPY[problem])
+            errors.setdefault(step_id, validation.localize(COPY[problem], ctx.platform))
         stack.extend((t, after) for t in successors(step) if t is not None)
     return errors
 
@@ -477,6 +570,8 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
 def _allowed(step: Step, window: Window, ctx: Context, start: str) -> tuple[str | None, Window]:
     """(the problem with ``step`` here or None, the window after it)."""
     match step:
+        case ProductStep() | PaymentStep():
+            return ("after_private_reply" if window == "closed" else None), window
         case SendStep() | AskStep():
             if window == "closed":
                 return "after_private_reply", "closed"
@@ -580,9 +675,23 @@ def _excerpt(text: str, limit: int = 80) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
 
 
-def describe(definition: FlowDefinition) -> list[str]:
+def _action_line(action: Action, member_names: Mapping[uuid.UUID, str]) -> str:
+    """An action step in a few words. An assign step says who gets the conversation."""
+    if isinstance(action, Assign):
+        if action.mode == "round_robin":
+            return "assign to the next available member"
+        if action.mode == "nobody":
+            return "remove the assignee"
+        name = member_names.get(action.user_id) if action.user_id else None
+        return f"assign to {name}" if name else "assign to a team member"
+    return action.kind.replace("_", " ")
+
+
+def describe(
+    definition: FlowDefinition, member_names: Mapping[uuid.UUID, str] | None = None
+) -> list[str]:
     """One line per step a run can reach, in the order a walk meets them (Ask Social Hood reads
-    a flow this way)."""
+    a flow this way). ``member_names`` names the member an assign step gives the conversation to."""
     try:
         g = graph(definition)
     except FlowError:
@@ -609,7 +718,7 @@ def describe(definition: FlowDefinition) -> list[str]:
                 kinds = ", ".join(rule.when.kind for rule in step.rules)
                 line = f"branch on {kinds or 'nothing'}"
             case ActionStep():
-                line = step.action.kind.replace("_", " ")
+                line = _action_line(step.action, member_names or {})
             case DelayStep():
                 line = f"wait {step.seconds // 60} minutes"
             case RandomizeStep():

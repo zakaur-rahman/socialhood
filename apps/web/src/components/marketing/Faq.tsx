@@ -1,9 +1,10 @@
 import { ChevronDown } from "lucide-react";
 
 import { FAQ } from "@/lib/marketing/faq";
+import { cn } from "@/lib/utils";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
-import { Container, SectionHeading } from "./primitives";
+import { Container, MARKETING_CARD_GLASS, SectionHeading } from "./primitives";
 
 /**
  * The product guide's common questions as an accordion. Native <details>: keyboard and screen
@@ -14,7 +15,7 @@ export function Faq() {
     <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
       <Container>
         <SectionHeading id="faq-title" eyebrow="FAQ" title="Common questions" />
-        <div data-reveal className="mx-auto mt-12 max-w-3xl divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel/40">
+        <div data-reveal className={cn(MARKETING_CARD_GLASS, "mx-auto mt-12 max-w-3xl divide-y divide-line overflow-hidden")}>
           {FAQ.map((item) => (
             <div key={item.question}>
             <h3 className="sr-only">{item.question}</h3>

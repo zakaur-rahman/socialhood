@@ -172,6 +172,11 @@ async def _account_or_404(session: AsyncSession, account_id: uuid.UUID) -> Socia
     return account
 
 
+async def account_or_404(session: AsyncSession, account_id: uuid.UUID) -> SocialAccount:
+    """The workspace's account, else 404 not_found."""
+    return await _account_or_404(session, account_id)
+
+
 async def posting_slots(
     session: AsyncSession, account_id: uuid.UUID, *, timezone: str, now: datetime
 ) -> PostingSlots:

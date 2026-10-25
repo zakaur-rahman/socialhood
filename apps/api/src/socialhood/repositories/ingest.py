@@ -204,7 +204,7 @@ async def lock_message_by_platform_id(
     ).one_or_none()
 
 
-OUR_SOURCES = ("human", "ai_auto", "automation")
+OUR_SOURCES = ("human", "ai_auto", "automation", "broadcast")
 
 
 async def own_send_for_echo(

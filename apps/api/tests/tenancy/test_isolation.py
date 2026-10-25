@@ -25,11 +25,12 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from tests.support.agent import make_agent_approval, make_agent_run
+from tests.support.agent import make_agent_approval, make_agent_run, make_approval_event
 from tests.support.ai import (
     make_analysis,
     make_decision,
     make_gap,
+    make_site,
     make_source,
     make_suggestion,
 )
@@ -37,6 +38,7 @@ from tests.support.analytics import make_account_day, make_comment_analysis, mak
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
 from tests.support.billing import make_payment
+from tests.support.broadcasts import make_broadcast_row
 from tests.support.inbox import make_asset, make_scheduled, make_thread
 from tests.support.notify import (
     make_email_delivery,
@@ -46,6 +48,7 @@ from tests.support.notify import (
     push_endpoint,
 )
 from tests.support.publishing import make_hashtag_group, make_posting_slot, make_scheduled_post
+from tests.support.sequences import make_sequence_rows
 
 METHODS = ("get", "post", "put", "patch", "delete")
 
@@ -78,6 +81,16 @@ PARAM_TO_SEED: dict[str, str] = {
     "link_id": "link_id",  # GR-08
     "segment_id": "segment_id",  # GR-17
     "reply_id": "reply_id",  # GR-21
+    "page_id": "page_id",  # GR-35
+    "user_id": "user_id",  # GR-19
+    "invitation_id": "invitation_id",
+    "key_id": "api_key_id",  # GR-25
+    "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
+    "broadcast_id": "broadcast_id",  # GR-23
+    "product_id": "product_id",  # GR-31
+    "order_id": "order_id",  # GR-32
+    "sequence_id": "sequence_id",  # GR-24
+    "enrolment_id": "enrolment_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -99,6 +112,10 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     },
     ("POST", "/v1/w/{wid}/notifications/read"): {"all": True},
     ("PATCH", "/v1/w/{wid}/conversations/{conversation_id}"): {"status": "archived"},
+    # GR-20: assignment. B's conversation, B's member as the assignee; B's member's availability.
+    ("PUT", "/v1/w/{wid}/conversations/{conversation_id}/assignee"): {"user_id": "{user_id}"},
+    ("PUT", "/v1/w/{wid}/members/{user_id}/availability"): {"available": False},
+    ("PUT", "/v1/w/{wid}/assignment/settings"): {"round_robin": True},  # the workspace's own
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
         "client_id": "5f0c3c1e-2d7a-4b43-9d35-9d7f0b0c2a11",
         "text": "Sent into B",
@@ -122,6 +139,14 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
+    # GR-29: Facebook Pages connect (the nonce is bound to the member and workspace) and a
+    # sandbox Facebook Page.
+    ("POST", "/v1/w/{wid}/social-accounts/facebook/pages"): {"nonce": "not-yours"},
+    ("POST", "/v1/w/{wid}/social-accounts/facebook/connect-pages"): {
+        "nonce": "not-yours",
+        "page_ids": ["1"],
+    },
+    ("POST", "/v1/w/{wid}/dev/sandbox/accounts"): {"platform": "facebook"},
     # GR-02: contacts, tags, custom fields, consent.
     ("PATCH", "/v1/w/{wid}/contacts/{contact_id}"): {"email": "taken@example.com"},
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},
@@ -143,6 +168,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     # GR-18: moving B's lead is 404 from A's workspace; the cold setting is the workspace's own.
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
     ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
+    ("POST", "/v1/w/{wid}/api-keys"): {"name": "Not yours", "scopes": ["contacts:read"]},  # GR-25
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -152,6 +178,13 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "events": ["lead.captured"],
     },
     ("PATCH", "/v1/w/{wid}/webhook-endpoints/{endpoint_id}"): {"description": "Taken over"},
+    # GR-27: B's Google connection, sheet and mapping are not reachable from A.
+    ("POST", "/v1/w/{wid}/integrations/google-sheets/complete"): {"nonce": "not-yours-nonce"},
+    ("POST", "/v1/w/{wid}/integrations/google-sheets/sheet"): {"title": "Not yours"},
+    ("PUT", "/v1/w/{wid}/integrations/google-sheets/sheet"): {"link": "not-yours-sheet-id"},
+    ("PUT", "/v1/w/{wid}/integrations/google-sheets/mapping"): {
+        "columns": [{"field": "email", "header": "Mail"}]
+    },
     # GR-11: conversation starters of B's account.
     ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers"): {
         "items": [{"question": "Taken over", "answer_with_ai": True}]
@@ -173,6 +206,104 @@ EXAMPLE_BODIES.update(
         },
         ("PUT", "/v1/w/{wid}/business-hours"): HOURS_OFF,
         ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
+        # GR-28: B's website chat settings (its public routes are in test_widget_tenancy.py).
+        ("PUT", "/v1/w/{wid}/widget"): {"enabled": False},
+    }
+)
+
+# GR-31: the catalogue. A picture of B's is a 404 before any plan check, so the walk (a Free
+# workspace A) still proves isolation; the other bodies name nothing of B's.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/products"): {
+            "name": "Into B",
+            "price": "1",
+            "image_asset_id": "{asset_id}",
+        },
+        ("PATCH", "/v1/w/{wid}/products/{product_id}"): {"name": "Taken over"},
+        ("POST", "/v1/w/{wid}/products/import/preview"): {"csv": "name,price\nA,1\n"},
+        ("POST", "/v1/w/{wid}/products/import"): {"csv": "name,price\nA,1\n"},
+        ("POST", "/v1/w/{wid}/integrations/shopify/connect"): {"shop": "into-b"},
+        ("POST", "/v1/w/{wid}/integrations/shopify/complete"): {"nonce": "n" * 16},
+    }
+)
+
+# GR-32: orders. B's conversation and product in a new order are a 404 before any plan check;
+# the other routes name B's order in the path.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/orders"): {
+            "conversation_id": "{conversation_id}",
+            "items": [{"product_id": "{product_id}", "quantity": 1}],
+        },
+        ("POST", "/v1/w/{wid}/orders/{order_id}/payment-request"): {"method": "upi"},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/mark-paid"): {},
+        # C-125: B's order edited, shipped and refunded.
+        ("PATCH", "/v1/w/{wid}/orders/{order_id}"): {"note": "Taken over"},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/cancel"): {},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/fulfil"): {},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/refunds"): {"reason": "Taken over"},
+        ("PUT", "/v1/w/{wid}/integrations/payments/razorpay"): {
+            "key_id": "rzp_test_abcdefgh",
+            "private_key": "secretsecret",
+            "webhook_key": "hooksecret1",
+        },
+        ("PUT", "/v1/w/{wid}/integrations/payments/upi"): {
+            "vpa": "shop@okbank",
+            "name": "Shop",
+        },
+    }
+)
+
+# GR-33: the WhatsApp catalogue. B's number and B's conversation are a 404 before any plan check.
+EXAMPLE_BODIES.update(
+    {
+        ("PUT", "/v1/w/{wid}/integrations/whatsapp-catalogue"): {
+            "social_account_id": "{account_id}",
+            "catalog_id": "into-b",
+        },
+        ("POST", "/v1/w/{wid}/conversations/{conversation_id}/product-message"): {
+            "kind": "product",
+            "body": "Sent into B",
+            "item": {"product_id": "{product_id}"},
+        },
+    }
+)
+
+# GR-23: broadcasts. The walk turns BROADCASTS_ENABLED on (it is off by default); with it off every
+# route is a plain 404 and proves nothing.
+BROADCAST_DRAFT = {
+    "social_account_id": "{account_id}",
+    "segment_id": "{segment_id}",
+    "template_name": "sale_offer",
+    "template_language": "en",
+    "variables": [],
+}
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/broadcasts"): {**BROADCAST_DRAFT, "name": "Taken over"},
+        ("POST", "/v1/w/{wid}/broadcasts/preview"): BROADCAST_DRAFT,
+        ("PATCH", "/v1/w/{wid}/broadcasts/{broadcast_id}"): {"name": "Taken over"},
+        # GR-24: B's account in a new sequence, and B's sequence replaced.
+        ("POST", "/v1/w/{wid}/sequences"): {
+            "name": "Into B",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "captured"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
+        ("POST", "/v1/w/{wid}/sequences/preview"): {
+            "name": "Into B",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "captured"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
+        ("PUT", "/v1/w/{wid}/sequences/{sequence_id}"): {
+            "name": "Taken over",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "tagged", "tag_id": "{tag_id}"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
+        ("POST", "/v1/w/{wid}/broadcasts/{broadcast_id}/start"): {},
     }
 )
 
@@ -214,6 +345,9 @@ EXAMPLE_BODIES.update(
             "gap_id": "{gap_id}",
         },
         ("POST", "/v1/w/{wid}/knowledge/test"): {"question": "Do you ship to Dubai?"},
+        # GR-35: excluding a path on B's source from A's workspace is 404 (the site tests also
+        # run it against B's real site).
+        ("POST", "/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths"): {"path": "/blog"},
     }
 )
 
@@ -277,6 +411,19 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Team (GR-19): B's members and invitations can't be changed, and nobody can be invited or made
+# the owner, from A's workspace.
+EXAMPLE_BODIES.update(
+    {
+        ("PATCH", "/v1/w/{wid}/members/{user_id}"): {"role": "agent"},
+        ("POST", "/v1/w/{wid}/invitations"): {"email": "intruder@example.com", "role": "agent"},
+        ("POST", "/v1/w/{wid}/ownership-transfer"): {
+            "user_id": "{user_id}",
+            "confirm_name": "Taken over",
+        },
+    }
+)
+
 # Billing and notification settings (P8: T8.2, T8.6): B's checkout and preferences can't be
 # started or changed from A's workspace.
 EXAMPLE_BODIES.update(
@@ -327,6 +474,9 @@ B_TABLES = (
     "automation_run_steps",
     "webhook_endpoints",
     "webhook_deliveries",
+    "google_connections",  # GR-27
+    "sheet_rows",
+    "api_keys",  # GR-25
     "story_mentions",
     "tracked_links",
     "link_clicks",
@@ -336,12 +486,32 @@ B_TABLES = (
     "ice_breakers",
     "saved_replies",
     "business_hours",
+    "widget_settings",  # GR-28
+    "products",  # GR-31
+    "product_variants",
+    "shopify_connections",
+    "catalogue_connections",  # GR-33
+    "catalogue_items",
+    "payment_connections",  # GR-32
+    "orders",
+    "order_items",
+    "order_payments",  # C-125
+    "order_refunds",
+    "sequences",  # GR-24
+    "sequence_steps",
+    "sequence_enrolments",
+    "sequence_step_runs",
+    "broadcasts",  # GR-23
+    "broadcast_recipients",
+    "whatsapp_number_health",
     "comments",
     "message_analyses",
     "reply_suggestions",
     "knowledge_sources",
     "knowledge_chunks",
     "knowledge_gaps",
+    "site_crawls",  # GR-35
+    "site_pages",
     "ai_decisions",
     "ai_usage_events",
     "media_items",
@@ -356,10 +526,13 @@ B_TABLES = (
     "agent_runs",
     "agent_steps",
     "agent_approvals",
+    "agent_approval_events",
     "agent_policies",
     "payments",
     "email_deliveries",
     "weekly_digests",
+    "workspace_invitations",  # GR-19
+    "audit_events",
 )
 
 
@@ -392,6 +565,16 @@ class Seed:
     link_id: str = ""
     segment_id: str = ""
     reply_id: str = ""
+    page_id: str = ""
+    user_id: str = ""
+    invitation_id: str = ""
+    api_key_id: str = ""  # GR-25
+    hook_id: str = ""  # GR-26: a REST hook that key subscribed
+    broadcast_id: str = ""
+    product_id: str = ""  # GR-31
+    order_id: str = ""  # GR-32
+    sequence_id: str = ""  # GR-24
+    enrolment_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -521,6 +704,51 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
     )
     assert sent.status_code == 202, sent.text
+    async with engine.begin() as conn:  # GR-27: a Google connection with a sheet and a waiting row
+        connection = await conn.execute(
+            text(
+                "INSERT INTO google_connections (workspace_id, google_email, credential_enc,"
+                " status, connected_at, spreadsheet_id, spreadsheet_title, spreadsheet_url,"
+                " sheet_tab, mapping) VALUES (:w, 'b@example.com', :c, 'active', now(), 'b-sheet',"
+                " 'B leads', 'https://docs.google.test/b', 'Leads',"
+                ' CAST(\'[{"field": "email", "header": "Mail"}]\' AS jsonb))'
+                " RETURNING id"
+            ),
+            {"w": wid, "c": b"not-a-real-credential"},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO sheet_rows (workspace_id, connection_id, event_id, source, status)"
+                ' VALUES (:w, :c, gen_random_uuid(), CAST(\'{"email": "b@x.test"}\' AS jsonb),'
+                " 'pending')"
+            ),
+            {"w": wid, "c": connection.scalar_one()},
+        )
+    async with engine.begin() as conn:  # GR-25: an API key, and GR-26: the REST hook it made
+        api_key = (
+            await conn.execute(
+                text(
+                    "INSERT INTO api_keys (workspace_id, name, key_prefix, key_hash, scopes)"
+                    " VALUES (:w, 'Zapier', 'shk_bbbbbbbb', :h, ARRAY['contacts:read'])"
+                    " RETURNING id"
+                ),
+                {"w": wid, "h": "b" * 64},
+            )
+        ).scalar_one()
+        rest_hook = (
+            await conn.execute(
+                text(
+                    "INSERT INTO webhook_endpoints (workspace_id, url, events, status, secret_enc,"
+                    " failing_deliveries, api_key_id) VALUES (:w, 'https://hooks.example.com/z',"
+                    " ARRAY['contact.created'], 'active', '\\x00'::bytea, 0, :k) RETURNING id"
+                ),
+                {"w": wid, "k": api_key},
+            )
+        ).scalar_one()
+    widget = await client.get(  # GR-28: the website chat (its web account and settings)
+        f"/v1/w/{wid}/widget", headers=clerk.headers(owner_b)
+    )
+    assert widget.status_code == 200, widget.text
     async with engine.begin() as conn:  # GR-11: a conversation starter
         await conn.execute(
             text(
@@ -584,6 +812,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     suggestion = await make_suggestion(engine, **on)
     decision = await make_decision(engine, **on)
     source = await make_source(engine, workspace_id=wid)
+    _, site_page = await make_site(engine, workspace_id=wid)  # GR-35
     gap = await make_gap(engine, workspace_id=wid)
     post = await make_media_item(engine, workspace_id=wid, account_id=account_id)
     comment = await make_comment(
@@ -638,6 +867,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     approval = await make_agent_approval(
         engine, workspace_id=wid, run_id=waiting.id, step_id=waiting.step_ids[0]
     )
+    await make_approval_event(engine, workspace_id=wid, approval_id=approval)
     await make_payment(engine, workspace_id=wid)
     notification = await make_notification(engine, workspace_id=wid, user_id=b["id"])
     await make_email_delivery(
@@ -648,6 +878,117 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         to_email="b@example.com",
     )
     await make_weekly_digest(engine, workspace_id=wid)
+    async with engine.begin() as conn:  # GR-19: an open invitation and an audit row
+        invitation = (
+            await conn.execute(
+                text(
+                    "INSERT INTO workspace_invitations (workspace_id, email, role, expires_at)"
+                    " VALUES (:w, 'invited-b@example.com', 'agent', now() + interval '7 days')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
+            )
+        ).scalar_one()
+    broadcast = (
+        await make_broadcast_row(  # GR-23: a broadcast, its recipient and the number's health
+            engine,
+            workspace_id=wid,
+            account_id=account_id,
+            segment_id=segment.json()["id"],
+            contact_id=thread.contact_id,
+            message_id=thread.message_ids[0],
+        )
+    )
+    async with engine.begin() as conn:  # GR-31: a product with a variant, and a Shopify store
+        product = (
+            await conn.execute(
+                text(
+                    "INSERT INTO products (workspace_id, name, currency, price_minor, source,"
+                    " search_text) VALUES (:w, 'B kurta', 'INR', 79900, 'manual', 'b kurta')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO product_variants (workspace_id, product_id, title, price_minor)"
+                " VALUES (:w, :p, 'M', 79900)"
+            ),
+            {"w": wid, "p": product},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO shopify_connections (workspace_id, shop_domain, token_enc,"
+                " connected_at) VALUES (:w, 'b-store.myshopify.com', :t, now())"
+            ),
+            {"w": wid, "t": b"not-a-real-token"},
+        )
+    async with engine.begin() as conn:  # GR-32: an order for B's contact, a line, payment settings
+        order = (
+            await conn.execute(
+                text(
+                    "INSERT INTO orders (workspace_id, number, contact_id, conversation_id, status,"
+                    " currency, total_minor) VALUES (:w, 1, :c, :v, 'draft', 'INR', 79900)"
+                    " RETURNING id"
+                ),
+                {"w": wid, "c": thread.contact_id, "v": thread.conversation_id},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO order_items (workspace_id, order_id, product_id, name, quantity,"
+                " unit_price_minor, line_total_minor)"
+                " VALUES (:w, :o, :p, 'B kurta', 1, 79900, 79900)"
+            ),
+            {"w": wid, "o": order, "p": product},
+        )
+        paid = (
+            await conn.execute(
+                text(
+                    "INSERT INTO order_payments (workspace_id, order_id, amount_minor, method,"
+                    " paid_at) VALUES (:w, :o, 79900, 'upi', now()) RETURNING id"
+                ),
+                {"w": wid, "o": order},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO order_refunds (workspace_id, order_id, payment_id, amount_minor,"
+                " reason, method, status) VALUES (:w, :o, :p, 100, 'Returned', 'manual',"
+                " 'processed')"
+            ),
+            {"w": wid, "o": order, "p": paid},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO payment_connections (workspace_id, webhook_token, upi_vpa, upi_name)"
+                " VALUES (:w, 'b-webhook-token', 'b@okbank', 'B')"
+            ),
+            {"w": wid},
+        )
+    async with engine.begin() as conn:  # GR-33: B's catalogue connection and one item sent
+        await conn.execute(
+            text(
+                "INSERT INTO catalogue_connections (workspace_id, social_account_id, catalog_id,"
+                " brand) VALUES (:w, :a, 'b-catalog', 'B')"
+            ),
+            {"w": wid, "a": account_id},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO catalogue_items (workspace_id, retailer_id, product_id, state)"
+                " VALUES (:w, :r, :p, 'synced')"
+            ),
+            {"w": wid, "r": str(product), "p": product},
+        )
+    sequence, enrolment = await make_sequence_rows(  # GR-24
+        engine,
+        workspace_id=wid,
+        account_id=account_id,
+        contact_id=thread.contact_id,
+        message_id=thread.message_ids[0],
+    )
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -676,12 +1017,27 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         link_id=link.json()["id"],
         segment_id=segment.json()["id"],
         reply_id=reply.json()["id"],
+        page_id=str(site_page),
+        user_id=b["id"],
+        invitation_id=str(invitation),
+        api_key_id=str(api_key),
+        hook_id=str(rest_hook),
+        broadcast_id=broadcast,
+        product_id=str(product),
+        order_id=str(order),
+        sequence_id=sequence,
+        enrolment_id=enrolment,
     )
 
 
 async def test_every_route_with_a_path_id_hides_other_workspaces(
-    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+    app: FastAPI,
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    engine: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(app.state.settings, "broadcasts_enabled", True)  # GR-23
     member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
     seed = await seed_workspace_b(client, clerk, engine)
     own = replace(seed, workspace_id=a["workspaces"][0]["id"])
@@ -697,6 +1053,11 @@ async def test_every_route_with_a_path_id_hides_other_workspaces(
         # A fresh session token per request: the walk takes about a minute, as long as a token
         # lives (the fake Clerk's 60 s, like Clerk's own).
         headers = clerk.headers(member_a)
+        # One test makes hundreds of requests from 127.0.0.1: empty the per-IP rate-limit windows
+        # (TR-API-07) before each, or a fast runner meets a 429 instead of the 404 under test.
+        stale = [key async for key in app.state.redis.scan_iter("rl:*")]
+        if stale:
+            await app.state.redis.delete(*stale)
         response = await client.request(
             call.method, call.url, json=call.body, headers={**headers, **call.headers}
         )
@@ -776,3 +1137,98 @@ async def test_a_user_cannot_remove_another_users_push_device(
             )
         ).scalar_one()
     assert str(owner) == b["id"]
+
+
+# ---------------------------------------------------------------- the public API (GR-25, GR-26)
+
+# The public routes authenticate with an API key, so the walk above (a member's session, the
+# app's OpenAPI document) never sees them. A key of workspace A calls each with B's ids: 404, and
+# B is unchanged. Bodies are valid, so a call fails on tenancy and not on validation.
+PUBLIC_EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
+    ("POST", "/public/v1/contacts"): {"account_id": "{account_id}", "phone": "+919876543210"},
+    ("PATCH", "/public/v1/contacts/{contact_id}"): {"email": "taken@example.com"},
+    ("POST", "/public/v1/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},
+    ("POST", "/public/v1/conversations/{conversation_id}/messages"): {"text": "Sent into B"},
+    ("POST", "/public/v1/hooks"): {
+        "trigger": "new_contact",
+        "target_url": "https://hooks.example.com/a",
+    },
+}
+PUBLIC_PARAMS = {
+    "contact_id": "contact_id",
+    "conversation_id": "conversation_id",
+    "hook_id": "hook_id",
+    "account_id": "account_id",
+    "tag_id": "tag_id",
+}
+# Routes with no id of B's to name: they list A's own data, and must show none of B's.
+PUBLIC_LISTS = {
+    "/public/v1/contacts",
+    "/public/v1/conversations",
+    "/public/v1/tags",
+    "/public/v1/accounts",
+    "/public/v1/automation-runs",
+    "/public/v1/contact-fields",
+    "/public/v1/hooks",
+    "/public/v1/me",  # the key's own workspace: it names no id at all
+    "/public/v1/openapi.json",
+}
+
+
+async def test_public_routes_hide_other_workspaces(
+    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+) -> None:
+    from socialhood.api.public_openapi import public_openapi
+    from tests.support.automation_api import set_plan
+
+    member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
+    seed = await seed_workspace_b(client, clerk, engine)
+    wid_a = a["workspaces"][0]["id"]
+    await set_plan(engine, wid_a, "pro")
+    made = await client.post(
+        f"/v1/w/{wid_a}/api-keys",
+        json={
+            "name": "All",
+            "scopes": [
+                "contacts:read",
+                "contacts:write",
+                "tags:read",
+                "tags:write",
+                "conversations:read",
+                "messages:send",
+                "automations:read",
+                "webhooks:subscribe",
+            ],
+        },
+        headers=clerk.headers(member_a),
+    )
+    assert made.status_code == 201, made.text
+    headers = {"Authorization": f"Bearer {made.json()['key']}"}
+
+    document = public_openapi(app)
+    walked = 0
+    for path, operations in document["paths"].items():
+        params = re.findall(r"{(\w+)}", path)
+        for method, operation in operations.items():
+            key = (method.upper(), path)
+            if not params and path in PUBLIC_LISTS and "requestBody" not in operation:
+                continue  # a list of A's own data, checked below
+            if key == ("POST", "/public/v1/hooks"):
+                continue  # names nothing of B's: it makes A's own hook (tests/integration)
+            assert all(p in PUBLIC_PARAMS for p in params), f"{key}: no seed for {params}"
+            assert not ("requestBody" in operation and key not in PUBLIC_EXAMPLE_BODIES), key
+            body, _ = _fill(PUBLIC_EXAMPLE_BODIES.get(key), seed)
+            url = path.format(**{p: getattr(seed, PUBLIC_PARAMS[p]) for p in params})
+            before = await snapshot(engine, seed.workspace_id)
+            response = await client.request(method, url, json=body, headers=headers)
+            assert response.status_code == 404, f"{method.upper()} {url}: {response.text}"
+            assert response.json()["code"] == "not_found"
+            assert await snapshot(engine, seed.workspace_id) == before, f"{method.upper()} {url}"
+            walked += 1
+    assert walked >= 7, "the public walk found too few routes"
+
+    for path in sorted(PUBLIC_LISTS - {"/public/v1/openapi.json"}):
+        listed = await client.get(path, headers=headers)
+        assert listed.status_code == 200, f"{path}: {listed.text}"
+        for value in (seed.contact_id, seed.conversation_id, seed.tag_id, seed.hook_id):
+            assert value not in listed.text, f"{path} shows B's {value}"

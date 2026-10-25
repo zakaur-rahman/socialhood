@@ -35,7 +35,7 @@ test.describe("GR-15 link click tracking", () => {
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: keyword, fromId });
 
     const runs = () => api.call<{ items: Run[] }>("GET", `/v1/w/${workspace.id}/automations/${automation.id}/runs`);
-    await expect.poll(async () => (await runs()).items[0]?.conversation_id, { timeout: 60_000 }).not.toBeNull();
+    await expect.poll(async () => (await runs()).items[0]?.conversation_id ?? null, { timeout: 60_000 }).not.toBeNull();
     const conversation = (await runs()).items[0].conversation_id as string;
 
     // The message goes out with our address on the button, not the destination.
@@ -94,7 +94,7 @@ test.describe("GR-15 link click tracking", () => {
     const fromId = `e2e_gr15_raw_${Date.now().toString(36)}`;
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: keyword, fromId });
     const runs = () => api.call<{ items: Run[] }>("GET", `/v1/w/${workspace.id}/automations/${automation.id}/runs`);
-    await expect.poll(async () => (await runs()).items[0]?.conversation_id, { timeout: 60_000 }).not.toBeNull();
+    await expect.poll(async () => (await runs()).items[0]?.conversation_id ?? null, { timeout: 60_000 }).not.toBeNull();
     const conversation = (await runs()).items[0].conversation_id as string;
     await expect
       .poll(

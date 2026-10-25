@@ -93,7 +93,7 @@ def _window_open(now: datetime, *, human_agent: bool) -> ColumnElement[bool]:
     return or_(
         standard,
         and_(
-            Conversation.platform == "instagram",
+            Conversation.platform.in_(("instagram", "facebook")),
             Conversation.last_inbound_at > now - HUMAN_AGENT_WINDOW,
         ),
     )
@@ -185,7 +185,7 @@ async def priority_queue(
         window = reply_window(
             conv.platform,
             conv.last_inbound_at,
-            human_agent=human_agent and conv.platform == "instagram",
+            human_agent=human_agent and conv.platform in ("instagram", "facebook"),
             now=now,
         )
         queue.append(

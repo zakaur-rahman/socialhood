@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -38,7 +38,7 @@ describe("AccountPicker (UX-SCR-13 Accounts)", () => {
 
   it("points to Connections when no Instagram account is connected", () => {
     render(<AccountPicker accounts={[]} loading={false} selected={[]} onToggle={vi.fn()} slug="maple" />);
-    expect(screen.getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/settings/connections");
   });
 
   it("colours each account as Schedule does: by its order, not its id (UI-032)", () => {
@@ -56,6 +56,15 @@ describe("AccountPicker (UX-SCR-13 Accounts)", () => {
     expect(colors.get("zz-first")).toBe(IDENTITIES[0]);
     // A disconnected account has no identity on Schedule either: the neutral fill.
     expect(fallback("@maple.old")).not.toHaveClass("bg-linear-135");
+  });
+
+  it("lists Facebook Pages beside Instagram accounts, marked as Pages (GR-30)", () => {
+    const page = account({ id: "p1", platform: "facebook", username: "maple.page", capabilities: ["publish"] });
+    const ready = account({ id: "a1", username: "maple.bakery", capabilities: ["publish"] });
+    render(<AccountPicker accounts={[ready, page]} loading={false} selected={["p1"]} onToggle={vi.fn()} slug="maple" />);
+    const list = screen.getByRole("list", { name: "Accounts to publish to" });
+    expect(within(list).getAllByRole("button")).toHaveLength(2);
+    expect(within(list).getByTestId("page-tag")).toHaveTextContent("Facebook Page");
   });
 
   it("shows placeholders while accounts load", () => {

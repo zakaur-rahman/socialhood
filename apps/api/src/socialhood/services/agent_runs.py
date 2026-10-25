@@ -26,7 +26,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.agent import progress, visuals
+from socialhood.agent import hints, progress, visuals
 from socialhood.agent.planner import current_tools
 from socialhood.ai.metering import quota
 from socialhood.auth.deps import ROLE_RANK, WorkspaceContext
@@ -46,6 +46,7 @@ from socialhood.models.identity import Role
 from socialhood.repositories import agent as repo
 from socialhood.schemas import agent as schemas
 from socialhood.schemas.inbox import Actor
+from socialhood.services import agent_actions
 from socialhood.services.conversations import decode_cursor, encode_cursor
 
 THREAD_TITLE_CHARS = 80
@@ -103,6 +104,7 @@ def run_out(
             "id": row.id,
             "thread_id": row.thread_id,
             "request": row.request,
+            "hints": row.hints,
             "source": row.source,
             "mode": row.mode,
             "status": row.status,
@@ -165,14 +167,22 @@ async def runs_out(
 
 
 async def detail_out(
-    session: AsyncSession, row: AgentRun, *, with_visuals: bool = False
+    session: AsyncSession,
+    row: AgentRun,
+    *,
+    with_visuals: bool = False,
+    role: Role | None = None,
 ) -> schemas.AgentRunDetail:
     [base] = await runs_out(session, [row], with_visuals=with_visuals)
     steps = await repo.steps_of(session, row.id)
+    approvals = await agent_actions.approvals_out(
+        session, role, await repo.approvals_of_runs(session, [row.id])
+    )
     return schemas.AgentRunDetail.model_validate(
         {
             **base.model_dump(),
             "steps": [step_out(s) for s in steps],
+            "approvals": [a.model_dump() for a in approvals],
             "plan": row.plan,
             "model": row.model,
             "prompt_version": row.prompt_version,
@@ -200,6 +210,14 @@ async def create(
         session, body.thread_id, ctx.user.id
     ):
         raise ApiError("not_found")
+    request, stored_hints = body.request, None
+    if body.hints is not None:
+        # A follow-up names conversations only inside the workspace (RLS), else 404 not_found.
+        ids = set(body.hints.reply_conversation_ids)
+        if ids and await repo.count_conversations(session, ids) != len(ids):
+            raise ApiError("not_found")
+        request = hints.bubble(body.hints)  # the screen's words are never trusted
+        stored_hints = body.hints.model_dump(mode="json", exclude_defaults=True)
     credits = await quota(session, now=datetime.now(UTC))
     if not credits.allows(CREDIT_COSTS[AiFeature.AGENT_TURN]):
         raise ApiError("quota_exceeded", NO_CREDITS)
@@ -210,7 +228,8 @@ async def create(
         thread_id=body.thread_id or run_id,
         requested_by_user_id=ctx.user.id,
         source=AgentRunSource.ASK,
-        request=body.request,
+        request=request,
+        hints=stored_hints,
         mode=policy.mode,
         status=AgentRunStatus.QUEUED,
         answer_refs=[],

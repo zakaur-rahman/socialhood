@@ -1,8 +1,11 @@
 """One contact's timeline (GR-17): what happened with them, newest first, read-only.
 
 Sources today: their conversation, their comments, automation runs on them, story mentions,
-consent records, tags added and lead stage moves (GR-18). (Captured answers have no table of
-their own until GR-14 and broadcasts arrive in GR-23; each adds a source here.)
+consent records, tags added, lead stage moves (GR-18), the broadcasts they were sent (GR-23:
+"Received broadcast X", with how far it got) and who had their conversation (GR-20, from the audit
+rows ``conversation.assigned`` and ``conversation.unassigned``) and the steps of the sequences
+they are in (GR-24: sent, skipped with the reason, failed). (Captured answers have no table
+of their own; when they get one it adds a source here.)
 
 Rules:
 - Each source is read newest first with the same keyset, (time, id) before the cursor, and the
@@ -19,7 +22,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Select, and_, or_, select
+from sqlalchemy import Select, Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError
@@ -30,6 +33,7 @@ from socialhood.models.automations import (
     RunResult,
     StoryMention,
 )
+from socialhood.models.broadcasts import Broadcast, BroadcastRecipient, RecipientState
 from socialhood.models.contacts import (
     ConsentStatus,
     ContactConsent,
@@ -38,9 +42,14 @@ from socialhood.models.contacts import (
     LeadStageChange,
     Tag,
 )
-from socialhood.models.inbox import Contact, Conversation, EntrySource
+from socialhood.models.inbox import Contact, Conversation, EntrySource, Message
+from socialhood.models.orders import Order, OrderStatus
+from socialhood.models.sequences import RunStatus, Sequence, SequenceStepRun
+from socialhood.models.team import AuditEvent
+from socialhood.repositories.broadcasts import status_expr
 from socialhood.schemas.contacts import TimelineItem, TimelineKind, TimelineList
 from socialhood.services import leads
+from socialhood.services.catalogue import money
 from socialhood.services.contacts import _decode, _encode
 
 DEFAULT_LIMIT = 30
@@ -63,13 +72,35 @@ RUN_DETAIL: dict[str, str] = {
     RunResult.AWAITING_REPLY: "Waiting for their answer",
     RunResult.SKIPPED_READ_ONLY: "Skipped: the account is read-only",
 }
-CHANNEL_LABEL = {"instagram": "Instagram", "whatsapp": "WhatsApp", "email": "email"}
+BROADCAST_DETAIL: dict[str, str] = {
+    "queued": "Waiting to be sent",
+    "sent": "Sent",
+    "delivered": "Delivered",
+    "read": "Read",
+    "failed": "Couldn't be delivered",
+}
+ASSIGNED_BY: dict[str, str] = {
+    "round_robin": "Round-robin",
+    "automation": "By an automation",
+}
+SEQUENCE_VERB: dict[str, str] = {
+    RunStatus.SENT: "Sent",
+    RunStatus.SKIPPED: "Skipped",
+    RunStatus.FAILED: "Couldn't send",
+}
+CHANNEL_LABEL = {
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "email": "email",
+}
 CONSENT_SOURCE = {
     "platform_optin": "Opted in on the platform",
     "flow": "Answered in a conversation",
     "stop_reply": "Replied STOP",
     "member": "Recorded by your team",
     "import": "Imported",
+    "widget": "Agreed in the website chat",
 }
 
 
@@ -119,6 +150,57 @@ def _stage_detail(
     if reason:
         parts.append(reason.rstrip("."))
     return ". ".join(parts) + "."
+
+
+def _assignment_item(row: Any) -> TimelineItem:
+    """ "Assigned to Priya" or "Unassigned", with who did it: "By Sam", "Round-robin" or "By an
+    automation" (the audit row keeps the name as it was)."""
+    detail = row.detail or {}
+    via = str(detail.get("via") or "")
+    by = ASSIGNED_BY.get(via) or (f"By {row.actor_label}" if row.actor_label else None)
+    if row.action == "conversation.assigned":
+        title = f"Assigned to {detail.get('to_name') or 'a team member'}"
+    else:
+        title = "Unassigned"
+    came_from = detail.get("from_name")
+    parts = [by, f"From {came_from}" if came_from else None]
+    return _item(
+        row.id,
+        "assignment",
+        row.created_at,
+        title,
+        ". ".join(p for p in parts if p) or None,
+        row.conversation_id,
+    )
+
+
+ORDER_VERB: dict[str, str] = {
+    OrderStatus.DRAFT: "created",
+    OrderStatus.AWAITING_PAYMENT: "waiting for payment",
+    OrderStatus.PARTIALLY_PAID: "partly paid",
+    OrderStatus.PAID: "paid",
+    OrderStatus.FULFILLED: "shipped",
+    OrderStatus.REFUNDED: "refunded",
+    OrderStatus.CANCELLED: "cancelled",
+    OrderStatus.EXPIRED: "expired",
+}
+PAID_VIA = {"razorpay": "Paid with Razorpay", "upi": "Paid by UPI"}
+
+
+def order_item(row: Any) -> TimelineItem:
+    """ "Order #12 paid", with the total and how it was paid (GR-32)."""
+    total = money.label(row.total_minor, row.currency)
+    detail = total
+    if row.status in (OrderStatus.PAID, OrderStatus.FULFILLED) and row.payment_method in PAID_VIA:
+        detail = f"{total}. {PAID_VIA[row.payment_method]}"
+    return _item(
+        row.id,
+        "order",
+        row.at,
+        f"Order #{row.number} {ORDER_VERB.get(row.status, row.status)}",
+        detail,
+        row.conversation_id,
+    )
 
 
 async def timeline(
@@ -274,6 +356,118 @@ async def timeline(
         )
         for m in moves
     ]
+
+    sent = (
+        await session.execute(
+            _before(
+                select(
+                    BroadcastRecipient.id,
+                    BroadcastRecipient.dispatched_at,
+                    Broadcast.name,
+                    status_expr.label("shown"),
+                )
+                .join(Broadcast, Broadcast.id == BroadcastRecipient.broadcast_id)
+                .outerjoin(Message, Message.id == BroadcastRecipient.message_id)
+                .where(
+                    BroadcastRecipient.contact_id == contact_id,
+                    BroadcastRecipient.state == RecipientState.DISPATCHED,
+                ),
+                BroadcastRecipient.dispatched_at,
+                BroadcastRecipient.id,
+                after,
+            )
+            .order_by(BroadcastRecipient.dispatched_at.desc(), BroadcastRecipient.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [
+        _item(i, "broadcast", at, f"Received broadcast {name}", BROADCAST_DETAIL.get(shown))
+        for i, at, name, shown in sent
+    ]
+
+    handovers = (
+        await session.execute(
+            _before(
+                select(
+                    AuditEvent.id,
+                    AuditEvent.created_at,
+                    AuditEvent.action,
+                    AuditEvent.actor_label,
+                    AuditEvent.detail,
+                    Conversation.id.label("conversation_id"),
+                )
+                .join(Conversation, cast(Conversation.id, Text) == AuditEvent.target_id)
+                .where(
+                    Conversation.contact_id == contact_id,
+                    AuditEvent.target_type == "conversation",
+                    AuditEvent.action.in_(("conversation.assigned", "conversation.unassigned")),
+                ),
+                AuditEvent.created_at,
+                AuditEvent.id,
+                after,
+            )
+            .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [_assignment_item(h) for h in handovers]
+
+    steps = (
+        await session.execute(
+            _before(
+                select(
+                    SequenceStepRun.id,
+                    SequenceStepRun.ran_at,
+                    SequenceStepRun.position,
+                    SequenceStepRun.status,
+                    SequenceStepRun.reason,
+                    Sequence.name,
+                )
+                .join(Sequence, Sequence.id == SequenceStepRun.sequence_id)
+                .where(SequenceStepRun.contact_id == contact_id),
+                SequenceStepRun.ran_at,
+                SequenceStepRun.id,
+                after,
+            )
+            .order_by(SequenceStepRun.ran_at.desc(), SequenceStepRun.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [
+        _item(
+            i,
+            "sequence",
+            at,
+            f"{SEQUENCE_VERB.get(status, 'Ran')} step {position + 1} of {name}",
+            reason,
+        )
+        for i, at, position, status, reason, name in steps
+    ]
+
+    # GR-32: one entry per order, at the time of its latest step (paid, cancelled, or made).
+    order_at = func.coalesce(Order.paid_at, Order.cancelled_at, Order.created_at)
+    made = (
+        await session.execute(
+            _before(
+                select(
+                    Order.id,
+                    order_at.label("at"),
+                    Order.number,
+                    Order.status,
+                    Order.currency,
+                    Order.total_minor,
+                    Order.payment_method,
+                    Order.conversation_id,
+                ).where(Order.contact_id == contact_id),
+                order_at,
+                Order.id,
+                after,
+            )
+            .order_by(order_at.desc(), Order.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [order_item(o) for o in made]
 
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     page = items[:limit]

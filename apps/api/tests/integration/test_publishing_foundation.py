@@ -109,8 +109,8 @@ async def test_a_post_keeps_its_assets_in_order_and_one_target_per_account(
     ("values", "check"),
     [
         ({"status": "queued"}, "status"),
-        ({"format": "story"}, "format"),
-        ({"caption": "x" * 2201}, "caption_length"),
+        ({"format": "slideshow"}, "format"),
+        ({"caption": "x" * 63_207}, "caption_length"),
         ({"first_comment": ""}, "first_comment_length"),
         ({"status": "scheduled", "format": None}, "schedulable"),
     ],
@@ -141,7 +141,7 @@ async def test_a_draft_needs_no_time_or_media_but_a_scheduled_post_does(
         ("published", {"platform_media_id": None}, "published_media"),
         ("pending", {"attempts": -1}, "counters"),
         ("pending", {"child_container_ids": [str(i) for i in range(11)]}, "children"),
-        ("pending", {"caption_override": "x" * 2201}, "caption_override_length"),
+        ("pending", {"caption_override": "x" * 63_207}, "caption_override_length"),
     ],
 )
 async def test_target_checks(

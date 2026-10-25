@@ -9,7 +9,10 @@ import { toast } from "sonner";
 import { AUTO_UPGRADE } from "@/components/ai/AiModeControl";
 import { AutoConfirmDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
+import { AddAccountMenu } from "@/components/connections/AddAccountMenu";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
+import { FacebookGlyph } from "@/components/connections/FacebookGlyph";
+import { FacebookPagesDialog } from "@/components/connections/FacebookPagesDialog";
 import {
   ACCOUNT_FILTERS,
   filterCounts,
@@ -34,19 +37,14 @@ import {
   useDisconnectAccount,
   useResubscribeAccount,
   useSocialAccounts,
+  useStartFacebookConnect,
   useStartInstagramConnect,
   useUpdateAccount,
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { browser } from "@/lib/billing/browser";
-import {
-  completeConnectResult,
-  connectResult,
-  emptyStates,
-  instagramConnected,
-  type ConnectResult,
-} from "@/lib/copy";
+import { completeConnectResult, connectResult, emptyStates, instagramConnected, type ConnectResult } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useDocumentTitle } from "@/lib/document-title";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -73,6 +71,7 @@ function Connections() {
   const canManage = workspace.role !== "agent";
   const accounts = useSocialAccounts(wid);
   const connect = useStartInstagramConnect(wid);
+  const connectFacebook = useStartFacebookConnect(wid);
   const update = useUpdateAccount(wid);
   const resubscribe = useResubscribeAccount(wid);
   const disconnect = useDisconnectAccount(wid);
@@ -94,17 +93,30 @@ function Connections() {
     });
   }, [connect]);
 
+  // GR-29: Facebook's callback comes back with ?facebook=<nonce>; the Pages dialog lists and connects.
+  const startFacebook = useCallback(() => {
+    setConnectError(null);
+    connectFacebook.mutate(undefined, {
+      onSuccess: (url) => browser.assign(url),
+      onError: (error) => toastError(error),
+    });
+  }, [connectFacebook]);
+  const [facebookNonce, setFacebookNonce] = useFacebookNonce();
+
   const finishing = useConnectResult(wid, accounts.data, accounts.isError, setConnectError);
 
   if (accounts.isPending) return <PageSkeleton rows={2} />;
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
 
-  const empty = accounts.data.length === 0;
+  // The website chat is not a connection: its settings are under Website chat (GR-28).
+  const connections = accounts.data.filter((account) => account.platform !== "web");
+  const empty = connections.length === 0;
   const failWhatsApp = (message: string) => setConnectError({ message, retry: "whatsapp" });
   const retryConnect = () => {
     const platform = connectError?.retry;
     setConnectError(null);
     if (platform === "whatsapp") whatsapp.connect();
+    else if (platform === "facebook") startFacebook();
     else startConnect();
   };
   const connectAlert = connectError ? (
@@ -118,52 +130,56 @@ function Connections() {
     </Alert>
   ) : null;
 
-  // The empty state carries both Connect buttons, so the header keeps only the sandbox one then.
+  const addSandbox = (platform: "instagram" | "facebook") =>
+    sandbox.mutate(platform, {
+      onSuccess: () => toast.success(platform === "facebook" ? "Sandbox Page added" : "Sandbox account added"),
+      onError: (error) =>
+        toastError(
+          error,
+          error instanceof ApiError && error.status === 404
+            ? "The sandbox is off. Set SANDBOX_PLATFORM_ENABLED=true for the API."
+            : undefined,
+        ),
+    });
+
+  // The empty state carries every Connect button, so the header keeps only the sandbox ones then.
   const connectButtons = canManage ? (
     <>
       {SANDBOX_TOOLS && workspace.role === "owner" ? (
-        <Button
-          variant="ghost"
-          size="lg"
-          loading={sandbox.isPending}
-          onClick={() =>
-            sandbox.mutate(undefined, {
-              onSuccess: () => toast.success("Sandbox account added"),
-              onError: (error) =>
-                toastError(
-                  error,
-                  error instanceof ApiError && error.status === 404
-                    ? "The sandbox is off. Set SANDBOX_PLATFORM_ENABLED=true for the API."
-                    : undefined,
-                ),
-            })
-          }
-        >
-          <FlaskConical aria-hidden />
-          Add sandbox account
-        </Button>
+        <>
+          <Button variant="ghost" size="lg" loading={sandbox.isPending} onClick={() => addSandbox("instagram")}>
+            <FlaskConical aria-hidden />
+            Add sandbox account
+          </Button>
+          <Button variant="ghost" size="lg" loading={sandbox.isPending} onClick={() => addSandbox("facebook")}>
+            <FlaskConical aria-hidden />
+            Add sandbox Page
+          </Button>
+        </>
       ) : null}
       {empty ? null : (
         <>
-          <ConnectWhatsAppButton wid={wid} onFailure={failWhatsApp} />
-          <Button size="lg" loading={connect.isPending || finishing} onClick={startConnect}>
-            <InstagramGlyph className="size-4" />
-            Connect Instagram
-          </Button>
+          <AddAccountMenu
+            onInstagram={startConnect}
+            onFacebook={startFacebook}
+            onWhatsApp={whatsapp.connect}
+            whatsAppConfigured={whatsapp.configured}
+            busy={connect.isPending || finishing || connectFacebook.isPending || whatsapp.busy}
+          />
         </>
       )}
     </>
   ) : null;
 
-  const counts = filterCounts(accounts.data, query);
-  const shown = visibleAccounts(accounts.data, filter, query);
+  const counts = filterCounts(connections, query);
+  const shown = visibleAccounts(connections, filter, query);
 
   return (
     <SettingsFrame
       header={
         <SettingsPageHeader
           title="Connections"
-          description="The Instagram and WhatsApp accounts this workspace uses, and how the AI works on each."
+          description="The Instagram, Facebook and WhatsApp accounts this workspace uses, and how the AI works on each."
           actions={connectButtons}
         />
       }
@@ -182,6 +198,10 @@ function Connections() {
                     <InstagramGlyph className="size-4" />
                     Connect Instagram
                   </Button>
+                  <Button size="xl" loading={connectFacebook.isPending} onClick={startFacebook}>
+                    <FacebookGlyph className="size-4" />
+                    Connect Facebook
+                  </Button>
                   <ConnectWhatsAppButton wid={wid} size="xl" onFailure={failWhatsApp} />
                 </div>
               ) : (
@@ -192,31 +212,33 @@ function Connections() {
         </Card>
       ) : (
         <>
-          <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
-            <SearchInput
-              label="Search accounts"
-              placeholder="Search by name, handle or number"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              size="xl"
-              className="flex-1"
-            />
-            {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+          {accounts.data.length >= 2 ? (
+            <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
+              <SearchInput
+                label="Search accounts"
+                placeholder="Search by name, handle or number"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                size="xl"
+                className="flex-1"
+              />
+              {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
                 Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
-            <ToggleGroup
-              value={filter}
-              onValueChange={(value) => setFilter(value as AccountFilter)}
-              aria-label="Show accounts"
-              className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
-            >
-              {ACCOUNT_FILTERS.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
-                  {option.label}
-                  <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </Card>
+              <ToggleGroup
+                value={filter}
+                onValueChange={(value) => setFilter(value as AccountFilter)}
+                aria-label="Show accounts"
+                className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
+              >
+                {ACCOUNT_FILTERS.map((option) => (
+                  <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
+                    {option.label}
+                    <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </Card>
+          ) : null}
           {shown.length === 0 ? (
             <Card>
               <EmptyState
@@ -246,7 +268,12 @@ function Connections() {
                   canManage={canManage}
                   busy={{
                     saving: update.isPending && update.variables?.id === account.id,
-                    reconnecting: account.platform === "whatsapp" ? whatsapp.busy : connect.isPending,
+                    reconnecting:
+                      account.platform === "whatsapp"
+                        ? whatsapp.busy
+                        : account.platform === "facebook"
+                          ? connectFacebook.isPending
+                          : connect.isPending,
                     retrying: resubscribe.isPending && resubscribe.variables === account.id,
                     disconnecting: disconnect.isPending && disconnect.variables?.id === account.id,
                     deleting: deleteData.isPending && deleteData.variables?.id === account.id,
@@ -266,7 +293,12 @@ function Connections() {
                               onError: (error) => toastError(error),
                             },
                           ),
-                    onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
+                    onReconnect:
+                      account.platform === "whatsapp"
+                        ? whatsapp.connect
+                        : account.platform === "facebook"
+                          ? startFacebook
+                          : startConnect,
                     onRetrySubscribe: () =>
                       resubscribe.mutate(account.id, {
                         onSuccess: (saved) =>
@@ -301,6 +333,7 @@ function Connections() {
           )}
         </>
       )}
+      <FacebookPagesDialog key={facebookNonce ?? "closed"} wid={wid} nonce={facebookNonce} onClose={() => setFacebookNonce(null)} />
       <AutoConfirmDialog
         open={Boolean(confirmAuto)}
         onOpenChange={(open) => (open ? undefined : setConfirmAuto(null))}
@@ -330,11 +363,36 @@ function isConfirmError(error: unknown): boolean {
 }
 
 /** UI-061: the last connect error, shown inline until dismissed; `retry` is the platform to try again. */
-type ConnectFailure = { message: string; retry: "instagram" | "whatsapp" | null };
+type ConnectFailure = { message: string; retry: "instagram" | "facebook" | "whatsapp" | null };
 
-function showConnectResult(result: ConnectResult | null, fail: (failure: ConnectFailure) => void) {
+function showConnectResult(
+  result: ConnectResult | null,
+  fail: (failure: ConnectFailure) => void,
+  platform: "instagram" | "facebook" = "instagram",
+) {
   if (result?.kind === "success") toast.success(result.message);
-  else if (result) fail({ message: result.message, retry: result.retry ? "instagram" : null });
+  else if (result) fail({ message: result.message, retry: result.retry ? platform : null });
+}
+
+/**
+ * GR-29: Facebook's callback redirects here with ?facebook=<nonce> (X-1, as for Instagram). The
+ * page opens with it, so the dialog takes the nonce at once; the parameter is dropped straight away
+ * so a refresh doesn't open the dialog again.
+ */
+function useFacebookNonce() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [nonce, setNonce] = useState<string | null>(() => params.get("facebook"));
+  const dropped = useRef(false);
+
+  useEffect(() => {
+    if (dropped.current || !params.has("facebook")) return;
+    dropped.current = true;
+    router.replace(pathname as Route, { scroll: false });
+  }, [params, router, pathname]);
+
+  return [nonce, setNonce] as const;
 }
 
 /**
@@ -359,6 +417,7 @@ function useConnectResult(
   useEffect(() => {
     if (shown.current || !(params.has("instagram") || params.has("connected") || params.has("error"))) return;
     const nonce = params.get("instagram");
+    const platform = params.get("platform") === "facebook" ? "facebook" : "instagram";
     if (!nonce && params.has("connected") && accounts === undefined && !failed) return;
     shown.current = true;
     router.replace(pathname as Route, { scroll: false });
@@ -372,7 +431,7 @@ function useConnectResult(
     const newest = [...(accounts ?? [])]
       .filter((a) => a.connected_at)
       .sort((a, b) => (b.connected_at ?? "").localeCompare(a.connected_at ?? ""))[0];
-    showConnectResult(connectResult(new URLSearchParams(params.toString()), newest?.username), fail);
+    showConnectResult(connectResult(new URLSearchParams(params.toString()), newest?.username), fail, platform);
   }, [params, accounts, failed, fail, router, pathname, finish]);
 
   return complete.isPending;

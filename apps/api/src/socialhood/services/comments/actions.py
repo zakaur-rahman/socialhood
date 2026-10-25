@@ -139,7 +139,7 @@ async def _refused(
     if error.code == "account_needs_reconnect":
         from socialhood.services.connections import mark_needs_reconnect
 
-        await mark_needs_reconnect(session, acct, RECONNECT)
+        await mark_needs_reconnect(session, acct, sending.say(RECONNECT, acct.platform))
         await events.commit_and_publish(session, redis)
         handle = f"@{acct.username}" if acct.username else "This account"
         return ApiError("account_needs_reconnect", f"{handle} needs reconnecting.")
@@ -151,11 +151,13 @@ async def _refused(
         )
         return ApiError(
             "rate_limited",
-            "Instagram is limiting this account. Try again in a few minutes.",
+            sending.say(
+                "Instagram is limiting this account. Try again in a few minutes.", acct.platform
+            ),
             headers=headers,
         )
     if error.code == DELIVERY_UNKNOWN:
-        return ApiError("platform_error", UNCONFIRMED)
+        return ApiError("platform_error", sending.say(UNCONFIRMED, acct.platform))
     reason = sending.readable_error(
         error.code, acct.platform, platform_message=error.message, username=acct.username
     )
@@ -281,7 +283,10 @@ async def private_reply(
     if await comments_repo.automation_reply_queued(session, comment.id):
         raise ApiError("conflict", AUTOMATION_QUEUED)
     if now - comment.commented_at > PRIVATE_REPLY_LIMIT:
-        raise ApiError("conflict", TOO_OLD)
+        source = await accounts.get(session, comment.social_account_id)
+        raise ApiError(
+            "conflict", sending.say(TOO_OLD, source.platform) if source is not None else TOO_OLD
+        )
     acct, _ = await _account(session, deps, comment, Capability.PRIVATE_REPLY, sends=True)
     problem = sending.text_limit_error(acct.platform, text)
     if problem:

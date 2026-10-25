@@ -1,6 +1,6 @@
 "use client";
 
-import type { AutomationDefinition, Plan } from "@/lib/api/types";
+import type { AutomationDefinition, Plan, Platform } from "@/lib/api/types";
 import { errorsFor, isCommentTrigger, type FieldErrors } from "@/lib/automations/definition";
 import type { StepErrors } from "@/lib/automations/flow";
 
@@ -21,6 +21,7 @@ export function ThenFlow({
   errors,
   state,
   plan,
+  platform,
   disclosure,
   upload,
   flow,
@@ -34,6 +35,7 @@ export function ThenFlow({
   errors: FieldErrors;
   state: StepState;
   plan: Plan;
+  platform?: Platform;
   disclosure: string | null;
   upload?: Uploader;
   flow: FlowDraft;
@@ -53,6 +55,7 @@ export function ThenFlow({
           plan={plan}
           draft={flow}
           comment={comment}
+          platform={platform}
           disclosure={disclosure}
           upload={upload}
           activationErrors={activationErrors}

@@ -51,7 +51,7 @@ export function SegmentBar({ filters, onApply }: { filters: ContactFilters; onAp
             key={segment.id}
             className={cn(
               "inline-flex items-center rounded-full border text-sm",
-              active ? "border-brand-line bg-brand-soft text-brand-fg" : "border-line bg-surface text-fg",
+              active ? "border-brand-line bg-brand-soft text-brand-fg" : "border-line bg-hover text-fg",
             )}
           >
             <button

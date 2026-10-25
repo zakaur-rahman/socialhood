@@ -55,7 +55,7 @@ describe("AppSidebar (UX-SH-01)", () => {
   it("shows labels, the workspace, the plan and every section for an owner when expanded", () => {
     renderSidebar({ userName: "Priya Nair", userEmail: "priya@aria.example" });
     const nav = mainNav();
-    for (const label of ["Home", "Inbox", "Comments", "Contacts", "Leads", "Schedule", "Automations", "Knowledge", "Settings", "Help"]) {
+    for (const label of ["Home", "Inbox", "Comments", "Contacts", "Leads", "Orders", "Schedule", "Automations", "Knowledge", "Products", "Settings", "Help"]) {
       expect(within(nav).getByText(label)).toBeInTheDocument();
     }
     expect(within(nav).getByText("Social Hood")).toBeInTheDocument();
@@ -75,11 +75,28 @@ describe("AppSidebar (UX-SH-01)", () => {
     renderSidebar({ collapsed: true, credits: { used: 10, limit: 200, plan: "free" } });
     const nav = mainNav();
     expect(nav).toHaveAttribute("data-collapsed", "true");
-    expect(within(nav).queryByText("Inbox")).not.toBeInTheDocument();
-    expect(within(nav).queryByText("Aria Label")).not.toBeInTheDocument();
+    // The labels stay in the DOM to fade, but are out of the accessibility tree.
+    expect(within(nav).getByText("Inbox")).toHaveAttribute("aria-hidden", "true");
+    expect(within(nav).getByText("Aria Label").closest("[aria-hidden=true]")).not.toBeNull();
+    expect(within(nav).queryByText("Inbox", { ignore: "[aria-hidden=true]" })).not.toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Inbox" })).toHaveAttribute("href", "/w/aria/inbox");
     expect(within(nav).getByRole("button", { name: "Workspace menu: Aria Label" })).toBeInTheDocument();
-    expect(within(nav).queryByText("Upgrade")).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: "Upgrade" })).not.toBeInTheDocument();
+  });
+
+  it("animates only under motion-safe and only after the first paint; never with a bare transition", () => {
+    renderSidebar({ onToggleCollapsed: vi.fn() });
+    const nav = mainNav();
+    expect(nav).toHaveAttribute("data-ready", "true"); // set after mount, so a restored state shows at once
+    const classes = Array.from(nav.querySelectorAll("[class]"), (el) => el.getAttribute("class") ?? "")
+      .concat(nav.getAttribute("class") ?? "")
+      .join(" ")
+      .split(/\s+/);
+    const motion = classes.filter((c) => /(^|:)transition-\[(width|opacity|translate|transform|grid)/.test(c));
+    expect(motion.length).toBeGreaterThan(0);
+    for (const c of motion) expect(c.startsWith("motion-safe:")).toBe(true); // reduced motion: instant
+    expect(nav.className).toContain("duration-slow");
+    expect(nav.className).toContain("ease-standard");
   });
 
   it("marks the active item", () => {
@@ -89,12 +106,41 @@ describe("AppSidebar (UX-SH-01)", () => {
     expect(screen.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 
+  it("a row hovered while expanded shows no tooltip once the sidebar collapses (owner, 2026-10-25)", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderSidebar();
+    await user.hover(screen.getByRole("link", { name: "Schedule" }));
+    await new Promise((resolve) => setTimeout(resolve, 800)); // past the tooltip's open delay
+    rerender({ collapsed: true });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    // A hover after collapsing still shows its tooltip.
+    await user.unhover(screen.getByRole("link", { name: "Schedule" }));
+    await user.hover(screen.getByRole("link", { name: "Automations" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Automations");
+  });
+
+  it("a click anywhere on the account card opens the account menu (owner, 2026-10-25)", async () => {
+    const open = vi.fn();
+    renderSidebar({
+      userName: "Zakaur Rahman",
+      account: (
+        <button type="button" aria-label="Open account menu" onClick={open}>
+          ZR
+        </button>
+      ),
+    });
+    await userEvent.click(screen.getByText("Zakaur Rahman"));
+    expect(open).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "Open account menu" }));
+    expect(open).toHaveBeenCalledTimes(2); // the avatar itself still works, once per click
+  });
+
   it("toggles collapse when the host allows it", async () => {
     const toggle = vi.fn();
     renderSidebar({ onToggleCollapsed: toggle });
     const button = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(button).toHaveAttribute("aria-keyshortcuts", "Control+[ Meta+[");
-    expect(button).toHaveTextContent("Ctrl [");
+    expect(button).toHaveTextContent(""); // icon only, on the card's edge; the shortcut is in its tooltip
     await userEvent.click(button);
     expect(toggle).toHaveBeenCalledOnce();
   });
@@ -106,8 +152,8 @@ describe("navigation groups by role", () => {
       const { unmount } = renderSidebar({ workspace: { ...owner, role } });
       const engage = screen.getByRole("group", { name: "Engage" });
       const grow = screen.getByRole("group", { name: "Grow" });
-      expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts", "Leads"]);
-      expect(linkNames(grow)).toEqual(["Schedule", "Automations", "Knowledge"]);
+      expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts", "Leads", "Orders"]);
+      expect(linkNames(grow)).toEqual(["Schedule", "Automations", "Knowledge", "Products"]);
       const home = screen.getByRole("link", { name: "Home" });
       expect(home.closest('[role="group"]')).toBeNull();
       expect(home.compareDocumentPosition(engage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -116,13 +162,13 @@ describe("navigation groups by role", () => {
     }
   });
 
-  it("agents: Home, Inbox, Comments, Contacts and Leads; the Grow group, label and all, is hidden", () => {
+  it("agents: Home, Inbox, Comments, Contacts, Leads and Orders; the Grow group, label and all, is hidden", () => {
     renderSidebar({ workspace: { ...owner, role: "agent" } });
     const nav = mainNav();
-    expect(linkNames(screen.getByRole("group", { name: "Engage" }))).toEqual(["Inbox", "Comments", "Contacts", "Leads"]);
+    expect(linkNames(screen.getByRole("group", { name: "Engage" }))).toEqual(["Inbox", "Comments", "Contacts", "Leads", "Orders"]);
     expect(screen.queryByRole("group", { name: "Grow" })).not.toBeInTheDocument();
     expect(within(nav).queryByText("Grow")).not.toBeInTheDocument();
-    for (const hidden of ["Automations", "Schedule", "Knowledge"]) {
+    for (const hidden of ["Automations", "Schedule", "Knowledge", "Products"]) {
       expect(within(nav).queryByText(hidden)).not.toBeInTheDocument();
     }
   });
@@ -130,8 +176,9 @@ describe("navigation groups by role", () => {
   it("collapsed, the labels become dividers but still name the groups", () => {
     renderSidebar({ collapsed: true });
     const engage = screen.getByRole("group", { name: "Engage" });
-    expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts", "Leads"]);
-    expect(within(engage).getByText("Engage")).toHaveClass("sr-only");
+    expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts", "Leads", "Orders"]);
+    // The heading fades out (it is hidden from assistive tech) but still names the group.
+    expect(within(engage).getByText("Engage")).toHaveAttribute("aria-hidden", "true");
   });
 });
 
@@ -341,7 +388,7 @@ describe("reconnecting notice", () => {
   it("collapsed: a dot named for screen readers", () => {
     renderSidebar({ collapsed: true, reconnecting: true });
     expect(screen.getByRole("status", { name: "Reconnecting…" })).toBeInTheDocument();
-    expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();
+    expect(screen.getByText("Reconnecting…")).toHaveAttribute("aria-hidden", "true");
   });
 });
 
@@ -391,6 +438,8 @@ describe("Ask Social Hood in the sidebar (FR-AGT-01)", () => {
 
     rerender({ collapsed: true });
     expect(within(mainNav()).getByRole("button", { name: "Ask Social Hood" })).toBeInTheDocument();
-    expect(screen.queryByTestId("ask-card")).not.toBeInTheDocument();
+    // The same card, text faded out and hidden from assistive tech.
+    expect(screen.getByTestId("ask-card")).toBeInTheDocument();
+    expect(screen.getByText("Your AI assistant").closest("[aria-hidden=true]")).not.toBeNull();
   });
 });

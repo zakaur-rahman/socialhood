@@ -16,10 +16,12 @@ a cross-workspace lookup except the sweeper's (allowed in jobs/, TR-TEN-04).
   worker under ``agent:{run_id}`` are enqueued again and resume from their last completed step
   (``orchestrator.recover``); a run too old to resume, or with a write step found running (R2:
   re-checked by its verifier first), is failed with the reason, so nothing runs twice (TA.6).
+- expire_agent_approvals (GR-36): periodic, every 15 minutes (``*/15 * * * *``, bulk lane,
+  singleton). Pending approvals past ``expires_at`` (24 hours after the agent proposed the write)
+  become ``expired`` and the audit trail records it; nothing was saved. The approvals routes also
+  expire what is due before they list or decide, so a stale card never approves.
 
-R2 adds resume_agent_run(run_id, workspace_id) (after an approval or a finished long task; same
-lock) and expire_agent_approvals (every 15 minutes: pending approvals past expires_at become
-expired and their runs end partial).
+R2 adds resume_agent_run(run_id, workspace_id) (after a finished long task; same lock).
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ from socialhood.models.agent import STUCK_AFTER
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import deps_from
 from socialhood.repositories import agent as repo
+from socialhood.services import agent_actions
 
 log = get_logger(__name__)
 
@@ -86,6 +89,25 @@ async def sweep(
     return counts
 
 
+async def expire_approvals(
+    sessionmaker: async_sessionmaker[AsyncSession], now: datetime | None = None
+) -> int:
+    """GR-36: expire the pending approvals that are due, workspace by workspace."""
+    now = now or datetime.now(UTC)
+    async with sessionmaker() as session:
+        with tenant_bypass_scope():
+            due = await repo.workspaces_with_due_approvals(session, now, SWEEP_BATCH)
+    expired = 0
+    for workspace_id in due:
+        with workspace_scope(workspace_id):
+            async with sessionmaker() as session:
+                expired += await agent_actions.expire_due(session, now)
+                await session.commit()
+    if expired:
+        log.info("expire_agent_approvals", expired=expired)
+    return expired
+
+
 @app.task(name="run_agent", queue=INTERACTIVE)
 async def run_agent(run_id: str, workspace_id: str) -> None:
     rt = runtime()
@@ -105,3 +127,9 @@ async def run_agent(run_id: str, workspace_id: str) -> None:
 async def sweep_agent_runs(timestamp: int) -> None:
     rt = runtime()
     await sweep(rt.sessionmaker, rt.redis)
+
+
+@app.periodic(cron="*/15 * * * *", periodic_id="expire_agent_approvals")
+@app.task(name="expire_agent_approvals", queue=BULK, queueing_lock="expire_agent_approvals")
+async def expire_agent_approvals(timestamp: int) -> None:
+    await expire_approvals(runtime().sessionmaker)
