@@ -607,6 +607,26 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - Every claim must be checkable against our own code and their public pages, as in
   competitors.md.
 
+### Later: agreed, not scheduled
+
+#### GR-40 · Google Drive import, media retention and backup · M · needs O-10 (Google verification) · agreed 2026-10-25
+- **Why:** customers want their scheduled and published posts to stay with them, and some don't
+  want their media kept on our storage.
+- **Not Drive as live storage.** Meta's servers fetch each image or video from a public URL when a
+  post publishes, so a private Drive file can't be used directly; making it public is a privacy
+  risk, and a file deleted, moved or unshared before the scheduled time fails the post. Reading
+  any Drive file (`drive.readonly`) is a restricted scope with a paid yearly security assessment.
+- **Do, in this order:**
+  1. **Import from Google Drive** in the composer and media library, with Google's file picker and
+     the `drive.file` scope (only the files the person picks; the scope GR-27 Sheets already uses).
+  2. **"Don't keep my media"**: a workspace setting that deletes our copy once the post is published
+     (at once or after N days), so the media lives with the customer and publishing stays reliable.
+  3. **Back up to my Drive** (optional): after each post publishes, copy its media and a small file
+     with the caption, time, accounts and links into a "Social Hood" folder in their Drive.
+- **Later still:** Dropbox and OneDrive the same way.
+- **Done when:** a Drive photo picked in the composer publishes; with "don't keep my media" on, our
+  copy is gone after publishing; with backup on, the media and its details appear in their Drive.
+
 ---
 
 ## E. Order, dependencies and lanes
@@ -623,6 +643,7 @@ Wave 4  GR-17 (← GR-02) → GR-18     GR-19 → GR-20     GR-21  GR-22     GR-
 Wave 5  GR-25 → GR-26    GR-27 (← GR-04, GR-14)    GR-28    GR-29 → GR-30
 Wave 6  GR-31 → GR-32, GR-33
 Wave 7  GR-34  GR-35  GR-36 (← GR-03, GR-23)  GR-37
+Later   GR-40 (← GR-27, O-10)
 ```
 
 **Suggested batches,** three parallel lanes as in the UI programme:
