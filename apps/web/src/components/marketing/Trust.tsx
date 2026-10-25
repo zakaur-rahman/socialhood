@@ -2,7 +2,10 @@ import { BadgeCheck, KeyRound, Layers, LockKeyhole, Trash2, type LucideIcon } fr
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-import { Container, SectionHeading } from "./primitives";
+import { MARKETING_HEADING } from "@/styles/tokens";
+import { cn } from "@/lib/utils";
+
+import { Container, SECTION_EYEBROW } from "./primitives";
 
 // Only what is true of the built system (product guide, "Security and privacy"). No certifications,
 // uptime figures or compliance badges: we have none to claim.
@@ -36,28 +39,27 @@ const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
 
 export function Trust() {
   return (
-    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel-glass py-20 sm:py-24">
-      <Container>
-        <SectionHeading
-          id="trust-title"
-          eyebrow="Security and privacy"
-          title="Your customers' messages, handled with care"
-          intro={
-            <>
-              Read exactly what we collect and why in our{" "}
-              <Link href="/privacy" className="font-medium text-brand-fg underline underline-offset-4">
-                Privacy Policy
-              </Link>
-              .
-            </>
-          }
-        />
-        <ul className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel-glass py-16 sm:py-20">
+      <Container className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-14">
+        <div className="text-center lg:text-left">
+          <p className={SECTION_EYEBROW}>Security and privacy</p>
+          <h2 id="trust-title" className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
+            Your customers&apos; messages, handled with care
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-pretty text-fg-secondary">
+            Read exactly what we collect and why in our{" "}
+            <Link href="/privacy" className="font-medium text-brand-fg underline underline-offset-4">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </div>
+        <ul className="grid gap-3 sm:grid-cols-2">
           {POINTS.map(({ icon: Icon, title, body }, index) => (
-            <li key={title} data-reveal style={{ "--reveal-delay": `${(index % 3) * 80}ms` } as CSSProperties}>
-              <div className="flex h-full gap-4 rounded-2xl border border-line bg-canvas p-5 transition-colors duration-slow hover:border-line-strong">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
-                  <Icon className="size-5" aria-hidden />
+            <li key={title} data-reveal style={{ "--reveal-delay": `${(index % 2) * 80}ms` } as CSSProperties} className={index === POINTS.length - 1 ? "sm:col-span-2" : undefined}>
+              <div className="flex h-full gap-3.5 rounded-2xl border border-line bg-canvas p-4 transition-colors duration-slow hover:border-line-strong">
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
+                  <Icon className="size-4.5" aria-hidden />
                 </span>
                 <div>
                   <h3 className="text-sm font-semibold">{title}</h3>

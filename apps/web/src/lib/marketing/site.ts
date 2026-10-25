@@ -46,6 +46,7 @@ export const APP_PATH = "/app";
 
 export const SECTION_IDS = {
   features: "features",
+  integrations: "integrations",
   howItWorks: "how-it-works",
   pricing: "pricing",
   faq: "faq",

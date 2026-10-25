@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { EYEBROW, MARKETING_HEADING } from "@/styles/tokens";
 
@@ -35,7 +36,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" className={cn("flex min-h-10 items-center gap-2.5 rounded-lg", className)}>
       <LogoMark />
-      <span className="text-base font-semibold tracking-tight">Social Hood</span>
+      <span className="text-base font-semibold tracking-tight">{SITE_NAME}</span>
     </Link>
   );
 }

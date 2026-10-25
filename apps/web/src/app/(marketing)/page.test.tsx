@@ -48,7 +48,7 @@ describe("the landing page", () => {
     expect(h1.querySelector("[data-flip-words]")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
-      "Built on Meta's official APIs",
+      "Connects to where your customers are",
       "Everything your customer conversations need",
       "Set up in three steps",
       "Comment LINK, get the link in a DM",
@@ -73,9 +73,30 @@ describe("the landing page", () => {
     expect(screen.getByRole("heading", { name: "Ask Social Hood" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
     expect(screen.getByText("Illustrations with example data.")).toBeInTheDocument();
-    // The platform tile and the Max plan both say "Coming soon" (UI-068), so look in the platforms section.
-    const platforms = within(container.querySelector('section[aria-labelledby="platforms-title"]') as HTMLElement);
-    expect(platforms.getByText("Coming soon")).toBeInTheDocument();
+    // Integrations: each with an honest status; Facebook Pages are built, so no "Messenger coming soon" any more.
+    const integrations = within(container.querySelector("section#integrations") as HTMLElement);
+    expect(integrations.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Instagram",
+      "WhatsApp",
+      "Website chat",
+      "Facebook Pages",
+      "Live comments and ad replies",
+      "Shopify",
+      "Razorpay and UPI",
+      "Google Sheets",
+      "Zapier and the public API",
+    ]);
+    expect(integrations.getByText("With our Shopify app listing")).toBeInTheDocument();
+    expect(integrations.getAllByText("With Meta's approval")).toHaveLength(2);
+    expect(integrations.getAllByText("Official API")).toHaveLength(2);
+    expect(integrations.queryByText(/Messenger isn't supported/)).toBeNull();
+    // Hero: the "Works with" strip, with names only for tools whose logos we don't ship.
+    expect(screen.getByRole("list", { name: "Works with" }).textContent).toMatch(/Shopify.*Razorpay.*Google Sheets.*Zapier/);
+
+    // Stats come from the plan table, and there is no social proof section until there is data.
+    expect(screen.getByRole("region", { name: "The product in numbers" })).toBeInTheDocument();
+    expect(container.querySelector("section[aria-labelledby=\"proof-title\"]")).toBeNull();
+    // The footer is the layout's; the decorative wordmark is tested with the footer.
 
     // How it works: three steps, each with a real screen.
     const how = within(container.querySelector("section#how-it-works") as HTMLElement);

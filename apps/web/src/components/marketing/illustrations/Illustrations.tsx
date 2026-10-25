@@ -1,4 +1,4 @@
-import { BookOpen, Lock, Mail, MessageCircle, Sparkles } from "lucide-react";
+import { CalendarDays, Check, Lock, Mail, MessageCircle, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
@@ -111,7 +111,26 @@ export function DraftIllustration() {
 
 export function AutomationIllustration() {
   return (
-    <div className="relative h-full min-h-56">
+    <>
+      {/* Phones: the same story, stacked (the drawing below needs about 30 rem). */}
+      <div className="flex h-full flex-col justify-center gap-2 p-4 sm:hidden">
+        <div className="flex gap-2">
+          {["linen.lover", "weekend.wardrobe"].map((handle) => (
+            <div key={handle} className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-2 py-1.5">
+              <span className="block truncate text-xs text-fg-secondary">{handle}</span>
+              <span className="block text-sm font-semibold">LINK</span>
+            </div>
+          ))}
+        </div>
+        <p className="flex items-center justify-center gap-1.5 text-xs text-brand-fg">
+          <LogoMark className="size-5" /> sends a DM to each
+        </p>
+        <div className="rounded-xl border border-line bg-panel p-2">
+          <p className="bg-brand-gradient rounded-xl rounded-br-md px-2 py-1.5 text-xs leading-snug text-on-brand">Tap below and we&apos;ll send you the link.</p>
+          <p className="mt-1.5 rounded-full border border-brand-line px-2 py-1 text-center text-xs text-brand-fg">Send me the link</p>
+        </div>
+      </div>
+    <div className="relative hidden h-full min-h-56 sm:block">
       <svg viewBox="0 0 600 220" preserveAspectRatio="none" className="absolute inset-0 size-full">
         <Beam d="M186,66 C231,66 231,110 276,110" />
         <Beam d="M186,154 C231,154 231,110 276,110" />
@@ -152,6 +171,7 @@ export function AutomationIllustration() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -189,25 +209,6 @@ export function InboxIllustration() {
   );
 }
 
-// ---------------------------------------------------------------- 4. knowledge gaps
-
-export function GapsIllustration() {
-  return (
-    <div className="flex h-full flex-col justify-center gap-2 p-4">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-fg-secondary">
-        <BookOpen className="size-3.5" /> Questions the AI couldn&apos;t answer
-      </p>
-      {["Do you offer gift wrapping?", "Can I pick up from the shop?"].map((question) => (
-        <div key={question} className="flex items-center gap-2 rounded-xl border border-line-subtle bg-panel px-3 py-2">
-          <span className="min-w-0 flex-1 text-sm leading-snug">{question}</span>
-          <span className="shrink-0 rounded-md bg-brand-soft px-2 py-1 text-xs font-medium text-brand-fg">Add answer</span>
-        </div>
-      ))}
-      <p className="pl-1 text-xs text-fg-secondary">Not guessed: handed to you instead.</p>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------- 5. Ask
 
 export function AskIllustration() {
@@ -238,10 +239,10 @@ const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function AnalyticsIllustration() {
   return (
-    <div className="grid h-full gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,15rem)]">
+    <div className="flex h-full flex-col justify-center gap-3 p-4">
       <div className="flex min-w-0 flex-col">
         <p className="text-xs font-medium text-fg-secondary">Messages received, this week</p>
-        <div className="mt-3 flex h-28 flex-1 items-end gap-2">
+        <div className="mt-3 flex h-24 items-end gap-2">
           {BARS.map((height, index) => (
             <div key={index} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
               <div className="bg-brand-gradient-decor w-full max-w-8 rounded-t-md" style={{ height: `${height}%` }} />
@@ -250,17 +251,177 @@ export function AnalyticsIllustration() {
           ))}
         </div>
       </div>
-      <div className="hidden self-center rounded-xl border border-line bg-panel p-3 sm:block">
-        <p className="flex items-center gap-1.5 text-xs text-fg-secondary">
-          <Mail className="size-3.5 text-brand-fg" /> Monday, 9:00 AM
-        </p>
-        <p className="mt-1.5 text-sm font-semibold">Your week at Indigo Lane</p>
-        <div className="mt-2 space-y-1.5">
-          <span className="block h-1.5 w-full rounded-full bg-raised" />
-          <span className="block h-1.5 w-4/5 rounded-full bg-raised" />
-          <span className="block h-1.5 w-3/5 rounded-full bg-raised" />
-        </div>
+      <div className="flex items-center gap-2 rounded-xl border border-line bg-panel px-3 py-2">
+        <Mail className="size-3.5 shrink-0 text-brand-fg" />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">Your week at Indigo Lane</span>
+        <span className="shrink-0 text-xs text-fg-secondary">Mon, 9:00 AM</span>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- 7. comment intelligence
+
+const SENTIMENT = [
+  { label: "Positive", width: "w-[62%]", bar: "bg-success" },
+  { label: "Neutral", width: "w-[26%]", bar: "bg-line-strong" },
+  { label: "Negative", width: "w-[12%]", bar: "bg-danger" },
+];
+
+export function CommentsIllustration() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-2.5 p-4">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-fg-secondary">Linen shirt Reel · 48 comments</span>
+        <span className="flex gap-1.5">
+          <Chip tone="brand">Price 12</Chip>
+          <Chip>Size 9</Chip>
+        </span>
+      </div>
+      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
+        {SENTIMENT.map((part) => (
+          <span key={part.label} className={cn("h-full", part.width, part.bar)} />
+        ))}
+      </div>
+      {[
+        { who: "R", text: "Love this colour! What does it cost?", chips: <Chip tone="success">Positive</Chip>, action: "Reply by DM" },
+        { who: "K", text: "Follow my page for free followers", chips: <Chip tone="warning">Spam</Chip>, action: "Hidden" },
+      ].map((comment) => (
+        <div key={comment.who} className="flex items-center gap-2 rounded-xl border border-line-subtle bg-panel px-2.5 py-2">
+          <Avatar initial={comment.who} />
+          <span className="min-w-0 flex-1 truncate text-sm">{comment.text}</span>
+          <span className="hidden sm:block">{comment.chips}</span>
+          <span className="shrink-0 rounded-md bg-raised px-2 py-1 text-xs text-fg">{comment.action}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- 8. scheduling, Reels and Stories
+
+const WEEK = [
+  { day: "Mon", date: "12" },
+  { day: "Tue", date: "13", post: "Post" },
+  { day: "Wed", date: "14" },
+  { day: "Thu", date: "15", post: "Reel" },
+  { day: "Fri", date: "16", post: "Story" },
+  { day: "Sat", date: "17" },
+  { day: "Sun", date: "18", post: "Post" },
+];
+
+export function ScheduleIllustration() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-3 p-4">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-fg-secondary">
+        <CalendarDays className="size-3.5" /> This week
+      </p>
+      <div className="grid grid-cols-7 gap-1">
+        {WEEK.map((item) => (
+          <div key={item.day} className="flex flex-col items-center gap-1 rounded-lg border border-line-subtle bg-panel py-1.5">
+            <span className="text-2xs text-fg-secondary">{item.day}</span>
+            <span className="text-xs font-semibold">{item.date}</span>
+            <span className={cn("h-1.5 w-4 rounded-full", item.post ? "bg-brand" : "bg-raised")} />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-brand-line bg-panel p-2.5">
+        <p className="flex flex-wrap items-center gap-1.5 text-xs">
+          <Chip tone="brand">Reel</Chip>
+          <span className="text-fg-secondary">Thu 15, 6:30 PM</span>
+          <Chip>with @weave.studio</Chip>
+        </p>
+        <p className="mt-1.5 truncate text-sm">Linen season is here. Which colour would you pick?</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- 9. catalogue, orders and payment links
+
+const PRODUCTS = [
+  { name: "Blue kurta", price: "₹1,499" },
+  { name: "Linen shirt", price: "₹1,199" },
+  { name: "Cotton dupatta", price: "₹649" },
+];
+
+export function OrdersIllustration() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-2.5 p-4">
+      <div className="grid grid-cols-3 gap-1.5">
+        {PRODUCTS.map((product) => (
+          <div key={product.name} className="rounded-lg border border-line-subtle bg-panel p-1.5">
+            <span className="block h-8 rounded-md bg-raised" />
+            <span className="mt-1 block truncate text-xs">{product.name}</span>
+            <span className="block text-xs font-semibold">{product.price}</span>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-line bg-panel p-2.5">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-medium">Order 1042 · Blue kurta, M</span>
+          <Chip tone="success">
+            <Check className="mr-0.5 inline size-3" />
+            Paid
+          </Chip>
+        </div>
+        <p className="mt-1 text-xs text-fg-secondary">Payment link sent in the chat. The money goes to your own account.</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- 10. sequences
+
+const STEPS = [
+  { when: "Right away", what: "Thanks for your interest! Here is our size guide." },
+  { when: "After 2 days", what: "Still thinking it over? Happy to help." },
+  { when: "After 5 days", what: "Your size is still in stock." },
+];
+
+export function SequenceIllustration() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-2 p-4">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-fg-secondary">
+        <UserRound className="size-3.5" /> A lead is captured
+      </p>
+      <ol className="space-y-1.5 border-l border-line pl-3">
+        {STEPS.map((step) => (
+          <li key={step.when} className="rounded-lg border border-line-subtle bg-panel px-2.5 py-1.5">
+            <p className="text-2xs font-medium text-brand-fg">{step.when}</p>
+            <p className="truncate text-xs">{step.what}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="pl-1 text-xs text-fg-secondary">Stops as soon as they reply.</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- 11. roles and assignment
+
+const MEMBERS = [
+  { name: "Priya", role: "Admin", open: 4 },
+  { name: "Sam", role: "Agent", open: 7 },
+  { name: "Kiran", role: "Agent", open: 3 },
+];
+
+export function TeamIllustration() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-2 p-4">
+      {MEMBERS.map((member) => (
+        <div key={member.name} className="flex items-center gap-2.5 rounded-xl border border-line-subtle bg-panel px-2.5 py-1.5">
+          <Avatar initial={member.name[0]} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">{member.name}</span>
+            <span className="block text-xs text-fg-secondary">{member.open} open conversations</span>
+          </span>
+          <Chip tone={member.role === "Admin" ? "brand" : "neutral"}>{member.role}</Chip>
+        </div>
+      ))}
+      <p className="flex items-center gap-1.5 pl-1 text-xs text-fg-secondary">
+        <ShieldCheck className="size-3 shrink-0 text-brand-fg" /> Round-robin assignment, if you turn it on.
+      </p>
     </div>
   );
 }
@@ -271,9 +432,13 @@ export const ILLUSTRATIONS = {
   draft: DraftIllustration,
   automation: AutomationIllustration,
   inbox: InboxIllustration,
-  gaps: GapsIllustration,
   ask: AskIllustration,
   analytics: AnalyticsIllustration,
+  comments: CommentsIllustration,
+  schedule: ScheduleIllustration,
+  orders: OrdersIllustration,
+  sequence: SequenceIllustration,
+  team: TeamIllustration,
 };
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;

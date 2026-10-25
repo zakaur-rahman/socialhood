@@ -34,7 +34,7 @@ export function HowItWorks() {
     <section
       id={SECTION_IDS.howItWorks}
       aria-labelledby="how-title"
-      className="scroll-mt-24 border-t border-line-subtle bg-panel-glass py-20 sm:py-24"
+      className="scroll-mt-24 border-t border-line-subtle bg-panel-glass py-16 sm:py-20"
     >
       <Container>
         <SectionHeading id="how-title" eyebrow="How it works" title="Set up in three steps" intro="Screens from the app, with example data." />

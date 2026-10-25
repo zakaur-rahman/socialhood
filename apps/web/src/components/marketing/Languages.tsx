@@ -33,7 +33,7 @@ const EXAMPLES: Example[] = [
 /** The AI's three languages, as replies to real-sounding questions (examples, labelled as such). */
 export function Languages() {
   return (
-    <section aria-labelledby="languages-title" className="border-t border-line-subtle bg-panel-glass py-20 sm:py-24">
+    <section aria-labelledby="languages-title" className="border-t border-line-subtle bg-panel-glass py-16 sm:py-20">
       <Container>
         <SectionHeading
           id="languages-title"
