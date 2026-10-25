@@ -14,7 +14,7 @@ test.describe("not found", () => {
     await expect(page.getByRole("heading", { name: "We can't find that page" })).toBeVisible();
     await expect(page.getByTestId("not-found-illustration")).toBeVisible();
     await expect(page.getByTestId("requested-path")).toHaveText("/no-such-page-e2e");
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
     await expect(page.getByRole("link", { name: "See pricing" })).toBeVisible();
     await page.getByRole("link", { name: "See pricing" }).click();
     await expect(page).toHaveURL(/\/pricing$/);
@@ -35,7 +35,9 @@ test.describe("not found", () => {
     await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/schedule$`));
   });
 
-  test("a missing conversation shows the in-page state and goes back to Inbox", async ({ page, workspace }) => {
+  test("a missing conversation shows the in-page state and goes back to Inbox", async ({ page, sandbox }) => {
+    // A workspace with no connected account shows "Connect an account" instead of the inbox.
+    const { workspace } = sandbox;
     await page.goto(`/w/${workspace.slug}/inbox/${randomUUID()}`);
     await expect(page.getByText("This conversation doesn't exist or was deleted")).toBeVisible();
     await page.getByRole("link", { name: "Back to Inbox" }).click();

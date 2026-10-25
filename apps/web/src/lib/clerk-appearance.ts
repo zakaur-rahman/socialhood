@@ -91,6 +91,12 @@ function appearanceWithoutBase(theme: Theme) {
           color: "var(--color-fg-secondary) !important",
           opacity: "1 !important",
         },
+        // A development instance paints an orange bar behind "Secured by" and "Development mode"
+        // (absolute `div`s, first in the footer item), where no text colour can pass 4.5:1. The bar
+        // is made transparent, so the text sits on the panel; a production instance has none.
+        '& [class*="cl-footerItem"] > div:first-child, & [class*="cl-footerItem"] > div:first-child *': {
+          backgroundColor: "transparent !important",
+        },
       },
       userButtonPopoverCard: {
         "& *": { borderColor: "var(--color-line) !important" },

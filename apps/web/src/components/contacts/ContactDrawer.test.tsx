@@ -174,7 +174,7 @@ describe("ContactDrawer (GR-17)", () => {
     await user.click(save);
     await waitFor(() => {
       const patch = calls.find((c) => c.method === "PATCH");
-      expect(patch?.body).toEqual({ clear_email: true, clear_phone: false, phone: "98765 43210", fields: { city: null } });
+      expect(patch?.body).toEqual({ clear_email: true, clear_phone: false, use_platform_name: false, phone: "98765 43210", fields: { city: null } });
     });
   });
 
@@ -247,10 +247,10 @@ describe("ContactDrawer (GR-17)", () => {
     expect(within(agentDrawer).queryByLabelText("New tag name")).not.toBeInTheDocument();
   });
 
-  it("says when the contact did not load", async () => {
+  it("says when the contact does not exist", async () => {
     renderWithApi(<ContactDrawer contactId="gone" onClose={() => {}} />, {
       handlers: { "GET /v1/w/:wid/contacts/:id": () => problem(404, "not_found") },
     });
-    expect(await screen.findByText(/did not load/)).toBeInTheDocument();
+    expect(await screen.findByTestId("contact-not-found")).toBeInTheDocument();
   });
 });

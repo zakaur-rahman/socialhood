@@ -10,7 +10,7 @@ describe("NotFoundPage", () => {
   it("says what happened, shows the requested path and the ways out", () => {
     render(
       <NotFoundPage>
-        <a href="/">Go home</a>
+        <span role="link">Go home</span>
       </NotFoundPage>,
     );
     expect(screen.getByRole("heading", { name: "We can't find that page" })).toBeInTheDocument();

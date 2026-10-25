@@ -33,10 +33,10 @@ function MediaImage({
 }) {
   const [failed, setFailed] = useState(false);
   if (failed || !src) return <Unavailable label="Media no longer available" />;
-  // eslint-disable-next-line @next/next/no-img-element -- platform and storage URLs of any size; next/image needs known hosts and sizes
   // width and height (when the platform sent them) let the browser reserve the box before the
   // picture arrives, so the message list doesn't jump; without them, a minimum box holds the place.
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- platform and storage URLs of any size; next/image needs known hosts and sizes
     <img
       src={src}
       alt={alt}

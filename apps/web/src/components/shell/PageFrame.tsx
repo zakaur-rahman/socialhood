@@ -34,7 +34,7 @@ export function BackLink({ href, label }: { href: Route; label: string }) {
 }
 
 /** First-paint header height for a title-only header; the observer then writes the measured value. */
-const PAGE_CLASS = "w-full p-4 pt-0 [--page-header-h:3.6rem] md:p-6 md:pt-0 md:[--page-header-h:4.1rem]";
+const PAGE_CLASS = "w-full p-4 pt-0 [--page-header-h:3.8125rem] md:p-6 md:pt-0 md:[--page-header-h:4.3125rem]";
 
 export function PageFrame({
   title,

@@ -5776,7 +5776,7 @@ decision is pending an owner call (PD-n).
 
 ### No layout shift
 - `PageFrame` no longer keeps the header height in React state. `--page-header-h` starts at a CSS
-  value for a title-only header (4.5rem + 1px; 5rem + 1px from md) and the observer writes the
+  value for a title-only header (3.8125rem; 4.3125rem from md) and the observer writes the
   measured value straight onto the page element, so the first paint and the measured value agree
   and nothing re-renders.
 - Inbox attachments reserve their box: images and videos take the platform's `width` and `height`
@@ -5789,10 +5789,36 @@ decision is pending an owner call (PD-n).
 for 27 pages on a desktop and a phone viewport, with the API slowed by 350 ms, and fails above 0.1.
 It runs locally only (CI does not run e2e).
 
-*Not run:* the worktree has no `node_modules` and installing is not allowed here, so the e2e stack's web
-build failed ("Could not find the Next.js package"); the spec, the new skeletons and the PageFrame change
-are written but unmeasured. Run `node scripts/e2e-stack.mjs -- --grep "layout shift"` once from a checked
-out tree with dependencies and fix any page above 0.1. Lint, tsc and vitest were not run either.
+Measured on the e2e stack (Chromium, API slowed 350 ms, three contacts). Every page is at or below 0.1
+on both viewports. CLS, desktop / phone:
+
+home 0.003 / 0.002; inbox 0.0006 / 0.0004; comments 0.0006 / 0; contacts 0.0006 / 0; leads 0.0006 / 0;
+orders 0.029 / 0.067; products 0.025 / 0.056; schedule 0.042 / 0; automations 0.004 / 0;
+sequences 0.0006 / 0; broadcasts 0.0006 / 0; knowledge 0.0006 / 0; ask 0.002 / 0; reports 0.0006 / 0;
+settings: workspace, connections, billing, ai, hours, replies, widget, appearance 0.0006 / 0 (each);
+members 0.0006 / 0.026; agent 0.014 / 0.020; integrations 0.0006 / 0.004; notifications 0.005 / 0.042;
+activity 0.001 / 0.004.
+
+What the first run found on a phone (leads 0.22, agent 0.16, products 0.13, orders 0.11, members 0.11,
+knowledge 0.075, automations 0.097) and the fixes:
+- Leads: the stage buttons' counts arrived after the summary and widened them, so the row wrapped.
+  The count's place is held (invisible "0") until it loads.
+- Orders and Products: the Pro notice and the settings cards (Payments; Shopify, WhatsApp catalogue)
+  grew above the list. The notice now sits inside the list card, and the settings cards come after
+  the list. The table skeleton is 7 and 8 rows (the empty state is about that tall on a phone).
+- Knowledge: the cards load on their own and pushed each other and the test box (below on a phone).
+  They show together once sources, brand voice and questions have all answered; the test box waits too below xl.
+- Members: the assignment card loaded between the list and the invitations; it is now last.
+- Settings, Agent: the mode sentence is about four lines on a phone, the skeleton is now as tall; the
+  mode badge and the AI credits box hold their places while they load.
+- Automations: the Broadcasts button (a flag) re-wrapped the header; its place is held until the flag is known.
+- `PageFrame`'s first-paint header height is 3.8125rem (4.3125rem from md), the title-only header's real height.
+- The spec also logs which elements moved for a page above 0.05 (set `CLS_PAGES` / `CLS_VIEWPORT` to narrow a run).
+It runs locally only (CI does not run e2e).
+
+Still not tied to the page's data: the "gone cold" note on Leads, a Broadcasts button when the flag is
+off, and a settings card that has no AI credits to show appear or disappear after load; they only show
+for workspaces that have them.
 
 ## C-137 · Polish C: 404 handling and the 404 page (feature/polish-not-found)
 
@@ -5827,7 +5853,7 @@ Web only; no API, model or migration change.
   both. Any other error keeps the error state with Try again.
 - Orders, products and reports have no per-item pages, so nothing to map there.
 
-**Tests (not run: no node_modules in this worktree, and pnpm is off limits here)**
+**Tests (run in the polish-batch check: vitest and the e2e spec pass)**
 - Vitest: `components/not-found/NotFound.test.tsx`, `components/states/NotFoundState.test.tsx`
   (`isNotFound` mapping included); `PostDetailPage.test.tsx` and `PostComposer.test.tsx` expect the
   new wording.

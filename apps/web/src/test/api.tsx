@@ -196,6 +196,7 @@ export function conversation(overrides: Partial<Conversation> = {}): Conversatio
       ...base.contact,
       first_seen_at: "2026-09-27T09:00:00Z",
       platform_user_id: "17841400000000000",
+      name_source: "platform",
     },
     reply_window: { state: "open", closes_at: "2026-09-29T11:55:00Z" },
     ai: { effective_mode: "suggest", override: null, paused_until: null },

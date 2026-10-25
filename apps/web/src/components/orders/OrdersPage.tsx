@@ -59,19 +59,6 @@ export function OrdersPage() {
   return (
     <PageFrame title="Orders">
       <div className="space-y-6">
-        {!entitled ? (
-          <Alert tone="brand">
-            Orders and payment requests are part of Pro. You can see what is here, but making orders needs Pro.{" "}
-            {manager ? (
-              <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
-                See plans
-              </button>
-            ) : null}
-          </Alert>
-        ) : null}
-
-        {manager ? <PaymentsCard wid={wid} /> : null}
-
         <Card asChild padding="roomy">
           <section aria-labelledby="orders-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -103,10 +90,21 @@ export function OrdersPage() {
               </div>
             </div>
 
+            {!entitled ? (
+              <Alert tone="brand" className="mt-4">
+                Orders and payment requests are part of Pro. You can see what is here, but making orders needs Pro.{" "}
+                {manager ? (
+                  <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
+                    See plans
+                  </button>
+                ) : null}
+              </Alert>
+            ) : null}
+
             <CardBleed className="mt-5 border-t border-line">
               {orders.isPending ? (
                 <SkeletonRegion label="Loading orders">
-                  <TableSkeleton columns={6} rows={5} />
+                  <TableSkeleton columns={6} rows={7} />
                 </SkeletonRegion>
               ) : orders.isError ? (
                 <div className="p-(--card-padding)">
@@ -169,6 +167,9 @@ export function OrdersPage() {
             </CardBleed>
           </section>
         </Card>
+
+        {/* After the orders: the card is taller once its settings load, and nothing is below it to move. */}
+        {manager ? <PaymentsCard wid={wid} /> : null}
       </div>
 
       <OrderSheet order={open} limits={limits} onOpenChange={(next) => (next ? undefined : setOpenId(null))} />

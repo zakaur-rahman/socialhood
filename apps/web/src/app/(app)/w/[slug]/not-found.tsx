@@ -25,7 +25,7 @@ export default function WorkspaceNotFound() {
       </Button>
       <Button asChild variant="secondary" size="lg">
         <Link href={`${base}/inbox` as Route}>
-          <Inbox aria-hidden /> Open Inbox
+          <Inbox aria-hidden /> Open inbox
         </Link>
       </Button>
       <Button asChild variant="ghost" size="lg">

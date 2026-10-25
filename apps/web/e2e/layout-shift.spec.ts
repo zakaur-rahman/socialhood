@@ -50,18 +50,32 @@ const VIEWPORTS = [
 
 async function startRecording(page: Page) {
   await page.addInitScript(() => {
-    const w = window as unknown as { __cls: number };
+    const w = window as unknown as { __cls: number; __clsLog: string[] };
     w.__cls = 0;
+    w.__clsLog = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as unknown as Array<{ value: number; hadRecentInput: boolean }>) {
-        if (!entry.hadRecentInput) w.__cls += entry.value;
+      for (const entry of list.getEntries() as unknown as Array<{
+        value: number;
+        hadRecentInput: boolean;
+        sources?: Array<{ node?: Element | null }>;
+      }>) {
+        if (entry.hadRecentInput) continue;
+        w.__cls += entry.value;
+        // Which elements moved, so a failure says where (tag, test id or first classes).
+        const nodes = (entry.sources ?? []).map((source) => {
+          const node = source.node;
+          if (!node || !("tagName" in node)) return "?";
+          const id = node.getAttribute("data-testid");
+          return `${node.tagName.toLowerCase()}${id ? `[${id}]` : ""}.${String(node.getAttribute("class") ?? "").split(" ").slice(0, 3).join(".")}`;
+        });
+        w.__clsLog.push(`${entry.value.toFixed(3)} ${nodes.join(" | ")}`);
       }
     }).observe({ type: "layout-shift", buffered: true });
   });
 }
 
 test.describe("layout shift while pages load", () => {
-  for (const viewport of VIEWPORTS) {
+  for (const viewport of VIEWPORTS.filter((v) => !process.env.CLS_VIEWPORT || v.name === process.env.CLS_VIEWPORT)) {
     test(`CLS stays under ${LIMIT} on the main pages (${viewport.name})`, async ({ page, api, sandbox }) => {
       test.setTimeout(10 * 60_000);
       const { workspace, account } = sandbox;
@@ -81,15 +95,22 @@ test.describe("layout shift while pages load", () => {
       await startRecording(page);
 
       const results: Record<string, number> = {};
-      for (const path of PAGES) {
+      // CLS_PAGES (comma list) narrows a debugging run; the default is every page.
+      const only = process.env.CLS_PAGES?.split(",");
+      for (const path of PAGES.filter((p) => !only || only.includes(p))) {
         await page.goto("about:blank");
         await page.evaluate(() => undefined);
         await page.goto(`/w/${workspace.slug}/${path}`, { waitUntil: "commit" });
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("load");
+        await page.waitForTimeout(1_000);
         // Skeletons gone: no region is still marked busy.
         await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
         await page.waitForTimeout(600);
         results[path] = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+        if (results[path] > LIMIT / 2) {
+          const log = await page.evaluate(() => (window as unknown as { __clsLog: string[] }).__clsLog);
+          console.log(`shifts on ${path}: ${log.join(" ;; ")}`);
+        }
       }
       console.log(`CLS (${viewport.name}):`, JSON.stringify(results, null, 1));
       const over = Object.entries(results).filter(([, value]) => value > LIMIT);

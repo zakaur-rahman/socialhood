@@ -113,8 +113,11 @@ export function LeadsPage() {
               onClick={() => setShown(stage.value)}
             >
               {stage.label}
-              {!filtered && counts[stage.value] !== undefined ? (
-                <span className="text-xs text-fg-secondary tabular-nums">{counts[stage.value]}</span>
+              {!filtered ? (
+                // Reserved while the counts load (invisible "0"), so the buttons don't widen and wrap.
+                <span className={cn("text-xs text-fg-secondary tabular-nums", counts[stage.value] === undefined && "invisible")}>
+                  {counts[stage.value] ?? 0}
+                </span>
               ) : null}
             </Button>
           ))}
