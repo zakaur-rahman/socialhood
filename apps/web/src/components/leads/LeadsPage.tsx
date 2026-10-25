@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { cardVariants } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useContacts, useLeadSettings, useLeadSummary, useSetLeadStage, useUpdateLeadSettings } from "@/lib/api/queries";
 import type { ContactListItem, LeadStage, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
@@ -29,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { ITEM_TITLE } from "@/styles/tokens";
 
 import { StageControl } from "./StageControl";
+import { RowCardsSkeleton, SkeletonRegion } from "@/components/states/skeletons";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -198,10 +198,9 @@ function StageColumn({
         {count !== undefined ? <span className="text-xs text-fg-secondary tabular-nums">{count}</span> : null}
       </h2>
       {list.isPending ? (
-        <div role="status" aria-label={`Loading ${label.toLowerCase()} leads`} className="space-y-2">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
+        <SkeletonRegion label={`Loading ${label.toLowerCase()} leads`}>
+          <RowCardsSkeleton count={3} />
+        </SkeletonRegion>
       ) : list.isError ? (
         <EmptyState
           size="compact"

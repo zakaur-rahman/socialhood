@@ -11,7 +11,6 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBleed } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useOrders } from "@/lib/api/queries";
@@ -22,6 +21,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { OrderSheet } from "./OrderSheet";
 import { PaymentsCard } from "./PaymentsCard";
+import { SkeletonRegion, TableSkeleton } from "@/components/states/skeletons";
 
 type Filter = "all" | OrderStatus;
 
@@ -105,10 +105,9 @@ export function OrdersPage() {
 
             <CardBleed className="mt-5 border-t border-line">
               {orders.isPending ? (
-                <div className="space-y-3 p-(--card-padding)" role="status" aria-busy="true" aria-label="Loading orders">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
+                <SkeletonRegion label="Loading orders">
+                  <TableSkeleton columns={6} rows={5} />
+                </SkeletonRegion>
               ) : orders.isError ? (
                 <div className="p-(--card-padding)">
                   <ErrorState error={orders.error} onRetry={() => void orders.refetch()} />

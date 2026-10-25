@@ -5760,3 +5760,36 @@ class updates in `ContactAvatar`, `PlatformStrip` and `BillingPage` tests. E2E (
 `polish-names-colours.spec.ts`. *For the coordinator:* regenerate the client (`ContactPatch.name`,
 `use_platform_name`, `ContactRecord` and `ContactDetail` `name_source` and `platform_name`); no
 decision is pending an owner call (PD-n).
+
+## C-136 Polish B: skeletons and layout shift
+
+### Shared pieces
+- `components/states/skeletons.tsx`: `SkeletonRegion` (the one `aria-busy` region with one polite
+  "Loading" label), `CardSkeleton`, `RowSkeleton`, `RowCardsSkeleton`, `ListCardSkeleton`,
+  `TableSkeleton` (for use inside a `CardBleed`), `ChartSkeleton`, `MetricTileSkeleton`,
+  `MediaSkeleton` (a picture at its real aspect ratio). They use the real `Card`, so padding and
+  radius match; colours are the existing `bg-raised` skeleton and the pulse stops under reduced motion.
+- `Skeleton` is now `aria-hidden`: placeholders are invisible to assistive tech, the region announces.
+- Contacts, Leads, Sequences, Broadcasts, Orders and Products use the shared pieces (a list card,
+  row cards, a table with the real column count). Home, Comments grid, post detail, Schedule list,
+  Knowledge and Automations already had skeletons shaped like their cards and were kept.
+
+### No layout shift
+- `PageFrame` no longer keeps the header height in React state. `--page-header-h` starts at a CSS
+  value for a title-only header (4.5rem + 1px; 5rem + 1px from md) and the observer writes the
+  measured value straight onto the page element, so the first paint and the measured value agree
+  and nothing re-renders.
+- Inbox attachments reserve their box: images and videos take the platform's `width` and `height`
+  when present, otherwise a minimum box (images) or 16:9 (video) holds the place.
+- Fonts: `next/font` (Geist) already self-hosts with `display: swap` and a size-adjusted fallback.
+- The sidebar's collapsed state on first paint is unchanged.
+
+### Measured
+`e2e/layout-shift.spec.ts` records `layout-shift` entries (no recent input) from navigation to idle
+for 27 pages on a desktop and a phone viewport, with the API slowed by 350 ms, and fails above 0.1.
+It runs locally only (CI does not run e2e).
+
+*Not run:* the worktree has no `node_modules` and installing is not allowed here, so the e2e stack's web
+build failed ("Could not find the Next.js package"); the spec, the new skeletons and the PageFrame change
+are written but unmeasured. Run `node scripts/e2e-stack.mjs -- --grep "layout shift"` once from a checked
+out tree with dependencies and fix any page above 0.1. Lint, tsc and vitest were not run either.

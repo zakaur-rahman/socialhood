@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { cardVariants } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchInput } from "@/components/ui/search-input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useContactCount, useContacts, useExportContacts } from "@/lib/api/queries";
 import type { ContactListItem, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
@@ -27,6 +26,7 @@ import { ContactDrawer } from "./ContactDrawer";
 import { FiltersSheet } from "./FiltersSheet";
 import { SegmentBar } from "./SegmentBar";
 import { TagChip } from "./TagChip";
+import { ListCardSkeleton, SkeletonRegion } from "@/components/states/skeletons";
 
 export const SEARCH_DEBOUNCE_MS = 250;
 
@@ -182,11 +182,9 @@ export function ContactsPage() {
         ) : null}
 
         {list.isPending ? (
-          <div role="status" aria-label="Loading contacts" className="space-y-2">
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </div>
+          <SkeletonRegion label="Loading contacts">
+            <ListCardSkeleton />
+          </SkeletonRegion>
         ) : list.isError ? (
           <EmptyState
             icon={<AlertTriangle />}

@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBleed } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useDeleteProduct, useProducts } from "@/lib/api/queries";
@@ -37,6 +36,7 @@ import { ImportDialog } from "./ImportDialog";
 import { ProductSheet, type ProductUploader } from "./ProductSheet";
 import { ShopifyCard } from "./ShopifyCard";
 import { WhatsAppCatalogueCard } from "./WhatsAppCatalogueCard";
+import { SkeletonRegion, TableSkeleton } from "@/components/states/skeletons";
 
 const SOURCE_LABEL: Record<Product["source"], string> = {
   manual: "Added here",
@@ -137,11 +137,9 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
 
             <CardBleed className="mt-5 border-t border-line">
               {products.isPending ? (
-                <div className="space-y-3 p-(--card-padding)" role="status" aria-busy="true" aria-label="Loading products">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
+                <SkeletonRegion label="Loading products">
+                  <TableSkeleton columns={5} rows={5} />
+                </SkeletonRegion>
               ) : products.isError ? (
                 <div className="p-(--card-padding)">
                   <ErrorState error={products.error} onRetry={() => void products.refetch()} />
