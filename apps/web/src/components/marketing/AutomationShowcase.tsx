@@ -36,7 +36,7 @@ const STEPS = [
 /** "Comment LINK, get the link in a DM": the steps with a rail that draws itself, beside the editor's real preview. */
 export function AutomationShowcase() {
   return (
-    <section aria-labelledby="showcase-title" className="relative overflow-hidden py-20 sm:py-24">
+    <section aria-labelledby="showcase-title" className="relative overflow-hidden py-16 sm:py-20">
       <div
         aria-hidden
         className="pointer-events-none absolute top-1/2 right-0 h-[32rem] w-[32rem] -translate-y-1/2 translate-x-1/3 rounded-full bg-[radial-gradient(closest-side,var(--color-brand-soft),transparent)]"

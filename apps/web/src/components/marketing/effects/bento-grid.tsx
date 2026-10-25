@@ -15,7 +15,7 @@ import { MARKETING_CARD } from "../primitives";
  */
 export function BentoGrid({ className, children, label }: { className?: string; children: ReactNode; label?: string }) {
   return (
-    <ul aria-label={label} className={cn("mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-3", className)}>
+    <ul aria-label={label} className={cn("mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-flow-dense md:grid-cols-2 lg:grid-cols-6", className)}>
       {children}
     </ul>
   );

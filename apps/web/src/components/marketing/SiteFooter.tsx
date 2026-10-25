@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, operatorName } from "@/lib/legal";
-import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH, SITE_NAME } from "@/lib/marketing/site";
 import { EYEBROW } from "@/styles/tokens";
 
 import { Container, Logo } from "./primitives";
@@ -18,7 +18,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
     { label: "Start free", href: SIGN_UP_PATH },
   ];
   return (
-    <footer className="border-t border-line bg-canvas">
+    <footer className="relative overflow-hidden border-t border-line bg-canvas">
       <Container className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
           <Logo />
@@ -83,6 +83,14 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
         </Container>
       </div>
+      {/* An oversized, decorative wordmark (C-138): the product name from the constant, in the edge colour. */}
+      <p
+        aria-hidden
+        data-footer-wordmark=""
+        className="pointer-events-none -mt-2 -mb-[0.2em] text-center text-5xl sm:text-8xl lg:text-9xl leading-none font-semibold tracking-tighter whitespace-nowrap text-line-subtle select-none"
+      >
+        {SITE_NAME}
+      </p>
     </footer>
   );
 }

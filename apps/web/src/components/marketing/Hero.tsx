@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Languages, Sparkles } from "lucide-react";
 import Image from "next/image";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import type { Platform } from "@/lib/api/types";
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { DISPLAY } from "@/styles/tokens";
@@ -20,6 +21,18 @@ const TRUST = [
   { icon: BadgeCheck, text: "Official Meta APIs" },
   { icon: Languages, text: "English, Hindi and Hinglish" },
   { icon: Sparkles, text: "Free plan, no card needed" },
+];
+
+/** The "Works with" strip: the platform marks we ship, and plain names for the rest (no third-party logos). */
+const WORKS_WITH: { name: string; platform?: Platform; tile?: string; soon?: boolean }[] = [
+  { name: "Instagram", platform: "instagram", tile: "bg-instagram-logo-gradient" },
+  { name: "WhatsApp", platform: "whatsapp", tile: "bg-whatsapp-logo" },
+  { name: "Facebook", platform: "facebook", tile: "bg-facebook-logo", soon: true },
+  { name: "Website chat", platform: "web", tile: "bg-web" },
+  { name: "Shopify", soon: true },
+  { name: "Razorpay" },
+  { name: "Google Sheets" },
+  { name: "Zapier" },
 ];
 
 /**
@@ -87,7 +100,8 @@ export function Hero() {
           </ul>
         </div>
 
-        <figure className="mx-auto mt-14 max-w-5xl sm:mt-16">
+        <figure className="relative mx-auto mt-14 max-w-5xl sm:mt-16">
+          <div aria-hidden className="pointer-events-none absolute -inset-x-6 -top-10 -bottom-6 -z-10 rounded-3xl bg-glow-brand-top blur-2xl" />
           <ContainerScroll>
             <Image
               src={SHOTS.inbox.src}
@@ -105,6 +119,28 @@ export function Hero() {
             The Social Hood inbox with example data. The shop, people and messages are made up.
           </figcaption>
         </figure>
+
+        <div className="mx-auto mt-12 max-w-4xl text-center sm:mt-14">
+          <p className="text-xs font-medium tracking-wide text-fg-secondary uppercase">Works with</p>
+          <ul aria-label="Works with" className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+            {WORKS_WITH.map((item) => (
+              <li key={item.name} className="flex items-center gap-2 text-sm font-medium text-fg-secondary">
+                {item.platform ? (
+                  <span aria-hidden className={cn("grid size-6 place-items-center rounded-md", item.tile)}>
+                    <PlatformGlyph platform={item.platform} className="size-3.5 text-on-brand" />
+                  </span>
+                ) : null}
+                {item.name}
+                {item.soon ? <span className="rounded-full bg-hover px-1.5 py-0.5 text-2xs font-normal">soon</span> : null}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-fg-secondary">
+            <a href={`#${SECTION_IDS.integrations}`} className="underline underline-offset-4 hover:text-fg">
+              What runs today, and what is coming
+            </a>
+          </p>
+        </div>
       </Container>
     </section>
   );
