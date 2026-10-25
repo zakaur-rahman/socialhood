@@ -5551,3 +5551,28 @@ item 50. The permission work is part of the second App Review submission (O-10,
   (`ExtraMetrics` is an alias in `lib/api/types.ts`). Migrations re-chained as 0048 to 0050 after the
   other branch's 0046 to 0049. The shared lists (nav, plans, tenancy) are untouched (no new table
   or route).
+
+## C-133 · Final batch: what the end-to-end run caught (feature/final-batch)
+
+The final batch (VIS-07 to VIS-14, the GR-24, GR-32 and Ask follow-ups, the Facebook and Stories
+follow-ups and the UI release) was written first and tested once at the end. Locally only the
+checks CI doesn't run on a PR were run (e2e and the UI screenshots); CI runs the rest on the PR.
+The e2e run found these in production code:
+
+- **Conversation starters were never saved (GR-11).** `PUT` and `sync` in `api/v1/ice_breakers.py`
+  didn't commit. The integration tests called the service directly, so they never saw it.
+- **WhatsApp number health, first read.** The broadcast preview sends two requests at once; both
+  inserted the `whatsapp_number_health` row and one failed on the unique key with a 500. The insert
+  now runs in a savepoint (`services/broadcasts/health.py`).
+- **Popups inside a dialog or sheet couldn't be clicked (C-128 Select upgrade).** `ModalInert`
+  marked the modal's own portalled popups inert (`components/ui/modal-inert.tsx`).
+- **Flow preview branch picks.** Choosing a second fork before the first one became the first
+  fork's choice (`withChoice` in `automations/flow/PathView.tsx`, used by the preview and the match
+  tester).
+- **Flow editor at 375 px.** The "Send a saved reply" switch overflowed sideways (`size="sm"`).
+- **The e2e stack** now starts the API before the web build, or the public API reference page was
+  prerendered as "unavailable" and cached for an hour.
+- *Not kept:* gr39's "a published story is in the live stories" check: the sandbox keeps published
+  stories in the worker's memory, which the API process can't see in the e2e stack.
+- *Open:* the UI shots inbox-list-1536 and conversation-1536 failed on a network error
+  (`ERR_NAME_NOT_RESOLVED`); axe reports two contrast issues on sign-in.
