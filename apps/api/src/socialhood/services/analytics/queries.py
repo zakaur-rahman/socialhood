@@ -17,7 +17,10 @@ Rules (agent-architecture §6 "Fair comparison"):
 - Engagement rate = (likes + comments + shares + saves) ÷ reach, in %, at the same age; only
   with reach.
 - ``lifetime`` is a post's latest snapshot (or, without any, its live like and comment counts).
-- Stories are left out: they take no comments and expire before most windows.
+- Stories are left out of rankings and of other posts' baselines: they take no comments and expire
+  before most windows. A Story has its own readings (1 h, 6 h and 23 h) and shows its own figures
+  (reach, views, shares, replies, taps) and, if asked to compare, is compared with the account's
+  other Stories.
 - Date ranges are the workspace's calendar days, both ends included; the default is the last 30
   days. An unknown or another workspace's post or account is 404; ``since`` after ``until`` 422.
 """
@@ -44,6 +47,7 @@ from socialhood.schemas.analytics import (
     AgeName,
     Baseline,
     BaselineKind,
+    ExtraMetrics,
     MetricName,
     PostComparison,
     PostMetrics,
@@ -53,11 +57,12 @@ from socialhood.schemas.analytics import (
 )
 from socialhood.schemas.posts import CommentStats, PostSummary
 from socialhood.services.analytics import stats
-from socialhood.services.analytics.ages import WINDOWS, exact_age, same_format, shown_age
+from socialhood.services.analytics.ages import exact_age, same_format, shown_age, windows_for
 from socialhood.services.analytics.common import View, date_range, load_account, load_post
 
 METRICS: tuple[MetricName, ...] = get_args(MetricName)
 MAX_RANGE_POSTS = 500  # a range baseline or ranking reads at most this many posts, newest first
+EXTRA_METRICS = tuple(ExtraMetrics.model_fields)
 
 
 # ---------------------------------------------------------------- figures at an age
@@ -84,6 +89,11 @@ class Figures:
             engagement_rate=stats.engagement_rate(self.values),
         )
 
+    def extra(self) -> ExtraMetrics | None:
+        """The figures only some posts have, or None when this age has none of them."""
+        found = {m: self.values[m] for m in EXTRA_METRICS if m in self.values}
+        return ExtraMetrics(**found) if found else None
+
     @property
     def known(self) -> bool:
         """Whether any of the analytics metrics is known."""
@@ -100,7 +110,9 @@ def _ints(raw: Mapping[str, Any] | None) -> dict[str, int]:
 def figures_at(post: MediaItem, snaps: Snapshots, age: AgeName) -> Figures | None:
     """The post's figures at ``age`` exactly, or None when it has none there."""
     if age == "lifetime":
-        latest = next((snaps[w] for w in reversed(WINDOWS) if w in snaps), None)
+        latest = next(
+            (snaps[w] for w in reversed(windows_for(post.media_type)) if w in snaps), None
+        )
         if latest is not None:
             return Figures(
                 "lifetime", _ints(latest.metrics), latest.captured_at, latest.insights_final
@@ -154,7 +166,9 @@ async def _performance(
     snaps: Snapshots,
     requested: AgeName | None,
 ) -> tuple[PostPerformance, Figures | None]:
-    used = shown_age(post.posted_at, snaps.keys(), requested, view.now)
+    used = shown_age(
+        post.posted_at, snaps.keys(), requested, view.now, windows_for(post.media_type)
+    )
     found = figures_at(post, snaps, used)
     acct = await accounts.get(session, post.social_account_id)
     granted = acct is not None and Capability.POST_INSIGHTS in view.capabilities(acct)
@@ -168,6 +182,7 @@ async def _performance(
         insights_granted=granted,
         insights_final=found.insights_final if found else False,
         metrics=found.metrics() if found else PostMetrics(),
+        extra_metrics=found.extra() if found else None,
     )
     return performance, found
 
@@ -218,12 +233,16 @@ async def compare_post(
     snaps = (await snapshots_for(session, [post.id])).get(post.id, {})
     performance, found = await _performance(session, view, post, snaps, age)
 
+    story = post.media_type == MediaType.STORY
     statement = select(MediaItem).where(
         MediaItem.social_account_id == post.social_account_id,
         MediaItem.id != post.id,
-        MediaItem.media_type != MediaType.STORY,
+        # A Story is compared with Stories only, and no other post with a Story.
+        (MediaItem.media_type == MediaType.STORY)
+        if story
+        else (MediaItem.media_type != MediaType.STORY),
     )
-    if baseline.same_format:
+    if baseline.same_format and not story:
         statement = statement.where(MediaItem.media_type.in_(same_format(post.media_type)))
     order = (MediaItem.posted_at.desc(), MediaItem.id.desc())
     since = until = None
@@ -302,7 +321,7 @@ async def top_posts(
     ranked: list[tuple[float, MediaItem, AgeName]] = []
     for post in posts:
         taken = snaps.get(post.id, {})
-        used = exact_age(post.posted_at, taken.keys(), age, view.now)
+        used = exact_age(post.posted_at, taken.keys(), age, view.now, windows_for(post.media_type))
         figures = figures_at(post, taken, used) if used is not None else None
         value = figures.value(metric) if figures is not None else None
         if value is not None and used is not None:

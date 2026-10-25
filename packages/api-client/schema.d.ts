@@ -3109,7 +3109,13 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Edit Order
+         * @description Change a draft or waiting order: the lines (re-priced from the catalogue now), the address,
+         *     the note. A new total cancels the payment link and returns the order to a draft; ``payment``
+         *     asks for a new request straight after. 422 once the order has a payment or is closed.
+         */
+        patch: operations["edit_order"];
         trace?: never;
     };
     "/v1/w/{wid}/orders/{order_id}/cancel": {
@@ -3123,9 +3129,31 @@ export interface paths {
         put?: never;
         /**
          * Cancel Order
-         * @description Cancel an order that isn't paid, and its Razorpay link. 422 for a paid order.
+         * @description Cancel an order nobody has paid, and its Razorpay link. 422 once there is a payment:
+         *     refund it first.
          */
         post: operations["cancel_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/fulfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fulfil Order
+         * @description Mark a paid order shipped, with a note (a courier and tracking number, say) that shows on
+         *     the order. 422 for an order that is not paid, or already shipped.
+         */
+        post: operations["fulfil_order"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3143,8 +3171,10 @@ export interface paths {
         put?: never;
         /**
          * Mark Order Paid
-         * @description A member says the order was paid: for UPI, which has no webhook. Who and when are kept on
-         *     the order and in the audit trail. 422 when it is already paid or cancelled.
+         * @description A member says a payment arrived: for UPI, which has no webhook. All that is left, or
+         *     ``amount_minor`` of it (the order is then partly paid; send another request for the rest).
+         *     Who, when and how much are kept on the order and in the audit trail. 422 when it is already
+         *     paid or cancelled, or the amount is more than what is left.
          */
         post: operations["mark_order_paid"];
         delete?: never;
@@ -3164,12 +3194,36 @@ export interface paths {
         put?: never;
         /**
          * Request Payment
-         * @description Make a Razorpay payment link or a UPI request for the order and, unless ``send`` is false,
-         *     send it as a message on the order's conversation. 409 when the method isn't set up ("Razorpay
-         *     isn't set up for this workspace"), 409 ``reply_window_closed`` when the message can't go,
-         *     422 for an order that is paid or cancelled.
+         * @description Make a Razorpay payment link or a UPI request for what is left to pay and, unless ``send``
+         *     is false, send it as a message on the order's conversation. ``allow_partial`` lets the
+         *     customer pay a Razorpay link in parts (rupees only). 409 when the method isn't set up
+         *     ("Razorpay isn't set up for this workspace"), 409 ``reply_window_closed`` when the message
+         *     can't go, 422 for an order that is paid or cancelled.
          */
         post: operations["request_order_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refund Order
+         * @description Refund an order in full or in part, with a reason. A Razorpay payment is refunded through
+         *     the business's own keys (the refund is pending until Razorpay says it is processed); a UPI
+         *     payment is returned by the business, which records it here. 422 for an order without
+         *     payments, too large an amount or no reason; 409 when Razorpay isn't set up.
+         */
+        post: operations["refund_order"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3430,7 +3484,9 @@ export interface paths {
          * @description A finished week against the week before, and the last 8 weeks of each count. ``week`` is
          *     the Monday it starts (default: the latest finished week); a day that is not a Monday, a week
          *     still running or one over a year back is 422. Gaps are null with the days they cover, never
-         *     zeros.
+         *     zeros. ``account_id`` makes every figure that connected account's (an account of another
+         *     workspace is 404); without it the report is workspace-wide and lists each account's own
+         *     numbers in ``breakdown``.
          */
         get: operations["get_weekly_report"];
         put?: never;
@@ -3845,6 +3901,27 @@ export interface paths {
          * @description Start taking people in (and carry on those already in it). 402 past the plan's limit.
          */
         post: operations["activate_sequence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/sequences/{sequence_id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sequence Analytics
+         * @description Who entered, how it went per step (sent, skipped and why, failed, replied) and the funnel.
+         *     Computed on the server; cached for a few minutes.
+         */
+        get: operations["get_sequence_analytics"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4567,6 +4644,12 @@ export interface components {
             /** Username */
             username: string | null;
         };
+        /** AccountBreakdown */
+        AccountBreakdown: {
+            account: components["schemas"]["ReportAccount"];
+            /** Metrics */
+            metrics: components["schemas"]["BreakdownMetric"][];
+        };
         /**
          * AccountBusinessHours
          * @description An account and its own schedule, when it has one (``override``); otherwise the
@@ -4970,6 +5053,7 @@ export interface components {
             /** Credits */
             credits: number;
             error?: components["schemas"]["ErrorInfo"] | null;
+            hints?: components["schemas"]["RunHints"] | null;
             /**
              * Id
              * Format: uuid
@@ -5001,14 +5085,18 @@ export interface components {
              */
             thread_id: string;
             /** Visuals */
-            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"] | components["schemas"]["TrendVisual"] | components["schemas"]["LeadListVisual"] | components["schemas"]["TableVisual"])[];
         };
         /**
          * AgentRunCreate
          * @description POST …/agent/runs: a question in plain language (English, Hindi or Hinglish).
          */
         AgentRunCreate: {
-            /** Request */
+            hints?: components["schemas"]["RunHints"] | null;
+            /**
+             * Request
+             * @default
+             */
             request: string;
             /** Thread Id */
             thread_id?: string | null;
@@ -5036,6 +5124,7 @@ export interface components {
             /** Credits */
             credits: number;
             error?: components["schemas"]["ErrorInfo"] | null;
+            hints?: components["schemas"]["RunHints"] | null;
             /**
              * Id
              * Format: uuid
@@ -5077,7 +5166,7 @@ export interface components {
              */
             thread_id: string;
             /** Visuals */
-            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"] | components["schemas"]["TrendVisual"] | components["schemas"]["LeadListVisual"] | components["schemas"]["TableVisual"])[];
         };
         /**
          * AgentRunList
@@ -5358,11 +5447,13 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source" | "product" | "order";
+            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source" | "product" | "order" | "contact" | "report";
             /** Label */
             label: string;
             /** Parent Id */
             parent_id?: string | null;
+            /** Week */
+            week?: string | null;
         };
         /** ApiKey */
         ApiKey: {
@@ -6373,6 +6464,43 @@ export interface components {
              */
             type: "branch";
         };
+        /**
+         * BreakdownMetric
+         * @description One account's count for the week against the week before, with a weekly series. A value
+         *     the platform can't give is None and ``unavailable`` says why (``insights_not_granted``,
+         *     ``no_readings``); a count is never None for that reason.
+         */
+        BreakdownMetric: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Days Known */
+            days_known?: number | null;
+            /** Days Total */
+            days_total?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "messages_received" | "conversations" | "comments_received" | "replies_sent" | "automation_runs" | "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows";
+            /** Label */
+            label: string;
+            /** Previous */
+            previous?: number | null;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+            /** Unavailable */
+            unavailable?: string | null;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "seconds";
+            /** Value */
+            value?: number | null;
+        };
         /** Broadcast */
         Broadcast: {
             /** Account Label */
@@ -6794,6 +6922,10 @@ export interface components {
              * Format: uuid
              */
             social_account_id: string;
+        };
+        /** CancelOrder */
+        CancelOrder: {
+            notice?: components["schemas"]["NoticeIn"] | null;
         };
         /**
          * CaptionRequest
@@ -7854,7 +7986,7 @@ export interface components {
             /** Step Count */
             step_count: number;
             /** Stop Reason */
-            stop_reason?: ("reply" | "tag" | "stage" | "member" | "ended") | null;
+            stop_reason?: ("reply" | "tag" | "tag_removed" | "stage" | "member" | "ended") | null;
             /** Stop Text */
             stop_text?: string | null;
         };
@@ -7961,6 +8093,8 @@ export interface components {
             capture_kind?: ("email" | "phone" | "field") | null;
             /** Label */
             label: string;
+            /** Stage */
+            stage?: ("new" | "qualified" | "follow_up" | "won" | "lost") | null;
             /** Tag Id */
             tag_id?: string | null;
             /** Tag Name */
@@ -7969,25 +8103,28 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "captured" | "tagged" | "broadcast_replied";
+            type: "captured" | "tagged" | "broadcast_replied" | "lead_stage";
         };
         /**
          * EntryRule
          * @description What starts the sequence for a contact: a lead captured (any, or an email, a phone or an
-         *     answer), a tag added (``tag_id``), or a reply to a WhatsApp broadcast (any, or one).
+         *     answer), a tag added (``tag_id``), a reply to a WhatsApp broadcast (any, or one), or the lead
+         *     moving into a stage (``stage``).
          */
         EntryRule: {
             /** Broadcast Id */
             broadcast_id?: string | null;
             /** Capture Kind */
             capture_kind?: ("email" | "phone" | "field") | null;
+            /** Stage */
+            stage?: ("new" | "qualified" | "follow_up" | "won" | "lost") | null;
             /** Tag Id */
             tag_id?: string | null;
             /**
              * Type
              * @enum {string}
              */
-            type: "captured" | "tagged" | "broadcast_replied";
+            type: "captured" | "tagged" | "broadcast_replied" | "lead_stage";
         };
         /** ErrorInfo */
         ErrorInfo: {
@@ -8003,6 +8140,26 @@ export interface components {
         ExcludePath: {
             /** Path */
             path: string;
+        };
+        /**
+         * ExtraMetrics
+         * @description Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and
+         *     compares): an Instagram Story's replies and its taps and swipes through the Story, and the
+         *     clicks on a Facebook Page post. None: not given for this post or not read yet.
+         */
+        ExtraMetrics: {
+            /** Clicks */
+            clicks?: number | null;
+            /** Exits */
+            exits?: number | null;
+            /** Replies */
+            replies?: number | null;
+            /** Swipes Forward */
+            swipes_forward?: number | null;
+            /** Taps Back */
+            taps_back?: number | null;
+            /** Taps Forward */
+            taps_forward?: number | null;
         };
         /**
          * FacebookConnectPages
@@ -8195,7 +8352,7 @@ export interface components {
             /** Start */
             start: string;
             /** Steps */
-            steps: (components["schemas"]["SendStep"] | components["schemas"]["ProductStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
+            steps: (components["schemas"]["SendStep"] | components["schemas"]["ProductStep"] | components["schemas"]["PaymentStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
         };
         /**
          * FlowPreviewStep
@@ -8261,6 +8418,16 @@ export interface components {
              * @enum {string}
              */
             kind: "follows_business";
+        };
+        /**
+         * FulfilOrder
+         * @description Mark a paid order shipped. ``note`` is shown on the order and in the default message
+         *     (a courier and tracking number, say).
+         */
+        FulfilOrder: {
+            /** Note */
+            note?: string | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
         };
         /**
          * FunnelStep
@@ -8842,6 +9009,60 @@ export interface components {
              */
             status: "sent" | "skipped" | "failed";
         };
+        /**
+         * LeadListVisual
+         * @description Leads waiting for a reply, best score first (list_contacts with awaiting_reply, VIS-08).
+         */
+        LeadListVisual: {
+            /** Items */
+            items: components["schemas"]["LeadRow"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lead_list";
+            /** More Route */
+            more_route?: string | null;
+            /** Reply Ids */
+            reply_ids: string[];
+            /** Title */
+            title: string;
+            /** Total */
+            total: number;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * LeadRow
+         * @description One lead. ``name`` is the customer's own text: render it as text.
+         */
+        LeadRow: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Last Activity Label */
+            last_activity_label?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /**
+             * Lead Stage
+             * @default new
+             * @enum {string}
+             */
+            lead_stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
+        };
         /** LeadScoreCondition */
         LeadScoreCondition: {
             /** At Least */
@@ -8957,9 +9178,14 @@ export interface components {
         };
         /**
          * MarkPaid
-         * @description For a UPI order: the customer's payment reference, if they shared one.
+         * @description A payment a member received by hand (UPI has no webhook): the customer's reference, if they
+         *     shared one, and the amount in minor units when it is less than what is left to pay (blank:
+         *     all of it).
          */
         MarkPaid: {
+            /** Amount Minor */
+            amount_minor?: number | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
             /** Reference */
             reference?: string | null;
         };
@@ -9329,6 +9555,30 @@ export interface components {
             /** Unavailable */
             unavailable?: string | null;
         };
+        /**
+         * NoticeIn
+         * @description A message to the customer about an order's new status, sent on the order's conversation.
+         *     ``message`` replaces the default wording. On WhatsApp after the 24-hour window an approved
+         *     utility template (name and language) carries it; without one it can't be sent.
+         */
+        NoticeIn: {
+            /** Message */
+            message?: string | null;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+        };
+        /**
+         * NoticeOut
+         * @description What happened to the message asked for with a status change: sent, or why not.
+         */
+        NoticeOut: {
+            /** Reason */
+            reason?: string | null;
+            /** Sent */
+            sent: boolean;
+        };
         /** NotificationList */
         NotificationList: {
             /** Items */
@@ -9429,6 +9679,21 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /**
+         * OrderEdit
+         * @description Change an order that is a draft or waiting for payment. Lines are replaced when given (and
+         *     re-priced from the catalogue now); the address and the note are replaced when given (an empty
+         *     note clears it). ``payment``, when given, sends a new payment request straight after, which
+         *     is what replaces a link the edit made useless.
+         */
+        OrderEdit: {
+            address?: components["schemas"]["AddressIn"] | null;
+            /** Items */
+            items?: components["schemas"]["OrderLineIn"][] | null;
+            /** Note */
+            note?: string | null;
+            payment?: components["schemas"]["PaymentRequest"] | null;
+        };
         /** OrderLimits */
         OrderLimits: {
             /** Entitled */
@@ -9491,7 +9756,42 @@ export interface components {
         };
         /** OrderOut */
         OrderOut: {
+            /**
+             * Accept Partial
+             * @default false
+             */
+            accept_partial: boolean;
             address?: components["schemas"]["AddressOut"] | null;
+            /**
+             * Amount Left
+             * @default 0.00
+             */
+            amount_left: string;
+            /**
+             * Amount Left Minor
+             * @default 0
+             */
+            amount_left_minor: number;
+            /**
+             * Amount Paid
+             * @default 0.00
+             */
+            amount_paid: string;
+            /**
+             * Amount Paid Minor
+             * @default 0
+             */
+            amount_paid_minor: number;
+            /**
+             * Amount Refunded
+             * @default 0.00
+             */
+            amount_refunded: string;
+            /**
+             * Amount Refunded Minor
+             * @default 0
+             */
+            amount_refunded_minor: number;
             /** Cancelled At */
             cancelled_at?: string | null;
             contact: components["schemas"]["OrderContact"];
@@ -9506,6 +9806,10 @@ export interface components {
             created_by_name?: string | null;
             /** Currency */
             currency: string;
+            /** Fulfilled At */
+            fulfilled_at?: string | null;
+            /** Fulfilment Note */
+            fulfilment_note?: string | null;
             /**
              * Id
              * Format: uuid
@@ -9517,6 +9821,7 @@ export interface components {
             link_expires_at?: string | null;
             /** Note */
             note?: string | null;
+            notice?: components["schemas"]["NoticeOut"] | null;
             /** Number */
             number: number;
             /** Paid At */
@@ -9529,16 +9834,34 @@ export interface components {
             payment_method?: ("razorpay" | "upi") | null;
             /** Payment Reference */
             payment_reference?: string | null;
+            /** Payments */
+            payments?: components["schemas"]["OrderPaymentOut"][];
+            /** Platform */
+            platform?: string | null;
+            /**
+             * Refundable
+             * @default 0.00
+             */
+            refundable: string;
+            /**
+             * Refundable Minor
+             * @default 0
+             */
+            refundable_minor: number;
+            /** Refunds */
+            refunds?: components["schemas"]["OrderRefundOut"][];
+            /** Social Account Id */
+            social_account_id?: string | null;
             /**
              * Source
              * @enum {string}
              */
-            source: "inbox" | "whatsapp";
+            source: "inbox" | "whatsapp" | "flow";
             /**
              * Status
              * @enum {string}
              */
-            status: "draft" | "awaiting_payment" | "paid" | "cancelled" | "expired";
+            status: "draft" | "awaiting_payment" | "partially_paid" | "paid" | "fulfilled" | "refunded" | "cancelled" | "expired";
             /** Total */
             total: string;
             /** Total Minor */
@@ -9548,6 +9871,67 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** OrderPaymentOut */
+        OrderPaymentOut: {
+            /** Amount */
+            amount: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /**
+             * Paid At
+             * Format: date-time
+             */
+            paid_at: string;
+            /** Recorded By Name */
+            recorded_by_name?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** OrderRefundOut */
+        OrderRefundOut: {
+            /** Amount */
+            amount: string;
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Failure */
+            failure?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "manual";
+            /** Processed At */
+            processed_at?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "processed" | "failed";
         };
         /** OverlapWarning */
         OverlapWarning: {
@@ -9754,6 +10138,24 @@ export interface components {
              */
             user_id: string;
         };
+        /**
+         * PaymentItem
+         * @description One line of an order a payment step makes: a product (and variant, when it has some).
+         */
+        PaymentItem: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
         /** PaymentList */
         PaymentList: {
             /** Items */
@@ -9794,6 +10196,11 @@ export interface components {
         /** PaymentRequest */
         PaymentRequest: {
             /**
+             * Allow Partial
+             * @default false
+             */
+            allow_partial: boolean;
+            /**
              * Method
              * @enum {string}
              */
@@ -9829,6 +10236,43 @@ export interface components {
             webhook_seen_at?: string | null;
             /** Webhook Url */
             webhook_url?: string | null;
+        };
+        /**
+         * PaymentStep
+         * @description Ask the customer to pay: make an order and send the payment link (Razorpay) or UPI request.
+         *     ``source`` ``items`` orders the chosen ``items`` at the catalogue's prices when the step runs;
+         *     ``draft`` uses the conversation's latest order that isn't paid yet (a member's draft, or the
+         *     customer's WhatsApp cart). ``intro`` is a line of your own above the payment message.
+         */
+        PaymentStep: {
+            /** Id */
+            id: string;
+            /**
+             * Intro
+             * @default
+             */
+            intro: string;
+            /** Items */
+            items?: components["schemas"]["PaymentItem"][];
+            /**
+             * Method
+             * @default razorpay
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /** Next */
+            next?: string | null;
+            /**
+             * Source
+             * @default items
+             * @enum {string}
+             */
+            source: "items" | "draft";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "payment";
         };
         /**
          * PeriodFigure
@@ -9956,7 +10400,7 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             baseline: components["schemas"]["Baseline"];
             /** Baseline Size */
             baseline_size: number;
@@ -10054,9 +10498,10 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             /** Captured At */
             captured_at?: string | null;
+            extra_metrics?: components["schemas"]["ExtraMetrics"] | null;
             /** Insights Final */
             insights_final: boolean;
             /** Insights Granted */
@@ -10075,7 +10520,7 @@ export interface components {
              */
             posted_at: string;
             /** Requested Age */
-            requested_age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+            requested_age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
         };
         /**
          * PostRef
@@ -10691,6 +11136,15 @@ export interface components {
             /** Emoji */
             emoji: string;
         };
+        /** ReasonCount */
+        ReasonCount: {
+            /** Code */
+            code: string;
+            /** Count */
+            count: number;
+            /** Text */
+            text: string;
+        };
         /** Recipient */
         Recipient: {
             /**
@@ -10730,6 +11184,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * RefundCreate
+         * @description Refund an order. ``amount_minor`` blank refunds everything not yet refunded.
+         */
+        RefundCreate: {
+            /** Amount Minor */
+            amount_minor?: number | null;
+            notice?: components["schemas"]["NoticeIn"] | null;
+            /** Reason */
+            reason: string;
+        };
         /** RemoveTag */
         RemoveTag: {
             /**
@@ -10752,6 +11217,25 @@ export interface components {
              * @enum {string}
              */
             state: "open" | "human_agent" | "template_only" | "closed";
+        };
+        /**
+         * ReportAccount
+         * @description A connected account, as the picker and the breakdown name it.
+         */
+        ReportAccount: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
+            /** Status */
+            status: string;
+            /** Username */
+            username?: string | null;
         };
         /**
          * ReportAccountMetric
@@ -10872,6 +11356,24 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /**
+         * RunHints
+         * @description VIS-11: a structured follow-up on the run before it, instead of free text from the screen.
+         *
+         *     Two kinds, never mixed: ``range_days`` and/or ``platform`` ask the same question again over
+         *     another range or platform (the controls on a visual); ``reply_conversation_ids`` asks for a
+         *     draft reply to each of those conversations (VIS-12). Keys and values are whitelisted; the
+         *     server words the member's question from them and the planner applies them as if the member had
+         *     asked. Conversations must be the workspace's (404 otherwise).
+         */
+        RunHints: {
+            /** Platform */
+            platform?: ("all" | "instagram" | "facebook" | "whatsapp") | null;
+            /** Range Days */
+            range_days?: (7 | 30 | 90) | null;
+            /** Reply Conversation Ids */
+            reply_conversation_ids?: string[];
         };
         /** SamplePreview */
         SamplePreview: {
@@ -11190,7 +11692,7 @@ export interface components {
              * @default post
              * @enum {string}
              */
-            kind: "post" | "story";
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
@@ -11238,7 +11740,7 @@ export interface components {
              * @default post
              * @enum {string}
              */
-            kind: "post" | "story";
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Targets */
@@ -11277,7 +11779,7 @@ export interface components {
              * @default post
              * @enum {string}
              */
-            kind: "post" | "story";
+            kind: "post" | "story" | "reel";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
@@ -11605,6 +12107,48 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * SequenceAnalytics
+         * @description A sequence's numbers, computed by the server and cached for a few minutes.
+         */
+        SequenceAnalytics: {
+            /** Active */
+            active: number;
+            /** Completed */
+            completed: number;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Enrolled */
+            enrolled: number;
+            /** Failed */
+            failed: number;
+            /** Replied */
+            replied: number;
+            /** Reply Rate */
+            reply_rate?: number | null;
+            /** Sent */
+            sent: number;
+            /**
+             * Sequence Id
+             * Format: uuid
+             */
+            sequence_id: string;
+            /** Skipped */
+            skipped: number;
+            /** Skipped By */
+            skipped_by: components["schemas"]["ReasonCount"][];
+            /** Steps */
+            steps: components["schemas"]["StepStats"][];
+            /** Stopped */
+            stopped: number;
+            /** Stopped By */
+            stopped_by: components["schemas"]["ReasonCount"][];
+            /** Window Hours */
+            window_hours: number;
         };
         /**
          * SequenceBody
@@ -12061,6 +12605,31 @@ export interface components {
             variables?: components["schemas"]["VariableOut"][];
         };
         /**
+         * StepStats
+         * @description One step's numbers. ``reached`` is the people it ran for plus those it is next for; the
+         *     funnel is ``share`` of everyone who entered.
+         */
+        StepStats: {
+            /** Failed */
+            failed: number;
+            /** Position */
+            position: number;
+            /** Reached */
+            reached: number;
+            /** Replied */
+            replied: number;
+            /** Reply Rate */
+            reply_rate?: number | null;
+            /** Sent */
+            sent: number;
+            /** Share */
+            share: number;
+            /** Skipped */
+            skipped: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /**
          * StepVerification
          * @description R2 (TR-AGT-06): what the verifier read back after a write.
          */
@@ -12076,6 +12645,10 @@ export interface components {
         StopOut: {
             /** On Reply */
             on_reply: boolean;
+            /** Removed Tag Ids */
+            removed_tag_ids?: string[];
+            /** Removed Tag Names */
+            removed_tag_names?: string[];
             /** Stages */
             stages: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
             /** Tag Ids */
@@ -12085,8 +12658,8 @@ export interface components {
         };
         /**
          * StopRules
-         * @description When to stop: the contact writing (on by default), a tag from the list being added, or
-         *     their lead stage becoming one from the list.
+         * @description When to stop: the contact writing (on by default), a tag from ``tag_ids`` being added, a tag
+         *     from ``removed_tag_ids`` being taken off, or their lead stage becoming one from the list.
          */
         StopRules: {
             /**
@@ -12094,6 +12667,8 @@ export interface components {
              * @default true
              */
             on_reply: boolean;
+            /** Removed Tag Ids */
+            removed_tag_ids?: string[];
             /** Stages */
             stages?: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
             /** Tag Ids */
@@ -12216,6 +12791,61 @@ export interface components {
             id: string;
             /** Title */
             title: string;
+        };
+        /** TableColumn */
+        TableColumn: {
+            /**
+             * Align
+             * @default left
+             * @enum {string}
+             */
+            align: "left" | "right";
+            /**
+             * Format
+             * @default text
+             * @enum {string}
+             */
+            format: "text" | "count" | "percent";
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * TableRow
+         * @description Cells in the order of the table's columns. Text cells may be the customer's own words:
+         *     render them as text.
+         */
+        TableRow: {
+            /** Cells */
+            cells: (string | number | null)[];
+        };
+        /**
+         * TableVisual
+         * @description A short table of what a tool listed (VIS-09): at most 10 rows and 6 columns.
+         */
+        TableVisual: {
+            /** Columns */
+            columns: components["schemas"]["TableColumn"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "table";
+            /** More Route */
+            more_route?: string | null;
+            /** Rows */
+            rows: components["schemas"]["TableRow"][];
+            /** Title */
+            title: string;
+            /** Total */
+            total: number;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
         };
         /** Tag */
         Tag: {
@@ -12364,7 +12994,7 @@ export interface components {
              * Age
              * @enum {string}
              */
-            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             post: components["schemas"]["PostSummary"];
             /** Value */
             value: number;
@@ -12388,7 +13018,7 @@ export interface components {
              * Requested Age
              * @enum {string}
              */
-            requested_age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            requested_age: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
             /**
              * Since
              * Format: date
@@ -12399,6 +13029,74 @@ export interface components {
              * Format: date
              */
             until: string;
+        };
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Days Known */
+            days_known: number;
+            /** Value */
+            value?: number | null;
+        };
+        /**
+         * TrendVisual
+         * @description One series over time (metric_trend, VIS-07). One series only: a second hue waits for the
+         *     categorical palette (C-123). Every value, the extremes and the change come from the tool.
+         */
+        TrendVisual: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            first?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "count" | "percent";
+            /**
+             * Granularity
+             * @enum {string}
+             */
+            granularity: "day" | "week";
+            highest?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "trend";
+            /** Known Points */
+            known_points: number;
+            last?: components["schemas"]["TrendPoint"] | null;
+            lowest?: components["schemas"]["TrendPoint"] | null;
+            /**
+             * Metric Key
+             * @enum {string}
+             */
+            metric_key: "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps";
+            /** Metric Label */
+            metric_label: string;
+            /** Note */
+            note?: string | null;
+            period: components["schemas"]["VisualPeriod"];
+            /** Points */
+            points: components["schemas"]["TrendPoint"][];
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
         };
         /** UpiSave */
         UpiSave: {
@@ -12679,7 +13377,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -12704,7 +13402,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Url */
             url: string;
         };
@@ -12720,7 +13418,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[] | null;
+            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[] | null;
             /** Status */
             status?: ("active" | "paused") | null;
             /** Url */
@@ -12741,7 +13439,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -12773,7 +13471,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid";
+            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid" | "order.refunded" | "sequence.enrolled" | "sequence.step_sent" | "sequence.completed" | "sequence.stopped";
             /** Version */
             version: number;
         };
@@ -12789,9 +13487,14 @@ export interface components {
          *     The digest email of that Monday carries the same numbers.
          */
         WeeklyReport: {
+            account?: components["schemas"]["ReportAccount"] | null;
             account_comparison: components["schemas"]["MetricComparisonVisual"];
             /** Account Metrics */
             account_metrics: components["schemas"]["ReportAccountMetric"][];
+            /** Accounts */
+            accounts?: components["schemas"]["ReportAccount"][];
+            /** Breakdown */
+            breakdown?: components["schemas"]["AccountBreakdown"][] | null;
             /** Metrics */
             metrics: components["schemas"]["ReportMetric"][];
             /** Needs You */
@@ -14188,7 +14891,7 @@ export interface operations {
                 n?: number;
                 since?: string | null;
                 until?: string | null;
-                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+                age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
                 same_format?: boolean;
             };
             header?: never;
@@ -14232,7 +14935,7 @@ export interface operations {
     get_post_performance: {
         parameters: {
             query?: {
-                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+                age?: ("1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
             };
             header?: never;
             path: {
@@ -14324,7 +15027,7 @@ export interface operations {
                 since?: string | null;
                 until?: string | null;
                 n?: number;
-                age?: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+                age?: "1h" | "6h" | "23h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
                 account_id?: string | null;
             };
             header?: never;
@@ -20925,7 +21628,7 @@ export interface operations {
     list_orders: {
         parameters: {
             query?: {
-                status?: ("draft" | "awaiting_payment" | "paid" | "cancelled" | "expired") | null;
+                status?: ("draft" | "awaiting_payment" | "partially_paid" | "paid" | "fulfilled" | "refunded" | "cancelled" | "expired") | null;
                 contact_id?: string | null;
                 limit?: number;
                 offset?: number;
@@ -21052,6 +21755,51 @@ export interface operations {
             };
         };
     };
+    edit_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     cancel_order: {
         parameters: {
             query?: never;
@@ -21062,7 +21810,56 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelOrder"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    fulfil_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FulfilOrder"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -21151,6 +21948,51 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refund_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundCreate"];
             };
         };
         responses: {
@@ -21791,6 +22633,7 @@ export interface operations {
         parameters: {
             query?: {
                 week?: string | null;
+                account_id?: string | null;
             };
             header?: never;
             path: {
@@ -22953,6 +23796,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Sequence"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_sequence_analytics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sequence_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SequenceAnalytics"];
                 };
             };
             /** @description Validation error */

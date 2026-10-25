@@ -4748,3 +4748,832 @@ change, no migration. The footer has a "Compare and learn" column, every page is
   offer (Razorpay link to the business's own account, or UPI marked paid by hand; no WhatsApp Pay) and
   the catalogue row says WhatsApp product messages need the owner's Meta catalogue and Meta's approval
   (C-121). The plan matrix shows "Orders a month" under commerce (Pro and Max).
+
+## C-123 · More visual answers in Ask (VIS-07 to VIS-10, VIS-12, feature/vis-07-12)
+
+Backlog items VIS-07 (trend), VIS-08 (lead list), VIS-09 (table), VIS-10 (progressive visuals) and
+VIS-12 (prepare replies for leads), on top of GR-38 (C-089). Option C still holds: the API builds
+every visual from the numbers a tool returned, the model neither writes nor sees one, and
+everything stays behind `AGENT_VISUALS_ENABLED` (off by default). No migration, no new route, no
+new setting. Built on the combined batch G (migrations to 0044).
+
+### What every new visual shares
+- **Closed union, three new kinds:** `trend`, `lead_list`, `table` join `metric_comparison`,
+  `ranked_posts` and `sentiment_summary` in `schemas/agent.py` (`Visual`), `agent/visuals.KINDS`
+  and the web's `VisualView` switch. `kind` is required; an unknown kind draws nothing.
+- **Caps in the types:** 92 trend points, 10 leads, 3 `reply_ids`, 10 table rows, 6 columns, 6
+  cells a row. Each visual at most 8 KB (a test builds the worst case of each). A build that fails
+  or is too big drops only the visual.
+- **Same text answer without visuals.** Each visual repeats numbers the tool result already holds
+  (its `summary`, `contacts`, `points`, `items`), so the answer reads the same with the setting
+  off. The trend carries its own sentence (`summary`) as the chart's aria label and its text
+  fallback.
+- **Links** (`more_route`) carry a pattern in the type (`WORKSPACE_PATH`: plain workspace paths
+  with an optional query, no scheme, host, `..`, `//` or fragment), checked again on the web by
+  the same rule as action cards (`visualPath`).
+- **The tool's role check is the visual's.** A builder runs inside the tool after the role gate
+  and only from the rows the tool returns, so a visual can never show more than the tool does.
+- Prompt: `VISUALS_NOTE` names the new tools so the answer doesn't copy their lists. *The prompt
+  file (`agent.v4`) is unchanged, so no version bump; the eval was not run (no key here).*
+
+### Trend (VIS-07)
+- `metric_trend` builds a `trend` visual when at least one point has a reading; with none, the
+  caveats say why and there is nothing to draw.
+- `TrendChart`: a hand-built SVG in `text-chart-series-1` (the brand chart token), the same recipe
+  as the weekly report's `SeriesChart` (scale from 0). A day or week with no reading breaks the
+  line; a lone reading is a dot; nothing is drawn through a gap or in its place. Under the chart:
+  latest, lowest and highest with their days (text, not the picture), and "N of M days have a
+  reading". The SVG's label is the API's `summary`; an `sr-only` table lists every point, a gap as
+  "No reading". The SVG scales with its column (viewBox 300 x 96, `w-full`), so 375 px and the
+  panel need no special case.
+- **One series only.** *Two-series trends (for example this month against last month on one
+  chart) are out of scope: the categorical palette is still on a local branch, and a second hue
+  without it would break the palette lock.* Revisit when it lands.
+- *The scale starts at 0, so followers (1,000 plus a few) looks flat; the facts under the chart
+  carry the real range. Chosen over a floating axis, which exaggerates small moves.*
+- *A range of more than 92 weekly points (about 21 months) fails the build and drops the
+  visual; the tool result and answer stand. The agent's default is 30 days.*
+
+### Lead list (VIS-08)
+- **Filter:** `ContactFilter.awaiting_reply` (the conversation's `awaiting_reply` flag, the one
+  the inbox's "Needs reply" view uses); `list_contacts` gains `awaiting_reply: bool | None`. A
+  contact with no conversation never matches `True`.
+- **Order:** new `services.contacts.top_leads`: lead score highest first, no score last, then the
+  latest activity, with the total that match. The cursor-paged `list_contacts` stays
+  activity-ordered. With `awaiting_reply` the result also has `total`.
+- **Visual:** top 10 (the tool's `limit` still goes to 25; the visual shows 10 and "+N more"
+  links to `inbox?view=needs_reply`). A row has the name (customer text, drawn as text), the
+  platform, the score ("No score" when none, never 0), the GR-18 lead stage and the last-activity
+  words the tool already returns. A row opens the conversation; a contact who never wrote opens the
+  Contacts page.
+- **`contact` ref kind:** `AnswerRefKind` gains `contact`; `list_contacts` cites a contact with no
+  conversation as `contact` (before, such contacts were left out of `refs`). The web opens
+  `contacts` (*the Contacts page has no per-contact route, so the ref opens the list*), labels it
+  "Contact", and has a follow-up for it.
+- **Roles:** unchanged. `list_contacts` is for any member, as before; `awaiting_reply` shows what
+  the inbox shows them.
+- *Doc 05 had `ref (conversation)` on each lead row. A row holds `conversation_id` and
+  `contact_id` instead, and the web builds the link, as `RankedPosts` does.*
+- *The lead's cold flag (GR-18) is not shown: a lead waiting for us is not cold.*
+
+### Table (VIS-09)
+- Used only for tools whose result is a list of like rows:
+  - `search_conversations` (any member): customer, platform, last message, when, lead score.
+    More: `inbox` or `inbox?view=<view>`.
+  - `list_orders` (owners and admins, like the tool): order, customer, status, total (the money
+    text the tool already formats, right-aligned), date. More: `orders`.
+- Not used for tools whose rows are nested or single records (`search_products` has variants,
+  `get_*` and the knowledge tools return one thing). *The risk the backlog names is overuse; the
+  rule is a tool opts in by calling `visuals.table` with its own rows.*
+- Figures are right-aligned with tabular digits; text cells are clipped to 80 characters and drawn
+  as text; a missing cell is a dash. The table scrolls inside its card at 375 px (`Table` with a
+  scroll label), never the page. "+N more" is a link when the API gave a safe path.
+- *Rows are `{cells: [...]}` in column order, not a dict by column key: smaller, and OpenAPI
+  generates a plain tuple-like list.*
+
+### Progressive visuals (VIS-10)
+- `applyAgentStepEvent` (`lib/agent/cache.ts`): when a step of a tool in `VISUAL_TOOLS` succeeds
+  and the run is open in this browser (it has a cached detail), the run detail is invalidated,
+  debounced at 300 ms (steps that finish together share one fetch; a later step waits again).
+  Events still carry no result: the set of tools is the only signal.
+- `RunView` shows `run-visuals` under the working steps, so the visual appears before the answer
+  is written. When the run finishes it moves to its usual place under the answer.
+- `VISUAL_TOOLS` mirrors the API's tools that have a `visual` in their result. *A DB-free API test
+  (`test_the_web_refetches_for_exactly_the_tools_that_can_carry_a_visual`) reads `cache.ts` and
+  fails when the two differ, so a new visual tool can't ship without it.*
+- *With the setting off a visual-tool step still costs one extra GET that returns `visuals: []`.
+  Left as is: the web can't see the setting, and the fetch is tiny and debounced.*
+
+### Prepare replies for these leads (VIS-12)
+- The lead list shows "Prepare replies" on the latest answer (the same rule as follow-up
+  questions). It asks, in the same thread, for a `draft_reply` on each of the conversations in
+  `reply_ids`: the best-scored leads that have a conversation, **at most 3**, chosen by the API.
+- **The request carries ids only** (no customer name or text goes into a prompt): "Prepare replies
+  for these leads. Use draft_reply once for each of these conversations, one at a time, and send
+  nothing: ... If a reply window is closed, skip that conversation and say so." It is shown as the
+  member's question, ids included. *Cleaner would be a structured hint on the run (VIS-11's
+  `AgentRunCreate.hints`); not built.*
+- **Caps:** a draft is 2 credits and one tool call; a run has 10 credits and 8 tool calls
+  (`RUN_CREDIT_CAP`, `MAX_TOOL_CALLS`). 3 drafts plus the turns that call them fit; 8 would not.
+  *The backlog's "8 tools" is the call cap, but the credit cap binds first.* A unit test checks the
+  arithmetic against both constants.
+- **Never sent:** `draft_reply` is a draft-tier tool; it drafts and returns the text. Nothing in
+  this path sends (a test checks no outbound message exists and that each draft is metered at 2
+  credits).
+- **Cards:** each draft is the existing `schedule_message` card that opens
+  `inbox/<id>?schedule=1` with the text, no time. *Its label is now "Schedule a reply to <name>"
+  (it was "Schedule this reply") so several cards can be told apart.* The name is customer text,
+  clipped and drawn as text.
+- *A lead whose reply window is closed fails its own draft with the tool's usual message and the
+  others go on; the request says to skip and say so. Not pre-filtered: the contacts service
+  doesn't hold the window, and a pre-check would cost one query a lead.*
+
+### Evals and tests
+- Eval: `trend-reach-30` now expects a `trend` visual holding the first and last days' readings;
+  new `visual-leads-waiting` expects a `lead_list` whose scores are the seeded needs-reply
+  conversations'. The visual-number check already requires every figure to be one a tool returned.
+- API unit (run here): builders (gaps, summary, caps, size, links), the credit arithmetic, the
+  `awaiting_reply` SQL, the orders table, the web/API tool list, kinds read back.
+  `tests/unit/test_agent_visuals.py` was updated for the six kinds.
+- API integration (written, not run): `tests/integration/test_agent_visuals_vis.py`: order and
+  total, 10 cap, roles, the setting off, another workspace, the drafts and their credits, the
+  trend from seeded days with a gap, the table, the run API with the new kinds.
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (layout, words, links, cache and debounce),
+  `components/agent/VisualViewVis.test.tsx` (each visual, malicious text, the follow-up, the run
+  while working), fixtures in `src/test/visuals.ts`.
+- E2E `e2e/vis-07-12.spec.ts` (written, not run). The e2e API (`scripts/e2e/api.py`) gains `trend`
+  on `/agent-runs` and `POST /__e2e/workspaces/{wid}/agent-leads`, which sets lead scores and runs
+  the real `list_contacts`, `search_conversations` and (with `drafts`) `draft_reply` as steps,
+  because the fake model calls no tools.
+- **Checked centrally:** regenerate `apps/api/openapi.json` and `packages/api-client`
+  (`TrendVisual`, `LeadListVisual`, `TableVisual`, `TrendPoint`, `LeadRow`, `TableColumn`,
+  `TableRow`, `AnswerRef.kind` with `contact`, `list_contacts` is a tool not a route so no route
+  change); typecheck, build, the integration and tenancy suites, vitest, the e2e spec.
+
+### Left for later
+VIS-11 (range controls), VIS-13 (the report page), VIS-14 (the OpenUI spike), VIS-X2 (quote
+account names in the prompt), VIS-X4 (design-system entries for `TrendChart`, `LeadList` and
+`DataTableVisual`), a two-series trend, a reply-window pre-check for the lead follow-up, and
+localised labels.
+
+## C-124 · Sequence follow-ups (GR-24, feature/followups-24-32-ask)
+
+The four items C-118 left as "not built", on the same tables and hooks. Migration `0046` (after `0044`;
+`0045` is the visuals branch's), expand-only.
+
+- **Stop when a tag is removed.** New stop rule `stop_removed_tag_ids` (up to 20 tags) beside the
+  existing `stop_tag_ids`. A removal arrives through `webhooks.events.contacts_tagged` like an addition
+  (the contacts API, a flow's "remove tag" step and the agent already call it with `added=False`);
+  `entry.on_tagged` now handles both. The enrolment is stopped with the new reason `tag_removed` and
+  says "A tag they needed was taken off: VIP". Only the contact's *active* enrolments in sequences that
+  list the tag are touched. The stop-reason check on `sequence_enrolments` is widened.
+- **Start on a lead stage.** New entry type `lead_stage` with `entry_stage` (new, qualified, follow up,
+  won or lost; every stage can start a sequence, "new" included). `entry.on_stage`, called by
+  `webhooks.events.lead_stage_changed` (GR-18), now first stops the sequences that stop on the new
+  stage and then enrols the contact in those that start on it, so a stage never stops the sequence it
+  just started. The enrolment says "Lead stage: Qualified". It follows the usual rules: only an active
+  sequence on the contact's own account, one active enrolment at a time, re-entry only if allowed.
+  The `entry_type` check is widened; `entry_stage` has its own check.
+- **Analytics** (`GET /sequences/{id}/analytics`, owners and admins, `services/sequences/analytics.py`).
+  Computed on the server from the enrolments and step runs and cached in Redis for 5 minutes
+  (`seqstats:<workspace>:<sequence>`; a cache outage only costs the query). Definitions:
+  - entered, in it now, finished, stopped, with stopped split by reason (most first);
+  - sent, skipped (split by reason code, with the sentence) and failed, from the step runs;
+  - **replied** = a *sent* run followed by a customer message in the contact's conversation on the same
+    account within 24 hours of the run (`window_hours` in the answer). Someone who answers two steps
+    counts once for each. *My choice of window; the brief said "within the window after a step".*
+  - per step: reached (the runs at that step plus the people it is next for), waiting, sent, skipped,
+    failed, replied, reply rate and the share of everyone who entered, which is the funnel.
+  The reply count is one `EXISTS` over `messages` (`ix_messages_thread` serves it). *Not built:* opens
+  and reads, a date range, per-variable breakdowns.
+- **Webhook events** `sequence.enrolled`, `sequence.step_sent`, `sequence.completed` and
+  `sequence.stopped` through GR-04's catalogue (now 16 events with `order.refunded`; the catalogue test
+  counts them). Payload: the contact, `sequence` (id, name), `enrolment_id`, plus the step (1-based),
+  `step_count`, `sent_as` and `message_id` on a step, and `reason` and `reason_text` on a stop. `emit` is
+  skipped when no endpoint wants the event. A person taken out by hand emits `sequence.stopped` with
+  reason `member`. *The Zapier trigger list (GR-26) is unchanged: it has five triggers and does not
+  expose `order.created` or `order.paid` either, so the sequence events are not added there.*
+- **Web.** The editor offers "A lead moves into a stage" (with a stage picker) and a "One of these tags is
+  taken off" group under "Stops when". The sequence page has a Numbers section (stat figures, the
+  skip and stop reasons, and a `Meter` per step for the funnel) between the form and the people; it
+  stays out of the way if the numbers can't load.
+- **Ask.** `list_sequences` also lists the removed-tag stops ("the tag VIP being removed").
+- **Tests.** Unit: `test_sequence_analytics.py` (the counts, rates and funnel from grouped numbers, the
+  new entry and stop rules, the words). Integration: `test_sequence_follow_ups.py` (tag removed stops
+  and leaves the others, a stage starts a sequence, validation, the numbers with a skip, a stop and a
+  reply, the empty sequence, 404, the four events, the catalogue). Vitest: `SequenceNumbers`, `format`.
+  E2E: `followups-sequences.spec.ts`. *Integration, vitest and e2e were written, not run.*
+- **For the coordinator:** regenerate the client (`SequenceAnalytics`, `StepStats`, `ReasonCount`, the
+  `lead_stage` entry type and `stage`, `removed_tag_ids` / `removed_tag_names`, `tag_removed` stop
+  reason, `get_sequence_analytics`, the four `EventName`s). Migration `0046` follows `0044`; the
+  coordinator re-chains it with the others.
+- *Fixed in the combined batch:* a reply in the same second as the step's send now counts ("replied" compares at whole seconds, since Meta's webhook timestamps have no fractions); CI's fast runner caught it.
+
+## C-125 · Order follow-ups (GR-32, feature/followups-24-32-ask)
+
+Part payments, refunds, shipping, editing, status messages and the "request payment" flow step, on the
+GR-32 tables. Migration `0047` (after `0046`), expand-only: `orders` gains `amount_paid_minor`,
+`amount_refunded_minor`, `accept_partial`, `fulfilled_at` and `fulfilment_note`; two new tables,
+`order_payments` and `order_refunds`; the status check gains `partially_paid`, `fulfilled` and
+`refunded`, and the source check gains `flow`. Orders paid before it are backfilled with their one
+payment. *Everything Razorpay-side below is unverified against a real account; see
+`docs/verification.md` item 38.* PD-8 (commerce is Pro and Max) applies to all of it; nothing here is
+pending another PD.
+
+### Status and money
+- **Statuses:** draft, awaiting payment, **partly paid**, paid, **shipped** (`fulfilled`), **refunded**,
+  cancelled, expired. The money is rows, not a status: every payment is an `order_payments` row and
+  every refund an `order_refunds` row, and the two totals on the order are kept equal to their sums by
+  `services/orders/ledger.py`. Partly paid means some of the total is paid; paid means all of it.
+  Refunded means everything paid has been given back; a part refund leaves the status as it is (the
+  sheet shows "Partly refunded" and the amounts).
+- **Part payments.** *Razorpay:* the payment request can set `allow_partial`, which creates the link
+  with `accept_partial: true`; Razorpay's `payment_link.partially_paid` and `payment_link.paid` events
+  each record the payment entity's own amount (the link's running total is only a fallback). A Razorpay
+  payment is unique per order by its payment id, so a re-delivered event and the final `paid` event never
+  count twice. A link that does not take part payments ignores a part (and logs it), as before. *In
+  rupees only: unverified whether Razorpay allows part payments in other currencies, so the API refuses
+  `allow_partial` for a non-INR order until a real account says otherwise.* *UPI:* a member records each
+  payment (`POST .../mark-paid` with `amount_minor`; blank is everything left); more than is left is a
+  422. Asking for payment again on a partly paid order asks for what is left (the link or UPI amount and
+  the message say "Paid so far" and "Left to pay").
+- **Cancelling** an order with payments is a 422 ("Refund them before you cancel it"); *a paid order was
+  already final, and a partly paid one now is too.* Unpaid and expired orders behave as before.
+- **Refunds** (`POST /orders/{id}/refunds`: `amount_minor` blank for everything, a required `reason`).
+  Taken from the newest payments first. A Razorpay payment is refunded through the business's own keys
+  (`POST /payments/{id}/refund`, normal speed, our reason in the notes); the refund is **pending** until
+  Razorpay's `refund.processed` (or `refund.failed`) webhook arrives, or processed at once when
+  Razorpay answers so. A UPI payment can't be sent back by us: the member pays it back themselves and
+  the refund is recorded as processed at once ("paid back by you"). The refundable amount is paid,
+  less processed refunds, less pending ones, so two refunds can't promise the same money; a failed
+  refund frees it again. If Razorpay refuses or can't be reached on the first part the request fails
+  (422 or 502) and nothing is recorded; on a later part the failed part is recorded as failed. **A
+  refund made in the Razorpay dashboard** arrives as the same webhook and is recorded as "Refunded in the
+  Razorpay dashboard" (ignored if it is more than was paid or the payment is unknown). The webhook card
+  lists `refund.processed` and `refund.failed` to turn on.
+- **Event** `order.refunded` (payload as for the other order events, plus `refund`: id, amount, reason,
+  method, and `full`), emitted once when a refund becomes processed. `order.created` and `order.paid`
+  also carry `amount_paid_minor` and `amount_refunded_minor`. `RAZORPAY_PROVIDER=fake` refunds
+  (`rfnd_fake_<n>`, processed; `refund_status = "pending"` leaves one for the suite to finish with a
+  signed `refund.processed`).
+- **Shipping.** `POST /orders/{id}/fulfil` with an optional note (courier and tracking number) moves a
+  paid order to `fulfilled`; shown on the order, in Activity and on the contact timeline ("Order #12
+  shipped"). A shipped order can still be refunded.
+- **Audit.** Every change writes a row: `order.edited` (changed parts, totals before and after, whether
+  the link was cancelled), `order.marked_paid` (amount), `order.payment_requested` (method, partial),
+  `order.cancelled`, `order.fulfilled`, `order.refunded` (amount, reason, methods) and
+  `order.status_message` (sent or not); Razorpay-driven changes are system rows labelled "Razorpay"
+  (`order.payment_recorded`, `order.refund_updated`); the flow step's rows are "Automation: name".
+
+### Editing
+- `PATCH /orders/{id}` while the order is a draft or awaiting payment (422 after that, with the status in
+  words): `items` replaces the lines and re-prices them from the catalogue now (the same checks as
+  making an order: switched off, no price, stock, one currency; another workspace's product is 404),
+  `address` and `note` replace theirs (an empty note clears it). **A new total makes the payment link
+  useless:** the old Razorpay link is cancelled (best effort) and the order goes back to a draft, unless
+  the request carries `payment`, which asks for a new request straight after (and sends it). An edit that
+  keeps the total leaves the link alone. The sheet's "Edit order" dialog shares the line and address
+  fields with "Create order" (`OrderLinesFields`).
+
+### Messages to the customer
+- Every status change (`mark-paid`, `cancel`, `fulfil`, `refunds`) accepts an optional `notice`
+  (`message`, `template_name`, `template_language`). The change is made first; the answer's `notice`
+  says `{sent, reason}`, and the sheet toasts the reason when it didn't go.
+  - **Inside the 24-hour window** it goes as text, the member's own words or the default ("Thanks, we've got
+    your payment for order #12 (INR 1598.00).", "We've received INR 500.00 for order #12. INR 1098.00 is
+    still to pay.", "Good news: order #12 is on its way. Delhivery 123", "Order #12 has been cancelled.",
+    "We've refunded INR 200.00 for order #12. It can take a few days to show in your account.").
+    Human Agent applies as for any member's message.
+  - **Outside it on WhatsApp** only an approved *utility* template can go (an order update is not
+    marketing, so marketing consent is not involved; GR-23's `approved_templates` is the source). Its
+    variables are filled in this order: the customer's first name, the order number, the total, the new
+    status in words; a template with more than four is refused. With no template chosen the message is
+    not sent and the answer says "The 24-hour window has closed. WhatsApp only allows an approved
+    template now. Choose a utility template to send this update."
+  - **Outside it on Instagram or Messenger** it can't be sent, and the answer says why.
+  - No conversation (the order has none) or an account that needs reconnecting also say so.
+  The template picker in the sheet lists the number's approved utility templates with up to four
+  variables (`OrderOut` now carries the conversation's `social_account_id` and `platform`).
+  *Unverified:* that a utility template is accepted by Meta for these updates; the sandbox's
+  `order_shipped` (two variables) is what the tests use.
+
+### The flow step "request payment"
+- New step type `payment` (`schemas.flows.PaymentStep`): `source` `items` (up to ten products, with a
+  variant when the product has some, and a quantity) or `draft` (the conversation's latest order that is
+  not paid yet: a draft, a WhatsApp cart, one awaiting payment, or one only partly paid), a `method`
+  (Razorpay or UPI) and an optional `intro`. Like the product step it needs the `commerce` plan to be
+  saved (402 "Asking for payment is part of Pro.") and is checked at activation: the method must be set
+  up under Payments, the products exist, are switched on and have a variant chosen when they have
+  variants, and `items` is not empty; it can't follow a comment's private reply. The flow editor has the
+  step (`PaymentFields`).
+- **At run time** (`services/orders/flow_payment.py`) the plan is checked again, a new order is made at
+  the catalogue's prices *when the step runs* (source `flow`, nobody made it; the monthly cap applies),
+  and the payment message goes as an automation message. Failures end the run with a plain reason in the
+  step log and Activity: no plan, no unpaid order to ask for, a product gone or switched off or out of
+  stock, the method not set up. A refused Razorpay key from inside a run is not written to the payment
+  card (the run commits as a whole). The step's run row carries the `order_id`.
+
+### Other places
+Activity shows paid, shipped and refunded orders; the contact timeline has words for every status; Ask's
+`list_orders` knows the new statuses and counts paid or shipped orders as paid; the orders page filters
+by partly paid, shipped and refunded.
+
+### Not built
+Reminders for unpaid orders; refunds by the line (a refund is an amount, with a reason); automatic
+restocking; shipping labels or courier tracking; delivery fees, tax and discounts; a customer-facing
+order page; editing the lines of a partly paid order (refund and make a new one).
+
+### Tests
+Unit: `test_order_follow_ups.py` (what is left to pay or refund, the split of a refund over payments,
+the default messages, the payment message of a part-paid order, the UPI amount, the Razorpay refund call
+and statuses with a mock transport and the sandbox, the request shapes, the payment step's activation
+checks). Integration: `test_order_follow_ups.py` (UPI parts and the rest, a Razorpay link taking parts
+and each payment counted once, a part and then a full refund with the events and audit, the refund
+rules, a pending refund finished by the webhook and a failed one freeing the money, a dashboard refund,
+Razorpay failures, a UPI refund, shipping, editing and the link, status messages in and out of the
+window, on WhatsApp with templates), `test_flow_payment.py` (the step's order and message, the price
+read when it runs, draft mode, a plan that was left, a method not set up, saving and activating).
+Tenancy: the new routes and tables in `test_isolation.py`; the purge and account-deletion lists have
+the two tables. Vitest: `OrderSheet.test.tsx`, `lib/orders/format`, `lib/automations/flow`. E2E:
+`followups-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written, not run.*
+
+### For the coordinator
+- Regenerate the client: `OrderOut` (new money fields, `payments`, `refunds`, `notice`,
+  `social_account_id`, `platform`), `OrderPaymentOut`, `OrderRefundOut`, `NoticeIn`, `NoticeOut`,
+  `MarkPaid`, `CancelOrder`, `FulfilOrder`, `RefundCreate`, `OrderEdit`, `PaymentRequest.allow_partial`,
+  `PaymentStep` / `PaymentItem` in the flow step union and `StepType`, the new statuses, `flow` order
+  source, the operations `edit_order`, `fulfil_order`, `refund_order`, and the `order.refunded` and
+  `sequence.*` event names. The web types are aliases waiting for it.
+- `alembic check` for `0047` (after `0046`, which follows `0044`). Add the two refund events to the
+  Razorpay dashboard's webhook for the live test. Owner track: a real test account to verify item 38.
+
+## C-126 · The assign action in Ask's flow proposals (GR-36 + GR-20, feature/followups-24-32-ask)
+
+GR-20 added the flow action `assign`; `propose_flow` could not draft it. Now it can.
+
+- **The model's side** (`agent/tools/proposals.py`): an action step may be `assign`, with `assign_to`
+  `member`, `round_robin` or `nobody` and, for a member, `member` (the member's name or email as the
+  workspace lists them; never an id, like tags). `build_flow` resolves it with the workspace's roster
+  (`assignment.roster`). A name is matched ignoring case against the member's name (or the part of the
+  email before the @) and their email; no match is a `validation_error` that names the step and lists
+  the team ("There's no team member called "X". Members of this workspace: ..."), which the model can
+  correct; two members with the same name is "More than one member is called ... Use their email
+  address instead."; a missing `assign_to`, a member with no name, or a member named for `nobody` or
+  `round_robin` is refused with what to fix.
+- **Validation is the editor's.** The gateway's `check_flow` already ran `flow_store.reference_errors`,
+  which refuses an assign step whose member is not on the team ("That person isn't on your team any
+  more.") or is missing ("Choose who gets the conversation."); no second rule was added. Approving
+  saves a draft as for any flow.
+- **Round-robin** works in a flow whatever the workspace's own setting says (C-117), but only to an
+  *available* member. *Decision (the brief said "needs the workspace setting or says what to switch
+  on"; the editor and the engine have no such requirement, and "same validation as the editor" won):*
+  the proposal is accepted and its summary says what to switch on: "Nobody is available for assignment
+  now, so the assign step would be skipped. Turn on availability for a member under Members." and/or
+  "New conversations are not handed out in turn yet (Settings, Members). This step still assigns in turn
+  when it runs." (`actions.assign_notes`, from `assignment.overview`.)
+- **The summary** names the member ("assign to Ben Das"), "assign to the next available member" or
+  "remove the assignee" (`flows.describe` takes the member names; without them it says "assign to a team
+  member"), in the proposal card's lines. Ask's reading of an existing flow uses the generic wording.
+- **Schema and prompts.** `ProposedStep` has `assign_to` and `member`; the tool description lists the
+  actions in 500 characters (the registry test caps it). The eval set has `write-flow-assign`.
+- **Tests.** Unit (`test_agent_actions.py`): resolving by name or email, in turn and nobody, every
+  refusal, the stranger message listing the team, the card lines, the round-robin notes, the schema.
+  Integration (`test_agent_actions.py`): a member is saved as an assign step in a draft, a stranger is
+  refused before anything is stored, the round-robin notes with the setting off and nobody available.
+- *Not changed:* the web proposal card shows the summary lines as they are; nothing there lists actions.
+
+
+## C-127 · Theme single source and exception list (feature/theme-single-source)
+
+Implements the theme audit (F-01 to F-17, exceptions E-01 to E-12). Visual consistency only: no
+logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
+
+- **One source.** `styles/globals.css` is the only place a theme value is written. New
+  `scripts/gen-tokens.mjs` (no dependencies; `pnpm tokens`, also `predev` and `prebuild`) parses it
+  and writes `styles/tokens.generated.ts` and `.json`, both committed. `tokens.ts` keeps only the
+  descriptions (name, use, swatch) and the type-role constants and reads the values from the
+  generated file; `colorValue()` reads them too, and a chart alias resolves to its token. New
+  `radiusValue()`. `tokens.test.ts` regenerates in memory and fails on drift, requires a `use` entry
+  for every `--color-*` and none for a token that is gone, and forbids a theme literal in
+  `tokens.ts`. `scripts/generate-icons.mjs` reads shell-1, shell-2 and fg from the JSON (the icons
+  come out byte-identical). The brand gradient is `--gradient-brand` in `:root`, used by
+  `bg-brand-gradient` and by Clerk's primary button (`var(--gradient-brand)`); the other gradients
+  are variables too. Clerk's radii read `radiusValue("lg")` and `var(--radius-xl)`; the global error
+  page reads `radiusValue("lg")`. DESIGN_SYSTEM §1.13 points to globals.css and is marked
+  historical; §1.10 and §1.12 are updated.
+- **Light mode is not built.** Dark only, as decided; THEME.md §1 lists the prerequisites.
+- **Semantic names everywhere (F-03, F-04).** Hand-written code, `components/ui` included, uses the
+  tokens: `bg-popover` to `bg-overlay`, `text-muted-foreground` to `text-fg-secondary`,
+  `border-input` to `border-line-control`, `bg-primary` to `bg-brand-strong`, `border-border` to
+  `border-line`, `bg-border` to `bg-line`, `ring-background` to `ring-canvas`, `text-foreground` to
+  `text-fg`, `outline-ring`/`border-ring`/`ring-ring` to `outline-brand`/`border-brand`/`ring-brand`.
+  Every mapping is the alias's own target, so no pixel moves. The `:root` aliases and `@theme inline`
+  stay for `shadcn add` output, with a comment and a manifest entry; the lint bans the class names
+  in all of `src`. The inert `--radius` is removed. `SavedReplyPicker` uses `FLOATING_SURFACE`.
+- **F-01.** `bg-surface` (undefined, transparent) was in ActivityPage, ContactsPage, LeadsPage,
+  SegmentBar and TagChip. The three cards and the table wrapper use `cardVariants()` (`panel`,
+  `line` edge); the two chips use `bg-hover` (the neutral chip fill). This is a visible fix: those
+  surfaces were transparent on `canvas` and are now `panel`.
+- **Named shades instead of opacity modifiers (F-05).** 58 modifiers to 0. New tokens, all derived
+  with `color-mix` from their base so they follow it: `media-wash` 20%, `media-chip` 70%,
+  `media-heavy` 85% (media scrim: /20 to wash, /50 /60 /70 to chip, /80 /85 and `from-canvas/90` to
+  heavy); `panel-glass` 50% (panel /30 /40 /50 /60 /70) and `panel-veil` 85% (the floating nav);
+  `canvas-veil` 30% (canvas /20 /30 /40); `on-brand-soft` 15%, `on-brand-line` 30%,
+  `on-brand-line-strong` 60%; `danger-line` 30%, `warning-line` 40%; `danger-fill-hover`;
+  `fg-hover`. Exact duplicates use existing tokens: `success-soft`, `warning-soft`; `brand-soft/20`
+  to `brand-soft`; `bg-raised/60` to `bg-hover`; the dialog footers' `bg-muted/50` to `bg-field`.
+- **Gradients (F-06).** New `bg-glow-brand-top` (50% 55% at the top, as the hero had) used by Hero
+  and LazyIllustration. AutomationShowcase's circular glow, the moving border, the lamp and the
+  spotlight stay as listed marketing-effect exceptions.
+- **Charts (F-07).** Legends use the `chart-*` tokens their bars use; data bars are
+  `bg-chart-series-1` (TopIntentsCard was the gradient); gradients stay for meters and progress. The
+  series chart axis is `stroke-line-strong` with no stroke opacity.
+- **Cards (F-08).** App cards use `cardVariants` (SuggestionCard keeps its `rounded-lg` and padding).
+  Marketing cards use `MARKETING_CARD`, `MARKETING_CARD_GLASS` and `MARKETING_CARD_HOVER` in
+  `marketing/primitives.tsx`, static edges `line` (hover `line-strong`). Left: the PostComposer sticky
+  bar (a bar that is a card only from `md`), the app chrome frames (sidebar, shell, inbox), the
+  mock-UI cards inside `Illustrations.tsx`, and the Languages and Trust cards (a `canvas` fill).
+- **States (F-09).** Hover on SuggestionCard's and EmojiPicker's small buttons and on the
+  TemplatePicker option is `hover:bg-hover`; `disabled:opacity-30` is 50. `hover:bg-pressed` stays
+  on three elements that already sit on a `hover` or tinted fill, where `hover` would be invisible:
+  the Ask source chip and suggestion rows (AnswerText, AskConversation) and the download button on a
+  file card inside a bubble (AttachmentView). The empty send buttons keep `disabled:opacity-100`
+  (listed).
+- **Inverse button (F-11).** New Button variant `inverse` (`bg-fg text-canvas hover:bg-fg-hover`)
+  for Ask's stop button and the carousel arrows in PostPreview.
+- **Type (F-12).** `tracking-eyebrow` and `leading-display` are theme tokens, so no arbitrary
+  tracking or leading remains. SiteFooter headings use `EYEBROW`. Headings use the roles:
+  `ITEM_TITLE`, `CARD_TITLE`, `SECTION_TITLE`, `PAGE_TITLE`.
+- **Radius and shadow (F-13, F-14).** SiteFooter `rounded` to `rounded-sm`. The radius scale is
+  written in `@theme`. New `--shadow-glow`, `-hover` and `-button` replace the 2xl, xl and lg shadows
+  tinted with `shadow-brand/N`. Stale comments in `ui/floating.ts` and `lib/utils.ts` updated;
+  tailwind-merge knows the new names.
+- **Left as is.** F-10 (marketing border colours are now consistent through the shared constants;
+  the implicit-colour borders are fine), F-15 (arbitrary sizes, not colour), F-16 (test literals, now
+  listed), F-17 (emails: out of the web app and email clients can't use CSS variables; listed with
+  the reason, not changed).
+- **Lint and manifest.** `styles/colour-exceptions.ts` lists every intentional literal, allowed
+  shade, runtime channel, token group, the shadcn layer, dark-only choice and static asset with a
+  reason. `design-lint.test.ts` now also checks undefined colour tokens (built from globals.css),
+  arbitrary colour/shadow/gradient values, colour literals and inline colour styles (ts, tsx, other
+  css, `scripts/*.mjs`), shadcn alias class names anywhere in `src`, opacity modifiers on tokens,
+  the focus names, disabled opacity, arbitrary tracking and leading, a bare `rounded` and `dark:`,
+  with positive and negative self-tests, and it fails on a listed entry that is gone.
+- *Deviation: the audit said a file that uses `colorValue()` may hold literals. It may not: the five
+  such files are held to none by `tokens.test.ts`, and the one literal among them (the OG glow's
+  `rgba(0,0,0,0)`) is a manifest entry.*
+- *Deviation: the audit suggested `hover:bg-pressed` become `hover:bg-hover` everywhere; three stay,
+  for the reason above.*
+- *Deviation: shades are `color-mix` of a base token, not repeated rgb literals, so a base change
+  carries to them. `colorValue()` therefore returns a `color-mix(...)` string for those tokens; none
+  of its consumers uses one.*
+- **On-screen changes** (for screenshots): the five F-01 surfaces; marketing: `panel` cards at 30, 40
+  and 60 or 70% are now 50%, the sticky nav veil unchanged, static framed shots (hero, auth, the
+  automation showcase) have a `line` edge, not `line-strong`, the footer headings are 11 px,
+  secondary-coloured; the Hero glow is as before and the illustration cards' glow is narrower; calendar
+  cells outside the month (30%) and closed hours (20% to 30%); media chips and captions at 70% where
+  they were 50 or 60% (attachment tray) and 85% where 80 (media tray); the carousel arrows are solid
+  white at rest; the Stop button is now a Button (a disabled Button ignores the pointer, so its tooltip does not show while it is disabled); the
+  chart axis is white 20% (it was the brand colour at 20%); the Top topics bars are solid brand; the
+  dialog footers are `field` (it was `field` at 50%); the sentiment card and metric comparison
+  titles are semibold where they were medium; the plans heading on the billing page loses
+  `tracking-tight` at 18 px.
+
+## C-128 · Midnight palette, indigo brand and glass surfaces (feature/theme-midnight-glass)
+
+The owner approved a preview ("Midnight + indigo + glass") that ran as an override stylesheet on
+local-dev. This entry makes it real in the theme system (C-127), and the preview stylesheet is gone.
+
+- **Palette.** The values are exactly the approved ones: canvas `#131520`, panel `#1B1E2A`, field
+  `#181B26`, raised `#252937`, overlay `#222633`, lines and states as cool `214 219 255` alpha, fg
+  `#F3F4F8`, fg-secondary `#A6A9BC`, brand `#6D6AF5`, brand-strong `#5550E0`, brand-deep `#2B2585`,
+  brand-fg `#B5B3FF`, shell `#4B44C9` / `#231E6B`. Indigo, because the old blue sat next to Facebook
+  and LinkedIn (platform fills) and next to the info and focus colours; Midnight was lifted from
+  near-black to a charcoal-indigo at the owner's request. Measured: brand-strong carries white at
+  5.82:1, fg-secondary is 5.4:1 or more on every surface, line-control 3.16:1 or more (3.55 on panel).
+  Comments that quoted older ratios are updated.
+- **Glass is tokens and utilities, not overrides.** New colours: `panel-frost` (82%), `card-glass`
+  (68%), `overlay-frost` (86%), `raised-frost` (72%), `frost-outline` (45%), `line-glass` (8%); new
+  shadows: `shadow-glass`, `shadow-highlight`, `shadow-button-primary`, `shadow-button-secondary`; the
+  ambient light is `--gradient-ambient` on the body (base layer). The blur is in five `@utility`
+  rules (`glass-pane`, `glass-card`, `glass-float`, `glass-raised`, `glass-outline`) that bundle the
+  frost colour and the blur and fall back to solid under `prefers-reduced-transparency`. Chosen over
+  Tailwind's `backdrop-blur-*` plus a colour class so that colour and blur can't drift apart and
+  the fallback lives in one place. Every new colour has a `use` entry and appears on `/dev/tokens`.
+- **Work panes are subtler than cards** (owner): 82% with a 10 px blur, because inbox and thread
+  text sits on them; cards show the glass fully.
+- **Where it applies.** I chose call-site utilities over making `--color-panel` itself translucent:
+  `panel` is also the colour of chips, the date pill, marketing cards and `Alert`, which must stay
+  solid, and a translucent token would break every `bg-panel` that sits on another surface. The work
+  panes (about a dozen call sites in shell, inbox, Ask and the post composer) switched to
+  `glass-pane`; `Card` / `cardVariants`, `FLOATING_SURFACE`, dialog, alert dialog, sheet, tooltip,
+  sonner and `buttonVariants` (default, secondary, outline) carry the glass in their recipes.
+  `CardInset` stays solid (a card on a card). The Save bar stays opaque (its test says so) and the
+  marketing cards stay solid.
+  *Deviation from the preview: the preview frosted every `.bg-panel` and `.bg-overlay` on the page,
+  including marketing cards, small chips and the Save bar; those are now solid.*
+- **Identity rings.** brand (indigo) and facebook (blue) are 1.24:1 apart in luminance; the identity
+  test's floor went from 1.3 to 1.2, since the hues differ. Rings are still 3:1 on panel.
+- **Icons.** `node scripts/generate-icons.mjs` was run; the PNGs use the new shell gradient.
+- Tests that quoted the old classes or values were updated (card, button, floating family, sonner,
+  tooltip 13:1, manifest, tone).
+
+## C-129 · Light mode (feature/theme-midnight-glass)
+
+Light mode with a Dark / Light / System switch. Dark stays the default and the marketing site stays dark.
+
+- **Mechanism: `light-dark()` pairs.** Each differing colour is one declaration, `light-dark(LIGHT,
+  DARK)`, in the same `@theme` entry, so the two values sit side by side and a token can't exist in one
+  theme only. `<html data-theme>` sets `color-scheme` (dark, light, or both for System, which therefore
+  follows the OS with no script). Chosen over a second block of overrides under a selector because that
+  needs the dark values written twice to pin a subtree dark (the marketing pages), and over a `dark`
+  class because `dark:` is banned. Checked that Tailwind's optimizer keeps `light-dark()` intact in
+  custom properties. Needs a 2024 browser (Chrome 123, Safari 17.5, Firefox 120).
+  `scripts/gen-tokens.mjs` splits the pairs (`colors`/`colorsLight`, `shadows`/`shadowsLight`);
+  `themeInvariant` lists single-valued colours with reasons.
+- **Choice and first paint.** Cookie `sh_theme` (dark | light | system, default dark), applied by a small
+  script in `<head>`. *Deviation from the brief: no server read in the root layout.* The root layout is
+  shared with the marketing pages, which are static and revalidated hourly; `cookies()` there would make
+  them all dynamic. The CSP already allows inline scripts. Only a no-JS visitor differs: they get Dark.
+- **Switch.** Settings → Appearance (new tab, everyone) and a Theme radio group in the workspace menu (the
+  shell's account area; Clerk's own user menu can't hold a three-way control). It is the member's, per
+  browser; no Save bar.
+- **Palette.** Soft cool canvas `#F5F6FB`, white panels, cool ink alpha for lines and states, text
+  `#14161F` / `#585C73`, the same indigo family (`brand` `#5B57EA`, `brand-fg` `#4640C8`,
+  `brand-strong` and `brand-deep` unchanged, 5.82:1 with white). Status colours are darker on light so they
+  read as text on their soft fills (success `#166534`, warning `#92400E`, danger-fg `#B91C1C`). Glass on
+  light: panes 88%, cards 72%, floating 92% white frost with the same blurs; shadows are cool ink; the
+  ambient glows are lighter (new tokens `ambient-1..3`). Every key pair is measured and held by
+  `styles/contrast.test.ts`.
+- **Marketing stays dark.** The layout wrapper carries `scheme-dark` and `bg-ambient`; `<html>` is pinned
+  by an inline script on a first load and by `ThemePin` on a client navigation, so scrollbars, overscroll
+  and portals match. Auth pages and the app follow the choice.
+- **Runtime-literal consumers.** Clerk gets per-theme variables and base (component-level appearance);
+  viewport `themeColor` starts dark and `ThemeSync` moves it; manifest, OG image, icons and the global
+  error page stay dark; `statusBarStyle` stays black (read once by iOS). See THEME.md section 1.
+- **Dark-only spots.** Shadows are pairs; the avatar edge lost `mix-blend-lighten` for a plain `line` ring;
+  the grain is `--grain-opacity` (0 on light); `dark:` variant now follows `data-theme="dark"`; the
+  inverse button works by token (near-black pill in light, also on photos).
+- Not verified in a browser (no build or screenshots by brief): Clerk's merge of the per-component
+  appearance over the provider's, and iOS status bar in light.
+
+## C-130 · The weekly report per account, and the categorical chart palette (feature/weekly-report-accounts)
+
+Owner: the report did not tell accounts apart and had one chart colour. Decided here, small calls:
+
+- **`account_id` on `GET …/reports/weekly`.** Every figure, series, top intent and top post is that account's (`overview_stats` functions take an optional `account_id`); another workspace's account is 404 `not_found`. Leads and captures follow the contact's account and the automation's account. Knowledge-gap questions belong to the workspace, so an account's report returns 0 and none for them and the page hides the line. The digest is unchanged (workspace-wide).
+- **Breakdown** (workspace-wide report only, additive `breakdown`, plus `accounts` for the picker and `account` when one is picked): per account messages received, people who wrote in, comments, replies sent (the reply rate's own definition), automation runs, reach and followers, each this week against last with 8 weekly points. Counts are never None except for a week before the workspace existed. Reach and followers are None with `unavailable` (`insights_not_granted`, `no_readings`) where the platform gives no insights, e.g. WhatsApp. Leads, response time and rates are not broken down by account.
+- **Palette.** `--color-chart-series-2` to `-6` (orange, aqua, sky, yellow, magenta) join series 1 (brand indigo) in a fixed order, validated per theme with the data-viz checker (adjacent colour-blind separation and normal-vision floor pass in light and dark; the light yellow, aqua and magenta are under 3:1, so every chart has a legend, tooltip and table). A seventh entity folds into the neutral token. Shared pieces live in `components/charts/`.
+
+
+## C-132 · Range and platform controls, report links, and the OpenUI spike (VIS-11, VIS-13, VIS-14, feature/vis-11-13-14)
+
+The last three backlog items for Ask, on top of C-123 (branch `feature/vis-07-12`). Option C still
+holds: the API builds every visual, the model neither writes nor sees one, and everything stays
+behind `AGENT_VISUALS_ENABLED`. **One migration, 0045** (`agent_runs.hints`, nullable JSON,
+expand-only). No new route, no new setting.
+
+### Structured follow-ups (VIS-11)
+- **`AgentRunCreate.hints`** (`RunHints`, `schemas/agent.py`): whitelisted keys and values only,
+  `extra="forbid"`. Two kinds, never mixed: `range_days` (7, 30 or 90) and/or `platform` (`all`,
+  `instagram`, `facebook`, `whatsapp`) repeat the question over another range or platform;
+  `reply_conversation_ids` (at most 3, the same cap as the lead list) is VIS-12's "Prepare
+  replies". Never free text from the screen. A follow-up needs a `thread_id` (422 without).
+- **`request` is optional with hints.** The server words the member's side itself
+  (`agent/hints.bubble`: "Same, for the last 90 days on Instagram", "Same, across all platforms",
+  "Prepare replies for these leads") and ignores any text sent with hints, so the thread shows
+  words, never ids, and the screen can't put its own words in the thread. *This fixes the gap
+  C-123 recorded: the bubble no longer shows UUIDs.*
+- **The planner applies the hint as if the member had asked** (`hints.instruction`): the member's
+  earlier typed question (`AgentContext.last_typed`, carried as quoted data) asked again with the
+  range and platform as tool arguments, same tools. Earlier follow-ups in the thread reach the
+  model as their instruction, not their bubble. When the earlier question is out of the context
+  window (six runs) the instruction says "your previous answer's question".
+- **Stored:** `agent_runs.hints` holds the validated hints (defaults left out) and `request` the
+  bubble; run responses return `hints` (null for a typed question) so the web shows what is
+  chosen. *A migration was needed: the bubble must be words and the planner must still know the
+  structure, and the run table had nowhere to keep it.*
+- **Conversations are checked.** `reply_conversation_ids` that aren't the workspace's give 404
+  `not_found`, the rule for every body that names a resource. An integration test covers it (the
+  tenancy example body can hold only one resource per route, and `thread_id` already uses it).
+- **Controls on the visual** (`VisualControls`, `lib/agent/controls.ts`): range chips and
+  platform chips under `trend`, `metric_comparison`, and `ranked_posts` and `sentiment_summary`
+  when they have a period (a single post has no range). Not on `lead_list` and `table` (their
+  tools take neither). Shown on the latest answer only, like the other follow-ups. The chosen
+  range comes from the visual's own period when it is 7, 30 or 90 days, the platform from the
+  run's hints; none is shown as chosen otherwise. A change sends the whole selection, so one
+  control keeps the other's choice. Clicking the chosen chip does nothing (no run for no change).
+- **Credits, before the run.** Under the controls: "Changing this asks again. About 2 to 4 AI
+  credits." (`agent_turn` is 1 credit a model call and a typical question takes 2 to 4,
+  `billing/plans.py`; the same run, so the same price as typing the question). The controls turn
+  off, with the reason in that line, when the plan has no AI credits, none are left (the
+  composer's own message with the reset date), or fewer are left than the upper estimate (4):
+  "You have 3 AI credits left this month, and a change can use up to 4." *The API only needs one
+  credit to start a run; the stricter line is a choice so a change doesn't stop half way. Easy to
+  loosen in `controlGate`.* The API still answers 402 `quota_exceeded` as before.
+- **Retry** on a failed follow-up resends its hints, not its bubble words.
+
+### Weekly report links (VIS-13)
+- **`report` answer-ref kind** with `AnswerRef.week` (the Monday). `parent_id` is the account when
+  the question was about one; `id` is derived from week and account (`uuid5`), so the same report
+  is one source however often it is cited. The web opens `reports?week=<monday>[&account=<id>]`
+  (`lib/agent/routes.ts`, both values re-checked there; a malformed ref opens `reports`) and
+  labels it "Weekly report". Nothing in `components/reports` and no change to the page.
+- **Which week matches:** the latest finished week (Monday to Sunday in the workspace's zone,
+  within the report's 52 weeks) that lies wholly inside the tool's period (`report_week`, a
+  function of dates only). A period with no whole finished week cites none; a running week is
+  never linked, as the report page itself refuses it.
+- **Tools:** `metric_trend` and `compare_periods` (the current period) cite it, for the account
+  when the question named one. *There is no overview tool in the agent (Home's figures come from
+  `compare_periods`); nothing else cites a report.* The label is "Weekly report, 12-18 Oct 2026"
+  (with the handle for an account). It works with the visuals setting off: refs are not visuals.
+- *The `?account=` parameter belongs to the report page work on `feature/ui-refresh`; until it
+  lands the page shows the workspace report for the week and ignores the account.*
+
+### The OpenUI spike (VIS-14), not shipped
+- Done offline on the scratch branch `spike/openui` (`spike/openui/`), packages installed only
+  there, `OPENUI_TELEMETRY_DISABLED=1`. Result and numbers:
+  `docs/architecture/generative-ui/11-openui-spike-result.md` (on this branch too).
+- **Decision: do not adopt; keep C.** 30 of 30 valid, 0 number errors in 521 numbers, p95 1.54 s
+  as a separate call (about 0.25 s written inside the answer's own turn, an estimate); but no
+  open-ended use the catalogue can't serve was found, which the gate requires.
+- The Gemini key was read through the API's `Settings` (`apps/api/.env`), held in memory, never
+  printed or written; about 140 calls in all.
+
+### Tests
+- API unit (run here): `tests/unit/test_agent_hints.py` (the words, the instruction, the
+  whitelist, the request rules, which week a period links, the ref).
+- API integration (written, not run): `test_agent_api.py` (a follow-up is worded by the server and
+  keeps its hints; thread and whitelist; 404 for another workspace's conversation; 402 without
+  credits), `test_agent_visuals_vis.py` (the trend and the comparison cite the week, for an
+  account, none for a period without a whole week).
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (selection, hints, the credit gate, which
+  visuals offer controls, the report path), `VisualViewVis.test.tsx` (the controls, the cost
+  line, the explanation, busy). E2E `e2e/vis-11-13.spec.ts` (written, not run); the e2e seed
+  (`scripts/e2e/api.py`) gains `report_week`; `vis-07-12.spec.ts` now expects the new bubble.
+- **Checked centrally:** apply migration 0045; regenerate `apps/api/openapi.json` and
+  `packages/api-client` (`RunHints`, `AgentRunCreate.hints` and an optional `request`,
+  `AgentRun.hints`, `AnswerRef.week` and `kind` with `report`), then drop the hand-added
+  `RunHints`, `AgentRun`, `AgentRunDetail`, `AgentRunCreate` and `AnswerRef` additions in
+  `lib/api/types.ts`; typecheck, build, the integration and tenancy suites, vitest, the e2e specs.
+
+### Left for later
+VIS-X2 (quote account names in the prompt), VIS-X4 (design-system entries for the visuals and
+their controls), a platform control on the lead list, a two-series trend, a reply-window
+pre-check for the lead follow-up, and localised labels.
+
+## C-131 · Facebook and Stories follow-ups (feature/followups-fb-stories)
+
+What C-114 (Instagram Stories) and C-115 (Facebook publishing) recorded as "not built", built after
+the owner approved it. **Every Meta behaviour below was written from Meta's docs and none has been
+seen on a real Page or account.** Each is marked *unverified* and listed in `docs/verification.md`
+item 50. The permission work is part of the second App Review submission (O-10,
+`docs/ops/app-review.md` section 8).
+
+### 1. A caption limit per platform
+- **The numbers.** Instagram 2,200 characters (as before). A Facebook Page post 63,206 characters,
+  the figure Meta's Pages documentation and Page tools give (*unverified*). They are
+  `CAPTION_MAX_CHARS` and `FACEBOOK_CAPTION_MAX_CHARS` in `models/publishing.py`. The first comment
+  stays at 2,200 for every platform (Instagram's; Facebook allows more, nobody asked for it).
+- **Where they apply.** The columns and the request bodies hold the longest
+  (`STORED_CAPTION_MAX_CHARS`; migration 0048 re-creates `ck_scheduled_posts_caption_length` and
+  `ck_scheduled_post_targets_caption_override_length`), so a draft can hold a long caption. The
+  checklist and the scheduling rules apply the platform's limit (`rules.caption_limit`): an account's
+  own caption to its platform's; the shared caption to the strictest of the accounts that use it
+  (those without their own caption). A Page-only post may be long; add an Instagram account and the
+  caption fails with "Shorten the caption to 2,200 characters (now N)". The composer's counter and
+  checklist (`captionLimit`, `checklist.ts`) do the same; the counter under each caption shows its
+  own limit.
+- **Not changed.** The AI caption writer and "improve" still work to 2,200 characters
+  (`CaptionRequest`), so improving a longer Page caption is refused by the schema; hashtag
+  suggestions likewise.
+- **Migration 0048** (after 0047; written as 0050 after 0044, renumbered when stacked), expand-only. *Numbering:* 0046 to 0049 belong to the other
+  follow-ups branch; the coordinator re-chains.
+
+### 2. Story insights
+- **Windows.** A Story is gone after 24 hours, so it has its own snapshot windows: 1 h, 6 h and 23 h
+  (`STORY_WINDOWS`, new `SnapshotWindow.H23`, `ck_post_metric_snapshots_window` re-created in
+  migration 0049). Feed posts and Reels never get 23 h (`ages.WINDOWS` leaves it out). A Story's
+  grace ends 10 minutes before it goes down (the 23 h reading has 50 minutes), the 15 minute tick
+  (`due_condition`) now includes Stories, and every `ages` function takes the post's windows
+  (`windows_for(media_type)`).
+- **What is read.** Every Story window reads the insights (a Story has no like or comment counts to
+  read early) and is final when written (`insights_final`). The metrics: `reach`, `views`,
+  `shares`, `replies`, `total_interactions`, `follows`, `profile_visits`, and from the `navigation`
+  metric with `breakdown=story_navigation_action_type` the `taps_forward`, `taps_back`,
+  `swipes_forward` and `exits` (`tap_forward`, `tap_back`, `swipe_forward`, `tap_exit`). The
+  breakdown is asked for on its own, like `follows_and_unfollows`. A kind with no row in the
+  breakdown is 0; a refused call leaves the figures unknown (never 0). Without the insights scope a
+  Story gets an empty snapshot, so it is not asked for again.
+- **Stored like other metrics:** `post_metric_snapshots.metrics` (new `PostMetric` keys `replies`,
+  `taps_forward`, `taps_back`, `swipes_forward`, `exits`, `clicks`).
+- **Shown.** The analytics reads already take any post: `PostPerformance` gains `extra_metrics`
+  (`ExtraMetrics`: the Story and Page figures that `PostMetrics` does not carry, so every post's
+  shared metrics and their comparisons are unchanged), and `AgeName` gains `23h`. A Story is shown
+  at the latest reading it has reached and is compared only with the account's other Stories (and
+  no other post with a Story); rankings (`top_posts`) and other posts' baselines still leave Stories
+  out. Web: the published Story in the composer's status banner (the schedule's published view)
+  shows "Reach 900 · Views 1,100 · Shares 7 · Replies 5 · at 6 h" (`story-insights`); "Comments and
+  results" in the schedule menu opens the Performance card, which for a Story lists reach, views,
+  shares, replies, taps forward, taps back, swipes forward and exits at 1 h, 6 h, 23 h or lifetime.
+- *Unverified:* the metric names and the breakdown values; that insights can be read while the Story
+  is up and for how long after it goes down; that `replies` and `navigation` are offered under
+  Instagram Login.
+
+### 3. Facebook Page post insights
+- **Metrics.** `GET /{post_id}/insights?metric=post_media_view,post_total_media_view_unique,post_clicks&period=lifetime`
+  gives `views`, `reach` and `clicks`; `GET /{post_id}?fields=shares` gives `shares`. Likes
+  (reactions) and comments come from the live counts, as before. Meta replaced the old impressions
+  metrics with these "media view" ones, so the old names are not used. A refused metric is read
+  alone and left unknown (the Instagram helpers).
+- **Schedule.** The same windows as Instagram posts: live counts at 1 h and 6 h, insights from 24 h,
+  the 72 h run marks them final (no change to `snapshot_account_posts`; a Page now has
+  `Capability.POST_INSIGHTS`).
+- **Permission.** `read_insights`, asked for only with `FB_REQUEST_INSIGHTS_SCOPE` (default off, like
+  `IG_REQUEST_INSIGHTS_SCOPE`); a Page connected without it has no `POST_INSIGHTS` and the
+  Performance card says to reconnect. Sandbox Pages always have it. Account-level insights for Pages
+  are still not built (account insights stay followers only).
+- **Shown** where Instagram post metrics are: the Performance card on the post detail (reach, views,
+  likes, comments, shares, saves, engagement rate, and a Page post's clicks; the wording names
+  Facebook for a Page). Saves, profile visits and follows are Instagram's, so a Page shows "—".
+- *Unverified:* the three metric names and `period=lifetime`; `values[0].value`; `shares.count`; how
+  soon after posting the figures exist; that reactions are a fair "likes".
+
+### 4. Facebook Reels
+- **A choice, not a shape.** A Page video stays a normal video. The composer's Type section offers
+  **Reel** when a Facebook Page is chosen (`kind: "reel"`, `PostKind.REEL`; migration 0050 widens
+  `ck_scheduled_posts_kind`). A Reel is exactly one video of 3 to 90 seconds (*unverified limits*,
+  `FACEBOOK_REEL_MIN_S`, `FACEBOOK_REEL_MAX_S`); 9:16 is only recommended, so another shape passes
+  with a note ("9:16 fits a Reel best. Facebook may crop or add bars to this file."). It needs a
+  Page ("Choose a Facebook Page for a Reel. Instagram already publishes a single video as a
+  Reel."); with an Instagram account chosen too, the Instagram side is its usual Reel. The caption,
+  hashtag and first comment rules are a normal post's. The stored `format` is `reel` (as for any
+  single video).
+- **Calls** (`platforms/facebook/publishing.py`): `reel:{video_id}`. Create is
+  `POST /me/video_reels {upload_phase: start}` then the hosted file handed to the answer's
+  `upload_url` with `Authorization: OAuth {token}` and a `file_url` header; the token is only sent
+  to an https address on facebook.com. Status is `GET /{video_id}?fields=status`: FINISHED when
+  `uploading_phase` is complete, ERROR when a phase failed, PUBLISHED once `publishing_phase` has
+  started. Publish is `POST /me/video_reels {upload_phase: finish, video_id, video_state: PUBLISHED,
+  description}`. The video id is the media id, read back as a video and stored as `reel`.
+  `PlatformHttp.request` gained a `headers` argument for the upload call; `create_reel_container`
+  gained `page_reel` (Instagram and the others ignore it).
+- **Lost answers.** A plain Page post cannot tell a lost publish answer from one that never went
+  out, so it still ends unconfirmed (C-115). A Reel's status shows the publishing phase, so after a
+  lost answer the job reads the status first: PUBLISHED finds the post again
+  (`find_published_media` reads the video), anything else ends unconfirmed. The check runs for every
+  non-Instagram lost answer, and only a Reel or a video Story ever answers PUBLISHED. The sandbox
+  does the same.
+- *Deviation:* once `finish` is accepted the target is marked published, though Facebook may still
+  be processing the Reel (the publishing phase); a later processing failure is not followed up.
+- *Unverified:* the whole flow (`video_reels` bodies and answers, the upload host and header,
+  `file_url` for a hosted file there, the phase and `status` values, `video_state`), the limits, and
+  that `pages_manage_posts` covers Reels.
+
+### 5. Facebook Page Stories
+- **Same Type switch and rules as Instagram's:** one photo or one video, no caption (kept on the
+  draft, never sent), no first comment, 3 to 60 second videos, any image shape (a note says who may
+  crop), 24 hours (the banner says "Disappears ..."). The composer no longer disables Story for a
+  Page (the old "Pages can't publish Stories" is gone). A Page has no publishing limit to check.
+- **Calls:** a photo Story is an unpublished `POST /me/photos` (`storyphoto:{id}`) then
+  `POST /me/photo_stories {photo_id}`; a video Story is the Reel's start and upload on
+  `video_stories` (`storyvideo:{id}`), the same status, then
+  `POST /me/video_stories {upload_phase: finish, video_id}`. The answer's `post_id` is stored as the
+  media id (else the upload id). The target is a `story` media item, so "next post" automations
+  never link to it.
+- **Not readable, honestly.** Facebook has no read API for Page Stories: the permalink stays empty
+  (no "View on Facebook"), the story picker's live list is empty for a Page (`list_stories` returns
+  `[]`; the sandbox too), `get_published_media` returns nothing for a Story (the job keeps what it
+  knows), and a Page Story has no insights (the published banner says "Facebook doesn't share
+  figures for Page Stories"; its snapshots are empty). A photo Story's lost answer ends unconfirmed
+  like any plain Page post; a video Story's is found through its status like a Reel's.
+- *Unverified:* `photo_stories` and `video_stories` bodies and answers, the Page video Story limits
+  (the Instagram ones are used), and that `pages_manage_posts` is enough.
+
+### Shared notes
+- **Migrations** 0048 (caption checks), 0049 (snapshot window 23h), 0050 (post kind reel), all
+  expand-only, each with a downgrade that removes or rewrites what the old check would refuse.
+- **Settings:** `FB_REQUEST_INSIGHTS_SCOPE` (default false) in `.env.example` and
+  `docs/ops/deploy.md`.
+- **Tests.** Unit: `test_page_caption_limit.py`, `test_story_insights.py`,
+  `test_facebook_insights.py`, `test_facebook_reels_stories.py`; `test_story_scheduling.py`,
+  `test_facebook_publishing.py` and `test_analytics_rules.py` updated. Contract:
+  `test_story_insights.py`. Integration (written, not run): `test_facebook_reels_stories.py`, plus
+  new cases in `test_metric_snapshots.py` (Stories read at 1 h, 6 h and 23 h; Page post insights; a
+  Page Story), `test_analytics_api.py` (Story figures, the 23h age, Story comparison) and
+  `test_story_publishing.py` (a Story may go to a Page). Vitest (written, not run):
+  `checklist.test.ts`, `format.test.ts`, `PostPerformanceCard.test.tsx`, `StatusBanner.test.tsx`,
+  `PostComposer.test.tsx`. E2E: `followups-fb-stories.spec.ts` (a long Page caption, a Page Reel, a
+  Page Story) and `gr30-facebook-publishing.spec.ts` updated; the e2e seed can now add a video
+  (`videoAsset`).
+- **For the coordinator:** regenerate the client: `AgeName` gains `23h`,
+  `PostPerformance.extra_metrics` and `ExtraMetrics`, `ScheduledPostDraft.kind` and
+  `ScheduledPostSummary.kind` gain `reel`. The web uses the generated types for all of these
+  (`ExtraMetrics` is an alias in `lib/api/types.ts`). Migrations re-chained as 0048 to 0050 after the
+  other branch's 0046 to 0049. The shared lists (nav, plans, tenancy) are untouched (no new table
+  or route).
+
+## C-133 · Final batch: what the end-to-end run caught (feature/final-batch)
+
+The final batch (VIS-07 to VIS-14, the GR-24, GR-32 and Ask follow-ups, the Facebook and Stories
+follow-ups and the UI release) was written first and tested once at the end. Locally only the
+checks CI doesn't run on a PR were run (e2e and the UI screenshots); CI runs the rest on the PR.
+The e2e run found these in production code:
+
+- **Conversation starters were never saved (GR-11).** `PUT` and `sync` in `api/v1/ice_breakers.py`
+  didn't commit. The integration tests called the service directly, so they never saw it.
+- **WhatsApp number health, first read.** The broadcast preview sends two requests at once; both
+  inserted the `whatsapp_number_health` row and one failed on the unique key with a 500. The insert
+  now runs in a savepoint (`services/broadcasts/health.py`).
+- **Popups inside a dialog or sheet couldn't be clicked (C-128 Select upgrade).** `ModalInert`
+  marked the modal's own portalled popups inert (`components/ui/modal-inert.tsx`).
+- **Flow preview branch picks.** Choosing a second fork before the first one became the first
+  fork's choice (`withChoice` in `automations/flow/PathView.tsx`, used by the preview and the match
+  tester).
+- **Flow editor at 375 px.** The "Send a saved reply" switch overflowed sideways (`size="sm"`).
+- **The e2e stack** now starts the API before the web build, or the public API reference page was
+  prerendered as "unavailable" and cached for an hour.
+- *Not kept:* gr39's "a published story is in the live stories" check: the sandbox keeps published
+  stories in the worker's memory, which the API process can't see in the e2e stack.
+- *Open:* the UI shots inbox-list-1536 and conversation-1536 failed on a network error
+  (`ERR_NAME_NOT_RESOLVED`); axe reports two contrast issues on sign-in.

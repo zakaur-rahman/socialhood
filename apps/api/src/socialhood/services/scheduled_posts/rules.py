@@ -23,6 +23,8 @@ from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
     CAROUSEL_MAX_ASSETS,
     CAROUSEL_MIN_ASSETS,
+    FACEBOOK_CAPTION_MAX_CHARS,
+    FACEBOOK_REEL_MIN_S,
     FIRST_COMMENT_MAX_CHARS,
     MAX_HASHTAGS,
     MAX_MENTIONS,
@@ -72,6 +74,12 @@ STORY_ASPECT = 9 / 16
 STORY_ASPECT_TOLERANCE = 0.05
 STORY_ONE_FILE = "A Story is one image or one video."
 STORY_NO_CAPTION = "Stories are published without a caption"
+# A Facebook Reel (C-131) is one video, 3 to 90 seconds, for a Page; 9:16 fits it best.
+REEL_ONE_VIDEO = "A Facebook Reel is one video."
+REEL_NEEDS_PAGE = (
+    "Choose a Facebook Page for a Reel. Instagram already publishes a single video as a Reel."
+)
+REEL_NEEDS_VIDEO = "Add a video for the Reel."
 
 # Facebook Pages (GR-30): a photo post takes several photos or one video, never both.
 FACEBOOK_NO_MIX = "A Facebook post can have several photos or one video, not both."
@@ -88,13 +96,20 @@ TIME_TOO_SOON = "Pick a time at least 5 minutes from now."
 
 
 def derive_format(
-    resource_types: Sequence[str], *, story: bool = False, text: bool = False
+    resource_types: Sequence[str],
+    *,
+    story: bool = False,
+    text: bool = False,
+    reel: bool = False,
 ) -> PostFormat | None:
     """1 image: an image post; 1 video: a Reel; 2 to 10 images and videos: a carousel. Chosen as a
     Story (GR-39), exactly 1 image or video is a Story. No media but text for a Facebook Page
-    (``text``, GR-30): a text post. Nothing else makes a post."""
+    (``text``, GR-30): a text post. Chosen as a Reel (``reel``, C-131), exactly 1 video is a Reel
+    and nothing else is. Nothing else makes a post."""
     if any(kind not in ("image", "video") for kind in resource_types):
         return None
+    if reel and not story:
+        return PostFormat.REEL if list(resource_types) == ["video"] else None
     if not resource_types:
         return PostFormat.TEXT if text and not story else None
     if story:
@@ -184,7 +199,8 @@ class PostFacts:
     caption: str
     first_comment: str | None
     publish_at: datetime | None
-    story: bool = False  # chosen as an Instagram Story (GR-39)
+    story: bool = False  # chosen as a Story (GR-39; a Facebook Page's too, C-131)
+    reel: bool = False  # chosen as a Facebook Reel (C-131)
 
 
 def handle(username: str | None, display_name: str | None = None) -> str:
@@ -193,23 +209,23 @@ def handle(username: str | None, display_name: str | None = None) -> str:
     return display_name or "This account"
 
 
-def _account_problem(target: TargetFacts, *, story: bool = False, text: bool = False) -> str | None:
+def _account_problem(target: TargetFacts, *, text: bool = False) -> str | None:
     if target.status == AccountStatus.DISCONNECTED:
         return f"{target.handle} is disconnected. Reconnect it or remove it from this post."
     if target.status != AccountStatus.ACTIVE:
         return f"{target.handle} needs reconnecting before it can publish."
     if not target.can_publish:
         return f"{target.handle} can't publish posts."
-    if story and target.platform != "instagram":
-        return f"{target.handle} can't publish Stories. Remove it or choose a post."
     if text and target.platform != "facebook":
         return NEEDS_MEDIA.format(handle=target.handle)
     return None
 
 
-def asset_problem(asset: AssetFacts, *, story: bool = False, instagram: bool = True) -> str | None:
+def asset_problem(
+    asset: AssetFacts, *, story: bool = False, instagram: bool = True, reel: bool = False
+) -> str | None:
     """TR-MED-02: type, size, aspect ratio and video length. A Story takes any image shape (9:16
-    is only recommended) and a video of 3 to 60 seconds."""
+    is only recommended) and a video of 3 to 60 seconds; a Facebook Reel a video of 3 to 90."""
     fmt = (asset.format or "").lower()
     if asset.resource_type == "image":
         if fmt and fmt not in IMAGE.formats:
@@ -231,6 +247,8 @@ def asset_problem(asset: AssetFacts, *, story: bool = False, instagram: bool = T
             return f"{'Story videos' if story else 'Videos'} can be up to {limit:.0f} seconds."
         if story and asset.duration_s is not None and asset.duration_s < STORY_VIDEO_MIN_S:
             return f"Story videos must be at least {STORY_VIDEO_MIN_S} seconds."
+        if reel and asset.duration_s is not None and asset.duration_s < FACEBOOK_REEL_MIN_S:
+            return f"Reel videos must be at least {FACEBOOK_REEL_MIN_S} seconds."
         return None
     return "Posts can only use images and videos."
 
@@ -247,20 +265,45 @@ def asset_facts(
     return AssetFacts(resource_type, file_format(fmt, public_id), size, width, height, duration_s)
 
 
-def story_shape_note(asset: AssetFacts) -> str | None:
-    """A passing Story file that is not 9:16: Instagram crops or letterboxes it."""
+def story_shape_note(
+    asset: AssetFacts, *, platforms: str = "Instagram", what: str = "Story"
+) -> str | None:
+    """A passing Story (or Facebook Reel) file that is not 9:16: the platform crops or letterboxes
+    it. ``platforms`` names who does it: "Instagram", "Facebook" or "Instagram and Facebook"."""
     if not (asset.width and asset.height):
         return None
     ratio = asset.width / asset.height
     if abs(ratio - STORY_ASPECT) <= STORY_ASPECT_TOLERANCE * STORY_ASPECT:
         return None
-    return "9:16 fits a Story best. Instagram may crop or add bars to this file."
+    return f"9:16 fits a {what} best. {platforms} may crop or add bars to this file."
 
 
 def _item(
     key: ChecklistKey, message: str, *, ok: bool = True, field: str | None = None
 ) -> ChecklistItem:
     return ChecklistItem(key=key, ok=ok, message=message, field=field)
+
+
+def caption_limit(platforms: Iterable[str]) -> int:
+    """The caption length a post to these platforms may have: Instagram's 2,200 unless every
+    account is a Facebook Page (C-131). No accounts yet: Instagram's, the strictest."""
+    kinds = list(platforms)
+    if kinds and all(kind == "facebook" for kind in kinds):
+        return FACEBOOK_CAPTION_MAX_CHARS
+    return CAPTION_MAX_CHARS
+
+
+def _limits(post: PostFacts) -> dict[str, int]:
+    """The length limit of each caption field. An account's own caption is held to its own
+    platform; the shared caption goes to every account without one, so it is held to the
+    strictest of those (to the longest limit when each account has its own caption)."""
+    limits = {"first_comment": FIRST_COMMENT_MAX_CHARS}
+    shared = [t.platform for t in post.targets if t.caption_override is None]
+    limits["caption"] = caption_limit(shared) if shared else FACEBOOK_CAPTION_MAX_CHARS
+    for i, t in enumerate(post.targets):
+        if t.caption_override is not None:
+            limits[f"targets.{i}.caption_override"] = caption_limit([t.platform])
+    return limits
 
 
 def _texts(post: PostFacts, *, first_comment: bool) -> list[tuple[str, str | None]]:
@@ -281,10 +324,11 @@ def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[
     """The caption, hashtags and mentions checks (FR-PUB-10) of a post that has a caption.
     Hashtag and mention limits are Instagram's: a post for Facebook Pages only skips them."""
     items: list[ChecklistItem] = []
-    # caption: lengths
+    # caption: lengths, each against the limit of the accounts it goes to
     failing = []
+    limits = _limits(post)
     for field, text in _texts(post, first_comment=True):
-        limit = FIRST_COMMENT_MAX_CHARS if field == "first_comment" else CAPTION_MAX_CHARS
+        limit = limits[field]
         if len(text or "") > limit:
             what = "first comment" if field == "first_comment" else "caption"
             failing.append(
@@ -295,7 +339,8 @@ def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[
                     field=field,
                 )
             )
-    items += failing or [_item("caption", f"Caption within {CAPTION_MAX_CHARS:,} characters")]
+    overall = caption_limit(t.platform for t in post.targets)
+    items += failing or [_item("caption", f"Caption within {overall:,} characters")]
     if not hashtags_and_mentions:
         return items
 
@@ -345,8 +390,13 @@ def checklist(
 
     ig = any(t.platform == "instagram" for t in post.targets)
     fb = any(t.platform == "facebook" for t in post.targets)
-    text_post = bool(post.caption.strip()) and fb and not ig and not post.story
-    fmt = derive_format([a.resource_type for a in post.assets], story=post.story, text=text_post)
+    text_post = bool(post.caption.strip()) and fb and not ig and not post.story and not post.reel
+    fmt = derive_format(
+        [a.resource_type for a in post.assets],
+        story=post.story,
+        text=text_post,
+        reel=post.reel,
+    )
 
     # accounts
     if not post.targets:
@@ -355,9 +405,10 @@ def checklist(
         failing = [
             _item("accounts", problem, ok=False, field=f"targets.{i}")
             for i, t in enumerate(post.targets)
-            if (problem := _account_problem(t, story=post.story, text=fmt == PostFormat.TEXT))
-            is not None
+            if (problem := _account_problem(t, text=fmt == PostFormat.TEXT)) is not None
         ]
+        if post.reel and not fb:
+            failing.append(_item("accounts", REEL_NEEDS_PAGE, ok=False, field="targets"))
         count = len(post.targets)
         items += failing or [
             _item(
@@ -378,7 +429,11 @@ def checklist(
         items.append(
             _item(
                 "media",
-                FACEBOOK_NO_MEDIA if fb and not ig else "Add an image or video.",
+                REEL_NEEDS_VIDEO
+                if post.reel
+                else FACEBOOK_NO_MEDIA
+                if fb and not ig
+                else "Add an image or video.",
                 ok=False,
                 field="asset_ids",
             )
@@ -389,6 +444,8 @@ def checklist(
                 "media",
                 STORY_ONE_FILE
                 if post.story
+                else REEL_ONE_VIDEO
+                if post.reel
                 else "Use 1 image, 1 video, or 2 to 10 images and videos.",
                 ok=False,
                 field="asset_ids",
@@ -401,10 +458,20 @@ def checklist(
     failing = [
         _item("media_files", problem, ok=False, field=f"asset_ids.{i}")
         for i, a in enumerate(post.assets)
-        if (problem := asset_problem(a, story=post.story, instagram=ig or not fb)) is not None
+        if (
+            problem := asset_problem(
+                a, story=post.story, instagram=ig or not fb, reel=post.reel and fb
+            )
+        )
+        is not None
     ]
-    note = story_shape_note(post.assets[0]) if post.story and len(post.assets) == 1 else None
     names = "Instagram's and Facebook's" if ig and fb else "Facebook's" if fb else "Instagram's"
+    who = "Instagram and Facebook" if ig and fb else "Facebook" if fb else "Instagram"
+    note = None
+    if len(post.assets) == 1 and (post.story or post.reel):
+        note = story_shape_note(
+            post.assets[0], platforms=who, what="Story" if post.story else "Reel"
+        )
     if post.assets or fmt != PostFormat.TEXT:
         items += failing or [_item("media_files", note or f"Media meets {names} requirements")]
 

@@ -14,7 +14,7 @@ export function TagChip({ tag, action, className }: { tag: Pick<TagRef, "name" |
     <span
       data-testid="tag-chip"
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-xs text-fg",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-line bg-hover px-2 py-0.5 text-xs text-fg",
         className,
       )}
     >

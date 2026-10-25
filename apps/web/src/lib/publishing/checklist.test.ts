@@ -81,10 +81,21 @@ describe("localChecklist for Facebook Pages (GR-30)", () => {
     expect(failures(items)).toEqual([["media", "asset_ids", "A Facebook post can have several photos or one video, not both."]]);
   });
 
-  it("names the platform that sets the caption limit", () => {
+  it("holds a Page to Facebook's caption limit and a cross-post to the strictest account (C-131)", () => {
     const long = "a".repeat(2201);
-    expect(failures(localChecklist(input({ ...toPage, caption: long }, { accounts: [page] })))[0][2]).toContain("Social Hood allows 2,200");
+    expect(failures(localChecklist(input({ ...toPage, caption: long }, { accounts: [page] })))).toEqual([]);
+    expect(failures(localChecklist(input({ ...toPage, caption: "a".repeat(63207) }, { accounts: [page] })))[0][2]).toContain("Facebook allows 63,206");
     expect(failures(localChecklist(input({ caption: long })))[0][2]).toContain("Instagram allows 2,200");
+    const both = { targets: [{ social_account_id: "a1", caption_override: null }, ...toPage.targets] };
+    expect(failures(localChecklist(input({ ...both, caption: long }, { accounts: [ready, page] })))[0][2]).toContain("Instagram allows 2,200");
+  });
+
+  it("holds each account's own caption to its platform's limit", () => {
+    const long = "a".repeat(3000);
+    const own = { targets: [{ social_account_id: "a1", caption_override: "short" }, { social_account_id: "p1", caption_override: long }] };
+    expect(failures(localChecklist(input({ ...own, caption: "short" }, { accounts: [ready, page] })))).toEqual([]);
+    const swapped = { targets: [{ social_account_id: "a1", caption_override: long }, { social_account_id: "p1", caption_override: "short" }] };
+    expect(failures(localChecklist(input({ ...swapped, caption: "short" }, { accounts: [ready, page] })))[0].slice(0, 2)).toEqual(["caption", "targets.0.caption_override"]);
   });
 });
 
@@ -127,15 +138,65 @@ describe("localChecklist as a Story (GR-39)", () => {
     expect(failures(localChecklist(input({}, { assets: { as1: video } }))).map((row) => row[0])).toEqual([]);
   });
 
-  it("refuses a Facebook Page as a Story target", () => {
+  it("takes a Facebook Page as a Story target, and names who crops a file that is not 9:16 (C-131)", () => {
     const page = account({ id: "p1", username: "maple.page", platform: "facebook", capabilities: ["publish"] });
-    const items = localChecklist(
-      story(
-        { targets: [{ social_account_id: "a1", caption_override: null }, { social_account_id: "p1", caption_override: null }] },
-        { accounts: [ready, page] },
-      ),
+    const toPage = { targets: [{ social_account_id: "p1", caption_override: null }] };
+    const wide = assetInfo({ width: 1600, height: 900 });
+    expect(failures(localChecklist(story(toPage, { accounts: [page] })))).toEqual([]);
+    const note = (items: ReturnType<typeof localChecklist>) => items.find((item) => item.key === "media_files")?.message;
+    expect(note(localChecklist(story(toPage, { accounts: [page], assets: { as1: wide } })))).toBe(
+      "9:16 fits a Story best. Facebook may crop or add bars to this file.",
     );
-    expect(failures(items)).toEqual([["accounts", "targets.1", "@maple.page can't publish Stories. Remove it or choose a post."]]);
+    const both = { targets: [{ social_account_id: "a1", caption_override: null }, ...toPage.targets] };
+    expect(note(localChecklist(story(both, { accounts: [ready, page], assets: { as1: wide } })))).toBe(
+      "9:16 fits a Story best. Instagram and Facebook may crop or add bars to this file.",
+    );
+  });
+});
+
+describe("localChecklist as a Facebook Reel (C-131)", () => {
+  const page = account({ id: "p1", username: "maple.page", platform: "facebook", capabilities: ["publish"] });
+  const toPage = { targets: [{ social_account_id: "p1", caption_override: null }] };
+  const video = (duration: number | null = 20) => assetInfo({ resource_type: "video", width: 1080, height: 1920, duration_s: duration });
+  const reel = (overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<Omit<ChecklistInput, "draft">> = {}) =>
+    input({ ...toPage, kind: "reel", caption: "Behind the counter", ...overrides }, { accounts: [page], assets: { as1: video() }, ...extra });
+
+  it("passes one video for a Page, with the caption checks kept", () => {
+    const items = localChecklist(reel());
+    expect(failures(items)).toEqual([]);
+    expect(items.find((item) => item.key === "media")?.message).toBe("Reel");
+    expect(items.map((item) => item.key)).toContain("caption");
+  });
+
+  it("needs a Facebook Page", () => {
+    expect(failures(localChecklist(reel({ targets: [{ social_account_id: "a1", caption_override: null }] }, { accounts: [ready] })))).toEqual([
+      ["accounts", "targets", "Choose a Facebook Page for a Reel. Instagram already publishes a single video as a Reel."],
+    ]);
+  });
+
+  it("is one video", () => {
+    expect(failures(localChecklist(reel({}, { assets: { as1: assetInfo() } }))).map((row) => [row[0], row[2]])).toEqual([
+      ["media", "A Facebook Reel is one video."],
+    ]);
+    expect(failures(localChecklist(reel({ asset_ids: ["as1", "as2"] }, { assets: { as1: video(), as2: video() } })))[0][2]).toBe("A Facebook Reel is one video.");
+    expect(failures(localChecklist(reel({ asset_ids: [] })))).toEqual([["media", "asset_ids", "Add a video for the Reel."]]);
+  });
+
+  it("waits for the file to load before judging it", () => {
+    expect(failures(localChecklist(reel({}, { assets: {} })))).toEqual([]);
+  });
+
+  it("a video under 3 seconds fails, and a file that is not 9:16 passes with a note", () => {
+    expect(failures(localChecklist(reel({}, { assets: { as1: video(2) } })))).toEqual([
+      ["media_files", "asset_ids.0", "Video 1: Reel videos must be at least 3 seconds."],
+    ]);
+    const wide = assetInfo({ resource_type: "video", width: 1920, height: 1080, duration_s: 20 });
+    const note = localChecklist(reel({}, { assets: { as1: wide } })).find((item) => item.key === "media_files");
+    expect(note?.message).toBe("9:16 fits a Reel best. Facebook may crop or add bars to this file.");
+  });
+
+  it("is never a text post", () => {
+    expect(failures(localChecklist(reel({ asset_ids: [] }))).map((row) => row[0])).toEqual(["media"]);
   });
 });
 
@@ -200,7 +261,11 @@ describe("localChecklist (FR-PUB-10)", () => {
     const items = localChecklist(
       input({
         caption: long,
-        targets: [{ social_account_id: "a1", caption_override: `${tags} ${mentions}` }],
+        // One account with its own caption, one on the shared caption (held to Instagram's 2,200).
+        targets: [
+          { social_account_id: "a1", caption_override: `${tags} ${mentions}` },
+          { social_account_id: "a1", caption_override: null },
+        ],
         first_comment: tags,
       }),
     );

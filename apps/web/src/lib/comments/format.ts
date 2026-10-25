@@ -119,9 +119,10 @@ export function mediaTypeLabel(type: string | null | undefined): string {
   return MEDIA_TYPE[type.toLowerCase()] ?? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 }
 
-/** Reels are compared with Reels and everything else with feed posts (same_format). */
+/** Reels are compared with Reels, Stories with Stories and everything else with feed posts (same_format). */
 export function formatPlural(type: string | null | undefined): string {
   const key = type?.toLowerCase();
+  if (key === "story" || key === "stories") return "Stories";
   return key === "reel" || key === "reels" ? "Reels" : "feed posts";
 }
 

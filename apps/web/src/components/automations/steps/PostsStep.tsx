@@ -291,7 +291,7 @@ function PostPicker({
                   </span>
                   <span
                     aria-hidden
-                    className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-media-scrim/70 px-1.5 py-0.5 text-2xs text-on-brand"
+                    className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-media-chip px-1.5 py-0.5 text-2xs text-on-brand"
                   >
                     <span>{tile.scheduled ? "Scheduled" : tile.type}</span>
                     <span>{tile.date ? shortDate(tile.date, timeZone) : ""}</span>

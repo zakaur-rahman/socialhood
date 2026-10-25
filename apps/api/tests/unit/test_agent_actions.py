@@ -30,15 +30,17 @@ from socialhood.models.agent import (
 )
 from socialhood.models.identity import Role
 from socialhood.schemas.agent import ApprovalEventName, ApprovalListStatus, ApprovalStatusName
+from socialhood.schemas.assignment import Assignable, AssignmentOverview
 from socialhood.schemas.contacts import ContactFilterSpec
 from socialhood.schemas.flows import (
     ActionStep,
     AddTag,
+    Assign,
     BranchStep,
     SendStep,
     TagCondition,
 )
-from socialhood.services import agent_actions
+from socialhood.services import agent_actions, assignment
 from socialhood.services.automations import flows
 
 VIP = uuid.UUID("00000000-0000-4000-8000-0000000000a1")
@@ -160,6 +162,135 @@ def test_a_step_missing_what_it_needs_says_so(bad: dict[str, Any]) -> None:
         build_flow(steps(bad), TAGS)
     assert caught.value.code == "validation_error"
     assert caught.value.errors[0].field.startswith("steps.0")
+
+
+BEN = uuid.UUID("00000000-0000-4000-8000-0000000000b1")
+ANN = uuid.UUID("00000000-0000-4000-8000-0000000000b2")
+ROSTER = assignment.Roster(
+    [(BEN, "Ben Das", "ben@maple.in"), (ANN, "Ann", "ann@maple.in"), (uuid.uuid4(), "Ann", None)]
+)
+
+
+def test_an_assign_step_resolves_a_member_by_name_or_email() -> None:
+    by_name = build_flow(
+        steps({"type": "action", "action": "assign", "assign_to": "member", "member": " ben das "}),
+        TAGS,
+        ROSTER,
+    )
+    [step] = by_name.steps
+    assert isinstance(step, ActionStep)
+    assert step.action == Assign(mode="member", user_id=BEN)
+    by_email = build_flow(
+        steps({"type": "action", "action": "assign", "member": "BEN@maple.in"}), TAGS, ROSTER
+    )
+    assert by_email.steps[0].action == Assign(mode="member", user_id=BEN)  # type: ignore[attr-defined]
+    assert flows.graph(by_name)
+
+
+def test_an_assign_step_can_hand_out_in_turn_or_to_nobody() -> None:
+    turn = build_flow(
+        steps({"type": "action", "action": "assign", "assign_to": "round_robin"}), TAGS
+    )
+    assert turn.steps[0].action == Assign(mode="round_robin")  # type: ignore[attr-defined]
+    nobody = build_flow(steps({"type": "action", "action": "assign", "assign_to": "nobody"}), TAGS)
+    assert nobody.steps[0].action == Assign(mode="nobody")  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    ("step", "words"),
+    [
+        ({"action": "assign"}, "needs assign_to"),
+        ({"action": "assign", "assign_to": "member"}, "name or email"),
+        ({"action": "assign", "member": "Zed"}, "no team member called"),
+        ({"action": "assign", "member": "Ann"}, "More than one member"),
+        ({"action": "assign", "assign_to": "nobody", "member": "Ben Das"}, "only named when"),
+    ],
+    ids=["nothing", "no_member", "stranger", "ambiguous", "member_with_nobody"],
+)
+def test_an_assign_step_that_cannot_be_built_says_why(step: dict[str, Any], words: str) -> None:
+    with pytest.raises(ApiError) as caught:
+        build_flow(steps({"type": "action", **step}), TAGS, ROSTER)
+    assert caught.value.code == "validation_error"
+    assert words in (caught.value.detail or "")
+    assert caught.value.errors[0].field == "steps.0"
+
+
+def test_the_stranger_message_lists_the_team() -> None:
+    with pytest.raises(ApiError) as caught:
+        build_flow(steps({"type": "action", "action": "assign", "member": "Zed"}), TAGS, ROSTER)
+    assert "Ben Das, Ann, Ann" in (caught.value.detail or "")
+
+
+def test_the_proposal_lines_name_the_member_assigned_to() -> None:
+    flow = build_flow(
+        steps(
+            {"type": "send", "text": "Hi"},
+            {"type": "action", "action": "assign", "member": "Ben Das"},
+            {"type": "action", "action": "assign", "assign_to": "round_robin"},
+            {"type": "action", "action": "assign", "assign_to": "nobody"},
+        ),
+        TAGS,
+        ROSTER,
+    )
+    assert actions.flow_lines(flow, {BEN: "Ben Das"}) == [
+        "send “Hi”",
+        "assign to Ben Das",
+        "assign to the next available member",
+        "remove the assignee",
+    ]
+    assert actions.flow_lines(flow)[1] == "assign to a team member"
+
+
+def overview(*, round_robin: bool, available: list[bool]) -> AssignmentOverview:
+    return AssignmentOverview(
+        round_robin=round_robin,
+        members=[
+            Assignable(
+                user_id=uuid.uuid4(),
+                name=f"M{i}",
+                avatar_url=None,
+                role="agent",
+                available=ok,
+                open_conversations=0,
+                is_you=False,
+            )
+            for i, ok in enumerate(available)
+        ],
+    )
+
+
+def test_round_robin_says_what_to_switch_on() -> None:
+    flow = build_flow(
+        steps({"type": "action", "action": "assign", "assign_to": "round_robin"}), TAGS
+    )
+    assert actions.assign_notes(flow, overview(round_robin=True, available=[True])) == []
+    off = actions.assign_notes(flow, overview(round_robin=False, available=[True]))
+    assert len(off) == 1
+    assert "not handed out in turn yet" in off[0]
+    nobody = actions.assign_notes(flow, overview(round_robin=True, available=[False, False]))
+    assert len(nobody) == 1
+    assert "Nobody is available" in nobody[0]
+    both = actions.assign_notes(flow, overview(round_robin=False, available=[]))
+    assert len(both) == 2
+
+
+def test_only_a_round_robin_step_needs_the_notes() -> None:
+    member = build_flow(
+        steps({"type": "action", "action": "assign", "member": "Ben Das"}), TAGS, ROSTER
+    )
+    assert actions.assign_notes(member, overview(round_robin=False, available=[])) == []
+
+
+def test_the_tool_schema_offers_assign() -> None:
+    schema = ProposedStep.model_json_schema()
+    offered = schema["properties"]["action"]["anyOf"][0]["enum"]
+    assert "assign" in offered
+    assert schema["properties"]["assign_to"]["anyOf"][0]["enum"] == [
+        "member",
+        "round_robin",
+        "nobody",
+    ]
+    assert "member" in schema["properties"]
 
 
 def test_two_steps_with_the_same_id_are_refused() -> None:

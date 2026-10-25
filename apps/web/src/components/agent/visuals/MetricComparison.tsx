@@ -3,6 +3,7 @@ import { useId } from "react";
 import { MetricTile } from "@/components/home/MetricTile";
 import type { MetricComparisonVisual } from "@/lib/api/types";
 import { deltaHints, deltaTrend, formatValue, totalsNote } from "@/lib/agent/visuals";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 /**
  * GR-38: a period against another, a card per metric (compare_periods). Every figure and change is
@@ -18,7 +19,7 @@ export function MetricComparison({ visual }: { visual: MetricComparisonVisual })
   const note = totalsNote(visual.metrics);
   return (
     <section aria-labelledby={titleId} className="@container space-y-2" data-testid="visual-metric-comparison">
-      <h3 id={titleId} className="text-sm font-medium">
+      <h3 id={titleId} className={ITEM_TITLE}>
         {visual.title}
       </h3>
       {visual.note ? <p className="text-xs text-fg-secondary">{visual.note}</p> : null}

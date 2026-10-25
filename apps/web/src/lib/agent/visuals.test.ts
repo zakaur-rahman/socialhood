@@ -65,3 +65,11 @@ describe("visual figures (GR-38): formatting only, the API works every number ou
     expect(httpsOnly(null)).toBeNull();
   });
 });
+
+describe("a small change is never No change", () => {
+  it("writes the difference when the API calls it flat but the figures differ", () => {
+    const small = deltaTrend({ change_pct: -0.2, direction: "flat", tone: "neutral", current: 1054, previous: 1056, format: "count" }, "last week");
+    expect(small).toMatchObject({ direction: "down", text: "−2 (−0.2%)" });
+    expect(deltaTrend({ change_pct: 0, direction: "flat", tone: "neutral", current: 5, previous: 5, format: "count" }, "last week")?.text).toBe("No change");
+  });
+});

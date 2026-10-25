@@ -46,6 +46,7 @@ from pydantic import ValidationError
 from socialhood.errors import FieldError
 from socialhood.models.automations import Automation, AutomationAction
 from socialhood.schemas.flows import (
+    Action,
     ActionStep,
     AddTag,
     AiReplyStep,
@@ -62,6 +63,7 @@ from socialhood.schemas.flows import (
     FollowsCondition,
     LeadScoreCondition,
     LeadStageCondition,
+    PaymentStep,
     PlatformCondition,
     ProductStep,
     QuickReply,
@@ -125,7 +127,14 @@ COPY = {
     "product_missing": "That product doesn't exist any more. Choose another.",
     "product_off": "That product is switched off. Turn it on, or choose another.",
     "variant_missing": "That variant doesn't exist any more. Choose another.",
+    "variant_needed": "Choose a variant of this product.",
     "product_plan": "Sending products is part of Pro.",
+    "payment_plan": "Asking for payment is part of Pro.",
+    "payment_items": "Choose at least one product to sell.",
+    "payment_razorpay": (
+        "Razorpay isn't set up for this workspace. Add your keys in Integrations first."
+    ),
+    "payment_upi": "A UPI address isn't set up for this workspace. Add it in Integrations first.",
     "comment_saved_reply": (
         "A comment's first message is written here, not a saved reply. Start with a message "
         "step, then use the saved reply."
@@ -153,7 +162,7 @@ def successors(step: Step) -> list[str | None]:
     match step:
         case SendStep(quick_replies=replies) if replies:
             return [r.next for r in replies] + [step.on_text]
-        case SendStep() | ProductStep() | ActionStep() | DelayStep():
+        case SendStep() | ProductStep() | PaymentStep() | ActionStep() | DelayStep():
             return [step.next]
         case AskStep():
             return [step.next, step.on_skip]
@@ -324,6 +333,8 @@ class Context:
     # includes the catalogue (a product step is refused without it).
     products: Mapping[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]] = field(default_factory=dict)
     commerce: bool = True
+    # GR-32: the payment methods the workspace has set up (a payment step needs its method).
+    payment_methods: frozenset[str] = frozenset({"razorpay", "upi"})
     # GR-20: the workspace's members, for an "assign to a member" action.
     member_ids: frozenset[uuid.UUID] = frozenset()
 
@@ -362,6 +373,8 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
             return _send_errors(i, step, ctx)
         case ProductStep():
             return _product_errors(i, step, ctx)
+        case PaymentStep():
+            return _payment_errors(i, step, ctx)
         case AskStep():
             return _ask_errors(i, step, ctx)
         case BranchStep():
@@ -386,6 +399,31 @@ def _product_errors(i: int, step: ProductStep, ctx: Context) -> list[FieldError]
     if step.variant_id is not None and step.variant_id not in variants:
         return [FieldError(path(i, "variant_id"), COPY["variant_missing"])]
     return []
+
+
+def _payment_errors(i: int, step: PaymentStep, ctx: Context) -> list[FieldError]:
+    if not ctx.commerce:
+        return [FieldError(path(i, "method"), COPY["payment_plan"])]
+    if step.method not in ctx.payment_methods:
+        return [FieldError(path(i, "method"), COPY[f"payment_{step.method}"])]
+    if step.source == "draft":
+        return []
+    if not step.items:
+        return [FieldError(path(i, "items"), COPY["payment_items"])]
+    errors: list[FieldError] = []
+    for j, item in enumerate(step.items):
+        known = ctx.products.get(item.product_id)
+        if known is None:
+            errors.append(FieldError(path(i, f"items.{j}.product_id"), COPY["product_missing"]))
+            continue
+        active, variants = known
+        if not active:
+            errors.append(FieldError(path(i, f"items.{j}.product_id"), COPY["product_off"]))
+        elif item.variant_id is not None and item.variant_id not in variants:
+            errors.append(FieldError(path(i, f"items.{j}.variant_id"), COPY["variant_missing"]))
+        elif item.variant_id is None and variants:
+            errors.append(FieldError(path(i, f"items.{j}.variant_id"), COPY["variant_needed"]))
+    return errors
 
 
 def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[FieldError]:
@@ -532,7 +570,7 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
 def _allowed(step: Step, window: Window, ctx: Context, start: str) -> tuple[str | None, Window]:
     """(the problem with ``step`` here or None, the window after it)."""
     match step:
-        case ProductStep():
+        case ProductStep() | PaymentStep():
             return ("after_private_reply" if window == "closed" else None), window
         case SendStep() | AskStep():
             if window == "closed":
@@ -637,9 +675,23 @@ def _excerpt(text: str, limit: int = 80) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
 
 
-def describe(definition: FlowDefinition) -> list[str]:
+def _action_line(action: Action, member_names: Mapping[uuid.UUID, str]) -> str:
+    """An action step in a few words. An assign step says who gets the conversation."""
+    if isinstance(action, Assign):
+        if action.mode == "round_robin":
+            return "assign to the next available member"
+        if action.mode == "nobody":
+            return "remove the assignee"
+        name = member_names.get(action.user_id) if action.user_id else None
+        return f"assign to {name}" if name else "assign to a team member"
+    return action.kind.replace("_", " ")
+
+
+def describe(
+    definition: FlowDefinition, member_names: Mapping[uuid.UUID, str] | None = None
+) -> list[str]:
     """One line per step a run can reach, in the order a walk meets them (Ask Social Hood reads
-    a flow this way)."""
+    a flow this way). ``member_names`` names the member an assign step gives the conversation to."""
     try:
         g = graph(definition)
     except FlowError:
@@ -666,7 +718,7 @@ def describe(definition: FlowDefinition) -> list[str]:
                 kinds = ", ".join(rule.when.kind for rule in step.rules)
                 line = f"branch on {kinds or 'nothing'}"
             case ActionStep():
-                line = step.action.kind.replace("_", " ")
+                line = _action_line(step.action, member_names or {})
             case DelayStep():
                 line = f"wait {step.seconds // 60} minutes"
             case RandomizeStep():

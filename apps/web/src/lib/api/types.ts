@@ -151,6 +151,8 @@ export type SequencePreview = Schemas["SequencePreview"];
 export type SequenceEnrolment = Schemas["Enrolment"];
 export type SequenceEnrolmentList = Schemas["EnrolmentList"];
 export type EnrolmentStatus = SequenceEnrolment["status"];
+export type SequenceAnalytics = Schemas["SequenceAnalytics"];
+export type SequenceStepStats = Schemas["StepStats"];
 export type ContactSequence = Schemas["ContactSequence"];
 export type ContactSequenceList = Schemas["ContactSequenceList"];
 export type CostEstimate = Schemas["CostEstimate"];
@@ -251,6 +253,8 @@ export type PostSort = NonNullable<NonNullable<operations["list_posts"]["paramet
 export type PostPerformance = Schemas["PostPerformance"];
 export type PostComparison = Schemas["PostComparison"];
 export type PostMetrics = Schemas["PostMetrics"];
+/** Story replies and taps, Page post clicks: the figures only some posts have (C-131). */
+export type ExtraMetrics = Schemas["ExtraMetrics"];
 export type MetricComparison = Schemas["MetricComparison"];
 export type Baseline = Schemas["Baseline"];
 /** A post's age after publishing: a snapshot window, or its latest known values. */
@@ -310,6 +314,14 @@ export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
 
 // ---- Ask Social Hood: the read-only agent (PA: FR-AGT-01…07, agent-architecture.html §11, §12)
 
+/**
+ * VIS-11: a structured follow-up on the run before it (schemas/agent.py RunHints): the same
+ * question over another range or platform, or a draft reply for each of a few conversations.
+ * Whitelisted values only; the API words the member's question from them.
+ */
+export type RunHints = Schemas["RunHints"];
+/** What the Ask thread can send: a question in words, or a structured follow-up (VIS-11). */
+export type AskInput = string | RunHints;
 export type AgentRun = Schemas["AgentRun"];
 export type AgentRunDetail = Schemas["AgentRunDetail"];
 export type AgentRunList = Schemas["AgentRunList"];
@@ -361,6 +373,13 @@ export type VisualKind = Visual["kind"];
 export type MetricComparisonVisual = Schemas["MetricComparisonVisual"];
 export type RankedPostsVisual = Schemas["RankedPostsVisual"];
 export type SentimentSummaryVisual = Schemas["SentimentSummaryVisual"];
+export type TrendVisual = Schemas["TrendVisual"];
+export type LeadListVisual = Schemas["LeadListVisual"];
+export type TableVisual = Schemas["TableVisual"];
+export type TrendPoint = Schemas["TrendPoint"];
+export type LeadRow = Schemas["LeadRow"];
+export type TableColumn = Schemas["TableColumn"];
+export type TableRow = Schemas["TableRow"];
 export type MetricDelta = Schemas["MetricDelta"];
 export type RankedPostRow = Schemas["RankedPostRow"];
 export type VisualPeriod = Schemas["VisualPeriod"];
@@ -438,6 +457,12 @@ export type OrderCreate = Schemas["OrderCreate"];
 export type OrderLineInput = Schemas["OrderLineIn"];
 export type OrderAddressInput = Schemas["AddressIn"];
 export type OrderStatus = Order["status"];
+export type OrderPayment = NonNullable<Order["payments"]>[number];
+export type OrderRefund = NonNullable<Order["refunds"]>[number];
+export type OrderNotice = NonNullable<Order["notice"]>;
+export type OrderNoticeInput = Schemas["NoticeIn"];
+export type OrderEditInput = Schemas["OrderEdit"];
+export type OrderRefundInput = Schemas["RefundCreate"];
 export type OrderPaymentMethod = NonNullable<Order["payment_method"]>;
 export type PaymentSettings = Schemas["PaymentSettings"];
 export type RazorpayConnectInput = Schemas["RazorpayConnect"];
@@ -507,6 +532,9 @@ export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];
 // Weekly report (GR-34)
 export type WeeklyReport = Schemas["WeeklyReport"];
 export type ReportMetric = Schemas["ReportMetric"];
+export type ReportAccount = Schemas["ReportAccount"];
+export type AccountBreakdown = Schemas["AccountBreakdown"];
+export type BreakdownMetric = Schemas["BreakdownMetric"];
 export type ReportMetricKey = ReportMetric["key"];
 export type ReportAccountMetric = Schemas["ReportAccountMetric"];
 export type ReportPoint = Schemas["ReportPoint"];

@@ -18,6 +18,7 @@ import { Fragment, useState, type ReactNode } from "react";
 
 import { PostThumb } from "@/components/comments/PostThumb";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldControl, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -265,7 +266,7 @@ function StoryPreview({
     <div>
       <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
         {asset ? <Media asset={asset} /> : <NoMedia>Add one photo or video to see the Story.</NoMedia>}
-        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-scrim/60 to-transparent p-3" aria-hidden>
+        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-chip to-transparent p-3" aria-hidden>
           <div className="h-0.5 w-full rounded-full bg-line-strong">
             <div className="h-full w-1/3 rounded-full bg-fg" />
           </div>
@@ -323,24 +324,28 @@ function FeedPreview({
             </Badge>
             {/* Instagram's white arrows on the photo: 32 px, 40 px on coarse pointers. */}
             {index > 0 ? (
-              <button
+              <Button
                 type="button"
+                variant="inverse"
+                size="icon"
                 aria-label="Previous item"
                 onClick={() => setSlide(index - 1)}
-                className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute inset-y-0 left-2 my-auto"
               >
                 <ChevronLeft className="size-4" aria-hidden />
-              </button>
+              </Button>
             ) : null}
             {index < assets.length - 1 ? (
-              <button
+              <Button
                 type="button"
+                variant="inverse"
+                size="icon"
                 aria-label="Next item"
                 onClick={() => setSlide(index + 1)}
-                className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute inset-y-0 right-2 my-auto"
               >
                 <ChevronRight className="size-4" aria-hidden />
-              </button>
+              </Button>
             ) : null}
           </>
         ) : null}
@@ -398,7 +403,7 @@ function ReelPreview({
   return (
     <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
       {asset ? <Media asset={asset} /> : <NoMedia />}
-      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-canvas/90 to-transparent p-3 pr-12">
+      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-media-heavy to-transparent p-3 pr-12">
         <div className="flex items-center gap-2">
           <AccountPicture account={account} identity={identity} size={24} />
           <span className="truncate text-sm font-semibold">{name}</span>
@@ -457,7 +462,7 @@ function GridPreview({
             <span className="grid size-full place-items-center text-xs text-fg-secondary">New post</span>
           )}
           {Icon ? (
-            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70" aria-hidden>
+            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-chip" aria-hidden>
               <Icon className="size-3.5" />
             </span>
           ) : null}

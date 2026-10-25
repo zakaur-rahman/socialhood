@@ -98,7 +98,7 @@ export function ThreadView({
   if (!conversation.data) {
     return (
       <div role="status" className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
-        <div className="flex h-14 items-center gap-3 border-b border-line bg-panel px-4">
+        <div className="flex h-14 items-center gap-3 border-b border-line glass-pane px-4">
           <Skeleton className="size-8 rounded-full" />
           <Skeleton className="h-3 w-40" />
         </div>

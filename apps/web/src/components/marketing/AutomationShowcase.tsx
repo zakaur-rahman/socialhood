@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { MARKETING_HEADING } from "@/styles/tokens";
 
 import { TraceLine } from "./effects/TraceLine";
-import { Container, SECTION_EYEBROW } from "./primitives";
+import { Container, MARKETING_CARD, SECTION_EYEBROW } from "./primitives";
 import { SHOTS } from "./shots";
 
 // FR-AUT-21 tap first and FR-AUT-22 the follow nudge, as the product guide describes them.
@@ -78,7 +78,7 @@ export function AutomationShowcase() {
         </div>
 
         <figure data-reveal className="mx-auto w-full max-w-sm">
-          <div className="rounded-2xl border border-line-strong bg-panel p-2 shadow-2xl shadow-brand/15">
+          <div className={cn(MARKETING_CARD, "p-2 shadow-glow")}>
             <Image
               src={SHOTS.automationPreview.src}
               width={SHOTS.automationPreview.width}

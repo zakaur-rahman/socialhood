@@ -86,11 +86,60 @@ export function upsertStep(steps: AgentStep[], progress: AgentStepProgress): Age
   return next.sort((a, b) => a.ordinal - b.ordinal);
 }
 
-/** agent.step: a step started or finished. Only a run someone is watching has a detail to patch. */
+/**
+ * The tools whose results can carry a visual (VIS-10). A finished step of one of these makes the
+ * watching client fetch the run again, so the visual shows before the answer is written. The set
+ * mirrors the API's tools that have a `visual` in their result (a unit test on the API side keeps
+ * the two in step). Events carry no result, so this is the only way to know.
+ */
+export const VISUAL_TOOLS: ReadonlySet<string> = new Set([
+  "compare_periods",
+  "metric_trend",
+  "top_posts",
+  "sentiment_distribution",
+  "comment_topics",
+  "list_contacts",
+  "search_conversations",
+  "list_orders",
+]);
+
+/** Steps that finish within this window share one fetch of the run. */
+export const VISUAL_REFETCH_MS = 300;
+
+const refetching = new Map<string, ReturnType<typeof setTimeout>>();
+
+function refetchRunSoon(queryClient: QueryClient, wid: string, runId: string): void {
+  const key = `${wid}:${runId}`;
+  if (refetching.has(key)) return; // the fetch already waiting will see this step too
+  refetching.set(
+    key,
+    setTimeout(() => {
+      refetching.delete(key);
+      void queryClient.invalidateQueries({ queryKey: keys.agentRun(wid, runId), exact: true });
+    }, VISUAL_REFETCH_MS),
+  );
+}
+
+/** Drops fetches still waiting (tests, and a client torn down). */
+export function cancelVisualRefetches(): void {
+  refetching.forEach((timer) => clearTimeout(timer));
+  refetching.clear();
+}
+
+/**
+ * agent.step: a step started or finished. Only a run someone is watching has a detail to patch. A
+ * visual-producing step that succeeded also refetches that detail, debounced (VIS-10), because the
+ * visual lives in the run, not in the event.
+ */
 export function applyAgentStepEvent(queryClient: QueryClient, wid: string, event: AgentStepEvent): void {
+  const watched = queryClient.getQueryData<AgentRunDetail>(keys.agentRun(wid, event.run_id)) !== undefined;
   queryClient.setQueryData<AgentRunDetail>(keys.agentRun(wid, event.run_id), (detail) =>
     detail ? { ...detail, steps: upsertStep(detail.steps, event.step) } : detail,
   );
+  const { tool, status } = event.step;
+  if (watched && status === "succeeded" && tool && VISUAL_TOOLS.has(tool)) {
+    refetchRunSoon(queryClient, wid, event.run_id);
+  }
 }
 
 /**

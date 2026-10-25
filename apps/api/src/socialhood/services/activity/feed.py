@@ -370,19 +370,24 @@ def _sequence_item(row: Any) -> ActivityItem:
 def _order_item(row: Any) -> ActivityItem:
     """An order that was paid, or whose payment link ran out (GR-32)."""
     who = _who(row.contact_username, row.contact_display_name)
-    paid = row.status == "paid"
+    paid = row.status in ("paid", "fulfilled")
+    refunded = row.status == "refunded"
     total = money.label(row.total_minor, row.currency)
     return ActivityItem(
         id=row.id,
         kind="order",
-        outcome="ok" if paid else "attention",
+        outcome="ok" if paid or refunded else "attention",
         occurred_at=row.at,
         title=(
             f"Order #{row.number} was paid{_for(who)}"
             if paid
+            else f"Order #{row.number} was refunded{_for(who)}"
+            if refunded
             else f"Order #{row.number} expired without payment{_for(who)}"
         ),
-        reason=total if paid else f"The payment link for {total} ran out. Send a new one.",
+        reason=(
+            total if paid or refunded else f"The payment link for {total} ran out. Send a new one."
+        ),
         social_account_id=row.account_id,
         account_label=account_label(row.account_username, row.account_display_name, row.platform),
         platform=row.platform,

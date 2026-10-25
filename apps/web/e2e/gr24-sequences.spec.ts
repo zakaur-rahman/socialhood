@@ -24,9 +24,10 @@ test.describe("GR-24 sequences", () => {
     const wid = workspace.id;
     const asked = unique("Do you have it in blue?");
     await api.inbound(wid, { accountId: account.id, kind: "dm", text: asked, fromId: "e2e_gr24_reply" });
-    const conversations = await api.call<{ items: Conversation[] }>("GET", `/v1/w/${wid}/conversations`);
-    const contact = conversations.items.find((c) => c.last_message_preview === asked)?.contact.id;
-    expect(contact).toBeTruthy();
+    const contactOf = async () =>
+      (await api.call<{ items: Conversation[] }>("GET", `/v1/w/${wid}/conversations`)).items.find((c) => c.last_message_preview === asked)?.contact.id;
+    await expect.poll(contactOf, { timeout: 30_000 }).toBeTruthy();
+    const contact = await contactOf();
 
     const tag = await api.call<{ id: string }>("POST", `/v1/w/${wid}/tags`, { name: unique("Follow up") });
     const created = await api.call<{ id: string }>("POST", `/v1/w/${wid}/sequences`, {
@@ -67,7 +68,9 @@ test.describe("GR-24 sequences", () => {
     await expect(stopped.getByText("Stopped")).toBeVisible();
 
     // The third step was never sent.
-    const thread = conversations.items.find((c) => c.contact.id === contact);
+    const thread = (await api.call<{ items: Conversation[] }>("GET", `/v1/w/${wid}/conversations`)).items.find(
+      (c) => c.contact.id === contact,
+    );
     const messages = await api.call<{ items: { text: string | null }[] }>(
       "GET",
       `/v1/w/${wid}/conversations/${thread?.id}/messages`,
@@ -94,7 +97,7 @@ test.describe("GR-24 sequences", () => {
 
     await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/sequences/[0-9a-f-]+$`));
     await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
-    await expect(page.getByText("Draft")).toBeVisible();
+    await expect(page.getByText("Draft", { exact: true }).first()).toBeVisible();
 
     // The list shows it with what starts it.
     await page.goto(`/w/${workspace.slug}/sequences`);

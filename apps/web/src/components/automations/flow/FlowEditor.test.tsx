@@ -138,7 +138,7 @@ describe("the flow editor (GR-13)", () => {
     renderEditor({ initial: [send("a", "Hello")] });
     await user.click(screen.getByRole("button", { name: "Add step" }));
     const kinds = screen.getAllByRole("menuitem").map((item) => item.querySelector("span")?.textContent);
-    expect(kinds).toEqual(["Send", "Product", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
+    expect(kinds).toEqual(["Send", "Product", "Request payment", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
 
     await user.click(screen.getByRole("menuitem", { name: /^Delay/ }));
     expect(titles()).toEqual(["1Message", "2Wait 10 minutes"]);

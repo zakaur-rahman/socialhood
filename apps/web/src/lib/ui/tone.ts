@@ -4,7 +4,7 @@
  * every status chip shows the same fill and text for a tone.
  *
  * - `neutral`: the `hover` fill (white 5%) with secondary text. Not `pressed`: secondary text is
- *   only 4.45:1 on it.
+ *   5.55:1 on it, but `hover` is the quieter fill.
  * - `brand`: the info tone, `brand-soft` with `brand-fg` text.
  * - `success`, `warning`, `danger`: the 15% soft fills with the status text colour (`danger-fg`,
  *   since `danger` is never text).

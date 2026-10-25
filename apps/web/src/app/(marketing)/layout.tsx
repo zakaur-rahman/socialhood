@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { ThemePin } from "@/components/theme/ThemePin";
+import { THEME_PIN_DARK_SCRIPT } from "@/lib/theme";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/marketing/site";
@@ -14,12 +16,17 @@ export const metadata: Metadata = {
 };
 
 /**
- * The public site: header, the page, footer. Pages stay server-rendered and static; only the
+ * The public site: header, the page, footer. Always dark (C-129): the wrapper pins the dark
+ * scheme (`scheme-dark`) so its colours are dark whatever the visitor chose for the app, and <html>
+ * is pinned too (the inline script on a first load, ThemePin on a client navigation), so the
+ * scrollbars and the overscroll match. Pages stay server-rendered and static; only the
  * header's account actions and phone menu run in the browser. Each page renders its own <main>.
  */
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="scheme-dark flex min-h-dvh flex-col bg-canvas bg-ambient bg-fixed">
+      <script dangerouslySetInnerHTML={{ __html: THEME_PIN_DARK_SCRIPT }} />
+      <ThemePin />
       <a
         href="#main"
         className="sr-only z-50 rounded-lg bg-brand-strong text-sm font-medium text-on-brand focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"

@@ -330,6 +330,19 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         c=thread.contact_id,
         v=thread.conversation_id,
     )
+    await execute(  # GR-32 follow-up: a payment on that order, and a refund of part of it
+        engine,
+        "INSERT INTO order_payments (workspace_id, order_id, amount_minor, method, paid_at)"
+        " SELECT :w, id, 100, 'upi', now() FROM orders WHERE workspace_id = :w",
+        w=wid,
+    )
+    await execute(
+        engine,
+        "INSERT INTO order_refunds (workspace_id, order_id, payment_id, amount_minor, reason,"
+        " method, status) SELECT :w, order_id, id, 40, 'Returned', 'manual', 'processed'"
+        " FROM order_payments WHERE workspace_id = :w",
+        w=wid,
+    )
     await make_sequence_rows(  # GR-24: a sequence on the account, the contact in it, a step run
         engine,
         workspace_id=wid,

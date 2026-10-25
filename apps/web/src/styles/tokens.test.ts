@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { JSON_PATH, TS_PATH, generate, render, resolveTheme } from "../../scripts/gen-tokens.mjs";
 import {
   EYEBROW,
   breakpoints,
@@ -10,23 +11,44 @@ import {
   colorTokens,
   colorValue,
   customVariants,
+  describedColors,
   easings,
   fontSizes,
+  glassShadows,
+  glowShadows,
   gradientUtilities,
   motionDurations,
   otherUtilities,
+  radiusTokens,
+  radiusValue,
   shadcnAliases,
   shadowTokens,
+  themeInvariant,
   typeRoles,
 } from "./tokens";
 
 const css = readFileSync(join(__dirname, "globals.css"), "utf8");
-/** A source file under src/, for the checks on the token mirrors. */
+/** A source file under src/, for the checks on the token consumers. */
 const source = (path: string) => readFileSync(join(__dirname, "..", path), "utf8");
+const unix = (text: string) => text.replace(/\r\n/g, "\n");
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
-function declared(name: string): string | undefined {
+/** The raw declaration of a colour, `light-dark(…)` included (a pair is written once, C-129). */
+function declaredRaw(name: string): string | undefined {
   const match = css.match(new RegExp(`--color-${name}:\\s*([^;]+);`));
   return match?.[1].trim();
+}
+
+/** A shadow's value in one theme, from the source. */
+function declaredShadow(name: string, theme: "dark" | "light"): string | undefined {
+  const match = css.match(new RegExp(`--${name}:\\s*([^;]+);`));
+  return match ? resolveTheme(match[1].trim().replace(/\s+/g, " "), theme) : undefined;
+}
+
+/** A colour's value in one theme (dark by default): one side of its `light-dark()` pair. */
+function declared(name: string, theme: "dark" | "light" = "dark"): string | undefined {
+  const raw = declaredRaw(name);
+  return raw === undefined ? undefined : resolveTheme(raw, theme);
 }
 
 /** The body of every top-level block whose header matches, e.g. `:root` or `@theme inline`. */
@@ -49,17 +71,42 @@ const rootAliases = blocks(/:root/)
   .join("\n")
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .matchAll(/--([a-z-]+):/g);
-// `--radius` is inert (DESIGN_SYSTEM §1.10) and `--motion-*` are durations, not colours.
-const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => name !== "radius" && !name.startsWith("motion-"));
+// `--motion-*` are durations and `--gradient-*` gradients, not colour aliases.
+const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-") && !name.startsWith("grain-"));
 const themeInline = blocks(/@theme inline/).join("\n");
+/** Every `--color-*` declared in `@theme` (the palette lock, `--color-*`, is not a token). */
+const themeColorNames = [...blocks(/@theme/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
+
+describe("one source of truth (C-127)", () => {
+  it("has generated files that match globals.css exactly: run `pnpm tokens` after editing it", () => {
+    const { json, ts } = render(generate(css));
+    expect(unix(readFileSync(JSON_PATH, "utf8"))).toBe(json);
+    expect(unix(readFileSync(TS_PATH, "utf8"))).toBe(ts);
+  });
+
+  it("describes every --color-* token and nothing else", () => {
+    const described = [...describedColors, ...chartAliases.map((a) => a.name)];
+    expect([...themeColorNames].sort()).toEqual([...described].sort());
+    for (const token of colorTokens) {
+      expect(token.use, token.name).not.toBe("");
+      expect(token.swatch, token.name).toBe(`bg-${token.name}`);
+    }
+  });
+
+  it("writes no theme value in tokens.ts: no colour, gradient or easing literal", () => {
+    expect(source("styles/tokens.ts")).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(|linear-gradient|radial-gradient|cubic-bezier/);
+  });
+});
 
 describe("design tokens (§4.2, UX-TOK-01)", () => {
   it.each(colorTokens)("globals.css defines $name as $value", ({ name, value }) => {
     expect(declared(name)).toBe(value);
   });
 
-  it.each(gradientUtilities)("defines the $name utility", ({ name, value }) => {
-    expect(css).toContain(`@utility ${name} { background-image: ${value}; }`);
+  it.each(gradientUtilities)("defines the $name utility over $variable", ({ name, variable, value }) => {
+    expect(css).toContain(`@utility ${name} { background-image: var(${variable}); }`);
+    // a gradient may span lines in globals.css; the generated value has its whitespace collapsed
+    expect(css.replace(/\s+/g, " ")).toMatch(new RegExp(`${variable}:\\s*${escape(value)};`));
   });
 
   it("builds every gradient from tokens, not hex stops (DESIGN_SYSTEM §1.9)", () => {
@@ -69,11 +116,13 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     for (const rule of gradientRules) expect(rule).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
 
-  it("maps shadcn's semantic variables onto the tokens", () => {
+  it("maps shadcn's semantic variables onto the tokens (kept only for `shadcn add` output)", () => {
     expect(css).toMatch(/--background:\s*var\(--color-canvas\)/);
     expect(css).toMatch(/--ring:\s*var\(--color-brand\)/);
+    expect(shadcnAliases).toHaveLength(18);
     for (const { alias, token } of shadcnAliases) {
       expect(css, `--${alias}`).toMatch(new RegExp(`--${alias}:\\s*var\\(--color-${token}\\);`));
+      expect(colorTokens.map((t) => t.name), `${alias} -> ${token}`).toContain(token);
     }
   });
 
@@ -89,36 +138,65 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(css).toMatch(/--primary:\s*var\(--color-brand-strong\)/);
     expect(css).toMatch(/--primary-foreground:\s*var\(--color-on-brand\)/);
     expect(css).toMatch(/--accent:\s*var\(--color-hover\)/);
-    expect(blocks(/:root/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    const aliasLines = blocks(/:root/)
+      .join("\n")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n")
+      .filter((line) => !line.includes("--gradient-") && !line.includes("--motion-"));
+    expect(aliasLines.join("\n")).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
 
   it("keeps the WCAG fixes from UX-TOK-02", () => {
-    expect(declared("brand-strong")).toBe("#4467E6"); // the gradient ends at 4.85:1 with white, not #567FF8
+    expect(declared("brand-strong")).toBe("#5550E0"); // the gradient ends at 5.82:1 with white, not #6D6AF5
     expect(gradientUtilities[0].value).toContain("var(--color-brand-strong) 100%");
-    expect(declared("brand-fg")).toBe("#9DB5FF");
-    expect(declared("fg-secondary")).toBe("#9B9CA0");
+    expect(declared("brand-fg")).toBe("#B5B3FF");
+    expect(declared("fg-secondary")).toBe("#A6A9BC");
     expect(declared("danger-fill")).toBe("#C53030");
   });
 
   it("applies the owner's token decisions D-01, D-06 and D-12 (C-069, C-071)", () => {
     // D-01: control edges are white 40%, through --input, so every field, select, checkbox and
     // switch edge is 3:1 or more on every surface.
-    expect(declared("line-control")).toBe("rgb(255 255 255 / 0.40)");
+    expect(declared("line-control")).toBe("rgb(214 219 255 / 0.45)");
     expect(css).toMatch(/--input:\s*var\(--color-line-control\);/);
     // D-06: placeholders are fg-secondary (text, 4.5:1), not fg-disabled.
     const base = blocks(/@layer base/).join("\n");
     expect(base).toMatch(/::placeholder \{ color: var\(--color-fg-secondary\); \}/);
     expect(base).not.toMatch(/fg-disabled/);
     // D-12: what floats sits on overlay, lighter than the panel cards beneath it.
-    expect(declared("overlay")).toBe("#262626");
+    expect(declared("overlay")).toBe("#222633");
     expect(css).toMatch(/--popover:\s*var\(--color-overlay\);/);
   });
 
-  it.each(shadowTokens)("defines the $name elevation shadow (D-12)", ({ name, value, sample }) => {
-    expect(css).toMatch(new RegExp(`--${name}:\\s*${value.replace(/[()/.]/g, "\\$&")};`));
+  it.each(shadowTokens)("defines the $name elevation shadow (D-12, C-129)", ({ name, value, light, sample }) => {
+    expect(declaredShadow(name, "dark")).toBe(value);
+    expect(declaredShadow(name, "light")).toBe(light);
     expect(sample.split(" ")).toEqual(expect.arrayContaining(["bg-overlay", "ring-1", "ring-line", name]));
-    // Dark shadows only: no hue, and the edge is a ring, not part of the shadow.
+    // Black on dark, no hue; a cool ink on light. The edge is a ring, not part of the shadow.
     expect(value).toMatch(/^0 \d+px \d+px -\d+px rgb\(0 0 0 \/ 0\.\d+\)$/);
+    expect(light).toMatch(/^0 \d+px \d+px -\d+px rgb\(30 35 80 \/ 0\.\d+\)$/);
+  });
+
+  it.each(glassShadows)("defines the $name glass shadow from the tokens (C-128)", ({ name, value, light }) => {
+    expect(declaredShadow(name, "dark")).toBe(value);
+    expect(declaredShadow(name, "light")).toBe(light);
+  });
+
+  it.each(glowShadows)("defines the $name marketing glow from the brand token (C-127)", ({ name, value }) => {
+    expect(css).toMatch(new RegExp(`--${name}:\\s*${escape(value)};`));
+    expect(value).toContain("var(--color-brand)");
+    expect(value).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+  });
+
+  it.each(radiusTokens)("defines $name as $value", ({ key, value }) => {
+    expect(css).toMatch(new RegExp(`--radius-${key}:\\s*${value};`));
+    expect(radiusValue(key)).toBe(value);
+  });
+
+  it("drops the inert shadcn --radius and names the eyebrow tracking and display leading", () => {
+    expect(css).not.toMatch(/--radius:/);
+    expect(css).toMatch(/--tracking-eyebrow:\s*0\.08em;/);
+    expect(css).toMatch(/--leading-display:\s*1\.08;/);
   });
 
   it.each(fontSizes)("defines $name as $size with a $lineHeight line height", ({ name, size, lineHeight }) => {
@@ -136,8 +214,9 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(css).toContain(`--${name}: ${value};`);
   });
 
-  it("adds the wide breakpoint", () => {
-    for (const bp of breakpoints.filter((b) => b.custom)) expect(css).toMatch(new RegExp(`--breakpoint-${bp.name}:\\s*${bp.value};`));
+  it("defines the breakpoints, wide being the addition", () => {
+    for (const bp of breakpoints) expect(css).toMatch(new RegExp(`--breakpoint-${bp.name}:\\s*${bp.value};`));
+    expect(breakpoints.map((b) => b.px)).toEqual([768, 1024, 1280, 1440]);
   });
 
   it.each(otherUtilities)("defines the $name utility", ({ name, value }) => {
@@ -148,7 +227,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     const mask = otherUtilities.find((u) => u.name === "shadow-crop-mask")!;
     expect(mask.value).toContain("var(--color-media-scrim) 60%");
     expect(mask.value).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
-    // Elevation stays two shadows in @theme; the mask is a utility of its own.
+    // Elevation stays two shadows; the mask is a utility of its own.
     expect(css).not.toMatch(/--shadow-crop-mask/);
     expect(shadowTokens.map((s) => s.name)).not.toContain("shadow-crop-mask");
   });
@@ -159,9 +238,15 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
 
   it("adds the brand-soft hover step between brand-soft and brand-line (C-073)", () => {
     const alpha = (name: string) => Number(declared(name)?.match(/\/ ([\d.]+)\)$/)?.[1]);
-    expect(declared("brand-soft-hover")).toBe("rgb(86 127 248 / 0.25)");
+    expect(declared("brand-soft-hover")).toBe("rgb(109 106 245 / 0.25)");
     expect(alpha("brand-soft")).toBeLessThan(alpha("brand-soft-hover"));
     expect(alpha("brand-soft-hover")).toBeLessThan(alpha("brand-line"));
+  });
+
+  it("derives the named shades (media, panel, on-brand, danger) from their base token, not from a second literal", () => {
+    const shades = colorTokens.filter((t) => /^(media-(wash|chip|heavy)|canvas-veil|panel-(glass|veil)|on-brand-(soft|line|line-strong)|fg-hover|danger-line|warning-line|danger-fill-hover)$/.test(t.name));
+    expect(shades).toHaveLength(13);
+    for (const { name, value } of shades) expect(value, name).toMatch(/^color-mix\(in srgb, var\(--color-[a-z-]+\) \d+%, transparent\)$/);
   });
 
   it("sets the base-layer rules: bold is 600, the phone top bar's scroll padding, the reduced-motion net", () => {
@@ -174,11 +259,10 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 
   it("keeps type roles on the scale: no arbitrary sizes, weights 400–600, one eyebrow", () => {
-    expect(EYEBROW).toBe("text-2xs font-semibold uppercase tracking-[0.08em] text-fg-secondary");
+    expect(EYEBROW).toBe("text-2xs font-semibold uppercase tracking-eyebrow text-fg-secondary");
     for (const { className } of typeRoles) {
-      expect(className).not.toMatch(/text-\[/);
+      expect(className).not.toMatch(/(text|tracking|leading)-\[/);
       expect(className).not.toMatch(/font-(bold|extrabold|black|light|thin)/);
-      expect(className).not.toMatch(/tracking-\[0\.(1|12|14)em\]/);
     }
     expect(new Set(typeRoles.map((r) => r.name)).size).toBe(typeRoles.length);
   });
@@ -194,6 +278,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(declared(name)).toBe(`var(--color-${token})`);
     expect(colorTokens.map((t) => t.name)).toContain(token);
     expect(swatch).toBe(`bg-${name}`);
+    expect(colorValue(name)).toBe(colorValue(token));
   });
 
   it.each(["lib/clerk-appearance.ts", "components/marketing/og.tsx", "app/manifest.ts", "app/layout.tsx", "app/global-error.tsx"])(
@@ -206,9 +291,77 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     },
   );
 
+  it("gives Clerk the brand gradient and the radii as CSS variables, and the icon script its colours from the generated tokens (C-127)", () => {
+    const clerk = source("lib/clerk-appearance.ts");
+    expect(clerk).toContain('backgroundImage: "var(--gradient-brand)"');
+    expect(clerk).not.toMatch(/linear-gradient|0\.5rem|0\.75rem/);
+    const icons = readFileSync(join(__dirname, "..", "..", "scripts", "generate-icons.mjs"), "utf8");
+    expect(icons).toContain("tokens.generated.json");
+    expect(icons).not.toMatch(/\b0x(33|52|cc|1c|2d|70)\b/i); // the old hard-coded gradient bytes
+  });
+
   it("looks colour tokens up by name and refuses unknown ones", () => {
-    expect(colorValue("canvas")).toBe("#000000");
-    expect(colorValue("brand-line")).toBe("rgb(86 127 248 / 0.35)");
+    expect(colorValue("canvas")).toBe("#131520");
+    expect(colorValue("brand-line")).toBe("rgb(109 106 245 / 0.35)");
     expect(() => colorValue("red-500")).toThrow(/Unknown colour token/);
+    expect(() => radiusValue("huge")).toThrow(/Unknown radius token/);
+  });
+});
+
+describe("two themes, one declaration (C-129)", () => {
+  const generated = generate(css);
+
+  it("defines every colour in both themes: a light-dark() pair, a shade of another token, or a listed invariant", () => {
+    const problems: string[] = [];
+    for (const name of themeColorNames) {
+      const raw = declaredRaw(name) ?? "";
+      const pair = raw.includes("light-dark(");
+      const shade = /var\(--color-[a-z0-9-]+\)/.test(raw);
+      const invariant = name in themeInvariant;
+      if (!pair && !shade && !invariant) problems.push(`${name} is one literal value: write light-dark(LIGHT, DARK) or list it in themeInvariant`);
+      if (pair && invariant) problems.push(`${name} is a pair but listed as invariant`);
+      if (pair) {
+        const [light, dark] = [resolveTheme(raw, "light"), resolveTheme(raw, "dark")];
+        if (light === dark) problems.push(`${name} has the same value in both themes: drop the pair and list it`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("lists only invariants that exist and are single values", () => {
+    for (const name of Object.keys(themeInvariant)) {
+      expect(themeColorNames, name).toContain(name);
+      expect(declaredRaw(name), name).not.toContain("light-dark(");
+    }
+  });
+
+  it("generates a light value for every colour and shadow, covering the same names as dark", () => {
+    expect(Object.keys(generated.colorsLight)).toEqual(Object.keys(generated.colors));
+    expect(Object.keys(generated.shadowsLight)).toEqual(Object.keys(generated.shadows));
+    for (const token of colorTokens) {
+      expect(token.light, token.name).not.toBe("");
+      expect(token.light, token.name).not.toContain("light-dark(");
+      expect(token.value, token.name).not.toContain("light-dark(");
+    }
+    expect(colorValue("canvas")).toBe("#131520");
+    expect(colorValue("canvas", "light")).toBe("#F5F6FB");
+    expect(colorValue("chart-series-1", "light")).toBe(colorValue("brand", "light"));
+  });
+
+  it("keeps the shades on their base in both themes", () => {
+    expect(colorValue("card-glass", "light")).toContain("var(--color-panel) 72%");
+    expect(colorValue("card-glass")).toContain("var(--color-panel) 68%");
+  });
+
+  it("sets the scheme from the theme attribute, dark by default, and System takes both", () => {
+    expect(css).toMatch(/:root \{ color-scheme: dark; \}/);
+    expect(css).toMatch(/:root\[data-theme="light"\] \{ color-scheme: light; \}/);
+    expect(css).toMatch(/:root\[data-theme="system"\] \{ color-scheme: light dark; \}/);
+  });
+
+  it("keeps platform brand colours and the media scrim the same in both themes", () => {
+    for (const name of ["instagram", "whatsapp", "facebook", "linkedin", "media-scrim", "on-brand", "brand-strong"]) {
+      expect(colorValue(name, "light"), name).toBe(colorValue(name, "dark"));
+    }
   });
 });

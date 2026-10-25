@@ -2,6 +2,8 @@
 for payment?", "how much did we sell this week?" and "what did Priya order?". Owners and admins,
 like the Orders page (``min_role`` admin).
 
+Visuals (GR-38, VIS-09): the first orders as a ``table`` (admins only, like the tool).
+
 R1 (read): totals, statuses and lines come from the orders as stored, in each order's currency
 (services/orders), and the customer is named by their handle or name. Delivery addresses and
 payment references are never returned. Nothing is changed; writes through the action gateway are
@@ -17,11 +19,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
+from socialhood.agent import visuals
 from socialhood.agent.registry import ToolContext, ToolResult
-from socialhood.agent.tools.common import clip, limit_field, ref, tool
+from socialhood.agent.tools.common import clip, limit_field, ref, tool, visual, when
 from socialhood.models.identity import Role
 from socialhood.models.inbox import Contact
 from socialhood.models.orders import Order, OrderStatus
+from socialhood.schemas.agent import TableVisual, Visual
 from socialhood.services.catalogue import money
 from socialhood.services.orders import orders as order_service
 
@@ -34,9 +38,19 @@ class _Input(BaseModel):
 
 
 class ListOrdersInput(_Input):
-    status: Literal["draft", "awaiting_payment", "paid", "cancelled", "expired"] | None = Field(
-        default=None, description="Only orders in this state; leave out for all."
-    )
+    status: (
+        Literal[
+            "draft",
+            "awaiting_payment",
+            "partially_paid",
+            "paid",
+            "fulfilled",
+            "refunded",
+            "cancelled",
+            "expired",
+        ]
+        | None
+    ) = Field(default=None, description="Only orders in this state; leave out for all.")
     customer: str | None = Field(
         default=None,
         max_length=100,
@@ -67,15 +81,43 @@ class OrdersTotals(BaseModel):
 class ListOrdersResult(ToolResult):
     items: list[OrderLine]
     totals: OrdersTotals
+    visual: Visual | None = None  # GR-38 (VIS-09): the first orders as a table
+
+
+def _orders_table(ctx: ToolContext, items: list[OrderLine], total: int) -> TableVisual:
+    """Order number, customer, status, total (money text, right-aligned) and date."""
+    return visuals.table(
+        title="Orders",
+        columns=[
+            visuals.Column("order", "Order"),
+            visuals.Column("customer", "Customer"),
+            visuals.Column("status", "Status"),
+            visuals.Column("total", "Total", figures=True),
+            visuals.Column("date", "Date"),
+        ],
+        rows=[
+            [
+                f"#{i.number}",
+                i.customer,
+                i.status.replace("_", " ").capitalize(),
+                i.total,
+                when(ctx, i.created_at),
+            ]
+            for i in items
+        ],
+        total=total,
+        more_route="orders",
+    )
 
 
 @tool(
     name="list_orders",
     label="Looking at your orders",
     description=(
-        "Orders made in conversations: number, status (draft, awaiting payment, paid, cancelled, "
-        "expired), total, customer and lines, with how many are paid and how much was paid in "
-        "the period. For 'which orders are unpaid?' or 'what did we sell this week?'."
+        "Orders made in conversations: number, status (draft, awaiting payment, partially paid, "
+        "paid, shipped, refunded, cancelled, expired), total, customer and lines, with how many "
+        "are paid (paid or shipped) and how much was paid in the period. For 'which orders are "
+        "unpaid?' or 'what did we sell this week?'."
     ),
     input_model=ListOrdersInput,
     result_model=ListOrdersResult,
@@ -115,7 +157,7 @@ async def list_orders(ctx: ToolContext, args: ListOrdersInput) -> ListOrdersResu
     paid = (
         await ctx.session.execute(
             select(Order.currency, func.count(), func.sum(Order.total_minor))
-            .where(*where, Order.status == OrderStatus.PAID)
+            .where(*where, Order.status.in_((OrderStatus.PAID, OrderStatus.FULFILLED)))
             .group_by(Order.currency)
         )
     ).all()
@@ -151,6 +193,7 @@ async def list_orders(ctx: ToolContext, args: ListOrdersInput) -> ListOrdersResu
         or "Looked at orders",
         items=items,
         totals=totals,
+        visual=visual(ctx, "table", lambda: _orders_table(ctx, items, count)) if items else None,
         refs=[ref("order", item.id, f"Order #{item.number}") for item in items],
         caveats=caveats,
     )

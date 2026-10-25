@@ -192,7 +192,7 @@ export function MessageBubble({
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs",
-                outbound && !nativeApp ? "border-on-brand/30" : "border-line bg-canvas/40",
+                outbound && !nativeApp ? "border-on-brand-line" : "border-line bg-canvas-veil",
               )}
               data-testid="unsupported-card"
             >
@@ -224,7 +224,7 @@ export function MessageBubble({
                   key={`${reply.title}-${index}`}
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                    tinted ? "border-on-brand/60 text-on-brand" : "border-line-strong text-fg",
+                    tinted ? "border-on-brand-line-strong text-on-brand" : "border-line-strong text-fg",
                   )}
                 >
                   {reply.title}

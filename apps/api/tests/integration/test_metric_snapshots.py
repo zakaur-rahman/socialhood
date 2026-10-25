@@ -354,18 +354,35 @@ async def test_accounts_without_posts_to_measure_are_skipped(
     assert graph.calls == []
 
 
-async def test_stories_are_not_measured(
+async def test_a_story_is_read_at_1h_6h_and_23h_and_never_after(
     engine: AsyncEngine, deps: PlatformDeps, graph: FakeGraph, ig: Acct
 ) -> None:
-    await make_post(
+    """A Story is gone after 24 h: its own windows, each reading its insights (no like or
+    comment counts), final when written, and none after it is down (C-131)."""
+    post = await make_post(
         engine,
         workspace_id=ig.workspace_id,
         account_id=ig.account_id,
         posted_at=T0,
         media_type="story",
     )
-    with time_machine.travel(T0 + timedelta(hours=1), tick=False):
-        assert await run_posts(engine, deps, ig) == []
+    timeline = [
+        (timedelta(minutes=50), []),
+        (timedelta(hours=1, minutes=5), ["1h"]),
+        (timedelta(hours=1, minutes=20), []),
+        (timedelta(hours=6, minutes=1), ["6h"]),
+        (timedelta(hours=23, minutes=10), ["23h"]),
+        (timedelta(hours=23, minutes=55), []),  # past the 23 h reading's grace
+        (timedelta(hours=26), []),
+    ]
+    for after, expected in timeline:
+        with time_machine.travel(T0 + after, tick=False):
+            assert await run_posts(engine, deps, ig) == [(post, w) for w in expected], after
+    stored = {s["window"]: s for s in await snapshots(engine, post)}
+    assert list(stored) == ["1h", "6h", "23h"]
+    assert all(s["insights_final"] for s in stored.values())
+    assert all("reach" in s["metrics"] and "likes" not in s["metrics"] for s in stored.values())
+    assert not any(call.startswith("counts:") for call in graph.calls)
 
 
 async def test_a_sandbox_post_grows_between_windows(
@@ -388,6 +405,48 @@ async def test_a_sandbox_post_grows_between_windows(
     assert set(stored["1h"]) == {"likes", "comments"}
     assert stored["72h"]["reach"] >= stored["24h"]["reach"] > 0
     assert "profile_visits" not in stored["72h"]  # Reels have none
+
+
+async def test_a_sandbox_page_post_gets_views_reach_clicks_and_shares_from_24h(
+    engine: AsyncEngine, deps: PlatformDeps, clean_db: None
+) -> None:
+    """C-131: a Facebook Page post is measured like an Instagram one: live counts (reactions as
+    likes, comments) at 1 h, and its insights from 24 h."""
+    wid = await make_workspace(engine)
+    acct = Acct(wid, await make_account(engine, wid, platform="facebook"))
+    post = await make_post(
+        engine,
+        workspace_id=wid,
+        account_id=acct.account_id,
+        posted_at=T0,
+        media_type="image",
+        platform_media_id=f"sandbox_media_{uuid.uuid4().hex[:6]}",
+    )
+    for after in (timedelta(hours=1), timedelta(hours=24)):
+        with time_machine.travel(T0 + after, tick=False):
+            assert await run_posts(engine, deps, acct) == [(post, after_window(after))]
+    stored = {s["window"]: s["metrics"] for s in await snapshots(engine, post)}
+    assert set(stored["1h"]) == {"likes", "comments"}
+    assert {"reach", "views", "clicks", "shares", "likes", "comments"} <= set(stored["24h"])
+    assert {"saves", "follows", "profile_visits"}.isdisjoint(stored["24h"])  # Instagram's only
+
+
+async def test_a_sandbox_page_story_is_read_but_has_no_figures(
+    engine: AsyncEngine, deps: PlatformDeps, clean_db: None
+) -> None:
+    wid = await make_workspace(engine)
+    acct = Acct(wid, await make_account(engine, wid, platform="facebook"))
+    post = await make_post(
+        engine,
+        workspace_id=wid,
+        account_id=acct.account_id,
+        posted_at=T0,
+        media_type="story",
+        platform_media_id=f"sandbox_media_{uuid.uuid4().hex[:6]}",
+    )
+    with time_machine.travel(T0 + timedelta(hours=1), tick=False):
+        assert await run_posts(engine, deps, acct) == [(post, "1h")]
+    assert [s["metrics"] for s in await snapshots(engine, post)] == [{}]
 
 
 def after_window(after: timedelta) -> str:

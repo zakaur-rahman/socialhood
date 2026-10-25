@@ -13,6 +13,8 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
+from pydantic import Field
+
 from socialhood.schemas.agent import MetricComparisonVisual
 from socialhood.schemas.analytics import AccountMetricFigure, ChangeDirection, DaySpan
 from socialhood.schemas.common import ResponseModel
@@ -87,6 +89,55 @@ class ReportPost(ResponseModel):
     comments: int
 
 
+BreakdownMetricKey = Literal[
+    "messages_received",
+    "conversations",
+    "comments_received",
+    "replies_sent",
+    "automation_runs",
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+]
+
+
+class ReportAccount(ResponseModel):
+    """A connected account, as the picker and the breakdown name it."""
+
+    id: uuid.UUID
+    platform: str
+    name: str  # display name, else @username, else the platform
+    username: str | None = None
+    status: str
+
+
+class BreakdownMetric(ResponseModel):
+    """One account's count for the week against the week before, with a weekly series. A value
+    the platform can't give is None and ``unavailable`` says why (``insights_not_granted``,
+    ``no_readings``); a count is never None for that reason."""
+
+    key: BreakdownMetricKey
+    label: str
+    unit: ReportUnit = "count"
+    value: float | None = None
+    previous: float | None = None
+    change_pct: float | None = None
+    direction: ChangeDirection | None = None
+    unavailable: str | None = None
+    days_known: int | None = None  # insights: days with a reading in the week
+    days_total: int | None = None
+    series: list[ReportPoint]
+
+
+class AccountBreakdown(ResponseModel):
+    account: ReportAccount
+    metrics: list[BreakdownMetric]
+
+
 class WeeklyReport(ResponseModel):
     """GET …/reports/weekly: the report for one finished week. ``week_start`` is its Monday in
     the workspace's time zone; ``weeks`` lists the Mondays that can be asked for, newest first.
@@ -106,3 +157,10 @@ class WeeklyReport(ResponseModel):
     needs_you: int
     open_questions: int
     top_questions: list[ReportQuestion]
+    # Per account (additive). ``account`` is set when the report is for one account, whose
+    # figures are then every figure above (knowledge-gap questions stay out: they belong to the
+    # workspace). ``accounts`` lists the connected accounts for a picker. ``breakdown`` is each
+    # account side by side, on the workspace-wide report only.
+    account: ReportAccount | None = None
+    accounts: list[ReportAccount] = Field(default_factory=list)
+    breakdown: list[AccountBreakdown] | None = None

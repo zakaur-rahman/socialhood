@@ -5,7 +5,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { MetricComparison } from "@/components/agent/visuals/MetricComparison";
+import { assignColours, colourIndexes, seriesStyle } from "@/components/charts/palette";
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { formatCount, formatSpan } from "@/components/home/format";
 import { MetricTile } from "@/components/home/MetricTile";
 import { PageFrame } from "@/components/shell/PageFrame";
@@ -16,16 +17,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { INTENT_LABEL } from "@/lib/ai/format";
 import { useWeeklyReport } from "@/lib/api/queries";
-import type { ReportAccountMetric, ReportMetric, WeeklyReport } from "@/lib/api/types";
-import { formatMetric, parseWeekParam, previousLine, reportTrend, weekLabel } from "@/lib/reports/format";
+import type { Platform, ReportAccountMetric, ReportMetric, WeeklyReport } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
+import {
+  formatMetric,
+  insightLine,
+  isIdle,
+  parseAccountParam,
+  parseWeekParam,
+  previousLine,
+  reportHref,
+  reportTrend,
+  weekLabel,
+} from "@/lib/reports/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { CARD_TITLE } from "@/styles/tokens";
 
+import { AccountBreakdown } from "./AccountBreakdown";
+import { AccountPicker } from "./AccountPicker";
 import { SeriesChart } from "./SeriesChart";
 
 /**
  * The weekly report (GR-34, roadmap P3; VIS-13): one finished Monday to Sunday against the week
  * before, and each main count over the weeks leading up to it. The week is in the address
- * (`?week=2026-09-21`), so a link from the digest email or a colleague opens that week; any member
+ * (`?week=2026-09-21`), so a link from the digest email or a colleague opens that week; so is the
+ * account (`?account=<id>`): without one the report is for every account and compares them side by
+ * side, with one every figure is that account's. Any member
  * of the workspace can open it, and there is no public link. Every number and change is the
  * API's (the digest email carries the same ones), a week with no figure says so instead of
  * showing 0, and the account figures use the same cards as Ask's comparisons. It works from
@@ -37,13 +54,25 @@ export function WeeklyReportPage() {
   const pathname = usePathname();
   const params = useSearchParams();
   const week = parseWeekParam(params?.get("week"));
-  const report = useWeeklyReport(workspace.id, week);
+  const account = parseAccountParam(params?.get("account"));
+  const report = useWeeklyReport(workspace.id, week, account);
   const data = report.data;
 
-  const open = (monday: string) => router.replace(`${pathname}?week=${monday}` as Route);
+  const go = (view: { week?: string | null; account?: string | null }) =>
+    router.replace(reportHref(pathname, { week, account, ...view }) as Route);
 
   return (
-    <PageFrame title="Weekly report" actions={data ? <WeekPicker report={data} onPick={open} switching={report.isPlaceholderData} /> : null}>
+    <PageFrame
+      title="Weekly report"
+      actions={
+        data ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {(data.accounts ?? []).length > 1 || account ? <AccountPicker accounts={data.accounts ?? []} value={account} onPick={(next) => go({ account: next })} /> : null}
+            <WeekPicker report={data} onPick={(monday) => go({ week: monday })} switching={report.isPlaceholderData} />
+          </div>
+        ) : null
+      }
+    >
       {report.isPending ? (
         <div role="status" aria-busy="true" aria-label="Loading the weekly report" className="space-y-6">
           <Skeleton className="h-5 w-64 max-w-full" />
@@ -56,10 +85,10 @@ export function WeeklyReportPage() {
       ) : !data ? (
         <div className="space-y-3">
           <ErrorState error={report.error} onRetry={() => void report.refetch()} />
-          {week ? (
+          {week || account ? (
             <p className="text-center">
               <Button variant="outline" onClick={() => router.replace(pathname as Route)}>
-                Show the latest week
+                {account ? "Show every account, latest week" : "Show the latest week"}
               </Button>
             </p>
           ) : null}
@@ -116,35 +145,73 @@ function WeekPicker({ report, onPick, switching }: { report: WeeklyReport; onPic
 function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; switching: boolean }) {
   const span = formatSpan(data.week.since, data.week.until);
   const before = formatSpan(data.previous_week.since, data.previous_week.until);
+  // An account's colour is its place in the API's list, the same in every chart on the page.
+  const indexes = colourIndexes((data.accounts ?? []).map((a) => a.id));
+  // The workspace-wide lines are neutral, so no account's hue stands for "everyone".
+  const color = data.account ? (indexes.get(data.account.id) ?? 0) : ALL_ACCOUNTS;
+  const compared = !!data.breakdown && data.breakdown.length > 1;
+  const idle = data.metrics.filter((m) => isIdle(m.unit, m.series));
+  const busy = data.metrics.filter((m) => !idle.includes(m));
+  const insights = data.account_metrics;
   return (
-    <div className="space-y-8" aria-busy={switching} data-testid="weekly-report">
+    <div className={cn("space-y-8 transition-opacity", switching && "opacity-60")} aria-busy={switching} data-testid="weekly-report">
       <p className="text-sm text-fg-secondary" data-testid="report-span">
         <span className="font-medium text-fg tabular-nums">{span}</span>, Monday to Sunday in {data.timezone}, against {before}. Charts show the{" "}
         {data.series_weeks} weeks up to this one.
       </p>
+      {data.account ? (
+        <p className="flex flex-wrap items-center gap-2 text-sm" data-testid="report-account">
+          <span aria-hidden className={`size-2.5 shrink-0 rounded-sm ${seriesStyle(color).bg}`} />
+          <PlatformGlyph platform={data.account.platform as Platform} className="size-4 shrink-0" />
+          <span className="font-medium">{data.account.name}</span>
+          <span className="text-fg-secondary">only: every figure on this page is this account&apos;s.</span>
+        </p>
+      ) : null}
 
       <section aria-labelledby="report-counts" className="space-y-3">
-        <h2 id="report-counts" className="text-base font-semibold">
-          Conversations and leads
+        <h2 id="report-counts" className={CARD_TITLE}>
+          {data.account ? "Conversations and leads" : "Conversations and leads, all accounts"}
         </h2>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.metrics.map((metric) => (
-            <MetricItem key={metric.key} metric={metric} />
+          {busy.map((metric) => (
+            <MetricItem key={metric.key} metric={metric} color={color} />
           ))}
         </ul>
+        {idle.length > 0 ? (
+          <p className="text-sm text-fg-secondary" data-testid="report-idle">
+            No activity in the last {data.series_weeks} weeks: {idle.map((m) => m.label).join(", ")}.
+          </p>
+        ) : null}
       </section>
 
-      <section aria-labelledby="report-account" className="space-y-3">
-        <h2 id="report-account" className="text-base font-semibold">
-          Your Instagram account
-        </h2>
-        <MetricComparison visual={data.account_comparison} />
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.account_metrics.map((item) => (
-            <AccountSeries key={item.figure.metric} item={item} />
-          ))}
-        </ul>
-      </section>
+      {compared && data.breakdown ? <AccountBreakdown breakdown={data.breakdown} accounts={data.accounts ?? []} /> : null}
+
+      {/* With every account compared above, reach and followers are in that table and those charts;
+          this section is for one account, or a workspace with one. */}
+      {!compared ? (
+        <section aria-labelledby="report-account" className="space-y-3">
+          <h2 id="report-account" className={CARD_TITLE}>
+            Account insights
+          </h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {insights
+              .filter((item) => !isIdle("count", item.series) || item.figure.current.value !== null)
+              .map((item) => (
+                <InsightItem key={item.figure.metric} item={item} color={color} />
+              ))}
+          </ul>
+          {insights.some((item) => isIdle("count", item.series) && item.figure.current.value === null) ? (
+            <p className="text-sm text-fg-secondary" data-testid="insights-idle">
+              No readings in these weeks:{" "}
+              {insights
+                .filter((item) => isIdle("count", item.series) && item.figure.current.value === null)
+                .map((item) => item.label)
+                .join(", ")}
+              .
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <IntentsCard report={data} />
@@ -155,31 +222,53 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
   );
 }
 
-function MetricItem({ metric }: { metric: ReportMetric }) {
+/** Position outside the palette: the neutral line that stands for every account together. */
+const ALL_ACCOUNTS = -1;
+
+function MetricItem({ metric, color }: { metric: ReportMetric; color: number }) {
   return (
-    <li data-metric={metric.key} className="flex min-w-0 flex-col gap-1">
-      <MetricTile label={metric.label} value={formatMetric(metric.unit, metric.value)} trend={reportTrend(metric)} hint={previousLine(metric)} />
-      <SeriesChart label={metric.label} unit={metric.unit} series={metric.series} className="px-1" />
+    <li data-metric={metric.key} className="flex min-w-0 flex-col">
+      <MetricTile label={metric.label} value={formatMetric(metric.unit, metric.value)} trend={reportTrend(metric)} hint={previousLine(metric)}>
+        <SeriesChart label={metric.label} unit={metric.unit} series={metric.series} color={color} />
+      </MetricTile>
     </li>
   );
 }
 
-function AccountSeries({ item }: { item: ReportAccountMetric }) {
-  const known = item.series.some((p) => p.value !== null && p.value !== undefined);
+/** An account insight: the week's figure, the change, one line on the week before and the days
+ * with a reading, and the weeks leading up to it. */
+function InsightItem({ item, color }: { item: ReportAccountMetric; color: number }) {
+  const { figure } = item;
+  const value = figure.current.value;
+  const hasChart = item.series.some((p) => p.value !== null && p.value !== undefined);
   return (
-    <li data-account-metric={item.figure.metric} className="min-w-0 space-y-1 rounded-xl border border-line p-3">
-      <p className="text-xs text-fg-secondary">{item.label}, by week</p>
-      {known ? (
-        <SeriesChart label={item.label} unit="count" series={item.series} />
-      ) : (
-        <p className="text-sm text-fg-secondary">No readings in these weeks.</p>
-      )}
+    <li data-account-metric={figure.metric} className="flex min-w-0 flex-col">
+      <MetricTile
+        label={item.label}
+        value={formatMetric("count", value)}
+        trend={reportTrend({ direction: figure.direction, change_pct: figure.change_pct, value, previous: figure.previous?.value, unit: "count" })}
+        hint={insightLine({
+          unit: "count",
+          previous: figure.previous?.value,
+          daysNow: figure.current.days_known,
+          daysBefore: figure.previous?.days_known,
+          daysTotal: figure.current.days_total,
+          unavailable: figure.current.unavailable,
+        })}
+      >
+        {hasChart ? <SeriesChart label={item.label} unit="count" series={item.series} color={color} /> : null}
+      </MetricTile>
     </li>
   );
 }
 
 function IntentsCard({ report }: { report: WeeklyReport }) {
   const most = Math.max(1, ...report.top_intents.map((i) => i.count));
+  // A topic keeps its hue from week to week (the order of INTENT_LABEL); two shown never share one.
+  const colours = assignColours(
+    report.top_intents.map((i) => i.intent),
+    Object.keys(INTENT_LABEL),
+  );
   return (
     <Card asChild className="flex flex-col">
       <section aria-labelledby="report-intents">
@@ -199,7 +288,7 @@ function IntentsCard({ report }: { report: WeeklyReport }) {
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                  <div className="h-full rounded-full bg-chart-series-1" style={{ width: `${(item.count / most) * 100}%` }} />
+                  <div className={`h-full rounded-full ${seriesStyle(colours.get(item.intent) ?? 0).bg}`} style={{ width: `${(item.count / most) * 100}%` }} />
                 </div>
               </li>
             ))}
@@ -241,7 +330,8 @@ function PostsCard({ report, slug }: { report: WeeklyReport; slug: string }) {
   );
 }
 
-/** Where things stand now, not in the week: the inbox and the knowledge gaps are live counts. */
+/** Where things stand now, not in the week: the inbox and the knowledge gaps are live counts (the
+ * knowledge gaps belong to the workspace, so an account's report leaves them out). */
 function OpenCard({ report, slug }: { report: WeeklyReport; slug: string }) {
   return (
     <Card asChild className="flex flex-col">
@@ -256,12 +346,14 @@ function OpenCard({ report, slug }: { report: WeeklyReport; slug: string }) {
               {report.needs_you === 1 ? "conversation needs" : "conversations need"} you
             </Link>
           </li>
-          <li>
-            <Link href={`/w/${slug}/knowledge` as Route} className="hover:underline">
-              <span className="font-semibold tabular-nums">{formatCount(report.open_questions)}</span>{" "}
-              {report.open_questions === 1 ? "question the AI couldn't answer" : "questions the AI couldn't answer"}
-            </Link>
-          </li>
+          {report.account ? null : (
+            <li>
+              <Link href={`/w/${slug}/knowledge` as Route} className="hover:underline">
+                <span className="font-semibold tabular-nums">{formatCount(report.open_questions)}</span>{" "}
+                {report.open_questions === 1 ? "question the AI couldn't answer" : "questions the AI couldn't answer"}
+              </Link>
+            </li>
+          )}
         </ul>
         {report.top_questions.length > 0 ? (
           <ul className="mt-3 space-y-1 border-t border-line-subtle pt-3 text-xs text-fg-secondary">

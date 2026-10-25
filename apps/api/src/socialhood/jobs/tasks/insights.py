@@ -3,10 +3,12 @@ services/analytics (snapshots.py, account_daily.py).
 
 - snapshot_post_metrics: every 15 minutes, queue snapshot_account_posts for each live account
   with a post whose window (1 h, 6 h, 24 h, 72 h, 7 d, 30 d after publishing) is due and not
-  captured yet (key ``snap:{account_id}``).
+  captured yet (key ``snap:{account_id}``). An Instagram Story has its own windows, 1 h, 6 h and
+  23 h, so it is read before it goes down at 24 h.
 - snapshot_account_posts(account_id): capture those windows; 1 h and 6 h hold the live counts
   only, insights start at 24 h behind the insights capability (IG_REQUEST_INSIGHTS_SCOPE), and
-  the 72 h run marks the earlier snapshots final. Each window is captured once.
+  the 72 h run marks the earlier snapshots final. A Story's windows all read its insights. Each
+  window is captured once.
 - snapshot_account_daily: hourly, queue snapshot_account_day for each live account once it is
   02:00 or later in its workspace's time zone and yesterday's row is missing
   (key ``acctday:{account_id}:{date}``).

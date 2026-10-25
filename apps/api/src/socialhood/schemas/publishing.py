@@ -32,6 +32,7 @@ from socialhood.models.publishing import (
     HASHTAG_GROUP_NAME_MAX_CHARS,
     MAX_ASSETS,
     MAX_HASHTAGS,
+    STORED_CAPTION_MAX_CHARS,
     SUGGESTED_HASHTAGS_MAX,
 )
 from socialhood.schemas.automations import StatusName as AutomationStatusName
@@ -43,7 +44,7 @@ ScheduledPostStatusName = Literal[
     "draft", "scheduled", "publishing", "published", "partially_published", "failed", "canceled"
 ]
 PostFormatName = Literal["image", "carousel", "reel", "story", "text"]
-PostKind = Literal["post", "story"]
+PostKind = Literal["post", "story", "reel"]
 TargetStatusName = Literal[
     "pending", "publishing", "container_created", "published", "failed", "canceled"
 ]
@@ -62,7 +63,8 @@ FirstCommentStatus = Literal["pending", "posted", "failed"]
 # - media: at least one asset, and the assets make a format (1 image; 1 video, a Reel; 2 to 10
 #   images and videos, a carousel; ``kind: story`` makes one image or video a Story)
 # - media_files: each asset's type, size, aspect ratio and video length (TR-MED-02)
-# - caption: the caption and each per-account caption up to 2,200 characters
+# - caption: the caption and each per-account caption within the strictest limit of the accounts
+#   they go to (2,200 for Instagram, 63,206 for a Facebook Page)
 # - hashtags: at most 30 hashtags in each caption
 # - mentions: at most 20 @mentions in each caption
 # - publishing_limit: room in each account's 24-hour publishing limit on the post's day
@@ -196,7 +198,7 @@ class TargetIn(RequestModel):
     """An account to publish to, with an optional caption for it alone."""
 
     social_account_id: uuid.UUID
-    caption_override: str | None = Field(default=None, max_length=CAPTION_MAX_CHARS)
+    caption_override: str | None = Field(default=None, max_length=STORED_CAPTION_MAX_CHARS)
 
 
 class ScheduledPostDraft(RequestModel):
@@ -211,12 +213,14 @@ class ScheduledPostDraft(RequestModel):
 
     targets: list[TargetIn] = Field(default_factory=list, max_length=10)
     asset_ids: list[uuid.UUID] = Field(default_factory=list, max_length=MAX_ASSETS)
-    caption: str = Field(default="", max_length=CAPTION_MAX_CHARS)
+    caption: str = Field(default="", max_length=STORED_CAPTION_MAX_CHARS)
     first_comment: str | None = Field(default=None, max_length=FIRST_COMMENT_MAX_CHARS)
     # A draft may keep a time (a calendar click); a scheduled post's time.
     publish_at: datetime | None = None
-    # ``story``: the one image or video is published as an Instagram Story (GR-39), without the
-    # caption or first comment (both are kept on the draft but never sent).
+    # ``story``: the one image or video is published as a Story (GR-39; a Facebook Page's too,
+    # C-131), without the caption or first comment (both are kept on the draft but never sent).
+    # ``reel``: the one video is published to a Facebook Page as a Reel instead of a normal video
+    # (C-131).
     kind: PostKind = "post"
 
 

@@ -68,6 +68,22 @@ export type ProductNode = {
   /** A line of your own above it. */
   intro: string;
 };
+/** One product (and variant) a payment step orders. */
+export type PaymentItemInput = { product_id: string; variant_id: string | null; quantity: number };
+/**
+ * GR-32: ask the customer to pay. Orders the chosen products at the catalogue's prices when the
+ * step runs ("items"), or asks for the conversation's latest unpaid order ("draft"), then sends the
+ * Razorpay link or UPI request.
+ */
+export type PaymentNode = {
+  kind: "payment";
+  id: string;
+  source: "items" | "draft";
+  items: PaymentItemInput[];
+  method: "razorpay" | "upi";
+  /** A line of your own above the payment message. */
+  intro: string;
+};
 export type AskNode = {
   kind: "ask";
   id: string;
@@ -91,13 +107,14 @@ export type SplitNode = { kind: "split"; id: string; paths: SplitPath[] };
 export type AiNode = { kind: "ai"; id: string; instructions: string };
 export type EndNode = { kind: "end"; id: string };
 
-export type EditorStep = SendNode | ProductNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
+export type EditorStep = SendNode | ProductNode | PaymentNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
 export type StepKind = EditorStep["kind"];
 
 /** What the "Add step" menu offers, in order. AI replies are chosen above the steps. */
 export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: string }[] = [
   { kind: "send", label: "Send", hint: "A message, with an image, link buttons or quick replies" },
   { kind: "product", label: "Product", hint: "Send a product from your catalogue with its price and link" },
+  { kind: "payment", label: "Request payment", hint: "Make an order and send a payment link or UPI request" },
   { kind: "ask", label: "Ask", hint: "Ask a question and save the answer" },
   { kind: "branch", label: "Branch", hint: "Go different ways by a tag, a field or who they are" },
   { kind: "action", label: "Action", hint: "Tag them, set a field, tell the team or hand off" },
@@ -109,6 +126,7 @@ export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: stri
 export const KIND_LABEL: Record<StepKind, string> = {
   send: "Send",
   product: "Product",
+  payment: "Request payment",
   ask: "Ask",
   branch: "Branch",
   action: "Action",
@@ -146,6 +164,8 @@ export function makeStep(kind: StepKind, taken: ReadonlySet<string> = new Set())
       return { kind, id, text: "", image_asset_id: null, buttons: [], replies: [], typed: { mode: "none" } };
     case "product":
       return { kind, id, product_id: null, variant_id: null, intro: "" };
+    case "payment":
+      return { kind, id, source: "items", items: [], method: "razorpay", intro: "" };
     case "ask":
       return { kind, id, text: "", expect: "email",
         field_key: null,
@@ -391,6 +411,17 @@ export function compile(tree: EditorStep[]): Compiled {
             next,
           });
           break;
+        case "payment":
+          steps.push({
+            type: "payment",
+            id: node.id,
+            source: node.source,
+            items: node.source === "items" ? node.items : [],
+            method: node.method,
+            intro: node.intro,
+            next,
+          });
+          break;
         case "ask":
           steps.push({
             type: "ask",
@@ -460,6 +491,7 @@ export function successors(step: FlowStep): (string | null)[] {
     case "action":
     case "delay":
     case "product":
+    case "payment":
       return [step.next ?? null];
     default:
       return [];
@@ -537,6 +569,21 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
             id: step.id,
             product_id: step.product_id || null,
             variant_id: step.variant_id ?? null,
+            intro: step.intro ?? "",
+          });
+          current = step.next ?? null;
+          break;
+        case "payment":
+          list.push({
+            kind: "payment",
+            id: step.id,
+            source: step.source ?? "items",
+            items: (step.items ?? []).map((item) => ({
+              product_id: item.product_id,
+              variant_id: item.variant_id ?? null,
+              quantity: item.quantity ?? 1,
+            })),
+            method: step.method ?? "razorpay",
             intro: step.intro ?? "",
           });
           current = step.next ?? null;
@@ -734,6 +781,8 @@ export function stepTitle(node: EditorStep, tagName?: (id: string) => string | u
       return node.saved ? "Saved reply" : "Message";
     case "product":
       return "Send a product";
+    case "payment":
+      return "Request payment";
     case "ask":
       return node.expect === "email" ? "Ask for an email" : node.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":
@@ -907,6 +956,12 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
         out.intro = overLimitCopy(ctx.platform, "it", false);
       }
       return out;
+    case "payment":
+      if (node.source === "items" && node.items.length === 0) out.items = "Choose at least one product to sell.";
+      else if (node.intro.trim() && messageSize(node.intro, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+        out.intro = overLimitCopy(ctx.platform, "it", false);
+      }
+      return out;
     case "ai":
       if (!node.instructions.trim()) out.instructions = "Write the instructions for the AI.";
       return out;
@@ -1031,6 +1086,8 @@ function wireTitle(step: FlowStep, tagName?: (id: string) => string | undefined)
       return step.saved_reply_id ? "Saved reply" : "Message";
     case "product":
       return "Send a product";
+    case "payment":
+      return "Request payment";
     case "ask":
       return step.expect === "email" ? "Ask for an email" : step.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":

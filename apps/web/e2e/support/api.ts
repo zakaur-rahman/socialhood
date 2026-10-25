@@ -94,6 +94,17 @@ export class Api {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }
 
+  /** C-131: a 9:16 video in the media library (a Facebook Reel, a Page video Story). */
+  videoAsset(wid: string, filename = "e2e-reel.mp4", durationSeconds = 20): Promise<{ id: string; secure_url: string }> {
+    return this.seed("POST", `/workspaces/${wid}/media-assets`, {
+      filename,
+      video: true,
+      width: 1080,
+      height: 1920,
+      duration_s: durationSeconds,
+    });
+  }
+
   /**
    * GR-38: a finished Ask run of the signed-in owner (the fake model calls no tools). With `visual`
    * it seeds the account's metrics for the last `days` complete days and the `days` before them,
@@ -101,14 +112,42 @@ export class Api {
    */
   agentRun(
     wid: string,
-    run: { request: string; answer: string; accountId?: string; visual?: boolean; days?: number },
+    run: {
+      request: string;
+      answer: string;
+      accountId?: string;
+      visual?: boolean;
+      trend?: boolean;
+      days?: number;
+      /** VIS-13: cite the weekly report of this Monday (YYYY-MM-DD). */
+      reportWeek?: string;
+    },
   ): Promise<{ id: string; thread_id: string }> {
     return this.seed("POST", `/workspaces/${wid}/agent-runs`, {
       request: run.request,
       answer: run.answer,
       account_id: run.accountId,
       visual: run.visual ?? false,
+      trend: run.trend ?? false,
       days: run.days ?? 14,
+      report_week: run.reportWeek,
+    });
+  }
+
+  /**
+   * VIS-08, VIS-09, VIS-12: lead scores (by username), then a finished Ask run whose steps are the
+   * real list_contacts (awaiting_reply) and search_conversations tools; with `drafts`, a follow-up
+   * run in the same thread whose steps are draft_reply for the lead list's `reply_ids`.
+   */
+  agentLeads(
+    wid: string,
+    run: { request: string; answer: string; scores?: Record<string, number>; drafts?: boolean },
+  ): Promise<{ run_id: string; thread_id: string; follow_up_run_id: string | null; reply_ids: string[] }> {
+    return this.seed("POST", `/workspaces/${wid}/agent-leads`, {
+      request: run.request,
+      answer: run.answer,
+      scores: run.scores ?? {},
+      drafts: run.drafts ?? false,
     });
   }
 

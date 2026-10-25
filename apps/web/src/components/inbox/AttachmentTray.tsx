@@ -52,12 +52,12 @@ export function AttachmentTray({
                   </span>
                 )}
                 {item.status === "uploading" ? (
-                  <span className="absolute inset-0 flex items-end bg-media-scrim/50 p-2">
+                  <span className="absolute inset-0 flex items-end bg-media-chip p-2">
                     <Progress aria-label={`Uploading ${item.file.name}`} value={Math.round(item.progress * 100)} />
                   </span>
                 ) : null}
                 {item.status === "failed" ? (
-                  <span className="absolute inset-0 bg-media-scrim/60" aria-hidden />
+                  <span className="absolute inset-0 bg-media-chip" aria-hidden />
                 ) : null}
               </div>
               {item.status === "failed" ? (
@@ -78,7 +78,7 @@ export function AttachmentTray({
                 type="button"
                 onClick={() => onRemove(item.id)}
                 aria-label={`Remove ${item.file.name}`}
-                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-lg bg-media-scrim/70 text-on-brand after:absolute after:-inset-2.5 after:content-[''] hover:bg-media-scrim"
+                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-lg bg-media-chip text-on-brand after:absolute after:-inset-2.5 after:content-[''] hover:bg-media-scrim"
               >
                 <X className="size-3" aria-hidden />
               </button>

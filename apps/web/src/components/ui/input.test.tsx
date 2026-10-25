@@ -12,11 +12,11 @@ describe("Input", () => {
     const input = screen.getByRole("textbox", { name: "Name" });
     expect(input).toHaveClass(
       "bg-field",
-      "border-input",
+      "border-line-control",
       "rounded-lg",
       "px-3",
       "focus-visible:bg-raised",
-      "focus-visible:border-ring",
+      "focus-visible:border-brand",
       "aria-invalid:border-danger",
       "disabled:opacity-50",
     );
@@ -68,10 +68,10 @@ describe("Input", () => {
       expect(input).toHaveClass(
         "focus-within:outline-2",
         "focus-within:outline-offset-2",
-        "focus-within:outline-ring",
-        "focus-within:border-ring",
+        "focus-within:outline-brand",
+        "focus-within:border-brand",
         "focus-within:bg-raised",
-        "focus-visible:border-ring",
+        "focus-visible:border-brand",
       );
       expect(classes(input.className).filter((c) => c.includes("outline-none") || c.includes("transition-all"))).toEqual([]);
     },
@@ -81,7 +81,7 @@ describe("Input", () => {
     render(<Input aria-label="Name" type={type} />);
     const list = classes(screen.getByRole(type === "search" ? "searchbox" : "textbox").className);
     expect(list.filter((c) => c.startsWith("focus-within:"))).toEqual([]);
-    expect(list).toContain("focus-visible:border-ring");
+    expect(list).toContain("focus-visible:border-brand");
   });
 
   it("passes native props and aria-invalid through", () => {

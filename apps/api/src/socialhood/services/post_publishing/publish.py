@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
@@ -51,6 +51,7 @@ from socialhood.models.publishing import (
     POLL_SLOW_DELAY,
     PROCESSING_TIMEOUT_SUFFIX,
     PostFormat,
+    PostKind,
     ScheduledPost,
     ScheduledPostStatus,
     ScheduledPostTarget,
@@ -448,7 +449,9 @@ async def publish_target(
                 code="platform_rejected",
                 message=LIMIT_REACHED,
             )
-        container_id, children = await _create(adapter, acct, post.format, media, caption)
+        container_id, children = await _create(
+            adapter, acct, post.format, media, caption, page_reel=post.kind == PostKind.REEL
+        )
     except PlatformError as error:
         if error.retryable and will_retry(error):
             log.info("publish_target_retry", target_id=str(target_id), error_code=error.code)
@@ -492,9 +495,12 @@ async def _create(
     post_format: str | None,
     media: Sequence[ContainerMedia],
     caption: str,
+    *,
+    page_reel: bool = False,
 ) -> tuple[str | None, list[str]]:
     """(container id, children): a carousel's children only, its parent comes once they are
-    FINISHED (poll_container)."""
+    FINISHED (poll_container). ``page_reel``: a Facebook Page's video is published as a Reel
+    (C-131) instead of a normal video."""
     if post_format == PostFormat.TEXT:
         return await adapter.create_text_container(acct), []
     if post_format == PostFormat.STORY:
@@ -503,7 +509,7 @@ async def _create(
         return None, [await adapter.create_carousel_item(acct, m) for m in media]
     if post_format == PostFormat.REEL:
         return await adapter.create_reel_container(
-            acct, video_url=media[0].url, caption=caption, share_to_feed=True
+            acct, video_url=media[0].url, caption=caption, share_to_feed=True, page_reel=page_reel
         ), []
     return await adapter.create_image_container(acct, image_url=media[0].url, caption=caption), []
 
@@ -609,8 +615,13 @@ async def _poll(p: _Poll) -> Outcome:
         media_id = await p.adapter.publish_container(p.acct, container_id, caption=p.caption)
     except PlatformError as error:
         if error.code == DELIVERY_UNKNOWN and p.acct.platform != "instagram":
-            # A Page post can't be told from its status (no PUBLISHED state): publishing on
-            # would risk a second post, so it ends unconfirmed for the owner to check (C-115).
+            # A Page post can't usually be told from its status (no PUBLISHED state): publishing
+            # on would risk a second post, so it ends unconfirmed for the owner to check (C-115).
+            # A Reel and a video Story are the exception: their status shows the publishing phase
+            # has started, so the post is found instead (C-131).
+            if await _status_shows_published(p, container_id):
+                log.info("publish_answer_lost_found", target_id=str(p.target_id), n=p.n)
+                return await _recover(p, container_id)
             log.warning("publish_answer_lost_page", target_id=str(p.target_id), n=p.n)
             return await _end_with(
                 p.sessionmaker,
@@ -627,6 +638,15 @@ async def _poll(p: _Poll) -> Outcome:
             return await _next_poll(p, processing=False, error=error)
         return await _later(p, error, processing=False)
     return await _published(p, await _read_back(p, media_id))
+
+
+async def _status_shows_published(p: _Poll, container_id: str) -> bool:
+    """Whether the container's status now says it was published (read after a lost answer)."""
+    try:
+        status = await p.adapter.get_container_status(p.acct, container_id)
+    except PlatformError:
+        return False
+    return status.status_code == "PUBLISHED"
 
 
 async def _store_parent(p: _Poll, container_id: str) -> bool:
@@ -735,12 +755,18 @@ async def _read_back(p: _Poll, media_id: str) -> PlatformMedia:
     except PlatformError as error:
         log.warning("published_media_read_failed", target_id=str(p.target_id), error=error.code)
         media = None
+    page_reel = p.acct.platform != "instagram" and p.post.kind == PostKind.REEL
     if media is not None and media.platform_media_id == media_id:
-        return media
+        # A Page video published as a Reel is a Reel (C-131), whatever Facebook calls the video.
+        return (
+            replace(media, media_type="reel")
+            if page_reel and media.media_type == "video"
+            else media
+        )
     media_type: Literal["image", "video", "carousel", "reel", "story"] = (
         "carousel"
         if p.post.format == PostFormat.CAROUSEL
-        else ("reel" if p.acct.platform == "instagram" else "video")
+        else ("reel" if p.acct.platform == "instagram" or page_reel else "video")
         if p.post.format == PostFormat.REEL
         else "story"
         if p.post.format == PostFormat.STORY

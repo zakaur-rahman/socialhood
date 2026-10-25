@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
-import { BackLink } from "@/components/shell/PageFrame";
+import { BackLink, STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -59,6 +59,7 @@ import { itemsFromErrors, localChecklist, mergeChecklist } from "@/lib/publishin
 import { renderCrop, type Cropper } from "@/lib/publishing/crop";
 import {
   assetLabel,
+  captionLimit,
   checkPostFile,
   deriveFormat,
   fromMediaAsset,
@@ -301,11 +302,16 @@ function Composer({
     .map((accountId) => allAccounts.find((account) => account.id === accountId))
     .filter((account): account is NonNullable<typeof account> => Boolean(account));
   const isStory = draft.kind === "story";
+  const isReel = draft.kind === "reel";
   const format = isStory
     ? postAssets.length === 1
       ? "story"
       : null
-    : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
+    : isReel
+      ? postAssets.length === 1 && postAssets[0].resource_type === "video"
+        ? "reel"
+        : null
+      : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
       ? "text"
       : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
@@ -589,7 +595,7 @@ function Composer({
     <div className="w-full p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
-      <header className="flex items-center gap-3 border-b border-line pb-4">
+      <header className={cn(STICKY_PAGE_HEADER, "flex items-center gap-3")}>
         <div className="min-w-max flex-1">
           <BackLink href={scheduleHref(slug)} label="Schedule" />
           <h1 className={PAGE_TITLE}>Post</h1>
@@ -635,6 +641,7 @@ function Composer({
         now={now}
         onEditAndRetry={onEditAndRetry}
         retrying={put.isPending}
+        wid={wid}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -651,11 +658,8 @@ function Composer({
             <PostTypeSection
               value={draft.kind}
               onChange={(kind) => change({ kind })}
-              storyBlockedBy={
-                selectedAccounts.find((account) => account.platform !== "instagram")
-                  ? handleOf(selectedAccounts.find((account) => account.platform !== "instagram"))
-                  : null
-              }
+              reelAvailable={selectedAccounts.some((account) => account.platform === "facebook")}
+              instagramToo={selectedAccounts.some((account) => account.platform === "instagram")}
             />
             <MediaTray
               entries={entries}
@@ -687,7 +691,13 @@ function Composer({
                 accountId: target.social_account_id,
                 label: handleOf(allAccounts.find((account) => account.id === target.social_account_id)),
                 value: target.caption_override ?? draft.caption,
+                maxChars: captionLimit([allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"]),
               }))}
+              maxChars={captionLimit(
+                draft.targets
+                  .filter((target) => target.caption_override == null)
+                  .map((target) => allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"),
+              )}
               onAccountCaptionChange={(index, value) =>
                 change((current) => ({
                   targets: current.targets.map((target, position) => (position === index ? { ...target, caption_override: value } : target)),
@@ -749,7 +759,7 @@ function Composer({
                 role="region"
                 aria-label="Post actions"
                 className={cn(
-                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
+                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:glass-pane",
                   BOTTOM_BAR,
                 )}
               >

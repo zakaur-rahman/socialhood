@@ -199,6 +199,60 @@ async def test_a_brand_new_post_has_no_figures_yet(shop: Shop) -> None:
     assert set(body["metrics"].values()) == {None}
 
 
+STORY_FIGURES = {"reach": 900, "views": 1100, "shares": 7, "replies": 5, "taps_forward": 700}
+
+
+async def test_a_storys_figures_come_with_its_replies_and_taps(shop: Shop) -> None:
+    """C-131: a Story has its own readings (1 h, 6 h, 23 h) and extra figures."""
+    story = await shop.post(
+        timedelta(hours=23, minutes=30),
+        {"1h": {"reach": 300}, "6h": {"reach": 700, "replies": 2}, "23h": STORY_FIGURES},
+        media_type="story",
+    )
+    latest = await shop.get(f"/posts/{story}/performance")
+    assert (latest["requested_age"], latest["age"]) == (None, "23h")
+    assert latest["metrics"]["reach"] == 900
+    assert latest["extra_metrics"] == {
+        "replies": 5,
+        "taps_forward": 700,
+        "taps_back": None,
+        "swipes_forward": None,
+        "exits": None,
+        "clicks": None,
+    }
+    six = await shop.get(f"/posts/{story}/performance", age="6h")
+    assert (six["age"], six["extra_metrics"]["replies"]) == ("6h", 2)
+    lifetime = await shop.get(f"/posts/{story}/performance", age="lifetime")
+    assert (lifetime["age"], lifetime["metrics"]["reach"]) == ("lifetime", 900)
+
+
+async def test_a_story_is_shown_at_the_reading_it_has_reached(shop: Shop) -> None:
+    story = await shop.post(
+        timedelta(hours=8), {"1h": {"reach": 300}, "6h": {"reach": 700}}, media_type="story"
+    )
+    body = await shop.get(f"/posts/{story}/performance", age="23h")
+    assert (body["requested_age"], body["age"]) == ("23h", "6h")  # not 23 h old yet
+    assert body["extra_metrics"] is None
+
+
+async def test_a_post_that_is_not_a_story_has_no_23h_reading(shop: Shop) -> None:
+    post = await shop.post(timedelta(days=2), {"24h": figures(reach=900)})
+    body = await shop.get(f"/posts/{post}/performance", age="23h")
+    assert (body["requested_age"], body["age"]) == ("23h", "24h")
+
+
+async def test_a_story_is_compared_with_the_accounts_other_stories_only(shop: Shop) -> None:
+    story = await shop.post(
+        timedelta(hours=23, minutes=30), {"23h": {"reach": 900}}, media_type="story"
+    )
+    for days in (1, 2, 3):
+        await shop.post(timedelta(days=days), {"23h": {"reach": 600}}, media_type="story")
+    await shop.post(timedelta(days=4), {"24h": figures(reach=5000)})  # a feed post: left out
+    body = await shop.get(f"/posts/{story}/compare", age="23h")
+    assert (body["baseline_size"], body["enough_history"], body["age"]) == (3, True, "23h")
+    assert by_metric(body)["reach"]["baseline_median"] == 600
+
+
 async def test_an_account_without_insights_says_so(shop: Shop) -> None:
     account = await make_instagram_account(shop.engine, shop.wid, insights=False)
     post = await shop.post(

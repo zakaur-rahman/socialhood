@@ -183,7 +183,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   {/* One field in two parts: the wrapper draws the focus outline, ring border and raised fill
                       while its input has focus (DESIGN_SYSTEM §8.3, like ChipInput); the input draws none. */}
                   <div className="flex h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-brand has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-brand has-[input[aria-invalid=true]]:border-danger">
-                    <span className="flex items-center border-r border-line bg-raised/60 px-3 text-sm text-fg-secondary" aria-hidden>
+                    <span className="flex items-center border-r border-line bg-hover px-3 text-sm text-fg-secondary" aria-hidden>
                       …/w/
                     </span>
                     <Input

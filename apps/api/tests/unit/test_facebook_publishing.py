@@ -208,15 +208,11 @@ async def test_the_new_post_is_read_back_by_its_kind_of_id() -> None:
     assert "permalink_url" in recorder.requests[1].url.params["fields"]
 
 
-async def test_stories_and_quota_are_not_available_on_a_page() -> None:
+async def test_the_publishing_quota_is_not_available_on_a_page() -> None:
     page = adapter(Recorder())
-    for call in (
-        page.create_story_container(account(), ContainerMedia(kind="image", url=IMAGE)),
-        page.get_publishing_quota(account()),
-    ):
-        with pytest.raises(PlatformError) as raised:
-            await call
-        assert raised.value.code == "capability_unavailable"
+    with pytest.raises(PlatformError) as raised:
+        await page.get_publishing_quota(account())
+    assert raised.value.code == "capability_unavailable"
 
 
 def test_the_first_link_drops_trailing_punctuation() -> None:

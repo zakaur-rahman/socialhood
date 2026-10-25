@@ -193,7 +193,7 @@ function DayColumn({
       data-day={day}
       role="group"
       aria-label={p.long}
-      className={cn("relative border-l border-line", isToday && "bg-brand-soft/20")}
+      className={cn("relative border-l border-line", isToday && "bg-brand-soft")}
     >
       {Array.from({ length: ROWS }, (_, row) => {
         const open = row >= firstOpenRow;
@@ -206,7 +206,7 @@ function DayColumn({
             className={cn(
               "border-t",
               row % 2 === 0 ? "border-line-subtle" : "border-transparent",
-              open ? "cursor-pointer hover:bg-hover" : "bg-canvas/20",
+              open ? "cursor-pointer hover:bg-hover" : "bg-canvas-veil",
             )}
             style={{ height: ROW_PX }}
           />

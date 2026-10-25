@@ -15,6 +15,10 @@ work per account (bulk lane, TR-JOB-06). For each post with a window due (``ages
   72 h on are final when written.
 - A post Instagram no longer gives (deleted) gets an empty snapshot, so the window counts as
   captured and is not asked for again.
+- A Story is gone after 24 h, so it has its own windows (``STORY_WINDOWS``: 1 h, 6 h and 23 h).
+  It has no likes or comments to count and its insights are read while it is up, so every Story
+  window reads the Story's insights (reach, views, replies, taps, shares ...) and is final when
+  written. Without the insights scope it gets an empty snapshot, so it is not asked for again.
 
 Each window is captured once: rows are inserted with ON CONFLICT DO NOTHING on (post, window) and
 committed per post, so a re-run, a retry after a rate limit or a second worker writes nothing
@@ -35,7 +39,12 @@ from sqlalchemy import ColumnElement, and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.db.tenancy import workspace_scope
-from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, PostMetricSnapshot
+from socialhood.models.analytics import (
+    LIVE_COUNT_WINDOWS,
+    STORY_WINDOWS,
+    WINDOW_AGES,
+    PostMetricSnapshot,
+)
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.media import MediaItem, MediaType
 from socialhood.observability.logging import get_logger
@@ -51,9 +60,11 @@ from socialhood.services.analytics.ages import (
     FINAL_WINDOWS,
     PROVISIONAL_WINDOWS,
     SNAPSHOT_HORIZON,
+    STORY_HORIZON,
     WINDOWS,
     due_window,
     grace,
+    windows_for,
 )
 
 log = get_logger(__name__)
@@ -77,19 +88,23 @@ def due_condition(now: datetime) -> ColumnElement[bool]:
     """SQL for "this media item has a window due now and not captured": the same rule as
     ``ages.due_window``, for the tick that picks accounts."""
     per_window = []
-    for window in WINDOWS:
-        age = WINDOW_AGES[window]
-        per_window.append(
-            and_(
-                MediaItem.posted_at <= now - age,
-                MediaItem.posted_at > now - age - grace(window),
-                ~exists().where(
-                    PostMetricSnapshot.media_item_id == MediaItem.id,
-                    PostMetricSnapshot.window == window.value,
-                ),
+    for story, windows in ((False, WINDOWS), (True, STORY_WINDOWS)):
+        for window in windows:
+            age = WINDOW_AGES[window]
+            per_window.append(
+                and_(
+                    (MediaItem.media_type == MediaType.STORY)
+                    if story
+                    else (MediaItem.media_type != MediaType.STORY),
+                    MediaItem.posted_at <= now - age,
+                    MediaItem.posted_at > now - age - grace(window, story=story),
+                    ~exists().where(
+                        PostMetricSnapshot.media_item_id == MediaItem.id,
+                        PostMetricSnapshot.window == window.value,
+                    ),
+                )
             )
-        )
-    return and_(MediaItem.media_type != MediaType.STORY, or_(*per_window))
+    return or_(*per_window)
 
 
 def measured(adapter: PlatformAdapter, acct: SocialAccount) -> bool:
@@ -162,9 +177,17 @@ async def _due_posts(
                 select(MediaItem)
                 .where(
                     MediaItem.social_account_id == account_id,
-                    MediaItem.media_type != MediaType.STORY,
-                    MediaItem.posted_at > now - SNAPSHOT_HORIZON,
                     MediaItem.posted_at <= now - WINDOW_AGES[WINDOWS[0]],
+                    or_(
+                        and_(
+                            MediaItem.media_type != MediaType.STORY,
+                            MediaItem.posted_at > now - SNAPSHOT_HORIZON,
+                        ),
+                        and_(
+                            MediaItem.media_type == MediaType.STORY,
+                            MediaItem.posted_at > now - STORY_HORIZON,
+                        ),
+                    ),
                 )
                 .order_by(MediaItem.posted_at)
             )
@@ -181,7 +204,7 @@ async def _due_posts(
             taken[post_id].add(taken_window)
     due: list[tuple[MediaItem, str]] = []
     for post in posts:
-        window = due_window(post.posted_at, taken[post.id], now)
+        window = due_window(post.posted_at, taken[post.id], now, windows_for(post.media_type))
         if window is not None:
             due.append((post, window.value))
     return due
@@ -226,7 +249,7 @@ async def snapshot_account_posts(
                     window=window,
                     captured_at=now,
                     metrics=snapshot_metrics(counts, insights),
-                    insights_final=window in FINAL_WINDOWS,
+                    insights_final=window in FINAL_WINDOWS or post.media_type == MediaType.STORY,
                 )
                 if window in FINAL_WINDOWS:
                     await repo.mark_final(session, post.id, PROVISIONAL_WINDOWS)
@@ -253,6 +276,14 @@ async def _read(
     buckets: TokenBuckets | None,
     sleep: Sleep,
 ) -> tuple[MediaCounts | None, MediaInsights | None]:
+    if post.media_type == MediaType.STORY:
+        # No like or comment counts on a Story; its insights are read at every window.
+        if not with_insights:
+            return None, None
+        await take_token(buckets, acct.id, sleep)
+        return None, await adapter.get_media_insights(
+            acct, post.platform_media_id, media_type=post.media_type
+        )
     await take_token(buckets, acct.id, sleep)
     counts = await adapter.get_media_counts(acct, post.platform_media_id)
     if counts is None or window in LIVE_COUNT_WINDOWS or not with_insights:

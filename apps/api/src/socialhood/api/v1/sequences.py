@@ -25,12 +25,13 @@ from socialhood.schemas.sequences import (
     EnrolmentList,
     EnrolmentStatusName,
     Sequence,
+    SequenceAnalytics,
     SequenceBody,
     SequenceList,
     SequencePreview,
 )
 from socialhood.services import audit
-from socialhood.services.sequences import service
+from socialhood.services.sequences import analytics, service
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["sequences"])
 
@@ -149,6 +150,15 @@ async def stop_sequence_enrolment(
     await audit.record(session, ctx, "sequence.person_removed", "sequence", sequence_id)
     await session.commit()
     return out
+
+
+@router.get("/sequences/{sequence_id}/analytics", operation_id="get_sequence_analytics")
+async def get_sequence_analytics(
+    request: Request, sequence_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> SequenceAnalytics:
+    """Who entered, how it went per step (sent, skipped and why, failed, replied) and the funnel.
+    Computed on the server; cached for a few minutes."""
+    return await analytics.get(session, request.app.state.redis, sequence_id, now=datetime.now(UTC))
 
 
 @router.get("/contacts/{contact_id}/sequences", operation_id="list_contact_sequences")

@@ -145,7 +145,13 @@ class WebAdapter:
         raise _unavailable(NO_POSTS)
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
         raise _unavailable(NO_POSTS)
 

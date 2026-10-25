@@ -341,7 +341,7 @@ export function Composer({
     // with its one action as the Alert's secondary `sm` Button (DESIGN_SYSTEM §8.5). `outline`, as a
     // neutral soft fill over panel would leave the secondary Button's `raised` fill nearly invisible.
     return (
-      <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
+      <div className="shrink-0 border-t border-line glass-pane px-4 py-3" data-mode={mode}>
         <Alert
           variant="outline"
           action={
@@ -369,7 +369,7 @@ export function Composer({
   }
 
   return (
-    <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
+    <div className="shrink-0 border-t border-line glass-pane px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
       {/* The textarea draws no outline of its own; this wrapper shows the focus outline (DESIGN_SYSTEM §8.3). */}
       <div className="relative rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { ChartLegend } from "@/components/charts/ChartLegend";
+import { ChartTable } from "@/components/charts/ChartTable";
 import { ErrorState } from "@/components/states/ErrorState";
 import { CardInset } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -135,14 +137,13 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
     <figure className="space-y-2">
       <div className="flex items-center justify-between gap-2 text-xs">
         <figcaption className="text-fg-secondary">Runs per day</figcaption>
-        <span className="flex items-center gap-3 text-fg-secondary">
-          <span className="flex items-center gap-1">
-            <span aria-hidden className="size-2 rounded-sm bg-chart-series-1" /> Runs
-          </span>
-          <span className="flex items-center gap-1">
-            <span aria-hidden className="size-2 rounded-sm bg-chart-negative" /> Failures
-          </span>
-        </span>
+        <ChartLegend
+          label="Runs and failures"
+          items={[
+            { key: "runs", label: "Runs", color: 0, shape: "box" },
+            { key: "failures", label: "Failures", color: 0, shape: "box", swatch: "bg-chart-negative" },
+          ]}
+        />
       </div>
       <p className="h-4 text-xs tabular-nums" aria-hidden>
         {current
@@ -180,25 +181,11 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
           );
         })}
       </div>
-      <table className="sr-only">
-        <caption>Runs and failures per day</caption>
-        <thead>
-          <tr>
-            <th scope="col">Day</th>
-            <th scope="col">Runs</th>
-            <th scope="col">Failures</th>
-          </tr>
-        </thead>
-        <tbody>
-          {daily.map((day) => (
-            <tr key={day.date}>
-              <th scope="row">{dayLabel(day.date)}</th>
-              <td>{day.runs}</td>
-              <td>{day.failures}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ChartTable
+        caption="Runs and failures per day"
+        columns={["Day", "Runs", "Failures"]}
+        rows={daily.map((day) => ({ key: day.date, cells: [dayLabel(day.date), day.runs, day.failures] }))}
+      />
     </figure>
   );
 }

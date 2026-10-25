@@ -259,7 +259,7 @@ function ChipInput({
         className={cn(
           fieldControlClass,
           "flex min-h-10 cursor-text flex-wrap items-center gap-1.5 px-2 py-1 pointer-coarse:gap-y-2",
-          "has-[input:focus-visible]:border-ring has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring",
+          "has-[input:focus-visible]:border-brand has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-brand",
           "data-invalid:border-danger data-disabled:cursor-not-allowed data-disabled:opacity-50"
         )}
       >
@@ -306,7 +306,7 @@ function ChipInput({
           onBlur={addButton ? undefined : commit}
           placeholder={full ? undefined : placeholder}
           autoComplete="off"
-          className="h-7 min-w-32 flex-1 bg-transparent px-1 text-fg placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed"
+          className="h-7 min-w-32 flex-1 bg-transparent px-1 text-fg placeholder:text-fg-secondary focus-visible:outline-none disabled:cursor-not-allowed"
         />
         {addButton ? (
           <Button

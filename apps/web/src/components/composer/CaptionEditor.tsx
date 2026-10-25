@@ -211,7 +211,7 @@ export function accountCaptionId(accountId: string): string {
   return `composer-caption-${accountId}`;
 }
 
-export type AccountCaption = { accountId: string; label: string; value: string };
+export type AccountCaption = { accountId: string; label: string; value: string; maxChars?: number };
 
 /**
  * UX-SCR-13 Caption: one caption for every account, or (with two or more accounts) a caption per
@@ -229,6 +229,7 @@ export function CaptionEditor({
   onPerAccountChange,
   accountCaptions,
   onAccountCaptionChange,
+  maxChars = CAPTION_MAX_CHARS,
 }: {
   wid: string;
   slug: string;
@@ -242,6 +243,8 @@ export function CaptionEditor({
   /** Each selected account's caption, in the post's account order. */
   accountCaptions: AccountCaption[];
   onAccountCaptionChange: (index: number, value: string) => void;
+  /** The shared caption's limit: the strictest of the accounts it goes to (C-131). */
+  maxChars?: number;
 }) {
   const switchId = useId();
   return (
@@ -270,6 +273,7 @@ export function CaptionEditor({
               slug={slug}
               groups={groups}
               groupsLoading={groupsLoading}
+              maxChars={item.maxChars}
             />
           ))}
         </div>
@@ -283,6 +287,7 @@ export function CaptionEditor({
           slug={slug}
           groups={groups}
           groupsLoading={groupsLoading}
+          maxChars={maxChars}
           placeholder="Write a caption…"
         />
       )}

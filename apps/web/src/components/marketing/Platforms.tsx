@@ -53,7 +53,7 @@ export function Platforms() {
               <div
                 className={cn(
                   "flex h-full gap-4 rounded-2xl border p-4 transition-colors duration-slow",
-                  platform.status === "available" ? "border-line bg-panel hover:border-line-strong" : "border-dashed border-line bg-panel/50",
+                  platform.status === "available" ? "border-line bg-panel hover:border-line-strong" : "border-dashed border-line bg-panel-glass",
                 )}
               >
                 <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", platform.tile, platform.status === "later" && "opacity-60")}>

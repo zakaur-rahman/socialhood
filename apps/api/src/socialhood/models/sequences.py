@@ -50,6 +50,7 @@ class EntryType(StrEnum):
     CAPTURED = "captured"  # a lead was captured (GR-14): an email, a phone or a field
     TAGGED = "tagged"  # a tag was added (GR-02)
     BROADCAST_REPLIED = "broadcast_replied"  # they answered a WhatsApp broadcast (GR-23)
+    LEAD_STAGE = "lead_stage"  # their lead moved into a stage (GR-18)
 
 
 class DelayFrom(StrEnum):
@@ -66,6 +67,7 @@ class EnrolmentStatus(StrEnum):
 class StopReason(StrEnum):
     REPLY = "reply"  # the contact wrote
     TAG = "tag"  # a stop tag was added
+    TAG_REMOVED = "tag_removed"  # a tag they needed was taken off
     STAGE = "stage"  # their lead stage became a stop stage
     MEMBER = "member"  # someone took them out
     ENDED = "ended"  # the sequence has no step to run (its steps were removed)
@@ -96,12 +98,18 @@ class Sequence(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("broadcasts.id", ondelete="SET NULL")
     )
     entry_capture_kind: Mapped[str | None] = mapped_column(Text)
-    # Stop rules: any customer reply (default on), a tag from the list, a lead stage from the list.
+    # ``entry_stage`` is the lead stage that starts a ``lead_stage`` sequence.
+    entry_stage: Mapped[str | None] = mapped_column(Text)
+    # Stop rules: any customer reply (default on), a tag from the list, a lead stage from the list,
+    # a tag from ``stop_removed_tag_ids`` being taken off.
     stop_on_reply: Mapped[bool] = mapped_column(server_default=sql("true"))
     stop_tag_ids: Mapped[list[uuid.UUID]] = mapped_column(
         ARRAY(PG_UUID(as_uuid=True)), server_default=sql("'{}'")
     )
     stop_stages: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    stop_removed_tag_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(PG_UUID(as_uuid=True)), server_default=sql("'{}'")
+    )
     # Whether a contact who finished (or was stopped) can enter again.
     allow_reentry: Mapped[bool] = mapped_column(server_default=sql("false"))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -121,7 +129,15 @@ class Sequence(IdMixin, TimestampMixin, TenantScoped, Base):
             "entry_capture_kind IS NULL OR entry_capture_kind IN ('email', 'phone', 'field')",
             name="entry_capture_kind",
         ),
+        CheckConstraint(
+            "entry_stage IS NULL "
+            "OR entry_stage IN ('new', 'qualified', 'follow_up', 'won', 'lost')",
+            name="entry_stage",
+        ),
         CheckConstraint("cardinality(stop_tag_ids) <= 20", name="stop_tag_ids_length"),
+        CheckConstraint(
+            "cardinality(stop_removed_tag_ids) <= 20", name="stop_removed_tag_ids_length"
+        ),
         CheckConstraint("cardinality(stop_stages) <= 5", name="stop_stages_length"),
     )
 

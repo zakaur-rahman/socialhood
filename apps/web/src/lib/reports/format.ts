@@ -3,8 +3,8 @@
  * (services/reports.py works them out, the digest email carries the same ones); these functions
  * only format them and lay a series out as a line. Pure, tested directly.
  */
-import { DASH, formatCount, formatPercent, formatWait, type Trend } from "@/components/home/format";
-import type { ReportMetric, ReportPoint } from "@/lib/api/types";
+import { DASH, formatCount, formatPercent, formatWait, formatWaitCompact, smallChange, type Trend } from "@/components/home/format";
+import type { ReportMetric } from "@/lib/api/types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MINUS = "−";
@@ -13,6 +13,29 @@ const oneDecimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 /** A `?week=` value worth asking the API about: a plain date (the API checks it is a Monday). */
 export function parseWeekParam(value: string | null | undefined): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** An `?account=` value worth asking the API about: an id (the API 404s one that isn't this workspace's). */
+export function parseAccountParam(value: string | null | undefined): string | null {
+  return value && UUID.test(value) ? value : null;
+}
+
+/** The report's address for a week and an account (both optional): what a link reproduces. */
+export function reportHref(pathname: string, view: { week?: string | null; account?: string | null }): string {
+  const query = new URLSearchParams();
+  if (view.week) query.set("week", view.week);
+  if (view.account) query.set("account", view.account);
+  const text = query.toString();
+  return text ? `${pathname}?${text}` : pathname;
+}
+
+/** Why an account's figure is missing, in words (the API's reason code). */
+export function unavailableWords(reason: string | null | undefined): string {
+  if (reason === "insights_not_granted") return "Not available: this account gives no insights";
+  if (reason === "no_readings") return "No readings yet";
+  return "Not available";
 }
 
 /** "21 Sep" for a YYYY-MM-DD day. */
@@ -39,12 +62,23 @@ export function formatMetric(unit: ReportMetric["unit"], value: number | null | 
  * share. Null when the API gave no direction (a side is unknown). "New" is a rise from none. The
  * tone follows `lower_is_better` (a faster first response is good news).
  */
-export function reportTrend(metric: ReportMetric): Trend | null {
-  const { direction, change_pct: pct, change_points: points, lower_is_better: lower } = metric;
+export function reportTrend(
+  metric: Pick<ReportMetric, "direction" | "change_pct"> &
+    Partial<Pick<ReportMetric, "change_points" | "lower_is_better" | "unit" | "value" | "previous">>,
+): Trend | null {
+  const { direction, change_pct: pct, change_points: points, lower_is_better: lower = false } = metric;
   if (!direction) return null;
   const good = direction === "flat" ? null : (direction === "up") !== lower;
   if (direction === "flat") {
-    return { direction, good: null, text: "No change", words: "no change from the week before" };
+    // Flat is the API's call for under half a percent (or point). Only exactly equal values are
+    // "No change"; any other difference is written out.
+    const unit = metric.unit ?? "count";
+    const small = smallChange(metric.value, metric.previous, {
+      points: unit === "percent",
+      format: (n) => formatMetric(unit, n),
+      period: "the week before",
+    });
+    return small ?? { direction, good: null, text: "No change", words: "no change from the week before" };
   }
   if (points !== null && points !== undefined) {
     const size = oneDecimal.format(Math.abs(points));
@@ -68,60 +102,59 @@ export function reportTrend(metric: ReportMetric): Trend | null {
 }
 
 /** The line under a tile's number: the week before, or why there is nothing to compare with. */
-export function previousLine(metric: ReportMetric): string {
+export function previousLine(metric: Pick<ReportMetric, "unit" | "previous">): string {
   return metric.previous === null || metric.previous === undefined
     ? "Week before: no data"
     : `Week before: ${formatMetric(metric.unit, metric.previous)}`;
 }
 
-export type Plot = {
-  /** Runs of consecutive weeks with a value, each a list of [x, y] in the viewBox. A gap ends a run. */
-  runs: [number, number][][];
-  /** The latest week's point, when it has a value. */
-  last: [number, number] | null;
-  /** How many weeks have no value. */
-  gaps: number;
-};
-
-/**
- * Lays a series out in a width x height box. The scale starts at 0 (a count or a time) or spans 0
- * to 100 (a share), so a small change doesn't look like a big one. A week without a value breaks
- * the line: nothing is drawn through it and nothing stands in for it.
- */
-export function plot(
-  points: Pick<ReportPoint, "value">[],
-  unit: ReportMetric["unit"],
-  width: number,
-  height: number,
-  pad = 4,
-): Plot {
-  const known = points.map((p) => p.value).filter((v): v is number => v !== null && v !== undefined);
-  const top = unit === "percent" ? 100 : Math.max(1, ...known);
-  const step = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
-  const runs: [number, number][][] = [];
-  let current: [number, number][] = [];
-  let last: [number, number] | null = null;
-  points.forEach((point, index) => {
-    if (point.value === null || point.value === undefined) {
-      if (current.length) runs.push(current);
-      current = [];
-      last = null;
-      return;
-    }
-    const x = pad + index * step;
-    const y = height - pad - (point.value / top) * (height - pad * 2);
-    const at: [number, number] = [Number(x.toFixed(1)), Number(y.toFixed(1))];
-    current.push(at);
-    last = at;
-  });
-  if (current.length) runs.push(current);
-  return { runs, last, gaps: points.length - known.length };
+/** The tooltip's change for a count compared with the week before: "+12%", "New" (a rise from none) or null. */
+export function changeText(
+  metric: Pick<ReportMetric, "direction" | "change_pct"> & Partial<Pick<ReportMetric, "unit" | "value" | "previous">>,
+): string | null {
+  return reportTrend(metric)?.text ?? null;
 }
 
-/** The words for a chart's label: "Messages received, 8 weeks from 3 Aug: 12, 15, no data, 20". */
-export function seriesSummary(metric: Pick<ReportMetric, "label" | "unit" | "series">): string {
-  const first = metric.series[0];
-  const values = metric.series.map((p) => (p.value === null || p.value === undefined ? "no data" : formatMetric(metric.unit, p.value)));
-  const from = first ? ` from ${dayLabel(first.week_start)}` : "";
-  return `${metric.label}, ${metric.series.length} weeks${from}: ${values.join(", ")}`;
+/** An axis label for a value: durations are compact ("28h", "1d 4h") so they stay on one line. */
+export function formatAxis(unit: ReportMetric["unit"], value: number): string {
+  return unit === "seconds" ? formatWaitCompact(value) : formatMetric(unit, value);
+}
+
+/**
+ * The line under an insight's number: the week before and the days that have a reading, in one
+ * sentence ("Week before: 1,056 · readings on 2 of 7 days (both weeks)"), or why there is nothing.
+ */
+export function insightLine(options: {
+  unit: ReportMetric["unit"];
+  previous: number | null | undefined;
+  daysNow?: number | null;
+  daysBefore?: number | null;
+  daysTotal?: number | null;
+  unavailable?: string | null;
+}): string {
+  const { unit, previous, daysNow, daysBefore, daysTotal, unavailable } = options;
+  if (unavailable) return unavailableWords(unavailable);
+  const before = previous === null || previous === undefined ? "Week before: no data" : `Week before: ${formatMetric(unit, previous)}`;
+  if (!daysTotal || daysNow === null || daysNow === undefined) return before;
+  const same = daysBefore === null || daysBefore === undefined || daysBefore === daysNow;
+  const days = (n: number) => `${n} of ${daysTotal} days`;
+  if (daysNow >= daysTotal && (same || daysBefore === daysTotal)) return before;
+  return same ? `${before} · readings on ${days(daysNow)} (both weeks)` : `${before} · readings on ${days(daysNow)}, ${days(daysBefore ?? 0)} the week before`;
+}
+
+/**
+ * A metric with nothing to draw over the weeks shown: no value at all, or (for a count) only zeros.
+ * A rate or a time of 0 is a reading, so only a count can be idle by being zero.
+ */
+export function isIdle(unit: ReportMetric["unit"], series: { value?: number | null }[]): boolean {
+  return series.every((p) => p.value === null || p.value === undefined || (unit === "count" && p.value === 0));
+}
+
+/** The note under a compact chart about weeks without a value: where the line starts, or how many. */
+export function gapNote(series: { week_start: string; value?: number | null }[]): string | null {
+  const missing = series.filter((p) => p.value === null || p.value === undefined).length;
+  if (missing === 0) return null;
+  const leading = series.findIndex((p) => p.value !== null && p.value !== undefined);
+  if (leading > 0 && series.slice(0, leading).length === missing) return `No data before ${dayLabel(series[leading].week_start)}`;
+  return missing === 1 ? "1 week without data" : `${missing} weeks without data`;
 }

@@ -67,6 +67,11 @@ EVENTS: tuple[EventType, ...] = (
     EventType("broadcast.finished", 1, "A broadcast finished sending.", emitted=False),
     EventType("order.created", 1, "An order was made for a customer."),
     EventType("order.paid", 1, "An order was paid."),
+    EventType("order.refunded", 1, "An order was refunded, in full or in part."),
+    EventType("sequence.enrolled", 1, "A contact entered a sequence."),
+    EventType("sequence.step_sent", 1, "A sequence step was sent to a contact."),
+    EventType("sequence.completed", 1, "A contact reached the end of a sequence."),
+    EventType("sequence.stopped", 1, "A contact left a sequence before the end, and why."),
 )
 BY_NAME = {e.name: e for e in EVENTS}
 TEST_EVENT = "webhook.test"  # "Send test event" (not subscribable)
@@ -324,10 +329,16 @@ async def lead_stage_changed(
 
 
 async def order_event(
-    session: AsyncSession, event_type: str, order: Any, items: list[Any], contact: Contact
+    session: AsyncSession,
+    event_type: str,
+    order: Any,
+    items: list[Any],
+    contact: Contact,
+    **extra: Any,
 ) -> None:
-    """``order.created`` and ``order.paid`` (GR-32): the order, its lines and the contact. The
-    delivery address is left out: an endpoint that needs it reads the order in the app."""
+    """``order.created``, ``order.paid`` and ``order.refunded`` (GR-32): the order, its lines and
+    the contact, plus what the event adds (the refund). The delivery address is left out: an
+    endpoint that needs it reads the order in the app."""
     from socialhood.services.catalogue import money
 
     if not await wanted(session, event_type):
@@ -344,6 +355,8 @@ async def order_event(
                 "currency": order.currency,
                 "total_minor": order.total_minor,
                 "total": money.plain(order.total_minor, order.currency),
+                "amount_paid_minor": order.amount_paid_minor,
+                "amount_refunded_minor": order.amount_refunded_minor,
                 "payment_method": order.payment_method,
                 "paid_at": order.paid_at.isoformat() if order.paid_at else None,
                 "items": [
@@ -357,6 +370,34 @@ async def order_event(
                     for i in items
                 ],
             },
+            **extra,
+        },
+    )
+
+
+async def sequence_event(
+    session: AsyncSession,
+    event_type: str,
+    contact: Contact,
+    *,
+    sequence_id: uuid.UUID,
+    sequence_name: str,
+    enrolment_id: uuid.UUID,
+    **extra: Any,
+) -> None:
+    """``sequence.enrolled``, ``sequence.step_sent``, ``sequence.completed`` and
+    ``sequence.stopped`` (GR-24): the contact, the sequence and the enrolment, and what the event
+    adds (the step, why it stopped)."""
+    if not await wanted(session, event_type):
+        return
+    await emit(
+        session,
+        event_type,
+        {
+            "contact": contact_ref(contact, await _platform(session, contact)),
+            "sequence": {"id": str(sequence_id), "name": sequence_name},
+            "enrolment_id": str(enrolment_id),
+            **extra,
         },
     )
 

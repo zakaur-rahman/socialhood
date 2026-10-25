@@ -6,9 +6,15 @@
 - **Stock** is checked when it is recorded (more than is left is refused) but is not reduced:
   the catalogue's stock is a number the business keeps (C-120).
 - **Status.** ``draft`` when made, ``awaiting_payment`` once a payment link or UPI request is
-  out, then ``paid``, ``cancelled`` or ``expired`` (Razorpay's link ran out). A paid order is
-  final. A payment that arrives for a cancelled or expired order still marks it paid, because the
-  money has arrived.
+  out, ``partially_paid`` when some of the total is paid (services/orders/ledger.py), then
+  ``paid``, ``fulfilled`` (shipped), ``refunded`` (all of it given back), ``cancelled`` or
+  ``expired`` (Razorpay's link ran out). A payment that arrives for a cancelled or expired order
+  still counts, because the money has arrived. An order with payments can't be cancelled: refund
+  them first.
+- **Editing** (draft or awaiting payment only): the lines are replaced and re-priced from the
+  catalogue, the address and note replaced. A change of total makes a payment link useless, so the
+  link is cancelled with Razorpay and the order goes back to a draft, unless the same request asks
+  for a new payment request.
 - **Paying.** Razorpay: a Payment Link on the business's own keys; Razorpay's signed webhook marks
   the order paid (webhook.py). UPI: a ``upi://pay`` link and the VPA in the message; there is no
   webhook for it, so a member marks the order paid and the audit trail says who and when.
@@ -37,6 +43,8 @@ from socialhood.models.inbox import Contact, Conversation
 from socialhood.models.orders import (
     Order,
     OrderItem,
+    OrderPayment,
+    OrderRefund,
     OrderSource,
     OrderStatus,
     PaymentConnection,
@@ -45,19 +53,23 @@ from socialhood.models.orders import (
 from socialhood.observability.logging import get_logger
 from socialhood.razorpay.client import MIN_EXPIRY_S, RazorpayClient, RazorpayError
 from socialhood.repositories import catalogue as catalogue_repo
+from socialhood.repositories.base import scoped_delete
 from socialhood.schemas.orders import (
     AddressOut,
     OrderContact,
     OrderCreate,
+    OrderEdit,
     OrderLimits,
     OrderLineOut,
     OrderList,
     OrderOut,
+    OrderPaymentOut,
+    OrderRefundOut,
 )
 from socialhood.security.crypto import TokenCipher
 from socialhood.services import leads
 from socialhood.services.catalogue import money
-from socialhood.services.orders import payments
+from socialhood.services.orders import ledger, payments
 
 log = get_logger(__name__)
 
@@ -80,16 +92,25 @@ COPY = {
     "total": "That total is too large.",
     "state": "This order is {status}, so that can't be done.",
     "paid": "This order is already paid.",
+    "has_payments": "This order has payments. Refund them before you cancel it.",
+    "ship_state": "Only a paid order can be marked shipped.",
+    "shipped": "This order is already marked shipped.",
+    "edit_state": "An order can be changed until someone pays it. This one is {status}.",
+    "partial_inr": "Part payments on a Razorpay link are for rupees. This order is in {currency}.",
     "upi_currency": "UPI payments are in rupees. This order is in {currency}.",
     "no_conversation": "That conversation's customer can't be reached.",
 }
 STATUS_WORDS: dict[str, str] = {
     OrderStatus.DRAFT: "a draft",
     OrderStatus.AWAITING_PAYMENT: "waiting for payment",
+    OrderStatus.PARTIALLY_PAID: "partly paid",
     OrderStatus.PAID: "paid",
+    OrderStatus.FULFILLED: "shipped",
+    OrderStatus.REFUNDED: "refunded",
     OrderStatus.CANCELLED: "cancelled",
     OrderStatus.EXPIRED: "expired",
 }
+EDITABLE = (OrderStatus.DRAFT, OrderStatus.AWAITING_PAYMENT)
 
 
 @dataclass
@@ -145,21 +166,67 @@ async def views(session: AsyncSession, orders: Sequence[Order]) -> list[OrderOut
             )
         ).all()
     }
+    chats = {
+        c.id: c
+        for c in (
+            await session.scalars(
+                select(Conversation).where(
+                    Conversation.id.in_({o.conversation_id for o in orders if o.conversation_id})
+                )
+            )
+        ).all()
+    }
+    ids = [o.id for o in orders]
+    paid: dict[uuid.UUID, list[OrderPayment]] = {}
+    for p in await ledger.payments_of(session, ids):
+        paid.setdefault(p.order_id, []).append(p)
+    refunded: dict[uuid.UUID, list[OrderRefund]] = {}
+    for r in await ledger.refunds_of(session, ids):
+        refunded.setdefault(r.order_id, []).append(r)
     user_ids = {
         u for o in orders for u in (o.paid_by_user_id, o.created_by_user_id) if u is not None
     }
+    user_ids |= {
+        p.recorded_by_user_id for rows in paid.values() for p in rows if p.recorded_by_user_id
+    }
+    user_ids |= {
+        r.created_by_user_id for rows in refunded.values() for r in rows if r.created_by_user_id
+    }
     names = await leads.user_names(session, list(user_ids))
-    return [_out(o, items.get(o.id, []), contacts[o.contact_id], names) for o in orders]
+    return [
+        _out(
+            o,
+            items.get(o.id, []),
+            contacts[o.contact_id],
+            names,
+            paid.get(o.id, []),
+            refunded.get(o.id, []),
+            chats.get(o.conversation_id) if o.conversation_id else None,
+        )
+        for o in orders
+    ]
 
 
 async def view(session: AsyncSession, order: Order) -> OrderOut:
     return (await views(session, [order]))[0]
 
 
+async def session_contact(session: AsyncSession, order: Order) -> Contact | None:
+    return await session.get(Contact, order.contact_id)
+
+
 def _out(
-    order: Order, items: Sequence[OrderItem], contact: Contact, names: dict[uuid.UUID, str]
+    order: Order,
+    items: Sequence[OrderItem],
+    contact: Contact,
+    names: dict[uuid.UUID, str],
+    paid: Sequence[OrderPayment] = (),
+    refunded: Sequence[OrderRefund] = (),
+    chat: Conversation | None = None,
 ) -> OrderOut:
     cur = order.currency
+    left = ledger.remaining(order)
+    can_refund = ledger.refundable(order, refunded)
     return OrderOut(
         id=order.id,
         number=order.number,
@@ -190,6 +257,8 @@ def _out(
             id=contact.id, display_name=contact.display_name, username=contact.username
         ),
         conversation_id=order.conversation_id,
+        social_account_id=chat.social_account_id if chat else None,
+        platform=chat.platform if chat else None,
         payment_method=order.payment_method,
         payment_link_url=order.payment_link_url,
         payment_reference=order.payment_reference,
@@ -200,6 +269,46 @@ def _out(
         created_by_name=names.get(order.created_by_user_id) if order.created_by_user_id else None,
         created_at=order.created_at,
         updated_at=order.updated_at,
+        amount_paid_minor=order.amount_paid_minor,
+        amount_paid=money.plain(order.amount_paid_minor, cur),
+        amount_left_minor=left,
+        amount_left=money.plain(left, cur),
+        amount_refunded_minor=order.amount_refunded_minor,
+        amount_refunded=money.plain(order.amount_refunded_minor, cur),
+        refundable_minor=can_refund,
+        refundable=money.plain(can_refund, cur),
+        accept_partial=order.accept_partial,
+        fulfilled_at=order.fulfilled_at,
+        fulfilment_note=order.fulfilment_note,
+        payments=[
+            OrderPaymentOut(
+                id=p.id,
+                amount_minor=p.amount_minor,
+                amount=money.plain(p.amount_minor, cur),
+                method=p.method,
+                reference=p.reference,
+                recorded_by_name=names.get(p.recorded_by_user_id)
+                if p.recorded_by_user_id
+                else None,
+                paid_at=p.paid_at,
+            )
+            for p in paid
+        ],
+        refunds=[
+            OrderRefundOut(
+                id=r.id,
+                amount_minor=r.amount_minor,
+                amount=money.plain(r.amount_minor, cur),
+                reason=r.reason,
+                method=r.method,
+                status=r.status,
+                failure=r.failure,
+                created_by_name=names.get(r.created_by_user_id) if r.created_by_user_id else None,
+                created_at=r.created_at,
+                processed_at=r.processed_at,
+            )
+            for r in refunded
+        ],
     )
 
 
@@ -434,12 +543,14 @@ async def create(
 # ---------------------------------------------------------------- asking for payment
 
 
-def upi_link(vpa: str, name: str, order: Order) -> str:
+def upi_link(vpa: str, name: str, order: Order, amount_minor: int | None = None) -> str:
+    """The ``upi://pay`` link for what is left to pay (or ``amount_minor``)."""
+    due = ledger.remaining(order) if amount_minor is None else amount_minor
     query = urlencode(
         {
             "pa": vpa,
             "pn": name,
-            "am": money.plain(order.total_minor, order.currency),
+            "am": money.plain(due, order.currency),
             "cu": order.currency,
             "tn": f"Order {order.number}",
         },
@@ -449,7 +560,8 @@ def upi_link(vpa: str, name: str, order: Order) -> str:
 
 
 def payment_text(order: Order, items: Sequence[OrderItem], *, pay_url: str, vpa: str | None) -> str:
-    """The message that carries the link: the order, its lines, the total and how to pay."""
+    """The message that carries the link: the order, its lines, the total and how to pay. An order
+    with something already paid says what is left."""
     lines = [f"Order #{order.number}"]
     for item in items[:MAX_LISTED_LINES]:
         name = f"{item.name} - {item.variant_title}" if item.variant_title else item.name
@@ -459,6 +571,9 @@ def payment_text(order: Order, items: Sequence[OrderItem], *, pay_url: str, vpa:
     if len(items) > MAX_LISTED_LINES:
         lines.append(f"and {len(items) - MAX_LISTED_LINES} more")
     lines.append(f"Total: {money.label(order.total_minor, order.currency)}")
+    if (order.amount_paid_minor or 0) > 0:
+        lines.append(f"Paid so far: {money.label(order.amount_paid_minor, order.currency)}")
+        lines.append(f"Left to pay: {money.label(ledger.remaining(order), order.currency)}")
     lines.append("")
     if vpa is None:
         lines.append(f"Pay here: {pay_url}")
@@ -475,44 +590,55 @@ async def request_payment(
     *,
     client: RazorpayClient,
     cipher: TokenCipher,
+    allow_partial: bool = False,
+    remember_refused_keys: bool = True,
     now: datetime | None = None,
 ) -> str:
-    """Make the payment link (Razorpay) or UPI request and record it on the order, which is
-    then awaiting payment. Returns the text to send. 409 when the method isn't set up, 422 for
-    an order in a state that can't be paid or a UPI order that isn't in rupees. A link that was
-    out for the order is cancelled first (best effort)."""
+    """Make the payment link (Razorpay) or UPI request for what is left to pay and record it on
+    the order, which is then awaiting payment (or still partly paid). Returns the text to send.
+    409 when the method isn't set up, 422 for an order in a state that can't be paid, a UPI order
+    that isn't in rupees, or part payments on a Razorpay link in another currency. A link that was
+    out for the order is cancelled first (best effort).
+
+    ``allow_partial`` lets the customer pay a Razorpay link in parts. *Unverified:* that Razorpay
+    allows it only in INR; the check is conservative until a real account has tried it."""
     now = now or datetime.now(UTC)
     await check_entitlement(session, KEY, detail=COPY["plan"])
-    if order.status not in (OrderStatus.DRAFT, OrderStatus.AWAITING_PAYMENT, OrderStatus.EXPIRED):
+    if order.status not in ledger.PAYABLE:
         raise ApiError(
             "validation_error",
             COPY["paid"]
-            if order.status == OrderStatus.PAID
+            if order.status in (OrderStatus.PAID, OrderStatus.FULFILLED)
             else COPY["state"].format(status=STATUS_WORDS.get(order.status, order.status)),
         )
     conn: PaymentConnection | None = await payments.get(session)
     items = (await items_of(session, [order.id])).get(order.id, [])
     contact = await session.get(Contact, order.contact_id)
+    due = ledger.remaining(order)
     if method == PaymentMethod.RAZORPAY:
+        if allow_partial and order.currency != UPI_CURRENCY:
+            raise ApiError("validation_error", COPY["partial_inr"].format(currency=order.currency))
         creds = payments.credentials(conn, cipher)
         await _cancel_link(order, client, creds)
         expires = now + LINK_TTL
         try:
             link = await client.create_payment_link(
                 creds,
-                amount_minor=order.total_minor,
+                amount_minor=due,
                 currency=order.currency,
                 reference_id=str(order.id),
                 description=f"Order #{order.number}",
                 customer_name=contact.display_name if contact else None,
                 customer_phone=contact.phone if contact else None,
                 expire_by=max(int(expires.timestamp()), int(now.timestamp()) + MIN_EXPIRY_S),
+                accept_partial=allow_partial,
             )
         except RazorpayError as error:
             if error.kind == "auth":
                 assert conn is not None
                 conn.razorpay_last_error = payments.KEYS_REFUSED
-                await session.commit()  # remember it for the card; the request still fails
+                if remember_refused_keys:  # not inside a flow run, which commits as a whole
+                    await session.commit()  # remember it for the card; the request still fails
                 raise ApiError("conflict", payments.KEYS_REFUSED) from error
             if error.kind == "rejected":
                 raise ApiError(
@@ -522,21 +648,24 @@ async def request_payment(
         order.payment_link_id = link.id
         order.payment_link_url = link.short_url
         order.link_expires_at = expires
+        order.accept_partial = allow_partial
         text = payment_text(order, items, pay_url=link.short_url, vpa=None)
     elif method == PaymentMethod.UPI:
         if conn is None or not conn.upi_vpa:
             raise ApiError("conflict", payments.UPI_MISSING)
         if order.currency != UPI_CURRENCY:
             raise ApiError("validation_error", COPY["upi_currency"].format(currency=order.currency))
-        link_url = upi_link(conn.upi_vpa, conn.upi_name or conn.upi_vpa, order)
+        link_url = upi_link(conn.upi_vpa, conn.upi_name or conn.upi_vpa, order, due)
         order.payment_link_id = None
         order.payment_link_url = link_url
         order.link_expires_at = None
+        order.accept_partial = False
         text = payment_text(order, items, pay_url=link_url, vpa=conn.upi_vpa)
     else:  # pragma: no cover - the schema allows only the two
         raise ApiError("validation_error", "Choose Razorpay or UPI.")
     order.payment_method = method
-    order.status = OrderStatus.AWAITING_PAYMENT
+    if order.status != OrderStatus.PARTIALLY_PAID:
+        order.status = OrderStatus.AWAITING_PAYMENT
     return text
 
 
@@ -551,31 +680,17 @@ async def _cancel_link(order: Order, client: RazorpayClient, creds: Any) -> None
         log.warning("razorpay_cancel_failed", order_id=str(order.id), http_status=error.status)
 
 
-# ---------------------------------------------------------------- paid, cancelled
+# ---------------------------------------------------------------- paid, shipped, cancelled
 
 
-async def apply_paid(
-    session: AsyncSession,
-    order: Order,
-    *,
-    reference: str | None,
-    user_id: uuid.UUID | None,
-    now: datetime,
-) -> bool:
-    """Mark the order paid and emit ``order.paid``. False (nothing changed) when it already is."""
-    if order.status == OrderStatus.PAID:
-        return False
-    order.status = OrderStatus.PAID
-    order.paid_at = now
-    order.paid_by_user_id = user_id
-    order.payment_reference = reference.strip() if reference and reference.strip() else None
+async def _emit(session: AsyncSession, order: Order, event: str) -> None:
     contact = await session.get(Contact, order.contact_id)
-    items = (await items_of(session, [order.id])).get(order.id, [])
-    if contact is not None:
-        from socialhood.services.webhooks import events
+    if contact is None:
+        return
+    from socialhood.services.webhooks import events
 
-        await events.order_event(session, "order.paid", order, items, contact)
-    return True
+    items = (await items_of(session, [order.id])).get(order.id, [])
+    await events.order_event(session, event, order, items, contact)
 
 
 async def mark_paid(
@@ -584,18 +699,51 @@ async def mark_paid(
     *,
     reference: str | None,
     user_id: uuid.UUID,
+    amount_minor: int | None = None,
     now: datetime | None = None,
-) -> None:
-    """A member says the order was paid (UPI has no webhook). 422 when it is already paid or
-    cancelled."""
+) -> OrderPayment | None:
+    """A member says a payment arrived (UPI has no webhook): all that is left, or
+    ``amount_minor`` of it (then the order is partly paid). 422 when it is already paid, refunded
+    or cancelled, or the amount is more than what is left."""
     await check_entitlement(session, KEY, detail=COPY["plan"])
-    if order.status == OrderStatus.PAID:
+    if order.status in (OrderStatus.PAID, OrderStatus.FULFILLED, OrderStatus.REFUNDED):
         raise ApiError("validation_error", COPY["paid"])
     if order.status == OrderStatus.CANCELLED:
         raise ApiError("validation_error", COPY["state"].format(status="cancelled"))
-    await apply_paid(
-        session, order, reference=reference, user_id=user_id, now=now or datetime.now(UTC)
+    now = now or datetime.now(UTC)
+    if order.total_minor == 0:  # nothing to pay: mark it paid, there is no payment to record
+        order.status, order.paid_at, order.paid_by_user_id = OrderStatus.PAID, now, user_id
+        await _emit(session, order, "order.paid")
+        return None
+    return await ledger.record_payment(
+        session,
+        order,
+        amount=ledger.remaining(order) if amount_minor is None else amount_minor,
+        method=PaymentMethod.RAZORPAY
+        if order.payment_method == PaymentMethod.RAZORPAY
+        else PaymentMethod.UPI,
+        reference=reference,
+        razorpay_payment_id=None,
+        user_id=user_id,
+        now=now,
     )
+
+
+async def fulfil(
+    session: AsyncSession,
+    order: Order,
+    *,
+    note: str | None,
+    now: datetime | None = None,
+) -> None:
+    """Mark a paid order shipped. 422 for an order that is not paid, or already shipped."""
+    if order.status == OrderStatus.FULFILLED:
+        raise ApiError("validation_error", COPY["shipped"])
+    if order.status != OrderStatus.PAID:
+        raise ApiError("validation_error", COPY["ship_state"])
+    order.status = OrderStatus.FULFILLED
+    order.fulfilled_at = now or datetime.now(UTC)
+    order.fulfilment_note = note.strip()[:300] if note and note.strip() else None
 
 
 async def cancel(
@@ -606,13 +754,94 @@ async def cancel(
     cipher: TokenCipher,
     now: datetime | None = None,
 ) -> None:
-    """Cancel an order that isn't paid, and its Razorpay link."""
+    """Cancel an order nobody has paid, and its Razorpay link. 422 once there is a payment (refund
+    it first)."""
     if order.status == OrderStatus.CANCELLED:
         return
-    if order.status == OrderStatus.PAID:
-        raise ApiError("validation_error", COPY["paid"])
+    if order.amount_paid_minor > 0 or order.status in (
+        OrderStatus.PAID,
+        OrderStatus.FULFILLED,
+        OrderStatus.PARTIALLY_PAID,
+    ):
+        raise ApiError("validation_error", COPY["has_payments"])
+    if order.status == OrderStatus.REFUNDED:
+        raise ApiError("validation_error", COPY["state"].format(status="refunded"))
     conn = await payments.get(session)
     if conn is not None and conn.razorpay_key_id and conn.razorpay_secret_enc:
         await _cancel_link(order, client, payments.credentials(conn, cipher))
     order.status = OrderStatus.CANCELLED
     order.cancelled_at = now or datetime.now(UTC)
+
+
+# ---------------------------------------------------------------- editing
+
+
+@dataclass
+class Edited:
+    changed: list[str]  # "items", "address", "note"
+    link_cancelled: bool  # the payment link no longer matches the total and was cancelled
+
+
+async def edit(
+    session: AsyncSession,
+    order: Order,
+    body: OrderEdit,
+    *,
+    client: RazorpayClient,
+    cipher: TokenCipher,
+) -> Edited:
+    """Change a draft or waiting order: re-price the lines from the catalogue, replace the
+    address or the note. A new total cancels the payment link (best effort) and returns the order
+    to a draft, so the customer can't pay the old amount; the caller may ask for a new request
+    straight after. 422 for an order someone has paid or that is closed."""
+    await check_entitlement(session, KEY, detail=COPY["plan"])
+    if order.status not in EDITABLE:
+        raise ApiError(
+            "validation_error",
+            COPY["edit_state"].format(status=STATUS_WORDS.get(order.status, order.status)),
+        )
+    changed: list[str] = []
+    link_cancelled = False
+    if body.items is not None:
+        lines = await resolve_lines(
+            session, [(i.product_id, i.variant_id, i.quantity) for i in body.items]
+        )
+        total = total_of(lines)
+        await session.execute(scoped_delete(OrderItem, order_id=order.id))
+        session.add_all(
+            OrderItem(
+                order_id=order.id,
+                product_id=line.product.id,
+                variant_id=line.variant.id if line.variant is not None else None,
+                name=line.product.name,
+                variant_title=line.variant.title if line.variant is not None else None,
+                sku=(line.variant.sku if line.variant is not None else None) or line.product.sku,
+                quantity=line.quantity,
+                unit_price_minor=line.unit_minor,
+                line_total_minor=line.unit_minor * line.quantity,
+                position=position,
+            )
+            for position, line in enumerate(lines)
+        )
+        currency = lines[0].product.currency
+        changed_total = total != order.total_minor or currency != order.currency
+        if changed_total and order.status == OrderStatus.AWAITING_PAYMENT:
+            conn = await payments.get(session)
+            if conn is not None and conn.razorpay_key_id and conn.razorpay_secret_enc:
+                await _cancel_link(order, client, payments.credentials(conn, cipher))
+            link_cancelled = True
+            order.status = OrderStatus.DRAFT
+            order.payment_link_id = None
+            order.payment_link_url = None
+            order.link_expires_at = None
+        order.total_minor, order.currency = total, currency
+        changed.append("items")
+    if body.address is not None:
+        cleaned = {k: v.strip() for k, v in body.address.model_dump().items() if v and v.strip()}
+        order.address = cleaned or None
+        changed.append("address")
+    if body.note is not None:
+        order.note = body.note.strip() or None
+        changed.append("note")
+    await session.flush()
+    return Edited(changed=changed, link_cancelled=link_cancelled)

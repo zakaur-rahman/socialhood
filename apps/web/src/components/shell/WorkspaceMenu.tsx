@@ -8,14 +8,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Plan, Role } from "@/lib/api/types";
+import { THEME_CHOICES, THEME_LABEL, parseTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
 
+import { sidebarFadeClass } from "./sidebar-styles";
 import { WORKSPACE_HOME_HREF, WORKSPACE_SETTINGS_HREF } from "./nav";
 
 export type SidebarWorkspace = { name: string; slug: string; plan: Plan; role: Role };
@@ -26,8 +31,8 @@ export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Pro", max:
  * The plan as a Badge: `sm` (11 px, the type floor), `tag` corners and the `brand` (info) tone for
  * every plan. It sits inside the workspace menu's trigger and items, whose hover and open fills
  * stack under its own: the `neutral` tone's white 5% on top of them reaches the `pressed` level,
- * where secondary text is 4.46:1 (4.1:1 over the menu's `overlay`), so no neutral badge passes
- * there. `brand-fg` on `brand-soft` stays above 5.4:1 on each of those fills.
+ * where secondary text is 5.0:1 or more (over the menu's `overlay`), kept as the brand tone for
+ * consistency. `brand-fg` on `brand-soft` stays above 5.6:1 on each of those fills.
  */
 export function PlanBadge({ plan, className }: { plan: Plan; className?: string }) {
   return (
@@ -64,20 +69,19 @@ export function WorkspaceMenu({
    */
   onShowChecklist?: () => void;
 }) {
+  const theme = useTheme();
   const others = (workspaces ?? []).filter((w) => w.slug !== workspace.slug);
   const trigger = (
     <DropdownMenuTrigger
       aria-label={`Workspace menu: ${workspace.name}`}
       className={cn(
         // Open keeps the hover fill, not `pressed`: the workspace name is secondary text, which is
-        // 4.45:1 on `pressed` (DESIGN_SYSTEM §1.11).
-        "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-hover data-[state=open]:bg-hover motion-safe:transition-[color,background-color]",
-        collapsed && "size-10 justify-center p-0",
+        // 5.55:1 on `pressed` (DESIGN_SYSTEM §1.11).
+        "relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg py-1.5 pr-1.5 pl-1.25 text-left hover:bg-hover data-[state=open]:bg-hover motion-safe:transition-[color,background-color]",
       )}
     >
-      <LogoMark className={collapsed ? "size-9" : undefined} />
-      {collapsed ? null : (
-        <>
+      <LogoMark />
+      <span aria-hidden={collapsed} className={cn("flex min-w-0 flex-1 items-center gap-2.5 whitespace-nowrap", sidebarFadeClass(!collapsed))}>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-sm font-semibold">Social Hood</span>
@@ -86,8 +90,7 @@ export function WorkspaceMenu({
             <span className="block truncate text-xs text-fg-secondary">{workspace.name}</span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-fg-secondary" aria-hidden />
-        </>
-      )}
+      </span>
     </DropdownMenuTrigger>
   );
 
@@ -140,6 +143,16 @@ export function WorkspaceMenu({
             Workspace settings
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* C-129: the theme is the user's, not the workspace's; it is also in Settings → Appearance. */}
+        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme.choice} onValueChange={(next) => theme.setChoice(parseTheme(next))}>
+          {THEME_CHOICES.map((choice) => (
+            <DropdownMenuRadioItem key={choice} value={choice}>
+              {THEME_LABEL[choice]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

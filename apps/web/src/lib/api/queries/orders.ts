@@ -6,7 +6,9 @@ import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type {
   Order,
   OrderCreate,
+  OrderEditInput,
   OrderList,
+  OrderNoticeInput,
   OrderPaymentMethod,
   OrderStatus,
   PaymentSettings,
@@ -49,28 +51,40 @@ export function useCreateOrder(wid: string) {
 export function useRequestPayment(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useMutation<Order, Error, { orderId: string; method: OrderPaymentMethod; send: boolean }>({
-    mutationFn: ({ orderId, method, send }) =>
+  return useMutation<
+    Order,
+    Error,
+    { orderId: string; method: OrderPaymentMethod; send: boolean; allowPartial?: boolean }
+  >({
+    mutationFn: ({ orderId, method, send, allowPartial }) =>
       unwrap(
         api.POST("/v1/w/{wid}/orders/{order_id}/payment-request", {
           params: { path: { wid, order_id: orderId } },
-          body: { method, send },
+          body: { method, send, allow_partial: allowPartial ?? false },
         }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
   });
 }
 
-/** For UPI, which has no webhook: who and when are kept on the order and in the audit trail. */
+/**
+ * For UPI, which has no webhook: who, when and how much are kept on the order and in the audit
+ * trail. `amountMinor` blank records everything that is left; less leaves the order partly paid.
+ * `notice` also messages the customer; the answer's `notice` says whether it went.
+ */
 export function useMarkOrderPaid(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useMutation<Order, Error, { orderId: string; reference: string | null }>({
-    mutationFn: ({ orderId, reference }) =>
+  return useMutation<
+    Order,
+    Error,
+    { orderId: string; reference: string | null; amountMinor?: number | null; notice?: OrderNoticeInput | null }
+  >({
+    mutationFn: ({ orderId, reference, amountMinor, notice }) =>
       unwrap(
         api.POST("/v1/w/{wid}/orders/{order_id}/mark-paid", {
           params: { path: { wid, order_id: orderId } },
-          body: { reference },
+          body: { reference, amount_minor: amountMinor ?? null, notice: notice ?? null },
         }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
@@ -80,9 +94,61 @@ export function useMarkOrderPaid(wid: string) {
 export function useCancelOrder(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useMutation<Order, Error, string>({
-    mutationFn: (orderId) =>
-      unwrap(api.POST("/v1/w/{wid}/orders/{order_id}/cancel", { params: { path: { wid, order_id: orderId } } })),
+  return useMutation<Order, Error, { orderId: string; notice?: OrderNoticeInput | null }>({
+    mutationFn: ({ orderId, notice }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/orders/{order_id}/cancel", {
+          params: { path: { wid, order_id: orderId } },
+          body: { notice: notice ?? null },
+        }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
+  });
+}
+
+/** Mark a paid order shipped, with a note for the order (a courier and tracking number). */
+export function useFulfilOrder(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<Order, Error, { orderId: string; note: string | null; notice?: OrderNoticeInput | null }>({
+    mutationFn: ({ orderId, note, notice }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/orders/{order_id}/fulfil", {
+          params: { path: { wid, order_id: orderId } },
+          body: { note, notice: notice ?? null },
+        }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
+  });
+}
+
+/** Refund an order in full (`amountMinor` blank) or in part, with a reason. */
+export function useRefundOrder(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<
+    Order,
+    Error,
+    { orderId: string; amountMinor: number | null; reason: string; notice?: OrderNoticeInput | null }
+  >({
+    mutationFn: ({ orderId, amountMinor, reason, notice }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/orders/{order_id}/refunds", {
+          params: { path: { wid, order_id: orderId } },
+          body: { amount_minor: amountMinor, reason, notice: notice ?? null },
+        }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
+  });
+}
+
+/** Change a draft or waiting order; `payment` sends a new request straight after. */
+export function useEditOrder(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<Order, Error, { orderId: string; body: OrderEditInput }>({
+    mutationFn: ({ orderId, body }) =>
+      unwrap(api.PATCH("/v1/w/{wid}/orders/{order_id}", { params: { path: { wid, order_id: orderId } }, body })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),
   });
 }

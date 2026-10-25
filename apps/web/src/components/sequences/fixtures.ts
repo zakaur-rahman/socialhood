@@ -10,7 +10,7 @@ export function sequence(values: Partial<Sequence> = {}): Sequence {
     account_label: "Maple Orders",
     platform: "whatsapp",
     entry: { type: "tagged", tag_id: "t1", tag_name: "Follow up", label: "A tag is added: Follow up" },
-    stop: { on_reply: true, tag_ids: [], tag_names: [], stages: [] },
+    stop: { on_reply: true, tag_ids: [], tag_names: [], removed_tag_ids: [], removed_tag_names: [], stages: [] },
     allow_reentry: false,
     step_count: 3,
     enrolments: { active: 4, completed: 2, stopped: 1 },

@@ -10,6 +10,7 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } f
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { cn } from "@/lib/utils";
 
 import { BulkTagDialog } from "./BulkTagDialog";
 import { ContactDrawer } from "./ContactDrawer";
@@ -215,7 +217,7 @@ export function ContactsPage() {
           />
         ) : (
           <>
-            <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div className={cn(cardVariants(), "overflow-hidden p-0")}>
               <div className="flex items-center gap-3 border-b border-line px-3 py-2 text-xs text-fg-secondary">
                 <Checkbox
                   aria-label="Select all on this page"

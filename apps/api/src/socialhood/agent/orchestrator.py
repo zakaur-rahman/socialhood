@@ -51,8 +51,8 @@ from pydantic_ai.usage import RunUsage
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from socialhood.agent import planner, progress
-from socialhood.agent.context import build_context
+from socialhood.agent import hints, planner, progress
+from socialhood.agent.context import AgentContext, build_context
 from socialhood.agent.executor import RunLimitReached, RunState, RunStopped
 from socialhood.agent.registry import Principal, ToolContext, ToolRegistry
 from socialhood.agent.report import Found, RefBook, cite, fallback_answer, model_view
@@ -74,6 +74,7 @@ from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.realtime.events import commit_and_publish
 from socialhood.repositories import agent as repo
+from socialhood.schemas.agent import RunHints
 
 log = get_logger(__name__)
 
@@ -344,12 +345,19 @@ async def _answer(state: RunState, platform: PlatformDeps, steps: list[AgentStep
             state,
             deps,
             context,
-            request=run_row.request,
+            request=_asked(run_row, context),
             replay=resume.replay,
             usage=resume.usage,
             model=model,
             settings=settings,
         )
+
+
+def _asked(run_row: AgentRun, context: AgentContext) -> str:
+    """What the planner answers: the question as typed, or (VIS-11) a follow-up's instruction."""
+    if not run_row.hints:
+        return run_row.request
+    return hints.instruction(RunHints.model_validate(run_row.hints), context.last_typed)
 
 
 # ---------------------------------------------------------------- endings

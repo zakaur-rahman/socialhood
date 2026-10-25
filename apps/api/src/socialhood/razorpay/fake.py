@@ -4,7 +4,9 @@ never in production).
 Keys that start with ``rzp_test_`` work; anything else is refused as ``auth``. A created link is
 ``plink_fake_<n>`` at ``https://rzp.test/pay/<id>``. ``fail_next(error)`` raises on the next call;
 every call is recorded in ``calls``. Nothing is paid here: a test or the end-to-end suite posts
-the signed ``payment_link.paid`` webhook itself, as Razorpay would.
+the signed ``payment_link.paid`` webhook itself, as Razorpay would. A refund is ``rfnd_fake_<n>``
+and comes back ``processed``; set ``refund_status = "pending"`` to see the other path, which the
+suite then finishes by posting ``refund.processed``.
 """
 
 from __future__ import annotations
@@ -12,7 +14,13 @@ from __future__ import annotations
 from collections import deque
 from typing import Any
 
-from socialhood.razorpay.client import Credentials, PaymentLink, RazorpayError
+from socialhood.razorpay.client import (
+    Credentials,
+    PaymentLink,
+    RazorpayError,
+    Refund,
+    RefundState,
+)
 
 
 class FakeRazorpay:
@@ -21,6 +29,8 @@ class FakeRazorpay:
         self.links: dict[str, dict[str, Any]] = {}
         self._failures: deque[RazorpayError] = deque()
         self._made = 0
+        self.refund_status: RefundState = "processed"
+        self.refunds: dict[str, dict[str, Any]] = {}
 
     def fail_next(self, error: RazorpayError) -> None:
         self._failures.append(error)
@@ -46,6 +56,7 @@ class FakeRazorpay:
         customer_name: str | None,
         customer_phone: str | None,
         expire_by: int,
+        accept_partial: bool = False,
     ) -> PaymentLink:
         self._enter(
             "create_payment_link",
@@ -54,6 +65,7 @@ class FakeRazorpay:
             currency=currency,
             reference_id=reference_id,
             expire_by=expire_by,
+            accept_partial=accept_partial,
         )
         self._made += 1
         link_id = f"plink_fake_{self._made}"
@@ -63,3 +75,19 @@ class FakeRazorpay:
     async def cancel_payment_link(self, creds: Credentials, link_id: str) -> None:
         self._enter("cancel_payment_link", creds, link_id=link_id)
         self.links.pop(link_id, None)
+
+    async def refund_payment(
+        self,
+        creds: Credentials,
+        payment_id: str,
+        *,
+        amount_minor: int,
+        reason: str,
+        receipt: str,
+    ) -> Refund:
+        self._enter(
+            "refund_payment", creds, payment_id=payment_id, amount_minor=amount_minor, reason=reason
+        )
+        refund_id = f"rfnd_fake_{len(self.refunds) + 1}"
+        self.refunds[refund_id] = {"payment_id": payment_id, "amount": amount_minor}
+        return Refund(refund_id, self.refund_status)

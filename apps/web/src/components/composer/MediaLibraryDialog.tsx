@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useMediaLibrary, type MediaLibraryFilters } from "@/lib/api/queries/scheduledPosts";
@@ -72,27 +72,33 @@ export function MediaLibraryDialog({
             <ToggleGroupItem value="image">Photos</ToggleGroupItem>
             <ToggleGroupItem value="video">Videos</ToggleGroupItem>
           </ToggleGroup>
-          {/* Native date pickers through Input (D-04); `lg`, the old 36 px fields. */}
+          {/* Calendar pickers (ui/date-picker); `lg`, the old 36 px fields. */}
           <Field id="library-since" density="compact" className="w-auto">
             <FieldLabel>Uploaded from</FieldLabel>
-            <Input
-              type="date"
+            <DatePicker
               size="lg"
-              className="w-auto"
+              className="w-44"
               value={since}
               max={until || undefined}
-              onChange={(event) => setSince(event.target.value)}
+              placeholder="Any date"
+              jumpMonths
+              clearable
+              clearLabel="Clear uploaded from"
+              onChange={setSince}
             />
           </Field>
           <Field id="library-until" density="compact" className="w-auto">
             <FieldLabel>To</FieldLabel>
-            <Input
-              type="date"
+            <DatePicker
               size="lg"
-              className="w-auto"
+              className="w-44"
               value={until}
               min={since || undefined}
-              onChange={(event) => setUntil(event.target.value)}
+              placeholder="Any date"
+              jumpMonths
+              clearable
+              clearLabel="Clear to date"
+              onChange={setUntil}
             />
           </Field>
         </div>

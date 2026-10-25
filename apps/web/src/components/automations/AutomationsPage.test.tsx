@@ -228,6 +228,25 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     expect(screen.queryByRole("button", { name: "Reorder Answer FAQs" })).not.toBeInTheDocument();
   });
 
+  it("the trigger filter groups triggers by channel, and keeps the full name on the button and options", async () => {
+    // jsdom lacks the pointer-capture and scroll APIs Radix Select calls.
+    Element.prototype.hasPointerCapture ??= () => false;
+    Element.prototype.releasePointerCapture ??= () => {};
+    Element.prototype.scrollIntoView ??= () => {};
+    const user = userEvent.setup();
+    renderWithApi(<AutomationsPage />, { handlers: handlers() });
+    await screen.findByRole("link", { name: "Answer FAQs" });
+    const filter = screen.getByRole("combobox", { name: "Trigger" });
+    expect(filter).toHaveTextContent("All triggers");
+    await user.click(filter);
+    for (const heading of ["Instagram and Facebook", "Instagram only", "Any channel"]) {
+      expect(await screen.findByText(heading)).toHaveAttribute("data-slot", "select-label");
+    }
+    expect(screen.getByText("Comment keyword")).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Instagram comment keyword" }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Trigger" })).toHaveTextContent("Instagram comment keyword"));
+  });
+
   it("pauses several at once", async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];

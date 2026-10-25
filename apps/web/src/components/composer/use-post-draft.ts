@@ -22,7 +22,7 @@ export type Draft = {
   first_comment: string | null;
   publish_at: string | null;
   /** "story": the one photo or video publishes as an Instagram Story, without a caption (GR-39). */
-  kind: "post" | "story";
+  kind: "post" | "story" | "reel";
 };
 
 /** The editable fields of a stored post, assets in their order. */

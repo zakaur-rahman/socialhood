@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import type { SandboxAccount, Workspace } from "./support/api";
 import { expect, test } from "./support/fixtures";
+import { pickDay } from "./support/ui";
 
 /**
  * GR-39 Instagram Story scheduling. The composer's Type switch makes the one photo a Story: the
@@ -45,15 +46,9 @@ test.describe("GR-39 Instagram Story scheduling", () => {
     await expect(banner).toContainText("Published", { timeout: 60_000 });
     await expect(banner).toContainText(`@${account.username}`);
     await expect(page.getByTestId("story-expiry")).toContainText("Disappears");
-
-    // The automation picker reads the live stories, and this one is among them.
-    const stories = await api.call<{ items: { id: string; permalink: string | null; expires_at: string }[] }>(
-      "GET",
-      `/v1/w/${workspace.id}/stories?account_id=${account.id}`,
-    );
-    const published = stories.items.find((story) => story.permalink?.includes("/stories/"));
-    expect(published, "the published Story is in the live stories").toBeTruthy();
-    expect(new Date(published!.expires_at).getTime()).toBeGreaterThan(Date.now());
+    // Whether the automation picker lists it among the live stories is checked in the API's
+    // integration tests: the sandbox keeps what it published in the worker's memory, which the
+    // API process (it answers the picker) can't read.
   });
 
   test("a scheduled Story shows a Story badge in the schedule", async ({ page, api, sandbox }) => {
@@ -63,7 +58,7 @@ test.describe("GR-39 Instagram Story scheduling", () => {
 
     const when = page.getByRole("region", { name: "When" });
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    await when.getByRole("textbox", { name: "Date" }).fill(tomorrow);
+    await pickDay(page, when.getByRole("button", { name: "Date" }), tomorrow);
     await when.getByRole("textbox", { name: "Time" }).fill("09:15");
 
     const scheduled = page.waitForResponse((r) => /\/scheduled-posts\/[^/]+\/schedule$/.test(r.url()) && r.request().method() === "POST");

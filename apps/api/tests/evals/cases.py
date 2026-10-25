@@ -1120,6 +1120,20 @@ CASES: tuple[Case, ...] = (
         "How has my Instagram reach moved over the last 30 days?",
         tools("metric_trend"),
         expect_numbers=(e(REACH_FIRST, label="first day"), e(REACH_LAST, label="last day")),
+        expect_visual=("trend",),  # VIS-07: one line, its points are the tool's
+        expect_visual_numbers=(e(REACH_FIRST, label="first day"), e(REACH_LAST, label="last day")),
+        area="visuals",
+    ),
+    Case(
+        "visual-leads-waiting",
+        "List the contacts waiting for my reply, best lead score first.",
+        tools("list_contacts"),
+        expect_visual=("lead_list",),  # VIS-08: the scores are the contacts service's
+        expect_visual_numbers=tuple(
+            e(c.lead_score, label=f"{c.name}'s score")
+            for c in S.conversations("needs_reply")
+            if c.lead_score is not None
+        ),
         area="visuals",
     ),
     Case(
@@ -1166,6 +1180,15 @@ CASES: tuple[Case, ...] = (
         expect_card="flow_proposal",
         expect_text=(r"approv",),
         lang="hinglish",
+        area="writes",
+    ),
+    Case(
+        "write-flow-assign",
+        "When someone DMs HELP, send our support hours, then give the chat to the next available "
+        "teammate.",
+        tools("propose_flow"),
+        expect_card="flow_proposal",
+        expect_text=(r"approv",),
         area="writes",
     ),
     Case(

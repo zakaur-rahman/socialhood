@@ -31,7 +31,23 @@ export function refPath(ref: AnswerRef): string {
       return "products";
     case "order":
       return "orders";
+    case "contact":
+      return "contacts"; // VIS-08: a contact with no conversation has no screen of its own
+    case "report":
+      return reportPath(ref); // VIS-13
   }
+}
+
+/**
+ * VIS-13: the weekly report of a week (`reports?week=<monday>`), for one account when the ref
+ * names it (`&account=<id>`). Both values are checked here, so a malformed ref opens the report's
+ * latest week instead of building an address from it.
+ */
+function reportPath(ref: Pick<AnswerRef, "week" | "parent_id">): string {
+  const week = ref.week && /^\d{4}-\d{2}-\d{2}$/.test(ref.week) ? ref.week : null;
+  const account = ref.parent_id && /^[0-9a-fA-F-]{36}$/.test(ref.parent_id) ? ref.parent_id : null;
+  const query = [week ? `week=${week}` : null, week && account ? `account=${account}` : null].filter(Boolean);
+  return query.length > 0 ? `reports?${query.join("&")}` : "reports";
 }
 
 // A path of plain segments and an optional query: no scheme, host, "..", fragment or "//".
@@ -49,6 +65,12 @@ export function actionPath(card: PreparedCard): string {
     case "automation_draft":
       return "automations/new";
   }
+}
+
+/** A link a visual carries (its "+N more" page): the workspace path when it is a plain one, else null. */
+export function visualPath(route: string | null | undefined): string | null {
+  const path = route?.trim().replace(/^\/+/, "") ?? "";
+  return path !== "" && SAFE_PATH.test(path) ? path : null;
 }
 
 /** Typed routes can't check a path built at run time; workspace links are cast here, once. */

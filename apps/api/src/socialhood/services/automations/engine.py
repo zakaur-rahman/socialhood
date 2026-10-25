@@ -86,6 +86,7 @@ from socialhood.schemas.flows import (
     LeadScoreCondition,
     LeadStageCondition,
     NotifyTeam,
+    PaymentStep,
     PlatformCondition,
     ProductStep,
     RandomizeStep,
@@ -433,6 +434,55 @@ async def _send_product(
         return None
 
 
+async def _send_payment(
+    session: AsyncSession,
+    deps: PlatformDeps,
+    scene: Scene,
+    step: PaymentStep,
+    *,
+    now: datetime,
+) -> Message | None:
+    """GR-32: a payment step makes (or finds) the order and sends the payment message. None when
+    the step can't run or the send is refused (the step is then logged failed with a plain
+    reason, shown in Activity)."""
+    from socialhood.services import sending
+    from socialhood.services.orders import flow_payment
+
+    run = scene.run
+    try:
+        order, text = await flow_payment.request(
+            session, deps, scene.conv, step, automation_name=scene.automation.name, now=now
+        )
+    except flow_payment.Failed as failed:
+        await _log(
+            session, run, step, StepStatus.FAILED, error_code=failed.code, error=failed.reason
+        )
+        return None
+    try:
+        msg = await sending.queue_outbound(
+            session,
+            scene.conv,
+            source="automation",
+            client_id=actions.client_id_for(run.id, step.id),
+            text=render.with_disclosure(text, scene.disclosure),
+            automation_run_id=run.id,
+            deps=deps,
+            now=now,
+        )
+    except ApiError as error:
+        await _log(
+            session,
+            run,
+            step,
+            StepStatus.FAILED,
+            error_code=error.code,
+            error=actions.api_error_reason(error),
+        )
+        return None
+    await _log(session, run, step, StepStatus.SENT, message_id=msg.id, order_id=str(order.id))
+    return msg
+
+
 async def _saved_reply_text(session: AsyncSession, scene: Scene, step: SendStep) -> str | None:
     """GR-21: a saved-reply step's message, read when the step runs (so an edited reply is what
     goes) and filled for the contact, with the disclosure line. None when the reply was
@@ -680,6 +730,13 @@ async def _advance(
                 await _log(session, run, step, StepStatus.SENT, message_id=msg.id)
                 run.flow_state = FlowState.SENDING
                 return "sent"
+            case PaymentStep():
+                msg = await _send_payment(session, deps, scene, step, now=now)
+                if msg is None:
+                    run.flow_state = FlowState.DONE
+                    return "done"
+                run.flow_state = FlowState.SENDING
+                return "sent"
             case BranchStep():
                 if _needs_follows(step) and not scene.follows_read:
                     run.flow_state = FlowState.NEXT
@@ -805,7 +862,7 @@ async def _after_message(session: AsyncSession, run: AutomationRun, msg: Message
             run.result = RunResult.AWAITING_REPLY  # a comment's opening is already
         return
     row.status = StepStatus.DONE
-    run.step_id = step.next if isinstance(step, SendStep | ProductStep) else None
+    run.step_id = step.next if isinstance(step, SendStep | ProductStep | PaymentStep) else None
     if run.step_id is None:
         run.flow_state = FlowState.DONE
         return

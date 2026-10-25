@@ -51,17 +51,17 @@ describe("AvatarFallback", () => {
   it("fills with raised by default, visible on panel (shadcn's field-coloured muted is 1.02:1)", () => {
     render(<Contact />)
     const fallback = screen.getByText("P")
-    expect(fallback).toHaveClass("bg-raised", "text-muted-foreground")
+    expect(fallback).toHaveClass("bg-raised", "text-fg-secondary")
     expect(fallback).not.toHaveClass("bg-muted")
   })
 })
 
 describe("Avatar", () => {
-  it("has no dark: classes (the app is dark only) and keeps its lightened edge", () => {
+  it("has no dark: classes and draws its edge as a line ring, in either theme (C-129)", () => {
     render(<Contact />)
     const list = classes(screen.getByTestId("avatar"))
     expect(list.filter((c) => c.startsWith("dark:"))).toEqual([])
-    expect(list).toContain("after:mix-blend-lighten")
-    expect(list).not.toContain("after:mix-blend-darken")
+    expect(list).toContain("after:border-line")
+    expect(list.filter((c) => c.includes("mix-blend"))).toEqual([])
   })
 })

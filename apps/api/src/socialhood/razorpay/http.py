@@ -6,19 +6,23 @@ business's own key id and secret as basic auth.
   as ``reference_id``, an expiry, and the customer's name and phone; Razorpay's own SMS and email
   are off, because we send the link in the chat.
 - ``cancel_payment_link`` posts to ``/payment_links/{id}/cancel``.
+- ``refund_payment`` posts the amount to ``/payments/{id}/refund`` (normal speed) with our reason in
+  the notes and our refund id as the receipt, and reads the refund's status from the answer.
+- A link that takes part payments is created with ``accept_partial: true``.
 - A response is classified into a ``RazorpayError`` kind; no body is logged or kept.
 
-**Unverified against a real account** (C-120): written from Razorpay's documentation; no test
-key has been used yet.
+**Unverified against a real account** (C-120, C-125): written from Razorpay's documentation; no
+test key has been used yet. In particular: that part payments on a link are for INR, and the refund
+call and its statuses.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
-from socialhood.razorpay.client import Credentials, PaymentLink, RazorpayError
+from socialhood.razorpay.client import Credentials, PaymentLink, RazorpayError, Refund
 
 API = "https://api.razorpay.com/v1"
 
@@ -78,6 +82,7 @@ class HttpRazorpayClient:
         customer_name: str | None,
         customer_phone: str | None,
         expire_by: int,
+        accept_partial: bool = False,
     ) -> PaymentLink:
         customer: dict[str, str] = {}
         if customer_name:
@@ -91,7 +96,7 @@ class HttpRazorpayClient:
             json={
                 "amount": amount_minor,
                 "currency": currency,
-                "accept_partial": False,
+                "accept_partial": accept_partial,
                 "reference_id": reference_id,
                 "description": description[:2048],
                 "customer": customer,
@@ -107,3 +112,31 @@ class HttpRazorpayClient:
 
     async def cancel_payment_link(self, creds: Credentials, link_id: str) -> None:
         await self._call(creds, "POST", f"/payment_links/{link_id}/cancel")
+
+    async def refund_payment(
+        self,
+        creds: Credentials,
+        payment_id: str,
+        *,
+        amount_minor: int,
+        reason: str,
+        receipt: str,
+    ) -> Refund:
+        body = await self._call(
+            creds,
+            "POST",
+            f"/payments/{payment_id}/refund",
+            json={
+                "amount": amount_minor,
+                "speed": "normal",
+                "receipt": receipt[:40],
+                "notes": {"reason": reason[:200]},
+            },
+        )
+        refund_id, state = body.get("id"), str(body.get("status") or "")
+        if not refund_id:
+            raise RazorpayError("rejected", "Razorpay didn't confirm the refund.")
+        status: Literal["pending", "processed", "failed"] = (
+            "processed" if state == "processed" else "failed" if state == "failed" else "pending"
+        )
+        return Refund(str(refund_id), status)

@@ -6,7 +6,7 @@ import { expect, test, unique } from "./support/fixtures";
 /**
  * GR-30 Facebook publishing on the sandbox (no Meta call): a text post to a Page, one post to an
  * Instagram account and a Page together (a photo from the library), per-platform checklist
- * wording, Stories refused for a Page, and the best times beside the time picker (a sandbox
+ * wording, a Page offered Stories and Reels (C-131), and the best times beside the time picker (a sandbox
  * account has only three synced posts, so it says it needs more history). The real Graph calls
  * are covered by the API's contract tests; Meta behaviour is unverified until a real Page
  * publishes.
@@ -75,13 +75,13 @@ test.describe("GR-30 Facebook publishing and best times", () => {
     await expect(banner.getByRole("link", { name: /View on Facebook/ })).toBeVisible();
   });
 
-  test("a Page can't be a Story", async ({ page, facebook }) => {
+  test("a Page can be a Story or a Reel (C-131)", async ({ page, facebook }) => {
     const { workspace, account } = facebook;
     await newPost(page, workspace);
     await choose(page, new RegExp(`${account.username ?? account.display_name}`));
     const type = page.getByRole("region", { name: "Type" });
-    await expect(type.getByTestId("story-blocked")).toContainText("Facebook Page");
-    await expect(type.getByRole("radio", { name: "Story" })).toBeDisabled();
+    await expect(type.getByRole("radio", { name: "Story" })).toBeEnabled();
+    await expect(type.getByRole("radio", { name: "Reel" })).toBeEnabled();
   });
 
   test("the time picker says when there is too little history for best times", async ({ page, facebook }) => {

@@ -27,7 +27,7 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-line bg-panel px-4 md:hidden",
+        "sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-line glass-pane px-4 md:hidden",
         STATIC_WHEN_SHORT,
       )}
     >

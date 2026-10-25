@@ -169,6 +169,7 @@ class ContactFilter:
     marketing_consent: str | None = None  # a channel with current consent granted
     min_lead_score: int | None = None
     stages: tuple[str, ...] = ()  # any of these lead stages (GR-18)
+    awaiting_reply: bool | None = None  # their conversation is waiting for our reply (VIS-08)
     active_after: datetime | None = None
     active_before: datetime | None = None
     # Moving ranges: active in the last N days; no activity for N days or more.
@@ -284,6 +285,13 @@ def _filtered(filt: ContactFilter) -> Select[Contact, Conversation, SocialAccoun
         query = query.where(Conversation.lead_score >= filt.min_lead_score)
     if filt.stages:
         query = query.where(Contact.lead_stage.in_(filt.stages))
+    if filt.awaiting_reply is not None:
+        # A contact without a conversation isn't waiting for anything.
+        query = query.where(
+            Conversation.awaiting_reply.is_(True)
+            if filt.awaiting_reply
+            else func.coalesce(Conversation.awaiting_reply, False).is_(False)
+        )
     if filt.active_after:
         query = query.where(_activity >= filt.active_after)
     if filt.active_before:
@@ -422,6 +430,28 @@ async def list_contacts(
     if last is not None and len(rows) > limit:
         next_cursor = _encode(last[4] if sort == "created" else last[3], last[0].id)
     return ContactList(items=items, next_cursor=next_cursor)
+
+
+async def top_leads(
+    session: AsyncSession, filt: ContactFilter, *, limit: int
+) -> tuple[list[ContactListItem], int]:
+    """The best-scored contacts that match, and how many match (VIS-08). Highest lead score
+    first, contacts without a score last, then the most recent activity: the order of a short
+    "who should I reply to first" list, which the activity-ordered, cursor-paged list can't give."""
+    rows = (
+        await session.execute(
+            _filtered(filt)
+            .add_columns(_activity.label("activity"))
+            .order_by(Conversation.lead_score.desc().nulls_last(), _activity.desc(), Contact.id)
+            .limit(limit)
+        )
+    ).all()
+    tags = await _tags_for(session, [r[0].id for r in rows])
+    items = [
+        ContactListItem.model_validate(_item(c, v, a, tags.get(c.id, []), at))
+        for c, v, a, at in rows
+    ]
+    return items, await count_contacts(session, filt)
 
 
 # ---------------------------------------------------------------- one contact

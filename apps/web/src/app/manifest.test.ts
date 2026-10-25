@@ -6,14 +6,14 @@ import { describe, expect, it } from "vitest";
 import manifest from "./manifest";
 
 describe("web app manifest (TR-FE-09)", () => {
-  it("installs as Social Hood, standalone, opening /app, on black", () => {
+  it("installs as Social Hood, standalone, opening /app, on Midnight", () => {
     const m = manifest();
     expect(m).toMatchObject({
       name: "Social Hood",
       display: "standalone",
       start_url: "/app",
-      background_color: "#000000",
-      theme_color: "#000000",
+      background_color: "#131520",
+      theme_color: "#131520",
     });
   });
 

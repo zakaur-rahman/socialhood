@@ -90,3 +90,11 @@ describe("Home formatting (UX-SCR-01)", () => {
     expect(agoLabel("28 Sep")).toBe("28 Sep");
   });
 });
+
+describe("a small change is never rounded to No change", () => {
+  it("shows a tenth of a percent, or less than that", () => {
+    expect(countTrend(1054, 1056, "7 days")).toMatchObject({ direction: "down", text: "−0.2%" });
+    expect(countTrend(100001, 100000, "7 days")).toMatchObject({ direction: "up", text: "<0.1%" });
+    expect(rateTrend(88.44, 88.4, "7 days")).toMatchObject({ direction: "up", text: "<0.1 pts" });
+  });
+});

@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { MARKETING_CARD } from "../primitives";
+
 /**
  * Bento Grid, from Aceternity UI's free "bento-grid" (ui.aceternity.com/components/bento-grid),
  * adapted for Social Hood (C-068):
@@ -39,7 +41,7 @@ export function BentoGridItem({
 }) {
   return (
     <li data-reveal style={{ "--reveal-delay": `${(index % 3) * 80}ms` } as CSSProperties} className={cn("min-w-0", className)}>
-      <div className="group/bento flex h-full flex-col gap-5 rounded-2xl border border-line bg-panel p-4 transition-[border-color,box-shadow] duration-200 hover:border-line-strong hover:shadow-xl hover:shadow-brand/10 sm:p-5">
+      <div className={cn(MARKETING_CARD, "group/bento flex h-full flex-col gap-5 p-4 transition-[border-color,box-shadow] duration-200 hover:border-line-strong hover:shadow-glow-hover sm:p-5")}>
         {header}
         <div className="mt-auto transition-transform duration-200 motion-safe:group-hover/bento:translate-x-1">
           <div className="flex items-center gap-2">

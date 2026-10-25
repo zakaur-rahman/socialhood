@@ -145,7 +145,7 @@ async def test_schema_limits_are_field_errors(shop: Shop) -> None:
     errors = await shop.fields(
         "POST",
         "/scheduled-posts",
-        {"caption": "x" * 2201, "asset_ids": [str(uuid.uuid4()) for _ in range(11)]},
+        {"caption": "x" * 63_207, "asset_ids": [str(uuid.uuid4()) for _ in range(11)]},
     )
     assert set(errors) == {"caption", "asset_ids"}
 

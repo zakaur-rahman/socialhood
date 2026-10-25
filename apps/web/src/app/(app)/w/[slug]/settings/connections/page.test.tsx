@@ -193,8 +193,20 @@ describe("search and filters (C-066)", () => {
     const card = await screen.findByRole("article", { name: "Gone Soon" });
     expect(within(card).getByText("Deleting…")).toBeInTheDocument();
     expect(within(card).queryAllByRole("button")).toEqual([]);
-    const filters = screen.getByRole("radiogroup", { name: "Show accounts" });
-    expect(counts(filters)).toEqual(["All1", "Connected0", "Disconnected1", "Sandboxes0"]);
+    // One account: no chips or search to filter it with.
+    expect(screen.queryByRole("radiogroup", { name: "Show accounts" })).toBeNull();
+    expect(screen.queryByRole("searchbox", { name: "Search accounts" })).toBeNull();
+  });
+
+  it("one Add account menu lists Instagram, Facebook and WhatsApp", async () => {
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByRole("radiogroup", { name: "Show accounts" });
+    expect(screen.queryByRole("button", { name: /Connect Instagram/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Add account/ }));
+    expect(await screen.findByRole("menuitem", { name: /Instagram/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Facebook/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /WhatsApp/ })).toBeInTheDocument();
   });
 
   it("Auto on the Free plan opens the upgrade dialog, with no request (UI-061)", async () => {
@@ -215,8 +227,7 @@ describe("search and filters (C-066)", () => {
     renderList();
     expect(await screen.findByRole("heading", { level: 1, name: "Connections" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
-    expect(screen.getByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Connect WhatsApp/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add account/ })).toBeInTheDocument();
   });
 });
 
@@ -277,7 +288,7 @@ describe("connecting Facebook Pages (GR-29)", () => {
     { id: "p2", name: "Maple Cafe", username: null, picture_url: null, connected: false, can_connect: true, problem: null },
   ];
 
-  it("Connect Facebook asks the API to start, and a refusal is a toast", async () => {
+  it("Add account → Facebook asks the API to start, and a refusal is a toast", async () => {
     const user = userEvent.setup();
     const { calls } = renderWithApi(<ConnectionsPage />, {
       handlers: {
@@ -286,7 +297,8 @@ describe("connecting Facebook Pages (GR-29)", () => {
           problem(503, "service_unavailable", "Facebook connections are not configured."),
       },
     });
-    await user.click(await screen.findByRole("button", { name: /Connect Facebook/ }));
+    await user.click(await screen.findByRole("button", { name: /Add account/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Facebook/ }));
     await waitFor(() => expect(calls.some((c) => c.path === "/v1/w/w1/social-accounts/facebook/connect")).toBe(true));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });

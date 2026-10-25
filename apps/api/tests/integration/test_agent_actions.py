@@ -275,6 +275,64 @@ async def test_a_flow_with_a_tag_resolves_it_and_a_missing_tag_is_refused(team: 
     assert flow["definition"]["steps"][1]["action"]["tag_id"] == created.json()["id"]
 
 
+async def test_an_assign_step_names_a_member_and_is_saved_as_a_draft(team: Team) -> None:
+    await make_account(team.engine, team.wid)
+    steps = [
+        {"type": "send", "text": "Thanks! Someone will be with you."},
+        {
+            "type": "action",
+            "action": "assign",
+            "assign_to": "member",
+            "member": "MEMBER@example.com",
+        },
+    ]
+    _, _, result = await propose(team, "propose_flow", {**PRICE_FLOW, "steps": steps})
+    lines = result.lines  # type: ignore[attr-defined]
+    assert any(line.startswith("2. assign to ") and "team member" not in line for line in lines)
+    approved = await decide(team, result.approval_id, "approve")  # type: ignore[attr-defined]
+    assert approved.json()["outcome"]["ok"] is True
+    [flow] = await team.rows("SELECT definition FROM automation_flows")
+    assert flow["definition"]["steps"][1]["action"] == {
+        "kind": "assign",
+        "mode": "member",
+        "user_id": team.member_id,
+    }
+
+
+async def test_an_assign_step_for_a_stranger_is_refused_and_lists_the_team(team: Team) -> None:
+    await make_account(team.engine, team.wid)
+    steps = [{"type": "action", "action": "assign", "member": "nobody@elsewhere.com"}]
+    with pytest.raises(ApiError) as caught:
+        await propose(team, "propose_flow", {**PRICE_FLOW, "steps": steps})
+    assert caught.value.code == "validation_error"
+    assert "no team member called" in (caught.value.detail or "")
+    assert await count(team, "agent_approvals") == 0
+
+
+async def test_a_round_robin_assign_step_says_what_to_switch_on(team: Team) -> None:
+    await make_account(team.engine, team.wid)
+    steps = [
+        {"type": "send", "text": "Thanks!"},
+        {"type": "action", "action": "assign", "assign_to": "round_robin"},
+    ]
+    _, _, result = await propose(team, "propose_flow", {**PRICE_FLOW, "steps": steps})
+    lines = " ".join(result.lines)  # type: ignore[attr-defined]
+    assert "assign to the next available member" in lines
+    assert "not handed out in turn yet" in lines  # the workspace setting is off
+
+    await team.execute(
+        "UPDATE workspaces SET assignment_round_robin = true WHERE id = :w", w=team.wid
+    )
+    await team.execute(
+        "UPDATE workspace_members SET available_for_assignment = false WHERE workspace_id = :w",
+        w=team.wid,
+    )
+    _, _, again = await propose(team, "propose_flow", {**PRICE_FLOW, "steps": steps})
+    said = " ".join(again.lines)  # type: ignore[attr-defined]
+    assert "Nobody is available for assignment now" in said
+    assert "not handed out in turn yet" not in said
+
+
 async def test_a_new_flow_for_an_existing_automation_keeps_its_status(team: Team) -> None:
     await make_account(team.engine, team.wid)
     _, _, first = await propose(team, "propose_flow", PRICE_FLOW)

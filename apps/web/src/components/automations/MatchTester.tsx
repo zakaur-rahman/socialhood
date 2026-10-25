@@ -15,7 +15,7 @@ import { isCommentTrigger } from "@/lib/automations/definition";
 import { errorMessage } from "@/lib/copy";
 import { EYEBROW } from "@/styles/tokens";
 
-import { PathView } from "./flow/PathView";
+import { PathView, withChoice } from "./flow/PathView";
 import { SAMPLE_CONTACT } from "./PreviewPane";
 
 type Kind = "comment" | "dm";
@@ -72,7 +72,7 @@ export function MatchTester({
   };
 
   const choose = (fork: number, exit: number) => {
-    const next = [...choices.slice(0, fork), exit];
+    const next = withChoice(choices, fork, exit);
     setChoices(next);
     send(next);
   };

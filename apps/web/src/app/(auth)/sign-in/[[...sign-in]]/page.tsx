@@ -1,7 +1,7 @@
-import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
 
-import { AuthShell, authAppearance } from "@/components/auth/AuthShell";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { ThemedSignIn } from "@/components/auth/ThemedClerk";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Sign in" };
 export default function SignInPage() {
   return (
     <AuthShell mode="sign-in">
-      <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/app" appearance={authAppearance} />
+      <ThemedSignIn />
     </AuthShell>
   );
 }

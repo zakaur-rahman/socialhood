@@ -14,11 +14,11 @@ from socialhood.schemas.common import RequestModel, ResponseModel
 from socialhood.schemas.contacts import LeadStageName
 
 SequenceStatusName = Literal["draft", "active", "paused"]
-EntryTypeName = Literal["captured", "tagged", "broadcast_replied"]
+EntryTypeName = Literal["captured", "tagged", "broadcast_replied", "lead_stage"]
 CaptureKindName = Literal["email", "phone", "field"]
 DelayFromName = Literal["entry", "previous"]
 EnrolmentStatusName = Literal["active", "completed", "stopped"]
-StopReasonName = Literal["reply", "tag", "stage", "member", "ended"]
+StopReasonName = Literal["reply", "tag", "tag_removed", "stage", "member", "ended"]
 RunStatusName = Literal["sent", "skipped", "failed"]
 Name = Annotated[str, Field(min_length=1, max_length=80)]
 
@@ -28,9 +28,11 @@ MAX_DELAY_SECONDS = 30 * 24 * 3600
 
 class EntryRule(RequestModel):
     """What starts the sequence for a contact: a lead captured (any, or an email, a phone or an
-    answer), a tag added (``tag_id``), or a reply to a WhatsApp broadcast (any, or one)."""
+    answer), a tag added (``tag_id``), a reply to a WhatsApp broadcast (any, or one), or the lead
+    moving into a stage (``stage``)."""
 
     type: EntryTypeName
+    stage: LeadStageName | None = None
     tag_id: uuid.UUID | None = None
     broadcast_id: uuid.UUID | None = None
     capture_kind: CaptureKindName | None = None
@@ -41,6 +43,10 @@ class EntryRule(RequestModel):
             raise ValueError("choose the tag that starts the sequence")
         if self.type != "tagged" and self.tag_id is not None:
             raise ValueError("a tag only starts a sequence of type tagged")
+        if self.type == "lead_stage" and self.stage is None:
+            raise ValueError("choose the lead stage that starts the sequence")
+        if self.type != "lead_stage" and self.stage is not None:
+            raise ValueError("a stage only starts a sequence of type lead_stage")
         if self.type != "broadcast_replied" and self.broadcast_id is not None:
             raise ValueError("a broadcast only starts a sequence of type broadcast_replied")
         if self.type != "captured" and self.capture_kind is not None:
@@ -49,11 +55,12 @@ class EntryRule(RequestModel):
 
 
 class StopRules(RequestModel):
-    """When to stop: the contact writing (on by default), a tag from the list being added, or
-    their lead stage becoming one from the list."""
+    """When to stop: the contact writing (on by default), a tag from ``tag_ids`` being added, a tag
+    from ``removed_tag_ids`` being taken off, or their lead stage becoming one from the list."""
 
     on_reply: bool = True
     tag_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    removed_tag_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     stages: list[LeadStageName] = Field(default_factory=list, max_length=5)
 
 
@@ -109,6 +116,7 @@ class EntryOut(ResponseModel):
     broadcast_id: uuid.UUID | None = None
     broadcast_name: str | None = None
     capture_kind: CaptureKindName | None = None
+    stage: LeadStageName | None = None
     label: str  # in words: "A tag is added: VIP"
 
 
@@ -116,6 +124,8 @@ class StopOut(ResponseModel):
     on_reply: bool
     tag_ids: list[uuid.UUID]
     tag_names: list[str]
+    removed_tag_ids: list[uuid.UUID] = Field(default_factory=list)
+    removed_tag_names: list[str] = Field(default_factory=list)
     stages: list[LeadStageName]
 
 
@@ -215,3 +225,44 @@ class ContactSequence(ResponseModel):
 
 class ContactSequenceList(ResponseModel):
     items: list[ContactSequence]
+
+
+class ReasonCount(ResponseModel):
+    code: str
+    text: str  # the reason in words
+    count: int
+
+
+class StepStats(ResponseModel):
+    """One step's numbers. ``reached`` is the people it ran for plus those it is next for; the
+    funnel is ``share`` of everyone who entered."""
+
+    position: int  # 1-based
+    reached: int
+    waiting: int  # on this step now, not yet run
+    sent: int
+    skipped: int
+    failed: int
+    replied: int  # sent runs followed by a customer message within the reply window
+    reply_rate: float | None = None  # replied / sent, null when nothing was sent
+    share: float  # reached / enrolled, 0 to 1
+
+
+class SequenceAnalytics(ResponseModel):
+    """A sequence's numbers, computed by the server and cached for a few minutes."""
+
+    sequence_id: uuid.UUID
+    window_hours: int  # how long after a step a reply counts
+    computed_at: datetime
+    enrolled: int
+    active: int
+    completed: int
+    stopped: int
+    stopped_by: list[ReasonCount]
+    sent: int
+    skipped: int
+    skipped_by: list[ReasonCount]
+    failed: int
+    replied: int
+    reply_rate: float | None = None
+    steps: list[StepStats]

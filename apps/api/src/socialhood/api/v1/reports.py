@@ -4,6 +4,7 @@ are in services/reports.py."""
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime
 from typing import Annotated
 
@@ -24,13 +25,23 @@ async def get_weekly_report(
     ctx: AnyMember,
     session: Session,
     week: Annotated[date | None, Query()] = None,
+    account_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> WeeklyReport:
     """A finished week against the week before, and the last 8 weeks of each count. ``week`` is
     the Monday it starts (default: the latest finished week); a day that is not a Monday, a week
     still running or one over a year back is 422. Gaps are null with the days they cover, never
-    zeros."""
+    zeros. ``account_id`` makes every figure that connected account's (an account of another
+    workspace is 404); without it the report is workspace-wide and lists each account's own
+    numbers in ``breakdown``."""
     deps = deps_from(request.app.state.http, request.app.state.settings)
     now = datetime.now(UTC)
     view = View(timezone=ctx.workspace.timezone, now=now, capabilities=capabilities_from(deps))
     monday = reports.ask_for(week, ctx.workspace.timezone, now)
-    return await reports.build(session, view, ctx.workspace, week_start=monday)
+    return await reports.build(
+        session,
+        view,
+        ctx.workspace,
+        week_start=monday,
+        account_id=account_id,
+        with_breakdown=True,
+    )

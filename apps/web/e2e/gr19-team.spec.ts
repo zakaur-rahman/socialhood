@@ -48,7 +48,8 @@ test.describe("GR-19 team", () => {
     await expect(pending).toContainText("Agent");
 
     // The invited person signs up; /app sends them to the workspace they were invited to.
-    const context = await browser.newContext({ baseURL: page.url().split("/w/")[0] });
+    // A new context inherits the project's signed-in state; the invited person has none.
+    const context = await browser.newContext({ baseURL: page.url().split("/w/")[0], storageState: { cookies: [], origins: [] } });
     const agentPage = await context.newPage();
     const { setupClerkTestingToken } = await import("@clerk/testing/playwright");
     await setupClerkTestingToken({ context });

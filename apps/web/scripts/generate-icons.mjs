@@ -1,6 +1,7 @@
 // Generates the app icons (TR-FE-09) from the brand mark: the shell-gradient tile (UX-SH-01,
-// #3352CC to #1C2D70 at 135°) with a white chat bubble. No dependencies: pixels are computed
-// with 4×4 supersampling and written as PNG with node:zlib.
+// shell-1 to shell-2 at 135°, read from src/styles/tokens.generated.json) with a white chat
+// bubble. No dependencies: pixels are computed with 4×4 supersampling and written as PNG with
+// node:zlib.
 //
 //   node scripts/generate-icons.mjs
 //
@@ -8,15 +9,27 @@
 // icon-maskable-512.png (full bleed, mark inside the 80% safe zone), badge-72.png (white
 // mark on transparent, for Android's status bar) and src/app/apple-icon.png (180, full bleed:
 // iOS rounds the corners itself).
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const FROM = [0x33, 0x52, 0xcc];
-const TO = [0x1c, 0x2d, 0x70];
+// The colours come from the generated tokens (globals.css is the only place they are written), so
+// the icons follow a change to shell-1, shell-2 or fg after `pnpm tokens`.
+const { colors } = JSON.parse(readFileSync(join(root, "src", "styles", "tokens.generated.json"), "utf8"));
+
+/** `#RRGGBB` as [r, g, b]. */
+function hex(name) {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(colors[name]);
+  if (!match) throw new Error(`Token ${name} is not a #RRGGBB colour: ${colors[name]}`);
+  return match.slice(1).map((byte) => parseInt(byte, 16));
+}
+
+const FROM = hex("shell-1");
+const TO = hex("shell-2");
+const MARK = hex("fg");
 
 // ---- PNG
 
@@ -131,12 +144,12 @@ function gradient(x, y) {
 function tile({ rounded, markScale }) {
   return (x, y) => {
     if (rounded && !inRoundedRect(x, y, 0, 0, 1, 1, 0.22)) return [0, 0, 0, 0];
-    if (inMark(x, y, markScale)) return [255, 255, 255, 1];
+    if (inMark(x, y, markScale)) return [...MARK, 1];
     return [...gradient(x, y), 1];
   };
 }
 
-const badge = (x, y) => (inMark(x, y, 1.25) ? [255, 255, 255, 1] : [0, 0, 0, 0]);
+const badge = (x, y) => (inMark(x, y, 1.25) ? [...MARK, 1] : [0, 0, 0, 0]);
 
 const outputs = [
   ["public/icons/icon-192.png", 192, tile({ rounded: true, markScale: 1 })],

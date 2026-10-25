@@ -4,8 +4,9 @@ The account is one Page: ``platform_account_id`` is the Page id (the webhook ``e
 the token is its Page access token, which does not expire. Calls go to ``graph.facebook.com``
 with ``me`` meaning the Page. A Page can message, take attachments, mark chats seen, backfill
 conversations, read, answer, hide and delete comments, send private replies and (GR-30, with the
-``pages_manage_posts`` permission) publish photos, videos and text posts. It cannot read insights
-yet, so those raise ``capability_unavailable``; the best posting times use post counts instead.
+``pages_manage_posts`` permission) publish photos, videos and text posts. With the ``read_insights``
+permission (C-131) it reads a post's views, reach, clicks and shares; account insights are still
+not built. A Page Story has no insights to read.
 
 Every Meta behaviour here is unverified until a real Page confirms it (docs/verification.md):
 see the CONFLICTS entry for GR-29 for the list.
@@ -61,6 +62,7 @@ CAPABILITIES = frozenset(
         Capability.COMMENTS,
         Capability.PRIVATE_REPLY,
         Capability.PUBLISH,
+        Capability.POST_INSIGHTS,
     }
 )
 
@@ -70,8 +72,7 @@ BUTTON_TEXT_MAX_CHARS = 640
 MAX_BUTTONS = 3
 MAX_QUICK_REPLIES = 13
 NO_QUOTA = "Facebook Pages have no publishing limit to read"
-NO_STORIES = "Facebook Page Stories aren't available yet"
-NO_INSIGHTS = "Insights for Facebook Pages aren't available yet"
+NO_INSIGHTS = "Account insights for Facebook Pages aren't available yet"
 
 
 class FacebookAdapter:
@@ -85,6 +86,8 @@ class FacebookAdapter:
         caps = set(CAPABILITIES)
         if oauth.PUBLISH_SCOPE not in (acct.scopes or []):
             caps.discard(Capability.PUBLISH)  # connected before GR-30: reconnect to allow it
+        if oauth.INSIGHTS_SCOPE not in (acct.scopes or []):
+            caps.discard(Capability.POST_INSIGHTS)  # read_insights not granted (C-131)
         if self.deps.settings.ig_human_agent_enabled:  # one Meta approval covers both (O-10)
             caps.add(Capability.HUMAN_AGENT)
         return frozenset(caps)
@@ -205,7 +208,7 @@ class FacebookAdapter:
         return await reads.list_media(self.http, self._graph, self._token(acct), limit=limit)
 
     async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
-        return []  # Pages have no stories we can read
+        return []  # Facebook has no read API for a Page's Stories (C-131)
 
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         from socialhood.platforms.facebook import reads
@@ -305,7 +308,15 @@ class FacebookAdapter:
     async def get_media_insights(
         self, acct: SocialAccount, media_ref: str, *, media_type: str
     ) -> MediaInsights:
-        raise PlatformError("capability_unavailable", message=NO_INSIGHTS)
+        """A Page post's views, reach, clicks and shares (needs ``read_insights``). A Page Story
+        has none: Facebook gives no read API for it."""
+        from socialhood.platforms.facebook import insights
+
+        if Capability.POST_INSIGHTS not in self.capabilities_for(acct):
+            raise PlatformError("capability_unavailable", message=NO_INSIGHTS)
+        if media_type == "story":
+            return MediaInsights()
+        return await insights.media_insights(self.http, self._graph, self._token(acct), media_ref)
 
     async def get_account_insights(
         self, acct: SocialAccount, day: date, *, tz: str = "UTC"
@@ -332,17 +343,37 @@ class FacebookAdapter:
         )
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
-        """A Page video (not a Facebook Reel); ``share_to_feed`` has no meaning here."""
+        """A Page video, or with ``page_reel`` (the composer's Reel choice, C-131) a Facebook
+        Reel; ``share_to_feed`` has no meaning here."""
         from socialhood.platforms.facebook import publishing
 
+        if page_reel:
+            return await publishing.create_reel(
+                self.http, self._graph, self._token(acct), video_url=video_url
+            )
         return await publishing.create_video(
             self.http, self._graph, self._token(acct), video_url=video_url, caption=caption
         )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise PlatformError("capability_unavailable", message=NO_STORIES)
+        """A Page Story (C-131): a photo or a video, published by ``publish_container``."""
+        from socialhood.platforms.facebook import publishing
+
+        if media.kind == "video":
+            return await publishing.create_story_video(
+                self.http, self._graph, self._token(acct), video_url=media.url
+            )
+        return await publishing.create_story_photo(
+            self.http, self._graph, self._token(acct), image_url=media.url
+        )
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         from socialhood.platforms.facebook import publishing
@@ -384,6 +415,8 @@ class FacebookAdapter:
     ) -> PlatformMedia | None:
         from socialhood.platforms.facebook import publishing
 
+        if story:
+            return None  # a Page Story can't be read back (C-131)
         return await publishing.published_media(
             self.http, self._graph, self._token(acct), media_ref
         )
@@ -405,6 +438,7 @@ class FacebookAdapter:
             self._token(acct),
             caption=caption,
             published_after=published_after,
+            container_ref=container_ref,
         )
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

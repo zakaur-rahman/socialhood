@@ -41,7 +41,7 @@ export function AskPage() {
     >
       <aside
         aria-label="Thread history"
-        className="relative hidden w-(--pane-w) max-w-[40%] shrink-0 flex-col border-r border-line bg-panel lg:flex"
+        className="relative hidden w-(--pane-w) max-w-[40%] shrink-0 flex-col border-r border-line glass-pane lg:flex"
         style={{ "--pane-w": `${threadsWidth}px` } as CSSProperties}
       >
         <ResizeHandle

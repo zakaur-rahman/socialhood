@@ -82,6 +82,7 @@ def decide(
 STOP_WORDS: dict[str, str] = {
     "reply": "They replied",
     "tag": "A stop tag was added",
+    "tag_removed": "A tag they needed was taken off",
     "stage": "Their lead stage changed",
     "member": "Taken out by your team",
     "ended": "The sequence has no more steps",

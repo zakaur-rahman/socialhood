@@ -227,7 +227,12 @@ def paid_event(link_id: str, order: dict[str, Any], *, amount: int | None = None
                         "status": "paid",
                     }
                 },
-                "payment": {"entity": {"id": "pay_Fake123", "amount": order["total_minor"]}},
+                "payment": {
+                    "entity": {
+                        "id": "pay_Fake123",
+                        "amount": amount if amount is not None else order["total_minor"],
+                    }
+                },
             },
         }
     ).encode()

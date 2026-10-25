@@ -16,9 +16,10 @@ beforeAll(() => {
 type Answers = {
   perf?: (age: AgeName | null) => PostPerformance | Response;
   compare?: (age: AgeName | null) => PostComparison | Response;
+  platform?: "instagram" | "facebook";
 };
 
-function setup({ perf = () => performance(), compare = () => comparison() }: Answers = {}) {
+function setup({ perf = () => performance(), compare = () => comparison(), platform = "instagram" }: Answers = {}) {
   const asked: { path: string; age: string | null }[] = [];
   const answer = (value: object | Response) => (value instanceof Response ? value : json(value));
   const record = (call: Call) => {
@@ -30,7 +31,7 @@ function setup({ perf = () => performance(), compare = () => comparison() }: Ans
     <PostPerformanceCard
       wid="w1"
       postId="po1"
-      account={account()}
+      account={account({ platform })}
       slug="maple"
       timeZone="Asia/Kolkata"
       now={new Date("2026-09-29T08:00:00Z")}
@@ -121,6 +122,48 @@ describe("Post figures (FR-ANL-02)", () => {
     expect(figure("Engagement rate")).toBe("—");
     expect(figure("Likes")).toBe("180");
     expect(screen.queryByText("Instagram can take up to 48 h to settle these numbers.")).not.toBeInTheDocument();
+  });
+
+  it("a Story shows its own figures and ages (1 h, 6 h, 23 h), with replies and taps", async () => {
+    const user = userEvent.setup();
+    const story = (age: AgeName | null) =>
+      performance({
+        media_type: "story",
+        age: age ?? "23h",
+        requested_age: age,
+        insights_final: true,
+        metrics: { reach: 900, views: 1100, likes: null, comments: null, shares: 7, saves: null, engagement_rate: null },
+        extra_metrics: { replies: 5, taps_forward: 700, taps_back: 80, swipes_forward: 40, exits: 60, clicks: null },
+      });
+    const { asked } = setup({ perf: story });
+    await screen.findByTestId("post-figures");
+    expect(figure("Reach")).toBe("900");
+    expect(figure("Replies")).toBe("5");
+    expect(figure("Taps forward")).toBe("700");
+    expect(figure("Exits")).toBe("60");
+    expect(screen.queryByText("Likes", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Engagement rate", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("figures-age")).toHaveTextContent("Figures at 23 h after posting");
+    expect(screen.queryByText(/can take up to 48 h/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Age after posting" }));
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual(["At 1 h", "At 6 h", "At 23 h", "Lifetime"]);
+    await user.click(screen.getByRole("option", { name: "At 6 h" }));
+    await waitFor(() => expect(asked).toEqual(expect.arrayContaining([{ path: "performance", age: "6h" }])));
+  });
+
+  it("a Page post names Facebook and shows its clicks", async () => {
+    setup({
+      platform: "facebook",
+      perf: () =>
+        performance({
+          insights_final: false,
+          extra_metrics: { replies: null, taps_forward: null, taps_back: null, swipes_forward: null, exits: null, clicks: 31 },
+        }),
+    });
+    await screen.findByTestId("post-figures");
+    expect(figure("Clicks")).toBe("31");
+    expect(screen.getByText("Facebook can take up to 48 h to settle these numbers.")).toBeInTheDocument();
   });
 
   it("before the first snapshot: no figures yet, and when they will come", async () => {

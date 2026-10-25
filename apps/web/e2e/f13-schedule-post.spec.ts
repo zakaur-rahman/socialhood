@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 
 import type { SandboxAccount, Workspace } from "./support/api";
 import { expect, test, unique } from "./support/fixtures";
+import { pickDay } from "./support/ui";
 
 /**
  * F-13 Schedule and publish a post. The composer builds a draft (account, a photo from the media
@@ -48,7 +49,7 @@ test.describe("F-13 schedule and publish a post", () => {
 
     const when = page.getByRole("region", { name: "When" });
     await expect(when).toContainText("Times are in UTC.");
-    await when.getByRole("textbox", { name: "Date" }).fill(tomorrowUtc());
+    await pickDay(page, when.getByRole("button", { name: "Date" }), tomorrowUtc());
     await when.getByRole("textbox", { name: "Time" }).fill("10:30");
 
     const scheduled = page.waitForResponse((r) => /\/scheduled-posts\/[^/]+\/schedule$/.test(r.url()) && r.request().method() === "POST");

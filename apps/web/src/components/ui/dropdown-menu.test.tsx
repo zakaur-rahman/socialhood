@@ -34,11 +34,11 @@ function expectItemHighlight(item: Element) {
     "focus:bg-hover",
     "focus-visible:outline-2",
     "focus-visible:-outline-offset-2",
-    "focus-visible:outline-ring",
+    "focus-visible:outline-brand",
     // Firefox: the outline also keys off the highlight while the keyboard moves it.
     "group-data-keyboard/floating:data-highlighted:outline-2",
     "group-data-keyboard/floating:data-highlighted:-outline-offset-2",
-    "group-data-keyboard/floating:data-highlighted:outline-ring",
+    "group-data-keyboard/floating:data-highlighted:outline-brand",
     "pointer-coarse:min-h-10",
     "rounded-md",
     "text-sm"
@@ -130,7 +130,7 @@ describe("DropdownMenu (UI-013)", () => {
     await user.click(screen.getByRole("button", { name: "More actions" }));
     const content = await screen.findByRole("menu", { name: "More actions" });
     expect(content).toHaveAttribute("data-slot", "dropdown-menu-content");
-    expect(content).toHaveClass("w-auto", "min-w-48", "shadow-floating", "ring-1", "ring-line", "rounded-lg", "bg-popover", "p-1");
+    expect(content).toHaveClass("w-auto", "min-w-48", "shadow-floating", "ring-1", "ring-line", "rounded-lg", "glass-float", "p-1");
     expect(content).not.toHaveClass("shadow-xl");
     // Not the trigger's width (wrong for icon triggers), and never wider than the viewport allows.
     expect(classes(content).filter((c) => c.includes("trigger-width"))).toEqual([]);
@@ -156,7 +156,7 @@ describe("DropdownMenu (UI-013)", () => {
     expect(content).not.toHaveClass("duration-100");
     expectReducedMotionCancels(content);
     const sub = document.querySelector('[data-slot="dropdown-menu-sub-content"]') as HTMLElement;
-    expect(sub).toHaveClass("shadow-floating", "bg-popover", "min-w-48");
+    expect(sub).toHaveClass("shadow-floating", "glass-float", "min-w-48");
     expectReducedMotionCancels(sub);
   });
 

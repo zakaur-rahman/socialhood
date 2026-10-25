@@ -15,10 +15,12 @@ import type { SocialAccount } from "@/lib/api/types";
 import {
   assetLabel,
   CAPTION_MAX_CHARS,
+  captionLimit,
   cannotPublishReason,
   countText,
   cropNeeded,
   deriveFormat,
+  FACEBOOK_CAPTION_MAX_CHARS,
   FIRST_COMMENT_MAX_CHARS,
   formatCount,
   formatDuration,
@@ -29,6 +31,10 @@ import {
   MIN_SCHEDULE_LEAD_MS,
   FACEBOOK_NO_MIX,
   postPlatforms,
+  REEL_NEEDS_PAGE,
+  REEL_NEEDS_VIDEO,
+  REEL_ONE_VIDEO,
+  reelVideoProblem,
   storyShapeOff,
   storyVideoProblem,
   videoTooLong,
@@ -77,17 +83,25 @@ function pass(key: ChecklistKey, message: string): ChecklistItem {
 }
 
 /** One caption with the field it lives in, for the per-caption checks. */
-type CaptionSlot = { text: string; field: string; owner: string };
+type CaptionSlot = { text: string; field: string; owner: string; limit: number };
 
 function captionSlots(draft: ScheduledPostDraft, accounts: SocialAccount[]): CaptionSlot[] {
-  const slots: CaptionSlot[] = [{ text: draft.caption ?? "", field: "caption", owner: "The caption" }];
-  (draft.targets ?? []).forEach((target, index) => {
+  // Each caption is held to the limit of the accounts it goes to (C-131): an account's own caption
+  // to its platform's; the shared one to the strictest of the accounts without their own.
+  const platformOf = (id: string) => accounts.find((item) => item.id === id)?.platform ?? "instagram";
+  const targets = draft.targets ?? [];
+  const shared = targets.filter((target) => target.caption_override == null).map((target) => platformOf(target.social_account_id));
+  const slots: CaptionSlot[] = [
+    { text: draft.caption ?? "", field: "caption", owner: "The caption", limit: shared.length ? captionLimit(shared) : FACEBOOK_CAPTION_MAX_CHARS },
+  ];
+  targets.forEach((target, index) => {
     if (target.caption_override == null) return;
     const account = accounts.find((item) => item.id === target.social_account_id);
     slots.push({
       text: target.caption_override,
       field: `targets.${index}.caption_override`,
       owner: `The caption for ${handleOf(account)}`,
+      limit: captionLimit([platformOf(target.social_account_id)]),
     });
   });
   return slots;
@@ -99,12 +113,13 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const targets = draft.targets ?? [];
   const assetIds = draft.asset_ids ?? [];
   const story = draft.kind === "story";
+  const reel = draft.kind === "reel";
   const selected = targets
     .map((target) => accounts.find((item) => item.id === target.social_account_id))
     .filter((account): account is SocialAccount => Boolean(account));
   const { instagram: ig, facebook: fb } = postPlatforms(selected);
   // Text for Facebook Pages alone, with no media, is a text post (GR-30).
-  const textPost = fb && !ig && !story && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
+  const textPost = fb && !ig && !story && !reel && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
   const limitName = ig ? "Instagram" : "Social Hood";
 
   // accounts: at least one, each connected and able to publish
@@ -116,12 +131,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       const account = accounts.find((item) => item.id === target.social_account_id);
       if (!account) return; // not loaded yet, or gone: the API says which
       const reason = cannotPublishReason(account);
-      if (!reason) {
-        if (story && account.platform !== "instagram") {
-          problems.push(fail("accounts", `${handleOf(account)} can't publish Stories. Remove it or choose a post.`, `targets.${index}`));
-        }
-        return;
-      }
+      if (!reason) return;
       const handle = handleOf(account);
       const message =
         account.status === "needs_reconnect"
@@ -133,6 +143,8 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
               : `${handle} didn't give Social Hood permission to publish. Reconnect to allow it.`;
       problems.push(fail("accounts", message, `targets.${index}`));
     });
+    // A Reel is for Facebook Pages: Instagram already publishes a single video as a Reel (C-131).
+    if (reel && !fb) problems.push(fail("accounts", REEL_NEEDS_PAGE, "targets"));
     if (problems.length) items.push(...problems);
     else items.push(pass("accounts", targets.length === 1 ? "1 account can publish" : `${targets.length} accounts can publish`));
   }
@@ -143,8 +155,15 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     items.push(
       textPost
         ? pass("media", "Text post")
-        : fail("media", fb && !ig ? "Add a photo or video, or write the post's text." : "Add a photo or video.", "asset_ids"),
+        : fail(
+            "media",
+            reel ? REEL_NEEDS_VIDEO : fb && !ig ? "Add a photo or video, or write the post's text." : "Add a photo or video.",
+            "asset_ids",
+          ),
     );
+  } else if (reel) {
+    const oneVideo = assetIds.length === 1 && (known.length === 0 || known[0].resource_type === "video");
+    items.push(oneVideo ? pass("media", "Reel") : fail("media", REEL_ONE_VIDEO, "asset_ids"));
   } else if (fb && !story && assetIds.length > 1 && known.some((asset) => asset.resource_type === "video")) {
     items.push(fail("media", FACEBOOK_NO_MIX, "asset_ids"));
   } else if (story) {
@@ -164,7 +183,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     if (!asset) return;
     const label = assetLabel(asset, index);
     const crop = story || !ig ? null : cropNeeded(asset);
-    const storyProblem = story ? storyVideoProblem(asset) : null;
+    const storyProblem = story ? storyVideoProblem(asset) : reel && fb ? reelVideoProblem(asset) : null;
     if (storyProblem) {
       fileProblems.push(fail("media_files", `${label}: ${storyProblem}`, `asset_ids.${index}`));
     } else if (crop) {
@@ -180,14 +199,15 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       );
     }
   });
-  const offShape = story && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
+  const offShape = (story || reel) && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
+  const who = ig && fb ? "Instagram and Facebook" : fb ? "Facebook" : "Instagram";
   if (fileProblems.length) items.push(...fileProblems);
   else if (assetIds.length) {
     items.push(
       pass(
         "media_files",
         offShape
-          ? "9:16 fits a Story best. Instagram may crop or add bars to this file."
+          ? `9:16 fits a ${story ? "Story" : "Reel"} best. ${who} may crop or add bars to this file.`
           : `Photos and videos fit ${ig && fb ? "Instagram's and Facebook's" : fb ? "Facebook's" : "Instagram's"} sizes`,
       ),
     );
@@ -207,11 +227,11 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const mentionProblems: ChecklistItem[] = [];
   for (const slot of slots) {
     const counts = countText(slot.text);
-    if (counts.chars > CAPTION_MAX_CHARS) {
+    if (counts.chars > slot.limit) {
       captionProblems.push(
         fail(
           "caption",
-          `${slot.owner} is ${formatCount(counts.chars)} characters. ${limitName} allows ${formatCount(CAPTION_MAX_CHARS)}.`,
+          `${slot.owner} is ${formatCount(counts.chars)} characters. ${slot.limit === CAPTION_MAX_CHARS ? "Instagram" : "Facebook"} allows ${formatCount(slot.limit)}.`,
           slot.field,
         ),
       );
@@ -242,7 +262,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       fail("hashtags", `The first comment has ${commentCounts.hashtags} hashtags. Instagram allows ${MAX_HASHTAGS}.`, "first_comment"),
     );
   }
-  items.push(...(captionProblems.length ? captionProblems : [pass("caption", `Caption within ${formatCount(CAPTION_MAX_CHARS)} characters`)]));
+  items.push(...(captionProblems.length ? captionProblems : [pass("caption", `Caption within ${formatCount(captionLimit(selected.map((account) => account.platform)))} characters`)]));
   // Hashtag and mention limits are Instagram's: a post for Facebook Pages alone has none.
   if (ig) {
     items.push(...(hashtagProblems.length ? hashtagProblems : [pass("hashtags", `Up to ${MAX_HASHTAGS} hashtags`)]));

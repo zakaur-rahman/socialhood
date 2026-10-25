@@ -10,7 +10,7 @@ import { expect, test, unique } from "./support/fixtures";
  * who withdrew is skipped, and a STOP reply from one of them revokes their consent.
  */
 type Contact = { id: string; name: string; username: string | null };
-type Recipient = { contact_name: string; status: string; reason: string | null; stopped: boolean; replied: boolean };
+type Recipient = { contact_name: string; username: string | null; status: string; reason: string | null; stopped: boolean; replied: boolean };
 type Consents = { consents: { channel: string; status: string; source: string }[] };
 
 test.describe("GR-23 WhatsApp broadcasts", () => {
@@ -38,8 +38,8 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
       await expect
         .poll(
           async () => {
-            const found = await api.call<{ items: Contact[] }>("GET", `/v1/w/${workspace.id}/contacts?q=${encodeURIComponent(person.name)}`);
-            const contact = found.items.find((c) => c.name === person.name);
+            const found = await api.call<{ items: Contact[] }>("GET", `/v1/w/${workspace.id}/contacts?q=${person.wa}`);
+            const contact = found.items.find((c) => c.username === person.wa);
             if (contact) contacts[person.name] = contact;
             return Boolean(contact);
           },
@@ -86,7 +86,15 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
       api
         .call<{ items: Recipient[] }>("GET", `/v1/w/${workspace.id}/broadcasts/${broadcastId}/recipients?limit=100`)
         .then((r) => r.items);
-    const named = async (name: string) => (await recipients()).find((r) => r.contact_name === name);
+    // By the WhatsApp number: the contact's profile (a made-up name in the sandbox) replaces the
+    // name the message carried, a moment after it.
+    const named = async (name: string) => {
+      const wa = people.find((p) => p.name === name)?.wa;
+      return (await recipients()).find((r) => r.username === wa);
+    };
+
+    // The name the page shows: the contact's profile name, not the one the message carried.
+    const shownName = async (person: (typeof people)[number]) => (await named(person.name))?.contact_name ?? person.name;
 
     // The worker hands each to the send queue and sends: all three are Sent; the fourth is skipped.
     for (const person of people.slice(0, 3)) {
@@ -115,12 +123,12 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
     const rows = page.getByTestId("recipient-row");
     await rows.first().waitFor({ timeout: 20_000 });
     await expect(rows).toHaveCount(4);
-    await expect(rows.filter({ hasText: asha.name })).toContainText("Delivered");
-    await expect(rows.filter({ hasText: ben.name })).toContainText("Read");
-    await expect(rows.filter({ hasText: chitra.name })).toContainText("Failed");
-    await expect(rows.filter({ hasText: chitra.name })).toContainText("This person can't receive messages right now.");
-    await expect(rows.filter({ hasText: dev.name })).toContainText("Skipped");
-    await expect(rows.filter({ hasText: dev.name })).toContainText("Asked not to get marketing messages.");
+    await expect(rows.filter({ hasText: await shownName(asha) })).toContainText("Delivered");
+    await expect(rows.filter({ hasText: await shownName(ben) })).toContainText("Read");
+    await expect(rows.filter({ hasText: await shownName(chitra) })).toContainText("Failed");
+    await expect(rows.filter({ hasText: await shownName(chitra) })).toContainText("This person can't receive messages right now.");
+    await expect(rows.filter({ hasText: await shownName(dev) })).toContainText("Skipped");
+    await expect(rows.filter({ hasText: await shownName(dev) })).toContainText("Asked not to get marketing messages.");
     await expect(page.getByTestId("counts")).toContainText("Failed");
 
     // Asha replies STOP: her consent is withdrawn, with the message as evidence, and the page says so.
@@ -138,7 +146,7 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
     await expect.poll(async () => (await named(asha.name))?.stopped, { timeout: 30_000 }).toBe(true);
     await page.reload();
     await rows.first().waitFor({ timeout: 20_000 });
-    await expect(rows.filter({ hasText: asha.name })).toContainText("Said STOP");
+    await expect(rows.filter({ hasText: await shownName(asha) })).toContainText("Said STOP");
 
     // The next broadcast to the same segment leaves her out.
     const next = await api.call<{ audience: { eligible: number; opted_out: number } }>(

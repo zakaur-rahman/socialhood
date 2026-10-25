@@ -14,33 +14,57 @@ check, so nothing reveals what exists.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request, Response
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.auth.deps import AnyMember, CanManageIntegrations, CanReply, Session
+from socialhood.auth.deps import (
+    AnyMember,
+    CanManageIntegrations,
+    CanReply,
+    Session,
+    WorkspaceContext,
+)
+from socialhood.models.orders import Order
 from socialhood.platforms.deps import deps_from
 from socialhood.razorpay.client import RazorpayClient
 from socialhood.razorpay.registry import get_razorpay
 from socialhood.realtime import events as realtime
 from socialhood.repositories import inbox
 from socialhood.schemas.orders import (
+    CancelOrder,
+    FulfilOrder,
     MarkPaid,
+    NoticeIn,
     OrderCreate,
+    OrderEdit,
     OrderList,
     OrderOut,
     PaymentRequest,
     PaymentSettings,
     RazorpayConnect,
+    RefundCreate,
     UpiSave,
 )
 from socialhood.security.crypto import TokenCipher, cipher_for
 from socialhood.services import audit, sending
-from socialhood.services.orders import orders, payments
+from socialhood.services.orders import ledger, notices, orders, payments
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["orders"])
 
-OrderStatusFilter = Literal["draft", "awaiting_payment", "paid", "cancelled", "expired"]
+OrderStatusFilter = Literal[
+    "draft",
+    "awaiting_payment",
+    "partially_paid",
+    "paid",
+    "fulfilled",
+    "refunded",
+    "cancelled",
+    "expired",
+]
 
 
 def _cipher(request: Request) -> TokenCipher:
@@ -89,21 +113,22 @@ async def get_order(order_id: uuid.UUID, ctx: AnyMember, session: Session) -> Or
     return await orders.view(session, await orders.get(session, order_id))
 
 
-@router.post("/orders/{order_id}/payment-request", operation_id="request_order_payment")
-async def request_payment(
+async def _send_request(
     request: Request,
-    order_id: uuid.UUID,
+    session: AsyncSession,
+    ctx: WorkspaceContext,
+    order: Order,
     body: PaymentRequest,
-    ctx: CanReply,
-    session: Session,
-) -> OrderOut:
-    """Make a Razorpay payment link or a UPI request for the order and, unless ``send`` is false,
-    send it as a message on the order's conversation. 409 when the method isn't set up ("Razorpay
-    isn't set up for this workspace"), 409 ``reply_window_closed`` when the message can't go,
-    422 for an order that is paid or cancelled."""
-    order = await orders.get(session, order_id, lock=True)
+) -> None:
+    """Make the payment link or UPI request and, unless ``send`` is false, send it as a message
+    on the order's conversation."""
     text = await orders.request_payment(
-        session, order, body.method, client=_client(request), cipher=_cipher(request)
+        session,
+        order,
+        body.method,
+        client=_client(request),
+        cipher=_cipher(request),
+        allow_partial=body.allow_partial,
     )
     if body.send and order.conversation_id is not None:
         conv = await inbox.get_conversation(session, order.conversation_id)
@@ -125,7 +150,100 @@ async def request_payment(
         order.id,
         method=body.method,
         sent=body.send,
+        partial=body.allow_partial,
     )
+
+
+async def _answer(
+    request: Request,
+    session: AsyncSession,
+    ctx: WorkspaceContext,
+    order: Order,
+    *,
+    event: str,
+    notice: NoticeIn | None,
+    amount_minor: int | None = None,
+) -> OrderOut:
+    """The order as the API shows it, after sending the message the member asked for with the
+    status change (``notice``): the change is already made, and the answer says whether the
+    message went. Commits."""
+    answer = None
+    if notice is not None:
+        redis: Redis = request.app.state.redis
+        answer = await notices.send(
+            session,
+            redis,
+            deps_from(request.app.state.http, request.app.state.settings),
+            order,
+            event=event,
+            notice=notice,
+            user_id=ctx.user.id,
+            amount_minor=amount_minor,
+            now=datetime.now(UTC),
+        )
+        await audit.record(
+            session,
+            ctx,
+            "order.status_message",
+            "order",
+            order.id,
+            number=order.number,
+            status=order.status,
+            sent=answer.sent,
+        )
+    out = await orders.view(session, order)
+    if answer is not None:
+        out = out.model_copy(update={"notice": answer})
+    await realtime.commit_and_publish(session, request.app.state.redis)
+    return out
+
+
+@router.post("/orders/{order_id}/payment-request", operation_id="request_order_payment")
+async def request_payment(
+    request: Request,
+    order_id: uuid.UUID,
+    body: PaymentRequest,
+    ctx: CanReply,
+    session: Session,
+) -> OrderOut:
+    """Make a Razorpay payment link or a UPI request for what is left to pay and, unless ``send``
+    is false, send it as a message on the order's conversation. ``allow_partial`` lets the
+    customer pay a Razorpay link in parts (rupees only). 409 when the method isn't set up
+    ("Razorpay isn't set up for this workspace"), 409 ``reply_window_closed`` when the message
+    can't go, 422 for an order that is paid or cancelled."""
+    order = await orders.get(session, order_id, lock=True)
+    await _send_request(request, session, ctx, order, body)
+    out = await orders.view(session, order)
+    await realtime.commit_and_publish(session, request.app.state.redis)
+    return out
+
+
+@router.patch("/orders/{order_id}", operation_id="edit_order")
+async def edit_order(
+    request: Request, order_id: uuid.UUID, body: OrderEdit, ctx: CanReply, session: Session
+) -> OrderOut:
+    """Change a draft or waiting order: the lines (re-priced from the catalogue now), the address,
+    the note. A new total cancels the payment link and returns the order to a draft; ``payment``
+    asks for a new request straight after. 422 once the order has a payment or is closed."""
+    order = await orders.get(session, order_id, lock=True)
+    before = order.total_minor
+    edited = await orders.edit(
+        session, order, body, client=_client(request), cipher=_cipher(request)
+    )
+    await audit.record(
+        session,
+        ctx,
+        "order.edited",
+        "order",
+        order.id,
+        number=order.number,
+        changed=",".join(edited.changed),
+        total_before=before,
+        total_after=order.total_minor,
+        link_cancelled=edited.link_cancelled,
+    )
+    if body.payment is not None:
+        await _send_request(request, session, ctx, order, body.payment)
     out = await orders.view(session, order)
     await realtime.commit_and_publish(session, request.app.state.redis)
     return out
@@ -133,12 +251,20 @@ async def request_payment(
 
 @router.post("/orders/{order_id}/mark-paid", operation_id="mark_order_paid")
 async def mark_order_paid(
-    order_id: uuid.UUID, body: MarkPaid, ctx: CanReply, session: Session
+    request: Request, order_id: uuid.UUID, body: MarkPaid, ctx: CanReply, session: Session
 ) -> OrderOut:
-    """A member says the order was paid: for UPI, which has no webhook. Who and when are kept on
-    the order and in the audit trail. 422 when it is already paid or cancelled."""
+    """A member says a payment arrived: for UPI, which has no webhook. All that is left, or
+    ``amount_minor`` of it (the order is then partly paid; send another request for the rest).
+    Who, when and how much are kept on the order and in the audit trail. 422 when it is already
+    paid or cancelled, or the amount is more than what is left."""
     order = await orders.get(session, order_id, lock=True)
-    await orders.mark_paid(session, order, reference=body.reference, user_id=ctx.user.id)
+    payment = await orders.mark_paid(
+        session,
+        order,
+        reference=body.reference,
+        user_id=ctx.user.id,
+        amount_minor=body.amount_minor,
+    )
     await audit.record(
         session,
         ctx,
@@ -147,23 +273,88 @@ async def mark_order_paid(
         order.id,
         number=order.number,
         method=order.payment_method,
+        amount_minor=payment.amount_minor if payment else 0,
+        status=order.status,
     )
-    out = await orders.view(session, order)
-    await session.commit()
-    return out
+    return await _answer(
+        request,
+        session,
+        ctx,
+        order,
+        event="paid" if order.status == "paid" else "partially_paid",
+        notice=body.notice,
+        amount_minor=payment.amount_minor if payment else None,
+    )
 
 
 @router.post("/orders/{order_id}/cancel", operation_id="cancel_order")
 async def cancel_order(
-    request: Request, order_id: uuid.UUID, ctx: CanReply, session: Session
+    request: Request,
+    order_id: uuid.UUID,
+    ctx: CanReply,
+    session: Session,
+    body: CancelOrder | None = None,
 ) -> OrderOut:
-    """Cancel an order that isn't paid, and its Razorpay link. 422 for a paid order."""
+    """Cancel an order nobody has paid, and its Razorpay link. 422 once there is a payment:
+    refund it first."""
     order = await orders.get(session, order_id, lock=True)
     await orders.cancel(session, order, client=_client(request), cipher=_cipher(request))
     await audit.record(session, ctx, "order.cancelled", "order", order.id, number=order.number)
-    out = await orders.view(session, order)
-    await session.commit()
-    return out
+    return await _answer(
+        request, session, ctx, order, event="cancelled", notice=body.notice if body else None
+    )
+
+
+@router.post("/orders/{order_id}/fulfil", operation_id="fulfil_order")
+async def fulfil_order(
+    request: Request, order_id: uuid.UUID, body: FulfilOrder, ctx: CanReply, session: Session
+) -> OrderOut:
+    """Mark a paid order shipped, with a note (a courier and tracking number, say) that shows on
+    the order. 422 for an order that is not paid, or already shipped."""
+    order = await orders.get(session, order_id, lock=True)
+    await orders.fulfil(session, order, note=body.note)
+    await audit.record(
+        session, ctx, "order.fulfilled", "order", order.id, number=order.number, note=body.note
+    )
+    return await _answer(request, session, ctx, order, event="fulfilled", notice=body.notice)
+
+
+@router.post("/orders/{order_id}/refunds", operation_id="refund_order")
+async def refund_order(
+    request: Request, order_id: uuid.UUID, body: RefundCreate, ctx: CanReply, session: Session
+) -> OrderOut:
+    """Refund an order in full or in part, with a reason. A Razorpay payment is refunded through
+    the business's own keys (the refund is pending until Razorpay says it is processed); a UPI
+    payment is returned by the business, which records it here. 422 for an order without
+    payments, too large an amount or no reason; 409 when Razorpay isn't set up."""
+    order = await orders.get(session, order_id, lock=True)
+    done = await ledger.refund(
+        session,
+        order,
+        amount=body.amount_minor,
+        reason=body.reason,
+        client=_client(request),
+        cipher=_cipher(request),
+        user_id=ctx.user.id,
+        now=datetime.now(UTC),
+    )
+    total = sum(r.amount_minor for r in done.made)
+    await audit.record(
+        session,
+        ctx,
+        "order.refunded",
+        "order",
+        order.id,
+        number=order.number,
+        amount_minor=total,
+        reason=body.reason,
+        methods=",".join(sorted({r.method for r in done.made})),
+        failed_part=done.failed is not None,
+        status=order.status,
+    )
+    return await _answer(
+        request, session, ctx, order, event="refunded", notice=body.notice, amount_minor=total
+    )
 
 
 # ---------------------------------------------------------------- payment settings

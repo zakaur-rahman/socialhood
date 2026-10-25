@@ -12,15 +12,26 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
 MAX_LINES = 50
 
-OrderStatusName = Literal["draft", "awaiting_payment", "paid", "cancelled", "expired"]
-OrderSourceName = Literal["inbox", "whatsapp"]
+OrderStatusName = Literal[
+    "draft",
+    "awaiting_payment",
+    "partially_paid",
+    "paid",
+    "fulfilled",
+    "refunded",
+    "cancelled",
+    "expired",
+]
+OrderSourceName = Literal["inbox", "whatsapp", "flow"]
 PaymentMethodName = Literal["razorpay", "upi"]
+RefundMethodName = Literal["razorpay", "manual"]
+RefundStatusName = Literal["pending", "processed", "failed"]
 
 
 class AddressIn(RequestModel):
@@ -60,6 +71,29 @@ class OrderCreate(RequestModel):
     note: str | None = Field(default=None, max_length=500)
 
 
+class NoticeIn(RequestModel):
+    """A message to the customer about an order's new status, sent on the order's conversation.
+    ``message`` replaces the default wording. On WhatsApp after the 24-hour window an approved
+    utility template (name and language) carries it; without one it can't be sent."""
+
+    message: str | None = Field(default=None, max_length=500)
+    template_name: str | None = Field(default=None, min_length=1, max_length=512)
+    template_language: str | None = Field(default=None, min_length=1, max_length=32)
+
+    @model_validator(mode="after")
+    def _template_pair(self) -> NoticeIn:
+        if bool(self.template_name) != bool(self.template_language):
+            raise ValueError("a template needs its name and language")
+        return self
+
+
+class NoticeOut(ResponseModel):
+    """What happened to the message asked for with a status change: sent, or why not."""
+
+    sent: bool
+    reason: str | None = None
+
+
 class OrderLineOut(ResponseModel):
     id: uuid.UUID
     product_id: uuid.UUID | None = None
@@ -72,6 +106,29 @@ class OrderLineOut(ResponseModel):
     unit_price: str
     line_total_minor: int
     line_total: str
+
+
+class OrderPaymentOut(ResponseModel):
+    id: uuid.UUID
+    amount_minor: int
+    amount: str
+    method: PaymentMethodName
+    reference: str | None = None
+    recorded_by_name: str | None = None  # a member, for a payment recorded by hand
+    paid_at: datetime
+
+
+class OrderRefundOut(ResponseModel):
+    id: uuid.UUID
+    amount_minor: int
+    amount: str
+    reason: str
+    method: RefundMethodName
+    status: RefundStatusName
+    failure: str | None = None
+    created_by_name: str | None = None
+    created_at: datetime
+    processed_at: datetime | None = None
 
 
 class OrderContact(ResponseModel):
@@ -93,6 +150,8 @@ class OrderOut(ResponseModel):
     note: str | None = None
     contact: OrderContact
     conversation_id: uuid.UUID | None = None
+    social_account_id: uuid.UUID | None = None  # the conversation's account (for its templates)
+    platform: str | None = None
     payment_method: PaymentMethodName | None = None
     payment_link_url: str | None = None
     payment_reference: str | None = None
@@ -103,6 +162,21 @@ class OrderOut(ResponseModel):
     created_by_name: str | None = None
     created_at: datetime
     updated_at: datetime
+    # C-125: part payments, refunds and shipping.
+    amount_paid_minor: int = 0
+    amount_paid: str = "0.00"
+    amount_left_minor: int = 0  # still to pay
+    amount_left: str = "0.00"
+    amount_refunded_minor: int = 0
+    amount_refunded: str = "0.00"
+    refundable_minor: int = 0  # paid, not refunded and not on its way back
+    refundable: str = "0.00"
+    accept_partial: bool = False
+    fulfilled_at: datetime | None = None
+    fulfilment_note: str | None = None
+    payments: list[OrderPaymentOut] = Field(default_factory=list)
+    refunds: list[OrderRefundOut] = Field(default_factory=list)
+    notice: NoticeOut | None = None  # set when the request asked for a message to the customer
 
 
 class OrderLimits(ResponseModel):
@@ -120,12 +194,51 @@ class OrderList(ResponseModel):
 class PaymentRequest(RequestModel):
     method: PaymentMethodName
     send: bool = True  # also send it as a message on the order's conversation
+    # Let the customer pay a Razorpay link in parts (rupees only). A UPI order can always be
+    # paid in parts: a member records each one.
+    allow_partial: bool = False
 
 
 class MarkPaid(RequestModel):
-    """For a UPI order: the customer's payment reference, if they shared one."""
+    """A payment a member received by hand (UPI has no webhook): the customer's reference, if they
+    shared one, and the amount in minor units when it is less than what is left to pay (blank:
+    all of it)."""
 
     reference: str | None = Field(default=None, max_length=200)
+    amount_minor: int | None = Field(default=None, ge=1, le=10**12)
+    notice: NoticeIn | None = None
+
+
+class CancelOrder(RequestModel):
+    notice: NoticeIn | None = None
+
+
+class FulfilOrder(RequestModel):
+    """Mark a paid order shipped. ``note`` is shown on the order and in the default message
+    (a courier and tracking number, say)."""
+
+    note: str | None = Field(default=None, max_length=300)
+    notice: NoticeIn | None = None
+
+
+class RefundCreate(RequestModel):
+    """Refund an order. ``amount_minor`` blank refunds everything not yet refunded."""
+
+    amount_minor: int | None = Field(default=None, ge=1, le=10**12)
+    reason: str = Field(min_length=1, max_length=200)
+    notice: NoticeIn | None = None
+
+
+class OrderEdit(RequestModel):
+    """Change an order that is a draft or waiting for payment. Lines are replaced when given (and
+    re-priced from the catalogue now); the address and the note are replaced when given (an empty
+    note clears it). ``payment``, when given, sends a new payment request straight after, which
+    is what replaces a link the edit made useless."""
+
+    items: list[OrderLineIn] | None = Field(default=None, min_length=1, max_length=MAX_LINES)
+    address: AddressIn | None = None
+    note: str | None = Field(default=None, max_length=500)
+    payment: PaymentRequest | None = None
 
 
 class RazorpayConnect(RequestModel):

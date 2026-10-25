@@ -266,10 +266,10 @@ async def orders_settled(
     failures_only: bool,
     account_id: uuid.UUID | None,
 ) -> list[Any]:
-    """Orders that were paid, or expired without payment (GR-32). With ``failures_only`` only
-    the expired ones."""
+    """Orders that were paid (and since shipped or refunded), or expired without payment (GR-32).
+    With ``failures_only`` only the expired ones."""
     at = func.coalesce(Order.paid_at, Order.updated_at)
-    wanted = ("expired",) if failures_only else ("paid", "expired")
+    wanted = ("expired",) if failures_only else ("paid", "fulfilled", "refunded", "expired")
     query = (
         select(
             Order.id,

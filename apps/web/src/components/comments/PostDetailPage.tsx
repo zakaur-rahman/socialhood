@@ -4,6 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { PageFrame } from "@/components/shell/PageFrame";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Card } from "@/components/ui/card";
@@ -24,10 +25,15 @@ import { TopicsCard } from "./TopicsCard";
 /**
  * A 340 px left column from 1024 px; one column on phones and tablets (UX-SCR-05). The children run
  * post, comments, insights, so below 1024 px the comments follow the post (UI-056); from 1024 px the
- * post and the insights share the left column and the comments span both rows.
+ * post and the insights share the left column and the comments span both rows. From 1280 px the
+ * insights (summary, topics, performance) take a right column, so the comments aren't stretched
+ * across a wide screen, and both side columns stay put under the page header while the comments
+ * scroll (owner, 2026-10-24). A side column taller than the screen scrolls on its own.
  */
+const SIDE_STICKY =
+  "xl:sticky xl:top-[calc(var(--page-header-h,0px)+1.5rem)] xl:max-h-[calc(100dvh-var(--page-header-h,0px)-3rem)] xl:self-start xl:overflow-y-auto";
 export const DETAIL_GRID_CLASS =
-  "grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-6";
+  "grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-6 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:grid-rows-1";
 
 function DetailSkeleton() {
   return (
@@ -97,13 +103,13 @@ export function PostDetailPage({ postId }: { postId: string }) {
   return (
     <PageFrame title={title} back={back}>
       <div className={DETAIL_GRID_CLASS} data-testid="post-detail">
-        <div className="min-w-0" data-testid="post-side">
+        <div className={cn("min-w-0", SIDE_STICKY)} data-testid="post-side">
           <PostPanel post={data} account={account} slug={workspace.slug} timeZone={workspace.timezone} now={now} />
         </div>
-        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 xl:row-span-1">
           <CommentsColumn post={data} now={now} accountUsername={account?.username} platform={account?.platform} />
         </div>
-        <div className="min-w-0 space-y-4" data-testid="post-insights">
+        <div className={cn("min-w-0 space-y-4 xl:col-start-3 xl:row-start-1", SIDE_STICKY)} data-testid="post-insights">
           <PostSummaryCard post={data} now={now} />
           <TopicsCard topics={data.topics} analysed={data.stats.analysed} />
           <PostPerformanceCard

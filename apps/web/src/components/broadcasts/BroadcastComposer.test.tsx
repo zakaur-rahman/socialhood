@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Broadcast, BroadcastAvailability, BroadcastPreview } from "@/lib/api/types";
+import { pickDate } from "@/test/datepicker";
 import { account, json, problem, renderWithApi, type Call } from "@/test/api";
 
 import { BroadcastComposer, toSpecs, variablesReady } from "./BroadcastComposer";
@@ -137,8 +138,9 @@ describe("the broadcast composer (GR-23)", () => {
     expect(screen.getByText(/typed in by hand, not yet checked against Meta/)).toBeInTheDocument();
     expect(screen.getByText(/Meta bills your WhatsApp Business Account directly/)).toBeInTheDocument();
 
-    const previews = calls.filter((c: Call) => c.method === "POST" && c.path.endsWith("/broadcasts/preview"));
-    expect(previews.at(-1)?.body).toEqual({
+    // The preview is re-asked as the mapping changes: under load the last one can still be on its way.
+    const lastPreview = () => calls.filter((c: Call) => c.method === "POST" && c.path.endsWith("/broadcasts/preview")).at(-1)?.body;
+    await waitFor(() => expect(lastPreview()).toEqual({
       social_account_id: "wa1",
       segment_id: "s1",
       template_name: "sale_offer",
@@ -147,7 +149,7 @@ describe("the broadcast composer (GR-23)", () => {
         { source: "field", field: "first_name", fallback: null },
         { source: "fixed", value: "31 October" },
       ],
-    });
+    }));
   });
 
   it("lists what stops a send and keeps the button off", async () => {
@@ -192,7 +194,7 @@ describe("the broadcast composer (GR-23)", () => {
     const send = screen.getByRole("button", { name: "Schedule broadcast" });
     expect(send).toBeDisabled();
     const day = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
-    await user.type(screen.getByLabelText("Date"), day);
+    await pickDate(user, "Date", day);
     await user.type(screen.getByLabelText("Time"), "10:30");
     await screen.findByTestId("eligible");
     await waitFor(() => expect(send).toBeEnabled());

@@ -41,10 +41,11 @@ from socialhood.models.automations import AutomationStatus
 from socialhood.models.contacts import Tag
 from socialhood.models.identity import Role
 from socialhood.repositories import social_accounts, workspaces
+from socialhood.schemas.assignment import AssignmentOverview
 from socialhood.schemas.automations import AutomationCreate, AutomationDefinition, TriggerName
 from socialhood.schemas.contacts import ContactFilterSpec, SegmentCreate
-from socialhood.schemas.flows import FlowDefinition
-from socialhood.services import contact_segments, contacts
+from socialhood.schemas.flows import ActionStep, Assign, FlowDefinition
+from socialhood.services import assignment, contact_segments, contacts
 from socialhood.services.automations import definitions, flow_store, flows
 from socialhood.services.automations.validation import COMMENT_TRIGGERS
 
@@ -143,9 +144,38 @@ def _validation(errors: list[FieldError]) -> ApiError:
     return ApiError("validation_error", errors=errors)
 
 
-def flow_lines(definition: FlowDefinition) -> list[str]:
-    """One line per step a run can reach, without the step ids."""
-    return [line.partition(": ")[2] or line for line in flows.describe(definition)]
+def flow_lines(
+    definition: FlowDefinition, member_names: dict[uuid.UUID, str] | None = None
+) -> list[str]:
+    """One line per step a run can reach, without the step ids. An assign step names the member."""
+    return [
+        line.partition(": ")[2] or line for line in flows.describe(definition, member_names or {})
+    ]
+
+
+def assign_notes(definition: FlowDefinition, overview: AssignmentOverview) -> list[str]:
+    """What to switch on for the assign steps in the flow to work, in plain words. Round-robin in a
+    flow works whatever the workspace's own setting says (C-117), but it hands the conversation to
+    an *available* member: with none available the step is skipped."""
+    if not any(
+        isinstance(step, ActionStep)
+        and isinstance(step.action, Assign)
+        and step.action.mode == "round_robin"
+        for step in definition.steps
+    ):
+        return []
+    notes: list[str] = []
+    if not any(member.available for member in overview.members):
+        notes.append(
+            "Nobody is available for assignment now, so the assign step would be skipped. "
+            "Turn on availability for a member under Members."
+        )
+    if not overview.round_robin:
+        notes.append(
+            "New conversations are not handed out in turn yet (Settings, Members). "
+            "This step still assigns in turn when it runs."
+        )
+    return notes
 
 
 async def check_flow(env: ActionEnv, args: FlowActionArgs) -> None:
@@ -179,7 +209,11 @@ async def summarize_flow(env: ActionEnv, args: FlowActionArgs) -> Summary:
         title = f"New automation: {args.name}"
         lines.append(_trigger_line(args))
         lines.append("It's saved as a draft. Nothing is switched on.")
-    lines += [f"{i}. {line}" for i, line in enumerate(flow_lines(args.definition), start=1)]
+    roster = await assignment.roster(env.session)
+    names = {user_id: label for user_id, label, _ in roster.members}
+    lines += [f"{i}. {line}" for i, line in enumerate(flow_lines(args.definition, names), start=1)]
+    overview = await assignment.overview(env.session, env.user_id or uuid.UUID(int=0))
+    lines += assign_notes(args.definition, overview)
     return Summary(title=title, lines=lines, step_count=steps)
 
 

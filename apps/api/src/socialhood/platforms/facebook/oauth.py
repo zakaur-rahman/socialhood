@@ -24,9 +24,10 @@ DIALOG = "https://www.facebook.com"
 GRAPH = "https://graph.facebook.com"
 
 # pages_manage_metadata lets us subscribe a Page to webhooks; pages_read_user_content reads the
-# comments on its posts. pages_manage_posts (GR-30) lets us publish; read_insights is not asked
-# for yet (docs/app-review).
+# comments on its posts. pages_manage_posts (GR-30) lets us publish; read_insights (C-131) lets
+# us read post insights and is asked for only with FB_REQUEST_INSIGHTS_SCOPE (docs/app-review).
 PUBLISH_SCOPE = "pages_manage_posts"
+INSIGHTS_SCOPE = "read_insights"
 SCOPES = (
     "pages_show_list",
     "pages_messaging",
@@ -36,6 +37,13 @@ SCOPES = (
     "pages_read_user_content",
     "pages_manage_posts",
 )
+
+
+def scopes(settings: Settings) -> tuple[str, ...]:
+    """The permissions to ask for: the fixed ones, plus read_insights when it is switched on."""
+    return SCOPES + ((INSIGHTS_SCOPE,) if settings.fb_request_insights_scope else ())
+
+
 # A Page task that lets a person answer messages as the Page.
 MESSAGING_TASK = "MESSAGING"
 PAGE_FIELDS = "id,name,username,picture.type(large){url},access_token,tasks"
@@ -75,7 +83,7 @@ def authorize_url(settings: Settings, state: str) -> str:
         "client_id": settings.meta_app_id or "",
         "redirect_uri": settings.fb_redirect_uri or "",
         "response_type": "code",
-        "scope": ",".join(SCOPES),
+        "scope": ",".join(scopes(settings)),
         "state": state,
     }
     return f"{DIALOG}/{settings.meta_graph_version}/dialog/oauth?{urlencode(query)}"

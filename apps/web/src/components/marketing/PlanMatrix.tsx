@@ -26,7 +26,7 @@ export function PlanMatrix() {
               role="region"
               aria-label={group.title}
               tabIndex={0}
-              className="overflow-x-auto rounded-2xl border border-line bg-panel/40 focus-visible:outline-offset-2"
+              className="overflow-x-auto rounded-2xl border border-line bg-panel-glass focus-visible:outline-offset-2"
             >
               <table className="w-full min-w-[34rem] border-collapse text-left">
                 <caption className="px-4 pt-4 text-left text-base font-semibold">{group.title}</caption>

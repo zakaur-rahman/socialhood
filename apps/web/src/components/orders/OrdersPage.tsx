@@ -28,7 +28,10 @@ type Filter = "all" | OrderStatus;
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All orders" },
   { value: "awaiting_payment", label: "Waiting for payment" },
+  { value: "partially_paid", label: "Partly paid" },
   { value: "paid", label: "Paid" },
+  { value: "fulfilled", label: "Shipped" },
+  { value: "refunded", label: "Refunded" },
   { value: "draft", label: "Drafts" },
   { value: "expired", label: "Expired" },
   { value: "cancelled", label: "Cancelled" },
@@ -37,7 +40,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 /**
  * Orders (GR-32, under Engage): the orders made in conversations, with their status and total, and
  * the payment settings for owners and admins. Orders are made from a conversation in the inbox
- * ("Create order"); here they are followed up: ask for payment, mark a UPI order paid, cancel.
+ * ("Create order"); here they are followed up: ask for payment, record a payment, ship, refund, change or cancel.
  * Reading is on every plan; making orders is part of Pro (PD-8) and the page says so.
  */
 export function OrdersPage() {

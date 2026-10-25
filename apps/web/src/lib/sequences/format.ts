@@ -26,6 +26,16 @@ export const ENTRY_TYPES: { value: SequenceEntryType; label: string }[] = [
   { value: "captured", label: "A lead is captured" },
   { value: "tagged", label: "A tag is added" },
   { value: "broadcast_replied", label: "Someone replies to a broadcast" },
+  { value: "lead_stage", label: "A lead moves into a stage" },
+];
+
+/** The stages a lead can start a sequence in (every stage; "new" is where they begin). */
+export const ENTRY_STAGES: { value: string; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "follow_up", label: "Follow up" },
+  { value: "won", label: "Won" },
+  { value: "lost", label: "Lost" },
 ];
 
 export const CAPTURE_KINDS: { value: "any" | "email" | "phone" | "field"; label: string }[] = [
@@ -104,8 +114,10 @@ export type EditorState = {
   tagId: string | null;
   broadcastId: string | null;
   captureKind: "any" | "email" | "phone" | "field";
+  entryStage: string | null;
   stopOnReply: boolean;
   stopTagIds: string[];
+  stopRemovedTagIds: string[];
   stopStages: string[];
   allowReentry: boolean;
   steps: StepState[];
@@ -140,8 +152,10 @@ export function blankState(accountId: string | null = null): EditorState {
     tagId: null,
     broadcastId: null,
     captureKind: "any",
+    entryStage: null,
     stopOnReply: true,
     stopTagIds: [],
+    stopRemovedTagIds: [],
     stopStages: [],
     allowReentry: false,
     steps: [blankStep({ amount: 1, unit: "days", from: "entry" })],
@@ -159,8 +173,10 @@ export function fromSequence(sequence: Sequence): EditorState {
     tagId: sequence.entry.tag_id ?? null,
     broadcastId: sequence.entry.broadcast_id ?? null,
     captureKind: sequence.entry.capture_kind ?? "any",
+    entryStage: sequence.entry.stage ?? null,
     stopOnReply: sequence.stop.on_reply,
     stopTagIds: [...sequence.stop.tag_ids],
+    stopRemovedTagIds: [...(sequence.stop.removed_tag_ids ?? [])],
     stopStages: [...sequence.stop.stages],
     allowReentry: sequence.allow_reentry,
     steps: (sequence.steps ?? []).map((step) => {
@@ -198,6 +214,7 @@ export function missingFor(state: EditorState): string[] {
   if (state.name.trim() === "") found.push("Give the sequence a name.");
   if (state.accountId === null) found.push("Choose the account it sends from.");
   if (state.entryType === "tagged" && state.tagId === null) found.push("Choose the tag that starts it.");
+  if (state.entryType === "lead_stage" && state.entryStage === null) found.push("Choose the stage that starts it.");
   state.steps.forEach((step, i) => {
     const where = `Step ${i + 1}`;
     if (step.text.trim() === "" && step.templateKey === null) found.push(`${where} needs a message or a template.`);
@@ -218,10 +235,12 @@ export function toBody(state: EditorState): SequenceBody | null {
       tag_id: state.entryType === "tagged" ? state.tagId : null,
       broadcast_id: state.entryType === "broadcast_replied" ? state.broadcastId : null,
       capture_kind: state.entryType === "captured" && state.captureKind !== "any" ? state.captureKind : null,
+      stage: state.entryType === "lead_stage" ? (state.entryStage as NonNullable<SequenceBody["entry"]["stage"]>) : null,
     },
     stop: {
       on_reply: state.stopOnReply,
       tag_ids: state.stopTagIds,
+      removed_tag_ids: state.stopRemovedTagIds,
       stages: state.stopStages as NonNullable<SequenceBody["stop"]>["stages"],
     },
     allow_reentry: state.allowReentry,

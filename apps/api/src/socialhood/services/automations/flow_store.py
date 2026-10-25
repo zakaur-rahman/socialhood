@@ -50,6 +50,7 @@ from socialhood.schemas.flows import (
     Flow,
     FlowDefinition,
     FlowSource,
+    PaymentStep,
     ProductStep,
     RemoveTag,
     SendStep,
@@ -157,6 +158,19 @@ async def _products(
     return {p.id: (p.active, frozenset(v.id for v in variants.get(p.id, []))) for p in rows}
 
 
+async def _payment_methods(session: AsyncSession) -> frozenset[str]:
+    """GR-32: the payment methods the workspace has set up (a payment step needs its method)."""
+    from socialhood.services.orders import payments
+
+    conn = await payments.get(session)
+    found: set[str] = set()
+    if conn is not None and conn.razorpay_key_id and conn.razorpay_secret_enc:
+        found.add("razorpay")
+    if conn is not None and conn.upi_vpa:
+        found.add("upi")
+    return frozenset(found)
+
+
 async def context(
     session: AsyncSession, automation: Automation, disclosure: str | None
 ) -> flows.Context:
@@ -176,6 +190,7 @@ async def context(
         products=await _products(session),
         commerce=allows(await current_plan(session), "commerce"),
         member_ids=await _member_ids(session),
+        payment_methods=await _payment_methods(session),
     )
 
 
@@ -247,6 +262,10 @@ async def save(
         plan, "commerce"
     ):
         raise entitlement_error("commerce", "Sending products is part of Pro.")
+    if any(isinstance(step, PaymentStep) for step in definition.steps) and not allows(
+        plan, "commerce"
+    ):
+        raise entitlement_error("commerce", "Asking for payment is part of Pro.")
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:
@@ -323,6 +342,7 @@ async def problems(
     shop = await _products(session) if flowing else {}
     commerce = allows(await current_plan(session), "commerce") if flowing else True
     member_ids = await _member_ids(session) if flowing else frozenset()
+    methods = await _payment_methods(session) if flowing else frozenset()
     out: dict[uuid.UUID, list[FieldError]] = {}
     for a in automations:
         d = (definitions_by_id or {}).get(a.id) or await definitions.stored_definition(session, a)
@@ -342,6 +362,7 @@ async def problems(
                 products=shop,
                 commerce=commerce,
                 member_ids=member_ids,
+                payment_methods=methods,
             )
             errors += flows.activation_errors(flows.parse(row.definition), ctx)
         out[a.id] = errors

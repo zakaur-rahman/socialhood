@@ -66,6 +66,53 @@ export function formatWait(seconds: number | null | undefined): string {
   return hours % 24 ? `${Math.floor(hours / 24)} d ${hours % 24} h` : `${hours / 24} d`;
 }
 
+/**
+ * The size of a percent change: whole numbers from 1%, one decimal under it, and "<0.1" for less
+ * than that. A change is never rounded to "0": only values that are exactly equal read as no change.
+ */
+export function percentSize(change: number): string {
+  const size = Math.abs(change);
+  if (size < 0.1) return "<0.1";
+  return size < 1 ? oneDecimal.format(size) : count.format(Math.round(size));
+}
+
+/**
+ * A small change that the API calls flat (under half a percent) but that is not zero: "−2 (−0.2%)"
+ * for a count, "+0.3 pts" for a share, "−0.2%" for a time. Null when the two are exactly equal (the
+ * only case that is "No change") or a side is unknown. `format` writes the absolute change.
+ */
+export function smallChange(
+  current: number | null | undefined,
+  previous: number | null | undefined,
+  options: { points?: boolean; format?: (n: number) => string; period: string },
+): Trend | null {
+  if (current === null || current === undefined || previous === null || previous === undefined) return null;
+  const diff = current - previous;
+  if (diff === 0) return null;
+  const direction = diff > 0 ? "up" : "down";
+  const sign = diff > 0 ? "+" : MINUS;
+  const before = `from ${options.period}`;
+  if (options.points) {
+    const size = Math.abs(diff) < 0.1 ? "<0.1" : oneDecimal.format(Math.abs(diff));
+    return { direction, good: null, text: `${size.startsWith("<") ? "" : sign}${size} pts`, words: `${direction} ${size === "<0.1" ? "less than 0.1" : size} percentage points ${before}` };
+  }
+  const pct = previous ? percentSize((diff / previous) * 100) : null;
+  const pctText = pct === null ? null : `${pct.startsWith("<") ? "" : sign}${pct}%`;
+  const absolute = options.format ? options.format(Math.abs(diff)) : null;
+  const text = absolute && pctText ? `${sign}${absolute} (${pctText})` : absolute ? `${sign}${absolute}` : (pctText ?? "");
+  return { direction, good: null, text, words: `${direction} ${absolute ?? ""}${pctText ? ` (${pct === "<0.1" ? "less than 0.1%" : `${pct}%`})` : ""} ${before}`.replace("  ", " ") };
+}
+
+/** A duration for a chart axis, short enough to stay on one line: "45s", "12m", "28h", "1d 4h". */
+export function formatWaitCompact(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  const hours = Math.round(s / 3600);
+  if (hours < 24) return `${hours}h`;
+  return hours % 24 ? `${Math.floor(hours / 24)}d ${hours % 24}h` : `${hours / 24}d`;
+}
+
 export type Trend = {
   direction: "up" | "down" | "flat";
   /** Whether the change is good news (more replies by AI, faster answers); null when neutral. */
@@ -82,7 +129,7 @@ const UNIT = { percent: { short: "%", long: "%" }, points: { short: " pts", long
 
 function trend(delta: number, size: string, unit: keyof typeof UNIT, period: string, better: Better): Trend {
   const before = `from the previous ${period}`;
-  if (size === "0") {
+  if (delta === 0) {
     return { direction: "flat", good: null, text: "No change", words: `no change ${before}` };
   }
   const direction = delta > 0 ? "up" : "down";
@@ -90,8 +137,8 @@ function trend(delta: number, size: string, unit: keyof typeof UNIT, period: str
   return {
     direction,
     good,
-    text: `${delta > 0 ? "+" : MINUS}${size}${UNIT[unit].short}`,
-    words: `${direction} ${size}${UNIT[unit].long} ${before}`,
+    text: size.startsWith("<") ? `${size}${UNIT[unit].short}` : `${delta > 0 ? "+" : MINUS}${size}${UNIT[unit].short}`,
+    words: `${direction} ${size.startsWith("<") ? "less than 0.1" : size}${UNIT[unit].long} ${before}`,
   };
 }
 
@@ -105,7 +152,7 @@ export function countTrend(
 ): Trend | null {
   if (previous <= 0) return null;
   const change = ((current - previous) / previous) * 100;
-  return trend(change, count.format(Math.round(Math.abs(change))), "percent", period, better);
+  return trend(change, percentSize(change), "percent", period, better);
 }
 
 /** A share (0-100) against the period before, in percentage points. */
@@ -117,7 +164,7 @@ export function rateTrend(
 ): Trend | null {
   if (current === null || current === undefined || previous === null || previous === undefined) return null;
   const change = current - previous;
-  return trend(change, oneDecimal.format(Math.abs(change)), "points", period, better);
+  return trend(change, Math.abs(change) < 0.1 && change !== 0 ? "<0.1" : oneDecimal.format(Math.abs(change)), "points", period, better);
 }
 
 /** A wait against the period before: the relative change; shorter is better. */
@@ -128,7 +175,7 @@ export function waitTrend(
 ): Trend | null {
   if (current === null || current === undefined || !previous) return null;
   const change = ((current - previous) / previous) * 100;
-  return trend(change, count.format(Math.round(Math.abs(change))), "percent", period, "lower");
+  return trend(change, percentSize(change), "percent", period, "lower");
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

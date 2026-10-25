@@ -14,7 +14,7 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("bg-brand-gradient text-on-brand", "bg-danger-fill")).toBe("text-on-brand bg-danger-fill");
     expect(cn("hover:bg-brand-gradient", "hover:bg-hover")).toBe("hover:bg-hover");
     // A gradient given later still layers over the variant's colour.
-    expect(cn("bg-primary", "bg-brand-gradient")).toBe("bg-primary bg-brand-gradient");
+    expect(cn("bg-brand-strong", "bg-brand-gradient")).toBe("bg-brand-strong bg-brand-gradient");
   });
 
   it("lets a motion token replace a duration or an easing", () => {
@@ -30,7 +30,7 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("shadow-floating", "shadow-none")).toBe("shadow-none");
     // A shadow colour layers on a size; it doesn't replace it.
     expect(cn("shadow-overlay", "shadow-black")).toBe("shadow-overlay shadow-black");
-    expect(cn("bg-popover", "bg-overlay")).toBe("bg-overlay");
+    expect(cn("bg-panel", "bg-overlay")).toBe("bg-overlay");
   });
 
   it("treats the crop mask as a shadow too, and brand-soft-hover as a colour (C-073)", () => {
@@ -40,8 +40,18 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("hover:bg-brand-soft-hover", "hover:bg-hover")).toBe("hover:bg-hover");
   });
 
+  it("treats the marketing glow shadows as shadow sizes, and the eyebrow tracking and display leading as such (C-127)", () => {
+    expect(cn("shadow-glow", "shadow-none")).toBe("shadow-none");
+    expect(cn("shadow-xl", "shadow-glow-hover")).toBe("shadow-glow-hover");
+    expect(cn("shadow-glow-button", "shadow-glow")).toBe("shadow-glow");
+    expect(cn("bg-glow-brand", "bg-glow-brand-top")).toBe("bg-glow-brand-top");
+    expect(cn("tracking-eyebrow", "tracking-tight")).toBe("tracking-tight");
+    expect(cn("leading-display", "leading-tight")).toBe("leading-tight");
+    expect(cn("bg-panel", "bg-panel-glass")).toBe("bg-panel-glass");
+  });
+
   it("still merges colours and sizes as tailwind-merge does", () => {
-    expect(cn("bg-primary", "bg-danger-fill")).toBe("bg-danger-fill");
+    expect(cn("bg-brand-strong", "bg-danger-fill")).toBe("bg-danger-fill");
     expect(cn("hover:bg-hover", "hover:bg-pressed")).toBe("hover:bg-pressed");
     expect(cn("text-sm", "text-2xs")).toBe("text-2xs");
     expect(cn("px-2", false, { "py-1": true })).toBe("px-2 py-1");

@@ -181,6 +181,14 @@ class MediaInsights:
     total_interactions: int | None = None
     profile_visits: int | None = None
     follows: int | None = None
+    # Instagram Stories only: replies and the taps and swipes through the Story.
+    replies: int | None = None
+    taps_forward: int | None = None
+    taps_back: int | None = None
+    swipes_forward: int | None = None
+    exits: int | None = None
+    # Facebook Page posts only: clicks on the post.
+    clicks: int | None = None
 
     def metrics(self) -> dict[str, int]:
         """The known values, as stored in a snapshot's ``metrics``."""
@@ -364,15 +372,24 @@ class PlatformAdapter(Protocol):
         ...
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
         """A Reel's container (single videos publish as Reels, shown in the feed too); returns
-        its id. The video processes on the platform: poll ``get_container_status``."""
+        its id. The video processes on the platform: poll ``get_container_status``. A Facebook
+        Page publishes the video as a normal video unless ``page_reel`` (the composer's Reel
+        choice, C-131); Instagram ignores it."""
         ...
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
         """A Story's container (GR-39): one image or video, no caption; returns its id. A video
-        processes on the platform: poll ``get_container_status``. Instagram only."""
+        processes on the platform: poll ``get_container_status``. Instagram, and Facebook Pages
+        (C-131)."""
         ...
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:

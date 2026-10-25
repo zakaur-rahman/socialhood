@@ -125,7 +125,7 @@ async def people(desk: Shop, sequence_id: str, **query: Any) -> list[dict[str, A
 
 
 async def reply(desk: Shop, who: Customer, said: str = "Yes please") -> None:
-    sent = await desk.inject(kind="dm", text=said, from_id=who.wa_id)
+    sent = await desk.inject(kind="dm", text=said, from_id=who.wa_id, from_username=who.name)
     assert sent.status_code == 200, sent.text
     await desk.process_webhooks()
 

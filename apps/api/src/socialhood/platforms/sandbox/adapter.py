@@ -87,9 +87,15 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import outbox
 
         short = platform_user_id[-4:]
+        # An id an e2e spec chose (``e2e_…``, or a phone number: POST /dev/sandbox/inbound
+        # from_id) is the username too, so the spec can find the contact; every other id gets a
+        # made-up one.
+        chosen = (
+            platform_user_id.startswith("e2e_") and platform_user_id.replace("_", "").isalnum()
+        ) or platform_user_id.isdigit()
         return ContactProfile(
             name=f"Sandbox customer {short}",
-            username=f"customer_{short}",
+            username=platform_user_id if chosen else f"customer_{short}",
             profile_picture_url=None,
             follows_business=outbox.follows(platform_user_id),
         )
@@ -127,6 +133,8 @@ class SandboxAdapter:
     async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
         from socialhood.platforms.sandbox import history
 
+        if acct.platform == "facebook":
+            return []  # Facebook has no read API for a Page's Stories (C-131)
         return history.stories(acct)
 
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
@@ -242,12 +250,22 @@ class SandboxAdapter:
         return publishing.create_image_container(acct, image_url=image_url, caption=caption)
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
         from socialhood.platforms.sandbox import publishing
 
         return publishing.create_reel_container(
-            acct, video_url=video_url, caption=caption, share_to_feed=share_to_feed
+            acct,
+            video_url=video_url,
+            caption=caption,
+            share_to_feed=share_to_feed,
+            page_reel=page_reel,
         )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:

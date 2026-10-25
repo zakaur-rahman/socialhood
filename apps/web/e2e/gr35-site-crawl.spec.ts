@@ -63,7 +63,8 @@ test.describe("GR-35 website crawl", () => {
       const row = page.getByRole("row").filter({ hasText: "127.0.0.1" }).first();
       await expect(row).toBeVisible();
       await expect(row.getByText("4 pages")).toBeVisible({ timeout: 90_000 });
-      await expect(row.getByText("Ready").first()).toBeVisible({ timeout: 90_000 });
+      // The badge is in the row twice (one only on narrow screens): the one that shows.
+      await expect(row.getByText("Ready").filter({ visible: true }).first()).toBeVisible({ timeout: 90_000 });
 
       // robots.txt was read and its Disallow respected.
       expect(site.hits.get("/robots.txt")).toBeGreaterThan(0);
@@ -84,7 +85,11 @@ test.describe("GR-35 website crawl", () => {
       await expect(pages.locator("li[data-status=removed]")).toHaveCount(1);
 
       // Exclude a path: its pages go and the path is listed.
-      await pages.getByLabel("Path to exclude").fill("/blog");
+      // The list refreshes after a removal and can take the typed path with it: type until it holds.
+      await expect(async () => {
+        await pages.getByLabel("Path to exclude").fill("/blog");
+        await expect(pages.getByRole("button", { name: "Exclude" })).toBeEnabled({ timeout: 1_000 });
+      }).toPass({ timeout: 15_000 });
       await pages.getByRole("button", { name: "Exclude" }).click();
       await expect(pages.locator("li[data-status=excluded]")).toHaveCount(1);
       await expect(pages.getByRole("button", { name: "Stop excluding /blog" })).toBeVisible();
@@ -115,7 +120,8 @@ test.describe("GR-35 website crawl", () => {
       await form.getByRole("button", { name: "Add" }).click();
 
       const row = page.getByRole("row").filter({ hasText: "127.0.0.1" }).first();
-      await expect(row.getByText("Ready").first()).toBeVisible({ timeout: 90_000 });
+      // The badge is in the row twice (one only on narrow screens): the one that shows.
+      await expect(row.getByText("Ready").filter({ visible: true }).first()).toBeVisible({ timeout: 90_000 });
       await row.getByRole("button", { name: /Show pages of/ }).click();
       const pages = page.getByTestId(/^site-pages-/);
       await expect(pages.getByRole("button", { name: "Crawl now" })).toBeVisible();
