@@ -16,7 +16,7 @@ import { SECTION_IDS } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { BentoGrid, BentoGridItem } from "./effects/bento-grid";
-import { LazyIllustration, type IllustrationName } from "./illustrations/LazyIllustration";
+import { Illustration, type IllustrationName } from "./illustrations/Illustrations";
 import { Container, MARKETING_CARD_GLASS, MARKETING_CARD_HOVER, SectionHeading } from "./primitives";
 
 type Feature = {
@@ -116,7 +116,7 @@ export function Features() {
                   <feature.icon className="size-4" aria-hidden />
                 </span>
               }
-              header={<LazyIllustration name={feature.illustration} className="h-auto min-h-56 flex-1" />}
+              header={<Illustration name={feature.illustration} className="h-auto min-h-56 flex-1" />}
             />
           ))}
         </BentoGrid>
