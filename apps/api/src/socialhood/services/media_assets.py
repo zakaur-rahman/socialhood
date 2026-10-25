@@ -80,6 +80,16 @@ DOCUMENT = Limit(
 # limit (C-134); the publishing rules hold carousel and Facebook videos to 90 seconds, Stories to
 # 60. The size cap is the ``post_video_max_mb`` setting (100 MB unless raised).
 POST_VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=900)
+
+
+def _duration_words(seconds: float) -> str:
+    """90 -> "90 seconds", 900 -> "15 minutes": whole minutes read as minutes from 2 minutes up."""
+    whole = round(seconds)
+    if whole >= 120 and whole % 60 == 0:
+        return f"{whole // 60} minutes"
+    return f"{whole} seconds"
+
+
 POST_UNSUPPORTED = "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."
 # Knowledge files (FR-KB-01): the formats ingestion reads, up to 10 MB.
 KNOWLEDGE_FILE = Limit(
@@ -196,7 +206,8 @@ def _within(resource: StoredResource, limit: Limit) -> Limit:
         and resource.duration_s > limit.max_duration_s
     ):
         raise ApiError(
-            "unsupported_media", f"{limit.label} can be up to {limit.max_duration_s:.0f} seconds."
+            "unsupported_media",
+            f"{limit.label} can be up to {_duration_words(limit.max_duration_s)}.",
         )
     return limit
 
