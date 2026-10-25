@@ -14,7 +14,14 @@ import type { SocialAccount } from "@/lib/api/types";
 
 import {
   assetLabel,
+  AUDIO_NAME_MAX_CHARS,
   CAPTION_MAX_CHARS,
+  COLLABORATORS_MAX,
+  igReelProblem,
+  LOCATION_HELP,
+  normalizeUsername,
+  parseLocation,
+  USER_TAGS_MAX_PER_IMAGE,
   captionLimit,
   cannotPublishReason,
   countText,
@@ -50,6 +57,7 @@ export const CHECKLIST_KEYS: readonly ChecklistKey[] = [
   "caption",
   "hashtags",
   "mentions",
+  "extras",
   "publishing_limit",
   "publish_at",
 ];
@@ -62,6 +70,7 @@ export const LOCAL_KEYS: ReadonlySet<ChecklistKey> = new Set([
   "caption",
   "hashtags",
   "mentions",
+  "extras",
   "publish_at",
 ]);
 
@@ -176,6 +185,8 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     items.push(pass("media", deriveFormat(known) === "reel" ? "Reel" : "Single image"));
   }
 
+  // A single video for Instagram alone is a Reel: 3 seconds to 15 minutes (C-134); other videos stay at 90 seconds.
+  const igAlone = ig && !fb && assetIds.length === 1;
   // media_files: each asset's aspect ratio and video length (type and size are checked on upload)
   const fileProblems: ChecklistItem[] = [];
   assetIds.forEach((id, index) => {
@@ -189,7 +200,11 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     } else if (crop) {
       const shape = crop === "tall" ? "taller than 4:5" : "wider than 1.91:1";
       fileProblems.push(fail("media_files", `${label} is ${shape}. Crop it to 1:1, 4:5 or 1.91:1.`, `asset_ids.${index}`));
-    } else if (!story && videoTooLong(asset)) {
+    } else if (!story && igAlone && igReelProblem(asset)) {
+      fileProblems.push(
+        fail("media_files", `${label} is ${formatDuration(asset.duration_s ?? 0)} long. ${igReelProblem(asset)}`, `asset_ids.${index}`),
+      );
+    } else if (!story && !igAlone && videoTooLong(asset)) {
       fileProblems.push(
         fail(
           "media_files",
@@ -216,6 +231,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   // A Story has no caption, hashtags or mentions: what the draft holds is kept but never sent.
   if (story) {
     items.push(pass("caption", "Stories are published without a caption"));
+    items.push(...extrasChecklist({ draft, assets, ig, story, reel, singleVideo: false }));
     return finishChecklist(items, draft, now);
   }
 
@@ -269,7 +285,91 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     items.push(...(mentionProblems.length ? mentionProblems : [pass("mentions", `Up to ${MAX_MENTIONS} mentions`)]));
   }
 
+  const singleVideo = assetIds.length === 1 && assets[assetIds[0]]?.resource_type === "video";
+  items.push(...extrasChecklist({ draft, assets, ig, story, reel, singleVideo }));
   return finishChecklist(items, draft, now);
+}
+
+type ExtrasInput = {
+  draft: ScheduledPostDraft;
+  assets: Record<string, AssetInfo>;
+  ig: boolean;
+  story: boolean;
+  reel: boolean;
+  /** The post's one asset is a video (an Instagram Reel). */
+  singleVideo: boolean;
+};
+
+/**
+ * The Instagram extras (FR-PUB-07, C-134): collaborators, user tags, the location and a Reel's
+ * options. Nothing is listed for a post that uses none. They are Instagram's: a Story or a post
+ * without an Instagram account cannot carry them.
+ */
+export function extrasChecklist({ draft, assets, ig, story, reel, singleVideo }: ExtrasInput): ChecklistItem[] {
+  const items: ChecklistItem[] = [];
+  const unavailable = (what: string, field: string): boolean => {
+    if (story) {
+      items.push(fail("extras", `${what} are not available on Stories. Remove them or publish a post.`, field));
+      return true;
+    }
+    if (!ig || reel) {
+      items.push(fail("extras", `${what} are an Instagram feature. Choose an Instagram account or remove them.`, field));
+      return true;
+    }
+    return false;
+  };
+
+  const collaborators = draft.collaborators ?? [];
+  if (collaborators.length && !unavailable("Collaborators", "collaborators")) {
+    const names = collaborators.map((raw) => ({ raw, name: normalizeUsername(raw) }));
+    const bad = names.find((item) => !item.name);
+    const valid = [...new Set(names.flatMap((item) => (item.name ? [item.name] : [])))];
+    if (bad) items.push(fail("extras", `${bad.raw} is not a valid Instagram username.`, "collaborators"));
+    else if (valid.length > COLLABORATORS_MAX) {
+      items.push(fail("extras", `Add at most ${COLLABORATORS_MAX} collaborators (now ${valid.length}).`, "collaborators"));
+    } else items.push(pass("extras", `Collaborators: ${valid.map((name) => `@${name}`).join(", ")}`));
+  }
+
+  const tags = draft.user_tags ?? [];
+  const assetIds = draft.asset_ids ?? [];
+  const tagged = assetIds
+    .map((id, index) => ({ index, count: tags.filter((tag) => tag.asset_id === id).length }))
+    .filter((item) => item.count > 0);
+  if (tagged.length && !unavailable("User tags", "asset_ids")) {
+    const over = tagged.filter((item) => item.count > USER_TAGS_MAX_PER_IMAGE);
+    for (const item of over) {
+      items.push(fail("extras", `Tag at most ${USER_TAGS_MAX_PER_IMAGE} accounts in one photo (now ${item.count}).`, `asset_ids.${item.index}`));
+    }
+    if (!over.length) {
+      const total = tagged.reduce((sum, item) => sum + item.count, 0);
+      items.push(pass("extras", `${total} ${total === 1 ? "tag" : "tags"} on ${tagged.length} ${tagged.length === 1 ? "photo" : "photos"}`));
+    }
+  }
+
+  if (draft.location && draft.location.trim() && !unavailable("Locations", "location")) {
+    items.push(parseLocation(draft.location) ? pass("extras", "Location set") : fail("extras", LOCATION_HELP, "location"));
+  }
+
+  const cover = draft.cover_asset_id ? assets[draft.cover_asset_id] : undefined;
+  const reelOptions =
+    Boolean(draft.cover_asset_id) || draft.cover_offset_ms != null || draft.share_to_feed === false || Boolean(draft.audio_name?.trim());
+  if (reelOptions) {
+    if (story || !ig || reel || !singleVideo) {
+      items.push(fail("extras", "Reel options only apply to a single Instagram video. Remove them.", "cover_asset_id"));
+    } else {
+      const problems: ChecklistItem[] = [];
+      if (cover && cover.resource_type !== "image") problems.push(fail("extras", "The cover must be an image.", "cover_asset_id"));
+      const video = assets[assetIds[0]];
+      if (draft.cover_offset_ms != null && video?.duration_s != null && draft.cover_offset_ms > video.duration_s * 1000) {
+        problems.push(fail("extras", "The cover frame is past the end of the video.", "cover_offset_ms"));
+      }
+      if ((draft.audio_name?.trim().length ?? 0) > AUDIO_NAME_MAX_CHARS) {
+        problems.push(fail("extras", `Keep the audio name to ${AUDIO_NAME_MAX_CHARS} characters.`, "audio_name"));
+      }
+      items.push(...(problems.length ? problems : [pass("extras", "Reel options set")]));
+    }
+  }
+  return items;
 }
 
 /** publish_at: only when the post has a time. */
@@ -293,6 +393,9 @@ export function itemsFromErrors(errors: ProblemField[]): ChecklistItem[] {
 /** The checklist key a field belongs to. */
 export function keyOfField(field: string): ChecklistKey {
   if (/^targets\.\d+\.caption_override$/.test(field) || field === "caption" || field === "first_comment") return "caption";
+  if (["collaborators", "location", "user_tags", "cover_asset_id", "cover_offset_ms", "audio_name", "share_to_feed"].includes(field.split(".")[0])) {
+    return "extras";
+  }
   if (field.startsWith("asset_ids.")) return "media_files";
   if (field.startsWith("asset_ids")) return "media";
   if (field.startsWith("publish_at")) return "publish_at";
@@ -329,8 +432,9 @@ export function mergeChecklist(
   for (const key of CHECKLIST_KEYS) {
     if (failures.some((item) => item.key === key)) continue;
     const source = LOCAL_KEYS.has(key) ? local : server;
-    const ok = source.find((item) => item.key === key && item.ok);
-    if (ok) passing.push(ok);
+    // The Instagram options report one passing line each under "extras"; every other key has one.
+    const oks = source.filter((item) => item.key === key && item.ok);
+    passing.push(...(key === "extras" ? oks : oks.slice(0, 1)));
   }
   const order = (item: ChecklistItem) => CHECKLIST_KEYS.indexOf(item.key);
   failures.sort((a, b) => order(a) - order(b));

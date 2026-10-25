@@ -8,6 +8,7 @@ from datetime import date, datetime
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
     AccountInsights,
+    CollaboratorStatus,
     CommentPage,
     ContactProfile,
     ContainerMedia,
@@ -19,6 +20,7 @@ from socialhood.platforms.base import (
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
+    PublishExtras,
     PublishingQuota,
     SendResult,
     TokenGrant,
@@ -328,12 +330,23 @@ class InstagramAdapter:
         return await publishing.publishing_quota(self.http, self._graph, self._token(acct), acct)
 
     async def create_image_container(
-        self, acct: SocialAccount, *, image_url: str, caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        image_url: str,
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         from socialhood.platforms.instagram import publishing
 
         return await publishing.create_image_container(
-            self.http, self._graph, self._token(acct), acct, image_url=image_url, caption=caption
+            self.http,
+            self._graph,
+            self._token(acct),
+            acct,
+            image_url=image_url,
+            caption=caption,
+            extras=extras,
         )
 
     async def create_reel_container(
@@ -344,6 +357,7 @@ class InstagramAdapter:
         caption: str,
         share_to_feed: bool = True,
         page_reel: bool = False,
+        extras: PublishExtras | None = None,
     ) -> str:
         from socialhood.platforms.instagram import publishing
 
@@ -355,6 +369,7 @@ class InstagramAdapter:
             video_url=video_url,
             caption=caption,
             share_to_feed=share_to_feed,
+            extras=extras,
         )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
@@ -372,12 +387,32 @@ class InstagramAdapter:
         )
 
     async def create_carousel_container(
-        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        children: Sequence[str],
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         from socialhood.platforms.instagram import publishing
 
         return await publishing.create_carousel_container(
-            self.http, self._graph, self._token(acct), acct, children=children, caption=caption
+            self.http,
+            self._graph,
+            self._token(acct),
+            acct,
+            children=children,
+            caption=caption,
+            extras=extras,
+        )
+
+    async def list_collaborators(
+        self, acct: SocialAccount, media_ref: str
+    ) -> list[CollaboratorStatus]:
+        from socialhood.platforms.instagram import publishing
+
+        return await publishing.list_collaborators(
+            self.http, self._graph, self._token(acct), media_ref
         )
 
     async def get_container_status(

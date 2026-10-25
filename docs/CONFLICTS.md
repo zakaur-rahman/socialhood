@@ -5577,3 +5577,125 @@ The e2e run found these in production code:
   stories in the worker's memory, which the API process can't see in the e2e stack.
 - *Open:* the UI shots inbox-list-1536 and conversation-1536 failed on a network error
   (`ERR_NAME_NOT_RESOLVED`); axe reports two contrast issues on sign-in.
+
+
+## C-134 · Instagram collaborators, user tags, location and Reel options (FR-PUB-07, feature/fr-pub-07)
+
+The owner approved the Instagram publishing extras of FR-PUB-07 ("user tags; collaborators;
+location") and, in a second step, the Reel options. Meta's IG User Media and IG Media Collaborators
+references were read on 2026-10-25; what the code relies on and what stays unverified is in
+`docs/verification.md` row 51. Built on the combined branch at a1ef4f73 (migrations 0051, 0052).
+
+### What Meta says, and where its pages disagree
+- **Collaborators.** `collaborators` on `POST /{ig}/media`: Instagram usernames, feed images, Reels
+  and carousels, not Stories. *Meta's pages disagree on the maximum: the publishing reference says
+  up to 3, the collaborators reference up to 5. We allow 3* (`COLLABORATORS_MAX`), the stricter one.
+- **Invites.** `GET /{media}/collaborators?fields=username,invite_status` returns Accepted or
+  Pending, only for users who allow collaborator tagging, with the media creator's token. *Meta names
+  `instagram_basic` and `pages_read_engagement` (Facebook Login); we connect with Instagram Login, so
+  whether the read works at all is unverified.* A collaborator who is not returned stays Pending; a
+  failed read keeps the last answer.
+- **User tags.** `[{username, x, y}]`, x and y from 0 to 1 from the top left. The reference states no
+  count limit; we use 20 per photo (Instagram's own limit in the app, unverified for the API). Tags go
+  on single images and on the child image containers of a carousel. *The reference does not say
+  whether Reels take them: we send none on Reels and the composer offers none on videos.*
+- **Location.** `location_id` is the id of a Facebook Page that has a location. *The reference says
+  both that carousels do not support it and lists it on the carousel container: we send it on the
+  carousel container.* Finding a Page by place needs the Pages search, which for our app needs Page
+  Public Metadata Access (App Review, not requested). **So there is no search: the composer takes a
+  Page's numeric id or its `profile.php?id=` / `pages/…/{id}` link**, validated on save; a vanity
+  link has no id in it and is refused with a plain explanation. Search waits on the review.
+- **Reels (IG User Media).** 3 seconds to 15 minutes, 300 MB, `cover_url` (JPEG, 8 MB, sRGB, 9:16
+  recommended), `thumb_offset` in ms (`cover_url` wins when both are set), `audio_name` (renamed
+  only once), `share_to_feed`.
+
+### Design
+- **Stored per post, not per target.** `scheduled_posts.collaborators text[]` (at most 3, a check),
+  `location_id`; `scheduled_post_assets.user_tags jsonb`; `scheduled_post_targets.collaborator_statuses`
+  and `collaborators_checked_at`. Reel options (0052): `cover_asset_id` (an uploaded image, SET NULL),
+  `cover_offset_ms`, `share_to_feed` (default true, as before), `audio_name`. A cross-post to a Page
+  and Instagram sends the extras to the Instagram target only; Pages ignore them (the adapters take
+  `extras` and drop it). Per-target values were not needed.
+- **One value object.** `platforms.base.PublishExtras` (collaborators, location, user tags, cover
+  URL, frame offset, audio name) and `ContainerMedia.user_tags` for carousel children. The adapter
+  methods for images, Reels and carousel containers take `extras=`; `list_collaborators` is a new
+  adapter method (Pages, the website chat and WhatsApp return nothing).
+- **Where each field goes.** Image: collaborators, location, user tags. Reel: collaborators,
+  location, `cover_url` or `thumb_offset`, `audio_name`, `share_to_feed`. Carousel: tags on each child
+  image, collaborators and location on the parent. Stories: nothing (unchanged container).
+- **Request.** `ScheduledPostDraft` gains `collaborators`, `location` (id or link), `user_tags`
+  (`asset_id`, `username`, `x`, `y`), `cover_asset_id`, `cover_offset_ms`, `share_to_feed`,
+  `audio_name`. Usernames are normalised (no "@", lowercase, repeats collapse). Bad input is a 422 on
+  `collaborators`, `location`, `user_tags.{i}`, `asset_ids.{i}`, `cover_asset_id` or `audio_name`.
+  `ScheduledPost` returns the same, `cover_url`, each asset's `user_tags`, each target's
+  `collaborators` (`username`, `status`) with `collaborators_checked_at`, and `video_max_mb`.
+- **Checklist.** One new key, `extras`, listed only when a post uses one (so existing posts show no new
+  line). Plain-language failures: more than 3 collaborators, an invalid username, tags over 20 on a
+  photo, an unreadable location, "not available on Stories", "an Instagram feature" for a Facebook-only
+  post, Reel options on something that is not one video, a cover over 8 MB or not an image, a cover
+  frame past the end of the video, an audio name over 100 characters. The composer computes the same
+  checks locally. When the options stop applying (a Story, no Instagram account, not one video) the
+  composer drops the hidden values so they cannot fail a checklist the user cannot see.
+- **Errors from Meta.** A refusal that names `location`, `collaborator`, `user_tag`, `cover`,
+  `thumb_offset` or `audio_name` gets a readable reason (no subcode is documented for them).
+- **Invite status.** At publish every collaborator is Pending. `refresh_collaborator_invites` (periodic,
+  every 15 minutes) reads each published Instagram target with collaborators, at most once an hour, for
+  three days; `POST /v1/w/{wid}/scheduled-posts/{id}/collaborators/refresh` reads now (409 until the post
+  has published). The published banner lists each collaborator as Pending or Accepted, when they were
+  last read, a Refresh button, and "They can't be changed after publishing" (Meta has no call to
+  change them). The job is in `jobs/recovery.py` and needs no new task module.
+- **Sandbox.** Containers keep their extras; the sandbox refuses what Meta refuses (more than 3
+  collaborators, collaborators on a Story, tags outside 0 to 1 or on a video, a location that is not a
+  numeric id, a cover on a non-Reel). Invites read Pending, or Accepted for a username starting with
+  "accept" or after `accept_collaborator`. The sandbox keeps its state in the worker's memory, so the
+  API process (the Refresh button) cannot see an invite the worker recorded; e2e shows Pending and the
+  "Checked" time, Accepted is covered in the integration and component tests.
+
+### Reel options and limits (the owner's scope addition)
+- **Length.** A single video for Instagram alone is a Reel: 3 seconds to 15 minutes (was 90 s with no
+  minimum). Videos in a carousel and Facebook videos keep 90 seconds (*Meta's carousel video limits
+  were not looked up: unchanged*); Stories keep 3 to 60; Facebook Reels 3 to 90. The upload
+  registration limit (`POST_VIDEO`) is now 15 minutes, with the per-format rules in the checklist.
+- **Size.** Meta takes 300 MB. Our upload is a signed single POST straight to Cloudinary (XMLHttpRequest,
+  no chunking), and Cloudinary caps one request at 100 MB (the free plan's file limit too; larger
+  files need chunked upload and a plan that allows them). *So the cap is a setting,
+  `POST_VIDEO_MAX_MB`, default 100 (10 to 300), enforced when the asset is registered and in the
+  checklist; the composer states the current cap from `ScheduledPost.video_max_mb`.* Above 100 MB the
+  browser sends 20 MB chunks with `X-Unique-Upload-Id` and `Content-Range` (written to Cloudinary's
+  documented protocol, not run). Raising the setting is an ops decision that depends on the plan.
+- **Composer.** A single video for Instagram shows "Reel options": a cover (a frame in seconds, or an
+  uploaded JPEG or PNG up to 8 MB; the image wins), "Also share to feed" (on by default), an audio name
+  with the note that Instagram allows renaming it once. The preview shows the cover image, the audio
+  name and the collaborators.
+
+### Tags and the preview
+Tags are placed in a dialog from a tile's Tag people button: tap the photo to place a tag, type the
+username, drag the marker (or use the arrow keys), remove it. Positions are stored as fractions. The
+preview draws the tags on the photo and shows "name and @collaborator" with a location line. Tapping the
+preview itself was not used: the dialog gives a large, stable target and keyboard use.
+
+### Not done, and pending
+- Location search (needs Page Public Metadata Access; not requested).
+- Tags on videos and Reels, and per-target values.
+- A cover image uploaded in e2e (it needs real storage); the e2e uses the frame.
+- *Pending PD-n:* none; the decisions above were scoped by the brief. The collaborator cap (3) and the
+  tag cap (20) are constants in `models/publishing.py`.
+- *For the coordinator:* regenerate the client (`UserTag`, `UserTagIn`, `CollaboratorResult`, the new
+  `ScheduledPostDraft` and `ScheduledPost` fields, `ChecklistKey` gains `extras`, the
+  `refresh_post_collaborators` operation); the web uses aliases in `lib/publishing/types.ts`.
+  Migrations 0051 and 0052 are expand-only.
+
+### Tests (written; the DB-free ones were run)
+Unit: `test_instagram_extras.py` (parsing, checklist, payloads, sandbox, invite rules); the contract
+test `test_instagram_publishing.py` gains payload cases; `test_publishing_rules.py` expects `extras`
+only when used. Integration (not run): `test_instagram_extras.py`. Vitest (not run):
+`TagDialog.test.tsx`, `InstagramExtras.test.tsx`, `StatusBanner.test.tsx`, `checklist.test.ts`,
+`rules.test.ts`, `upload.test.ts`. E2E (not run): `fr-pub-07-collab-tags-location.spec.ts`.
+
+*Fixed before the PR:* the composer checklist showed only the first passing line under the `extras` key, so with collaborators, a tag and a location set only "Collaborators: ..." was listed. `mergeChecklist` now keeps every passing `extras` line (one per option); other keys still show one. The `share_to_feed` field the generated client now marks as required is sent as `true` by the new-draft bodies (`newDraftBody`, `useCreateScheduledPost`).
+Also fixed: `publish_target` set each collaborator's Pending invite after `settle`, whose `scheduled_post.updated` event is built inside it, so the live banner showed no invites until a reload. They are now set before `settle`.
+
+- **Media-library video limit.** The upload is checked before the post format is known, so it allows
+  the most any post accepts: 15 minutes (900 s), an Instagram Reel's limit. The 90-second limit for
+  carousel and Facebook videos (and 60 s for Stories) is enforced when the post is saved, by the
+  publishing rules. Upload message: "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."

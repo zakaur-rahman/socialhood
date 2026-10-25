@@ -213,6 +213,21 @@ async def queue_post(
 
 
 @router.post(
+    "/scheduled-posts/{scheduled_post_id}/collaborators/refresh",
+    operation_id="refresh_post_collaborators",
+)
+async def refresh_post_collaborators(
+    request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
+) -> ScheduledPost:
+    """FR-PUB-07: read each collaborator's invite status (Pending or Accepted) from Instagram
+    now. It is also read every hour for three days after publishing. 409 conflict while the post
+    has not published. A read that fails leaves the last answer."""
+    out = await posts.refresh_collaborators(session, scheduled_post_id, _env(request, ctx))
+    await commit_and_publish(session, request.app.state.redis)
+    return out
+
+
+@router.post(
     "/scheduled-posts/{scheduled_post_id}/duplicate",
     status_code=201,
     operation_id="duplicate_scheduled_post",

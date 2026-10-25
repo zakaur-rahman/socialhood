@@ -16,6 +16,7 @@ from datetime import date, datetime
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
     AccountInsights,
+    CollaboratorStatus,
     CommentPage,
     ContactProfile,
     ContainerMedia,
@@ -27,6 +28,7 @@ from socialhood.platforms.base import (
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
+    PublishExtras,
     PublishingQuota,
     SendResult,
     TokenGrant,
@@ -140,7 +142,12 @@ class WebAdapter:
         raise _unavailable(NO_POSTS)
 
     async def create_image_container(
-        self, acct: SocialAccount, *, image_url: str, caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        image_url: str,
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise _unavailable(NO_POSTS)
 
@@ -152,6 +159,7 @@ class WebAdapter:
         caption: str,
         share_to_feed: bool = True,
         page_reel: bool = False,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise _unavailable(NO_POSTS)
 
@@ -162,9 +170,19 @@ class WebAdapter:
         raise _unavailable(NO_POSTS)
 
     async def create_carousel_container(
-        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        children: Sequence[str],
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise _unavailable(NO_POSTS)
+
+    async def list_collaborators(
+        self, acct: SocialAccount, media_ref: str
+    ) -> list[CollaboratorStatus]:
+        return []
 
     async def get_container_status(
         self, acct: SocialAccount, container_ref: str

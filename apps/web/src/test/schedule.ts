@@ -41,7 +41,23 @@ export function scheduledPost(overrides: Partial<ScheduledPostSummary> = {}): Sc
 
 /** The API's answer to a lifecycle call: the summary plus the composer's fields. */
 export function detail(post: ScheduledPostSummary, overrides: Partial<ScheduledPostDetail> = {}): ScheduledPostDetail {
-  return { ...post, first_comment: null, assets: [], automations: [], checklist: [], ready: true, ...overrides };
+  return {
+    ...post,
+    first_comment: null,
+    collaborators: [],
+    location_id: null,
+    cover_asset_id: null,
+    cover_url: null,
+    cover_offset_ms: null,
+    share_to_feed: true,
+    audio_name: null,
+    video_max_mb: 100,
+    assets: [],
+    automations: [],
+    checklist: [],
+    ready: true,
+    ...overrides,
+  };
 }
 
 export function calendarMessage(overrides: Partial<CalendarMessage> = {}): CalendarMessage {

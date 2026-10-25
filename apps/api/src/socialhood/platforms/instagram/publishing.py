@@ -26,6 +26,12 @@ is a comma-separated string, not a JSON array.
 - lost answer: the account's recent posts (``GET /me/media``) matched on caption and time; an IG
   Container has no field naming the post it became
 - first comment: ``POST /{media_id}/comments`` {message}
+- extras (FR-PUB-07, C-134; Meta's IG User Media and IG Media Collaborators references, checked
+  2026-10-25): ``collaborators`` (a list of usernames; feed images, Reels and carousels, not
+  Stories), ``location_id`` (a Facebook Page id with a location), ``user_tags`` ([{username, x, y}]
+  on images, children of a carousel included) and, on a Reel, ``cover_url``, ``thumb_offset``
+  (ms) and ``audio_name``. ``GET /{media_id}/collaborators?fields=username,invite_status`` reads
+  each collaborator's invite after publishing.
 
 Creating containers may be retried (an unpublished container expires after 24 h).
 ``publish_container`` and ``post_comment`` are writes: failures go through
@@ -34,7 +40,11 @@ limit) is already ``platform_rejected`` and 2207008 retryable in ``platforms.err
 publishing subcodes Meta calls temporary (2207001, 2207003, 2207027, 2207032, 2207053) are made
 retryable here, and every known subcode gets a readable reason (FR-PUB-06).
 
-Unverified until a real account publishes (T0.9, docs/verification.md; Stories: C-114): the
+Unverified until a real account publishes (T0.9, docs/verification.md; Stories: C-114; extras:
+C-134): whether the JSON body takes ``collaborators`` and ``user_tags`` as arrays (Meta's examples
+use form encoding), the user tag limit per image, tags on Reels, ``location_id`` on carousels
+(the reference says both ways), the wording of the extras' error messages, and the Story/other
+limits below: the
 Story limits (image 8 MB JPEG, video 3 to 60 s, 9:16 recommended), whether Stories count against
 the publishing quota, the Story-specific error subcodes (STORY_REASONS reuses the general
 subcodes with Story wording), the quota answer's shape
@@ -57,9 +67,11 @@ from socialhood.models.publishing import (
     DEFAULT_PUBLISHING_LIMIT,
 )
 from socialhood.platforms.base import (
+    CollaboratorStatus,
     ContainerMedia,
     ContainerStatus,
     PlatformMedia,
+    PublishExtras,
     PublishingQuota,
 )
 from socialhood.platforms.errors import PlatformError
@@ -76,6 +88,7 @@ from socialhood.platforms.outcome import DELIVERY_UNKNOWN, for_write
 
 QUOTA_FIELDS = "quota_usage,config"
 STATUS_FIELDS = "status_code,status"
+COLLABORATOR_FIELDS = "username,invite_status"
 # Recent posts searched for the post a lost publish answer made: the account can't have published
 # more than a handful since the claim.
 FIND_LIMIT = 25
@@ -116,6 +129,19 @@ STORY_REASONS: dict[int, str] = {
     2207026: "Instagram doesn't support this video format for a Story.",
     2207052: "Instagram couldn't fetch the Story's media from its link.",
 }
+# Meta's answers about the extras name the field; no numeric subcode for them is documented.
+EXTRAS_REASONS: tuple[tuple[str, str], ...] = (
+    ("location", "Instagram does not accept this location. Use a Facebook Page that has a place."),
+    (
+        "collaborator",
+        "Instagram could not add a collaborator. Check each username is a public professional "
+        "account that allows collaborator tags.",
+    ),
+    ("user_tag", "Instagram could not tag one of the accounts in the photo. Check the usernames."),
+    ("cover", "Instagram could not use the Reel's cover image."),
+    ("thumb_offset", "The Reel's cover frame is outside the video."),
+    ("audio_name", "Instagram does not accept this audio name."),
+)
 _SUBCODE = re.compile(r"\b(22070\d\d)\b")
 _SPACES = re.compile(r"\s+")
 
@@ -133,7 +159,7 @@ def _refine(error: PlatformError, *, story: bool = False) -> PlatformError:
     """A publishing error with its readable reason; Meta's temporary subcodes become retryable."""
     sub = _subcode(error)
     if sub is None or sub not in REASONS:
-        return error
+        return _extras_error(error)
     reason = STORY_REASONS.get(sub, REASONS[sub]) if story else REASONS[sub]
     code = "platform_unavailable" if sub in TRANSIENT_SUBCODES else error.code
     refined = PlatformError(
@@ -144,6 +170,25 @@ def _refine(error: PlatformError, *, story: bool = False) -> PlatformError:
     )
     refined.__cause__ = error.__cause__
     return refined
+
+
+def _extras_error(error: PlatformError) -> PlatformError:
+    """A refusal that names a collaborator, tag, location, cover or audio name field gets a
+    readable reason (FR-PUB-07); anything else is left as it was."""
+    if error.code != "platform_rejected":
+        return error
+    text = (error.message or "").lower().replace("-", "_")
+    for key, reason in EXTRAS_REASONS:
+        if key in text:
+            refined = PlatformError(
+                error.code,
+                platform_code=error.platform_code,
+                message=reason,
+                retry_after_s=error.retry_after_s,
+            )
+            refined.__cause__ = error.__cause__
+            return refined
+    return error
 
 
 def status_reason(detail: str | None) -> str | None:
@@ -198,6 +243,31 @@ def _captioned(body: dict[str, Any], caption: str) -> dict[str, Any]:
     return {**body, "caption": caption} if caption else body
 
 
+def _with_extras(
+    body: dict[str, Any], extras: PublishExtras | None, *, tags: bool = False, reel: bool = False
+) -> dict[str, Any]:
+    """The container body with the optional fields set (FR-PUB-07): collaborators and location
+    wherever they are set; user tags only when ``tags``; a Reel's cover and audio name when
+    ``reel`` (``cover_url`` wins over ``thumb_offset``)."""
+    if extras is None:
+        return body
+    out = dict(body)
+    if extras.collaborators:
+        out["collaborators"] = list(extras.collaborators)
+    if extras.location_id:
+        out["location_id"] = extras.location_id
+    if tags and extras.user_tags:
+        out["user_tags"] = [{"username": t.username, "x": t.x, "y": t.y} for t in extras.user_tags]
+    if reel:
+        if extras.cover_url:
+            out["cover_url"] = extras.cover_url
+        elif extras.thumb_offset_ms is not None:
+            out["thumb_offset"] = extras.thumb_offset_ms
+        if extras.audio_name:
+            out["audio_name"] = extras.audio_name
+    return out
+
+
 async def publishing_quota(
     http: PlatformHttp, graph: Callable[[str], str], token: str, acct: SocialAccount
 ) -> PublishingQuota:
@@ -220,13 +290,14 @@ async def create_image_container(
     *,
     image_url: str,
     caption: str,
+    extras: PublishExtras | None = None,
 ) -> str:
     return await _create(
         http,
         graph,
         token,
         acct,
-        _captioned({"image_url": image_url}, caption),
+        _with_extras(_captioned({"image_url": image_url}, caption), extras, tags=True),
         endpoint="media.create.image",
     )
 
@@ -240,10 +311,16 @@ async def create_reel_container(
     video_url: str,
     caption: str,
     share_to_feed: bool,
+    extras: PublishExtras | None = None,
 ) -> str:
     body = {"media_type": "REELS", "video_url": video_url, "share_to_feed": share_to_feed}
     return await _create(
-        http, graph, token, acct, _captioned(body, caption), endpoint="media.create.reel"
+        http,
+        graph,
+        token,
+        acct,
+        _with_extras(_captioned(body, caption), extras, reel=True),
+        endpoint="media.create.reel",
     )
 
 
@@ -273,6 +350,8 @@ async def create_carousel_item(
         body = {"media_type": "VIDEO", "video_url": media.url, "is_carousel_item": True}
     else:
         body = {"image_url": media.url, "is_carousel_item": True}
+        if media.user_tags:
+            body = _with_extras(body, PublishExtras(user_tags=media.user_tags), tags=True)
     return await _create(http, graph, token, acct, body, endpoint="media.create.carousel_item")
 
 
@@ -284,6 +363,7 @@ async def create_carousel_container(
     *,
     children: Sequence[str],
     caption: str,
+    extras: PublishExtras | None = None,
 ) -> str:
     if not CAROUSEL_MIN_ASSETS <= len(children) <= CAROUSEL_MAX_ASSETS:
         raise PlatformError("platform_rejected", message=REASONS[2207028])
@@ -292,7 +372,12 @@ async def create_carousel_container(
         "children": ",".join(_id(child, "container") for child in children),
     }
     return await _create(
-        http, graph, token, acct, _captioned(body, caption), endpoint="media.create.carousel"
+        http,
+        graph,
+        token,
+        acct,
+        _with_extras(_captioned(body, caption), extras),
+        endpoint="media.create.carousel",
     )
 
 
@@ -430,3 +515,18 @@ async def post_comment(
     except PlatformError as error:
         raise for_write(error) from error.__cause__
     return parse.created_id(body)
+
+
+async def list_collaborators(
+    http: PlatformHttp, graph: Callable[[str], str], token: str, media_ref: str
+) -> list[CollaboratorStatus]:
+    """``GET /{media}/collaborators``: each invited account with its invite status (Accepted or
+    Pending). Needs the token of the media's creator; an unknown status counts as pending."""
+    body = await http.request(
+        "GET",
+        graph(f"{_id(media_ref, 'media')}/collaborators"),
+        endpoint="media.collaborators",
+        token=token,
+        params={"fields": COLLABORATOR_FIELDS},
+    )
+    return parse.collaborators(body)

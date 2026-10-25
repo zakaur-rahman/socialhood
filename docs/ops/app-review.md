@@ -188,6 +188,8 @@ in `docs/verification.md` item 36.
 
 Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories) and `read_insights` for Page post insights (only asked for when `FB_REQUEST_INSIGHTS_SCOPE` is on).
 
+Not requested yet (FR-PUB-07, C-134): the Page Public Metadata Access feature, which the Pages search (`GET /pages/search`) needs to look up a place for an Instagram post's location. Until it is approved the composer takes a Facebook Page's id or link. Meta's collaborators reference names `instagram_basic` and `pages_read_engagement` for reading invites; our connection uses Instagram Login (`instagram_business_basic`), and whether that covers the read is unverified (C-134). If it does not, the invites stay Pending and the Schedule page says when they were last read.
+
 **Webhook fields to subscribe** (Page object): `messages`, `message_echoes`, `messaging_postbacks`,
 `messaging_referrals`, `message_reads`, `message_deliveries`, `message_reactions`, `message_edits`,
 `messaging_optins`, `feed`.

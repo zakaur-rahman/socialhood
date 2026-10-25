@@ -98,8 +98,10 @@ export const POST_FILE_RULES: Record<"image" | "video", FileRule> = {
 };
 
 /** §4.7 unsupported_media. */
-export const UNSUPPORTED_MEDIA =
-  "Instagram can't publish this file. Use JPEG or PNG images, or MP4 video up to 90 seconds.";
+export const UNSUPPORTED_MEDIA = "Instagram can't publish this file. Use JPEG or PNG images, or MP4 or MOV video.";
+
+/** The video size cap when the API doesn't say (its ``post_video_max_mb`` setting, C-134). */
+export const DEFAULT_VIDEO_MAX_MB = 100;
 
 export const POST_FILE_ACCEPT = [...POST_FILE_RULES.image.extensions, ...POST_FILE_RULES.video.extensions]
   .map((extension) => `.${extension}`)
@@ -119,11 +121,12 @@ export function postFileKind(file: Pick<File, "name" | "type">): "image" | "vide
 }
 
 /** Why a picked file can't be used, before it is uploaded; null when it can. */
-export function checkPostFile(file: Pick<File, "name" | "type" | "size">): string | null {
+export function checkPostFile(file: Pick<File, "name" | "type" | "size">, videoMaxMb = DEFAULT_VIDEO_MAX_MB): string | null {
   const kind = postFileKind(file);
   if (!kind) return UNSUPPORTED_MEDIA;
   const rule = POST_FILE_RULES[kind];
-  if (file.size > rule.maxBytes) return `${rule.label} can be up to ${rule.maxBytes / MB} MB on Instagram.`;
+  const maxBytes = kind === "video" ? videoMaxMb * MB : rule.maxBytes;
+  if (file.size > maxBytes) return `${rule.label} can be up to ${maxBytes / MB} MB on Instagram.`;
   return null;
 }
 
@@ -132,6 +135,9 @@ export const MIN_RATIO = 4 / 5;
 export const MAX_RATIO = 1.91;
 const RATIO_TOLERANCE = 0.01;
 export const MAX_VIDEO_SECONDS = 90;
+/** An Instagram Reel (a single video for Instagram alone) runs 3 seconds to 15 minutes (Meta, C-134). */
+export const IG_REEL_MIN_SECONDS = 3;
+export const IG_REEL_MAX_SECONDS = 900;
 
 /** What the composer knows about one image or video of the post. */
 export type AssetInfo = {
@@ -185,6 +191,14 @@ export function cropNeeded(asset: Pick<AssetInfo, "resource_type" | "width" | "h
   if (ratio === null) return null;
   if (ratio < MIN_RATIO - RATIO_TOLERANCE) return "tall";
   if (ratio > MAX_RATIO + RATIO_TOLERANCE) return "wide";
+  return null;
+}
+
+/** Why a single Instagram video can't be a Reel, or null: shorter than 3 s or longer than 15 minutes. */
+export function igReelProblem(asset: Pick<AssetInfo, "resource_type" | "duration_s">): string | null {
+  if (asset.resource_type !== "video" || asset.duration_s == null) return null;
+  if (asset.duration_s > IG_REEL_MAX_SECONDS) return `Reels can be up to ${IG_REEL_MAX_SECONDS / 60} minutes.`;
+  if (asset.duration_s < IG_REEL_MIN_SECONDS) return `Reels must be at least ${IG_REEL_MIN_SECONDS} seconds.`;
   return null;
 }
 
@@ -320,4 +334,40 @@ export const STATUS_TONE: Record<ScheduledPostStatus, Tone> = {
 /** Draft and scheduled posts can be edited; once publishing starts the composer is read-only. */
 export function isEditable(status: ScheduledPostStatus): boolean {
   return status === "draft" || status === "scheduled";
+}
+
+// ---- Instagram extras (FR-PUB-07, C-134; Meta's IG User Media references, checked 2026-10-25)
+
+/** Collaborators: the publishing reference says up to 3, the collaborators reference 5. We allow 3. */
+export const COLLABORATORS_MAX = 3;
+/** Meta states no limit on user tags; 20 per photo is Instagram's own limit in the app (unverified for the API). */
+export const USER_TAGS_MAX_PER_IMAGE = 20;
+export const INSTAGRAM_USERNAME_MAX_CHARS = 30;
+export const AUDIO_NAME_MAX_CHARS = 100;
+export const COVER_MAX_BYTES = 8 * MB;
+
+const USERNAME = /^[a-z0-9._]{1,30}$/;
+
+/** A username as stored: without "@", lowercase; null when it isn't a valid Instagram username. */
+export function normalizeUsername(raw: string): string | null {
+  const name = raw.trim().replace(/^@+/, "").trim().toLowerCase();
+  return USERNAME.test(name) ? name : null;
+}
+
+const PAGE_ID = /^\d{5,20}$/;
+const PAGE_LINKS = [/[?&]id=(\d{5,20})(?:&|$)/, /facebook\.com\/(?:pages\/[^/?#]+\/)?(?:[^/?#]*-)?(\d{5,20})(?:[/?#]|$)/i];
+
+export const LOCATION_HELP =
+  "Paste the numeric id of a Facebook Page that has a location, or the link to it (facebook.com/profile.php?id=…).";
+
+/** The Facebook Page id in a pasted id or Page link, else null. A vanity link has no id in it. */
+export function parseLocation(raw: string): string | null {
+  const text = raw.trim();
+  if (PAGE_ID.test(text)) return text;
+  if (!/facebook\.com/i.test(text)) return null;
+  for (const pattern of PAGE_LINKS) {
+    const match = pattern.exec(text);
+    if (match) return match[1];
+  }
+  return null;
 }

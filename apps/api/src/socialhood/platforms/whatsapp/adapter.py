@@ -14,6 +14,7 @@ from socialhood.models.connections import SocialAccount
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.base import (
     AccountInsights,
+    CollaboratorStatus,
     CommentPage,
     ContactProfile,
     ContainerMedia,
@@ -28,6 +29,7 @@ from socialhood.platforms.base import (
     OutboundTemplate,
     PlatformMedia,
     PlatformThread,
+    PublishExtras,
     PublishingQuota,
     SendResult,
     TokenGrant,
@@ -343,7 +345,12 @@ class WhatsAppAdapter:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def create_image_container(
-        self, acct: SocialAccount, *, image_url: str, caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        image_url: str,
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
@@ -355,6 +362,7 @@ class WhatsAppAdapter:
         caption: str,
         share_to_feed: bool = True,
         page_reel: bool = False,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
@@ -365,9 +373,19 @@ class WhatsAppAdapter:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def create_carousel_container(
-        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        children: Sequence[str],
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def list_collaborators(
+        self, acct: SocialAccount, media_ref: str
+    ) -> list[CollaboratorStatus]:
+        return []
 
     async def get_container_status(
         self, acct: SocialAccount, container_ref: str

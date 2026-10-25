@@ -34,6 +34,9 @@ carries the workspace id, so none needs a cross-workspace lookup after the dispa
   (FR-PUB-11); stores first_comment_platform_id, or first_comment_error after the last of 3
   tries (a lost answer is not retried); the post stays published either way. Lock
   ``firstc:{target_id}``.
+- refresh_collaborator_invites: periodic, every 15 minutes (FR-PUB-07, C-134). Reads each
+  collaborator's invite status (Pending or Accepted) of Instagram posts published in the last
+  three days, a target at most once an hour; a failed read leaves the last answer.
 - sweep_stuck_posts: periodic, every minute. Targets left ``publishing`` for more than 10 minutes
   with no publish_target waiting or running go back to pending (failed after the last attempt),
   and ``container_created`` targets idle for 10 minutes with no poll job waiting or running get
@@ -54,18 +57,23 @@ from socialhood.jobs.app import INTERACTIVE, app
 from socialhood.jobs.enqueue import enqueue
 from socialhood.jobs.retry import PlatformRetry
 from socialhood.jobs.runtime import runtime
-from socialhood.models.publishing import PUBLISH_ATTEMPTS
+from socialhood.models.publishing import (
+    COLLABORATOR_CHECK_EVERY,
+    COLLABORATOR_CHECK_FOR,
+    PUBLISH_ATTEMPTS,
+)
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.platforms.errors import PlatformError
 from socialhood.realtime import events
 from socialhood.repositories import publish_targets as repo
-from socialhood.services.post_publishing import claims, publish
+from socialhood.services.post_publishing import claims, collaborators, publish
 
 log = get_logger(__name__)
 
 CLAIM_BATCH = 200  # TR-JOB-03
 SWEEP_BATCH = 200
+COLLABORATOR_BATCH = 100
 IDLE_AFTER = timedelta(minutes=10)  # longer than the slowest poll interval (5 minutes)
 HEARTBEAT_S = 60  # a running job whose worker has been silent this long is dead
 PUBLISH_RETRY = PlatformRetry(max_attempts=PUBLISH_ATTEMPTS)  # FR-PUB-05: 3 tries
@@ -228,6 +236,44 @@ async def post_first_comment(context: JobContext, target_id: str, workspace_id: 
             target_id=uuid.UUID(target_id),
             will_retry=will_retry,
         )
+
+
+async def refresh_collaborator_invites(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    deps: PlatformDeps,
+    now: datetime | None = None,
+) -> int:
+    """FR-PUB-07: read the collaborator invites of posts published in the last three days, each
+    at most once an hour. Returns how many targets were read."""
+    now = now or datetime.now(UTC)
+    async with sessionmaker() as session:
+        with tenant_bypass_scope():
+            due = await repo.collaborator_checks_due(
+                session,
+                now - COLLABORATOR_CHECK_FOR,
+                now - COLLABORATOR_CHECK_EVERY,
+                COLLABORATOR_BATCH,
+            )
+    read = 0
+    for target in due:
+        with workspace_scope(target.workspace_id):
+            if await collaborators.refresh_target(
+                sessionmaker, redis, deps, target_id=target.id, now=now
+            ):
+                read += 1
+    return read
+
+
+@app.periodic(cron="*/15 * * * *", periodic_id="refresh_collaborator_invites")
+@app.task(
+    name="refresh_collaborator_invites",
+    queue=INTERACTIVE,
+    queueing_lock="refresh_collaborator_invites",
+)
+async def refresh_collaborator_invites_task(timestamp: int) -> None:
+    rt = runtime()
+    await refresh_collaborator_invites(rt.sessionmaker, rt.redis, _deps())
 
 
 @app.periodic(cron="* * * * *", periodic_id="sweep_stuck_posts")

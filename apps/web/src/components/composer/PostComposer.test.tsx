@@ -177,6 +177,13 @@ describe("PostComposer autosave (F-13)", () => {
       first_comment: null,
       publish_at: null,
       kind: "post",
+      collaborators: [],
+      location: null,
+      user_tags: [],
+      cover_asset_id: null,
+      cover_offset_ms: null,
+      share_to_feed: true,
+      audio_name: null,
     });
     await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
   });
@@ -488,7 +495,7 @@ describe("PostComposer media (FR-PUB-13, TR-MED-02)", () => {
     act(() => control.fail(new ApiError({ type: "about:blank", title: "unsupported_media", status: 415, code: "unsupported_media" })));
     const tile = await screen.findByRole("listitem", { name: "clip.mp4" });
     expect(tile).toHaveAttribute("data-status", "failed");
-    expect(tile).toHaveTextContent("Instagram can't publish this file. Use JPEG or PNG images, or MP4 video up to 90 seconds.");
+    expect(tile).toHaveTextContent("Instagram can't publish this file. Use JPEG or PNG images, or MP4 or MOV video.");
   });
 
   it("refuses files Instagram can't publish before uploading", async () => {
@@ -498,7 +505,7 @@ describe("PostComposer media (FR-PUB-13, TR-MED-02)", () => {
     await screen.findByRole("textbox", { name: "Caption" });
     await user.upload(screen.getByTestId("composer-media-input"), new File(["x"], "menu.pdf", { type: "application/pdf" }));
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "menu.pdf: Instagram can't publish this file. Use JPEG or PNG images, or MP4 video up to 90 seconds.",
+      "menu.pdf: Instagram can't publish this file. Use JPEG or PNG images, or MP4 or MOV video.",
     );
     expect(upload).not.toHaveBeenCalled();
   });

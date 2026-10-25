@@ -87,8 +87,31 @@ function NoMedia({ children = "Add a photo or video to see the preview." }: { ch
   );
 }
 
-function AccountHeader({ account, identity, subtitle }: { account: SocialAccount | null; identity?: AccountColor; subtitle?: string }) {
-  const name = account?.username ?? account?.display_name ?? "your.account";
+/** FR-PUB-07: what the Instagram options add to the preview. */
+export type PreviewExtras = {
+  collaborators: string[];
+  /** The location is set (a Facebook Page id); Instagram shows the Page's place name. */
+  hasLocation: boolean;
+  /** Tags by asset id, as fractions of the photo. */
+  tags: Record<string, { username: string; x: number; y: number }[]>;
+  /** A Reel's uploaded cover image, if chosen. */
+  coverUrl: string | null;
+  audioName: string | null;
+};
+
+function AccountHeader({
+  account,
+  identity,
+  subtitle,
+  collaborators = [],
+}: {
+  account: SocialAccount | null;
+  identity?: AccountColor;
+  subtitle?: string;
+  collaborators?: string[];
+}) {
+  const own = account?.username ?? account?.display_name ?? "your.account";
+  const name = collaborators.length ? `${own} and ${collaborators.map((item) => `@${item}`).join(", ")}` : own;
   return (
     <div className="flex items-center gap-2.5 px-3 py-2.5">
       <AccountPicture account={account} identity={identity} />
@@ -114,7 +137,9 @@ export function PostPreview({
   assets,
   format,
   firstComment,
+  extras,
 }: {
+  extras?: PreviewExtras;
   wid: string;
   /** The post's accounts, in order; the first leads the preview. */
   accounts: SocialAccount[];
@@ -171,11 +196,11 @@ export function PostPreview({
           <TabsTrigger value="grid">Grid</TabsTrigger>
         </TabsList>
         <TabsContent value="feed">
-          <FeedPreview account={account} identity={identity} caption={caption} assets={assets} firstComment={firstComment} />
+          <FeedPreview account={account} identity={identity} caption={caption} assets={assets} firstComment={firstComment} extras={extras} />
         </TabsContent>
         <TabsContent value="reel">
           {format === "reel" ? (
-            <ReelPreview account={account} identity={identity} caption={caption} asset={assets[0]} />
+            <ReelPreview account={account} identity={identity} caption={caption} asset={assets[0]} extras={extras} />
           ) : (
             <div className="aspect-[9/16] max-h-[420px] w-full rounded-xl border border-line bg-canvas">
               <NoMedia>A Reel preview shows when the post is a single video.</NoMedia>
@@ -293,12 +318,14 @@ function FeedPreview({
   caption,
   assets,
   firstComment,
+  extras,
 }: {
   account: SocialAccount | null;
   identity?: AccountColor;
   caption: string;
   assets: AssetInfo[];
   firstComment: string | null;
+  extras?: PreviewExtras;
 }) {
   const [slide, setSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -314,9 +341,26 @@ function FeedPreview({
 
   return (
     <article aria-label="Feed preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
-      <AccountHeader account={account} identity={identity} />
+      <AccountHeader
+        account={account}
+        identity={identity}
+        collaborators={extras?.collaborators}
+        subtitle={extras?.hasLocation ? "Location added" : undefined}
+      />
       <div className="relative w-full bg-field" style={{ aspectRatio: `${ratio}` }}>
         {current ? <Media asset={current} /> : <NoMedia />}
+        {current && extras?.tags[current.id]?.length
+          ? extras.tags[current.id].map((tag, position) => (
+              <span
+                key={position}
+                data-testid="preview-tag"
+                className="absolute -translate-x-1/2 rounded-sm bg-media-heavy px-1.5 py-0.5 text-2xs text-fg"
+                style={{ left: `${tag.x * 100}%`, top: `${tag.y * 100}%` }}
+              >
+                {tag.username}
+              </span>
+            ))
+          : null}
         {assets.length > 1 ? (
           <>
             <Badge tone="media" size="md" className="absolute top-2 right-2 tabular-nums" data-testid="carousel-counter">
@@ -393,20 +437,24 @@ function ReelPreview({
   identity,
   caption,
   asset,
+  extras,
 }: {
   account: SocialAccount | null;
   identity?: AccountColor;
   caption: string;
   asset: AssetInfo | undefined;
+  extras?: PreviewExtras;
 }) {
   const name = account?.username ?? account?.display_name ?? "your.account";
   return (
     <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
-      {asset ? <Media asset={asset} /> : <NoMedia />}
+      {asset ? <Media asset={extras?.coverUrl ? { ...asset, resource_type: "image", url: extras.coverUrl, thumbnail_url: extras.coverUrl } : asset} /> : <NoMedia />}
       <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-media-heavy to-transparent p-3 pr-12">
         <div className="flex items-center gap-2">
           <AccountPicture account={account} identity={identity} size={24} />
-          <span className="truncate text-sm font-semibold">{name}</span>
+          <span className="truncate text-sm font-semibold">
+            {extras?.collaborators.length ? `${name} and ${extras.collaborators.map((item) => `@${item}`).join(", ")}` : name}
+          </span>
         </div>
         {caption.trim() ? (
           <p className="line-clamp-2 text-sm break-words" data-testid="reel-caption">
@@ -414,7 +462,7 @@ function ReelPreview({
           </p>
         ) : null}
         <p className="flex items-center gap-1 text-xs text-fg-secondary">
-          <Music2 className="size-3" aria-hidden /> Original audio
+          <Music2 className="size-3" aria-hidden /> {extras?.audioName ? extras.audioName : "Original audio"}
         </p>
       </div>
       <div className="absolute right-2 bottom-4 flex flex-col items-center gap-4 text-fg" aria-hidden>
