@@ -95,7 +95,7 @@ test.describe("GR-31 product catalogue", () => {
     await card.getByRole("textbox", { name: /Your store.s address/ }).fill("e2e-store");
     await card.getByRole("button", { name: "Connect Shopify" }).click();
     // The built-in store returns straight to the API's callback, which sends the browser back with a nonce.
-    await expect(card.getByText(/Connected to E2e Store/)).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByText(/Connected to E2e Store/i)).toBeVisible({ timeout: 30_000 });
     await expect(page).not.toHaveURL(/shopify=/);
 
     const rows = page.getByTestId("product-row");

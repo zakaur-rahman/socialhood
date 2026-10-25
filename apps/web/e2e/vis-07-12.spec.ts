@@ -87,7 +87,9 @@ test.describe("VIS-07 to VIS-12", () => {
     const list = page.getByTestId("visual-lead-list");
     await expect(list).toBeVisible();
     const rows = list.getByTestId("lead-row");
-    await expect(rows).toHaveCount(3);
+    // The sandbox account's own conversations that wait for a reply follow ours, with lower scores.
+    await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(3);
+    const shown = await rows.count();
     await expect(rows.nth(0).getByTestId("lead-score")).toHaveText("Score 90");
     await expect(rows.nth(1).getByTestId("lead-score")).toHaveText("Score 60");
     await expect(rows.nth(2).getByTestId("lead-score")).toHaveText("Score 30");
@@ -96,7 +98,7 @@ test.describe("VIS-07 to VIS-12", () => {
     // The same conversations as a table, with the lead score right-aligned.
     const table = page.getByTestId("visual-table");
     await expect(table).toBeVisible();
-    await expect(table.getByTestId("table-row")).toHaveCount(3);
+    await expect(table.getByTestId("table-row")).toHaveCount(shown);
 
     // A row opens its conversation.
     await rows.nth(0).getByRole("link").click();

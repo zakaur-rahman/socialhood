@@ -70,7 +70,7 @@ export function SendFields({ node }: { node: SendNode }) {
   };
   const source = (
     <div className="space-y-1.5">
-      <ToggleGroup aria-label="What to send" value={node.saved ? "saved" : "text"} onValueChange={chooseSource}>
+      <ToggleGroup aria-label="What to send" size="sm" value={node.saved ? "saved" : "text"} onValueChange={chooseSource}>
         <ToggleGroupItem value="text">Write a message</ToggleGroupItem>
         <ToggleGroupItem value="saved" disabled={hasReplies}>
           Send a saved reply

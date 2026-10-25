@@ -398,6 +398,9 @@ async def _tool_run(
         model="e2e",
         prompt_version="agent.v4",
         credits=1,
+        # Explicit: the database's own default is the transaction's time, the same for a run and
+        # its follow-up seeded together, and a thread's title is its first run's question.
+        created_at=now,
         started_at=now - timedelta(seconds=3),
         completed_at=now,
     )

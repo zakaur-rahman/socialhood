@@ -51,8 +51,8 @@ test.describe("GR-17 contacts", () => {
 
     const rows = page.getByTestId("contact-row");
     await expect(rows).toHaveCount(2);
-    await expect(rows.filter({ hasText: asha.username })).toHaveCount(1);
-    await expect(rows.filter({ hasText: chetan.username })).toHaveCount(1);
+    await expect(rows.filter({ hasText: String(asha.username) })).toHaveCount(1);
+    await expect(rows.filter({ hasText: String(chetan.username) })).toHaveCount(1);
     await expect(page.getByTestId("contact-count")).toContainText("2 contacts match");
 
     // Export: the same two rows.
