@@ -177,6 +177,13 @@ describe("PostComposer autosave (F-13)", () => {
       first_comment: null,
       publish_at: null,
       kind: "post",
+      collaborators: [],
+      location: null,
+      user_tags: [],
+      cover_asset_id: null,
+      cover_offset_ms: null,
+      share_to_feed: true,
+      audio_name: null,
     });
     await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
   });

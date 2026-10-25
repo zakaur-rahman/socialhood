@@ -399,7 +399,9 @@ async def test_refresh_on_demand_and_another_workspace_gets_404(shop: Shop) -> N
     made = await shop.ready_draft(collaborators=["accepts.fast", "maple.studio"])
     # Publish the post by hand: the API alone can not run the publish jobs.
     await shop.execute(
-        "UPDATE scheduled_posts SET status = 'published' WHERE id = :p", p=made["id"]
+        "UPDATE scheduled_posts SET status = 'published', publish_at = COALESCE(publish_at, now()),"
+        " format = COALESCE(format, 'image') WHERE id = :p",
+        p=made["id"],
     )
     await shop.execute(
         "UPDATE scheduled_post_targets SET status = 'published', platform_media_id = :m,"

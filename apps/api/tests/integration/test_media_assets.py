@@ -139,12 +139,12 @@ async def test_an_asset_outside_the_workspace_folder_is_rejected(
         ("image", {"bytes": 8 * MB + 1}, "Images can be up to 8 MB."),
         ("image", {"format": "gif"}, None),
         ("video", {"format": "mp4", "bytes": 101 * MB}, "Videos can be up to 100 MB."),
-        ("video", {"format": "mov", "duration": 90.5}, "Videos can be up to 90 seconds."),
+        ("video", {"format": "mov", "duration": 900.5}, "Videos can be up to 900 seconds."),
         ("video", {"format": "avi"}, None),
         (
             "raw",
             {"format": None},
-            "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 90 seconds.",
+            "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes.",
         ),
     ],
 )

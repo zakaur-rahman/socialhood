@@ -99,6 +99,7 @@ export function InstagramExtras({
   const coverInput = useRef<HTMLInputElement>(null);
   const [rejected, setRejected] = useState<string | null>(null);
   const [locationText, setLocationText] = useState(draft.location ?? "");
+  const [pickedUpload, setPickedUpload] = useState(false);
 
   if (unavailable) {
     return (
@@ -112,7 +113,7 @@ export function InstagramExtras({
 
   const parsedLocation = locationText.trim() ? parseLocation(locationText) : null;
   const locationBad = locationText.trim() !== "" && parsedLocation === null;
-  const coverMode = draft.cover_asset_id ? "image" : "frame";
+  const coverMode = draft.cover_asset_id || pickedUpload ? "image" : "frame";
   const duration = video?.duration_s ?? null;
 
   const setCollaborators = (names: string[]) => {
@@ -195,6 +196,7 @@ export function InstagramExtras({
                 aria-label="Cover"
                 value={coverMode}
                 onValueChange={(next) => {
+                  setPickedUpload(next === "image");
                   if (next === "image") onChange({ cover_offset_ms: null });
                   else onChange({ cover_asset_id: null });
                 }}

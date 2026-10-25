@@ -55,7 +55,7 @@ function CollaboratorLine({ target, wid, postId, timeZone, now }: { target: Sche
       <ul className="flex flex-wrap gap-x-3" aria-label="Collaborators">
         {list.map((item) => (
           <li key={item.username} data-testid={`collaborator-${item.username}`}>
-            @{item.username} <span className={item.status === "accepted" ? "text-success-fg" : undefined}>{item.status === "accepted" ? "Accepted" : "Pending"}</span>
+            @{item.username} <span className={item.status === "accepted" ? "text-success" : undefined}>{item.status === "accepted" ? "Accepted" : "Pending"}</span>
           </li>
         ))}
       </ul>

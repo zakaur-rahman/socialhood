@@ -63,7 +63,7 @@ describe("InstagramExtras collaborators and location (FR-PUB-07)", () => {
     const user = userEvent.setup();
     const onDraft = vi.fn();
     render(<Harness onDraft={onDraft} />);
-    const field = screen.getByRole("textbox", { name: "Add a collaborator" });
+    const field = screen.getByRole("textbox", { name: "Collaborators Add a collaborator" });
     for (const name of ["@Maple.Studio", "bread_fan", "third", "fourth"]) {
       await user.type(field, `${name}{Enter}`);
     }
@@ -75,7 +75,7 @@ describe("InstagramExtras collaborators and location (FR-PUB-07)", () => {
     const user = userEvent.setup();
     const onDraft = vi.fn();
     render(<Harness onDraft={onDraft} />);
-    await user.type(screen.getByRole("textbox", { name: "Add a collaborator" }), "bad name{Enter}");
+    await user.type(screen.getByRole("textbox", { name: "Collaborators Add a collaborator" }), "bad name{Enter}");
     expect(screen.getByText("bad name is not a valid Instagram username.")).toBeInTheDocument();
     expect(onDraft).toHaveBeenLastCalledWith(expect.objectContaining({ collaborators: [] }));
   });

@@ -5694,3 +5694,8 @@ only when used. Integration (not run): `test_instagram_extras.py`. Vitest (not r
 
 *Fixed before the PR:* the composer checklist showed only the first passing line under the `extras` key, so with collaborators, a tag and a location set only "Collaborators: ..." was listed. `mergeChecklist` now keeps every passing `extras` line (one per option); other keys still show one. The `share_to_feed` field the generated client now marks as required is sent as `true` by the new-draft bodies (`newDraftBody`, `useCreateScheduledPost`).
 Also fixed: `publish_target` set each collaborator's Pending invite after `settle`, whose `scheduled_post.updated` event is built inside it, so the live banner showed no invites until a reload. They are now set before `settle`.
+
+- **Media-library video limit.** The upload is checked before the post format is known, so it allows
+  the most any post accepts: 15 minutes (900 s), an Instagram Reel's limit. The 90-second limit for
+  carousel and Facebook videos (and 60 s for Stories) is enforced when the post is saved, by the
+  publishing rules. Upload message: "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."

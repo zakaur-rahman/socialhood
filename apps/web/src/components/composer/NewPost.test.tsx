@@ -27,6 +27,7 @@ describe("newDraftBody (F-13)", () => {
       asset_ids: [],
       caption: "",
       kind: "post",
+      share_to_feed: true,
       first_comment: null,
       publish_at: "2026-09-30T12:30:00.000Z",
     });
