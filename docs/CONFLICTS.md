@@ -4947,6 +4947,7 @@ The four items C-118 left as "not built", on the same tables and hooks. Migratio
   `lead_stage` entry type and `stage`, `removed_tag_ids` / `removed_tag_names`, `tag_removed` stop
   reason, `get_sequence_analytics`, the four `EventName`s). Migration `0046` follows `0044`; the
   coordinator re-chains it with the others.
+- *Fixed in the combined batch:* a reply in the same second as the step's send now counts ("replied" compares at whole seconds, since Meta's webhook timestamps have no fractions); CI's fast runner caught it.
 
 ## C-125 · Order follow-ups (GR-32, feature/followups-24-32-ask)
 

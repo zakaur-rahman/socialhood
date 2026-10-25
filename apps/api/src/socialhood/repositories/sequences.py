@@ -261,7 +261,9 @@ async def replies_per_step(
             Conversation.contact_id == SequenceStepRun.contact_id,
             Conversation.social_account_id == SequenceStepRun.social_account_id,
             Message.direction == Direction.INBOUND,
-            Message.occurred_at > SequenceStepRun.ran_at,
+            # Meta's timestamps are whole seconds: a reply in the same second as the send counts
+            # (as for broadcast replies, services/broadcasts/inbound.py).
+            Message.occurred_at >= func.date_trunc("second", SequenceStepRun.ran_at),
             Message.occurred_at <= SequenceStepRun.ran_at + window,
         )
         .exists()
