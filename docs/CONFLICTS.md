@@ -5860,3 +5860,72 @@ Web only; no API, model or migration change.
 - E2E: `apps/web/e2e/not-found.spec.ts` (public 404 with status, noindex and links; app 404 in the
   shell; missing post and conversation with working back links; another workspace's contact and a
   made-up one read the same). Screenshots: `not-found-site` and `not-found-app` in ui-shots.
+
+## C-138 · Landing page redesign and the empty illustrations (feature/landing-redesign)
+
+Inspired by the section galleries on vibrant.design (patterns only: a "works with" strip, a connector
+grid, a bento of product UI, a stats band, two-column FAQ, an oversized footer wordmark). No artwork,
+copy or branding was taken from it. Web only: no API change.
+
+### The empty feature illustrations
+- **Cause.** The six pictures were client components behind `dynamic(..., { ssr: false })` and an
+  in-view check (`LazyIllustration`). The server therefore sent an empty, glowing box, and anything
+  that did not scroll and wait for the chunk (a full-page screenshot, a crawler, print, a slow or
+  failed chunk) showed blank panels. It was not a theme-token regression: with a slow scroll in a
+  real browser (dev and production build) they did fill in. I could not reproduce "empty even after
+  scrolling" in my own browser runs; the markup-level cause above is what I found and fixed.
+- **Fix.** `illustrations/Illustrations.tsx` is now server components, always in the markup, with
+  no framer-motion: the card's own `data-reveal` entrance is the only animation, and the two pulses
+  (beam, ping) are CSS under `motion-safe`. `LazyIllustration` and `Beam` are deleted. The typed-out
+  draft text is plain text now. Tests: `Illustrations.test.tsx` (each picture is in
+  `renderToStaticMarkup` with text and nothing hiding it) and the landing e2e spec.
+
+### Sections, in page order
+- **Hero**: headline and product shot unchanged, with a brand glow behind the shot and a "Works with"
+  strip: platform glyphs we already ship (Instagram, WhatsApp, Facebook, website chat) and plain
+  names for Shopify, Razorpay, Google Sheets and Zapier (no third-party logos). Facebook and Shopify
+  carry a small "soon"; a link goes to Integrations.
+- **Integrations** (replaces `Platforms`, which still said Messenger was "coming soon"): nine cards,
+  one line and a status each. Instagram and WhatsApp "Official API"; website chat "On every plan";
+  Facebook Pages and Live comments and ad replies "With Meta's approval" (C-108, C-122); Shopify
+  "With our Shopify app listing" (C-116); Razorpay and UPI "Your own account" (C-120); Google Sheets
+  and Zapier with the public API "Pro and Max" (C-103, C-109, C-110). *Decision:* the brief's "ads" is
+  worded as "chats that start from an ad" (the messaging referral event, C-077), the only ad feature
+  we have.
+- **Features bento**: ten cards in a 6-column grid (4+2, 3+3, 2+2+2, 2+2+2; two columns on tablets,
+  one on phones), each with a small token-only mockup and the "Illustrations with example data."
+  caption. Core: AI replies, inbox hand-off, comment and DM automations, comment intelligence,
+  scheduling with Reels, Stories and collaborators, Ask. Newer: analytics and the weekly report,
+  catalogue with orders and payment links, sequences, team roles and assignment. Knowledge gaps,
+  the website widget and notifications moved to a row of three small cards. Honesty: "Auto is part of
+  Pro", commerce "Part of Pro", Shopify sync "arrives with our Shopify app listing", broadcasts "coming
+  soon, once India's consent rules are checked" (O-11), collaborators on posts and Reels only (not
+  Stories, C-134), round-robin "if you turn it on" (off by default), Free has 1 seat.
+- **How it works, Automation showcase, Languages**: content unchanged; section padding tightened
+  (`py-16 sm:py-20`, as on every section now). The automation picture is stacked on phones (the
+  beam drawing needs about 30 rem).
+- **Stats band** (`Stats.tsx`): "1 inbox for Instagram, WhatsApp and website chat", "3 languages",
+  and the Free plan's AI credits and active automations read from `plan-table.json` (a test checks
+  them). *Not shown:* any setup time, speed or customer number we can't back.
+- **Social proof** (`SocialProof.tsx`, data in `lib/marketing/social-proof.ts`): typed, empty lists;
+  the section renders nothing while both are empty (tested), so there is no placeholder. Quotes and
+  logos need the person's or business's written permission.
+- **Pricing**: component unchanged, only the section padding.
+- **Trust**: same five points, in two columns on wide screens (heading left, points right).
+- **FAQ**: same questions; heading, a short intro and the support address on the left (sticky on
+  wide screens), the accordion on the right.
+- **Final CTA and footer**: larger headline, "See pricing" next to "Start free", and three plain
+  perks (Free plan with no card, the Pro trial days read from the plan table, official Meta APIs). The
+  footer has an oversized decorative wordmark from `SITE_NAME` (`aria-hidden`, token colour
+  `line-subtle`); it shows on every public page because the footer is shared. `Logo` now also
+  reads `SITE_NAME`.
+
+### Checks
+- `tsc --noEmit`, `pnpm lint` and vitest for `components/marketing`, `app/(marketing)`, `styles`,
+  `lib/marketing` pass. The design lint caught an arbitrary radius, an arbitrary text size and a
+  `fill:` key; all fixed with scale classes.
+- New `e2e/landing.spec.ts`: at 375, 768, 1280 and 1536 px every picture has content before any
+  scroll, the sections are in order, nothing scrolls sideways and the page's layout shift is at most
+  0.1. *The existing `layout-shift.spec.ts` covers the app's pages only, not `/`.*
+- *Not done:* no new product screenshots (`public/marketing/*.webp` are unchanged); no Lighthouse run;
+  the owner should look at the Hindi and Hinglish examples and the new copy once.
