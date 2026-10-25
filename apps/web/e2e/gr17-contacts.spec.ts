@@ -51,8 +51,8 @@ test.describe("GR-17 contacts", () => {
 
     const rows = page.getByTestId("contact-row");
     await expect(rows).toHaveCount(2);
-    await expect(rows.filter({ hasText: asha.name })).toHaveCount(1);
-    await expect(rows.filter({ hasText: chetan.name })).toHaveCount(1);
+    await expect(rows.filter({ hasText: asha.username })).toHaveCount(1);
+    await expect(rows.filter({ hasText: chetan.username })).toHaveCount(1);
     await expect(page.getByTestId("contact-count")).toContainText("2 contacts match");
 
     // Export: the same two rows.
@@ -86,6 +86,12 @@ test.describe("GR-17 contacts", () => {
       await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "hi", fromId: fromUsername, fromUsername });
     }
     const tag = await api.call<Tag>("POST", `/v1/w/${workspace.id}/tags`, { name: `bulk-${stamp}` });
+    // The username arrives with the contact's profile, a moment after the message: wait for it.
+    await expect
+      .poll(async () => (await api.call<{ items: Item[] }>("GET", `/v1/w/${workspace.id}/contacts?q=e2e_gr17b_`)).items.length, {
+        timeout: 30_000,
+      })
+      .toBe(2);
 
     await page.goto(`/w/${workspace.slug}/contacts`);
     await page.getByRole("searchbox", { name: "Search contacts" }).fill(`e2e_gr17b_`);
@@ -105,6 +111,9 @@ test.describe("GR-17 contacts", () => {
     const username = `e2e_gr17c_${stamp}`;
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "hello", fromId: username, fromUsername: username });
     await api.call("POST", `/v1/w/${workspace.id}/contact-fields`, { key: `city_${stamp.slice(-6)}`, label: "City" });
+    await expect
+      .poll(async () => (await api.call<{ items: Item[] }>("GET", `/v1/w/${workspace.id}/contacts?q=${username}`)).items.length, { timeout: 30_000 })
+      .toBe(1);
 
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto(`/w/${workspace.slug}/contacts`);

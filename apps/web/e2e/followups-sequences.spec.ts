@@ -18,9 +18,11 @@ test.describe("GR-24 follow-ups", () => {
     const wid = workspace.id;
     const asked = unique("Can I book a slot?");
     await api.inbound(wid, { accountId: account.id, kind: "dm", text: asked, fromId: "e2e_followups_seq" });
-    const conversations = await api.call<{ items: Conversation[] }>("GET", `/v1/w/${wid}/conversations`);
-    const contact = conversations.items.find((c) => c.last_message_preview === asked)?.contact.id;
-    expect(contact).toBeTruthy();
+    // The worker stores the message a moment after the event is injected.
+    const contactOf = async () =>
+      (await api.call<{ items: Conversation[] }>("GET", `/v1/w/${wid}/conversations`)).items.find((c) => c.last_message_preview === asked)?.contact.id;
+    await expect.poll(contactOf, { timeout: 30_000 }).toBeTruthy();
+    const contact = await contactOf();
 
     const needed = await api.call<{ id: string }>("POST", `/v1/w/${wid}/tags`, { name: unique("Subscriber") });
     const created = await api.call<{ id: string; entry: { label: string } }>("POST", `/v1/w/${wid}/sequences`, {

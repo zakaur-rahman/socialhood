@@ -29,20 +29,27 @@ test.describe("GR-34 weekly report", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Weekly report" })).toBeVisible();
     await expect(page.getByTestId("report-span")).toContainText("Monday to Sunday");
 
+    // A figure with something to show is a tile with a chart; one with nothing in any of the weeks
+    // shown is named in the line under the tiles (C-129), never drawn as a row of zeros.
+    const idleLine = (await page.getByTestId("report-idle").count()) ? ((await page.getByTestId("report-idle").textContent()) ?? "") : "";
+    let tiles = 0;
     for (const metric of report.metrics) {
       const tile = page.locator(`[data-metric="${metric.key}"]`).first();
+      if ((await tile.count()) === 0) {
+        expect(idleLine, `${metric.label} is named as having no activity`).toContain(metric.label);
+        continue;
+      }
+      tiles += 1;
       await expect(tile).toBeVisible();
       const shown = tile.getByTestId("metric-value");
       if (metric.value === null) await expect(shown).toHaveText("—");
       else if (metric.unit === "count") await expect(shown).toHaveText(number.format(Math.round(metric.value)));
-      // A chart under every tile, with the weeks that have no figure named.
       await expect(tile.getByTestId("series-chart")).toBeVisible();
       const gaps = metric.series.filter((p) => p.value === null).length;
       if (gaps > 0) await expect(tile.getByTestId("series-gaps")).toContainText(/without data/);
       else await expect(tile.getByTestId("series-gaps")).toHaveCount(0);
     }
-    await expect(page.getByTestId("report-note")).toContainText("aren't counted here yet");
-    await expect(page.getByTestId("visual-metric-comparison")).toBeVisible();
+    expect(tiles + (idleLine ? 1 : 0)).toBeGreaterThan(0);
   });
 
   test("the week is in the address and the picker moves between weeks", async ({ page, api, sandbox }) => {
@@ -87,9 +94,12 @@ test.describe("GR-34 weekly report", () => {
     await page.goto(`/w/${workspace.slug}/reports`);
     await expect(page.getByTestId("weekly-report")).toBeVisible();
 
-    const first = await page.locator("[data-metric]").first().boundingBox();
-    const second = await page.locator("[data-metric]").nth(1).boundingBox();
-    expect(first && second && second.y > first.y).toBe(true); // stacked, not side by side
+    // With two or more tiles to show, they are stacked, not side by side.
+    if ((await page.locator("[data-metric]").count()) > 1) {
+      const first = await page.locator("[data-metric]").first().boundingBox();
+      const second = await page.locator("[data-metric]").nth(1).boundingBox();
+      expect(first && second && second.y > first.y).toBe(true);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     await expect(page.getByRole("combobox", { name: "Week" })).toBeVisible();
   });

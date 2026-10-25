@@ -24,9 +24,16 @@ export function ModalInert() {
       marked.push(el)
     }
     for (const el of Array.from(document.body.children)) mark(el)
-    // Portals opened while the modal is up (a tooltip behind it, say) are marked too.
+    // Portals opened while the modal is up (a tooltip behind it, say) are marked too. Not the ones
+    // the modal's own controls open (a Select's options, a menu, a date picker, a dialog on top):
+    // they must stay clickable.
+    const belongsToModal = (el: Element) =>
+      el.matches("[data-radix-popper-content-wrapper]") ||
+      el.querySelector("[data-radix-popper-content-wrapper], [data-slot=modal-inert], [role=listbox], [role=menu], [role=dialog], [role=alertdialog]") !== null
     const observer = new MutationObserver((records) => {
-      for (const record of records) for (const node of Array.from(record.addedNodes)) if (node instanceof Element) mark(node)
+      for (const record of records) {
+        for (const node of Array.from(record.addedNodes)) if (node instanceof Element && !belongsToModal(node)) mark(node)
+      }
     })
     observer.observe(document.body, { childList: true })
     return () => {

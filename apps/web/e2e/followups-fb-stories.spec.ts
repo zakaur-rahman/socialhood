@@ -38,6 +38,8 @@ const pageLabel = (account: SandboxAccount) => new RegExp(`${account.username ??
 test.describe("C-131 Facebook and Stories follow-ups", () => {
   test("a long caption is fine for a Page and refused once Instagram is chosen too", async ({ page, api, facebook }) => {
     const { workspace, account } = facebook;
+    // Connected before the composer opens: it reads the accounts once.
+    const instagram = await api.connectSandbox(workspace.id);
     await newPost(page, workspace);
     await choose(page, pageLabel(account));
     const caption = "Open late tonight, come say hi. ".repeat(160); // about 5,100 characters
@@ -46,12 +48,12 @@ test.describe("C-131 Facebook and Stories follow-ups", () => {
     await expect(checklist.getByRole("link", { name: /^To fix:/ })).toHaveCount(0);
     await expect(checklist).toContainText("Caption within 63,206 characters");
 
-    const instagram = await api.connectSandbox(workspace.id);
     await choose(page, `@${instagram.username}`);
     await expect(checklist).toContainText("Instagram allows 2,200");
   });
 
   test("a video is published to a Page as a Reel", async ({ page, api, facebook }) => {
+    test.setTimeout(300_000); // the video is read every minute while it processes
     const { workspace, account } = facebook;
     await api.videoAsset(workspace.id, "page-reel.mp4");
     await newPost(page, workspace);
@@ -66,7 +68,7 @@ test.describe("C-131 Facebook and Stories follow-ups", () => {
 
     await publishNow(page);
     const banner = page.getByTestId("status-banner");
-    await expect(banner).toContainText("Published", { timeout: 60_000 });
+    await expect(banner).toContainText("Published", { timeout: 240_000 });
     await expect(banner.getByRole("link", { name: /View on Facebook/ })).toBeVisible();
   });
 

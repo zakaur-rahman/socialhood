@@ -17,7 +17,7 @@ import { renderFields, withDisclosure, type FieldValues } from "@/lib/automation
 import { IDENTITY_FILL, identityAt, type Identity } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
-import { PathView } from "./flow/PathView";
+import { PathView, withChoice } from "./flow/PathView";
 
 export const SAMPLE_CONTACT = { first_name: "Priya", username: "priya.styles" } as const;
 
@@ -139,7 +139,7 @@ export function PreviewPane({
           <PathView
             steps={path}
             imageNote={withImage}
-            onChoose={(fork, exit) => setChoices((current) => [...current.slice(0, fork), exit])}
+            onChoose={(fork, exit) => setChoices((current) => withChoice(current, fork, exit))}
           />
         ) : null}
 

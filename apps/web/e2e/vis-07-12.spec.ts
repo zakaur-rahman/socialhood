@@ -26,7 +26,7 @@ async function openThread(page: Page, slug: string, tag: string, request: string
 
 /** Three customers who wrote last, so all of them wait for a reply; returns them by username. */
 async function waitingLeads(api: Api, wid: string, accountId: string, tag: string): Promise<{ username: string; contact: Contact }[]> {
-  const names = SCORES.map((_, i) => `e2e_vis_${tag}_${i}`);
+  const names = SCORES.map((_, i) => `e2e_vis_${tag.replace(/\W+/g, "_")}_${i}`);
   for (const username of names) {
     await api.inbound(wid, { accountId, kind: "dm", text: "How much is it?", fromId: username, fromUsername: username });
   }

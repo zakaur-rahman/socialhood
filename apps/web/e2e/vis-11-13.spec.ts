@@ -54,7 +54,8 @@ test.describe("VIS-11 and VIS-13", () => {
     // The follow-up is a run in the same thread whose hints are the whitelisted choice.
     const thread = await api.call<{ items: Run[] }>("GET", `/v1/w/${workspace.id}/agent/runs?thread_id=${seeded.thread_id}`);
     const followUp = thread.items.find((run) => run.request === "Same, for the last 90 days");
-    expect(followUp?.hints).toEqual({ range_days: 90 });
+    expect(followUp?.hints).toMatchObject({ range_days: 90 });
+    expect(followUp?.hints?.platform ?? null).toBeNull();
   });
 
   test("an answer that cites the weekly report links to that week", async ({ page, api, sandbox }) => {
@@ -71,6 +72,6 @@ test.describe("VIS-11 and VIS-13", () => {
     await openThread(page, workspace.slug, tag, request);
     const link = page.getByRole("link", { name: /Weekly report/ }).first();
     await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute("href", new RegExp(`/w/${workspace.slug}/reports\?week=${week}&account=${account.id}`));
+    await expect(link).toHaveAttribute("href", new RegExp(`/w/${workspace.slug}/reports\\?week=${week}&account=${account.id}`));
   });
 });

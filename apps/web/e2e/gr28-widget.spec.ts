@@ -107,7 +107,8 @@ test.describe("GR-28 website chat", () => {
     await expect(chat.launcher).toHaveAccessibleName(/1 new message/, { timeout: 20_000 });
     await chat.launcher.click();
     await expect(chat.log.getByText(reply)).toBeVisible();
-    await expect(chat.log.locator(".sr", { hasText: "Team:" })).toHaveCount(1); // read out as the team's
+    // Read out as the team's: the hand-off line the unknown question gets, and the reply.
+    await expect.poll(() => chat.log.locator(".sr", { hasText: "Team:" }).count()).toBeGreaterThanOrEqual(2);
   });
 
   test("an email given in the widget becomes the contact's email", async ({ page, api, workspace }) => {

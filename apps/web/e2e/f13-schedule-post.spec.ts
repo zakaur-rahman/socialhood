@@ -1,7 +1,8 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import type { SandboxAccount, Workspace } from "./support/api";
 import { expect, test, unique } from "./support/fixtures";
+import { pickDay } from "./support/ui";
 
 /**
  * F-13 Schedule and publish a post. The composer builds a draft (account, a photo from the media
@@ -33,16 +34,6 @@ async function composeDraft(page: Page, workspace: Workspace, account: SandboxAc
   await expect(preview).toContainText(account.username ?? "");
   await expect(preview).toContainText(caption);
   await expect(page.getByRole("region", { name: "Checklist" }).getByRole("link", { name: /^To fix:/ })).toHaveCount(0);
-}
-
-/** Opens the date picker's calendar, pages to the month of `day` ("YYYY-MM-DD") and clicks it. */
-async function pickDay(page: Page, trigger: Locator, day: string): Promise<void> {
-  await trigger.click();
-  const cell = page.locator(`td[data-day="${day}"]:not([data-outside])`);
-  for (let hops = 0; hops < 2 && (await cell.count()) === 0; hops++) {
-    await page.getByRole("button", { name: /next month/i }).click();
-  }
-  await cell.getByRole("button").click();
 }
 
 function tomorrowUtc(): string {

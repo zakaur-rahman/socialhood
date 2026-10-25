@@ -8,6 +8,15 @@ import { cn } from "@/lib/utils";
 import { NativeSelect } from "./NativeSelect";
 
 /**
+ * The choices after picking `exit` at the `fork`th fork (0-based): the earlier forks keep what they
+ * were walking (the first exit unless chosen), and the ones after are walked again.
+ */
+export function withChoice(current: readonly number[], fork: number, exit: number): number[] {
+  const before = Array.from({ length: fork }, (_, index) => current[index] ?? 0);
+  return [...before, exit];
+}
+
+/**
  * One walk through a flow as a chat: what the business sends, the taps and answers between, and at
  * each fork a picker for the way to follow (the Preview and the Test tab show one branch at a time).
  * The steps come from the editor's own walk (lib/automations/flow.walk) or the API's dry run

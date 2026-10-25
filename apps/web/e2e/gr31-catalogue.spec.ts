@@ -57,7 +57,7 @@ test.describe("GR-31 product catalogue", () => {
     await api.setAiMode(workspace.id, account.id, "suggest");
     await page.goto(`/w/${workspace.slug}/products`);
 
-    await page.getByRole("button", { name: "Import CSV" }).click();
+    await page.getByRole("button", { name: "Import CSV" }).first().click();
     const dialog = page.getByRole("dialog", { name: "Import products from a CSV file" });
     await dialog.getByTestId("csv-file-input").setInputFiles({
       name: "products.csv",

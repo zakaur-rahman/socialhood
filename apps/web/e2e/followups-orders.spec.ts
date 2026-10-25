@@ -18,9 +18,12 @@ async function customerAndKurta(
     name: "Cotton kurta",
     variants: [{ title: "Blue / M", price: "799", stock: 12 }],
   });
-  const conversations = await api.call<{ items: { id: string }[] }>("GET", `/v1/w/${wid}/conversations`);
+  // The worker stores the message a moment after the event is injected.
+  const firstConversation = async () =>
+    (await api.call<{ items: { id: string }[] }>("GET", `/v1/w/${wid}/conversations`)).items[0]?.id ?? "";
+  await expect.poll(firstConversation, { timeout: 30_000 }).not.toBe("");
   return {
-    conversationId: conversations.items[0]?.id ?? "",
+    conversationId: await firstConversation(),
     productId: product.id,
     variantId: product.variants[0]?.id ?? "",
   };
@@ -67,7 +70,7 @@ test.describe("GR-32 follow-ups", () => {
     await sheet.getByLabel("Reason").fill("Returned by the customer");
     await sheet.getByRole("button", { name: "Refund" }).click();
     await expect(sheet.getByText("Refunded", { exact: true }).first()).toBeVisible();
-    await expect(sheet.getByText(/Returned by the customer/)).toBeVisible();
+    await expect(sheet.getByText(/Returned by the customer/).first()).toBeVisible();
   });
 
   test("a draft order is changed and gets its new total", async ({ page, api, sandbox }) => {
