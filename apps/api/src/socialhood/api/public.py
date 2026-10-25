@@ -194,9 +194,11 @@ async def get_contact(contact_id: uuid.UUID, ctx: ReadContacts, session: Session
 async def update_contact(
     contact_id: uuid.UUID, body: ContactPatch, ctx: WriteContacts, session: Session
 ) -> ContactRecord:
-    """Change a contact's email, phone or custom fields; only what is sent changes. ``fields``
-    merges and a key set to null is removed. 422 lists each value that doesn't fit (an email's
-    shape, a phone without a country code, a field's type or an unknown field)."""
+    """Change a contact's name, email, phone or custom fields; only what is sent changes. A name
+    set here stays: the platform's profile name no longer replaces it (``use_platform_name`` goes
+    back to it). ``fields`` merges and a key set to null is removed. 422 lists each value that
+    doesn't fit (an email's shape, a phone without a country code, a field's type or an unknown
+    field)."""
     await contact_service.update_contact(session, contact_id, body)
     out = await contact_service.get_record(session, contact_id)
     await session.commit()

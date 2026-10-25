@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 import { DELETE_ACCOUNT_LABEL, DeleteAccountDialog, type DeleteMode } from "./DeleteAccountDialog";
 import { DisconnectDialog } from "./DisconnectDialog";
-import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "./PlatformGlyph";
 
 const STATUS_TONE: Record<AccountStatus, { tone: Tone; dot: string }> = {
   active: { tone: "success", dot: "bg-success" },
@@ -115,7 +115,7 @@ export function AccountCard({
         <Avatar size="lg">
           {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
           <AvatarFallback className="bg-brand-soft text-brand-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
-          <AvatarBadge role="img" aria-label={platformName} className={PLATFORM_BG[account.platform]}>
+          <AvatarBadge role="img" aria-label={platformName} className={PLATFORM_LOGO_BG[account.platform]}>
             <PlatformGlyph platform={account.platform} />
           </AvatarBadge>
         </Avatar>

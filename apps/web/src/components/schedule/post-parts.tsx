@@ -155,9 +155,16 @@ export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummar
   );
 }
 
-/** The first published account's Instagram link. */
+/** The first published account's link on its platform. */
 export function permalinkOf(post: Pick<ScheduledPostSummary, "targets">): string | null {
   return post.targets.find((t) => t.permalink)?.permalink ?? null;
+}
+
+/** "View on Facebook" for a Page post, "View on Instagram" otherwise: the platform of the account the link is from. */
+export function viewLabelOf(post: Pick<ScheduledPostSummary, "targets">, accounts: Map<string, SocialAccount>): string {
+  const target = post.targets.find((t) => t.permalink);
+  const platform = target ? accounts.get(target.social_account_id)?.platform : undefined;
+  return platform === "facebook" ? "View on Facebook" : "View on Instagram";
 }
 
 function mediaItemOf(post: Pick<ScheduledPostSummary, "targets">): string | null {
@@ -262,7 +269,7 @@ export function PostMenu({
         {published && permalink ? (
           <DropdownMenuItem asChild>
             <a href={permalink} target="_blank" rel="noreferrer">
-              <ExternalLink aria-hidden /> View on Instagram
+              <ExternalLink aria-hidden /> {viewLabelOf(post, schedule.accounts)}
             </a>
           </DropdownMenuItem>
         ) : null}
@@ -301,8 +308,8 @@ export function PublishedPeek({ post }: { post: ScheduledPostSummary }) {
   return (
     <span className="flex flex-col gap-0.5">
       <span className="font-medium">{captionLine(post.caption)}</span>
-      {mediaItem ? <PeekResults wid={schedule.wid} postId={mediaItem} /> : <span>Results appear once Instagram shares them.</span>}
-      {permalinkOf(post) ? <span>View on Instagram from the post&apos;s menu.</span> : null}
+      {mediaItem ? <PeekResults wid={schedule.wid} postId={mediaItem} /> : <span>Results appear once the platform shares them.</span>}
+      {permalinkOf(post) ? <span>{viewLabelOf(post, schedule.accounts)} from the post&apos;s menu.</span> : null}
     </span>
   );
 }

@@ -8,7 +8,7 @@ import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
 import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
-import { ContactDrawer } from "@/components/contacts/ContactDrawer";
+import { ContactDrawer, PlatformNameNote } from "@/components/contacts/ContactDrawer";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +117,9 @@ export function DetailsPanel({
             <div className="min-w-0">
               <p className="truncate font-semibold">{name}</p>
               {c.contact.username ? <p className="truncate text-sm text-fg-secondary">@{c.contact.username}</p> : null}
+              <PlatformNameNote
+                record={{ id: c.contact.id, name, name_source: c.contact.name_source, platform_name: c.contact.platform_name, platform: c.platform }}
+              />
               {typeof c.contact.follows_business === "boolean" ? (
                 // FR-AUT-22: as Instagram reported it at the last check; nothing while unknown.
                 <Badge

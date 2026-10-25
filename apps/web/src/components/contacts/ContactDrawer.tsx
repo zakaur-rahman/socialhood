@@ -118,13 +118,14 @@ function DrawerBody({ record }: { record: ContactRecord }) {
   const admin = role !== "agent";
   // Remount the form when the saved values change, so it starts from them. It waits for the field
   // definitions, which give it its fields.
-  const formKey = JSON.stringify([record.email, record.phone, record.fields]);
+  const formKey = JSON.stringify([record.name, record.email, record.phone, record.fields]);
   return (
     <>
       <SheetHeader className="flex-row items-center gap-3 border-b border-line">
         <ContactAvatar id={record.id} name={record.name} pictureUrl={record.profile_picture_url} platform={record.platform as Platform} />
         <div className="min-w-0">
           <SheetTitle className="truncate">{record.name}</SheetTitle>
+          <PlatformNameNote record={record} />
           <SheetDescription className="truncate">
             {[record.username ? `@${record.username}` : null, PLATFORM_LABEL[record.platform as Platform]]
               .filter(Boolean)
@@ -165,6 +166,30 @@ function DrawerBody({ record }: { record: ContactRecord }) {
         </Section>
       </div>
     </>
+  );
+}
+
+/**
+ * C-135: when the team's saved name differs from the one the platform sent, a quiet line says what
+ * the platform calls them, with a way back to it. Shared with the inbox's details panel.
+ */
+export function PlatformNameNote({ record }: { record: Pick<ContactRecord, "id" | "name" | "name_source" | "platform_name" | "platform"> }) {
+  const { id: wid } = useCurrentWorkspace();
+  const update = useUpdateContact(wid);
+  if (record.name_source !== "team" || !record.platform_name || record.platform_name === record.name) return null;
+  return (
+    <p className="text-xs text-fg-secondary">
+      {PLATFORM_LABEL[record.platform as Platform]} name: {record.platform_name}.{" "}
+      <Button
+        variant="link"
+        size="xs"
+        className="px-0"
+        loading={update.isPending}
+        onClick={() => update.mutate({ id: record.id, body: { use_platform_name: true } }, { onError: (error) => toastError(error) })}
+      >
+        Use this name
+      </Button>
+    </p>
   );
 }
 
@@ -281,6 +306,11 @@ function DetailsForm({ record, definitions }: { record: ContactRecord; definitio
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4" aria-label="Contact details">
+      <Field invalid={Boolean(errors.name)}>
+        <FieldLabel>Name</FieldLabel>
+        <Input maxLength={100} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+        {errors.name ? <FieldError>{errors.name}</FieldError> : null}
+      </Field>
       <Field invalid={Boolean(errors.email)}>
         <FieldLabel>Email</FieldLabel>
         <Input type="email" maxLength={254} value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} />

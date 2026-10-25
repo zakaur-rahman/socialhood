@@ -355,6 +355,6 @@ describe("plan hero and quotas (C-066)", () => {
       "aria-valuetext",
       "1 of 3 connected",
     );
-    expect(tiles[1].querySelector(".bg-facebook")).not.toBeNull();
+    expect(tiles[1].querySelector(".bg-facebook-logo")).not.toBeNull();
   });
 });

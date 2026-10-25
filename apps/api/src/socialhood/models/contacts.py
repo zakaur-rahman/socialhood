@@ -84,6 +84,14 @@ class LeadStage(StrEnum):
     LOST = "lost"
 
 
+class NameSource(StrEnum):
+    """Who chose a contact's saved name (C-135): the platform's profile name, or a member. A
+    name a member saved is never replaced by the profile name a platform sends later."""
+
+    PLATFORM = "platform"
+    TEAM = "team"
+
+
 class StageActor(StrEnum):
     """Who moved a lead: a member, an automation's step, a rule of the product (lead score,
     intent, a captured email, going cold) or the system."""

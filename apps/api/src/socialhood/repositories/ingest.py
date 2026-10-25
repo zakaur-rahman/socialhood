@@ -58,6 +58,7 @@ async def get_or_create_contact(
             social_account_id=social_account_id,
             platform_user_id=platform_user_id,
             display_name=display_name,
+            platform_name=display_name,  # C-135: the platform's name, kept apart from a team name
             first_seen_at=first_seen_at,
         )
         .on_conflict_do_nothing(

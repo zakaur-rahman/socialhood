@@ -39,6 +39,8 @@ Actionable tasks for visual answers (doc 08's decision C). Effort is relative (X
 
 **Built (C-123):** VIS-12. The lead list carries `reply_ids` (at most 3, the best scores that have a conversation) and a "Prepare replies" button that asks the agent for one `draft_reply` each; the drafts are action cards named after the lead that open the conversation with the draft. Three, not the 8 the tool cap would allow, because each draft costs 2 of a run's 10 credits.
 
+**Built (C-135):** the platform control on the lead list (VIS-11 left it out; `list_contacts` also takes `facebook`), VIS-X2 (account names reach the system prompt quoted, on one line, at most 60 characters) and VIS-X4 (`DESIGN_SYSTEM.md` §8.2).
+
 **Built (C-132, `feature/vis-11-13-14`):** VIS-11 (`AgentRunCreate.hints`, migration 0045, range and platform controls with the credit cost shown, the bubble in words; VIS-12's "Prepare replies" uses it too) and VIS-13 (the `report` answer-ref kind and a `reports?week=` link from `metric_trend` and `compare_periods`; the page itself is GR-34's, extended elsewhere).
 
 ## Phase 4 · Decision gate
@@ -54,8 +56,8 @@ Actionable tasks for visual answers (doc 08's decision C). Effort is relative (X
 | ID | Task | Files | Priority | Effort | Acceptance criteria |
 |---|---|---|---|---|---|
 | VIS-X1 | Prompt: tell the model a visual will show the figures, so it keeps prose to the main change and doesn't repeat the table; prompt v3 with eval | `api/ai/prompts/agent.v3.md`, eval | P1 | S | Eval passes at ≥ v2's rate; answers shorter on visual questions |
-| VIS-X2 | Quote or remove account display names in the system prompt (minor injection exposure) | `api/agent/context.py` | P1 | XS | Names passed as data, not instructions |
+| VIS-X2 **(built, C-135)** | Quote or remove account display names in the system prompt (minor injection exposure) | `api/agent/context.py` | P1 | XS | Names passed as data, not instructions |
 | VIS-X3 | Metrics and logs: `agent_visual` log line; counters for built, dropped and render-error | `api/services/agent_runs.py`, `api/observability/metrics.py`, web Sentry | P1 | XS | Visible in /metrics and Sentry |
-| VIS-X4 | Design-system entries for the new components (charts §1.8, components §8) | `docs/ui-audit/DESIGN_SYSTEM.md` | P1 | XS | Documented with states and tokens |
+| VIS-X4 **(built, C-135)** | Design-system entries for the new components (charts §1.8, components §8) | `docs/ui-audit/DESIGN_SYSTEM.md` | P1 | XS | Documented with states and tokens |
 
 **Critical path:** VIS-01 → VIS-02 → VIS-03 → VIS-04 → VIS-05 → VIS-06, which is the MVP: about two M and four S tasks plus tests.

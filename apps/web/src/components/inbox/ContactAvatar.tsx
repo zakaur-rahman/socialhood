@@ -1,4 +1,4 @@
-import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Platform } from "@/lib/api/types";
 import { avatarGradient, initial } from "@/lib/inbox/format";
@@ -55,7 +55,7 @@ export function ContactAvatar({
         {initial(name)}
       </AvatarFallback>
       {platform && s.badge ? (
-        <AvatarBadge className={PLATFORM_BG[platform]} data-platform={platform}>
+        <AvatarBadge className={PLATFORM_LOGO_BG[platform]} data-platform={platform}>
           <PlatformGlyph platform={platform} />
         </AvatarBadge>
       ) : null}

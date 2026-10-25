@@ -67,7 +67,7 @@ function Avatar({ initial, platform }: { initial: string; platform: "instagram" 
       <span
         className={cn(
           "absolute -right-0.5 -bottom-0.5 grid size-3.5 place-items-center rounded-full ring-2 ring-panel",
-          platform === "instagram" ? "bg-instagram" : "bg-whatsapp",
+          platform === "instagram" ? "bg-instagram-logo-gradient" : "bg-whatsapp-logo",
         )}
       >
         <PlatformGlyph platform={platform} className="size-2 text-on-brand" />

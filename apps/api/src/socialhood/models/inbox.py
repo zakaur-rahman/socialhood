@@ -120,6 +120,12 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     platform_user_id: Mapped[str] = mapped_column(Text)  # IGSID or WhatsApp wa_id
     username: Mapped[str | None] = mapped_column(Text)
     display_name: Mapped[str | None] = mapped_column(Text)
+    # C-135: who chose display_name (models.contacts.NameSource: "platform" or "team") and the
+    # latest profile name the platform sent, kept even while a team name is shown.
+    name_source: Mapped[str] = mapped_column(
+        Text, server_default=sql("'platform'"), default="platform"
+    )
+    platform_name: Mapped[str | None] = mapped_column(Text)
     profile_picture_url: Mapped[str | None] = mapped_column(Text)
     profile_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Instagram's is_user_follow_business (FR-AUT-22), known once they have messaged the account.
@@ -156,6 +162,7 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(
             "lead_stage IN ('new', 'qualified', 'follow_up', 'won', 'lost')", name="lead_stage"
         ),
+        CheckConstraint("name_source IN ('platform', 'team')", name="name_source"),
         CheckConstraint(
             "lead_stage_reason IS NULL OR char_length(lead_stage_reason) <= 300",
             name="lead_stage_reason_length",

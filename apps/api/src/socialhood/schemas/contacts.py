@@ -141,6 +141,9 @@ class ContactRecord(ContactListItem):
     """One contact with what the business knows about them."""
 
     fields: dict[str, Any]
+    # C-135: "team" when a member chose the name; the platform's own name is kept even then.
+    name_source: Literal["platform", "team"] = "platform"
+    platform_name: str | None = None
     email_source: str | None = None
     email_verified: bool
     phone_source: str | None = None
@@ -150,9 +153,14 @@ class ContactRecord(ContactListItem):
 
 
 class ContactPatch(RequestModel):
-    """Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or
+    """Only what is sent changes. A ``name`` is the team's; ``use_platform_name`` goes back to the
+    platform's. ``fields`` merges: a key set to null is removed. An email or
     phone set here is marked as entered by a member and not verified."""
 
+    # C-135: a name typed here is the team's and is never replaced by the platform's profile name;
+    # ``use_platform_name`` hands the name back to the platform.
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    use_platform_name: bool = False
     email: str | None = Field(default=None, max_length=254)
     clear_email: bool = False
     phone: str | None = Field(default=None, max_length=32)

@@ -43,10 +43,10 @@ export function Hero() {
         <div className="mx-auto max-w-5xl text-center">
           <p className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-line bg-panel-glass px-3 py-1.5 text-xs text-fg-secondary">
             <span className="flex items-center gap-1">
-              <span className="grid size-5 place-items-center rounded-full bg-instagram">
+              <span className="grid size-5 place-items-center rounded-full bg-instagram-logo-gradient">
                 <PlatformGlyph platform="instagram" className="size-3 text-on-brand" />
               </span>
-              <span className="grid size-5 place-items-center rounded-full bg-whatsapp">
+              <span className="grid size-5 place-items-center rounded-full bg-whatsapp-logo">
                 <PlatformGlyph platform="whatsapp" className="size-3 text-on-brand" />
               </span>
             </span>

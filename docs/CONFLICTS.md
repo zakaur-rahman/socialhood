@@ -5699,3 +5699,64 @@ Also fixed: `publish_target` set each collaborator's Pending invite after `settl
   the most any post accepts: 15 minutes (900 s), an Instagram Reel's limit. The 90-second limit for
   carousel and Facebook videos (and 60 s for Stories) is enforced when the post is saved, by the
   publishing rules. Upload message: "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."
+
+## C-135 · Polish A: contact names, account card colours and small leftovers (feature/polish-names-colours)
+
+On top of the combined GR branch (migrations to 0052). **One migration, 0053** (expand-only).
+
+### A name the team saved is never replaced
+- **The rule.** `contacts.name_source` (`platform` default, or `team`) says who chose
+  `display_name`; `contacts.platform_name` keeps the latest profile name the platform sent. The
+  rule lives in one place, `services/contact_names.py`: a platform name is always stored in
+  `platform_name` and becomes the shown name only while `name_source = platform`; an empty or
+  missing name never overwrites anything.
+- **Every channel.** *The owner asked about WhatsApp; the same code serves Instagram, Facebook, the
+  website widget and WhatsApp, so the rule is built once for all of them.* Inbound messages
+  (`ingest._inbound`), the profile follow-up (`ingest_followups._store`) and the widget's typed
+  visitor name go through `apply_platform_name`; a new contact also starts with `platform_name`.
+- **What counts as the team's name.** A rename (`PATCH /contacts/{id}` with `name`, in the app and
+  the public API, which share `ContactPatch`) and a contact the team creates (public API
+  `POST /contacts` with a name). `use_platform_name: true` hands the name back: `name_source` is
+  `platform` again and `platform_name` is copied over (without one, the saved name stays shown
+  until the next message brings it). *There is no contact CSV import in the product (only the
+  catalogue imports files), and Ask has no write action that types a contact name, so there was
+  nothing to change there.*
+- **Responses.** `ContactRecord` and the inbox `ContactDetail` gain `name_source` and
+  `platform_name`; the contacts list is unchanged.
+- **Web.** The contact drawer has a Name field (a changed name is sent; a blanked one is not).
+  When the team's name differs from the platform's, the drawer header and the inbox details panel
+  show a quiet "Instagram name: Priya N." line (the platform word from the channel) with "Use this
+  name". Existing contacts keep `name_source = platform` and an empty `platform_name` until their
+  next message (*no backfill: older names cannot be told apart from team-typed ones*).
+
+### Account cards in the platforms' own colours
+- `PLATFORM_LOGO_BG` (`bg-instagram-logo-gradient`, `bg-facebook-logo`, `bg-whatsapp-logo`,
+  `bg-web`) is used wherever a badge or tile holds the glyph alone: the account card, the AI
+  settings account tile, avatar platform badges, the platform strip dot, the billing meter tiles and
+  the marketing tiles. The darkened `PLATFORM_BG` stays for fills with text (contrast). DESIGN_SYSTEM
+  §1.6 states the rule.
+
+### Small leftovers
+- **View on Facebook.** The post menu and the card peek in Schedule take their label from the
+  platform of the account the link is from (`viewLabelOf`); the composer banner already did.
+- **Sign-in contrast.** Clerk's "Secured by" line is an unnamed `<p data-variant="buttonSmall"
+  data-color="inherit">` inside the footer; the `footer` element rule in `lib/clerk-appearance.ts`
+  sets it to solid `fg-secondary` (both themes, since the variable follows the theme). *Not
+  measured with axe here (no browser run); the selector is the one axe reported.*
+- **Lead list platform control (VIS-11 leftover).** The lead list offers the platform chips only
+  (`offersRange` is false for it: it is whoever is waiting now); `list_contacts` also accepts
+  `facebook`.
+- **VIS-X2.** Account names in the agent's system prompt are JSON-quoted on one line, at most 60
+  characters (`agent/context.quoted`), so they are data. **VIS-X4.** DESIGN_SYSTEM §8.2 has the
+  trend, table, lead list and controls. Both are marked in the backlog.
+
+### Tests (written; the DB-free ones were run)
+Unit: `test_contact_names.py`, `test_agent_context_names.py` (ruff, mypy and the unit and contract
+suites pass). Integration (not run): `test_contact_names.py` (inbound fills and updates a platform
+name, keeps a team name, a missing name never clears, rename sets team, revert works) and an assertion
+in `test_public_api.py` (create sets team). Vitest (not run): `edit.test.ts`, `ContactDrawer.test.tsx`,
+`PlatformGlyph.test.tsx`, `post-parts.test.ts`, `vis-lib.test.ts`, `VisualViewVis.test.tsx`, plus
+class updates in `ContactAvatar`, `PlatformStrip` and `BillingPage` tests. E2E (not run):
+`polish-names-colours.spec.ts`. *For the coordinator:* regenerate the client (`ContactPatch.name`,
+`use_platform_name`, `ContactRecord` and `ContactDetail` `name_source` and `platform_name`); no
+decision is pending an owner call (PD-n).

@@ -101,6 +101,9 @@ class ContactDetail(ContactSummary):
     first_seen_at: datetime
     platform_user_id: str
     follows_business: bool | None = None  # FR-AUT-22; None until known
+    # C-135: who chose display_name ("platform" or "team") and the platform's own latest name.
+    name_source: Literal["platform", "team"] = "platform"
+    platform_name: str | None = None
 
 
 class Assignee(ResponseModel):

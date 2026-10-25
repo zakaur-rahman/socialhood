@@ -16,7 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -85,9 +85,9 @@ const METER_ICON: Record<string, ReactNode> = {
 };
 
 const METER_ICON_BG: Record<string, string> = {
-  instagram_accounts: `${PLATFORM_BG.instagram} text-on-brand`,
-  whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-on-brand`,
-  facebook_accounts: `${PLATFORM_BG.facebook} text-on-brand`,
+  instagram_accounts: `${PLATFORM_LOGO_BG.instagram} text-on-brand`,
+  whatsapp_accounts: `${PLATFORM_LOGO_BG.whatsapp} text-on-brand`,
+  facebook_accounts: `${PLATFORM_LOGO_BG.facebook} text-on-brand`,
 };
 
 /** Places, not allowances (VH-007): filling them is normal use, so the meter never warns. */
