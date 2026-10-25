@@ -123,7 +123,7 @@ and the `code=` log fields (SEC-07).
   - The web has no `dangerouslySetInnerHTML`, no `innerHTML` and no markdown library.
   - Agent answers use a React-only subset parser (`src/lib/agent/answer.ts`, `src/components/agent/AnswerText.tsx`).
   - Messages and comments render as text nodes.
-  - New tests in `src/lib/security/security.test.tsx`: an `<img onerror>`, `<script>` or `javascript:` payload renders as text in an Ask Social Hood answer and in a customer message.
+  - New tests in `src/lib/security/security.test.tsx`: an `<img onerror>`, `<script>` or `javascript:` payload renders as text in an Ask Amplychat answer and in a customer message.
   - Existing test: `src/lib/agent/answer.test.ts:35`.
 
 ### SEC-09: SSRF protection
@@ -148,7 +148,7 @@ and the `code=` log fields (SEC-07).
 - **Placeholders.** `ai/prompts.py` fills them from trusted settings only. Customer and knowledge text go in the message contents (`agent/context.py:1-15`).
 - **Auto replies.** They pass the policy (`ai/policy.py`) and the output filter. The filter blocks replies over 1000 characters, and any link, email or phone number that is not in the allowed sources (`ai/output_filter.py:101-143`).
 - **Tests.** `unit/test_ai_policy.py:225,236`.
-- **Ask Social Hood (C-033)** is R1 read-only:
+- **Ask Amplychat (C-033)** is R1 read-only:
   - `agent/registry.py:176-182` refuses any write-tier tool in R1.
   - The tools are 23 read and 4 draft; none writes.
   - `agent/gateway.py` `decide()` is an R2 stub that nothing calls.
@@ -298,7 +298,7 @@ workspace (`services/connections.py` `start_instagram_connect`). The public call
 completed the connect for whichever browser brought the code.
 
 **The attack.** An attacker starts a connect in their own workspace and sends the Instagram
-authorize link to a victim. If the victim approves "Social Hood", the victim's Instagram account is
+authorize link to a victim. If the victim approves "Amplychat", the victim's Instagram account is
 connected to the attacker's workspace, which can then read and send its DMs. F-04 (`account_in_use`)
 blocks this only when the victim's account is already connected elsewhere.
 
@@ -343,7 +343,7 @@ code can only be submitted by the member whose page asked for it.
 ### X-2: open redirects (pass)
 - **OAuth callback.** It redirects only to `WEB_BASE_URL` plus the stored slug, which must match `SLUG_PATTERN`. The `error` value maps to fixed codes (`api/v1/oauth.py`). New: `test_security_pass.py::test_the_oauth_callback_only_redirects_to_the_web_app`.
 - **Checkout return.** The URL is `WEB_BASE_URL/w/{slug}/settings/billing?checkout=return`, with no client input (`services/billing.py:218-257`). Test: `test_billing_api.py:91`.
-- **Auth return.** Clerk's `redirect_url` is limited to the app origin and `*.socialhood.com`. Clerk's default when `allowedRedirectOrigins` is unset is in `@clerk/shared` `internal/clerk-js/url.mjs:257-265`.
+- **Auth return.** Clerk's `redirect_url` is limited to the app origin and `*.amplychat.com`. Clerk's default when `allowedRedirectOrigins` is unset is in `@clerk/shared` `internal/clerk-js/url.mjs:257-265`.
 - **Service worker.** Push clicks open same-origin URLs only (`public/sw.js:22-29`).
 
 ### X-3: navigation to URLs the API returns (fixed)

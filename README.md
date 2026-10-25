@@ -1,4 +1,4 @@
-# Social Hood
+# Amplychat
 
 One inbox for Instagram and WhatsApp, with AI that answers from a business's own knowledge.
 

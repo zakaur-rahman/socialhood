@@ -5929,3 +5929,43 @@ copy or branding was taken from it. Web only: no API change.
   0.1. *The existing `layout-shift.spec.ts` covers the app's pages only, not `/`.*
 - *Not done:* no new product screenshots (`public/marketing/*.webp` are unchanged); no Lighthouse run;
   the owner should look at the Hindi and Hinglish examples and the new copy once.
+
+## C-139 · Rename: Social Hood becomes Amplychat (feature/rename-amplychat)
+
+The owner renamed the product to **Amplychat** (amplychat.com). The legal entity behind it is a sole
+proprietorship, **unchartd** (lowercase, as the owner writes it).
+
+### What changed
+- Every name a person can see: "Social Hood" is now "Amplychat" (capital A, rest lowercase) in web
+  copy, marketing, legal pages, metadata and SEO, emails, API messages, the widget's branding line,
+  the Ask prompts (`ai/prompts/agent.v1..v4.md`, edited in place: versions are not hashed and no
+  test pinned their text) and test assertions. "Ask Social Hood" is "Ask Amplychat".
+- Domains: `socialhood.com` is `amplychat.com` (support@, privacy@, hello@, api., app., clerk.;
+  `.env.example` and settings defaults; the CSP and SSRF allow-lists and the error type base URL
+  follow the constants). The bot user agent is `AmplychatBot` (`amplychatbot` in the robots token).
+- Operator: `LEGAL.entityName` is "unchartd", so the footer reads "(c) year unchartd", the Terms say
+  "between you and unchartd ("Amplychat", "we"...)" and the legal facts show "Operated by unchartd".
+  The registered address, governing law, jurisdiction, effective date and grievance officer are
+  still unset and still render nothing (no address, number or name was invented).
+- Living docs (README, BUILD_SPEC, ops, testing, verification, security checklist, dev-whatsapp,
+  product roadmap overview) use the new name. History is untouched: this file, `docs/roadmap/*`,
+  QUESTIONS, ai-eval-log, the generative-UI decision records, competitor notes and the two dated
+  requirement/review pages keep "Social Hood".
+
+### Kept internal (renaming them would break running systems for no reader's benefit)
+The Python package `socialhood` and its imports, the folder and repo names, Docker/compose names, DB
+names (`socialhood`, `socialhood_test_*`), Alembic, `SOCIALHOOD_*` env vars, `socialhood_*` Prometheus
+metrics, Valkey keys, cookie and localStorage keys, the `shk_` key prefix, `window.__socialHoodWidget`
+and the widget's `socialHood: 1` postMessage tag, `@socialhood/*` package names, CI workflow names,
+the Pydantic AI agent name `ask_social_hood` (trace label only), the `.test`/`.example` fake test
+domains, and the file reference `knowledge/social-hood-product.md`.
+
+### Owner to-dos
+- Buy amplychat.com (and consider .in, .co, www redirect); point app., api., docs., clerk. at it.
+- Trademark search for "Amplychat" in classes 9 and 42 (and India, since the business is there).
+- Rename the display names in: the Meta app (and its App Review submission text), the Clerk
+  application, Razorpay, Dodo Payments, and the Render and Vercel services.
+- Set up email on amplychat.com (support@, privacy@, hello@/noreply@) with SPF, DKIM and DMARC, and
+  verify the domain in Resend before the default `EMAIL_FROM` is used.
+- Update Meta redirect URIs, webhook URLs, the Clerk allowed origins and the Google OAuth redirect
+  when the domains move; `CORS`/`CSP` env values that name the old domain.

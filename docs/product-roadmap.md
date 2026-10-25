@@ -21,7 +21,7 @@ date above, not guarantees.
 - P0 runs as the owner track while engineering builds, because every feature can be developed and
   tested with role accounts and the sandbox before App Review passes.
 
-## What Social Hood already covers
+## What Amplychat already covers
 
 Several of the reviewed ideas are already built. Build on these instead of starting over.
 
@@ -30,7 +30,7 @@ Several of the reviewed ideas are already built. Build on these instead of start
 | Customer intelligence ("AudienceBrain") | Per-message analysis: sentiment, intent, topics, lead score (`services/analysis.py`, `models/ai.py`); Home's sentiment, top-intents and top-posts cards; conversation summaries (`services/summaries.py`); knowledge gaps |
 | Lead follow-up ("LeadRecovery") | `lead_score` on conversations; the Home priority queue (`services/priority_queue.py`); "Needs you" hand-off (`services/takeover.py`); reminders before a reply window closes for leads scoring 60 or more (`services/follow_ups.py`) |
 | Performance analytics | Daily account snapshots and post insights (`services/analytics/`) |
-| An AI copilot ("OpsPilot") | Ask Social Hood, a read-only agent (C-033); write tools through one action gateway are planned for R2 (`docs/agent-architecture.html`) |
+| An AI copilot ("OpsPilot") | Ask Amplychat, a read-only agent (C-033); write tools through one action gateway are planned for R2 (`docs/agent-architecture.html`) |
 | Automation reliability | Idempotency keys, webhook intake and processing, retries, automation run results, agent runs |
 | A shared integration layer | `platforms/base.py`'s `PlatformAdapter` protocol, implemented per platform |
 
@@ -49,7 +49,7 @@ Three separate things, often confused:
   requires business verification as well as App Review.
 
 **Steps:**
-1. In the app dashboard (developers.facebook.com → the Social Hood app → App Review), note the exact
+1. In the app dashboard (developers.facebook.com → the Amplychat app → App Review), note the exact
    message and the permissions it names (for example `instagram_business_manage_messages`,
    `instagram_business_manage_comments`). Request only what the product uses.
 2. Choose the cheapest legitimate business identity:
@@ -141,7 +141,7 @@ outcome customers pay for.
 5. Web: a **Leads** page with stage columns or a list (whichever works at 375 px), the reason a
    lead was qualified, last activity, and one click to the conversation. Add a lead stage chip in
    the conversation header.
-6. Ask Social Hood: add a read tool `list_leads` so questions like "who asked about pricing and
+6. Ask Amplychat: add a read tool `list_leads` so questions like "who asked about pricing and
    got no reply?" work.
 
 **Done when:** an owner can see every open lead, its stage and its last touch, and is told when
@@ -164,7 +164,7 @@ one goes cold.
 4. A weekly email digest: the same changes plus the leads summary (P2). Send through the existing
    notification pipeline with an unsubscribe link (the marketing unsubscribe page exists), and use
    the workspace time zone.
-5. Ask Social Hood: a `get_trends` read tool.
+5. Ask Amplychat: a `get_trends` read tool.
 
 **Done when:** an owner who opens nothing during the week still learns, every Monday, what changed
 and where to look.
@@ -191,7 +191,7 @@ automations work on them, under the same rules as Instagram.
 
 ## P5: Copilot write actions, R2 (L)
 
-**Why:** the main differentiator: describe the outcome and Social Hood prepares the actions. For
+**Why:** the main differentiator: describe the outcome and Amplychat prepares the actions. For
 example: "every time someone asks about pricing, send our price list and tell me if they want a
 demo."
 
@@ -278,5 +278,5 @@ Each one is a new `PlatformAdapter`, implementing only what its official API sup
   feature truly needs to search large text.
 - **Pages fill the width** and are responsive at any size (the owner's rule, 2026-10-14). New pages
   follow DESIGN_SYSTEM.md and the UI programme's primitives.
-- **Ask Social Hood gets a read tool** for every new data source, so the agent stays the single
+- **Ask Amplychat gets a read tool** for every new data source, so the agent stays the single
   place to ask questions.
