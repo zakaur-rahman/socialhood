@@ -18,6 +18,7 @@ function input(overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<
       kind: "post",
       first_comment: null,
       publish_at: null,
+      share_to_feed: true,
       ...overrides,
     },
     accounts: [ready],

@@ -370,19 +370,20 @@ function Composer({
     return counts;
   }, [draft.user_tags]);
   const tagTotal = draft.asset_ids.reduce((sum, id) => sum + (tagCounts[id] ?? 0), 0);
-  const previewExtras = useMemo<PreviewExtras | undefined>(() => {
-    if (extrasReason) return undefined;
+  // Not a useMemo: React Compiler memoizes it (a manual one with these dependencies is skipped by it).
+  let previewExtras: PreviewExtras | undefined;
+  if (!extrasReason) {
     const tags: PreviewExtras["tags"] = {};
-    for (const tag of draft.user_tags) (tags[tag.asset_id] ??= []).push({ username: tag.username, x: tag.x, y: tag.y });
+    for (const tag of draft.user_tags) tags[tag.asset_id] = [...(tags[tag.asset_id] ?? []), { username: tag.username, x: tag.x, y: tag.y }];
     const coverAsset = draft.cover_asset_id ? assets[draft.cover_asset_id] : undefined;
-    return {
+    previewExtras = {
       collaborators: draft.collaborators,
       hasLocation: Boolean(draft.location?.trim()),
       tags,
       coverUrl: coverAsset ? (coverAsset.thumbnail_url ?? coverAsset.url) : null,
       audioName: draft.audio_name?.trim() || null,
     };
-  }, [assets, draft.audio_name, draft.collaborators, draft.cover_asset_id, draft.location, draft.user_tags, extrasReason]);
+  }
   const tagAsset = tagId ? assets[tagId] : undefined;
   const tagIndex = tagId ? draft.asset_ids.indexOf(tagId) : -1;
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
