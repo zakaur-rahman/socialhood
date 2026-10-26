@@ -161,7 +161,7 @@ function ExampleLive({ layout, example, index, clock }: { layout: RoutingLayout;
     const local = localTime(t, index);
     if (local < 0) return 0;
     const head = Math.min(into.total, progress(local, T.inStart, T.inDur) * (into.total + layout.dash));
-    return Math.min(clamp01((local - 0.15) / 0.35), clamp01((into.total - half - head) / fade));
+    return Math.min(clamp01((head - layout.tile * 0.6) / fade), clamp01((into.total - half - head) / fade));
   });
   const answerOpacity = useTransform(clock, (t) => {
     const local = localTime(t, index);

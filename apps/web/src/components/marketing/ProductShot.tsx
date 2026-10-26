@@ -13,7 +13,7 @@ import { SHOTS } from "./shots";
  */
 export function ProductShot() {
   return (
-    <section aria-labelledby="inbox-shot-title" className="relative py-16 sm:py-20">
+    <section aria-labelledby="inbox-shot-title" className="relative overflow-hidden py-16 sm:py-20">
       <Container>
         <SectionHeading
           id="inbox-shot-title"

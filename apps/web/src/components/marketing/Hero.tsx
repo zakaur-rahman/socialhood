@@ -38,8 +38,8 @@ export function Hero() {
         </div>
         <div className="relative mx-auto max-w-5xl lg:border-x lg:border-line-subtle">
           <Container className="pt-14 pb-12 text-center sm:pt-20 sm:pb-14 lg:pt-24 lg:pb-16">
-            <h1 id="hero-title" className={cn(DISPLAY, "mx-auto max-w-3xl text-balance")}>
-              Every DM. Every comment. <span className="text-brand-fg">One inbox.</span>
+            <h1 id="hero-title" className={cn(DISPLAY, "mx-auto max-w-4xl text-balance")}>
+              Every DM. Every comment. <span className="text-brand-fg sm:block">One inbox.</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-pretty text-fg-secondary sm:text-lg">{HERO_LINE}</p>
             <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
