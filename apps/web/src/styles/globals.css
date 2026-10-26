@@ -214,6 +214,8 @@
   --gradient-instagram-logo: linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%);
   --gradient-glow-brand: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%);
   --gradient-glow-brand-top: radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%);
+  /* A round light behind one object: the hero's hub (C-141). */
+  --gradient-glow-brand-centre: radial-gradient(closest-side, var(--color-brand-soft), transparent);
   /* The light behind the glass (C-128), fixed to the viewport on the body; the glows are the
      --color-ambient-* tokens. */
   --gradient-ambient:
@@ -227,6 +229,7 @@
 @utility bg-instagram-logo-gradient { background-image: var(--gradient-instagram-logo); }
 @utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
 @utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
+@utility bg-glow-brand-centre { background-image: var(--gradient-glow-brand-centre); }
 @utility bg-ambient { background-image: var(--gradient-ambient); }
 
 /* Glass surfaces (C-128): a frost colour and a blur, bundled. Work panes get a light blur, cards
@@ -284,6 +287,13 @@
    more to scroll to (RSP-012; the sidebar's bottom fade, turned sideways). Give the row the same
    end padding (pe-4) so its last item can scroll clear of the fade. The mask uses alpha only. */
 @utility mask-fade-x { mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent); }
+
+/* The hero's side columns (C-141): fine vertical hairlines in `line-subtle`, fading out downwards
+   (the mask uses alpha only). A texture, not a gradient with a job, so it is not a bg- utility. */
+@utility hatch-lines {
+  background-image: repeating-linear-gradient(90deg, var(--color-line-subtle) 0 1px, transparent 1px 6px);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
 
 /* The crop box's mask (DESIGN_SYSTEM §6: box-shadow for another job than elevation, named here): a
    spread shadow that dims the photo outside the box with media-scrim at 60%, dark in any theme. Its
