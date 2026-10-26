@@ -6,7 +6,7 @@ import { MARKETING_CARD } from "../primitives";
 
 /**
  * Bento Grid, from Aceternity UI's free "bento-grid" (ui.aceternity.com/components/bento-grid),
- * adapted for Social Hood (C-068):
+ * adapted for Amplychat (C-068):
  * - a list (ul/li) with an h3 per card, so the cards read as a list of features;
  * - surfaces, lines and text from the tokens; lucide icons instead of Tabler's (no new
  *   dependency);
@@ -15,7 +15,7 @@ import { MARKETING_CARD } from "../primitives";
  */
 export function BentoGrid({ className, children, label }: { className?: string; children: ReactNode; label?: string }) {
   return (
-    <ul aria-label={label} className={cn("mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-3", className)}>
+    <ul aria-label={label} className={cn("mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-flow-dense md:grid-cols-2 lg:grid-cols-6", className)}>
       {children}
     </ul>
   );

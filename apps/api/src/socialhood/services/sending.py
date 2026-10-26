@@ -553,7 +553,7 @@ async def _touch_conversation(
 
 
 async def human_takeover(session: AsyncSession, conv: Conversation, *, now: datetime) -> None:
-    """A person replied (Social Hood, a scheduled message, or the native app): clear needs_human
+    """A person replied (Amplychat, a scheduled message, or the native app): clear needs_human
     and pause Auto for the workspace's takeover period, 0 meaning until resumed (FR-SUG-05, F-09).
     Sets the attributes on ``conv``; the caller flushes. When the pause starts in an Auto
     conversation, the system note "AI paused until 16:40 because you replied" is added
@@ -631,7 +631,7 @@ async def retry(
     already queued or sending is returned unchanged, so a second click sends nothing more."""
     now = now or datetime.now(UTC)
     if msg.direction != Direction.OUTBOUND:
-        raise ApiError("conflict", "Only messages sent from Social Hood can be retried.")
+        raise ApiError("conflict", "Only messages sent from Amplychat can be retried.")
     if msg.status in (MessageStatus.QUEUED, MessageStatus.SENDING):
         return msg, False
     if msg.status != MessageStatus.FAILED:

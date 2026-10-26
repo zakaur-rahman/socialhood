@@ -275,6 +275,7 @@ export const tokenValues = {
     "instagram-logo": "linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%)",
     "glow-brand": "radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%)",
     "glow-brand-top": "radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%)",
+    "glow-brand-centre": "radial-gradient(closest-side, var(--color-brand-soft), transparent)",
     "ambient": "radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%), radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%), radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%)"
   },
   "shadcn": {

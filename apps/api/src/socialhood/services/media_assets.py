@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from sqlalchemy import select
@@ -76,9 +76,21 @@ DOCUMENT = Limit(
     frozenset({"pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx"}),
     100 * MB,
 )
-# Posts publish only images and video, video up to 90 s (TR-MED-02, R1).
-POST_VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=90)
-POST_UNSUPPORTED = "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 90 seconds."
+# Posts publish only images and video. An upload may run up to 15 minutes, an Instagram Reel's
+# limit (C-134); the publishing rules hold carousel and Facebook videos to 90 seconds, Stories to
+# 60. The size cap is the ``post_video_max_mb`` setting (100 MB unless raised).
+POST_VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=900)
+
+
+def _duration_words(seconds: float) -> str:
+    """90 -> "90 seconds", 900 -> "15 minutes": whole minutes read as minutes from 2 minutes up."""
+    whole = round(seconds)
+    if whole >= 120 and whole % 60 == 0:
+        return f"{whole // 60} minutes"
+    return f"{whole} seconds"
+
+
+POST_UNSUPPORTED = "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."
 # Knowledge files (FR-KB-01): the formats ingestion reads, up to 10 MB.
 KNOWLEDGE_FILE = Limit(
     "document", "Knowledge files", frozenset({"pdf", "docx", "txt", "md"}), 10 * MB
@@ -153,8 +165,11 @@ def purpose_of(public_id: str, workspace_id: uuid.UUID) -> str:
     return match["purpose"]
 
 
-def check_limits(resource: StoredResource, purpose: str = "message") -> Limit:
-    """The limit the asset falls under; 415 unsupported_media when it breaks one."""
+def check_limits(
+    resource: StoredResource, purpose: str = "message", *, post_video_max_bytes: int | None = None
+) -> Limit:
+    """The limit the asset falls under; 415 unsupported_media when it breaks one.
+    ``post_video_max_bytes``: the configured cap on a post's video."""
     fmt = file_format(resource.format, resource.public_id)
     if purpose == AssetPurpose.KNOWLEDGE:
         if fmt in KNOWLEDGE_FILE.formats:
@@ -164,7 +179,8 @@ def check_limits(resource: StoredResource, purpose: str = "message") -> Limit:
         if resource.resource_type == "image" and fmt in IMAGE.formats:
             return _within(resource, IMAGE)
         if resource.resource_type == "video" and fmt in POST_VIDEO.formats:
-            return _within(resource, POST_VIDEO)
+            cap = post_video_max_bytes or POST_VIDEO.max_bytes
+            return _within(resource, replace(POST_VIDEO, max_bytes=cap))
         raise ApiError("unsupported_media", POST_UNSUPPORTED)
     if resource.resource_type == "image" and fmt in IMAGE.formats:
         limit = IMAGE
@@ -190,7 +206,8 @@ def _within(resource: StoredResource, limit: Limit) -> Limit:
         and resource.duration_s > limit.max_duration_s
     ):
         raise ApiError(
-            "unsupported_media", f"{limit.label} can be up to {limit.max_duration_s:.0f} seconds."
+            "unsupported_media",
+            f"{limit.label} can be up to {_duration_words(limit.max_duration_s)}.",
         )
     return limit
 
@@ -203,6 +220,7 @@ async def register(
     user_id: uuid.UUID,
     public_id: str,
     resource_type: ResourceType,
+    post_video_max_mb: int = 100,
 ) -> MediaAsset:
     """Store an uploaded asset once (registering it again returns the same row) and commit."""
     purpose = purpose_of(public_id, workspace_id)
@@ -210,7 +228,7 @@ async def register(
     if existing is not None:
         return existing
     resource = await _lookup(cloudinary, public_id, resource_type)
-    check_limits(resource, purpose)
+    check_limits(resource, purpose, post_video_max_bytes=post_video_max_mb * MB)
     await _check_delivery(cloudinary, resource)
     asset = MediaAsset(
         public_id=public_id,

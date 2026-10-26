@@ -3,7 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { currentSelection, offersControls, type CreditsNow } from "@/lib/agent/controls";
+import { currentSelection, offersControls, offersRange, type CreditsNow } from "@/lib/agent/controls";
 import type { AskInput, RunHints, Visual } from "@/lib/api/types";
 
 import { DataTableVisual } from "./visuals/DataTableVisual";
@@ -77,6 +77,7 @@ export function VisualView({
             credits={credits}
             now={now}
             busy={busy}
+            showRange={offersRange(visual)}
             onChange={onAsk}
           />
         ) : null}

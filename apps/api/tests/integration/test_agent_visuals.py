@@ -1,4 +1,4 @@
-"""GR-38: visual answers in Ask Social Hood (docs/architecture/generative-ui). The tools build
+"""GR-38: visual answers in Ask Amplychat (docs/architecture/generative-ui). The tools build
 their visuals from the same service numbers they return (compare_periods, metric_trend, top_posts,
 sentiment_distribution, comment_topics), nothing is built with the setting off, and a run exposes
 its stored visuals the way it exposes action cards: in step order, at most three, invalid ones

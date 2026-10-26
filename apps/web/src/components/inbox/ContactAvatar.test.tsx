@@ -37,7 +37,7 @@ describe("ContactAvatar", () => {
     const { container } = render(<ContactAvatar id="c1" name="priya" size={40} platform="instagram" />);
     const badge = container.querySelector('[data-platform="instagram"]');
     expect(badge).toHaveAttribute("data-slot", "avatar-badge");
-    expect(badge).toHaveClass("text-on-brand", "bg-instagram", "ring-2", "ring-panel");
+    expect(badge).toHaveClass("text-on-brand", "bg-instagram-logo-gradient", "ring-2", "ring-panel");
     expect(badge).not.toHaveClass("bg-primary", "text-white");
     expect(badge?.querySelector("svg")).not.toBeNull();
   });

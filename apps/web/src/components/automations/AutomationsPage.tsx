@@ -191,7 +191,8 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const router = useRouter();
   const now = useNow();
   // GR-23: the Broadcasts link shows only when the server setting is on (a failed call hides it).
-  const broadcastsOn = useBroadcastAvailability(wid).data?.enabled === true;
+  const availability = useBroadcastAvailability(wid);
+  const broadcastsOn = availability.data?.enabled === true;
 
   // ---- filters (FR-AUT-19)
   const [text, setText] = useState("");
@@ -239,7 +240,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   // here to give focus back to: New automation takes it (UX-A11Y-02).
   const newAutomation = useRef<HTMLButtonElement>(null);
   const focusNewAutomation = () => newAutomation.current;
-  // FR-AGT-03: an automation draft handed over by Ask Social Hood shows first (instead of the
+  // FR-AGT-03: an automation draft handed over by Ask Amplychat shows first (instead of the
   // gallery on /automations/new); it is taken once from the hand-off store.
   const draftHandoff = useAgentHandoff((state) => state.automationDraft);
   const takeAutomationDraft = useAgentHandoff((state) => state.takeAutomationDraft);
@@ -434,6 +435,11 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           {broadcastsOn ? (
             <Button asChild variant="secondary" size="lg">
               <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
+            </Button>
+          ) : availability.isPending ? (
+            // Holds the button's place until the flag is known, so the header doesn't re-wrap.
+            <Button variant="secondary" size="lg" className="pointer-events-none invisible" aria-hidden tabIndex={-1}>
+              Broadcasts
             </Button>
           ) : null}
           <Button asChild variant="secondary" size="lg">

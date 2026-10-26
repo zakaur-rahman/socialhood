@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import check_entitlement
 from socialhood.errors import ApiError, FieldError
+from socialhood.models.contacts import NameSource
 from socialhood.models.identity import User
 from socialhood.models.inbox import (
     Contact,
@@ -181,7 +182,7 @@ class ListFilters:
     # GR-20: the caller (the "mine" view is theirs) and an explicit assignee to filter by.
     viewer_id: uuid.UUID | None = None
     assignee_id: uuid.UUID | None = None
-    # Ask Social Hood (FR-AGT-05): conversations whose last message is in [active_from,
+    # Ask Amplychat (FR-AGT-05): conversations whose last message is in [active_from,
     # active_until).
     active_from: datetime | None = None
     active_until: datetime | None = None
@@ -279,7 +280,7 @@ def _filters(filters: ListFilters, now: datetime) -> list[ColumnElement[bool]]:
 
 
 async def count_conversations(session: AsyncSession, filters: ListFilters, *, now: datetime) -> int:
-    """How many conversations ``list_conversations`` would page through (Ask Social Hood's "and
+    """How many conversations ``list_conversations`` would page through (Ask Amplychat's "and
     n more", TA.4)."""
     count = await session.scalar(
         select(func.count())
@@ -438,6 +439,8 @@ async def conversation_detail(
                 first_seen_at=contact.first_seen_at or contact.created_at,
                 platform_user_id=contact.platform_user_id,
                 follows_business=contact.follows_business,
+                name_source=NameSource(contact.name_source).value,
+                platform_name=contact.platform_name,
             ),
             "reply_window": reply_window(
                 conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now

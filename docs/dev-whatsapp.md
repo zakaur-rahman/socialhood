@@ -2,7 +2,7 @@
 
 Connect WhatsApp (F-04) uses Meta's Embedded Signup, and Embedded Signup **can't connect Meta's
 test number** (the one on the app's WhatsApp → API Setup page). The popup finishes without a
-number, and Social Hood answers "This WhatsApp Business Account has no phone number yet … Meta's
+number, and Amplychat answers "This WhatsApp Business Account has no phone number yet … Meta's
 test numbers can't be connected this way; use a number your business owns."
 
 For development, `apps/api/scripts/connect_whatsapp_number.py` connects a number directly with a
@@ -52,7 +52,7 @@ Connected WhatsApp account 0192…
   status: active
 ```
 
-Exit code 1 means Meta or Social Hood refused (`account_in_use`, the plan's WhatsApp limit, a
+Exit code 1 means Meta or Amplychat refused (`account_in_use`, the plan's WhatsApp limit, a
 Graph error); 2 a usage problem (production, no token, no such workspace, a workspace being
 deleted). Meta refuses to register its test numbers; the script logs `whatsapp_register_failed`
 and carries on, and the number still sends. A failed webhook subscription shows as status

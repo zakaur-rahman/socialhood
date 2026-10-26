@@ -55,7 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await app.state.engine.dispose()
 
     app = FastAPI(
-        title="Social Hood API",
+        title="Amplychat API",
         version=__version__,
         lifespan=lifespan,
         docs_url=None if settings.is_production else "/docs",

@@ -1,5 +1,5 @@
 """The agent eval's requests (TA.6; agent-architecture.html §18): natural questions a bakery owner
-or a team member asks Ask Social Hood, in English, Hindi and Hinglish, over the seeded workspace
+or a team member asks Ask Amplychat, in English, Hindi and Hinglish, over the seeded workspace
 (tests/evals/seed.py).
 
 Each case lists the tools that can answer it (``expect_tools``: at least one must be called) and

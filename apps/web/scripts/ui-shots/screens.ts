@@ -199,21 +199,21 @@ export const SCREENS: Screen[] = [
   },
   {
     name: "ask-panel",
-    what: "The Ask Social Hood panel open over Home (no thread yet)",
+    what: "The Ask Amplychat panel open over Home (no thread yet)",
     viewportOnly: true,
     open: async (ctx) => {
       await go(ctx.page, `${app(ctx)}/home`);
       await heading(ctx.page);
-      await shown(ctx.page.getByRole("button", { name: "Ask Social Hood" })).click();
-      await expect(ctx.page.getByRole("dialog", { name: "Ask Social Hood" })).toBeVisible();
+      await shown(ctx.page.getByRole("button", { name: "Ask Amplychat" })).click();
+      await expect(ctx.page.getByRole("dialog", { name: "Ask Amplychat" })).toBeVisible();
     },
   },
   {
     name: "ask-page",
-    what: "The Ask Social Hood page (no thread yet)",
+    what: "The Ask Amplychat page (no thread yet)",
     open: async (ctx) => {
       await go(ctx.page, `${app(ctx)}/ask`);
-      await heading(ctx.page, "Ask Social Hood");
+      await heading(ctx.page, "Ask Amplychat");
     },
   },
   {
@@ -252,7 +252,7 @@ export const SCREENS: Screen[] = [
   },
   {
     name: "settings-agent",
-    what: "Settings › Agent: Ask Social Hood's settings and run history",
+    what: "Settings › Agent: Ask Amplychat's settings and run history",
     open: (ctx) => settingsPage(ctx, "agent"),
   },
   {
@@ -349,6 +349,20 @@ export const SCREENS: Screen[] = [
     what: "The landing page (/), signed out, every section revealed",
     signedOut: true,
     open: (ctx) => marketingPage(ctx.page, "/"),
+  },
+  {
+    name: "not-found-site",
+    what: "The 404 page on the public site, signed out",
+    signedOut: true,
+    open: (ctx) => marketingPage(ctx.page, "/no-such-page"),
+  },
+  {
+    name: "not-found-app",
+    what: "The 404 page inside a workspace, in the app shell",
+    open: async (ctx) => {
+      await go(ctx.page, `${app(ctx)}/no-such-page`);
+      await heading(ctx.page);
+    },
   },
   {
     name: "privacy",

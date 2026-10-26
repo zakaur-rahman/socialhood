@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HERO_TITLE } from "@/components/marketing/Hero";
+import { ROUTING_SUMMARY } from "@/components/marketing/RoutingDiagram";
 import { SHOTS } from "@/components/marketing/shots";
 import { FAQ } from "@/lib/marketing/faq";
 import { plansFetch, plansFixture } from "@/test/plans";
@@ -42,13 +43,13 @@ describe("the landing page", () => {
 
     expect(fetcher).toHaveBeenCalledOnce();
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
-    // One h1, named in full for screen readers; the cycling word is decorative.
+    // One h1, the headline (C-141).
     const h1 = screen.getByRole("heading", { level: 1 });
     expect(h1).toHaveAccessibleName(HERO_TITLE);
-    expect(h1.querySelector("[data-flip-words]")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
-      "Built on Meta's official APIs",
+      "Where every conversation lands",
+      "Connects to where your customers are",
       "Everything your customer conversations need",
       "Set up in three steps",
       "Comment LINK, get the link in a DM",
@@ -62,20 +63,42 @@ describe("the landing page", () => {
       expect(container.querySelector(`section#${id}`)).not.toBeNull();
     }
 
-    // Hero: the two ways in, and the real product, labelled as example data.
+    // Hero: the two ways in, and the routing diagram with its one sentence for screen readers.
+    // The real product follows in its own section, labelled as example data.
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
     expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     expect(screen.getByRole("img", { name: SHOTS.inbox.alt })).toBeInTheDocument();
-    expect(screen.getByText(/The Social Hood inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
+    expect(screen.getByText(/The Amplychat inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
     expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
+    expect(screen.getByText(ROUTING_SUMMARY)).toBeInTheDocument();
+    expect(container.querySelector("section[aria-labelledby=\"hero-title\"] [data-routing-diagram]")).toHaveAttribute("aria-hidden", "true");
 
     // Features and product rules.
-    expect(screen.getByRole("heading", { name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ask Amplychat" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
     expect(screen.getByText("Illustrations with example data.")).toBeInTheDocument();
-    // The platform tile and the Max plan both say "Coming soon" (UI-068), so look in the platforms section.
-    const platforms = within(container.querySelector('section[aria-labelledby="platforms-title"]') as HTMLElement);
-    expect(platforms.getByText("Coming soon")).toBeInTheDocument();
+    // Integrations: each with an honest status; Facebook Pages are built, so no "Messenger coming soon" any more.
+    const integrations = within(container.querySelector("section#integrations") as HTMLElement);
+    expect(integrations.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Instagram",
+      "WhatsApp",
+      "Website chat",
+      "Facebook Pages",
+      "Live comments and ad replies",
+      "Shopify",
+      "Razorpay and UPI",
+      "Google Sheets",
+      "Zapier and the public API",
+    ]);
+    expect(integrations.getByText("With our Shopify app listing")).toBeInTheDocument();
+    expect(integrations.getAllByText("With Meta's approval")).toHaveLength(2);
+    expect(integrations.getAllByText("Official API")).toHaveLength(2);
+    expect(integrations.queryByText(/Messenger isn't supported/)).toBeNull();
+
+    // Stats come from the plan table, and there is no social proof section until there is data.
+    expect(screen.getByRole("region", { name: "The product in numbers" })).toBeInTheDocument();
+    expect(container.querySelector("section[aria-labelledby=\"proof-title\"]")).toBeNull();
+    // The footer is the layout's; the decorative wordmark is tested with the footer.
 
     // How it works: three steps, each with a real screen.
     const how = within(container.querySelector("section#how-it-works") as HTMLElement);
@@ -106,7 +129,7 @@ describe("the landing page", () => {
 
     // Structured data with only true fields.
     const data = jsonLd(container);
-    expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Social Hood", url: "https://socialhood.example/" });
+    expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Amplychat", url: "https://socialhood.example/" });
     expect(data.offers).toEqual([
       expect.objectContaining({ name: "Free", price: "0", priceCurrency: "INR" }),
       expect.objectContaining({ name: "Pro", price: "999.00", priceCurrency: "INR" }),
@@ -155,9 +178,9 @@ describe("the landing page", () => {
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {
     expect(revalidate).toBe(3600);
-    expect(metadata.title).toEqual({ absolute: "Social Hood · AI inbox and automations for Instagram and WhatsApp" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox and automations for Instagram and WhatsApp" });
     expect(metadata.alternates?.canonical).toBe("/");
-    expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Social Hood" });
+    expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Amplychat" });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
 });

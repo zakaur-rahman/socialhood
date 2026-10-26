@@ -36,7 +36,7 @@ describe("connect results (F-03, §4.7)", () => {
     ],
     [
       "account_in_use",
-      "This account is connected to another Social Hood workspace. Disconnect it there first.",
+      "This account is connected to another Amplychat workspace. Disconnect it there first.",
       false,
     ],
     ["connect_failed", "Instagram didn't respond. Try again.", true],
@@ -78,7 +78,7 @@ describe("finishing an Instagram connect (X-1)", () => {
       "Only Instagram business and creator accounts can connect. Switch the account type in the Instagram app, then try again.",
       true,
     ],
-    [409, "account_in_use", "This account is connected to another Social Hood workspace. Disconnect it there first.", false],
+    [409, "account_in_use", "This account is connected to another Amplychat workspace. Disconnect it there first.", false],
     [502, "platform_error", "Instagram didn't respond. Try again.", true],
   ])("%s %s shows its copy", (status, code, message, retry) => {
     expect(completeConnectResult(problem(status, code))).toEqual({ kind: "error", message, retry });
@@ -135,10 +135,10 @@ describe("send failures (§4.7 error codes)", () => {
       "Instagram rejected this: Upload failed",
     );
     expect(sendFailure({ code: "internal", requestId: "01REQ" }, ig).message).toBe(
-      "Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com with code 01REQ.",
+      "Something went wrong on our side. Try again. If it keeps happening, email support@amplychat.com with code 01REQ.",
     );
     expect(sendFailure({ code: "capability_unavailable", message: "Missing permission" }, ig).message).toBe(
-      "@maple.bakery didn't give Social Hood permission for this. Reconnect to allow it.",
+      "@maple.bakery didn't give Amplychat permission for this. Reconnect to allow it.",
     );
     expect(sendFailure({ code: "capability_unavailable" }, wa).message).toBe("WhatsApp doesn't support this.");
   });

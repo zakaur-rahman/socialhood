@@ -1,7 +1,10 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { THEME_INIT_SCRIPT, THEMED_ROUTE } from "@/lib/theme";
 
 vi.mock("next/font/google", () => ({
   Geist: () => ({ variable: "geist-sans" }),
@@ -32,5 +35,21 @@ describe("the root layout (C-129)", () => {
 
   it("starts the browser bar on the dark canvas; ThemeSync moves it for Light", () => {
     expect(viewport.themeColor).toBe("#131520");
+  });
+});
+
+describe("which routes follow the member's theme (C-129)", () => {
+  const segments = (group: string) =>
+    readdirSync(join(__dirname, group), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith("[") && !entry.name.startsWith("("))
+      .map((entry) => `/${entry.name}`);
+
+  it.each(["(app)", "(auth)", "(dev)"])("every top-level route in %s follows the cookie", (group) => {
+    for (const path of segments(group)) expect(THEMED_ROUTE.test(path), path).toBe(true);
+  });
+
+  it("no public page does (the marketing site stays dark)", () => {
+    for (const path of segments("(marketing)")) expect(THEMED_ROUTE.test(path), path).toBe(false);
+    expect(THEMED_ROUTE.test("/")).toBe(false);
   });
 });

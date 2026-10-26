@@ -1,7 +1,7 @@
 import type { ContactPatch, ContactRecord, FieldDefinition } from "@/lib/api/types";
 
 /** What the edit form holds: every value as the text in its box. */
-export type ContactEdit = { email: string; phone: string; fields: Record<string, string> };
+export type ContactEdit = { name: string; email: string; phone: string; fields: Record<string, string> };
 
 /** A stored custom field value as the text in its box. */
 export function fieldText(value: unknown): string {
@@ -9,8 +9,9 @@ export function fieldText(value: unknown): string {
 }
 
 /** The form's starting values from a contact. */
-export function editFrom(record: Pick<ContactRecord, "email" | "phone" | "fields">, definitions: readonly FieldDefinition[]): ContactEdit {
+export function editFrom(record: Pick<ContactRecord, "name" | "email" | "phone" | "fields">, definitions: readonly FieldDefinition[]): ContactEdit {
   return {
+    name: record.name,
     email: record.email ?? "",
     phone: record.phone ?? "",
     fields: Object.fromEntries(definitions.map((d) => [d.key, fieldText(record.fields[d.key])])),
@@ -24,6 +25,10 @@ export function editFrom(record: Pick<ContactRecord, "email" | "phone" | "fields
  */
 export function buildPatch(before: ContactEdit, after: ContactEdit, definitions: readonly FieldDefinition[]): Partial<ContactPatch> | null {
   const patch: Partial<ContactPatch> = {};
+  // A name typed here is the team's: the platform's profile name no longer replaces it (C-135).
+  // A blanked name is not sent: a contact always has one.
+  const name = after.name.trim();
+  if (name !== "" && name !== before.name) patch.name = name;
   const email = after.email.trim();
   if (email !== before.email) {
     if (email === "") patch.clear_email = true;

@@ -15,8 +15,9 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,6 +112,28 @@ async def idle_containers(
     return list((await session.scalars(statement)).all())
 
 
+async def collaborator_checks_due(
+    session: AsyncSession, published_after: datetime, checked_before: datetime, limit: int
+) -> list[ScheduledPostTarget]:
+    """Published targets with collaborators whose invites are worth reading again (FR-PUB-07):
+    published recently, never read or last read before ``checked_before``."""
+    statement = (
+        select(ScheduledPostTarget)
+        .where(
+            ScheduledPostTarget.status == TargetStatus.PUBLISHED,
+            ScheduledPostTarget.published_at > published_after,
+            func.jsonb_array_length(ScheduledPostTarget.collaborator_statuses) > 0,
+            or_(
+                ScheduledPostTarget.collaborators_checked_at.is_(None),
+                ScheduledPostTarget.collaborators_checked_at <= checked_before,
+            ),
+        )
+        .order_by(ScheduledPostTarget.collaborators_checked_at.nulls_first())
+        .limit(limit)
+    )
+    return list((await session.scalars(statement)).all())
+
+
 # ---------------------------------------------------------------- one workspace
 
 
@@ -169,6 +192,25 @@ async def assets_of(session: AsyncSession, post_id: uuid.UUID) -> list[MediaAsse
         .order_by(ScheduledPostAsset.position)
     )
     return list((await session.scalars(statement)).all())
+
+
+async def user_tags_of(session: AsyncSession, post_id: uuid.UUID) -> list[list[dict[str, Any]]]:
+    """Each of the post assets user tags, in order (FR-PUB-07)."""
+    statement = (
+        select(ScheduledPostAsset.user_tags)
+        .where(ScheduledPostAsset.scheduled_post_id == post_id)
+        .order_by(ScheduledPostAsset.position)
+    )
+    rows = (await session.execute(statement)).all()
+    return [list(row[0] or []) for row in rows]
+
+
+async def cover_of(session: AsyncSession, post: ScheduledPost) -> MediaAsset | None:
+    """A Reel cover image upload, if the post has one."""
+    if post.cover_asset_id is None:
+        return None
+    statement = select(MediaAsset).where(MediaAsset.id == post.cover_asset_id)
+    return (await session.scalars(statement)).one_or_none()
 
 
 async def media_items_of(

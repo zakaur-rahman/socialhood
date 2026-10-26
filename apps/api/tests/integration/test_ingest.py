@@ -228,7 +228,7 @@ async def _outbound(
     error_code: str | None = None,
     attachments: list[dict[str, Any]] | None = None,
 ) -> uuid.UUID:
-    """An outbound message from Social Hood in the customer's conversation."""
+    """An outbound message from Amplychat in the customer's conversation."""
     [account] = await rows(engine, "SELECT id FROM social_accounts")
     thread = await make_thread(
         engine,

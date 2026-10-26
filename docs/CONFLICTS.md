@@ -5577,3 +5577,488 @@ The e2e run found these in production code:
   stories in the worker's memory, which the API process can't see in the e2e stack.
 - *Open:* the UI shots inbox-list-1536 and conversation-1536 failed on a network error
   (`ERR_NAME_NOT_RESOLVED`); axe reports two contrast issues on sign-in.
+
+
+## C-134 · Instagram collaborators, user tags, location and Reel options (FR-PUB-07, feature/fr-pub-07)
+
+The owner approved the Instagram publishing extras of FR-PUB-07 ("user tags; collaborators;
+location") and, in a second step, the Reel options. Meta's IG User Media and IG Media Collaborators
+references were read on 2026-10-25; what the code relies on and what stays unverified is in
+`docs/verification.md` row 51. Built on the combined branch at a1ef4f73 (migrations 0051, 0052).
+
+### What Meta says, and where its pages disagree
+- **Collaborators.** `collaborators` on `POST /{ig}/media`: Instagram usernames, feed images, Reels
+  and carousels, not Stories. *Meta's pages disagree on the maximum: the publishing reference says
+  up to 3, the collaborators reference up to 5. We allow 3* (`COLLABORATORS_MAX`), the stricter one.
+- **Invites.** `GET /{media}/collaborators?fields=username,invite_status` returns Accepted or
+  Pending, only for users who allow collaborator tagging, with the media creator's token. *Meta names
+  `instagram_basic` and `pages_read_engagement` (Facebook Login); we connect with Instagram Login, so
+  whether the read works at all is unverified.* A collaborator who is not returned stays Pending; a
+  failed read keeps the last answer.
+- **User tags.** `[{username, x, y}]`, x and y from 0 to 1 from the top left. The reference states no
+  count limit; we use 20 per photo (Instagram's own limit in the app, unverified for the API). Tags go
+  on single images and on the child image containers of a carousel. *The reference does not say
+  whether Reels take them: we send none on Reels and the composer offers none on videos.*
+- **Location.** `location_id` is the id of a Facebook Page that has a location. *The reference says
+  both that carousels do not support it and lists it on the carousel container: we send it on the
+  carousel container.* Finding a Page by place needs the Pages search, which for our app needs Page
+  Public Metadata Access (App Review, not requested). **So there is no search: the composer takes a
+  Page's numeric id or its `profile.php?id=` / `pages/…/{id}` link**, validated on save; a vanity
+  link has no id in it and is refused with a plain explanation. Search waits on the review.
+- **Reels (IG User Media).** 3 seconds to 15 minutes, 300 MB, `cover_url` (JPEG, 8 MB, sRGB, 9:16
+  recommended), `thumb_offset` in ms (`cover_url` wins when both are set), `audio_name` (renamed
+  only once), `share_to_feed`.
+
+### Design
+- **Stored per post, not per target.** `scheduled_posts.collaborators text[]` (at most 3, a check),
+  `location_id`; `scheduled_post_assets.user_tags jsonb`; `scheduled_post_targets.collaborator_statuses`
+  and `collaborators_checked_at`. Reel options (0052): `cover_asset_id` (an uploaded image, SET NULL),
+  `cover_offset_ms`, `share_to_feed` (default true, as before), `audio_name`. A cross-post to a Page
+  and Instagram sends the extras to the Instagram target only; Pages ignore them (the adapters take
+  `extras` and drop it). Per-target values were not needed.
+- **One value object.** `platforms.base.PublishExtras` (collaborators, location, user tags, cover
+  URL, frame offset, audio name) and `ContainerMedia.user_tags` for carousel children. The adapter
+  methods for images, Reels and carousel containers take `extras=`; `list_collaborators` is a new
+  adapter method (Pages, the website chat and WhatsApp return nothing).
+- **Where each field goes.** Image: collaborators, location, user tags. Reel: collaborators,
+  location, `cover_url` or `thumb_offset`, `audio_name`, `share_to_feed`. Carousel: tags on each child
+  image, collaborators and location on the parent. Stories: nothing (unchanged container).
+- **Request.** `ScheduledPostDraft` gains `collaborators`, `location` (id or link), `user_tags`
+  (`asset_id`, `username`, `x`, `y`), `cover_asset_id`, `cover_offset_ms`, `share_to_feed`,
+  `audio_name`. Usernames are normalised (no "@", lowercase, repeats collapse). Bad input is a 422 on
+  `collaborators`, `location`, `user_tags.{i}`, `asset_ids.{i}`, `cover_asset_id` or `audio_name`.
+  `ScheduledPost` returns the same, `cover_url`, each asset's `user_tags`, each target's
+  `collaborators` (`username`, `status`) with `collaborators_checked_at`, and `video_max_mb`.
+- **Checklist.** One new key, `extras`, listed only when a post uses one (so existing posts show no new
+  line). Plain-language failures: more than 3 collaborators, an invalid username, tags over 20 on a
+  photo, an unreadable location, "not available on Stories", "an Instagram feature" for a Facebook-only
+  post, Reel options on something that is not one video, a cover over 8 MB or not an image, a cover
+  frame past the end of the video, an audio name over 100 characters. The composer computes the same
+  checks locally. When the options stop applying (a Story, no Instagram account, not one video) the
+  composer drops the hidden values so they cannot fail a checklist the user cannot see.
+- **Errors from Meta.** A refusal that names `location`, `collaborator`, `user_tag`, `cover`,
+  `thumb_offset` or `audio_name` gets a readable reason (no subcode is documented for them).
+- **Invite status.** At publish every collaborator is Pending. `refresh_collaborator_invites` (periodic,
+  every 15 minutes) reads each published Instagram target with collaborators, at most once an hour, for
+  three days; `POST /v1/w/{wid}/scheduled-posts/{id}/collaborators/refresh` reads now (409 until the post
+  has published). The published banner lists each collaborator as Pending or Accepted, when they were
+  last read, a Refresh button, and "They can't be changed after publishing" (Meta has no call to
+  change them). The job is in `jobs/recovery.py` and needs no new task module.
+- **Sandbox.** Containers keep their extras; the sandbox refuses what Meta refuses (more than 3
+  collaborators, collaborators on a Story, tags outside 0 to 1 or on a video, a location that is not a
+  numeric id, a cover on a non-Reel). Invites read Pending, or Accepted for a username starting with
+  "accept" or after `accept_collaborator`. The sandbox keeps its state in the worker's memory, so the
+  API process (the Refresh button) cannot see an invite the worker recorded; e2e shows Pending and the
+  "Checked" time, Accepted is covered in the integration and component tests.
+
+### Reel options and limits (the owner's scope addition)
+- **Length.** A single video for Instagram alone is a Reel: 3 seconds to 15 minutes (was 90 s with no
+  minimum). Videos in a carousel and Facebook videos keep 90 seconds (*Meta's carousel video limits
+  were not looked up: unchanged*); Stories keep 3 to 60; Facebook Reels 3 to 90. The upload
+  registration limit (`POST_VIDEO`) is now 15 minutes, with the per-format rules in the checklist.
+- **Size.** Meta takes 300 MB. Our upload is a signed single POST straight to Cloudinary (XMLHttpRequest,
+  no chunking), and Cloudinary caps one request at 100 MB (the free plan's file limit too; larger
+  files need chunked upload and a plan that allows them). *So the cap is a setting,
+  `POST_VIDEO_MAX_MB`, default 100 (10 to 300), enforced when the asset is registered and in the
+  checklist; the composer states the current cap from `ScheduledPost.video_max_mb`.* Above 100 MB the
+  browser sends 20 MB chunks with `X-Unique-Upload-Id` and `Content-Range` (written to Cloudinary's
+  documented protocol, not run). Raising the setting is an ops decision that depends on the plan.
+- **Composer.** A single video for Instagram shows "Reel options": a cover (a frame in seconds, or an
+  uploaded JPEG or PNG up to 8 MB; the image wins), "Also share to feed" (on by default), an audio name
+  with the note that Instagram allows renaming it once. The preview shows the cover image, the audio
+  name and the collaborators.
+
+### Tags and the preview
+Tags are placed in a dialog from a tile's Tag people button: tap the photo to place a tag, type the
+username, drag the marker (or use the arrow keys), remove it. Positions are stored as fractions. The
+preview draws the tags on the photo and shows "name and @collaborator" with a location line. Tapping the
+preview itself was not used: the dialog gives a large, stable target and keyboard use.
+
+### Not done, and pending
+- Location search (needs Page Public Metadata Access; not requested).
+- Tags on videos and Reels, and per-target values.
+- A cover image uploaded in e2e (it needs real storage); the e2e uses the frame.
+- *Pending PD-n:* none; the decisions above were scoped by the brief. The collaborator cap (3) and the
+  tag cap (20) are constants in `models/publishing.py`.
+- *For the coordinator:* regenerate the client (`UserTag`, `UserTagIn`, `CollaboratorResult`, the new
+  `ScheduledPostDraft` and `ScheduledPost` fields, `ChecklistKey` gains `extras`, the
+  `refresh_post_collaborators` operation); the web uses aliases in `lib/publishing/types.ts`.
+  Migrations 0051 and 0052 are expand-only.
+
+### Tests (written; the DB-free ones were run)
+Unit: `test_instagram_extras.py` (parsing, checklist, payloads, sandbox, invite rules); the contract
+test `test_instagram_publishing.py` gains payload cases; `test_publishing_rules.py` expects `extras`
+only when used. Integration (not run): `test_instagram_extras.py`. Vitest (not run):
+`TagDialog.test.tsx`, `InstagramExtras.test.tsx`, `StatusBanner.test.tsx`, `checklist.test.ts`,
+`rules.test.ts`, `upload.test.ts`. E2E (not run): `fr-pub-07-collab-tags-location.spec.ts`.
+
+*Fixed before the PR:* the composer checklist showed only the first passing line under the `extras` key, so with collaborators, a tag and a location set only "Collaborators: ..." was listed. `mergeChecklist` now keeps every passing `extras` line (one per option); other keys still show one. The `share_to_feed` field the generated client now marks as required is sent as `true` by the new-draft bodies (`newDraftBody`, `useCreateScheduledPost`).
+Also fixed: `publish_target` set each collaborator's Pending invite after `settle`, whose `scheduled_post.updated` event is built inside it, so the live banner showed no invites until a reload. They are now set before `settle`.
+
+- **Media-library video limit.** The upload is checked before the post format is known, so it allows
+  the most any post accepts: 15 minutes (900 s), an Instagram Reel's limit. The 90-second limit for
+  carousel and Facebook videos (and 60 s for Stories) is enforced when the post is saved, by the
+  publishing rules. Upload message: "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 15 minutes."
+
+## C-135 · Polish A: contact names, account card colours and small leftovers (feature/polish-names-colours)
+
+On top of the combined GR branch (migrations to 0052). **One migration, 0053** (expand-only).
+
+### A name the team saved is never replaced
+- **The rule.** `contacts.name_source` (`platform` default, or `team`) says who chose
+  `display_name`; `contacts.platform_name` keeps the latest profile name the platform sent. The
+  rule lives in one place, `services/contact_names.py`: a platform name is always stored in
+  `platform_name` and becomes the shown name only while `name_source = platform`; an empty or
+  missing name never overwrites anything.
+- **Every channel.** *The owner asked about WhatsApp; the same code serves Instagram, Facebook, the
+  website widget and WhatsApp, so the rule is built once for all of them.* Inbound messages
+  (`ingest._inbound`), the profile follow-up (`ingest_followups._store`) and the widget's typed
+  visitor name go through `apply_platform_name`; a new contact also starts with `platform_name`.
+- **What counts as the team's name.** A rename (`PATCH /contacts/{id}` with `name`, in the app and
+  the public API, which share `ContactPatch`) and a contact the team creates (public API
+  `POST /contacts` with a name). `use_platform_name: true` hands the name back: `name_source` is
+  `platform` again and `platform_name` is copied over (without one, the saved name stays shown
+  until the next message brings it). *There is no contact CSV import in the product (only the
+  catalogue imports files), and Ask has no write action that types a contact name, so there was
+  nothing to change there.*
+- **Responses.** `ContactRecord` and the inbox `ContactDetail` gain `name_source` and
+  `platform_name`; the contacts list is unchanged.
+- **Web.** The contact drawer has a Name field (a changed name is sent; a blanked one is not).
+  When the team's name differs from the platform's, the drawer header and the inbox details panel
+  show a quiet "Instagram name: Priya N." line (the platform word from the channel) with "Use this
+  name". Existing contacts keep `name_source = platform` and an empty `platform_name` until their
+  next message (*no backfill: older names cannot be told apart from team-typed ones*).
+
+### Account cards in the platforms' own colours
+- `PLATFORM_LOGO_BG` (`bg-instagram-logo-gradient`, `bg-facebook-logo`, `bg-whatsapp-logo`,
+  `bg-web`) is used wherever a badge or tile holds the glyph alone: the account card, the AI
+  settings account tile, avatar platform badges, the platform strip dot, the billing meter tiles and
+  the marketing tiles. The darkened `PLATFORM_BG` stays for fills with text (contrast). DESIGN_SYSTEM
+  §1.6 states the rule.
+
+### Small leftovers
+- **View on Facebook.** The post menu and the card peek in Schedule take their label from the
+  platform of the account the link is from (`viewLabelOf`); the composer banner already did.
+- **Sign-in contrast.** Clerk's "Secured by" line is an unnamed `<p data-variant="buttonSmall"
+  data-color="inherit">` inside the footer; the `footer` element rule in `lib/clerk-appearance.ts`
+  sets it to solid `fg-secondary` (both themes, since the variable follows the theme). *Not
+  measured with axe here (no browser run); the selector is the one axe reported.*
+- **Lead list platform control (VIS-11 leftover).** The lead list offers the platform chips only
+  (`offersRange` is false for it: it is whoever is waiting now); `list_contacts` also accepts
+  `facebook`.
+- **VIS-X2.** Account names in the agent's system prompt are JSON-quoted on one line, at most 60
+  characters (`agent/context.quoted`), so they are data. **VIS-X4.** DESIGN_SYSTEM §8.2 has the
+  trend, table, lead list and controls. Both are marked in the backlog.
+
+### Tests (written; the DB-free ones were run)
+Unit: `test_contact_names.py`, `test_agent_context_names.py` (ruff, mypy and the unit and contract
+suites pass). Integration (not run): `test_contact_names.py` (inbound fills and updates a platform
+name, keeps a team name, a missing name never clears, rename sets team, revert works) and an assertion
+in `test_public_api.py` (create sets team). Vitest (not run): `edit.test.ts`, `ContactDrawer.test.tsx`,
+`PlatformGlyph.test.tsx`, `post-parts.test.ts`, `vis-lib.test.ts`, `VisualViewVis.test.tsx`, plus
+class updates in `ContactAvatar`, `PlatformStrip` and `BillingPage` tests. E2E (not run):
+`polish-names-colours.spec.ts`. *For the coordinator:* regenerate the client (`ContactPatch.name`,
+`use_platform_name`, `ContactRecord` and `ContactDetail` `name_source` and `platform_name`); no
+decision is pending an owner call (PD-n).
+
+## C-136 Polish B: skeletons and layout shift
+
+### Shared pieces
+- `components/states/skeletons.tsx`: `SkeletonRegion` (the one `aria-busy` region with one polite
+  "Loading" label), `CardSkeleton`, `RowSkeleton`, `RowCardsSkeleton`, `ListCardSkeleton`,
+  `TableSkeleton` (for use inside a `CardBleed`), `ChartSkeleton`, `MetricTileSkeleton`,
+  `MediaSkeleton` (a picture at its real aspect ratio). They use the real `Card`, so padding and
+  radius match; colours are the existing `bg-raised` skeleton and the pulse stops under reduced motion.
+- `Skeleton` is now `aria-hidden`: placeholders are invisible to assistive tech, the region announces.
+- Contacts, Leads, Sequences, Broadcasts, Orders and Products use the shared pieces (a list card,
+  row cards, a table with the real column count). Home, Comments grid, post detail, Schedule list,
+  Knowledge and Automations already had skeletons shaped like their cards and were kept.
+
+### No layout shift
+- `PageFrame` no longer keeps the header height in React state. `--page-header-h` starts at a CSS
+  value for a title-only header (3.8125rem; 4.3125rem from md) and the observer writes the
+  measured value straight onto the page element, so the first paint and the measured value agree
+  and nothing re-renders.
+- Inbox attachments reserve their box: images and videos take the platform's `width` and `height`
+  when present, otherwise a minimum box (images) or 16:9 (video) holds the place.
+- Fonts: `next/font` (Geist) already self-hosts with `display: swap` and a size-adjusted fallback.
+- The sidebar's collapsed state on first paint is unchanged.
+
+### Measured
+`e2e/layout-shift.spec.ts` records `layout-shift` entries (no recent input) from navigation to idle
+for 27 pages on a desktop and a phone viewport, with the API slowed by 350 ms, and fails above 0.1.
+It runs locally only (CI does not run e2e).
+
+Measured on the e2e stack (Chromium, API slowed 350 ms, three contacts). Every page is at or below 0.1
+on both viewports. CLS, desktop / phone:
+
+home 0.003 / 0.002; inbox 0.0006 / 0.0004; comments 0.0006 / 0; contacts 0.0006 / 0; leads 0.0006 / 0;
+orders 0.029 / 0.067; products 0.025 / 0.056; schedule 0.042 / 0; automations 0.004 / 0;
+sequences 0.0006 / 0; broadcasts 0.0006 / 0; knowledge 0.0006 / 0; ask 0.002 / 0; reports 0.0006 / 0;
+settings: workspace, connections, billing, ai, hours, replies, widget, appearance 0.0006 / 0 (each);
+members 0.0006 / 0.026; agent 0.014 / 0.020; integrations 0.0006 / 0.004; notifications 0.005 / 0.042;
+activity 0.001 / 0.004.
+
+What the first run found on a phone (leads 0.22, agent 0.16, products 0.13, orders 0.11, members 0.11,
+knowledge 0.075, automations 0.097) and the fixes:
+- Leads: the stage buttons' counts arrived after the summary and widened them, so the row wrapped.
+  The count's place is held (invisible "0") until it loads.
+- Orders and Products: the Pro notice and the settings cards (Payments; Shopify, WhatsApp catalogue)
+  grew above the list. The notice now sits inside the list card, and the settings cards come after
+  the list. The table skeleton is 7 and 8 rows (the empty state is about that tall on a phone).
+- Knowledge: the cards load on their own and pushed each other and the test box (below on a phone).
+  They show together once sources, brand voice and questions have all answered; the test box waits too below xl.
+- Members: the assignment card loaded between the list and the invitations; it is now last.
+- Settings, Agent: the mode sentence is about four lines on a phone, the skeleton is now as tall; the
+  mode badge and the AI credits box hold their places while they load.
+- Automations: the Broadcasts button (a flag) re-wrapped the header; its place is held until the flag is known.
+- `PageFrame`'s first-paint header height is 3.8125rem (4.3125rem from md), the title-only header's real height.
+- The spec also logs which elements moved for a page above 0.05 (set `CLS_PAGES` / `CLS_VIEWPORT` to narrow a run).
+It runs locally only (CI does not run e2e).
+
+Still not tied to the page's data: the "gone cold" note on Leads, a Broadcasts button when the flag is
+off, and a settings card that has no AI credits to show appear or disappear after load; they only show
+for workspaces that have them.
+
+## C-137 · Polish C: 404 handling and the 404 page (feature/polish-not-found)
+
+Web only; no API, model or migration change.
+
+**The 404 page**
+- `app/not-found.tsx` answers any address no route claims, with a real 404 status and `noindex`. It
+  wears the public site's frame (header, footer, always dark like the marketing pages) around
+  `NotFoundPage`. Visitors get "Go to the home page", "See pricing" and "Sign in"; once Clerk says
+  someone is signed in, "Open the app" replaces "Sign in".
+- `app/(app)/w/[slug]/not-found.tsx` is the in-app version, inside the workspace layout so the
+  sidebar stays: Go to Home, Open Inbox, Ask. A catch-all `[...rest]/page.tsx` under the workspace
+  calls `notFound()` so unknown sub-addresses reach it instead of the root page. *Deviation from
+  the brief:* no "search" link, because the app has no search page; Ask is the closest.
+- The illustration (`components/not-found/NotFoundIllustration.tsx`) is one inline SVG from
+  tokens only (`fill-*`, `stroke-*`): a short chat thread whose last message, drawn dashed with a
+  "?", has drifted off. It bobs and twinkles through `nf-drift` and `nf-twinkle` in `globals.css`,
+  and stays still under reduced motion. The requested path shows small under the text.
+- The product name comes from nothing hard-coded in the new files; the copy never says it.
+- *Known limit:* a `notFound()` thrown after a page has started streaming (the workspace pages
+  under a `loading.tsx`) can still answer with status 200; the page shows the same 404 and Next adds
+  `noindex` either way. The public 404 has the real status.
+
+**Missing resources inside the app**
+- `isNotFound(error)` (lib/api/errors.ts) is true for an API 404. `NotFoundState` shows "This
+  {post, conversation, automation, broadcast, sequence} doesn't exist or was deleted" with a link
+  back to the list. It replaces the earlier ad-hoc "Post not found" and "Automation not found"
+  states (wording changed, tests updated) and is added to the conversation, broadcast and sequence
+  pages, which showed the generic error. The contact drawer (`?contact=<id>`) shows the same text
+  with "Back to Contacts" (it closes the drawer).
+- A deleted resource and one in another workspace read the same, because the API answers 404 for
+  both. Any other error keeps the error state with Try again.
+- Orders, products and reports have no per-item pages, so nothing to map there.
+
+**Tests (run in the polish-batch check: vitest and the e2e spec pass)**
+- Vitest: `components/not-found/NotFound.test.tsx`, `components/states/NotFoundState.test.tsx`
+  (`isNotFound` mapping included); `PostDetailPage.test.tsx` and `PostComposer.test.tsx` expect the
+  new wording.
+- E2E: `apps/web/e2e/not-found.spec.ts` (public 404 with status, noindex and links; app 404 in the
+  shell; missing post and conversation with working back links; another workspace's contact and a
+  made-up one read the same). Screenshots: `not-found-site` and `not-found-app` in ui-shots.
+
+## C-138 · Landing page redesign and the empty illustrations (feature/landing-redesign)
+
+Inspired by the section galleries on vibrant.design (patterns only: a "works with" strip, a connector
+grid, a bento of product UI, a stats band, two-column FAQ, an oversized footer wordmark). No artwork,
+copy or branding was taken from it. Web only: no API change.
+
+### The empty feature illustrations
+- **Cause.** The six pictures were client components behind `dynamic(..., { ssr: false })` and an
+  in-view check (`LazyIllustration`). The server therefore sent an empty, glowing box, and anything
+  that did not scroll and wait for the chunk (a full-page screenshot, a crawler, print, a slow or
+  failed chunk) showed blank panels. It was not a theme-token regression: with a slow scroll in a
+  real browser (dev and production build) they did fill in. I could not reproduce "empty even after
+  scrolling" in my own browser runs; the markup-level cause above is what I found and fixed.
+- **Fix.** `illustrations/Illustrations.tsx` is now server components, always in the markup, with
+  no framer-motion: the card's own `data-reveal` entrance is the only animation, and the two pulses
+  (beam, ping) are CSS under `motion-safe`. `LazyIllustration` and `Beam` are deleted. The typed-out
+  draft text is plain text now. Tests: `Illustrations.test.tsx` (each picture is in
+  `renderToStaticMarkup` with text and nothing hiding it) and the landing e2e spec.
+
+### Sections, in page order
+- **Hero**: headline and product shot unchanged, with a brand glow behind the shot and a "Works with"
+  strip: platform glyphs we already ship (Instagram, WhatsApp, Facebook, website chat) and plain
+  names for Shopify, Razorpay, Google Sheets and Zapier (no third-party logos). Facebook and Shopify
+  carry a small "soon"; a link goes to Integrations.
+- **Integrations** (replaces `Platforms`, which still said Messenger was "coming soon"): nine cards,
+  one line and a status each. Instagram and WhatsApp "Official API"; website chat "On every plan";
+  Facebook Pages and Live comments and ad replies "With Meta's approval" (C-108, C-122); Shopify
+  "With our Shopify app listing" (C-116); Razorpay and UPI "Your own account" (C-120); Google Sheets
+  and Zapier with the public API "Pro and Max" (C-103, C-109, C-110). *Decision:* the brief's "ads" is
+  worded as "chats that start from an ad" (the messaging referral event, C-077), the only ad feature
+  we have.
+- **Features bento**: ten cards in a 6-column grid (4+2, 3+3, 2+2+2, 2+2+2; two columns on tablets,
+  one on phones), each with a small token-only mockup and the "Illustrations with example data."
+  caption. Core: AI replies, inbox hand-off, comment and DM automations, comment intelligence,
+  scheduling with Reels, Stories and collaborators, Ask. Newer: analytics and the weekly report,
+  catalogue with orders and payment links, sequences, team roles and assignment. Knowledge gaps,
+  the website widget and notifications moved to a row of three small cards. Honesty: "Auto is part of
+  Pro", commerce "Part of Pro", Shopify sync "arrives with our Shopify app listing", broadcasts "coming
+  soon, once India's consent rules are checked" (O-11), collaborators on posts and Reels only (not
+  Stories, C-134), round-robin "if you turn it on" (off by default), Free has 1 seat.
+- **How it works, Automation showcase, Languages**: content unchanged; section padding tightened
+  (`py-16 sm:py-20`, as on every section now). The automation picture is stacked on phones (the
+  beam drawing needs about 30 rem).
+- **Stats band** (`Stats.tsx`): "1 inbox for Instagram, WhatsApp and website chat", "3 languages",
+  and the Free plan's AI credits and active automations read from `plan-table.json` (a test checks
+  them). *Not shown:* any setup time, speed or customer number we can't back.
+- **Social proof** (`SocialProof.tsx`, data in `lib/marketing/social-proof.ts`): typed, empty lists;
+  the section renders nothing while both are empty (tested), so there is no placeholder. Quotes and
+  logos need the person's or business's written permission.
+- **Pricing**: component unchanged, only the section padding.
+- **Trust**: same five points, in two columns on wide screens (heading left, points right).
+- **FAQ**: same questions; heading, a short intro and the support address on the left (sticky on
+  wide screens), the accordion on the right.
+- **Final CTA and footer**: larger headline, "See pricing" next to "Start free", and three plain
+  perks (Free plan with no card, the Pro trial days read from the plan table, official Meta APIs). The
+  footer has an oversized decorative wordmark from `SITE_NAME` (`aria-hidden`, token colour
+  `line-subtle`); it shows on every public page because the footer is shared. `Logo` now also
+  reads `SITE_NAME`.
+
+### Checks
+- `tsc --noEmit`, `pnpm lint` and vitest for `components/marketing`, `app/(marketing)`, `styles`,
+  `lib/marketing` pass. The design lint caught an arbitrary radius, an arbitrary text size and a
+  `fill:` key; all fixed with scale classes.
+- New `e2e/landing.spec.ts`: at 375, 768, 1280 and 1536 px every picture has content before any
+  scroll, the sections are in order, nothing scrolls sideways and the page's layout shift is at most
+  0.1. *The existing `layout-shift.spec.ts` covers the app's pages only, not `/`.*
+- *Not done:* no new product screenshots (`public/marketing/*.webp` are unchanged); no Lighthouse run;
+  the owner should look at the Hindi and Hinglish examples and the new copy once.
+
+## C-139 · Rename: Social Hood becomes Amplychat (feature/rename-amplychat)
+
+The owner renamed the product to **Amplychat** (amplychat.com). The legal entity behind it is a sole
+proprietorship, **unchartd** (lowercase, as the owner writes it).
+
+### What changed
+- Every name a person can see: "Social Hood" is now "Amplychat" (capital A, rest lowercase) in web
+  copy, marketing, legal pages, metadata and SEO, emails, API messages, the widget's branding line,
+  the Ask prompts (`ai/prompts/agent.v1..v4.md`, edited in place: versions are not hashed and no
+  test pinned their text) and test assertions. "Ask Social Hood" is "Ask Amplychat".
+- Domains: `socialhood.com` is `amplychat.com` (support@ for every address, as the owner set on 2026-10-26: contact, legal and the `EMAIL_FROM` sender; api., app., clerk.;
+  `.env.example` and settings defaults; the CSP and SSRF allow-lists and the error type base URL
+  follow the constants). The bot user agent is `AmplychatBot` (`amplychatbot` in the robots token).
+- Operator: `LEGAL.entityName` is "unchartd", so the footer reads "(c) year unchartd", the Terms say
+  "between you and unchartd ("Amplychat", "we"...)" and the legal facts show "Operated by unchartd".
+  The registered address, governing law, jurisdiction, effective date and grievance officer are
+  still unset and still render nothing (no address, number or name was invented).
+- Living docs (README, BUILD_SPEC, ops, testing, verification, security checklist, dev-whatsapp,
+  product roadmap overview) use the new name. History is untouched: this file, `docs/roadmap/*`,
+  QUESTIONS, ai-eval-log, the generative-UI decision records, competitor notes and the two dated
+  requirement/review pages keep "Social Hood".
+
+### Kept internal (renaming them would break running systems for no reader's benefit)
+The Python package `socialhood` and its imports, the folder and repo names, Docker/compose names, DB
+names (`socialhood`, `socialhood_test_*`), Alembic, `SOCIALHOOD_*` env vars, `socialhood_*` Prometheus
+metrics, Valkey keys, cookie and localStorage keys, the `shk_` key prefix, `window.__socialHoodWidget`
+and the widget's `socialHood: 1` postMessage tag, `@socialhood/*` package names, CI workflow names,
+the Pydantic AI agent name `ask_social_hood` (trace label only), the `.test`/`.example` fake test
+domains, and the file reference `knowledge/social-hood-product.md`.
+
+### Owner to-dos
+- Buy amplychat.com (and consider .in, .co, www redirect); point app., api., docs., clerk. at it.
+- Trademark search for "Amplychat" in classes 9 and 42 (and India, since the business is there).
+- Rename the display names in: the Meta app (and its App Review submission text), the Clerk
+  application, Razorpay, Dodo Payments, and the Render and Vercel services.
+- Set up email on amplychat.com (support@amplychat.com, the one mailbox; it is also the sender) with SPF, DKIM and DMARC, and
+  verify the domain in Resend before the default `EMAIL_FROM` is used.
+- Update Meta redirect URIs, webhook URLs, the Clerk allowed origins and the Google OAuth redirect
+  when the domains move; `CORS`/`CSP` env values that name the old domain.
+
+## C-140 · The Amplychat logo: the "amp bubble" (feature/amplychat-logo)
+
+The owner asked for a logo for the new name (C-139) and, from ten concepts and five colour schemes
+(`amplychat-logo.html` outside the repo), asked for the best one to be chosen. Chosen: **A, the
+"amp bubble"**, in the existing indigo tile, with the wordmark in one colour.
+
+- **Why this one:** a chat bubble holding three rising bars, so it says "chat" and "amplify" in one
+  shape; it reads at 16 px (the favicon), where the letter, sparkle and wave concepts lost detail.
+  The two-tone wordmark ("Amply" + "chat" in brand colour) was not chosen: brand colour is for
+  non-text marks (globals.css), and one colour stays readable on any surface.
+- **Colours:** unchanged tokens. The tile is the shell gradient (`shell-1` to `shell-2`), the bubble
+  `on-brand` (`fg` in the generated icons), the bars `brand-deep`. The concepts page used a brighter
+  indigo for presentation; the product keeps its existing tile so the shell does not change.
+- **One shape, four places:** `LogoMark` (`components/marketing/primitives.tsx`, exporting
+  `LOGO_BUBBLE_PATH` and `LOGO_BARS` on a 64-unit tile), the share image (`og.tsx`, same constants),
+  `scripts/generate-icons.mjs` (the same geometry for the PNG icons) and the sidebar.
+  The sidebar's `LogoMark` (`WorkspaceMenu.tsx`) was a plain gradient tile with no mark; it now renders
+  the brand mark.
+- **Icons regenerated:** `icon-192`, `icon-512`, `icon-maskable-512`, `badge-72` (one colour, bars cut
+  out), `apple-icon`, and `favicon.ico`, which is now generated too (16, 32 and 48 px PNGs inside the
+  .ico) instead of being a static binary.
+
+## C-141 · Landing hero: the "one door" routing diagram (feature/hero-routing)
+
+The owner asked for the hero laid out like a reference screenshot (a SaaS hero with a two-line
+headline, two CTAs and a hub-and-spoke diagram of tools routed through a central logo tile, with
+hairline structure and hatched side columns), "customised to what we provide". Layout and craft
+only: no copy, logo or icons were taken from it. Web only: no API change.
+
+### What the hero shows
+- **Headline** (the page's one h1, `HERO_TITLE`, which the auth pages also show): "Every DM. Every
+  comment. One inbox." with "One inbox." in `brand-fg` on its own line from `sm`. One-line subhead
+  (`HERO_LINE`): "AI that knows your business drafts or sends the reply on Instagram, WhatsApp and your
+  website, and hands the tricky ones to you." CTAs unchanged ("Start free", "See how it works") and the
+  three-point trust row kept. The "Inbox, AI replies…" pill, FlipWords and the Spotlight beams are
+  gone from the hero (the components stay; nothing else on the landing page used FlipWords).
+- **Structure**: the text sits in a centre column with `line-subtle` side borders (from `lg`); outside
+  it, `hatch-lines` (new utility in globals.css: 1 px `line-subtle` verticals every 6 px, masked to fade
+  downwards). A `line-subtle` hairline divides the text from the diagram. The hub has a round glow,
+  `bg-glow-brand-centre` (new gradient token, registered in tokens.ts).
+- **The diagram** (`RoutingDiagram.tsx`, geometry in `routing.ts`): one coordinate system per layout;
+  the SVG tracks and the HTML nodes are placed from the same numbers (nodes in percent of the box,
+  sized in percent too), so endpoints line up at every width. Tracks are orthogonal with rounded
+  corners (quarter arcs), `line-strong` hairlines, staggered turns so no two cross (a test checks it).
+  - Sources, left: Instagram DMs ("DM" badge), Instagram comments ("Comment"), WhatsApp ("Chat"),
+    Website chat ("Widget"), Facebook Pages ("soon", as in C-138: with Meta's approval). Platform
+    glyphs and the `*-logo` tiles we already ship.
+  - Hub: `LogoMark` on a two-ring bezel with port nubs where the tracks plug in, captioned
+    "{SITE_NAME} AI". Above it, "Your knowledge" and "Your catalogue" joined by dotted tracks, under
+    "Answers only from what you added" (C-122).
+  - Outcomes, right: Reply in the same chat ("Reply", success tile), Needs you, for your team
+    ("Hand-off", warning tile), Razorpay or UPI link ("Pro"), Lead to Google Sheets ("Lead", "Pro";
+    Sheets is Pro and Max, C-103), Monday report (C-130). *Decision:* Zapier and webhooks left out to keep
+    five per side; Integrations lists them right below.
+  - Micro-labels: "Every message comes in" and "The right answer goes out".
+- **Motion** (`effects/RoutingPulses.tsx`, the only client part): one clock (`useAnimationFrame`, runs
+  only while the diagram is on screen) drives four examples of 6.4 s each: a brand pulse with the
+  customer's message on a chip rides from the source into the hub, the hub and the knowledge ties light
+  up, then the answer rides out to its outcome in success (reply, payment, lead) or warning (hand-off)
+  and rests there; each node "breathes" (a ring swells and fades) when a packet arrives. Examples, a
+  made-up shop, two in Hinglish with `lang="hi-Latn"`: DM "Is the blue kurta in M?" → "Yes, ₹1,499.
+  Shall I send the link?"; WhatsApp "Haan, M wala bhej do" → "UPI link sent: ₹1,499"; comment "Mera
+  order damaged aaya" → "Needs you: passed to your team"; website "Do you take bulk orders?" → "Lead
+  added to Google Sheets". Only transforms and opacity move; chips ride on a full-size layer translated
+  by a percentage of itself, so no layout shift.
+- **Static first and reduced motion**: the server sends the whole diagram plus a still frame (the
+  first example's two tracks lit at 60% and both chips in place). That frame is what visitors with
+  `prefers-reduced-motion`, without JavaScript, or before the diagram scrolls into view see; the clock
+  never starts under reduced motion.
+- **Phones and tablets** (below `lg`): a stacked layout (`STACK`): sources in a row on top with short
+  labels, vertical tracks into the hub, "Knowledge" and "Catalogue" beside it, outcomes in a row below;
+  no badges or micro-labels there (no room). Capped at `max-w-md`. Nothing scrolls sideways at 375,
+  768, 1280 or 1536.
+- **Accessibility**: the figure has one sentence for screen readers (`ROUTING_SUMMARY`, a
+  `figcaption.sr-only`); the drawing is `aria-hidden`.
+
+### Product shot and the "Works with" strip
+- The inbox screenshot moved to its own section right after the hero, `ProductShot.tsx` ("See the
+  inbox" / "Where every conversation lands"), with the same `ContainerScroll` tilt and the example-data
+  caption. It is no longer `loading="eager"`/high priority: the headline is the first screen's largest
+  paint now.
+- The "Works with" strip is removed: the diagram shows the channels, and Integrations (next but one)
+  lists every tool with its status.
+
+### Checks
+- `tsc --noEmit` (after `next typegen`), `pnpm lint`, vitest for marketing, `app/(marketing)`, `app`,
+  `auth` and `styles` pass. New `RoutingDiagram.test.tsx`: tracks start at their nodes and end in the
+  hub, none cross, arc maths, and the nodes, 12 tracks per layout, hub, labels and still-frame chips are
+  in `renderToStaticMarkup` with nothing hidden. `page.test.tsx` and `e2e/landing.spec.ts` updated for
+  the new section order and h2.
+- E2E `landing|GR-37|not-found`: 26 passed (layout shift ≤ 0.1 and no sideways scroll at all four
+  widths). Screenshots at 375, 768, 1280 and 1536, with and without reduced motion, checked by eye.

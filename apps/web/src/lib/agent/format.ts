@@ -1,5 +1,5 @@
 /**
- * Ask Social Hood's words (FR-AGT-01, FR-AGT-06, FR-AGT-07; §4.7 voice): run and step statuses,
+ * Ask Amplychat's words (FR-AGT-01, FR-AGT-06, FR-AGT-07; §4.7 voice): run and step statuses,
  * the explicit states of a run that didn't answer, and the suggested prompts.
  */
 import type { AgentMode, AgentRunStatus, AgentStepStatus, AnswerRefKind, ErrorInfo, RiskTier } from "@/lib/api/types";

@@ -94,7 +94,7 @@ export function useCreateScheduledPost(wid: string) {
       unwrap(
         api.POST("/v1/w/{wid}/scheduled-posts", {
           params: { path: { wid } },
-          body: { caption: "", kind: "post", publish_at: publishAt ?? null },
+          body: { caption: "", kind: "post", publish_at: publishAt ?? null, share_to_feed: true },
         }),
       ),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: keys.scheduledPostLists(wid) }),

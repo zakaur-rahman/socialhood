@@ -62,7 +62,7 @@ test.describe("GR-28 website chat", () => {
     await chat.launcher.click();
     await expect(chat.panel).toBeVisible();
     await expect(chat.log).toContainText("Hi! How can we help?");
-    await expect(chat.frame.getByRole("link", { name: "Powered by Social Hood" })).toBeVisible(); // Free
+    await expect(chat.frame.getByRole("link", { name: "Powered by Amplychat" })).toBeVisible(); // Free
 
     const question = unique("Do you have the linen shirt?");
     await chat.input.fill(question);
@@ -213,6 +213,6 @@ test.describe("GR-28 website chat", () => {
     await expect(page.getByLabel("Greeting")).toHaveValue(greeting);
 
     // Free keeps the link: the switch is locked.
-    await expect(page.getByRole("switch", { name: /Powered by Social Hood/ })).toBeDisabled();
+    await expect(page.getByRole("switch", { name: /Powered by Amplychat/ })).toBeDisabled();
   });
 });

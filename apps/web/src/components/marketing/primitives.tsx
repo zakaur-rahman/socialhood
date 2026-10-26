@@ -3,13 +3,15 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { EYEBROW, MARKETING_HEADING } from "@/styles/tokens";
 
 /**
- * The logo mark: the shell-gradient tile with the chat bubble (UX-SH-01, public/icons). The SVG has
+ * The logo mark (C-140): the shell-gradient tile with the "amp bubble", a chat bubble holding three
+ * rising bars (UX-SH-01, public/icons, scripts/generate-icons.mjs draws the same shape). The SVG has
  * no colours of its own (UI-ISS-095): the bubble is `currentColor`, `on-brand` from the tile, and the
- * dots are `brand-deep`.
+ * bars are `brand-deep`.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -18,24 +20,34 @@ export function LogoMark({ className }: { className?: string }) {
       data-logo-mark=""
       className={cn("bg-shell-gradient grid size-8 shrink-0 place-items-center rounded-lg text-on-brand", className)}
     >
-      <svg viewBox="0 0 24 24" className="size-[62%]" fill="none">
-        <path d="M5 5.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-8l-4.5 3.5V16.5H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" fill="currentColor" />
+      <svg viewBox="0 0 64 64" className="size-full" fill="none">
+        <path d={LOGO_BUBBLE_PATH} fill="currentColor" />
         <g className="fill-brand-deep">
-          <circle cx="8" cy="11" r="1.25" />
-          <circle cx="12" cy="11" r="1.25" />
-          <circle cx="16" cy="11" r="1.25" />
+          {LOGO_BARS.map(([x, y, height]) => (
+            <rect key={x} x={x} y={y} width="5" height={height} rx="2.5" />
+          ))}
         </g>
       </svg>
     </span>
   );
 }
 
+/** The mark's bubble on a 64-unit tile, shared with the share image (og.tsx). */
+export const LOGO_BUBBLE_PATH = "M20 13H44Q52 13 52 21V35Q52 43 44 43H29L19 51V43Q12 43 12 35V21Q12 13 20 13Z";
+
+/** The mark's three rising bars as [x, y, height], 5 units wide, on the same 64-unit tile. */
+export const LOGO_BARS = [
+  [21.5, 30, 7],
+  [29.5, 25, 12],
+  [37.5, 19, 18],
+] as const;
+
 /** The logo linking home; the wordmark is the link's name. */
 export function Logo({ className }: { className?: string }) {
   return (
     <Link href="/" className={cn("flex min-h-10 items-center gap-2.5 rounded-lg", className)}>
       <LogoMark />
-      <span className="text-base font-semibold tracking-tight">Social Hood</span>
+      <span className="text-base font-semibold tracking-tight">{SITE_NAME}</span>
     </Link>
   );
 }

@@ -1,4 +1,4 @@
-"""Ask Social Hood's runs, steps and policy (TA.1, TA.2, TA.6; FR-AGT-01, FR-AGT-07, TR-AGT-07,
+"""Ask Amplychat's runs, steps and policy (TA.1, TA.2, TA.6; FR-AGT-01, FR-AGT-07, TR-AGT-07,
 TR-AGT-08).
 
 Tenant-scoped like every repository: reads go through the ORM's workspace filter and writes

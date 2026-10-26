@@ -18,6 +18,7 @@ function input(overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<
       kind: "post",
       first_comment: null,
       publish_at: null,
+      share_to_feed: true,
       ...overrides,
     },
     accounts: [ready],
@@ -340,5 +341,95 @@ describe("422 field errors", () => {
     expect(keyOfField("targets.0.caption_override")).toBe("caption");
     expect(keyOfField("first_comment")).toBe("caption");
     expect(keyOfField("asset_ids")).toBe("media");
+  });
+});
+
+describe("localChecklist for the Instagram options (FR-PUB-07, C-134)", () => {
+  const extras = (items: ChecklistItem[]) => items.filter((item) => item.key === "extras").map((item) => [item.ok, item.field, item.message]);
+  const video = assetInfo({ id: "v1", resource_type: "video", width: 1080, height: 1920, duration_s: 10 });
+
+  it("lists nothing for a post that uses none", () => {
+    expect(extras(localChecklist(input()))).toEqual([]);
+  });
+
+  it("passes up to three collaborators", () => {
+    const items = localChecklist(input({ collaborators: ["@maple.studio", "bread_fan", "c"] }));
+    expect(extras(items)).toEqual([[true, null, "Collaborators: @maple.studio, @bread_fan, @c"]]);
+  });
+
+  it("fails four collaborators and a bad username", () => {
+    expect(extras(localChecklist(input({ collaborators: ["a", "b", "c", "d"] })))).toEqual([
+      [false, "collaborators", "Add at most 3 collaborators (now 4)."],
+    ]);
+    expect(extras(localChecklist(input({ collaborators: ["bad name"] })))).toEqual([
+      [false, "collaborators", "bad name is not a valid Instagram username."],
+    ]);
+  });
+
+  it("refuses collaborators on a Story and without an Instagram account", () => {
+    expect(extras(localChecklist(input({ kind: "story", collaborators: ["a"] })))).toEqual([
+      [false, "collaborators", "Collaborators are not available on Stories. Remove them or publish a post."],
+    ]);
+    const page = account({ id: "p1", platform: "facebook", capabilities: ["publish"] });
+    const items = localChecklist(input({ targets: [{ social_account_id: "p1", caption_override: null }], collaborators: ["a"] }, { accounts: [page] }));
+    expect(extras(items)).toEqual([[false, "collaborators", "Collaborators are an Instagram feature. Choose an Instagram account or remove them."]]);
+  });
+
+  it("counts tags per photo and fails past 20", () => {
+    const tags = (count: number) => Array.from({ length: count }, (_, i) => ({ asset_id: "as1", username: `u${i}`, x: 0.5, y: 0.5 }));
+    expect(extras(localChecklist(input({ user_tags: tags(2) })))).toEqual([[true, null, "2 tags on 1 photo"]]);
+    expect(extras(localChecklist(input({ user_tags: tags(21) })))).toEqual([
+      [false, "asset_ids.0", "Tag at most 20 accounts in one photo (now 21)."],
+    ]);
+  });
+
+  it("ignores tags of a photo that left the post", () => {
+    const stale = [{ asset_id: "gone", username: "u", x: 0.5, y: 0.5 }];
+    expect(extras(localChecklist(input({ user_tags: stale })))).toEqual([]);
+  });
+
+  it("accepts a Page id or link as the location and explains a vanity link", () => {
+    expect(extras(localChecklist(input({ location: "108123456789012" })))).toEqual([[true, null, "Location set"]]);
+    expect(extras(localChecklist(input({ location: "https://www.facebook.com/profile.php?id=100064123456789" })))).toEqual([
+      [true, null, "Location set"],
+    ]);
+    const [[ok, field, message]] = extras(localChecklist(input({ location: "https://www.facebook.com/maplebakery" })));
+    expect([ok, field]).toEqual([false, "location"]);
+    expect(message).toContain("Paste the numeric id of a Facebook Page");
+  });
+
+  it("checks a Reel's options on a single video", () => {
+    const reel = (draft: Partial<ChecklistInput["draft"]>) =>
+      extras(localChecklist(input({ asset_ids: ["v1"], ...draft }, { assets: { v1: video } })));
+    expect(reel({ audio_name: "Morning bake", share_to_feed: false })).toEqual([[true, null, "Reel options set"]]);
+    expect(reel({ cover_offset_ms: 12_000 })).toEqual([[false, "cover_offset_ms", "The cover frame is past the end of the video."]]);
+    expect(reel({ audio_name: "x".repeat(101) })).toEqual([[false, "audio_name", "Keep the audio name to 100 characters."]]);
+    expect(reel({})).toEqual([]);
+  });
+
+  it("refuses Reel options on a photo post", () => {
+    expect(extras(localChecklist(input({ audio_name: "x" })))).toEqual([
+      [false, "cover_asset_id", "Reel options only apply to a single Instagram video. Remove them."],
+    ]);
+  });
+
+  it("lets a single Instagram video run up to 15 minutes, and holds a carousel video to 90 seconds", () => {
+    const long = assetInfo({ id: "v1", resource_type: "video", duration_s: 600 });
+    expect(failures(localChecklist(input({ asset_ids: ["v1"] }, { assets: { v1: long } })))).toEqual([]);
+    const tooLong = assetInfo({ id: "v1", resource_type: "video", duration_s: 901 });
+    expect(failures(localChecklist(input({ asset_ids: ["v1"] }, { assets: { v1: tooLong } })))).toEqual([
+      ["media_files", "asset_ids.0", "Video 1 is 15:01 long. Reels can be up to 15 minutes."],
+    ]);
+    const short = assetInfo({ id: "v1", resource_type: "video", duration_s: 2 });
+    expect(failures(localChecklist(input({ asset_ids: ["v1"] }, { assets: { v1: short } })))[0][2]).toContain("at least 3 seconds");
+    const inCarousel = localChecklist(input({ asset_ids: ["as1", "v1"] }, { assets: { as1: assetInfo(), v1: long } }));
+    expect(failures(inCarousel)).toEqual([["media_files", "asset_ids.1", "Video 2 is 10:00 long. Instagram allows videos up to 90 seconds."]]);
+  });
+
+  it("maps the new field names to the extras key", () => {
+    for (const field of ["collaborators", "location", "user_tags.0", "cover_asset_id", "cover_offset_ms", "audio_name"]) {
+      expect(keyOfField(field)).toBe("extras");
+    }
+    expect(keyOfField("asset_ids.2")).toBe("media_files");
   });
 });

@@ -2,7 +2,7 @@
   "name": "@socialhood/api-client",
   "version": "0.1.0",
   "private": true,
-  "description": "Types generated from the Social Hood API's OpenAPI document. Do not edit schema.d.ts by hand; run pnpm gen:api.",
+  "description": "Types generated from the Amplychat API's OpenAPI document. Do not edit schema.d.ts by hand; run pnpm gen:api.",
   "types": "./schema.d.ts",
   "exports": {
     ".": {

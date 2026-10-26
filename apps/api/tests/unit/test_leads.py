@@ -76,7 +76,7 @@ def test_a_lead_is_cold_while_the_flag_is_later_than_their_last_message() -> Non
         (StageActor.MEMBER, None, "By a team member"),
         (StageActor.RULE, None, "Automatically"),
         (StageActor.AUTOMATION, None, "By an automation"),
-        (StageActor.SYSTEM, None, "By Social Hood"),
+        (StageActor.SYSTEM, None, "By Amplychat"),
     ],
 )
 def test_who_moved_a_lead_in_words(kind: str, user: str | None, words: str) -> None:

@@ -1,5 +1,5 @@
 """GR-28: the website chat widget. The settings routes and who may use them, the plan rule for
-"Powered by Social Hood", the public widget API (session, send, receive, email, limits), the chat
+"Powered by Amplychat", the public widget API (session, send, receive, email, limits), the chat
 as an inbox conversation of platform "web", an AI answer from knowledge and an inbox reply reaching
 the visitor, and the files the embed serves."""
 
@@ -214,7 +214,7 @@ async def test_agents_cannot_read_or_change_the_settings(
     assert (await ws.call("PUT", "/widget", json={"title": "Mine"})).status_code == 403
 
 
-# ---------------------------------------------------------------- "Powered by Social Hood" (PD-7)
+# ---------------------------------------------------------------- "Powered by Amplychat" (PD-7)
 
 
 async def test_free_shows_the_branding_and_pro_can_turn_it_off(

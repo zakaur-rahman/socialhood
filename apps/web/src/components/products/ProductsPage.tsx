@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBleed } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useDeleteProduct, useProducts } from "@/lib/api/queries";
@@ -37,6 +36,7 @@ import { ImportDialog } from "./ImportDialog";
 import { ProductSheet, type ProductUploader } from "./ProductSheet";
 import { ShopifyCard } from "./ShopifyCard";
 import { WhatsAppCatalogueCard } from "./WhatsAppCatalogueCard";
+import { SkeletonRegion, TableSkeleton } from "@/components/states/skeletons";
 
 const SOURCE_LABEL: Record<Product["source"], string> = {
   manual: "Added here",
@@ -84,21 +84,6 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
       }
     >
       <div className="space-y-6">
-        {!entitled ? (
-          <Alert tone="brand">
-            The product catalogue is part of Pro. You can see what is here, but adding, importing and syncing products
-            need Pro.{" "}
-            {canUpgrade ? (
-              <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
-                See plans
-              </button>
-            ) : null}
-          </Alert>
-        ) : null}
-
-        <ShopifyCard wid={wid} />
-        <WhatsAppCatalogueCard wid={wid} />
-
         <Card asChild padding="roomy">
           <section aria-labelledby="catalogue-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -135,13 +120,23 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
               </div>
             </div>
 
+            {!entitled ? (
+              <Alert tone="brand" className="mt-4">
+                The product catalogue is part of Pro. You can see what is here, but adding, importing and syncing products
+                need Pro.{" "}
+                {canUpgrade ? (
+                  <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
+                    See plans
+                  </button>
+                ) : null}
+              </Alert>
+            ) : null}
+
             <CardBleed className="mt-5 border-t border-line">
               {products.isPending ? (
-                <div className="space-y-3 p-(--card-padding)" role="status" aria-busy="true" aria-label="Loading products">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
+                <SkeletonRegion label="Loading products">
+                  <TableSkeleton columns={5} rows={8} />
+                </SkeletonRegion>
               ) : products.isError ? (
                 <div className="p-(--card-padding)">
                   <ErrorState error={products.error} onRetry={() => void products.refetch()} />
@@ -159,6 +154,10 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
             </CardBleed>
           </section>
         </Card>
+
+        {/* After the catalogue: these cards are taller once they load, and nothing is below them to move. */}
+        <ShopifyCard wid={wid} />
+        <WhatsAppCatalogueCard wid={wid} />
       </div>
 
       <ProductSheet

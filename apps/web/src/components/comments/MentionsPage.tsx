@@ -33,7 +33,7 @@ function who(mention: StoryMention): string {
 /**
  * GR-07: who mentioned the account in their story, and when. The story's link is Instagram's own
  * address and only works while the story is live (24 hours); after that the row says it expired.
- * Social Hood never copies the story.
+ * Amplychat never copies the story.
  */
 export function MentionsPage() {
   const workspace = useCurrentWorkspace();

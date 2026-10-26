@@ -332,7 +332,7 @@ def actor_phrase(actor_kind: str, user_name: str | None) -> str:
         return "By an automation"
     if actor_kind == StageActor.RULE:
         return "Automatically"
-    return "By Social Hood"
+    return "By Amplychat"
 
 
 async def user_names(session: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, str]:

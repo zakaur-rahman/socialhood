@@ -1,4 +1,4 @@
-"""Ask Social Hood's tools under test (TA.4): a workspace with a sandbox Instagram account, and
+"""Ask Amplychat's tools under test (TA.4): a workspace with a sandbox Instagram account, and
 ``call`` running one registered tool the way the executor will (the run's ToolContext, a
 session in the workspace's scope, the arguments validated by the tool's input model).
 

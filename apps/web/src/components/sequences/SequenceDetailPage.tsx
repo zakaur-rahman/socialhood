@@ -4,6 +4,8 @@ import type { Route } from "next";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
+import { isNotFound } from "@/lib/api/errors";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSequence } from "@/lib/api/queries";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -26,6 +28,13 @@ export function SequenceDetailPage({ id }: { id: string }) {
     );
   }
   if (sequence.isError) {
+    if (isNotFound(sequence.error)) {
+      return (
+        <PageFrame title="Sequence" back={back}>
+          <NotFoundState thing="sequence" backHref={back.href} backLabel="Back to Sequences" />
+        </PageFrame>
+      );
+    }
     return (
       <PageFrame title="Sequence" back={back}>
         <ErrorState error={sequence.error} onRetry={() => void sequence.refetch()} />

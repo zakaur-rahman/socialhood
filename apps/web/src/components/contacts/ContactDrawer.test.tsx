@@ -39,6 +39,8 @@ const record: ContactRecord = {
   last_activity_at: "2026-10-23T10:00:00Z",
   first_seen_at: "2026-09-27T09:00:00Z",
   fields: { city: "Pune" },
+  name_source: "platform",
+  platform_name: "Priya Nair",
   email_source: "flow",
   email_verified: false,
   phone_source: null,
@@ -55,14 +57,14 @@ const timeline: TimelineItem[] = [
   { id: "i3", kind: "conversation", occurred_at: "2026-10-01T09:00:00Z", title: "Conversation started", detail: "From an entry link", conversation_id: "c1" },
 ];
 
-function setup(options: { role?: "owner" | "agent"; next?: string | null; cold?: boolean; patch?: (call: Call) => Response } = {}) {
+function setup(options: { role?: "owner" | "agent"; next?: string | null; cold?: boolean; saved?: Partial<ContactRecord>; patch?: (call: Call) => Response } = {}) {
   let served = 0;
   let stage = record.lead_stage;
   const onClose = vi.fn();
   const view = renderWithApi(<ContactDrawer contactId="p1" onClose={onClose} />, {
     ws: { ...workspace, role: options.role ?? "owner" },
     handlers: {
-      "GET /v1/w/:wid/contacts/:id": () => json({ ...record, lead_stage: stage, lead_cold: options.cold ?? false }),
+      "GET /v1/w/:wid/contacts/:id": () => json({ ...record, ...options.saved, lead_stage: stage, lead_cold: options.cold ?? false }),
       "GET /v1/w/:wid/contacts/:id/timeline": () => {
         served += 1;
         return json(served === 1 ? { items: timeline, next_cursor: options.next ?? null } : { items: [{ ...timeline[2], id: "i4", title: "Tagged vip", kind: "tag", detail: null }], next_cursor: null });
@@ -102,6 +104,31 @@ describe("ContactDrawer (GR-17)", () => {
     expect(items.map((i) => i.getAttribute("data-kind"))).toEqual(["comment", "automation_run", "conversation"]);
     expect(within(drawer).getByText("LINK please")).toBeInTheDocument();
     expect(within(drawer).getAllByRole("link", { name: "Open conversation" }).length).toBeGreaterThan(0);
+  });
+
+  it("saves a renamed contact as the team's name (C-135)", async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> = {};
+    setup({ patch: (call) => ((body = call.body as Record<string, unknown>), json({ ...record, name: "Priya (wholesale)", name_source: "team" })) });
+    const drawer = await screen.findByRole("dialog");
+    const name = await within(drawer).findByLabelText("Name");
+    await user.clear(name);
+    await user.type(name, "Priya (wholesale)");
+    await user.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(body.name).toBe("Priya (wholesale)"));
+  });
+
+  it("shows the platform's name beside a team name and goes back to it (C-135)", async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> = {};
+    setup({
+      saved: { name: "Priya (wholesale)", name_source: "team", platform_name: "Priya N." },
+      patch: (call) => ((body = call.body as Record<string, unknown>), json({ ...record, name: "Priya N.", name_source: "platform", platform_name: "Priya N." })),
+    });
+    const drawer = await screen.findByRole("dialog");
+    expect(await within(drawer).findByText(/Instagram name: Priya N\./)).toBeInTheDocument();
+    await user.click(within(drawer).getByRole("button", { name: "Use this name" }));
+    await waitFor(() => expect(body.use_platform_name).toBe(true));
   });
 
   it("shows the lead stage and why it is there", async () => {
@@ -147,7 +174,7 @@ describe("ContactDrawer (GR-17)", () => {
     await user.click(save);
     await waitFor(() => {
       const patch = calls.find((c) => c.method === "PATCH");
-      expect(patch?.body).toEqual({ clear_email: true, clear_phone: false, phone: "98765 43210", fields: { city: null } });
+      expect(patch?.body).toEqual({ clear_email: true, clear_phone: false, use_platform_name: false, phone: "98765 43210", fields: { city: null } });
     });
   });
 
@@ -220,10 +247,10 @@ describe("ContactDrawer (GR-17)", () => {
     expect(within(agentDrawer).queryByLabelText("New tag name")).not.toBeInTheDocument();
   });
 
-  it("says when the contact did not load", async () => {
+  it("says when the contact does not exist", async () => {
     renderWithApi(<ContactDrawer contactId="gone" onClose={() => {}} />, {
       handlers: { "GET /v1/w/:wid/contacts/:id": () => problem(404, "not_found") },
     });
-    expect(await screen.findByText(/did not load/)).toBeInTheDocument();
+    expect(await screen.findByTestId("contact-not-found")).toBeInTheDocument();
   });
 });

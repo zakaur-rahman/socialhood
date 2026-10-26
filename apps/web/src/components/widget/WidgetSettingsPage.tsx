@@ -50,7 +50,7 @@ const BRANDING_UPGRADE = { code: "entitlement_required", entitlement: "widget_re
  * GR-28: Settings → Website chat. Owners and admins add the sites that may show the chat, copy the
  * one-line embed code, and choose how it looks and what it asks a visitor. Chats arrive in the
  * inbox as "Website"; the AI mode is the account's, set in AI rules and takeover. Free keeps the
- * "Powered by Social Hood" link; Pro and Max can turn it off (PD-7).
+ * "Powered by Amplychat" link; Pro and Max can turn it off (PD-7).
  */
 export function WidgetSettingsPage() {
   const workspace = useCurrentWorkspace();
@@ -394,12 +394,12 @@ function BrandingCard({
     <SettingsCard
       id="widget-branding"
       title="Branding and AI"
-      description="Free workspaces show a small “Powered by Social Hood” link. Pro and Max can turn it off."
+      description="Free workspaces show a small “Powered by Amplychat” link. Pro and Max can turn it off."
     >
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <label htmlFor="widget-branding-switch" className="text-sm font-medium">
-            Show “Powered by Social Hood”
+            Show “Powered by Amplychat”
           </label>
           {locked ? (
             <p className="text-xs text-fg-secondary">

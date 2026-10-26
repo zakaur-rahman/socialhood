@@ -1,6 +1,6 @@
 """Post analytics (§2.15 …/analytics/*; FR-ANL-02, TR-AGT-05; agent-architecture §6 and §11).
 
-The P6 contract: what services/analytics returns to the UI. Ask Social Hood's analytics tools call
+The P6 contract: what services/analytics returns to the UI. Ask Amplychat's analytics tools call
 the same functions, so these shapes are also what the agent explains (FR-AGT-04: numbers come from
 the database, never the model).
 

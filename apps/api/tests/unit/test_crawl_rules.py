@@ -17,7 +17,7 @@ Disallow: /search?
 Allow: /private/open
 Crawl-delay: 2
 
-User-agent: SocialHoodBot
+User-agent: AmplychatBot
 Disallow: /drafts
 Allow: /drafts/public$
 Disallow: /*.pdf$
@@ -80,7 +80,7 @@ def test_a_disallow_all_blocks_every_page() -> None:
 
 def test_several_user_agent_lines_share_one_group() -> None:
     robots = rules.parse_robots(
-        "User-agent: otherbot\nUser-agent: socialhoodbot\nDisallow: /shared\n"
+        "User-agent: otherbot\nUser-agent: amplychatbot\nDisallow: /shared\n"
     )
     assert not robots.allows("https://x.example/shared")
 
@@ -255,7 +255,7 @@ def test_robots_meta_is_read() -> None:
     )
     assert nofollow.noindex
     assert nofollow.nofollow
-    ours = rules.page_links(b'<meta name="socialhoodbot" content="none">', "https://x.example/")
+    ours = rules.page_links(b'<meta name="amplychatbot" content="none">', "https://x.example/")
     assert ours.noindex
     assert ours.nofollow
 

@@ -69,3 +69,11 @@ export function isPlanLimitError(error: unknown): error is ApiError {
     (error.status === 402 || (PLAN_LIMIT_CODES as readonly string[]).includes(error.code))
   );
 }
+
+/**
+ * True for the API's "no such thing" answer. It is the same 404 for a deleted resource and for one
+ * in another workspace, so the UI says the same thing for both and never reveals which.
+ */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}

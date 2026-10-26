@@ -146,12 +146,12 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
         <Section
           id="push"
           title="Push notifications"
-          hint="Alerts on your phone or computer, even when Social Hood isn't open."
+          hint="Alerts on your phone or computer, even when Amplychat isn't open."
           icon={<BellRing />}
         >
           <InstallPrompt
             storageKey="socialhood:install-dismissed"
-            title="Install Social Hood"
+            title="Install Amplychat"
             body="Open it from your home screen like an app, with alerts on this device."
             includeIos={false}
           />

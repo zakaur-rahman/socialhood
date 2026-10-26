@@ -1,6 +1,6 @@
 """The rules of a site crawl, as pure functions (GR-35; SEC-09): no database and no network.
 
-- ``Robots``: robots.txt for our bot. The group that names SocialHoodBot wins over ``*``; the
+- ``Robots``: robots.txt for our bot. The group that names AmplychatBot wins over ``*``; the
   longest matching rule decides, Allow beating Disallow at equal length; ``*`` and a closing ``$``
   work in paths; ``Crawl-delay`` and ``Sitemap`` lines are read. An empty or missing file allows
   everything; a file that can't be read (an error other than "not found") is handled by the caller.
@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-BOT_NAME = "socialhoodbot"
+BOT_NAME = "amplychatbot"
 MAX_URL_CHARS = 1000
 # Pages that aren't web pages: a link to one is never fetched.
 SKIPPED_EXTENSIONS = frozenset(
@@ -187,7 +187,7 @@ ALLOW_ALL = Robots()
 
 
 def parse_robots(text: str) -> Robots:
-    """robots.txt for SocialHoodBot (our group when present, else ``*``)."""
+    """robots.txt for AmplychatBot (our group when present, else ``*``)."""
     groups: list[tuple[list[str], list[tuple[str, str]]]] = []
     agents: list[str] = []
     lines: list[tuple[str, str]] = []

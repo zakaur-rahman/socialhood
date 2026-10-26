@@ -1,6 +1,6 @@
 # Meta App Review kit (GR-00)
 
-For the owner, to get Social Hood through Meta's business verification and App Review in **one
+For the owner, to get Amplychat through Meta's business verification and App Review in **one
 submission** for Instagram and WhatsApp. The plan's section F lists the permissions;
 this file has everything else.
 
@@ -58,10 +58,10 @@ role account: connect, receive and reply to a DM, reply to a comment, publish a 
 
 | Permission | Why we need it (draft use case; write it in your own words) | Test call that logs it | Screencast |
 |---|---|---|---|
-| `instagram_business_basic` | To connect a business's Instagram professional account to Social Hood and show its name, username and picture, so every message, comment and post in the app is tied to the right account. | Connect an account (reads `/me`) | S-1 |
+| `instagram_business_basic` | To connect a business's Instagram professional account to Amplychat and show its name, username and picture, so every message, comment and post in the app is tied to the right account. | Connect an account (reads `/me`) | S-1 |
 | `instagram_business_manage_messages` | To show the business's Instagram DMs in one shared inbox and let its team reply. The AI suggests replies that a person approves (or answers automatically if the business turns Auto on). Automations send the link or offer someone asked for, only inside Instagram's 24-hour window. Conversation starters, entry links and click-to-DM ads open these conversations. | Receive a DM and reply from the inbox | S-2, S-3 |
 | `instagram_business_manage_comments` | To show comments on the business's posts, Reels and Lives, with analysis of what people ask. The team can reply, hide spam or delete. Comment automations reply publicly and send one private reply to people who comment a keyword. | Reply to a comment; hide a comment | S-4 |
-| `instagram_business_content_publish` | To publish the business's own images, carousels and Reels at the time they schedule in Social Hood's calendar. | Publish a test post | S-5 |
+| `instagram_business_content_publish` | To publish the business's own images, carousels and Reels at the time they schedule in Amplychat's calendar. | Publish a test post | S-5 |
 | `instagram_business_manage_insights` (only if `IG_REQUEST_INSIGHTS_SCOPE` is on) | To show the business how its posts and account perform (reach, views, interactions at 1 hour to 30 days), so it can compare posts. | Open a post's performance | S-6 |
 | `whatsapp_business_messaging` | To show the business's WhatsApp chats in the same inbox and let its team reply. Outside the 24-hour window it sends only approved templates, and broadcasts go only to people who opted in. | Receive and reply to a WhatsApp message | S-7 |
 | `whatsapp_business_management` | To connect the business's WhatsApp Business Account through Embedded Signup and read its phone number and approved templates. | Connect through Embedded Signup; open the template picker | S-8 |
@@ -86,10 +86,10 @@ Meta's rules:
 Record on production with a test Instagram professional account that has a role on the app.
 
 - **S-1 · Connect (basic):**
-  1. Sign in to Social Hood.
+  1. Sign in to Amplychat.
   2. Open Settings › Connections and press Connect Instagram.
   3. Instagram's consent screen: grant the permissions.
-  4. Back in Social Hood, the account card shows the name, username and picture.
+  4. Back in Amplychat, the account card shows the name, username and picture.
 - **S-2 · Inbox and reply (manage_messages):**
   1. From another phone, DM the test account.
   2. The Inbox shows the message live; open it.
@@ -179,7 +179,7 @@ in `docs/verification.md` item 36.
 
 | Permission | Why we need it (draft; write it in your own words) | Test call that logs it | Screencast |
 |---|---|---|---|
-| `pages_show_list` | To list the Facebook Pages the person manages, so they pick which ones to connect to Social Hood. | Connect Facebook: the Pages list (`/me/accounts`) | S-9 |
+| `pages_show_list` | To list the Facebook Pages the person manages, so they pick which ones to connect to Amplychat. | Connect Facebook: the Pages list (`/me/accounts`) | S-9 |
 | `pages_manage_metadata` | To subscribe the connected Page to message and comment webhooks, so the inbox and comments update as they arrive. | Connect a Page (`/{page}/subscribed_apps`) | S-9 |
 | `pages_messaging` | To show the Page's Messenger conversations in the shared inbox and let its team reply. The AI suggests replies a person approves; automations send the link or offer someone asked for, inside Messenger's 24-hour window, and Human Agent replies up to 7 days. | Receive a Messenger message; reply from the inbox | S-10, S-11 |
 | `pages_read_engagement` | To read the Page's posts and their comment and reaction counts, so each comment is shown on its post. | Open the Comments grid after connecting | S-12 |
@@ -187,6 +187,8 @@ in `docs/verification.md` item 36.
 | `pages_manage_engagement` | To reply to comments as the Page, hide spam, delete comments, and send one private reply to a person who comments a keyword. | Reply to and hide a comment; automation private reply | S-12, S-13 |
 
 Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories) and `read_insights` for Page post insights (only asked for when `FB_REQUEST_INSIGHTS_SCOPE` is on).
+
+Not requested yet (FR-PUB-07, C-134): the Page Public Metadata Access feature, which the Pages search (`GET /pages/search`) needs to look up a place for an Instagram post's location. Until it is approved the composer takes a Facebook Page's id or link. Meta's collaborators reference names `instagram_basic` and `pages_read_engagement` for reading invites; our connection uses Instagram Login (`instagram_business_basic`), and whether that covers the read is unverified (C-134). If it does not, the invites stay Pending and the Schedule page says when they were last read.
 
 **Webhook fields to subscribe** (Page object): `messages`, `message_echoes`, `messaging_postbacks`,
 `messaging_referrals`, `message_reads`, `message_deliveries`, `message_reactions`, `message_edits`,
@@ -198,7 +200,7 @@ Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Re
 
 - **S-9 · Connect a Page (`pages_show_list`, `pages_manage_metadata`):**
   1. Settings › Connections › Connect Facebook; Facebook's consent screen: grant the permissions.
-  2. Back in Social Hood, the list of Pages appears; tick the test Page and press Connect Page.
+  2. Back in Amplychat, the list of Pages appears; tick the test Page and press Connect Page.
   3. The Page's card shows its name and "Facebook Pages API".
 - **S-10 · Messenger inbox (`pages_messaging`):**
   1. From another Facebook account, message the Page in Messenger.

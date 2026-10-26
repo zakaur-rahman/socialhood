@@ -115,8 +115,8 @@ test.describe("GR-38 visual answers", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole("link", { name: "Home" }).first().click();
     await expect(page).toHaveURL(/\/home/);
-    await page.getByRole("button", { name: "Ask Social Hood" }).first().click();
-    const panel = page.getByRole("dialog", { name: "Ask Social Hood" });
+    await page.getByRole("button", { name: "Ask Amplychat" }).first().click();
+    const panel = page.getByRole("dialog", { name: "Ask Amplychat" });
     await expect(panel.getByTestId("visual-metric-comparison")).toBeVisible({ timeout: 30_000 });
     await expect(panel.getByTestId("metric-tile").first()).toBeVisible();
   });

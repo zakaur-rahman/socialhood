@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Resizable Navbar, from Aceternity UI's free "resizable-navbar"
- * (ui.aceternity.com/components/resizable-navbar), adapted for Social Hood (C-068):
+ * (ui.aceternity.com/components/resizable-navbar), adapted for Amplychat (C-068):
  * - one bar for every width (the original rendered a desktop and a phone copy); the links and
  *   account actions are the caller's, so the header keeps its landmarks and phone menu;
  * - past `threshold` px of scroll the bar floats: it narrows (on wide screens), drops 12 px,

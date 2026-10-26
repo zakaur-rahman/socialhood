@@ -5,7 +5,7 @@ import { filterCounts, matchesSearch, visibleAccounts } from "@/components/conne
 import { account } from "@/test/api";
 
 import { FacebookGlyph } from "./FacebookGlyph";
-import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
+import { PLATFORM_BG, PLATFORM_LOGO_BG, PlatformGlyph } from "./PlatformGlyph";
 
 describe("PlatformGlyph (GR-29)", () => {
   it("draws the Facebook mark for a Page, decorative", () => {
@@ -27,6 +27,15 @@ describe("PlatformGlyph (GR-29)", () => {
     expect(PLATFORM_BG.facebook).toBe("bg-facebook");
     expect(PLATFORM_BG.instagram).toBe("bg-instagram");
     expect(PLATFORM_BG.whatsapp).toBe("bg-whatsapp");
+  });
+
+  it("has the platforms' logo colours for badges that hold the glyph alone (C-135)", () => {
+    expect(PLATFORM_LOGO_BG).toEqual({
+      instagram: "bg-instagram-logo-gradient",
+      whatsapp: "bg-whatsapp-logo",
+      facebook: "bg-facebook-logo",
+      web: "bg-web",
+    });
   });
 });
 

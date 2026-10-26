@@ -30,7 +30,7 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     expect(screen.getAllByRole("radio")).toHaveLength(4);
     const segment = screen.getByRole("radio", { name: "Facebook" });
     expect(segment).toHaveAttribute("aria-checked", "true");
-    expect(segment.querySelector(".bg-facebook")).not.toBeNull();
+    expect(segment.querySelector(".bg-facebook-logo")).not.toBeNull();
   });
 
   // D-15 item 1 (C-069): the chosen segment is neutral, raised with brand-fg text, like every other

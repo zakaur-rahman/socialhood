@@ -262,7 +262,7 @@ async def test_the_document_is_public_and_lists_only_the_public_api(
     response = await client.get("/public/v1/openapi.json")
     assert response.status_code == 200, response.text
     document = response.json()
-    assert document["info"]["title"] == "Social Hood public API"
+    assert document["info"]["title"] == "Amplychat public API"
     assert "/public/v1/contacts" in document["paths"]
     assert not [p for p in document["paths"] if p.startswith("/v1/")]
     assert document["components"]["securitySchemes"]["ApiKey"]["scheme"] == "bearer"
@@ -458,6 +458,7 @@ async def test_create_a_contact_on_a_whatsapp_account(
     assert made.json()["phone"] == "+919876543210"
     assert made.json()["platform"] == "whatsapp"
     assert made.json()["name"] == "Asha Nair"
+    assert made.json()["name_source"] == "team"  # C-135: a platform name will not replace it
 
     duplicate = await client.post("/public/v1/contacts", json=body, headers=bearer(key))
     assert duplicate.status_code == 409

@@ -57,7 +57,7 @@ export const SWITCH_PAGE: GtmPage = {
   name: "Switch from Manychat",
   title: "Switch from Manychat",
   description:
-    "Moving from Manychat to Social Hood: what you can rebuild (comment and DM automations, flows, tags, fields), what is different, and what Social Hood adds: an AI inbox, comment analysis and publishing on a flat plan.",
+    "Moving from Manychat to Amplychat: what you can rebuild (comment and DM automations, flows, tags, fields), what is different, and what Amplychat adds: an AI inbox, comment analysis and publishing on a flat plan.",
   eyebrow: "Switch from Manychat",
   h1: "Move your Instagram automations from Manychat",
   intro:
@@ -66,7 +66,7 @@ export const SWITCH_PAGE: GtmPage = {
     {
       id: "carries-over",
       title: "What you can rebuild here",
-      intro: "You set these up again in Social Hood. There is no one-click import from Manychat.",
+      intro: "You set these up again in Amplychat. There is no one-click import from Manychat.",
       items: [
         {
           title: "Comment-to-DM automations",
@@ -86,7 +86,7 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "Ways in beyond comments",
-          body: "Entry links and QR codes, click-to-DM ads, Live comments and ice breakers are built. Meta only sends some of these events to apps it has approved for them, so they reach your account once Meta's approval for Social Hood is complete.",
+          body: "Entry links and QR codes, click-to-DM ads, Live comments and ice breakers are built. Meta only sends some of these events to apps it has approved for them, so they reach your account once Meta's approval for Amplychat is complete.",
         },
         {
           title: "Team inbox",
@@ -100,7 +100,7 @@ export const SWITCH_PAGE: GtmPage = {
     },
     {
       id: "adds",
-      title: "What Social Hood adds",
+      title: "What Amplychat adds",
       items: [
         {
           title: "AI that answers from your knowledge",
@@ -130,7 +130,7 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "Instagram and WhatsApp first",
-          body: "Facebook Pages and Messenger are built but wait on Meta's approval. Social Hood has no TikTok, Telegram, SMS or email channels.",
+          body: "Facebook Pages and Messenger are built but wait on Meta's approval. Amplychat has no TikTok, Telegram, SMS or email channels.",
         },
         {
           title: "Triggers we don't have",
@@ -138,13 +138,13 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "WhatsApp broadcasts are coming soon",
-          body: "Broadcasts are built and open after our review of India's consent rules. Until then, Social Hood doesn't send marketing broadcasts.",
+          body: "Broadcasts are built and open after our review of India's consent rules. Until then, Amplychat doesn't send marketing broadcasts.",
         },
       ],
     },
   ],
   honesty: [
-    "Instagram and WhatsApp connections depend on Meta's approval of Social Hood's app. Features marked as needing Meta's approval work in our test setup and reach your account once Meta enables them.",
+    "Instagram and WhatsApp connections depend on Meta's approval of Amplychat's app. Features marked as needing Meta's approval work in our test setup and reach your account once Meta enables them.",
     "Manychat's own pages block automated reading, so what we say about Manychat comes from third-party guides written in 2026 and read on 2026-10-22. Check manychat.com before you decide.",
   ],
   sources: [
@@ -152,25 +152,25 @@ export const SWITCH_PAGE: GtmPage = {
     { label: "Chatarmin: Manychat pricing 2026", url: "https://chatarmin.com/en/blog/manychat-pricing", checked: "2026-10-22" },
   ],
   related: [
-    { label: "Social Hood vs Manychat", href: "/compare/manychat" },
+    { label: "Amplychat vs Manychat", href: "/compare/manychat" },
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   shot: "automationPreview",
 };
 
-// ---- Social Hood vs Manychat
+// ---- Amplychat vs Manychat
 
 export const COMPARE_MANYCHAT: GtmPage = {
   path: "/compare/manychat",
-  name: "Social Hood vs Manychat",
-  title: "Social Hood vs Manychat",
+  name: "Amplychat vs Manychat",
+  title: "Amplychat vs Manychat",
   description:
-    "A side-by-side of Social Hood and Manychat for Instagram and WhatsApp: automations, AI, comments, publishing, channels and how each is priced, with the sources and the date they were read.",
+    "A side-by-side of Amplychat and Manychat for Instagram and WhatsApp: automations, AI, comments, publishing, channels and how each is priced, with the sources and the date they were read.",
   eyebrow: "Compare",
-  h1: "Social Hood vs Manychat",
+  h1: "Amplychat vs Manychat",
   intro:
-    "Manychat is a mature builder for DM automation with many channels and integrations. Social Hood is an AI inbox for Instagram and WhatsApp that adds comment analysis and publishing. Here is where each is stronger, with sources.",
+    "Manychat is a mature builder for DM automation with many channels and integrations. Amplychat is an AI inbox for Instagram and WhatsApp that adds comment analysis and publishing. Here is where each is stronger, with sources.",
   blocks: [
     {
       id: "choose",
@@ -181,7 +181,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
           body: "you need a free-form flow canvas, share-to-DM or follow triggers, or channels such as TikTok, Telegram, SMS and email.",
         },
         {
-          title: "Social Hood may fit better if",
+          title: "Amplychat may fit better if",
           body: "you want one inbox that answers from your own knowledge with a person in the loop, comment analysis per post, publishing and a plan that doesn't count contacts.",
         },
       ],
@@ -189,7 +189,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
   ],
   compare: {
     competitor: "Manychat",
-    caption: "Social Hood and Manychat feature by feature",
+    caption: "Amplychat and Manychat feature by feature",
     rows: [
       {
         feature: "Channels",
@@ -296,23 +296,23 @@ export const COMPARE_MANYCHAT: GtmPage = {
   ],
   related: [
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
-    { label: "Social Hood vs Interakt", href: "/compare/interakt" },
+    { label: "Amplychat vs Interakt", href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },
   ],
 };
 
-// ---- Social Hood vs Interakt
+// ---- Amplychat vs Interakt
 
 export const COMPARE_INTERAKT: GtmPage = {
   path: "/compare/interakt",
-  name: "Social Hood vs Interakt",
-  title: "Social Hood vs Interakt",
+  name: "Amplychat vs Interakt",
+  title: "Amplychat vs Interakt",
   description:
-    "A side-by-side of Social Hood and Interakt for sellers on WhatsApp and Instagram in India: campaigns, catalogue, AI, comments and publishing, with sources and the date they were read.",
+    "A side-by-side of Amplychat and Interakt for sellers on WhatsApp and Instagram in India: campaigns, catalogue, AI, comments and publishing, with sources and the date they were read.",
   eyebrow: "Compare",
-  h1: "Social Hood vs Interakt",
+  h1: "Amplychat vs Interakt",
   intro:
-    "Interakt is built around WhatsApp: bulk campaigns, catalogues and checkout. Social Hood is built around the conversation and the comment: an AI inbox, comment analysis and Instagram publishing. Here is the detail.",
+    "Interakt is built around WhatsApp: bulk campaigns, catalogues and checkout. Amplychat is built around the conversation and the comment: an AI inbox, comment analysis and Instagram publishing. Here is the detail.",
   blocks: [
     {
       id: "choose",
@@ -323,7 +323,7 @@ export const COMPARE_INTERAKT: GtmPage = {
           body: "most of your business is WhatsApp campaigns to a list, with a catalogue and checkout inside WhatsApp.",
         },
         {
-          title: "Social Hood may fit better if",
+          title: "Amplychat may fit better if",
           body: "your customers find you through Instagram posts and comments, and you want comments read and answered, replies drafted from your own knowledge and your posts scheduled in the same place.",
         },
       ],
@@ -331,7 +331,7 @@ export const COMPARE_INTERAKT: GtmPage = {
   ],
   compare: {
     competitor: "Interakt",
-    caption: "Social Hood and Interakt feature by feature",
+    caption: "Amplychat and Interakt feature by feature",
     rows: [
       {
         feature: "Channels",
@@ -413,7 +413,7 @@ export const COMPARE_INTERAKT: GtmPage = {
     { label: "respond.io: Interakt review", url: "https://respond.io/blog/interakt-review", checked: "2026-10-22" },
   ],
   related: [
-    { label: "Social Hood vs Manychat", href: "/compare/manychat" },
+    { label: "Amplychat vs Manychat", href: "/compare/manychat" },
     { label: "The AI inbox", href: "/features/ai-inbox" },
     { label: "Plans and limits", href: "/pricing" },
   ],
@@ -448,16 +448,16 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
       items: [
         { title: "Free analyses your latest posts", body: "Free reads the comments on your latest posts for each account. Pro reads every post." },
         { title: "It uses AI credits", body: "Analysing a comment costs a credit and summarising a post's comments costs two. The pricing page lists the allowance for each plan." },
-        { title: "You stay in charge", body: "Social Hood hides spam only when you turn that on. Nothing is deleted without you." },
+        { title: "You stay in charge", body: "Amplychat hides spam only when you turn that on. Nothing is deleted without you." },
       ],
     },
   ],
-  honesty: ["Comment analysis needs your Instagram account connected, which depends on Meta's approval of Social Hood's app."],
+  honesty: ["Comment analysis needs your Instagram account connected, which depends on Meta's approval of Amplychat's app."],
   sources: [],
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
     { label: "Publishing", href: "/features/publishing" },
-    { label: "Social Hood vs Manychat", href: "/compare/manychat" },
+    { label: "Amplychat vs Manychat", href: "/compare/manychat" },
   ],
   shot: "inbox",
 };
@@ -488,18 +488,18 @@ export const FEATURE_AI_INBOX: GtmPage = {
       title: "Built for a team",
       items: [
         { title: "Assign, save replies, set hours", body: "Assign conversations, reuse saved replies and send an away message outside business hours." },
-        { title: "Ask Social Hood", body: "Ask about your own posts, comments and conversations in plain words. Answers cite the figures they used, and anything it prepares waits for your approval." },
+        { title: "Ask Amplychat", body: "Ask about your own posts, comments and conversations in plain words. Answers cite the figures they used, and anything it prepares waits for your approval." },
       ],
     },
   ],
   honesty: [
-    "Instagram only allows a business to message within 24 hours of the customer's last message. Social Hood shows when the window closes.",
+    "Instagram only allows a business to message within 24 hours of the customer's last message. Amplychat shows when the window closes.",
     "The AI uses credits from your monthly allowance. Plan limits are on the pricing page.",
   ],
   sources: [],
   related: [
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
-    { label: "Social Hood vs Interakt", href: "/compare/interakt" },
+    { label: "Amplychat vs Interakt", href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   shot: "aiDraft",

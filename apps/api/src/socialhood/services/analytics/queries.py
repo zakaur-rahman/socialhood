@@ -1,5 +1,5 @@
 """Post analytics (T6.5; FR-ANL-02, TR-AGT-05; agent-architecture §6): typed, parameterised reads
-of the FR-ANL-01 snapshots, used by the analytics routes and, unchanged, by Ask Social Hood's
+of the FR-ANL-01 snapshots, used by the analytics routes and, unchanged, by Ask Amplychat's
 analytics tools. The agent never sees tables; numbers come from here (FR-AGT-04).
 
 - ``post_performance``: one post's figures at an age (``ages.shown_age`` picks the snapshot).

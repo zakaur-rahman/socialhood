@@ -126,7 +126,7 @@ def _context() -> AgentContext:
 
 def test_the_system_prompt_holds_settings_and_the_local_time() -> None:
     prompt = planner.system_prompt(_context())
-    assert "Ask Social Hood, the assistant inside Social Hood for Maple Bakery" in prompt
+    assert "Ask Amplychat, the assistant inside Amplychat for Maple Bakery" in prompt
     assert "Now: Tue 29 Sep 2026, 19:00 (Asia/Kolkata, UTC+05:30)." in prompt
     assert (
         "Connected accounts: Instagram @maple.bakery: insights not granted; WhatsApp Maple"

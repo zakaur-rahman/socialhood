@@ -3,7 +3,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 /** The landing page's questions: the product guide's "Common questions", plus its WhatsApp costs. */
 export const FAQ: { question: string; answer: string }[] = [
   {
-    question: "Can Social Hood reply to my customers automatically?",
+    question: "Can Amplychat reply to my customers automatically?",
     answer:
       "Yes. With Auto mode (Pro), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to \"Needs you\" for a person to answer. On Free, the AI suggests replies and you send them.",
   },
@@ -24,17 +24,17 @@ export const FAQ: { question: string; answer: string }[] = [
   {
     question: "Why can't I message a customer who wrote to me days ago?",
     answer:
-      "Instagram only allows businesses to message a customer within 24 hours of the customer's last message. Once they write again, you can reply. Social Hood shows when this window closes.",
+      "Instagram only allows businesses to message a customer within 24 hours of the customer's last message. Once they write again, you can reply. Amplychat shows when this window closes.",
   },
   {
     question: "Can my automation require people to follow me before sending the link?",
     answer:
-      "No. Instagram's rules don't allow making a follow a condition. Social Hood can politely invite people to follow, and it always sends what they asked for.",
+      "No. Instagram's rules don't allow making a follow a condition. Amplychat can politely invite people to follow, and it always sends what they asked for.",
   },
   {
-    question: "Does Social Hood post to my account without asking?",
+    question: "Does Amplychat post to my account without asking?",
     answer:
-      "No. It only publishes posts you create and schedule. Ask Social Hood never publishes, sends or changes anything by itself.",
+      "No. It only publishes posts you create and schedule. Ask Amplychat never publishes, sends or changes anything by itself.",
   },
   {
     question: "Which languages does the AI support?",
@@ -43,7 +43,7 @@ export const FAQ: { question: string; answer: string }[] = [
   {
     question: "Is there a mobile app?",
     answer:
-      "Social Hood works in any modern browser on phone and computer, and you can install it as an app from the browser to get push notifications. On iPhone, add it to your Home Screen first (iOS 16.4 or later).",
+      "Amplychat works in any modern browser on phone and computer, and you can install it as an app from the browser to get push notifications. On iPhone, add it to your Home Screen first (iOS 16.4 or later).",
   },
   {
     question: "What happens when I run out of AI credits?",

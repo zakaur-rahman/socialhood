@@ -162,7 +162,7 @@ describe("WidgetSettingsPage (GR-28)", () => {
 
   it("Free keeps the branding: the switch is locked and says why", async () => {
     setup(settings());
-    const branding = await screen.findByRole("switch", { name: /Powered by Social Hood/ });
+    const branding = await screen.findByRole("switch", { name: /Powered by Amplychat/ });
     expect(branding).toBeChecked();
     expect(branding).toBeDisabled();
     expect(screen.getAllByText(/Turning it off is part of Pro/).length).toBeGreaterThan(0);
@@ -178,7 +178,7 @@ describe("WidgetSettingsPage (GR-28)", () => {
         return json(settings({ can_remove_branding: true, show_branding: false }));
       },
     });
-    const branding = await screen.findByRole("switch", { name: /Powered by Social Hood/ });
+    const branding = await screen.findByRole("switch", { name: /Powered by Amplychat/ });
     expect(branding).toBeEnabled();
     await user.click(branding);
     await user.click(within(await screen.findByRole("region", { name: "Save changes" })).getByRole("button", { name: "Save" }));

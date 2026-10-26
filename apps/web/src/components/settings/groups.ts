@@ -71,7 +71,7 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
   },
   agent: {
     icon: Bot,
-    description: "Ask Social Hood and its run history",
+    description: "Ask Amplychat and its run history",
     keywords: ["assistant", "ask", "runs", "history"],
   },
   billing: {

@@ -78,7 +78,7 @@ describe("fetchPublicApiDocument", () => {
   it("reads the document from the API's public path", async () => {
     const fetcher = ok(SAMPLE);
     const document = await fetchPublicApiDocument("https://api.example.test/", fetcher);
-    expect(document?.info.title).toBe("Social Hood public API");
+    expect(document?.info.title).toBe("Amplychat public API");
     expect(vi.mocked(fetcher).mock.calls[0][0]).toBe("https://api.example.test/public/v1/openapi.json");
   });
 

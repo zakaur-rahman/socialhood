@@ -59,12 +59,12 @@ const COPY: Record<DeleteMode, { action: string; title: (handle: string) => stri
     action: "Disconnect and delete",
     title: (handle) => `Disconnect ${handle} and delete its data?`,
     lead: (handle) =>
-      `Social Hood disconnects ${handle} now, then permanently deletes everything stored for it. This can't be undone.`,
+      `Amplychat disconnects ${handle} now, then permanently deletes everything stored for it. This can't be undone.`,
   },
   remove: {
     action: "Remove account",
     title: (handle) => `Remove ${handle}?`,
-    lead: (handle) => `Social Hood permanently deletes ${handle} and everything stored for it. This can't be undone.`,
+    lead: (handle) => `Amplychat permanently deletes ${handle} and everything stored for it. This can't be undone.`,
   },
 };
 

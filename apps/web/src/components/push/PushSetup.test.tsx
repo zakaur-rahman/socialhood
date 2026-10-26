@@ -107,22 +107,22 @@ describe("PushSetup: this device's push (UX-SCR-07, F-19)", () => {
     const fake = fakeBrowser({ answer: "denied" });
     setup(fake.browser);
     await user.click(await screen.findByRole("switch", { name: "Notifications on this device" }));
-    expect(await screen.findByText("Notifications are blocked for Social Hood")).toBeInTheDocument();
+    expect(await screen.findByText("Notifications are blocked for Amplychat")).toBeInTheDocument();
     expect(screen.getByText(/Permissions, and allow Notifications/)).toBeInTheDocument();
     expect(fake.subscribe).not.toHaveBeenCalled();
   });
 
   it("already blocked on an installed Android app: the app-info steps", async () => {
     setup(fakeBrowser({ env: { permission: "denied", standalone: true } }).browser);
-    expect(await screen.findByText("Notifications are blocked for Social Hood")).toBeInTheDocument();
-    expect(screen.getByText(/Touch and hold the Social Hood icon/)).toBeInTheDocument();
+    expect(await screen.findByText("Notifications are blocked for Amplychat")).toBeInTheDocument();
+    expect(screen.getByText(/Touch and hold the Amplychat icon/)).toBeInTheDocument();
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   it("iPhone in Safari: add to the Home Screen first, with the two steps", async () => {
     setup(fakeBrowser({ env: { platform: "ios", pushApis: false } }).browser);
-    expect(await screen.findByText("Add Social Hood to your Home Screen first")).toBeInTheDocument();
-    const steps = screen.getByRole("list", { name: "Add Social Hood to your Home Screen" });
+    expect(await screen.findByText("Add Amplychat to your Home Screen first")).toBeInTheDocument();
+    const steps = screen.getByRole("list", { name: "Add Amplychat to your Home Screen" });
     expect(steps).toHaveTextContent("Tap Share in Safari's toolbar.");
     expect(steps).toHaveTextContent("Choose Add to Home Screen");
   });
@@ -134,7 +134,7 @@ describe("PushSetup: this device's push (UX-SCR-07, F-19)", () => {
 
   it("a browser without push says so", async () => {
     setup(fakeBrowser({ env: { platform: "desktop", pushApis: false } }).browser);
-    expect(await screen.findByText("This browser can't show notifications from Social Hood")).toBeInTheDocument();
+    expect(await screen.findByText("This browser can't show notifications from Amplychat")).toBeInTheDocument();
   });
 
   it("unavailable when the API has no VAPID keys, or this build has no service worker", async () => {

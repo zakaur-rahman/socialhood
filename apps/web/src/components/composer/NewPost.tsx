@@ -32,6 +32,7 @@ export function newDraftBody(accounts: SocialAccount[], at: string | null, now: 
     kind: "post",
     first_comment: null,
     publish_at: publishAt,
+    share_to_feed: true,
   };
 }
 

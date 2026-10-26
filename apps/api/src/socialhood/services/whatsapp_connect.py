@@ -5,7 +5,7 @@ Meta's session-info message, which doesn't always arrive or name a number (FINIS
 check the plan, exchange the code for the business token, find any id the page couldn't give, read
 the number, store it (a reconnect updates the same row), and subscribe our app to its WhatsApp
 Business Account. Runs in the workspace scope and commits. Every refused or failed attempt is
-logged for follow-up (F-04: Meta may refuse while Social Hood's weekly onboarding allowance is used
+logged for follow-up (F-04: Meta may refuse while Amplychat's weekly onboarding allowance is used
 up).
 """
 
@@ -36,7 +36,7 @@ from socialhood.settings import Settings
 log = get_logger(__name__)
 
 CONNECT_FAILED = "WhatsApp didn't finish the connection. Try connecting again."
-IN_USE = "This number is connected to another Social Hood workspace. Disconnect it there first."
+IN_USE = "This number is connected to another Amplychat workspace. Disconnect it there first."
 CHOOSE_BUSINESS_ACCOUNT = (
     "Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one "
     "in Meta's popup."

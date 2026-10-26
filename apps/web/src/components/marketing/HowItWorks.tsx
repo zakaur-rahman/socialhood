@@ -10,7 +10,7 @@ import { SHOTS, type Shot } from "./shots";
 const STEPS: { title: string; body: string; shot: Shot; maxWidth: string }[] = [
   {
     title: "Connect your accounts",
-    body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Social Hood never asks for your password.",
+    body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Amplychat never asks for your password.",
     shot: SHOTS.connect,
     maxWidth: "max-w-xl",
   },
@@ -34,7 +34,7 @@ export function HowItWorks() {
     <section
       id={SECTION_IDS.howItWorks}
       aria-labelledby="how-title"
-      className="scroll-mt-24 border-t border-line-subtle bg-panel-glass py-20 sm:py-24"
+      className="scroll-mt-24 border-t border-line-subtle bg-panel-glass py-16 sm:py-20"
     >
       <Container>
         <SectionHeading id="how-title" eyebrow="How it works" title="Set up in three steps" intro="Screens from the app, with example data." />

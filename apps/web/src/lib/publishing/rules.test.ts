@@ -14,7 +14,10 @@ import {
   formatDuration,
   fromMediaAsset,
   hashtagsIn,
+  igReelProblem,
   mentionsIn,
+  normalizeUsername,
+  parseLocation,
   UNSUPPORTED_MEDIA,
   videoTooLong,
 } from "./rules";
@@ -116,5 +119,44 @@ describe("accounts that can publish", () => {
     expect(cannotPublishReason(account({ status: "needs_reconnect", capabilities: ["publish"] }))).toBe("Needs reconnecting");
     expect(cannotPublishReason(account({ status: "disconnected" }))).toBe("Disconnected");
     expect(cannotPublishReason(account({ capabilities: ["dm_send"] }))).toBe("Reconnect to allow publishing");
+  });
+});
+
+describe("Instagram options (FR-PUB-07, C-134)", () => {
+  it.each([
+    ["@Maple.Bakery", "maple.bakery"],
+    [" maple_2 ", "maple_2"],
+    ["bad name", null],
+    ["", null],
+    ["a".repeat(31), null],
+  ])("normalises the username %j", (raw, expected) => {
+    expect(normalizeUsername(raw)).toBe(expected);
+  });
+
+  it.each([
+    ["108123456789012", "108123456789012"],
+    ["https://www.facebook.com/profile.php?id=100064123456789", "100064123456789"],
+    ["https://facebook.com/pages/Maple-Bakery/108123456789012", "108123456789012"],
+    ["https://www.facebook.com/Maple-Bakery-108123456789012/", "108123456789012"],
+    ["https://www.facebook.com/maplebakery", null],
+    ["1234", null],
+    ["https://example.com/profile.php?id=123456789", null],
+  ])("reads the Page id in %j", (raw, expected) => {
+    expect(parseLocation(raw)).toBe(expected);
+  });
+
+  it("holds a single Instagram video to 3 seconds up to 15 minutes", () => {
+    const video = (duration_s: number) => ({ resource_type: "video" as const, duration_s });
+    expect(igReelProblem(video(900))).toBeNull();
+    expect(igReelProblem(video(901))).toBe("Reels can be up to 15 minutes.");
+    expect(igReelProblem(video(2))).toBe("Reels must be at least 3 seconds.");
+    expect(igReelProblem({ resource_type: "image", duration_s: null })).toBeNull();
+  });
+
+  it("checks a video against the size cap the API reports", () => {
+    const big = { name: "clip.mp4", type: "video/mp4", size: 150 * MB };
+    expect(checkPostFile(big)).toBe("Videos can be up to 100 MB on Instagram.");
+    expect(checkPostFile(big, 200)).toBeNull();
+    expect(checkPostFile({ name: "clip.mp4", type: "", size: 201 * MB }, 200)).toBe("Videos can be up to 200 MB on Instagram.");
   });
 });

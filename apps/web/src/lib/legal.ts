@@ -7,7 +7,7 @@
 import { SUPPORT_EMAIL } from "@/lib/copy";
 
 export type LegalConfig = {
-  /** The registered business that runs Social Hood, e.g. "Example Technologies Private Limited". */
+  /** The registered business that runs Amplychat, a sole proprietorship, "unchartd". */
   entityName?: string;
   /** Its registered address, on one line. */
   registeredAddress?: string;
@@ -25,7 +25,7 @@ export type LegalConfig = {
 
 // OWNER REVIEW: fill in before launch; see the report on feature/landing-page.
 export const LEGAL: LegalConfig = {
-  entityName: undefined,
+  entityName: "unchartd",
   registeredAddress: undefined,
   governingLaw: undefined,
   jurisdiction: undefined,
@@ -60,7 +60,7 @@ export function legalDate(iso: string | null | undefined): string | null {
 
 /** The name we go by in the documents: the legal entity when set, else the product. */
 export function operatorName(config: LegalConfig = LEGAL): string {
-  return isSet(config.entityName) ? config.entityName.trim() : "Social Hood";
+  return isSet(config.entityName) ? config.entityName.trim() : "Amplychat";
 }
 
 export type LegalFact = { label: string; value: string; href?: string };

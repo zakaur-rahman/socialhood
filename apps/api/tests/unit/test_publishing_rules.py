@@ -158,7 +158,8 @@ def test_a_passing_post_lists_each_check_once_in_order() -> None:
     items = rules.checklist(
         _post(publish_at=NOW + timedelta(hours=1)), now=NOW, publishing_limit=100
     )
-    assert [i.key for i in items] == list(CHECKLIST_KEYS)
+    # "extras" is listed only when a post uses one (FR-PUB-07)
+    assert [i.key for i in items] == [k for k in CHECKLIST_KEYS if k != "extras"]
     assert all(i.ok and i.field is None for i in items)
     assert items[0].message == "Publishing to @maple.bakery"
     assert items[1].message == "Image post"

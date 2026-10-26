@@ -613,7 +613,7 @@ class ListContactsInput(_Input):
     has_phone: bool | None = Field(
         default=None, description="Only contacts with (or without) a phone."
     )
-    platform: Literal["instagram", "whatsapp"] | None = None
+    platform: Literal["instagram", "whatsapp", "facebook"] | None = None
     min_lead_score: int | None = Field(default=None, ge=0, le=100)
     awaiting_reply: bool | None = Field(
         default=None,

@@ -108,7 +108,7 @@ def due_condition(now: datetime) -> ColumnElement[bool]:
 
 
 def measured(adapter: PlatformAdapter, acct: SocialAccount) -> bool:
-    """Whether the account has posts whose metrics Social Hood records."""
+    """Whether the account has posts whose metrics Amplychat records."""
     return bool(adapter.capabilities_for(acct) & POST_CAPABILITIES)
 
 

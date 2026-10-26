@@ -58,10 +58,16 @@ export function applyThemeColor(theme: Theme, doc: Document = document): void {
 }
 
 /**
- * Runs in <head> before first paint: copies the cookie to `data-theme`. It must not import
- * anything, so it is a string, built from the cookie name. lib/theme.test.ts runs it.
+ * The routes that follow the member's theme: the app, sign-in and sign-up, and the dev pages.
+ * Every other page (the public site and its 404) is always dark (C-129). app/layout.test.ts keeps
+ * this in step with the (app), (auth), (dev) and (marketing) route folders.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)document.documentElement.setAttribute("data-theme",m[1])}catch(e){}})()`;
+export const THEMED_ROUTE = /^\/(app|w|sign-in|sign-up|dev)(\/|$)/;
 
-/** Runs at the top of a page that is always dark (the marketing pages): pins <html> before paint. */
-export const THEME_PIN_DARK_SCRIPT = `document.documentElement.setAttribute("data-theme","dark")`;
+/**
+ * Runs in <head> before first paint: on a themed route, copies the cookie to `data-theme`; on any
+ * other page, pins it dark. It must not import anything, so it is a string, built from the cookie
+ * name and THEMED_ROUTE. lib/theme.test.ts runs it. (It replaces an inline script in the marketing
+ * layout, which React refused to render on a client navigation; ThemePin covers those.)
+ */
+export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement;if(!${THEMED_ROUTE}.test(location.pathname)){d.setAttribute("data-theme","dark");return}var m=document.cookie.match(/(?:^|;\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)d.setAttribute("data-theme",m[1])}catch(e){}})()`;

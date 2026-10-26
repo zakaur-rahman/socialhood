@@ -224,6 +224,21 @@ function usePostAction(wid: string, id: string, action: BodylessAction) {
   });
 }
 
+/** FR-PUB-07: read the collaborators' invite status (Pending or Accepted) from Instagram now. */
+export function useRefreshCollaborators(wid: string, id: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<ScheduledPost, Error, void>({
+    mutationFn: () =>
+      unwrap(
+        api.POST("/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/collaborators/refresh", {
+          params: { path: { wid, scheduled_post_id: id } },
+        }),
+      ),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
+  });
+}
+
 /** FR-PUB-09 Add to queue: the first posting time free for every selected account. */
 export function useComposerQueue(wid: string, id: string) {
   return usePostAction(wid, id, "queue");

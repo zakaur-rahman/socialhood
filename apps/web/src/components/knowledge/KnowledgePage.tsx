@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAiSettings, useDismissKnowledgeGap, useKnowledgeGaps, useKnowledgeSources } from "@/lib/api/queries";
 import type { KnowledgeGap } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -67,6 +68,10 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
     />
   );
 
+  // The cards below are shown together once all three requests have answered, so one arriving
+  // earlier doesn't push another (or the test box under them on a phone) while the page settles.
+  const ready = !sources.isPending && !settings.isPending && !gaps.isPending;
+
   return (
     <PageFrame title="Knowledge" actions={<AddKnowledgeMenu onChoose={(type) => setSheet({ kind: "create", type })} />}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -74,7 +79,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
           {gaps.isError ? <ErrorState error={gaps.error} onRetry={() => void gaps.refetch()} /> : null}
           {openGaps.length > 0 ? gapsCard : null}
 
-          {sources.isPending ? (
+          {!ready ? (
             <CardSkeleton label="Loading sources" rows={4} />
           ) : sources.isError ? (
             <ErrorState error={sources.error} onRetry={() => void sources.refetch()} />
@@ -87,7 +92,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
             />
           )}
 
-          {settings.isPending ? (
+          {!ready ? (
             <CardSkeleton label="Loading brand voice" rows={2} />
           ) : settings.isError ? (
             <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />
@@ -97,7 +102,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
 
           {gaps.isSuccess && openGaps.length === 0 ? gapsCard : null}
         </div>
-        <aside aria-label="Try the AI" className="xl:sticky xl:top-6 xl:self-start">
+        <aside aria-label="Try the AI" className={cn("xl:sticky xl:top-6 xl:self-start", !ready && "max-xl:hidden")}>
           <TestBox wid={wid} onAddAnswer={(question) => setSheet({ kind: "create", type: "faq", question })} />
         </aside>
       </div>

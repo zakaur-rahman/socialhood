@@ -2,14 +2,13 @@
 
 import { AlertCircle, Check, Clock, Copy, EllipsisVertical, Pause, Play, RotateCw, Trash2 } from "lucide-react";
 import type { Route } from "next";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { BackLink } from "@/components/shell/PageFrame";
-import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { ApiError, toApiError } from "@/lib/api/errors";
+import { isNotFound, toApiError } from "@/lib/api/errors";
 import {
   useActivateAutomation,
   useAutomation,
@@ -104,22 +103,8 @@ export function AutomationEditor({ id, upload }: { id: string; upload?: Uploader
   const automation = useAutomation(workspace.id, id);
   if (automation.isPending) return <EditorSkeleton />;
   if (automation.isError) {
-    if (automation.error instanceof ApiError && automation.error.status === 404) {
-      return (
-        <EmptyState
-          className="flex-1"
-          title="Automation not found"
-          body="It may have been deleted."
-          action={
-            <Link
-              href={`/w/${workspace.slug}/automations` as Route}
-              className="text-sm text-brand-fg underline-offset-4 hover:underline"
-            >
-              Back to automations
-            </Link>
-          }
-        />
-      );
+    if (isNotFound(automation.error)) {
+      return <NotFoundState thing="automation" backHref={`/w/${workspace.slug}/automations` as Route} backLabel="Back to automations" />;
     }
     return <ErrorState error={automation.error} onRetry={() => void automation.refetch()} />;
   }

@@ -126,7 +126,7 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
 export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; headingLevel?: 1 | 2 }) {
   const { free, pro } = pricing.credits;
   return (
-    <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
+    <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-24 border-t border-line-subtle py-16 sm:py-20">
       <Container>
         <SectionHeading
           id="pricing-title"

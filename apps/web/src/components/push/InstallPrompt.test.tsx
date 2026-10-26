@@ -25,7 +25,7 @@ let storageKey = "test:install:0";
 
 function renderPrompt(props: Partial<Parameters<typeof InstallPrompt>[0]> = {}) {
   return render(
-    <InstallPrompt storageKey={storageKey} title="Install Social Hood" body="Open it like an app." {...props} />,
+    <InstallPrompt storageKey={storageKey} title="Install Amplychat" body="Open it like an app." {...props} />,
   );
 }
 
@@ -60,7 +60,7 @@ describe("InstallPrompt (FR-NOT-03)", () => {
     expect(event.defaultPrevented).toBe(true);
     await user.click(await screen.findByRole("button", { name: "Install app" }));
     expect(event.prompt).toHaveBeenCalledOnce();
-    await waitFor(() => expect(screen.queryByRole("status", { name: "Install Social Hood" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Install Amplychat" })).not.toBeInTheDocument());
   });
 
   it("dismissed stays dismissed", async () => {
@@ -83,7 +83,7 @@ describe("InstallPrompt (FR-NOT-03)", () => {
       permission: "unsupported",
     });
     const first = renderPrompt();
-    expect(screen.getByRole("list", { name: "Add Social Hood to your Home Screen" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Add Amplychat to your Home Screen" })).toBeInTheDocument();
     first.unmount();
 
     vi.spyOn(support, "readEnvironment").mockReturnValue({
@@ -97,7 +97,7 @@ describe("InstallPrompt (FR-NOT-03)", () => {
     second.unmount();
     // With an action (F-19's Turn on alerts) the card still shows, without the steps.
     renderPrompt({ always: true, action: <button type="button">Turn on alerts</button> });
-    expect(screen.getByRole("status", { name: "Install Social Hood" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Install Amplychat" })).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 

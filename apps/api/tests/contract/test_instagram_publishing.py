@@ -14,7 +14,13 @@ import pytest
 import respx
 
 from socialhood.models.connections import SocialAccount
-from socialhood.platforms.base import ContainerMedia, ContainerStatus, PublishingQuota
+from socialhood.platforms.base import (
+    ContainerMedia,
+    ContainerStatus,
+    PublishExtras,
+    PublishingQuota,
+    UserTag,
+)
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.instagram import oauth
@@ -422,3 +428,120 @@ async def test_only_instagram_ids_reach_the_graph_path(adapter: InstagramAdapter
     ):
         with pytest.raises(PlatformError):
             await call
+
+
+# ---------------------------------------------------------------- FR-PUB-07 extras (C-134)
+
+
+@respx.mock
+async def test_an_image_container_carries_collaborators_location_and_tags(
+    adapter: InstagramAdapter,
+) -> None:
+    route = respx.post(f"{V}/{IG}/media").respond(200, json=fixture("container_created.json"))
+    extras = PublishExtras(
+        collaborators=("maple.studio", "bread.fan"),
+        location_id="108123456789012",
+        user_tags=(UserTag(username="bread.fan", x=0.25, y=0.75),),
+    )
+    await adapter.create_image_container(
+        account(adapter), image_url=IMAGE_URL, caption="Fresh", extras=extras
+    )
+    assert body(route) == {
+        "image_url": IMAGE_URL,
+        "caption": "Fresh",
+        "collaborators": ["maple.studio", "bread.fan"],
+        "location_id": "108123456789012",
+        "user_tags": [{"username": "bread.fan", "x": 0.25, "y": 0.75}],
+    }
+
+
+@respx.mock
+async def test_a_reel_container_carries_its_options(adapter: InstagramAdapter) -> None:
+    route = respx.post(f"{V}/{IG}/media").respond(200, json=fixture("container_created.json"))
+    extras = PublishExtras(
+        collaborators=("maple.studio",), cover_url="https://x/c.jpg", audio_name="Morning bake"
+    )
+    await adapter.create_reel_container(
+        account(adapter), video_url=VIDEO_URL, caption="", share_to_feed=False, extras=extras
+    )
+    assert body(route) == {
+        "media_type": "REELS",
+        "video_url": VIDEO_URL,
+        "share_to_feed": False,
+        "collaborators": ["maple.studio"],
+        "cover_url": "https://x/c.jpg",
+        "audio_name": "Morning bake",
+    }
+
+
+@respx.mock
+async def test_carousel_tags_go_on_the_child_image_and_collaborators_on_the_parent(
+    adapter: InstagramAdapter,
+) -> None:
+    route = respx.post(f"{V}/{IG}/media").respond(200, json=fixture("container_created.json"))
+    tags = (UserTag(username="bread.fan", x=0.5, y=0.5),)
+    await adapter.create_carousel_item(
+        account(adapter), ContainerMedia(kind="image", url=IMAGE_URL, user_tags=tags)
+    )
+    assert body(route) == {
+        "image_url": IMAGE_URL,
+        "is_carousel_item": True,
+        "user_tags": [{"username": "bread.fan", "x": 0.5, "y": 0.5}],
+    }
+    await adapter.create_carousel_container(
+        account(adapter),
+        children=[CONTAINER, CONTAINER],
+        caption="",
+        extras=PublishExtras(collaborators=("maple.studio",), location_id="108123456789012"),
+    )
+    assert body(route) == {
+        "media_type": "CAROUSEL",
+        "children": f"{CONTAINER},{CONTAINER}",
+        "collaborators": ["maple.studio"],
+        "location_id": "108123456789012",
+    }
+
+
+@respx.mock
+async def test_collaborator_invites_are_read_from_the_collaborators_edge(
+    adapter: InstagramAdapter,
+) -> None:
+    route = respx.get(f"{V}/{MEDIA}/collaborators").respond(
+        200,
+        json={
+            "data": [
+                {"id": "1", "username": "maple.studio", "invite_status": "Accepted"},
+                {"id": "2", "username": "bread.fan", "invite_status": "Pending"},
+            ]
+        },
+    )
+    got = await adapter.list_collaborators(account(adapter), MEDIA)
+    assert [(c.username, c.status) for c in got] == [
+        ("maple.studio", "accepted"),
+        ("bread.fan", "pending"),
+    ]
+    assert route.calls.last.request.url.params["fields"] == "username,invite_status"
+
+
+@respx.mock
+async def test_meta_refusing_a_location_gets_a_readable_reason(adapter: InstagramAdapter) -> None:
+    respx.post(f"{V}/{IG}/media").respond(
+        400,
+        json={
+            "error": {
+                "message": "INSTAGRAM_PLATFORM_API__INVALID_LOCATION_ID",
+                "type": "OAuthException",
+                "code": 100,
+                "error_subcode": 2207999,
+            }
+        },
+    )
+    with pytest.raises(PlatformError) as caught:
+        await adapter.create_image_container(
+            account(adapter),
+            image_url=IMAGE_URL,
+            caption="",
+            extras=PublishExtras(location_id="1"),
+        )
+    assert "location" in (caught.value.message or "").lower()
+    assert "Facebook Page" in (caught.value.message or "")

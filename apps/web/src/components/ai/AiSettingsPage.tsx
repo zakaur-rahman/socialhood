@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { cardInsetVariants } from "@/components/ui/card";
 import { ProBadge } from "@/components/automations/TemplateGallery";
-import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { PhraseChips } from "@/components/settings/PhraseChips";
 import { SaveBar } from "@/components/settings/SaveBar";
 import { SectionLabel, SettingsCard } from "@/components/settings/SettingsCard";
@@ -163,7 +163,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
               <div className="flex min-w-0 items-center gap-3">
                 <span
                   aria-hidden
-                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-on-brand", PLATFORM_BG[account.platform])}
+                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-on-brand", PLATFORM_LOGO_BG[account.platform])}
                 >
                   <PlatformGlyph platform={account.platform} className="size-5" />
                 </span>

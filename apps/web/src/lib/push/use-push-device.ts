@@ -38,7 +38,7 @@ function useIsClient(): boolean {
 function pushFailure(error: unknown): string {
   if (error instanceof ApiError) return errorMessage(error);
   if (error instanceof DOMException && error.name === "NotAllowedError") {
-    return "Notifications are blocked for Social Hood in this browser.";
+    return "Notifications are blocked for Amplychat in this browser.";
   }
   return "Notifications couldn't be turned on on this device. Try again.";
 }

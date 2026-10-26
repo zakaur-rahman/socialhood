@@ -13,6 +13,7 @@ export function postAsset(overrides: Partial<PostAsset> = {}): PostAsset {
     height: 1080,
     duration_s: null,
     position: 0,
+    user_tags: [],
     ...overrides,
   };
 }
@@ -61,6 +62,8 @@ export function target(overrides: Partial<ScheduledPostTarget> = {}): ScheduledP
     published_at: null,
     error: null,
     first_comment: null,
+    collaborators: [],
+    collaborators_checked_at: null,
     ...overrides,
   };
 }
@@ -91,6 +94,14 @@ export function scheduledPost(overrides: Partial<ScheduledPost> = {}): Scheduled
     created_at: "2026-09-28T10:00:00Z",
     updated_at: "2026-09-28T10:00:00Z",
     first_comment: null,
+    collaborators: [],
+    location_id: null,
+    cover_asset_id: null,
+    cover_url: null,
+    cover_offset_ms: null,
+    share_to_feed: true,
+    audio_name: null,
+    video_max_mb: 100,
     assets: [],
     automations: [],
     checklist: [],

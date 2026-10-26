@@ -18,7 +18,7 @@ call stores a ``failed`` suggestion so the card stops waiting; used-up credits s
 What happens to a pending suggestion (§5.9):
 - sent with its id: ``sent`` when the text is the suggestion's (ignoring spacing), else
   ``edited_sent`` with the normalised Levenshtein distance (FR-SUG-02);
-- a person's reply without it (Social Hood or the native app): ``dismissed``;
+- a person's reply without it (Amplychat or the native app): ``dismissed``;
 - a new customer message: ``superseded``; Dismiss: ``dismissed``.
 
 The projection (§5.10 Suggestion): ``low_confidence`` below 0.6, ``sources`` the distinct

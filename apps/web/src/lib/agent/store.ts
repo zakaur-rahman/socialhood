@@ -3,7 +3,7 @@
 import { create } from "zustand";
 
 type AskState = {
-  /** The Ask Social Hood panel (FR-AGT-01). */
+  /** The Ask Amplychat panel (FR-AGT-01). */
   open: boolean;
   /**
    * The thread the panel and the Ask page show, per workspace. null starts a new thread with the
@@ -17,7 +17,7 @@ type AskState = {
   setDraft: (wid: string, text: string) => void;
 };
 
-/** Client state of Ask Social Hood, shared by the panel and the /ask page. */
+/** Client state of Ask Amplychat, shared by the panel and the /ask page. */
 export const useAskStore = create<AskState>()((set) => ({
   open: false,
   threads: {},

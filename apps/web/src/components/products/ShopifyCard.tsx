@@ -170,7 +170,7 @@ function Connect({ wid, reconnect = false, shop = "" }: { wid: string; reconnect
     <form className="space-y-2" onSubmit={submit}>
       {reconnect ? null : (
         <p className="text-sm text-fg-secondary">
-          Social Hood asks for read access to your products only. It never changes your store.
+          Amplychat asks for read access to your products only. It never changes your store.
         </p>
       )}
       <Field id="shopify-store" invalid={Boolean(problem)}>
@@ -259,7 +259,7 @@ function Disconnect({ wid, open, onOpenChange }: { wid: string; open: boolean; o
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect Shopify?</AlertDialogTitle>
           <AlertDialogDescription>
-            Social Hood stops copying products. The products it copied are removed, because their prices and stock would
+            Amplychat stops copying products. The products it copied are removed, because their prices and stock would
             no longer be kept up to date, unless you keep them.
           </AlertDialogDescription>
         </AlertDialogHeader>

@@ -223,7 +223,7 @@ describe("deleting an account's data (C-067)", () => {
     const { card, handlers } = renderCard();
     vi.mocked(handlers.onDelete).mockRejectedValueOnce(
       new ApiError({
-        type: "https://api.socialhood.com/errors/validation_error",
+        type: "https://api.amplychat.com/errors/validation_error",
         title: "The request is not valid",
         status: 422,
         code: "validation_error",

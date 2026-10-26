@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,8 +46,10 @@ from socialhood.schemas.publishing import (
     PostAsset,
     ScheduledPost,
     ScheduledPostSummary,
+    UserTag,
 )
 from socialhood.schemas.publishing import ScheduledPostTarget as TargetOut
+from socialhood.services.media_assets import MB
 from socialhood.services.scheduled_posts import rules
 
 # Instagram's 24-hour limit on published posts. The account's own quota needs a platform call
@@ -104,6 +106,7 @@ def asset_out(row: ScheduledPostAsset, asset: MediaAsset) -> PostAsset:
         height=asset.height,
         duration_s=asset.duration_s,
         position=row.position,
+        user_tags=[UserTag.model_validate(tag) for tag in row.user_tags or []],
     )
 
 
@@ -147,6 +150,8 @@ def target_out(
             "first_comment": (
                 _first_comment(target, first_comment) if first_comment and published else None
             ),
+            "collaborators": (target.collaborator_statuses or []) if published else [],
+            "collaborators_checked_at": target.collaborators_checked_at,
         }
     )
 
@@ -214,9 +219,17 @@ class Draft:
     assets: Sequence[MediaAsset]
     story: bool = False  # chosen as a Story (GR-39; a Facebook Page's too, C-131)
     reel: bool = False  # chosen as a Facebook Reel (C-131)
+    # FR-PUB-07 (C-134): as stored, each asset's tag count, the Reel's cover upload and options.
+    collaborators: Sequence[str] = ()
+    location_id: str | None = None
+    tag_counts: Sequence[int] = ()
+    cover: MediaAsset | None = None
+    cover_offset_ms: int | None = None
+    share_to_feed: bool = True
+    audio_name: str | None = None
 
     @classmethod
-    def of(cls, loaded: Loaded) -> Draft:
+    def of(cls, loaded: Loaded, cover: MediaAsset | None = None) -> Draft:
         post = loaded.post
         return cls(
             post_id=post.id,
@@ -227,6 +240,13 @@ class Draft:
             assets=[asset for _, asset in loaded.assets],
             story=post.kind == PostKind.STORY,
             reel=post.kind == PostKind.REEL,
+            collaborators=list(post.collaborators or []),
+            location_id=post.location_id,
+            tag_counts=[len(row.user_tags or []) for row, _ in loaded.assets],
+            cover=cover,
+            cover_offset_ms=post.cover_offset_ms,
+            share_to_feed=post.share_to_feed,
+            audio_name=post.audio_name,
         )
 
 
@@ -256,6 +276,18 @@ async def recent_posts(
     return counts
 
 
+def _asset_facts(asset: MediaAsset) -> rules.AssetFacts:
+    return rules.asset_facts(
+        asset.resource_type,
+        asset.format,
+        asset.public_id,
+        asset.bytes,
+        asset.width,
+        asset.height,
+        asset.duration_s,
+    )
+
+
 def facts(
     draft: Draft, *, deps: PlatformDeps, recent: dict[tuple[uuid.UUID, uuid.UUID], int]
 ) -> rules.PostFacts:
@@ -272,17 +304,29 @@ def facts(
             for account, override in draft.targets
         ],
         assets=[
-            rules.asset_facts(
-                asset.resource_type,
-                asset.format,
-                asset.public_id,
-                asset.bytes,
-                asset.width,
-                asset.height,
-                asset.duration_s,
+            replace(
+                rules.asset_facts(
+                    asset.resource_type,
+                    asset.format,
+                    asset.public_id,
+                    asset.bytes,
+                    asset.width,
+                    asset.height,
+                    asset.duration_s,
+                ),
+                user_tags=draft.tag_counts[i] if i < len(draft.tag_counts) else 0,
             )
-            for asset in draft.assets
+            for i, asset in enumerate(draft.assets)
         ],
+        collaborators=draft.collaborators,
+        location_id=draft.location_id,
+        reel_options=rules.ReelFacts(
+            cover=_asset_facts(draft.cover) if draft.cover else None,
+            cover_offset_ms=draft.cover_offset_ms,
+            share_to_feed=draft.share_to_feed,
+            audio_name=draft.audio_name,
+        ),
+        video_max_bytes=deps.settings.post_video_max_mb * MB,
         caption=draft.caption,
         first_comment=draft.first_comment,
         publish_at=draft.publish_at,
@@ -336,7 +380,11 @@ async def posts_out(
     now = now or datetime.now(UTC)
     loaded = await load(session, posts)
     items = await _items(session, loaded)
-    drafts = [Draft.of(one) for one in loaded]
+    covers = {c.id: c for c in await repo.covers_for(session, [p.cover_asset_id for p in posts])}
+    drafts = [
+        Draft.of(one, covers.get(one.post.cover_asset_id) if one.post.cover_asset_id else None)
+        for one in loaded
+    ]
     recent = await recent_posts(session, drafts, now=now)
     automations: dict[uuid.UUID, list[LinkedAutomation]] = defaultdict(list)
     for post_id, automation in await repo.linked_automations(session, [p.id for p in posts]):
@@ -361,6 +409,14 @@ async def posts_out(
             ScheduledPost(
                 **summary.model_dump(),
                 first_comment=post.first_comment,
+                collaborators=list(post.collaborators or []),
+                location_id=post.location_id,
+                cover_asset_id=post.cover_asset_id,
+                cover_url=(thumbnail_url(draft.cover) if draft.cover is not None else None),
+                cover_offset_ms=post.cover_offset_ms,
+                share_to_feed=post.share_to_feed,
+                audio_name=post.audio_name,
+                video_max_mb=deps.settings.post_video_max_mb,
                 assets=[asset_out(row, asset) for row, asset in one.assets],
                 automations=automations[post.id],
                 checklist=checklist,

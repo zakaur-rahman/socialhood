@@ -20,6 +20,7 @@ from datetime import date, datetime
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
     AccountInsights,
+    CollaboratorStatus,
     CommentPage,
     ContactProfile,
     ContainerMedia,
@@ -31,6 +32,7 @@ from socialhood.platforms.base import (
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
+    PublishExtras,
     PublishingQuota,
     SendResult,
     TokenGrant,
@@ -334,7 +336,12 @@ class FacebookAdapter:
     # unpublished; publish_container posts it. See the module for the references.
 
     async def create_image_container(
-        self, acct: SocialAccount, *, image_url: str, caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        image_url: str,
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         from socialhood.platforms.facebook import publishing
 
@@ -350,6 +357,7 @@ class FacebookAdapter:
         caption: str,
         share_to_feed: bool = True,
         page_reel: bool = False,
+        extras: PublishExtras | None = None,
     ) -> str:
         """A Page video, or with ``page_reel`` (the composer's Reel choice, C-131) a Facebook
         Reel; ``share_to_feed`` has no meaning here."""
@@ -381,7 +389,12 @@ class FacebookAdapter:
         return await publishing.create_child(self.http, self._graph, self._token(acct), media)
 
     async def create_carousel_container(
-        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        children: Sequence[str],
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         from socialhood.platforms.facebook import publishing
 
@@ -391,6 +404,11 @@ class FacebookAdapter:
         from socialhood.platforms.facebook import publishing
 
         return publishing.create_text()
+
+    async def list_collaborators(
+        self, acct: SocialAccount, media_ref: str
+    ) -> list[CollaboratorStatus]:
+        return []
 
     async def get_container_status(
         self, acct: SocialAccount, container_ref: str

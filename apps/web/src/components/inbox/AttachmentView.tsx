@@ -18,11 +18,35 @@ type Props = {
 };
 
 /** A platform image that may have expired: a placeholder instead of a broken image. */
-function MediaImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+function MediaImage({
+  src,
+  alt,
+  className,
+  width,
+  height,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  width?: number | null;
+  height?: number | null;
+}) {
   const [failed, setFailed] = useState(false);
   if (failed || !src) return <Unavailable label="Media no longer available" />;
-  // eslint-disable-next-line @next/next/no-img-element -- platform and storage URLs of any size; next/image needs known hosts and sizes
-  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className={className} />;
+  // width and height (when the platform sent them) let the browser reserve the box before the
+  // picture arrives, so the message list doesn't jump; without them, a minimum box holds the place.
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- platform and storage URLs of any size; next/image needs known hosts and sizes
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      width={width ?? undefined}
+      height={height ?? undefined}
+      onError={() => setFailed(true)}
+      className={cn(!width || !height ? "min-h-32 min-w-32 bg-media-wash" : "bg-media-wash", className)}
+    />
+  );
 }
 
 function Unavailable({ label }: { label: string }) {
@@ -50,7 +74,13 @@ export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" 
             aria-label="Open photo"
             className="block overflow-hidden rounded-lg"
           >
-            <MediaImage src={attachment.url} alt={photoAlt} className="max-h-64 w-auto rounded-lg object-cover" />
+            <MediaImage
+              src={attachment.url}
+              alt={photoAlt}
+              width={attachment.width}
+              height={attachment.height}
+              className="h-auto max-h-64 w-auto max-w-full rounded-lg object-cover"
+            />
           </button>
           <Dialog open={lightbox} onOpenChange={setLightbox}>
             <DialogContent size="xl" className="p-2">
@@ -68,7 +98,9 @@ export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" 
           preload="metadata"
           src={attachment.url}
           poster={attachment.thumbnail_url ?? undefined}
-          className="max-h-64 max-w-full rounded-lg"
+          width={attachment.width ?? undefined}
+          height={attachment.height ?? undefined}
+          className={cn("h-auto max-h-64 max-w-full rounded-lg", !attachment.width || !attachment.height ? "aspect-video" : "")}
         >
           <track kind="captions" />
         </video>

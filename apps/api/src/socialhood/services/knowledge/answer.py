@@ -174,7 +174,7 @@ async def try_question(
 ) -> KnowledgeTestResult:
     """FR-KB-03: draft an answer the way a suggestion would, 1 credit (knowledge_test); nothing
     is stored or sent. 402 quota_exceeded without credits, 503 when the AI fails. ``ref_type``
-    and ``ref_id`` name what the credits are for in ai_usage_events (Ask Social Hood's
+    and ``ref_id`` name what the credits are for in ai_usage_events (Ask Amplychat's
     answer_from_knowledge passes its run, TA.4)."""
     workspace_id, workspace_name = workspace.id, workspace.name
     language = reply_language(workspace)

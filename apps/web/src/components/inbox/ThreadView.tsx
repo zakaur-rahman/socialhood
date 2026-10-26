@@ -15,6 +15,8 @@ import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
+import { isNotFound } from "@/lib/api/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +95,9 @@ export function ThreadView({
   const conversation = useConversation(wid, conversationId);
 
   if (conversation.isError) {
+    if (isNotFound(conversation.error)) {
+      return <NotFoundState thing="conversation" backHref={`/w/${workspace.slug}/inbox` as Route} backLabel="Back to Inbox" />;
+    }
     return <ErrorState error={conversation.error} onRetry={() => void conversation.refetch()} />;
   }
   if (!conversation.data) {
@@ -144,13 +149,13 @@ function Thread({
   const pathname = usePathname();
   // F-18: the "reply window closing" notification links here with ?schedule=1.
   const [scheduleOpen, setScheduleOpen] = useState(() => searchParams.get("schedule") === "1");
-  // FR-AGT-03: an Ask Social Hood action card put the message in the composer and hands over its
+  // FR-AGT-03: an Ask Amplychat action card put the message in the composer and hands over its
   // time; the popover opens with it (also when this conversation is already open).
   const scheduleHandoff = useAgentHandoff((state) => state.schedule[conversationId] ?? null);
   const takeSchedule = useAgentHandoff((state) => state.takeSchedule);
   const [handoffTaken, setHandoffTaken] = useState<string | null>(null);
   const [scheduleAt, setScheduleAt] = useState<string | null>(null);
-  // A typed reply is kept: the member is asked before Ask Social Hood's message takes its place.
+  // A typed reply is kept: the member is asked before Ask Amplychat's message takes its place.
   const [replaceAsk, setReplaceAsk] = useState<{ text: string; sendAt: string | null } | null>(null);
   const setDraft = useInboxStore((state) => state.setDraft);
   if (scheduleHandoff && scheduleHandoff.nonce !== handoffTaken) {
@@ -328,7 +333,7 @@ function Thread({
           <AlertDialogHeader>
             <AlertDialogTitle>Replace your reply?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have a reply typed here. Ask Social Hood prepared a different message. Replace yours with it, or keep
+              You have a reply typed here. Ask Amplychat prepared a different message. Replace yours with it, or keep
               yours?
             </AlertDialogDescription>
           </AlertDialogHeader>

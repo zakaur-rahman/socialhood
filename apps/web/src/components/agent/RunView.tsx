@@ -42,7 +42,7 @@ export type RunContext = {
 
 /**
  * One exchange of a thread, as a chat reads: the member's question in a neutral bubble on the
- * right, then Social Hood's side (a small mark, no card): the live steps while it works, and its
+ * right, then Amplychat's side (a small mark, no card): the live steps while it works, and its
  * answer with citations, sources, prepared actions, Copy and follow-ups, or a compact failed,
  * out-of-credits, cancelled or expired notice (FR-AGT-01, FR-AGT-03, FR-AGT-06).
  */

@@ -81,7 +81,23 @@ function appearanceWithoutBase(theme: Theme) {
         boxShadow: "var(--shadow-overlay) !important",
       },
       card: { backgroundColor: "transparent", border: "0 !important", borderRadius: "0", boxShadow: "none !important" },
-      footer: { background: "transparent !important", borderTop: "1px solid var(--color-line) !important" },
+      footer: {
+        background: "transparent !important",
+        borderTop: "1px solid var(--color-line) !important",
+        // "Secured by" (Clerk's branding line, an unnamed `<p data-variant="buttonSmall"
+        // data-color="inherit">`): Clerk fades it from the foreground, which axe measured below
+        // 4.5:1 at 375 and 1280 px. Solid `fg-secondary`, as the app's quiet text is (C-135).
+        '& p[data-variant="buttonSmall"][data-color="inherit"]': {
+          color: "var(--color-fg-secondary) !important",
+          opacity: "1 !important",
+        },
+        // A development instance paints an orange bar behind "Secured by" and "Development mode"
+        // (absolute `div`s, first in the footer item), where no text colour can pass 4.5:1. The bar
+        // is made transparent, so the text sits on the panel; a production instance has none.
+        '& [class*="cl-footerItem"] > div:first-child, & [class*="cl-footerItem"] > div:first-child *': {
+          backgroundColor: "transparent !important",
+        },
+      },
       userButtonPopoverCard: {
         "& *": { borderColor: "var(--color-line) !important" },
         backgroundColor: "var(--color-overlay) !important",

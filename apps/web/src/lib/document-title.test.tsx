@@ -15,18 +15,18 @@ describe("useDocumentTitle (WCAG 2.4.2)", () => {
 
   it("sets the title with the product suffix", () => {
     render(<Title title="Priya Nair" />);
-    expect(document.title).toBe("Priya Nair · Social Hood");
+    expect(document.title).toBe("Priya Nair · Amplychat");
   });
 
   it("follows the data as it arrives", () => {
     const { rerender } = render(<Title title="Comments" />);
     rerender(<Title title="Comments · Reel from 12 Sep" />);
-    expect(document.title).toBe("Comments · Reel from 12 Sep · Social Hood");
+    expect(document.title).toBe("Comments · Reel from 12 Sep · Amplychat");
   });
 
   it("leaves the title alone while the data is still loading", () => {
-    document.title = "Inbox · Social Hood";
+    document.title = "Inbox · Amplychat";
     render(<Title title={undefined} />);
-    expect(document.title).toBe("Inbox · Social Hood");
+    expect(document.title).toBe("Inbox · Amplychat");
   });
 });

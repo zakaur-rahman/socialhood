@@ -1,7 +1,7 @@
 [project]
 name = "socialhood"
 version = "0.1.0"
-description = "Social Hood API and job worker"
+description = "Amplychat API and job worker"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
@@ -87,6 +87,6 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 addopts = "-ra"
 markers = [
-    "agent_eval: Ask Social Hood's eval against the real model (runs only with AGENT_EVAL=1)",
+    "agent_eval: Ask Amplychat's eval against the real model (runs only with AGENT_EVAL=1)",
     "serial: must not run beside other tests (timing budgets); skipped under -n, run with -m serial",
 ]

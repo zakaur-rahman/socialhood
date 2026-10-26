@@ -5,7 +5,7 @@ const EVERYONE: readonly Role[] = ["owner", "admin", "agent"];
 export type SettingsSection = { segment: string; label: string; roles: readonly Role[] };
 
 /**
- * UX-SCR-07 sections in the spec's order, then Ask Social Hood. Role visibility is unchanged
+ * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Role visibility is unchanged
  * (C-066). D-08: each tab's label equals its page's title.
  */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
@@ -34,5 +34,5 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   // activity route is admin-only, like the automations it reports on).
   { segment: "activity", label: "Activity", roles: ["owner", "admin"] },
   // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
-  { segment: "agent", label: "Ask Social Hood", roles: EVERYONE },
+  { segment: "agent", label: "Ask Amplychat", roles: EVERYONE },
 ];

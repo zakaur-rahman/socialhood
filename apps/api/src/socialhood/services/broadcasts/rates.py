@@ -1,7 +1,7 @@
 """Meta's rate card for WhatsApp template messages, as data (GR-23, PD-3). Pure.
 
 The business pays Meta directly: each WhatsApp Business Account carries its own payment method
-(set up in Embedded Signup), with no markup and no money through Social Hood. So the estimate on
+(set up in Embedded Signup), with no markup and no money through Amplychat. So the estimate on
 a broadcast is information, never a charge.
 
 **The figures are unverified.** They are India's rates in INR per delivered template message by

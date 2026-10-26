@@ -1,6 +1,6 @@
 """Human takeover notes (T5.6; FR-SUG-05, F-09).
 
-When a person replies (Social Hood, a scheduled message or the native app), services/sending
+When a person replies (Amplychat, a scheduled message or the native app), services/sending
 pauses Auto for the takeover period. If the conversation is in Auto and was not already paused,
 a system note says so: "AI paused until 16:40 because you replied" (the workspace's time zone;
 "16:40 tomorrow" past midnight; "until you resume it" for a pause without an end). Resume

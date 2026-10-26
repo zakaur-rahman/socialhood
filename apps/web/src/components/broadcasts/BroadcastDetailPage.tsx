@@ -9,6 +9,8 @@ import { toast } from "sonner";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
+import { NotFoundState } from "@/components/states/NotFoundState";
+import { isNotFound } from "@/lib/api/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +93,13 @@ export function BroadcastDetailPage({ id }: { id: string }) {
     );
   }
   if (broadcast.isError) {
+    if (isNotFound(broadcast.error)) {
+      return (
+        <PageFrame title="Broadcast" back={back}>
+          <NotFoundState thing="broadcast" backHref={back.href} backLabel="Back to Broadcasts" />
+        </PageFrame>
+      );
+    }
     return (
       <PageFrame title="Broadcast" back={back}>
         <ErrorState error={broadcast.error} onRetry={() => void broadcast.refetch()} />
@@ -224,7 +233,7 @@ export function BroadcastDetailPage({ id }: { id: string }) {
                 <p className={META}>
                   {`An estimate from Meta's rate card for India as of ${b.cost.as_of}`}
                   {b.cost.verified ? "." : " (typed in by hand, not yet checked against Meta)."} Meta bills your WhatsApp
-                  Business Account directly; Social Hood charges nothing for it.
+                  Business Account directly; Amplychat charges nothing for it.
                 </p>
               </>
             ) : (

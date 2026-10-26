@@ -1,4 +1,4 @@
-"""Ask Social Hood, the agent (§5.5 Agent; FR-AGT-01…15, TR-AGT-01…08; agent-architecture.html
+"""Ask Amplychat, the agent (§5.5 Agent; FR-AGT-01…15, TR-AGT-01…08; agent-architecture.html
 §7): runs, their steps, approvals (R2) and the workspace's agent policy.
 
 The PA contract. The caps and limits below are shared: the orchestrator and planner (TA.1, TA.2),

@@ -54,7 +54,7 @@ class WidgetSettings(IdMixin, TimestampMixin, TenantScoped, Base):
         Text,
         server_default=sql("'Email me news and offers. You can unsubscribe at any time.'"),
     )
-    # "Powered by Social Hood". Free always shows it; Pro and Max can turn it off (PD-7).
+    # "Powered by Amplychat". Free always shows it; Pro and Max can turn it off (PD-7).
     show_branding: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
 
     __table_args__ = (

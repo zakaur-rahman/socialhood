@@ -1,5 +1,5 @@
 /*
- * Social Hood service worker (TR-FE-09, FR-NOT-03). It does two things only: show a push
+ * Amplychat service worker (TR-FE-09, FR-NOT-03). It does two things only: show a push
  * notification, and open its link when tapped. There is no fetch handler, so nothing is cached
  * and every request, API data included, goes to the network exactly as without a worker.
  *
@@ -40,7 +40,7 @@ function readPayload(data) {
 
 self.addEventListener("push", (event) => {
   const payload = readPayload(event.data);
-  const title = typeof payload.title === "string" && payload.title ? payload.title : "Social Hood";
+  const title = typeof payload.title === "string" && payload.title ? payload.title : "Amplychat";
   const tag = typeof payload.tag === "string" && payload.tag ? payload.tag : undefined;
   const options = {
     body: typeof payload.body === "string" ? payload.body : "",

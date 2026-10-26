@@ -9,7 +9,7 @@ import { DURATION, EASE_EXPRESSIVE } from "./motion";
 
 /**
  * Flip Words, from Aceternity UI's free "flip-words" (ui.aceternity.com/components/flip-words),
- * adapted for Social Hood (C-068):
+ * adapted for Amplychat (C-068):
  * - the first word is server-rendered without an entrance, so the headline paints at once (LCP);
  * - every word sits in one grid cell sized to the longest, so changing words never moves the
  *   text around it (no layout shift) and the outgoing word needs no absolute positioning;

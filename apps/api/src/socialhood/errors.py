@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-ERROR_TYPE_BASE = "https://api.socialhood.com/errors/"
+ERROR_TYPE_BASE = "https://api.amplychat.com/errors/"
 
 
 @dataclass(frozen=True)

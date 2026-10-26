@@ -41,7 +41,7 @@ const BENEFITS: Record<AuthMode, Benefit[]> = {
     {
       icon: BadgeCheck,
       title: "Official Meta APIs",
-      body: "Connect with Instagram's own login and Meta's official setup. Social Hood never asks for your password.",
+      body: "Connect with Instagram's own login and Meta's official setup. Amplychat never asks for your password.",
     },
   ],
 };
@@ -77,7 +77,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
   return (
     <main id="main" className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
       <section
-        aria-label="About Social Hood"
+        aria-label="About Amplychat"
         className="relative overflow-hidden px-4 pt-6 pb-2 sm:px-8 lg:flex lg:min-h-0 lg:flex-col lg:border-r lg:border-line lg:px-12 lg:pt-10 lg:pb-0 xl:px-16 2xl:px-24"
       >
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-glow-brand" />
@@ -89,7 +89,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
         <div className="relative max-w-xl">
           <Link href="/" className="inline-flex min-h-10 items-center gap-2.5 rounded-lg">
             <LogoMark className="size-9" />
-            <span className="text-base font-semibold tracking-tight">Social Hood</span>
+            <span className="text-base font-semibold tracking-tight">Amplychat</span>
           </Link>
           <p className="mt-3 text-sm text-pretty text-fg-secondary lg:mt-6 lg:text-2xl lg:leading-tight lg:font-semibold lg:tracking-tight lg:text-fg xl:text-3xl 2xl:text-4xl">
             {HERO_TITLE}
@@ -127,7 +127,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
       </section>
 
       {/* Tablet: the space below the card, with the same benefits and the inbox shot (untilted). */}
-      <section aria-label="What Social Hood does" className="hidden px-8 pt-4 pb-12 md:block lg:hidden">
+      <section aria-label="What Amplychat does" className="hidden px-8 pt-4 pb-12 md:block lg:hidden">
         <div className="mx-auto max-w-3xl">
           <BenefitList mode={mode} className="grid grid-cols-3 gap-6" />
           <div className={cn(MARKETING_CARD, "mt-10 p-2 shadow-glow")}>
@@ -149,7 +149,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
 }
 
 /**
- * The sign-in and sign-up card, as the owner asked (2026-10-17): the Social Hood logo inside the
+ * The sign-in and sign-up card, as the owner asked (2026-10-17): the Amplychat logo inside the
  * card, Clerk's title and subtitle, one bordered Google button, the "or" divider, bordered fields,
  * a full-width Continue, and the switch link plus "Secured by Clerk" in the footer. The colours
  * come from the app-wide `clerkAppearance` (root layout); these are layout and shape only, on the

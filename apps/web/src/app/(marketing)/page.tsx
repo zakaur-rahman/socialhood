@@ -8,9 +8,12 @@ import { Features } from "@/components/marketing/Features";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Hero } from "@/components/marketing/Hero";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
+import { Integrations } from "@/components/marketing/Integrations";
 import { Languages } from "@/components/marketing/Languages";
-import { Platforms } from "@/components/marketing/Platforms";
 import { Pricing } from "@/components/marketing/Pricing";
+import { ProductShot } from "@/components/marketing/ProductShot";
+import { SocialProof } from "@/components/marketing/SocialProof";
+import { Stats } from "@/components/marketing/Stats";
 import { Trust } from "@/components/marketing/Trust";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { jsonLdString, pageMetadata, softwareApplicationJsonLd } from "@/lib/marketing/seo";
@@ -27,7 +30,7 @@ export const metadata = pageMetadata({
 });
 
 /**
- * The landing page (§3.1 "/"): what Social Hood does, how, on which platforms, and what it costs.
+ * The landing page (§3.1 "/"): what the product does, how, on which platforms, and what it costs.
  * Server-rendered; the effects (C-068) are small client islands inside MarketingMotion, and every
  * one of them is still with reduced motion.
  */
@@ -39,11 +42,14 @@ export default async function HomePage() {
       <ScrollReveal />
       <MarketingMotion>
         <Hero />
-        <Platforms />
+        <ProductShot />
+        <Integrations />
         <Features />
         <HowItWorks />
         <AutomationShowcase />
         <Languages />
+        <Stats />
+        <SocialProof />
         <Pricing pricing={pricing} />
         <Trust />
         <Faq />

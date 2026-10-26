@@ -459,7 +459,7 @@ describe("A failed action says so once (UI-024, C-051)", () => {
   });
 });
 
-describe("An automation draft from Ask Social Hood (FR-AGT-03)", () => {
+describe("An automation draft from Ask Amplychat (FR-AGT-03)", () => {
   beforeEach(() => resetAgentHandoff());
 
   function draftHandlers(onCall: (call: Call) => void) {
@@ -493,7 +493,7 @@ describe("An automation draft from Ask Social Hood (FR-AGT-03)", () => {
     handOff(draftCard());
     renderWithApi(<AutomationsPage openGallery />, { handlers: draftHandlers((call) => seen.push(call)) });
 
-    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Social Hood" });
+    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Amplychat" });
     expect(screen.queryByRole("dialog", { name: "New automation" })).toBeNull();
     const details = within(dialog).getByTestId("agent-draft");
     expect(details).toHaveTextContent("Price DM");
@@ -526,7 +526,7 @@ describe("An automation draft from Ask Social Hood (FR-AGT-03)", () => {
     handOff(draftCard({ prefill: { ...draftCard().prefill, social_account_id: null } }));
     renderWithApi(<AutomationsPage openGallery />, { handlers: draftHandlers((call) => seen.push(call)) });
 
-    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Social Hood" });
+    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Amplychat" });
     const open = within(dialog).getByRole("button", { name: "Open in editor" });
     const cakes = await within(dialog).findByRole("radio", { name: "@maple.cakes" });
     expect(open).toBeDisabled();

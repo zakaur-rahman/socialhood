@@ -49,6 +49,7 @@ from socialhood.models.contacts import (
     ContactFieldDefinition,
     ContactTag,
     FieldType,
+    NameSource,
     Tag,
 )
 from socialhood.models.inbox import Contact, Conversation
@@ -69,7 +70,7 @@ from socialhood.schemas.contacts import (
     TagRef,
 )
 from socialhood.schemas.contacts import Tag as TagOut
-from socialhood.services import leads
+from socialhood.services import contact_names, leads
 
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 DIGITS = re.compile(r"\D")
@@ -507,6 +508,8 @@ async def get_record(session: AsyncSession, contact_id: uuid.UUID) -> ContactRec
         {
             **_item(contact, conv, acct, tags.get(contact.id, []), activity),
             "fields": contact.fields or {},
+            "name_source": contact.name_source,
+            "platform_name": contact.platform_name,
             "email_source": contact.email_source,
             "email_verified": contact.email_verified,
             "phone_source": contact.phone_source,
@@ -528,6 +531,10 @@ async def update_contact(session: AsyncSession, contact_id: uuid.UUID, body: Con
     contact, _, _, _ = await _row(session, contact_id)
     before = (contact.email, contact.phone, dict(contact.fields or {}))
     errors: list[FieldError] = []
+    if body.use_platform_name:
+        contact_names.use_platform_name(contact)
+    elif body.name is not None and body.name.strip():
+        contact_names.set_team_name(contact, body.name)
     if body.clear_email:
         contact.email, contact.email_source, contact.email_verified = None, None, False
     elif body.email is not None:
@@ -600,7 +607,8 @@ async def create_contact(session: AsyncSession, body: ContactCreate) -> uuid.UUI
     contact = Contact(
         social_account_id=account.id,
         platform_user_id=wa_id,
-        display_name=body.name,
+        display_name=contact_names.clean(body.name),
+        name_source=NameSource.TEAM if contact_names.clean(body.name) else NameSource.PLATFORM,
         phone=phone,
         phone_source="member",
         phone_verified=False,

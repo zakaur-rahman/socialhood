@@ -1,4 +1,4 @@
-"""Ask Social Hood's eval (TA.6; agent-architecture.html §18): seed the eval database fresh, run
+"""Ask Amplychat's eval (TA.6; agent-architecture.html §18): seed the eval database fresh, run
 every case in tests/evals/cases.py through the real orchestrator with the real Gemini planner,
 check the answers and write a JSON and a markdown report to tests/evals/results/.
 

@@ -167,7 +167,7 @@ NOT_PROFESSIONAL = (
     "Only Instagram business and creator accounts can connect. Switch the account type in the "
     "Instagram app, then try again."
 )
-IN_USE = "This account is connected to another Social Hood workspace. Disconnect it there first."
+IN_USE = "This account is connected to another Amplychat workspace. Disconnect it there first."
 BEING_DELETED = (
     "This account's data is being deleted. Connect it again once it's gone from this page."
 )
@@ -501,7 +501,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
         access_token_enc=None,
         status=AccountStatus.DISCONNECTED,
         disconnected_at=now,
-        last_error=f"Social Hood was removed from this account in {platform_label(acct)}.",
+        last_error=f"Amplychat was removed from this account in {platform_label(acct)}.",
     )
     await pause_for_account(session, acct.id, now=now)
     handle = f"@{acct.username}" if acct.username else "An account"
@@ -511,7 +511,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
         severity="warning",
         title=f"{handle} was disconnected",
         body=(
-            f"Social Hood was removed from {handle} in {platform_label(acct)}. "
+            f"Amplychat was removed from {handle} in {platform_label(acct)}. "
             "Connect it again to keep receiving messages."
         ),
         link="/settings/connections",

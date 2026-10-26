@@ -46,7 +46,7 @@ def settings(api_settings: Settings) -> Settings:
     return api_settings.model_copy(
         update={
             "resend_api_key": SecretStr(API_KEY),
-            "email_from": "Social Hood <hello@socialhood.test>",
+            "email_from": "Amplychat <hello@socialhood.test>",
         }
     )
 
@@ -78,7 +78,7 @@ async def test_an_email_is_posted_with_its_idempotency_key(
     assert request.headers["idempotency-key"] == "ws1:digest:2026-09-28:user1"
     assert request.headers["content-type"] == "application/json"
     assert json.loads(request.content) == {
-        "from": "Social Hood <hello@socialhood.test>",
+        "from": "Amplychat <hello@socialhood.test>",
         "to": [RECIPIENT],
         "subject": "Reconnect @maple.bakery",
         "html": "<p>Reconnect</p>",

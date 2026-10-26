@@ -12,13 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useBroadcastAvailability, useBroadcasts } from "@/lib/api/queries";
 import type { Broadcast } from "@/lib/api/types";
 import { BROADCAST_STATUS, formatCount, formatMoney, reached } from "@/lib/broadcasts/format";
 import { formatDayTime } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { META } from "@/styles/tokens";
+import { RowCardsSkeleton, SkeletonRegion } from "@/components/states/skeletons";
 
 /** The page every broadcast screen shows when the server setting is off or the call fails. */
 export function BroadcastsUnavailable() {
@@ -48,7 +48,9 @@ export function BroadcastsPage() {
   if (availability.isPending) {
     return (
       <PageFrame title="Broadcasts">
-        <Skeleton className="h-24 w-full" />
+        <SkeletonRegion label="Loading broadcasts">
+          <RowCardsSkeleton count={3} />
+        </SkeletonRegion>
       </PageFrame>
     );
   }
@@ -79,7 +81,7 @@ export function BroadcastsPage() {
             />
             <p className={META}>
               Meta charges your WhatsApp Business Account directly for each message, using the payment method you set up
-              when you connected the number. Social Hood adds nothing.
+              when you connected the number. Amplychat adds nothing.
             </p>
           </Card>
         ) : (
@@ -95,10 +97,9 @@ export function BroadcastsPage() {
         )}
 
         {list.isPending ? (
-          <div className="space-y-3">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
+          <SkeletonRegion label="Loading broadcasts">
+            <RowCardsSkeleton count={3} />
+          </SkeletonRegion>
         ) : list.isError ? (
           <ErrorState error={list.error} onRetry={() => void list.refetch()} />
         ) : list.data.items.length === 0 ? (

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Social Hood Build Spec</title>
-<meta name="description" content="Six build documents for Social Hood v2 on Next.js and FastAPI: PRD, TRD, app flows, UI/UX brief, backend schema and implementation plan.">
+<title>Amplychat Build Spec</title>
+<meta name="description" content="Six build documents for Amplychat v2 on Next.js and FastAPI: PRD, TRD, app flows, UI/UX brief, backend schema and implementation plan.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
@@ -330,7 +330,7 @@ table.xwide{min-width:980px}
 <aside class="side" aria-label="Documents">
   <a class="brand" href="#overview">
     <span class="brand-tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l.9-5.1A8 8 0 1 1 21 12Z"/><path d="M8.5 11.5h7M8.5 14.5h4"/></svg></span>
-    <span><b>Social Hood v2</b><span>build spec · 1.0</span></span>
+    <span><b>Amplychat v2</b><span>build spec · 1.0</span></span>
   </a>
   <nav class="nav" id="nav">
     <details data-doc="overview"><summary><span class="n">00</span>Start here</summary><ol>
@@ -423,8 +423,8 @@ table.xwide{min-width:980px}
 <section class="doc" id="overview">
   <div class="cover">
     <div class="code"><i></i>00 · Start here</div>
-    <h1>Social Hood v2 build specification</h1>
-    <p class="lede">Six documents that define a rebuild of Social Hood on Next.js and FastAPI. They are written so an AI coding agent can build the product without guessing, and so the owner can check every decision the agent will act on.</p>
+    <h1>Amplychat v2 build specification</h1>
+    <p class="lede">Six documents that define a rebuild of Amplychat on Next.js and FastAPI. They are written so an AI coding agent can build the product without guessing, and so the owner can check every decision the agent will act on.</p>
     <div class="meta"><span><b>Version</b> 1.1 draft</span><span><b>Date</b> 28 Sep 2026</span><span><b>Status</b> for owner review</span><span><b>Replaces</b> v1 Express + Prisma/MongoDB app</span></div>
   </div>
 
@@ -506,7 +506,7 @@ table.xwide{min-width:980px}
     <tbody>
       <tr><td class="m">OQ-1</td><td>Pricing and currency. The v1 landing page says ₹999/month; the v1 seed says US$10.00/month.</td><td>Prices live only in Dodo products; entitlement numbers in §1.7 are proposals.</td><td>FR-BIL, §1.7</td></tr>
       <tr><td class="m">OQ-2</td><td>Does v1 have real users whose data must move to v2?</td><td><strong>Answered: no.</strong> v1 was a school project and was never deployed. Nothing is migrated; v2 starts on fresh, business-owned accounts.</td><td>§6.5</td></tr>
-      <tr><td class="m">OQ-3</td><td>Production domains.</td><td><code>app.socialhood.com</code> (web) and <code>api.socialhood.com</code> (API).</td><td>Env, OAuth redirect URIs, Meta app settings</td></tr>
+      <tr><td class="m">OQ-3</td><td>Production domains.</td><td><code>app.amplychat.com</code> (web) and <code>api.amplychat.com</code> (API).</td><td>Env, OAuth redirect URIs, Meta app settings</td></tr>
       <tr><td class="m">OQ-4</td><td>Is the Meta business verified, and will one Meta app hold Instagram Login and WhatsApp?</td><td>One Meta app with both products; business verification done before App Review.</td><td>P2, P3, launch checklist</td></tr>
       <tr><td class="m">OQ-5</td><td>Apply for Instagram's Human Agent feature (7-day human reply window)?</td><td>Yes, feature-flagged off until approved.</td><td>FR-INB-10</td></tr>
       <tr><td class="m">OQ-6</td><td>Which languages should AI replies use?</td><td>Reply in the customer's language; UI in English only.</td><td>TR-AI prompts</td></tr>
@@ -521,19 +521,19 @@ table.xwide{min-width:980px}
   <div class="cover">
     <div class="code"><i></i>01 · Product requirements</div>
     <h1>Product requirements</h1>
-    <p class="lede">What Social Hood v2 does, who it is for, what ships in the first release, and how we will know it worked. It builds on the earlier PRD's vision and narrows it to a first release that can be built, measured and sold.</p>
+    <p class="lede">What Amplychat v2 does, who it is for, what ships in the first release, and how we will know it worked. It builds on the earlier PRD's vision and narrows it to a first release that can be built, measured and sold.</p>
     <div class="meta"><span><b>Owner</b> product (Zakaur Rahman)</span><span><b>IDs</b> FR-AREA-nn</span><span><b>Depends on</b> Start here</span></div>
   </div>
 
   <h2 id="prd-summary"><span class="sn">1.1</span>Summary and problem</h2>
-  <p><strong>Social Hood is an inbox and automation tool for businesses that sell and support customers through Instagram and WhatsApp.</strong> It puts every conversation in one place, answers repetitive messages automatically, and uses AI to understand what customers want and draft replies grounded in the business's own information.</p>
+  <p><strong>Amplychat is an inbox and automation tool for businesses that sell and support customers through Instagram and WhatsApp.</strong> It puts every conversation in one place, answers repetitive messages automatically, and uses AI to understand what customers want and draft replies grounded in the business's own information.</p>
   <p>The people it serves run small businesses and creator brands. Their customers ask the same questions in DMs and comments all day: price, availability, shipping, "link please". They lose sales when replies are slow, and they lose trust when automated replies are wrong. They do not have time to read hundreds of comments to learn what their audience thinks.</p>
   <p>v1, built as a school project and never deployed, established the shape of the product: a unified inbox, keyword automations, an AI auto-bot and post scheduling all exist in its code. Reading it also showed what breaks: prompts that never reached the model, replies sent twice, messages reported as sent when they failed, and data readable across accounts. v2 is the commercial product. It keeps what works in v1 (the inbox design in particular), fixes those failures structurally, and adds the intelligence layer from the vision: understanding, grounded suggestions, safe automatic replies, and comment insight.</p>
   <div class="note"><b class="l">Product loop</b>Observe (messages, comments, posts) → Understand (intent, sentiment, lead signal) → Decide (answer, suggest, or escalate) → Act (reply, DM, publish) → Measure (response time, acceptance, sentiment) → Learn (knowledge gaps, content that works). R1 closes the loop for conversations and comments. Content learning arrives in R2.</div>
 
   <h3>Glossary</h3>
   <div class="kv">
-    <div>Workspace</div><div>The business account in Social Hood. Owns connected accounts, conversations, automations, knowledge, billing. A user can belong to several (R2).</div>
+    <div>Workspace</div><div>The business account in Amplychat. Owns connected accounts, conversations, automations, knowledge, billing. A user can belong to several (R2).</div>
     <div>Connected account</div><div>One Instagram professional account or one WhatsApp business phone number linked to a workspace. Stored as <code>social_accounts</code>.</div>
     <div>Contact</div><div>A customer on a platform (an Instagram user or a WhatsApp number) who has messaged or commented.</div>
     <div>Conversation</div><div>The thread between one connected account and one contact.</div>
@@ -608,7 +608,7 @@ table.xwide{min-width:980px}
   <div class="tw"><table class="wide">
     <thead><tr><th>Release</th><th>Contents</th><th>From the vision PRD</th></tr></thead>
     <tbody>
-      <tr><td><span class="tag r1">R1</span> launch</td><td>Workspaces and sign-in; Instagram and WhatsApp connections; unified inbox with real-time updates, attachments and reply-window rules; scheduled messages; keyword automations (DM and comment) with fixed or AI replies; message analysis; conversation summaries; suggested replies; AI modes with a safety policy and human takeover; knowledge base with a list of questions the AI couldn't answer; follow-up reminders before reply windows close; comment intelligence per post; Instagram publishing (image, carousel, Reels) with AI captions, a content calendar and a posting queue; automation templates and per-automation results; plans, trial and usage limits; Home overview on real data; in-app, email and push notifications with an installable app; weekly email digest; Meta data-deletion callbacks; background collection of post metric snapshots; post analytics compared at the same age (FR-ANL-01, FR-ANL-02); <b>Ask Social Hood</b>, a read-only AI agent that answers questions over conversations, comments, posts, analytics and knowledge and prepares actions for the user to confirm (FR-AGT-01…07)</td><td>Stages 1, 2, parts of 3 and 5; MVP A–F, J</td></tr>
+      <tr><td><span class="tag r1">R1</span> launch</td><td>Workspaces and sign-in; Instagram and WhatsApp connections; unified inbox with real-time updates, attachments and reply-window rules; scheduled messages; keyword automations (DM and comment) with fixed or AI replies; message analysis; conversation summaries; suggested replies; AI modes with a safety policy and human takeover; knowledge base with a list of questions the AI couldn't answer; follow-up reminders before reply windows close; comment intelligence per post; Instagram publishing (image, carousel, Reels) with AI captions, a content calendar and a posting queue; automation templates and per-automation results; plans, trial and usage limits; Home overview on real data; in-app, email and push notifications with an installable app; weekly email digest; Meta data-deletion callbacks; background collection of post metric snapshots; post analytics compared at the same age (FR-ANL-01, FR-ANL-02); <b>Ask Amplychat</b>, a read-only AI agent that answers questions over conversations, comments, posts, analytics and knowledge and prepares actions for the user to confirm (FR-AGT-01…07)</td><td>Stages 1, 2, parts of 3 and 5; MVP A–F, J</td></tr>
       <tr><td><span class="tag r2">R2</span></td><td>Facebook Pages (messages, comments, publishing); team members, roles and conversation assignment; saved replies; best posting times; link click tracking; website crawl into knowledge; product catalog; order capture and UPI payment requests; business hours for auto mode; topic trends; giveaway winner picker; story mention and reply triggers; data export; Max plan; light theme; database row-level security; agent write tools through the action gateway with approvals, permissions, Copilot and Supervised modes, background agent tasks and conditional plans (FR-AGT-08…12)</td><td>Stages 4, 6, parts of 7 and 8; MVP G, H, I</td></tr>
       <tr><td><span class="tag r3">R3</span></td><td>Autonomous agent mode, standing instructions and the growth analyst (FR-AGT-13…15); content recommendations and campaign reports; payment-gateway links in chat; LinkedIn organisation posting; follow-up sequences; competitor and listening features where APIs allow</td><td>Stages 7, 9–14</td></tr>
     </tbody>
@@ -630,7 +630,7 @@ table.xwide{min-width:980px}
       <tr><td>Private reply to a commenter</td><td>One per comment, within 7 days of the comment; at most 750 per hour per account</td><td>n/a</td><td>Yes</td><td>No</td></tr>
       <tr><td>Message limits</td><td>Text ≤ 1,000 bytes (UTF-8). Send API 100 calls/s for text, 10/s for audio and video</td><td>Text ≤ 4,096 characters. 80 messages/s per number; 1 message every 6 s to the same user</td><td>Verify in R2</td><td>n/a</td></tr>
       <tr><td>Hide / delete comments</td><td>Yes, on the account's own media</td><td>n/a</td><td>Yes</td><td>No</td></tr>
-      <tr><td>Like posts or comments</td><td>Only through Instagram's Facebook-Login API (<code>instagram_manage_engagement</code>, April 2026), which Social Hood does not use. Not offered</td><td>n/a</td><td>Not offered</td><td>Not offered</td></tr>
+      <tr><td>Like posts or comments</td><td>Only through Instagram's Facebook-Login API (<code>instagram_manage_engagement</code>, April 2026), which Amplychat does not use. Not offered</td><td>n/a</td><td>Not offered</td><td>Not offered</td></tr>
       <tr><td>Publish</td><td>Image, carousel (2–10 items, images and videos), Reels. Stories in R2. Quota from <code>content_publishing_limit</code></td><td>n/a</td><td>R2</td><td>Organisation posts R3</td></tr>
       <tr><td>Post insights</td><td>Needs <code>instagram_business_manage_insights</code> (App Review). Metric names changed in 2025 (<code>views</code> replaced impressions): verify</td><td>n/a</td><td>R2</td><td>R3</td></tr>
       <tr><td>Customer profile</td><td>Name, username, profile picture for users who messaged</td><td>Profile name from the webhook</td><td>Name, picture</td><td>n/a</td></tr>
@@ -653,7 +653,7 @@ table.xwide{min-width:980px}
   <h3 id="prd-fr-con">Connections</h3>
   <div class="reqs">
     <div class="req"><div class="id">FR-CON-01</div><div><div class="t">Connect Instagram <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Connect an Instagram professional (business or creator) account through Instagram Login. On success: store the account, subscribe it to webhooks, sync its 25 most recent posts and their comments, and backfill recent conversations where the API allows.</p><div class="ac"><ul><li>The account appears with username and picture within 5 s of returning from Instagram.</li><li>A personal (non-professional) account is rejected with the message in <a href="#ux-copy">§4.7</a>.</li><li>Connecting an account already connected to another workspace is refused and says which is required: disconnect there first.</li></ul></div></div></div>
-    <div class="req"><div class="id">FR-CON-02</div><div><div class="t">Connect WhatsApp <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Connect a WhatsApp Business number through Meta's Embedded Signup (v4; v2 is deprecated on 15 October 2026). The user picks the business, WhatsApp Business Account and number inside Meta's dialog; the app never picks "the first one".</p><div class="ac"><ul><li>The number shows its display name and phone number after connecting.</li><li>The app is subscribed to the WhatsApp Business Account's webhooks.</li><li>If Meta refuses because Social Hood's onboarding allowance is used up (10 new businesses per rolling 7 days until verification, 200 after), the user sees a friendly "connections are paused" message and the attempt is logged for follow-up.</li></ul></div></div></div>
+    <div class="req"><div class="id">FR-CON-02</div><div><div class="t">Connect WhatsApp <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Connect a WhatsApp Business number through Meta's Embedded Signup (v4; v2 is deprecated on 15 October 2026). The user picks the business, WhatsApp Business Account and number inside Meta's dialog; the app never picks "the first one".</p><div class="ac"><ul><li>The number shows its display name and phone number after connecting.</li><li>The app is subscribed to the WhatsApp Business Account's webhooks.</li><li>If Meta refuses because Amplychat's onboarding allowance is used up (10 new businesses per rolling 7 days until verification, 200 after), the user sees a friendly "connections are paused" message and the attempt is logged for follow-up.</li></ul></div></div></div>
     <div class="req"><div class="id">FR-CON-03</div><div><div class="t">Several accounts per workspace <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Up to the plan limit per platform. Each account has its own AI mode and automations, and the inbox filters by account.</p></div></div>
     <div class="req"><div class="id">FR-CON-04</div><div><div class="t">Account health <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Status <code>active</code>, <code>needs_reconnect</code>, <code>disconnected</code> or <code>error</code>, with the last error in plain language. An account that needs reconnecting shows a banner in the inbox and a notification.</p></div></div>
     <div class="req"><div class="id">FR-CON-05</div><div><div class="t">Automatic token refresh <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Instagram long-lived tokens are refreshed when fewer than 20 days remain. A failed refresh sets <code>needs_reconnect</code> and notifies the owner by email.</p></div></div>
@@ -701,7 +701,7 @@ table.xwide{min-width:980px}
     <div class="req"><div class="id">FR-SUG-02</div><div><div class="t">Suggested reply <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>For a conversation whose latest message is from the contact and needs a reply, draft one reply grounded in knowledge and the conversation. Actions: Send, Edit, Regenerate, Dismiss.</p><div class="ac"><ul><li>Ready within 12 s p95 of the message.</li><li>Edit puts the text in the composer; sending it records "edited" and the edit distance.</li><li>A new inbound message replaces an unused suggestion.</li></ul></div></div></div>
     <div class="req"><div class="id">FR-SUG-03</div><div><div class="t">No invented facts <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>If the answer needs facts not in knowledge (price, stock, policy, dates), the suggestion is replaced by a note to the user: "Not in your knowledge: shipping to Dubai", with a link to add it. The AI never states a price, policy or availability that is not in knowledge.</p></div></div>
     <div class="req"><div class="id">FR-SUG-04</div><div><div class="t">Auto mode <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Sends the reply only when every check in TR-AI-07 passes. Otherwise it leaves a suggestion and flags the conversation "Needs you" with the reason.</p><div class="ac"><ul><li>At most one AI reply per inbound message; at most 5 per conversation per hour.</li><li>Every decision (sent, suggested, escalated, skipped) is recorded with its reasons and shown in the thread.</li></ul></div></div></div>
-    <div class="req"><div class="id">FR-SUG-05</div><div><div class="t">Human takeover <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When a person replies in a conversation (from Social Hood or the native app), Auto pauses there for the configured time (default 2 h; options 30 min, 2 h, 24 h, until resumed). A system note says so and offers Resume.</p></div></div>
+    <div class="req"><div class="id">FR-SUG-05</div><div><div class="t">Human takeover <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When a person replies in a conversation (from Amplychat or the native app), Auto pauses there for the configured time (default 2 h; options 30 min, 2 h, 24 h, until resumed). A system note says so and offers Resume.</p></div></div>
     <div class="req"><div class="id">FR-SUG-06</div><div><div class="t">Escalation rules <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Built in: refunds, legal threats, complaints with negative sentiment, abuse, low confidence, answer not in knowledge. User-defined: words or phrases that always escalate.</p></div></div>
     <div class="req"><div class="id">FR-SUG-07</div><div><div class="t">Business hours <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Limit Auto to chosen hours.</p></div></div>
   </div>
@@ -720,7 +720,7 @@ table.xwide{min-width:980px}
   <h3 id="prd-fr-agt">AI agent</h3>
   <p>An orchestration layer over the services below: understand, plan, call typed tools, execute under deterministic policy, verify, report. Design: <a href="agent-architecture.html">agent-architecture.html</a>.</p>
   <div class="reqs">
-    <div class="req"><div class="id">FR-AGT-01</div><div><div class="t">Ask Social Hood <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A panel on every page and a full page where a member asks questions in plain language (English, Hindi, Hinglish). Answers cite the data used (posts, time range, counts) and link to it.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-01</div><div><div class="t">Ask Amplychat <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A panel on every page and a full page where a member asks questions in plain language (English, Hindi, Hinglish). Answers cite the data used (posts, time range, counts) and link to it.</p></div></div>
     <div class="req"><div class="id">FR-AGT-02</div><div><div class="t">Read tools only in R1 <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Conversations, contacts, comments, posts, post metrics, analytics, sentiment and topics, knowledge, scheduled messages and posts, automations and runs. No R1 tool changes anything.</p></div></div>
     <div class="req"><div class="id">FR-AGT-03</div><div><div class="t">Prepared actions <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A request that needs a change becomes an action card that opens the existing screen pre-filled (schedule popover inside the reply window, automation editor with a draft, comment reply). The member completes it there, so every existing check applies.</p></div></div>
     <div class="req"><div class="id">FR-AGT-04</div><div><div class="t">Numbers come from the database <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Counts, percentages, averages and comparisons are computed by analytics tools; the model only explains them. Every answer states the time range and sample size.</p></div></div>
@@ -756,9 +756,9 @@ table.xwide{min-width:980px}
     <div class="req"><div class="id">FR-AUT-15</div><div><div class="t">Overlaps and priority <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When a keyword (after normalisation) is also used by another active automation of the same account and trigger type, the editor names that automation and says which one runs first. Only the first matching automation runs for a message or comment; keyword automations run before any-comment ones. The user sets the order by dragging automations in the list, per account, with a keyboard alternative (Move up, Move down).</p></div></div>
     <div class="req"><div class="id">FR-AUT-16</div><div><div class="t">Results per automation <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Each automation shows, for the last 7 or 30 days: runs, DMs sent, public replies, people who replied within 24 h of the DM, skipped (with reasons: cooldown, 7-day limit, outside run window), failures, and how many are queued now, with a daily chart. The list shows 7-day runs with a small trend line and the time of the last run.</p></div></div>
     <div class="req"><div class="id">FR-AUT-17</div><div><div class="t">Run window <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>Optional start and end time, for launches and giveaways. Before the start the automation shows as Scheduled; at the end it pauses itself, shows as Ended and notifies its creator.</p></div></div>
-    <div class="req"><div class="id">FR-AUT-18</div><div><div class="t">Automations for upcoming posts <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>A comment automation can target "the next post I publish" (from Social Hood or the Instagram app) or a specific scheduled post. In the post composer, "Add comment automation" creates one for that post from a template. It links itself to the post the moment it is published, so the first comments are answered.</p></div></div>
+    <div class="req"><div class="id">FR-AUT-18</div><div><div class="t">Automations for upcoming posts <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>A comment automation can target "the next post I publish" (from Amplychat or the Instagram app) or a specific scheduled post. In the post composer, "Add comment automation" creates one for that post from a template. It links itself to the post the moment it is published, so the first comments are answered.</p></div></div>
     <div class="req"><div class="id">FR-AUT-19</div><div><div class="t">Find and manage <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>The list can be searched and filtered by account, status and trigger, sorted by recent runs, name or creation date, and grouped by account. Row menu: Duplicate, Pause or Resume, Delete. Several automations can be paused at once.</p></div></div>
-    <div class="req"><div class="id">FR-AUT-20</div><div><div class="t">Link click tracking <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Link buttons can go through a Social Hood redirect that counts clicks per automation and button (count and time only), shown in the automation's results.</p></div></div>
+    <div class="req"><div class="id">FR-AUT-20</div><div><div class="t">Link click tracking <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Link buttons can go through a Amplychat redirect that counts clicks per automation and button (count and time only), shown in the automation's results.</p></div></div>
     <div class="req"><div class="id">FR-AUT-21</div><div><div class="t">Tap first <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>A comment automation can open with a short private reply (default "Hi {first_name|there}! Tap the button below, or just reply here, and I'll send it right over 👇") carrying one quick-reply button (default "Send me the link", up to 20 characters). The automation's message (text, image, link buttons) is sent when the commenter taps the button or replies with anything, since quick replies are not shown on desktop. Their answer opens Instagram's 24-hour window and allows the profile lookup, so the message uses their real first name and can include an image and buttons, which private replies cannot carry. The answering message is marked <code>automation_handled</code> and no DM keyword automation runs on it. The run shows "Waiting for tap" until then; results count taps. On by default for new comment automations.</p></div></div>
     <div class="req"><div class="id">FR-AUT-22</div><div><div class="t">Follow nudge, never a follow gate <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>An automation can send one more message after its message, only to people Instagram reports as not following the account (<code>is_user_follow_business</code>; skipped when unknown), for example "Enjoying this? Follow us for more like it." with a "View profile" link button. The message itself is never held back or conditioned on following or sharing: Meta's Spam Community Standard forbids "requiring users to engage (in the form of likes, shares, follows, or any other public-facing form of engagement) to gain access to specific, exclusive content", and shares cannot be seen through the API. The editor says so. Results count nudges; runs record whether the person followed when the message went out; the inbox shows "Follows you" when known.</p></div></div>
   </div>
@@ -803,8 +803,8 @@ table.xwide{min-width:980px}
   <h3 id="prd-fr-home">Home and analytics</h3>
   <div class="reqs">
     <div class="req"><div class="id">FR-HOME-01</div><div><div class="t">Home overview <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Real data only: conversations needing a reply, messages received today and in 7 days, share handled by AI, median first-response time (7 days), sentiment split of messages and comments (7 days), three posts with the most comments (7 days), and the onboarding checklist. No placeholder charts.</p></div></div>
-    <div class="req"><div class="id">FR-ANL-01</div><div><div class="t">Metric snapshots <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When the insights permission is granted, record post metrics 1 h, 6 h, 24 h, 72 h, 7 d and 30 d after publishing. Instagram insights can lag up to 48 h, so the 1 h and 6 h snapshots hold the post's live counts (likes, comments), insight metrics start at 24 h, and the 72 h run re-reads earlier values and marks them final. Also record one row of account metrics per account per day (followers and account insights), because Instagram keeps account insights for only 90 days. Post analytics (FR-ANL-02) and Ask Social Hood use them in R1; the data cannot be backfilled.</p></div></div>
-    <div class="req"><div class="id">FR-ANL-02</div><div><div class="t">Post analytics <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Reach, views, likes, comments, shares, saves and engagement rate per post, compared with the account's previous posts at the same age (TR-AGT-05); the explanation comes from Ask Social Hood.</p></div></div>
+    <div class="req"><div class="id">FR-ANL-01</div><div><div class="t">Metric snapshots <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When the insights permission is granted, record post metrics 1 h, 6 h, 24 h, 72 h, 7 d and 30 d after publishing. Instagram insights can lag up to 48 h, so the 1 h and 6 h snapshots hold the post's live counts (likes, comments), insight metrics start at 24 h, and the 72 h run re-reads earlier values and marks them final. Also record one row of account metrics per account per day (followers and account insights), because Instagram keeps account insights for only 90 days. Post analytics (FR-ANL-02) and Ask Amplychat use them in R1; the data cannot be backfilled.</p></div></div>
+    <div class="req"><div class="id">FR-ANL-02</div><div><div class="t">Post analytics <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Reach, views, likes, comments, shares, saves and engagement rate per post, compared with the account's previous posts at the same age (TR-AGT-05); the explanation comes from Ask Amplychat.</p></div></div>
   </div>
 
   <h3 id="prd-fr-bil">Billing</h3>
@@ -1016,7 +1016,7 @@ flowchart LR
     <div class="req"><div class="id">TR-API-01</div><div><div class="t">Paths and versioning</div><p>Every product endpoint is under <code>/v1</code>. Workspace data is always addressed through the path: <code>/v1/w/{workspace_id}/…</code>. Public webhook endpoints live under <code>/webhooks/…</code> and are unversioned. JSON field names are <code>snake_case</code>.</p></div></div>
     <div class="req"><div class="id">TR-API-02</div><div><div class="t">IDs and time</div><p>All ids are UUIDs (v4, generated by Postgres). Timestamps are ISO 8601 in UTC with <code>Z</code>. The client converts to the workspace timezone for display.</p></div></div>
     <div class="req"><div class="id">TR-API-03</div><div><div class="t">Errors</div><p>Every non-2xx response uses <code>application/problem+json</code>:</p>
-<pre><code>{ "type": "https://api.socialhood.com/errors/reply_window_closed",
+<pre><code>{ "type": "https://api.amplychat.com/errors/reply_window_closed",
   "title": "The reply window has closed",
   "status": 409,
   "code": "reply_window_closed",
@@ -1302,7 +1302,7 @@ class InboundMessage(Inbound):
     text: str | None
     attachments: tuple[InboundMediaRef, ...] = ()
     reply_to_id: str | None = None
-    is_echo: bool = False         # sent by the business outside Social Hood
+    is_echo: bool = False         # sent by the business outside Amplychat
 
 @dataclass(frozen=True, kw_only=True)
 class InboundComment(Inbound):
@@ -1738,7 +1738,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
     <div class="req"><div class="id">TR-FE-06</div><div><div class="t">State isolation</div><p>The thread component is rendered with <code>key={conversationId}</code>. Drafts live in a Zustand store keyed by conversation id. Nothing conversation-specific lives in component state that survives a conversation switch.</p></div></div>
     <div class="req"><div class="id">TR-FE-07</div><div><div class="t">Strict builds</div><p>One <code>next.config.ts</code>; no <code>ignoreBuildErrors</code> or <code>ignoreDuringBuilds</code>; <code>typedRoutes</code> on; <code>images.remotePatterns</code> for <code>res.cloudinary.com</code>, <code>*.cdninstagram.com</code>, <code>*.fbcdn.net</code>, <code>img.clerk.com</code>. Lint and typecheck run in CI.</p></div></div>
     <div class="req"><div class="id">TR-FE-08</div><div><div class="t">Performance</div><p>Conversation and message lists are virtualised above 100 rows. The emoji picker and Meta SDK load on demand. Route-level loading states use skeletons from §4.6.</p></div></div>
-    <div class="req"><div class="id">TR-FE-09</div><div><div class="t">Installable app and push</div><p><code>app/manifest.ts</code> (name "Social Hood", <code>display: "standalone"</code>, <code>start_url: "/app"</code>, background and theme <code>#000000</code>, 192 and 512 px icons plus a maskable icon). <code>public/sw.js</code> handles only <code>push</code> (show the notification with its title, body and link) and <code>notificationclick</code> (focus an open tab or open the link); no offline caching in R1. Settings → Notifications asks permission only after a user action, subscribes with <code>PushManager.subscribe({userVisibleOnly: true, applicationServerKey: NEXT_PUBLIC_VAPID_PUBLIC_KEY})</code> and posts the subscription to the API. On iPhone, the page explains that push works after "Add to Home Screen". The API sends with <code>pywebpush</code> and VAPID keys, and deletes subscriptions that return 404 or 410.</p></div></div>
+    <div class="req"><div class="id">TR-FE-09</div><div><div class="t">Installable app and push</div><p><code>app/manifest.ts</code> (name "Amplychat", <code>display: "standalone"</code>, <code>start_url: "/app"</code>, background and theme <code>#000000</code>, 192 and 512 px icons plus a maskable icon). <code>public/sw.js</code> handles only <code>push</code> (show the notification with its title, body and link) and <code>notificationclick</code> (focus an open tab or open the link); no offline caching in R1. Settings → Notifications asks permission only after a user action, subscribes with <code>PushManager.subscribe({userVisibleOnly: true, applicationServerKey: NEXT_PUBLIC_VAPID_PUBLIC_KEY})</code> and posts the subscription to the API. On iPhone, the page explains that push works after "Add to Home Screen". The API sends with <code>pywebpush</code> and VAPID keys, and deletes subscriptions that return 404 or 410.</p></div></div>
   </div>
 
   <h2 id="trd-endpoints"><span class="sn">2.15</span>Endpoint catalogue</h2>
@@ -1806,7 +1806,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">POST · DELETE</td><td class="m">/v1/me/push-subscriptions</td><td>Register or remove this device's push subscription</td><td>any user</td></tr>
       <tr><td class="m">GET</td><td class="m">…/knowledge-gaps?status=open</td><td>Questions the AI couldn't answer (30 days)</td><td>admin</td></tr>
       <tr><td class="m">POST</td><td class="m">…/knowledge-gaps/{id}/dismiss</td><td>Dismiss a gap (answering is creating an FAQ with <code>gap_id</code>)</td><td>admin</td></tr>
-      <tr><td class="m">POST</td><td class="m">…/agent/runs</td><td>Ask Social Hood: start a run {request, thread_id?}; 202 with the run</td><td>agent</td></tr>
+      <tr><td class="m">POST</td><td class="m">…/agent/runs</td><td>Ask Amplychat: start a run {request, thread_id?}; 202 with the run</td><td>agent</td></tr>
       <tr><td class="m">GET</td><td class="m">…/agent/runs?thread_id&amp;status&amp;q&amp;cursor · …/agent/runs/{id}</td><td>Run history; one run with its steps</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/agent/runs/{id}/cancel</td><td>Stop at the next step</td><td>agent</td></tr>
       <tr><td class="m">GET</td><td class="m">…/agent/threads</td><td>Ask panel threads</td><td>agent</td></tr>
@@ -1829,8 +1829,8 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
     <thead><tr><th>Variable</th><th>Service</th><th>Example / default</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td class="m">APP_ENV</td><td>api</td><td class="m">local | staging | production</td><td></td></tr>
-      <tr><td class="m">API_BASE_URL · WEB_BASE_URL</td><td>api</td><td class="m">https://api.socialhood.com · https://app.socialhood.com</td><td>OQ-3</td></tr>
-      <tr><td class="m">CORS_ALLOWED_ORIGINS</td><td>api</td><td class="m">https://app.socialhood.com</td><td>comma-separated</td></tr>
+      <tr><td class="m">API_BASE_URL · WEB_BASE_URL</td><td>api</td><td class="m">https://api.amplychat.com · https://app.amplychat.com</td><td>OQ-3</td></tr>
+      <tr><td class="m">CORS_ALLOWED_ORIGINS</td><td>api</td><td class="m">https://app.amplychat.com</td><td>comma-separated</td></tr>
       <tr><td class="m">DATABASE_URL</td><td>api</td><td class="m">postgresql+asyncpg://…</td><td></td></tr>
       <tr><td class="m">DATABASE_URL_DIRECT</td><td>api</td><td class="m">postgresql://…</td><td>job queue (psycopg); direct connection, never through PgBouncer</td></tr>
       <tr><td class="m">BULK_CONCURRENCY_PER_WORKSPACE</td><td>api</td><td class="m">4</td><td>TR-JOB-06</td></tr>
@@ -1847,10 +1847,10 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">AI_RETRIEVAL_MIN_SIM · AUTO_MIN_CONFIDENCE</td><td>api</td><td class="m">0.60 · 0.75</td><td>tuned by eval</td></tr>
       <tr><td class="m">CLOUDINARY_CLOUD_NAME · CLOUDINARY_API_KEY · CLOUDINARY_API_SECRET</td><td>api</td><td></td><td></td></tr>
       <tr><td class="m">DODO_API_KEY · DODO_ENVIRONMENT · DODO_WEBHOOK_SECRET · DODO_PRODUCT_PRO_MONTHLY · DODO_PRODUCT_MAX_MONTHLY</td><td>api</td><td class="m">test</td><td>Max product in R2</td></tr>
-      <tr><td class="m">RESEND_API_KEY · EMAIL_FROM</td><td>api</td><td class="m">Social Hood &lt;hello@socialhood.com&gt;</td><td></td></tr>
-      <tr><td class="m">VAPID_PUBLIC_KEY · VAPID_PRIVATE_KEY · VAPID_SUBJECT</td><td>api</td><td class="m">mailto:support@socialhood.com</td><td>web push (TR-FE-09)</td></tr>
+      <tr><td class="m">RESEND_API_KEY · EMAIL_FROM</td><td>api</td><td class="m">Amplychat &lt;support@amplychat.com&gt;</td><td></td></tr>
+      <tr><td class="m">VAPID_PUBLIC_KEY · VAPID_PRIVATE_KEY · VAPID_SUBJECT</td><td>api</td><td class="m">mailto:support@amplychat.com</td><td>web push (TR-FE-09)</td></tr>
       <tr><td class="m">SANDBOX_PLATFORM_ENABLED</td><td>api</td><td class="m">false</td><td>must be false in production</td></tr>
-      <tr><td class="m">NEXT_PUBLIC_API_BASE_URL</td><td>web</td><td class="m">https://api.socialhood.com</td><td></td></tr>
+      <tr><td class="m">NEXT_PUBLIC_API_BASE_URL</td><td>web</td><td class="m">https://api.amplychat.com</td><td></td></tr>
       <tr><td class="m">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY · CLERK_SECRET_KEY</td><td>web</td><td></td><td></td></tr>
       <tr><td class="m">NEXT_PUBLIC_CLERK_SIGN_IN_URL · NEXT_PUBLIC_CLERK_SIGN_UP_URL</td><td>web</td><td class="m">/sign-in · /sign-up</td><td></td></tr>
       <tr><td class="m">NEXT_PUBLIC_META_APP_ID · NEXT_PUBLIC_WHATSAPP_CONFIG_ID</td><td>web</td><td></td><td>Embedded Signup</td></tr>
@@ -1889,7 +1889,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">/w/[slug]/settings/notifications</td><td>Email digest and push notification settings for the signed-in member</td><td>member</td></tr>
     </tbody>
   </table></div>
-  <p>The sidebar holds: Home, Inbox (unread badge), Comments, Automations, Schedule, Knowledge; at the bottom, Notifications (bell with count, opens a panel), Settings, Help (opens <code>mailto:support@socialhood.com</code> and shows the address), and the account card. Agents see only Home, Inbox and Comments.</p>
+  <p>The sidebar holds: Home, Inbox (unread badge), Comments, Automations, Schedule, Knowledge; at the bottom, Notifications (bell with count, opens a panel), Settings, Help (opens <code>mailto:support@amplychat.com</code> and shows the address), and the account card. Agents see only Home, Inbox and Comments.</p>
 
   <h2 id="flow-onboard"><span class="sn">3.2</span>Sign-up and connect</h2>
 
@@ -1929,7 +1929,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
     <li>API exchanges the code, finds any missing id with the business token (the WABA from <code>debug_token</code>'s <code>whatsapp_business_management</code> targets, the number from <code>/{waba_id}/phone_numbers</code>), reads the number's details, subscribes the app to the WABA, stores the account and returns it.</li>
     <li>Toast "WhatsApp connected: {display name} ({number})".</li>
   </ol>
-  <p><strong>Edge cases.</strong> The dialog closes without finishing: no request, a neutral toast. The number is already connected elsewhere: 409 <code>account_in_use</code>. The ids don't settle on one number: 422 <code>wa_choose_business_account</code> (no single shared WABA), <code>wa_no_phone_number</code> (the WABA has none; Meta's test numbers can't be connected through Embedded Signup) or <code>wa_choose_number</code> (several). Meta refuses because Social Hood's weekly onboarding allowance is used up: "WhatsApp connections are paused for a few days. We'll email you when you can connect.", and the attempt is logged for follow-up. No history exists to backfill; the inbox fills as customers write.</p>
+  <p><strong>Edge cases.</strong> The dialog closes without finishing: no request, a neutral toast. The number is already connected elsewhere: 409 <code>account_in_use</code>. The ids don't settle on one number: 422 <code>wa_choose_business_account</code> (no single shared WABA), <code>wa_no_phone_number</code> (the WABA has none; Meta's test numbers can't be connected through Embedded Signup) or <code>wa_choose_number</code> (several). Meta refuses because Amplychat's weekly onboarding allowance is used up: "WhatsApp connections are paused for a few days. We'll email you when you can connect.", and the attempt is logged for follow-up. No history exists to backfill; the inbox fills as customers write.</p>
 
   <h3>F-05 Reconnect after a token failure</h3>
   <ol class="steps">
@@ -2189,7 +2189,7 @@ stateDiagram-v2
   <div class="cover">
     <div class="code"><i></i>04 · UI/UX design brief</div>
     <h1>UI/UX design brief</h1>
-    <p class="lede">How Social Hood v2 looks and behaves, screen by screen. It keeps the v1 inbox you like (its near-black surfaces, single accent, bubble shapes and platform strip) and specifies the tokens exactly, so the rebuild matches the design v1 intended. A few colours are adjusted where v1 text fell below readable contrast.</p>
+    <p class="lede">How Amplychat v2 looks and behaves, screen by screen. It keeps the v1 inbox you like (its near-black surfaces, single accent, bubble shapes and platform strip) and specifies the tokens exactly, so the rebuild matches the design v1 intended. A few colours are adjusted where v1 text fell below readable contrast.</p>
     <div class="meta"><span><b>IDs</b> UX-AREA-nn</span><span><b>Theme</b> dark only in R1 (D13)</span><span><b>Stack</b> Tailwind v4 + shadcn/ui</span></div>
   </div>
 
@@ -2358,7 +2358,7 @@ stateDiagram-v2
   to { background-position: 0 20px, 0 0; }
 }
 
-/* Ask Social Hood: the label of the step a run is on, a light sweeping across the secondary text
+/* Ask Amplychat: the label of the step a run is on, a light sweeping across the secondary text
    (1.6 s per sweep); plain secondary text under reduced motion. Built from tokens only. */
 @utility text-shimmer {
   color: var(--color-fg-secondary);
@@ -2547,7 +2547,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
   <h2 id="ux-shell"><span class="sn">4.3</span>App shell</h2>
   <div class="reqs">
-    <div class="req"><div class="id">UX-SH-01</div><div><div class="t">Sidebar</div><p>A floating card as in v1: <code>bg-panel border border-line rounded-xl</code>, inset 16 px from the viewport on desktop, with the v1 grain texture at 5% opacity. Width 200 px expanded, 64 px collapsed (icons with tooltips); collapse state is remembered per browser. Contents top to bottom: logo tile (<code>bg-shell-gradient</code>, 36 px, <code>rounded-xl</code>) with "Social Hood"; workspace switcher (R2; in R1 the workspace name as text); nav items; flexible space; Notifications; Settings; Help; account card (Clerk <code>UserButton</code>, name, plan badge; Free users see "Upgrade" in <code>bg-shell-gradient</code>).</p><p>Nav row (<code>sidebarRowClass</code>, C-048): 36 px tall, 40 px on touch, <code>flex items-center gap-3 rounded-lg px-3 text-sm font-medium text-fg-secondary hover:bg-hover hover:text-fg</code>. Active row (v1 had none): <code>bg-raised text-fg</code> with the selection bar (2 px <code>brand</code> on its leading edge, inset 8 px) and the icon in <code>text-brand-fg</code>. Inbox shows an unread count badge (Badge <code>count</code>: <code>bg-brand-gradient text-on-brand text-xs font-medium rounded-full min-w-5 h-5 px-1.5</code>).</p></div></div>
+    <div class="req"><div class="id">UX-SH-01</div><div><div class="t">Sidebar</div><p>A floating card as in v1: <code>bg-panel border border-line rounded-xl</code>, inset 16 px from the viewport on desktop, with the v1 grain texture at 5% opacity. Width 200 px expanded, 64 px collapsed (icons with tooltips); collapse state is remembered per browser. Contents top to bottom: logo tile (<code>bg-shell-gradient</code>, 36 px, <code>rounded-xl</code>) with "Amplychat"; workspace switcher (R2; in R1 the workspace name as text); nav items; flexible space; Notifications; Settings; Help; account card (Clerk <code>UserButton</code>, name, plan badge; Free users see "Upgrade" in <code>bg-shell-gradient</code>).</p><p>Nav row (<code>sidebarRowClass</code>, C-048): 36 px tall, 40 px on touch, <code>flex items-center gap-3 rounded-lg px-3 text-sm font-medium text-fg-secondary hover:bg-hover hover:text-fg</code>. Active row (v1 had none): <code>bg-raised text-fg</code> with the selection bar (2 px <code>brand</code> on its leading edge, inset 8 px) and the icon in <code>text-brand-fg</code>. Inbox shows an unread count badge (Badge <code>count</code>: <code>bg-brand-gradient text-on-brand text-xs font-medium rounded-full min-w-5 h-5 px-1.5</code>).</p></div></div>
     <div class="req"><div class="id">UX-SH-02</div><div><div class="t">Phones and tablets</div><p>Below 1024 px the sidebar is collapsed. Below 768 px it becomes a 56 px top bar (<code>bg-panel border-b border-line</code>) with the logo, page title and a menu button; the drawer (<code>w-[240px]</code>, over a <code>bg-black/60</code> scrim) is <strong>closed on load</strong> and closes when a link is tapped (v1 opened on load and stayed open).</p></div></div>
     <div class="req"><div class="id">UX-SH-03</div><div><div class="t">Page frame</div><p>Non-inbox pages: page title and optional actions in a header row, content below, filling the width beside the sidebar (no page cap; readability limits live inside components, C-074). The inbox fills the height and, from <code>md</code>, is inset 16 px on all four sides with <code>rounded-xl</code> and a <code>line</code> border, as the Ask page is (C-074); on phones it runs edge to edge below the 56 px top bar.</p></div></div>
     <div class="req"><div class="id">UX-SH-04</div><div><div class="t">Banners and notifications</div><p>App-level banners (account needs reconnecting, payment on hold, AI credits exhausted) sit above page content: <code>rounded-lg px-4 py-2.5 text-sm</code> with a warning or danger soft background, one action button and no dismiss for critical states. Notifications open a 360 px popover from the sidebar bell: icon, title, one-line body, relative time, unread dot, "Mark all read". Toasts use sonner with <code>theme="dark"</code> at the bottom right (top on phones).</p></div></div>
@@ -2558,7 +2558,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
   <div class="mockwrap" role="img" aria-label="Mock of the inbox: sidebar, conversation list, open conversation with a suggested reply, and the customer details panel">
     <div class="mock">
       <div class="mk-side"><div class="mk-card">
-        <div class="mk-logo"><i></i><b>Social Hood</b></div>
+        <div class="mk-logo"><i></i><b>Amplychat</b></div>
         <div class="mk-nav"><u></u>Home</div>
         <div class="mk-nav on"><u></u>Inbox<span style="margin-left:auto;font-size:11px;background:linear-gradient(135deg,#20338A,#4467E6);border-radius:999px;padding:0 7px">3</span></div>
         <div class="mk-nav"><u></u>Comments</div>
@@ -2628,7 +2628,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
         <thead><tr><th>Variant</th><th>Side</th><th>Style</th><th>Extra</th></tr></thead>
         <tbody>
           <tr><td>Customer</td><td>left</td><td class="m">bg-field border border-line-subtle text-fg rounded-2xl rounded-bl-md shadow-sm</td><td>Avatar at group end</td></tr>
-          <tr><td>You (human, from Social Hood)</td><td>right</td><td class="m">bg-brand-gradient text-white rounded-2xl rounded-br-md</td><td>Meta in <code>text-white/75</code></td></tr>
+          <tr><td>You (human, from Amplychat)</td><td>right</td><td class="m">bg-brand-gradient text-white rounded-2xl rounded-br-md</td><td>Meta in <code>text-white/75</code></td></tr>
           <tr><td>AI auto reply</td><td>right</td><td>Same gradient</td><td>Label row above text: sparkles 12 px + "Sent by AI", <code>text-xs font-medium text-white/90</code>; info button opens the decision</td></tr>
           <tr><td>Automation</td><td>right</td><td>Same gradient</td><td>Label "Automation · {name}" with a zap icon</td></tr>
           <tr><td>Sent from Instagram app</td><td>right</td><td class="m">bg-raised text-fg rounded-2xl rounded-br-md</td><td>Label "Sent from Instagram"</td></tr>
@@ -2658,7 +2658,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
   <p>The v1 pages used a draggable node canvas for what is a fixed sequence of steps, grain overlays and hard-coded greys. The redesign uses a step list, live previews and results, built only from tokens. Illustrative mock:</p>
   <div class="mockwrap" role="img" aria-label="Mock of the automation editor: step cards joined by a line on the left, a live Instagram preview and last-7-days figures on the right">
     <div class="mock ae">
-      <div class="mk-side"><div class="mk-card"><div class="mk-logo"><i></i><b>Social Hood</b></div><div class="mk-nav"><u></u>Home</div><div class="mk-nav"><u></u>Inbox</div><div class="mk-nav"><u></u>Comments</div><div class="mk-nav on"><u></u>Automations</div><div class="mk-nav"><u></u>Schedule</div><div class="mk-nav"><u></u>Knowledge</div><div class="mk-acct"><i></i><div>Zakaur Rahman<small>Pro plan</small></div></div></div></div>
+      <div class="mk-side"><div class="mk-card"><div class="mk-logo"><i></i><b>Amplychat</b></div><div class="mk-nav"><u></u>Home</div><div class="mk-nav"><u></u>Inbox</div><div class="mk-nav"><u></u>Comments</div><div class="mk-nav on"><u></u>Automations</div><div class="mk-nav"><u></u>Schedule</div><div class="mk-nav"><u></u>Knowledge</div><div class="mk-acct"><i></i><div>Zakaur Rahman<small>Pro plan</small></div></div></div></div>
       <div class="ae-main">
         <div class="ae-head"><div><small>Automations /</small><b>Comment "LINK" → DM the link</b></div><span class="ae-st">Active</span><span class="ae-saved">Saved</span><span class="ae-btn">Pause</span><span class="ae-btn">···</span></div>
         <div class="ae-steps">
@@ -2705,7 +2705,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
   <p>Replaces v1's post list and three-node canvas, which had no calendar, offered networks that were never connected, and showed a timed rather than real upload progress. Illustrative mock of the Week view:</p>
   <div class="mockwrap" role="img" aria-label="Mock of the schedule page in week view: posts on a time grid with status colours, dashed queue slots, a now line, and a rail of unscheduled drafts">
     <div class="mock cal">
-      <div class="mk-side"><div class="mk-card"><div class="mk-logo"><i></i><b>Social Hood</b></div><div class="mk-nav"><u></u>Home</div><div class="mk-nav"><u></u>Inbox</div><div class="mk-nav"><u></u>Comments</div><div class="mk-nav"><u></u>Automations</div><div class="mk-nav on"><u></u>Schedule</div><div class="mk-nav"><u></u>Knowledge</div><div class="mk-acct"><i></i><div>Zakaur Rahman<small>Pro plan</small></div></div></div></div>
+      <div class="mk-side"><div class="mk-card"><div class="mk-logo"><i></i><b>Amplychat</b></div><div class="mk-nav"><u></u>Home</div><div class="mk-nav"><u></u>Inbox</div><div class="mk-nav"><u></u>Comments</div><div class="mk-nav"><u></u>Automations</div><div class="mk-nav on"><u></u>Schedule</div><div class="mk-nav"><u></u>Knowledge</div><div class="mk-acct"><i></i><div>Zakaur Rahman<small>Pro plan</small></div></div></div></div>
       <div class="cal-main">
         <div class="cal-head"><div><b>Schedule</b><small>Times in Asia/Kolkata</small></div><div class="mk-seg cal-seg"><span>Month</span><span class="on">Week</span><span>List</span></div><span class="cal-range">‹ 28 Sep – 4 Oct ›</span><span class="ae-btn">Today</span><span class="cal-accts"><i style="background:linear-gradient(135deg,#a855f7,#ec4899)"></i><i style="background:linear-gradient(135deg,#8b5cf6,#3b82f6)"></i></span><span class="ae-btn">Add to queue</span><span class="ae-btn p">New post</span></div>
         <div class="cal-grid"><div class="cal-dh"></div><div class="cal-dh today">Mon <b>28</b></div><div class="cal-dh">Tue <b>29</b></div><div class="cal-dh">Wed <b>30</b></div><div class="cal-dh">Thu <b>1</b></div><div class="cal-dh">Fri <b>2</b></div><div class="cal-dh">Sat <b>3</b></div><div class="cal-dh">Sun <b>4</b></div><div class="cal-t">09:00</div><div class="cal-c today"><div class="cal-p pub"><i style="background:linear-gradient(135deg,#f59e0b,#ef4444)"></i><div class="t"><b>09:00 ✓</b><small>New arrivals</small></div></div></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"><div class="cal-p"><i style="background:linear-gradient(135deg,#8b5cf6,#3b82f6)"></i><div class="t"><b>09:00</b><small>Behind the scenes</small></div></div></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-t">12:00</div><div class="cal-c today"><div class="cal-p fail"><i style="background:linear-gradient(135deg,#fb7185,#f97316)"></i><div class="t"><b>12:00 · Failed</b><small>Festive teaser</small></div></div><div class="cal-now"></div></div><div class="cal-c"><div class="cal-p"><i style="background:linear-gradient(135deg,#0ea5e9,#6366f1)"></i><div class="t"><b>12:00</b><small>Linen styles</small></div></div></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"><div class="cal-p"><i style="background:linear-gradient(135deg,#14b8a6,#22c55e)"></i><div class="t"><b>12:00 ⚡</b><small>Giveaway 🎁</small></div></div></div><div class="cal-c"></div><div class="cal-t">15:00</div><div class="cal-c today"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-t">18:00</div><div class="cal-c today"></div><div class="cal-c"></div><div class="cal-c"><div class="cal-slot">Queue · 18:00</div></div><div class="cal-c"></div><div class="cal-c"><div class="cal-slot">Queue · 18:00</div></div><div class="cal-c"></div><div class="cal-c"><div class="cal-p"><i style="background:linear-gradient(135deg,#a855f7,#ec4899)"></i><div class="t"><b>18:00</b><small>Lookbook</small></div></div></div><div class="cal-t">21:00</div><div class="cal-c today"></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"><div class="cal-p dm"><div class="t"><b>21:00</b><small>2 scheduled DMs</small></div></div></div><div class="cal-c"></div><div class="cal-c"></div><div class="cal-c"></div></div>
@@ -2775,7 +2775,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
     <tbody>
       <tr><td class="m">reply_window_closed</td><td>Instagram: "Instagram allows replies for 24 hours after the customer's last message." WhatsApp: "WhatsApp allows free-form replies for 24 hours after the customer's last message. Send an approved template instead."</td><td>Choose template (WhatsApp)</td></tr>
       <tr><td class="m">account_needs_reconnect</td><td>"@{username} needs reconnecting before you can send from it."</td><td>Reconnect</td></tr>
-      <tr><td class="m">capability_unavailable</td><td>Missing permission: "@{username} didn't give Social Hood permission for this. Reconnect to allow it." Not supported: "{Platform} doesn't support this."</td><td>Reconnect (missing permission only)</td></tr>
+      <tr><td class="m">capability_unavailable</td><td>Missing permission: "@{username} didn't give Amplychat permission for this. Reconnect to allow it." Not supported: "{Platform} doesn't support this."</td><td>Reconnect (missing permission only)</td></tr>
       <tr><td class="m">recipient_unavailable</td><td>"This person can't receive messages right now."</td><td></td></tr>
       <tr><td class="m">platform_rate_limited</td><td>"Instagram is limiting messages from this account. Try again in a few minutes."</td><td>Retry</td></tr>
       <tr><td class="m">platform_unavailable</td><td>"Instagram didn't respond."</td><td>Retry</td></tr>
@@ -2785,14 +2785,14 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
       <tr><td class="m">entitlement_required</td><td>"{Feature} is part of Pro."</td><td>Start 7-day trial / Upgrade</td></tr>
       <tr><td class="m">unsupported_media</td><td>"Instagram can't publish this file. Use JPEG or PNG images, or MP4 video up to 90 seconds."</td><td></td></tr>
       <tr><td class="m">ig_not_professional</td><td>"Only Instagram business and creator accounts can connect. Switch the account type in the Instagram app, then try again."</td><td>Try again</td></tr>
-      <tr><td class="m">account_in_use</td><td>"This account is connected to another Social Hood workspace. Disconnect it there first."</td><td></td></tr>
+      <tr><td class="m">account_in_use</td><td>"This account is connected to another Amplychat workspace. Disconnect it there first."</td><td></td></tr>
       <tr><td class="m">wa_choose_business_account</td><td>"Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one in Meta's popup."</td><td>Connect again</td></tr>
       <tr><td class="m">wa_no_phone_number</td><td>"This WhatsApp Business Account has no phone number yet. Add and verify one in Meta's popup or in WhatsApp Manager, then connect again. Meta's test numbers can't be connected this way; use a number your business owns."</td><td>Connect again</td></tr>
       <tr><td class="m">wa_choose_number</td><td>"This WhatsApp Business Account has more than one number. Connect again and pick the one to use in Meta's popup."</td><td>Connect again</td></tr>
       <tr><td class="m">state_invalid</td><td>"That connection link expired."</td><td>Try again</td></tr>
       <tr><td class="m">validation_error</td><td>Field messages inline, e.g. "Add at least one keyword."</td><td></td></tr>
       <tr><td class="m">offline (client)</td><td>"You're offline. Reconnect to send messages."</td><td></td></tr>
-      <tr><td class="m">internal</td><td>"Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com with code {request_id}."</td><td>Try again</td></tr>
+      <tr><td class="m">internal</td><td>"Something went wrong on our side. Try again. If it keeps happening, email support@amplychat.com with code {request_id}."</td><td>Try again</td></tr>
     </tbody>
   </table></div>
   <h4>Empty states</h4>
@@ -3328,7 +3328,7 @@ erDiagram
       <tr><td class="m">topics</td><td class="m">jsonb</td><td>yes</td><td></td><td><code>[{label, count, positive, neutral, negative}]</code>, ≤ 6</td></tr>
       <tr><td class="m">summary_updated_at · synced_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td></td></tr>
       <tr><td class="m">comments_since_summary</td><td class="m">integer</td><td>no</td><td class="m">0</td><td>trigger at 20</td></tr>
-      <tr><td class="m">published_target_id</td><td class="m">uuid</td><td>yes</td><td></td><td>when published by Social Hood</td></tr>
+      <tr><td class="m">published_target_id</td><td class="m">uuid</td><td>yes</td><td></td><td>when published by Amplychat</td></tr>
     </tbody>
   </table></div>
   <p>Keys: <code>uq (social_account_id, platform_media_id)</code>; index <code>(workspace_id, posted_at DESC)</code>.</p>
@@ -3772,7 +3772,7 @@ interface Notification {
       <tr><td class="m">P5</td><td>AI: analysis, knowledge and gaps, suggestions, auto mode, follow-up reminders</td><td class="num">12</td><td>F-08, F-09, F-14, F-17, F-18 pass; eval meets PRD targets</td></tr>
       <tr><td class="m">P6</td><td>Comment intelligence</td><td class="num">5</td><td>F-12 passes; post summaries accurate on a real post</td></tr>
       <tr><td class="m">P7</td><td>Instagram publishing</td><td class="num">7</td><td>Image, carousel with video and Reel publish to a test account; F-13 passes</td></tr>
-      <tr><td class="m">PA</td><td>Ask Social Hood (read-only agent), after P7</td><td class="num">6</td><td>Agent eval targets met (≥ 90% tool choice, numbers equal to the database, no invented numbers); F-AGT flows pass</td></tr>
+      <tr><td class="m">PA</td><td>Ask Amplychat (read-only agent), after P7</td><td class="num">6</td><td>Agent eval targets met (≥ 90% tool choice, numbers equal to the database, no invented numbers); F-AGT flows pass</td></tr>
       <tr><td class="m">P8</td><td>Billing, entitlements, push, digest, measured plan limits</td><td class="num">9</td><td>F-15 and F-19 pass; plan limits set from measured AI cost</td></tr>
       <tr><td class="m">P9</td><td>Home, hardening, deployment, launch</td><td class="num">7</td><td>Launch checklist (§6.4) complete</td></tr>
           </tbody>
@@ -3909,7 +3909,7 @@ interface Notification {
     </tbody>
   </table></div>
 
-  <h3>PA · Ask Social Hood (after P7)</h3>
+  <h3>PA · Ask Amplychat (after P7)</h3>
   <div class="tw"><table class="xwide">
     <thead><tr><th>ID</th><th>Task</th><th>Covers</th><th>Done when</th></tr></thead>
     <tbody>

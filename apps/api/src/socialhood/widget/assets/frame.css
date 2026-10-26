@@ -1,4 +1,4 @@
-/* Social Hood chat widget: the styles of the frame (GR-28). Its own small stylesheet: it shares
+/* Amplychat chat widget: the styles of the frame (GR-28). Its own small stylesheet: it shares
    nothing with the app or the host page. --accent and --on-accent are set from the widget's
    colour; the rest follow the visitor's light or dark preference. */
 :root {

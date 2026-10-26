@@ -64,8 +64,8 @@ from socialhood.schemas.widget import (
 )
 from socialhood.security import widget_tokens
 from socialhood.security.widget_tokens import VisitorClaim
+from socialhood.services import contact_names, ingest, leads
 from socialhood.services import contacts as contacts_service
-from socialhood.services import ingest, leads
 from socialhood.services.webhooks import events as webhook_events
 from socialhood.services.widget import abuse, origin
 from socialhood.services.widget.settings import day_start
@@ -383,7 +383,7 @@ async def save_email(
         changed = ["email"] if contact.email != email else []
         contact.email, contact.email_source, contact.email_verified = email, "widget", False
         if name:
-            contact.display_name = name
+            contact_names.apply_platform_name(contact, name)
         if created:
             await webhook_events.contact_created(session, contact, platform="web")
         await session.flush()

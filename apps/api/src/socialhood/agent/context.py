@@ -1,6 +1,6 @@
 """Memory for a run (TR-AGT-02, TA.2; agent-architecture.html §4 Memory).
 
-No separate vector memory: what the agent knows comes from what Social Hood already stores.
+No separate vector memory: what the agent knows comes from what Amplychat already stores.
 
 - Business: the knowledge base through the search_knowledge tool and the product catalogue through
   search_products (GR-31); the brand voice (ai_settings)
@@ -18,6 +18,7 @@ instead of guessing (FR-AGT-06).
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -60,8 +61,8 @@ class AgentContext:
     workspace_name: str
     timezone: ZoneInfo
     now: datetime  # the run's clock: every relative time resolves against it (FR-AGT-05)
-    # The connected accounts in plain words, with what each can't do ("Instagram @maple.bakery:
-    # insights not granted"), so the answer can say so (FR-AGT-06).
+    # The connected accounts in plain words, with what each can't do ("Instagram "@maple.bakery":
+    # insights not granted"; names are quoted data), so the answer can say so (FR-AGT-06).
     accounts: list[str] = field(default_factory=list)
     brand_voice: str | None = None  # from ai_settings: trusted settings, not customer text
     history: list[Exchange] = field(default_factory=list)  # oldest first, at most 6
@@ -69,17 +70,27 @@ class AgentContext:
     last_typed: str | None = None
 
 
+NAME_LIMIT = 60
+
+
+def quoted(name: str) -> str:
+    """A name the platform or a member chose, as a quoted string on one line (VIS-X2): it is data
+    in the system prompt, so a name that reads like an instruction stays inside its quotes."""
+    flat = " ".join(name.split())[:NAME_LIMIT]
+    return json.dumps(flat, ensure_ascii=False)
+
+
 def describe_account(account: SocialAccount) -> str:
-    """An account in plain words with what it can't do."""
+    """An account in plain words with what it can't do. Names are quoted (see ``quoted``)."""
     platform = account.platform
     if platform == Platform.WHATSAPP:
         name = account.display_name or account.phone_number or "WhatsApp number"
-        described = f"WhatsApp {name}"
+        described = f"WhatsApp {quoted(name)}"
     elif platform == Platform.WEB:
         described = "Website chat widget"
     else:
         handle = f"@{account.username}" if account.username else account.display_name or "account"
-        described = f"{platform.capitalize()} {handle}"
+        described = f"{platform.capitalize()} {quoted(handle)}"
     notes: list[str] = []
     note = STATUS_NOTES.get(account.status)
     if note:

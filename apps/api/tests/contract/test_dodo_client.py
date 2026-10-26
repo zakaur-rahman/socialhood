@@ -26,7 +26,7 @@ PRO = "pdt_fvZrlRdUeVxrLfGIP6iYP"
 SUB = "sub_YEaU8sj51t3HtOOyHktA7"
 CUSTOMER = "cus_S8fu70OJYoHjkD1pRw4iH"
 WORKSPACE = "0b4f6c2e-8f1d-4f4e-9b1a-3c2d1e0f9a8b"
-RETURN_URL = "https://app.socialhood.com/w/acme/settings/billing?checkout=return"
+RETURN_URL = "https://app.amplychat.com/w/acme/settings/billing?checkout=return"
 
 
 def fixture(name: str) -> dict[str, Any]:

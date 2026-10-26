@@ -221,12 +221,46 @@ class AccountInsights:
 
 
 @dataclass(frozen=True, kw_only=True)
+class UserTag:
+    """An Instagram account tagged on an image at a point (fractions of its width and height,
+    from the top left, 0 to 1)."""
+
+    username: str
+    x: float
+    y: float
+
+
+@dataclass(frozen=True, kw_only=True)
+class PublishExtras:
+    """Instagram's optional container fields (FR-PUB-07, C-134). ``collaborators`` and
+    ``location_id`` go on feed images, Reels and carousel containers; ``user_tags`` on images;
+    the cover and audio name on Reels. Other platforms ignore them."""
+
+    collaborators: tuple[str, ...] = ()
+    location_id: str | None = None
+    user_tags: tuple[UserTag, ...] = ()
+    cover_url: str | None = None  # a Reel's cover image (wins over thumb_offset_ms)
+    thumb_offset_ms: int | None = None  # a Reel's cover frame, in ms from the start
+    audio_name: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class CollaboratorStatus:
+    """A collaborator's invite on a published post (Instagram's ``invite_status``)."""
+
+    username: str
+    status: Literal["pending", "accepted"]
+
+
+@dataclass(frozen=True, kw_only=True)
 class ContainerMedia:
     """One image or video for a container: a public URL the platform fetches (our storage's
     delivery URL: JPEG images, H.264 MP4 video; TR-MED-02)."""
 
     kind: Literal["image", "video"]
     url: str
+    # Instagram user tags on an image (FR-PUB-07); a carousel's go on its image children.
+    user_tags: tuple[UserTag, ...] = ()
 
 
 # A container's processing state (Instagram's status_code). FINISHED: ready to publish; ERROR and
@@ -366,9 +400,15 @@ class PlatformAdapter(Protocol):
         ...
 
     async def create_image_container(
-        self, acct: SocialAccount, *, image_url: str, caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        image_url: str,
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
-        """A single-image post's container; returns its id."""
+        """A single-image post's container; returns its id. ``extras``: Instagram's
+        collaborators, location and user tags (FR-PUB-07)."""
         ...
 
     async def create_reel_container(
@@ -379,6 +419,7 @@ class PlatformAdapter(Protocol):
         caption: str,
         share_to_feed: bool = True,
         page_reel: bool = False,
+        extras: PublishExtras | None = None,
     ) -> str:
         """A Reel's container (single videos publish as Reels, shown in the feed too); returns
         its id. The video processes on the platform: poll ``get_container_status``. A Facebook
@@ -398,9 +439,21 @@ class PlatformAdapter(Protocol):
         ...
 
     async def create_carousel_container(
-        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+        self,
+        acct: SocialAccount,
+        *,
+        children: Sequence[str],
+        caption: str,
+        extras: PublishExtras | None = None,
     ) -> str:
         """The carousel's container from its 2 to 10 children, in order; returns its id."""
+        ...
+
+    async def list_collaborators(
+        self, acct: SocialAccount, media_ref: str
+    ) -> list[CollaboratorStatus]:
+        """A published post's collaborators with their invite status (FR-PUB-07). Empty where
+        the platform has none."""
         ...
 
     async def get_container_status(

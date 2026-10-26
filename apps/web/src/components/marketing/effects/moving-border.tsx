@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Moving Border, from Aceternity UI's free "moving-border" (ui.aceternity.com/components/moving-border),
- * adapted for Social Hood (C-068) as a frame around a card instead of a button:
+ * adapted for Amplychat (C-068) as a frame around a card instead of a button:
  * - a soft brand glow travels along the card's edge, one lap every `duration` ms;
  * - the frame loop runs only while the card is on screen, and never with reduced motion: then
  *   the edge is a still brand line;

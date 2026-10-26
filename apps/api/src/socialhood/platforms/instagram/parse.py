@@ -32,6 +32,7 @@ from typing import Any, Literal
 from urllib.parse import parse_qs, urlsplit
 
 from socialhood.platforms.base import (
+    CollaboratorStatus,
     CommentPage,
     ContainerStatus,
     ContainerStatusCode,
@@ -584,6 +585,20 @@ def created_id(body: object) -> str | None:
     """``{"id": "…"}``: a new container (``POST /{ig}/media``), a published post
     (``POST /{ig}/media_publish``) or a comment (``POST /{media_id}/comments``)."""
     return _id(body)
+
+
+def collaborators(body: object) -> list[CollaboratorStatus]:
+    """``GET /{media}/collaborators?fields=username,invite_status``: ``{"data": [{"username": "…",
+    "invite_status": "Accepted" | "Pending"}]}``. Anything but Accepted counts as pending."""
+    out: list[CollaboratorStatus] = []
+    for item in _data(body):
+        username = _str(item.get("username"))
+        if username:
+            accepted = str(item.get("invite_status") or "").strip().lower() == "accepted"
+            out.append(
+                CollaboratorStatus(username=username, status="accepted" if accepted else "pending")
+            )
+    return out
 
 
 def publishing_quota(body: object, *, default_limit: int) -> PublishingQuota:

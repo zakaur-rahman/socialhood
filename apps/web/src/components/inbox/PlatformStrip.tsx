@@ -1,6 +1,6 @@
 import { Layers } from "lucide-react";
 
-import { PLATFORM_BG } from "@/components/connections/PlatformGlyph";
+import { PLATFORM_LOGO_BG } from "@/components/connections/PlatformGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Platform } from "@/lib/api/types";
@@ -48,7 +48,7 @@ export function PlatformStrip({
             {choice === "all" ? (
               <Layers className="size-3.5 shrink-0" aria-hidden />
             ) : (
-              <span className={cn("size-2 shrink-0 rounded-full", PLATFORM_BG[choice])} aria-hidden />
+              <span className={cn("size-2 shrink-0 rounded-full", PLATFORM_LOGO_BG[choice])} aria-hidden />
             )}
             <span className="truncate">{choice === "all" ? "All" : PLATFORM_LABEL[choice]}</span>
           </ToggleGroupItem>

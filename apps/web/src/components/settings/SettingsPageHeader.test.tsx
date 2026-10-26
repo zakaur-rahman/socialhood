@@ -38,7 +38,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Members",
       "Audit log",
       "Activity",
-      "Ask Social Hood",
+      "Ask Amplychat",
     ]);
   });
 });

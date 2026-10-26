@@ -5,7 +5,7 @@ gets the caller's permissions from ``GET /v1/w/{wid}/permissions`` instead of ke
 copy. A new write route must declare one: tests/unit/test_permission_routes.py walks the OpenAPI
 routes and fails for a write route that does not.
 
-- Agents reply, tag and assign, and use Ask Social Hood.
+- Agents reply, tag and assign, and use Ask Amplychat.
 - Admins also manage automations, knowledge and settings (integrations, webhooks, saved replies,
   business hours, segments, contact fields, templates), connect channels, publish, read the
   audit log, and invite agents.
@@ -27,7 +27,7 @@ class Permission(StrEnum):
     REPLY = "inbox.reply"  # send and schedule messages, reply to comments, AI help in a thread
     TAG = "contacts.tag"  # tag contacts, edit a contact, set a lead stage
     ASSIGN = "conversations.assign"  # change a conversation's status and assignment
-    ASK = "ask.use"  # Ask Social Hood
+    ASK = "ask.use"  # Ask Amplychat
     # Admin tier
     AUTOMATIONS_MANAGE = "automations.manage"
     KNOWLEDGE_MANAGE = "knowledge.manage"
