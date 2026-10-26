@@ -42,7 +42,8 @@ MAX_BYTES = 2 * 1024 * 1024
 HTML_TYPES = frozenset({"text/html", "application/xhtml+xml"})
 HTML_ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1"
 REDIRECTS = frozenset({301, 302, 303, 307, 308})
-USER_AGENT = "AmplychatBot/1.0 (+https://amplychat.com/bot)"
+# Who to contact about our fetcher (the knowledge crawler): the contact page.
+USER_AGENT = "AmplychatBot/1.0 (+https://amplychat.com/contact)"
 
 # Cloud metadata endpoints. Each already falls in a refused range; listed so the intent is plain.
 METADATA = frozenset(

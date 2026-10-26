@@ -6062,3 +6062,498 @@ only: no copy, logo or icons were taken from it. Web only: no API change.
   the new section order and h2.
 - E2E `landing|GR-37|not-found`: 26 passed (layout shift ≤ 0.1 and no sideways scroll at all four
   widths). Screenshots at 375, 768, 1280 and 1536, with and without reduced motion, checked by eye.
+
+## C-142 · Launch SEO: canonical apex, metadata, sitemap, structured data, verification tags (feature/launch-seo)
+
+The public website goes live on Vercel first so Meta can verify the business; this pass makes it
+ready for search engines and for that check.
+
+### Canonical origin (decided)
+- **`https://amplychat.com`** (the apex) is the one public origin. `www.amplychat.com` redirects
+  to it (308, set in Vercel); the signed-in app is the same deployment under `/app` and `/w/…`, so
+  there is no `app.` subdomain any more. `DEFAULT_SITE_URL` (`lib/marketing/site.ts`) is the apex;
+  the API's production `WEB_BASE_URL`, CORS and Clerk authorized parties are the apex too (set in
+  `infra/render.yaml` on feature/launch-sec, C-143; documented in `docs/ops/deploy.md`,
+  `apps/api/.env.example`, BUILD_SPEC OQ-3). Leftover `socialhood.com` hosts in the production
+  workflow's environment URL, the Prometheus targets and the Zapier app's default API base are now
+  `api.amplychat.com` / `api.staging.amplychat.com`.
+- The root layout sets `metadataBase` from the site URL, so every canonical and Open Graph URL is
+  absolute on the apex (also the 404 and the app).
+
+### Metadata
+- Every public page: a unique title of at most 60 characters as shown ("… · Amplychat"), a unique
+  description of 50 to 160 characters, a canonical, Open Graph and a Twitter card with `/og.png`.
+  The landing title is "Amplychat · AI inbox for Instagram and WhatsApp" (`SITE_TITLE_LINE`);
+  `SITE_DESCRIPTION` and eight longer descriptions (pricing, the six GTM pages, the API reference)
+  were shortened. `app/public-metadata.test.ts` finds every `(marketing)` page by glob and holds
+  each `PUBLIC_PATHS` entry to that, so a sitemap entry without a page fails the test.
+- `noindex`: the `(app)` and `(auth)` layouts (`NO_INDEX`), unsubscribe and the 404 (unchanged).
+
+### Sitemap, robots, llms.txt
+- `PUBLIC_PATHS` adds `/developers/api` and `/security` (the page comes from C-143); the footer's
+  "Compare and learn" links the API reference. Each entry has an ISO `lastModified`: the legal
+  pages' "Last updated" date, the others `PAGE_UPDATED` in `site.ts` (bump it when a page's copy
+  changes; a build date would claim every page changed on every deploy).
+- robots.txt also disallows `/sign-up`, `/dev/` and `/api/` (`ROBOTS_DISALLOW`); a test checks no
+  public path, `/apple-icon.png` or `/llms.txt` is blocked.
+- `/llms.txt` (static): the product in plain words and links to every public page.
+
+### Structured data
+- Landing page: one `@graph` with `Organization` (name Amplychat, `legalName` from
+  `LEGAL.entityName`, url, logo `/icons/icon-512.png`, support email, contact point; `sameAs` only
+  once `SOCIAL_PROFILES` has real profiles), `WebSite`, `SoftwareApplication` (offers only when
+  the plan list has a Pro price, else none) and `FAQPage` from the FAQ data.
+- `BreadcrumbList` (Home, then the page) on the GTM pages, pricing, the API reference,
+  data deletion and the three legal pages (from small `layout.tsx` files beside them, so the
+  documents stay untouched). No ratings, reviews or counts anywhere.
+
+### Verification tags
+`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` (`google-site-verification`),
+`NEXT_PUBLIC_BING_SITE_VERIFICATION` (`msvalidate.01`) and
+`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION` (`facebook-domain-verification`), rendered only when
+set (`verificationMetadata`), documented in `apps/web/.env.example` and deploy.md section 4.
+
+### Website without the API
+`next build` with `NEXT_PUBLIC_API_BASE_URL` unset passes and prerenders every public page. The
+plan cards fall back to the bundled plan table and say "See pricing when you sign up"; the
+"Prices couldn't be loaded just now" line is gone (it read as broken on a website-only deploy, and
+the cards already say it). `/developers/api` shows "isn't available right now"; a data-deletion
+status lookup says "Request not found". Clerk keys are still needed on every page (root layout and
+middleware). Deploy.md section 5a covers this first deploy.
+
+### Performance (measured from the build, not a deploy)
+The landing page's LCP is the server-rendered h1 (no hero image); Geist is self-hosted by
+next/font with preload and `font-display: swap`; images below the fold are lazy with `sizes`.
+Client JS on public pages is about 355 to 395 KB gzipped (home 396, pricing 380, a GTM page 365,
+404 354), most of it shared by the root layout: Framer Motion with React DOM (~63 KB), Sentry
+(~67 KB, loaded even with no DSN) and Clerk (~46 KB). Not changed here: making Sentry and Clerk
+load only in the app is a larger change than this pass.
+
+### Owner to-dos
+- Vercel domains: `amplychat.com` primary, `www` redirect, `staging.amplychat.com` (deploy.md §5).
+- Google Search Console and Bing Webmaster Tools: verify `https://amplychat.com/` (tag through the
+  env vars, or DNS TXT), then submit `https://amplychat.com/sitemap.xml`.
+- Meta Business Manager: verify the domain (`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION`), then
+  business verification with the legal name, the website and support@amplychat.com.
+- Add real social profile URLs to `SOCIAL_PROFILES` once they exist.
+
+## C-143 · Launch security pass (feature/launch-sec)
+
+Security hardening for putting the public website live on Vercel at `https://amplychat.com`
+(API on Render later). The full record, with the vendor-dashboard steps for the owner, is the
+"Launch pass" section of `docs/security-checklist.md` (L-1…L-13).
+
+### Decisions made here
+- **HSTS gets `preload`** (two years, `includeSubDomains`). Sending the directive is harmless;
+  submitting the domain to hstspreload.org is the owner's step, after every subdomain is on HTTPS.
+- **`'unsafe-inline'` stays** on `script-src` and `style-src` only (A-4, re-checked): Next.js's
+  per-page inline scripts can't be hashed, and nonces would make the public pages dynamic. A test
+  now pins it to those two directives and keeps `unsafe-eval` out of production.
+- **`upgrade-insecure-requests` on Vercel without an API** (`VERCEL=1` and no
+  `NEXT_PUBLIC_API_BASE_URL`), so the website-only launch gets it; local production builds don't.
+- **Permissions-Policy** turns off 15 features the app never uses; `autoplay` is left alone so a
+  muted marketing video can still play.
+- **security.txt `Expires` is computed**, 360 days ahead (RFC 9116 recommends under a year), and the
+  route revalidates daily, so it never lapses between deploys. Canonical and Policy use `siteUrl()`,
+  so they follow C-142's canonical origin.
+- **`/security` makes no bounty and no legal safe-harbour promise.** It gives the testing rules and
+  says we reply. A safe-harbour sentence is a legal commitment, so it is left to the owner (below).
+- **Production settings refuse inexact origins.** `CORS_ALLOWED_ORIGINS` and
+  `CLERK_AUTHORIZED_PARTIES` must be exact https origins and include `WEB_BASE_URL`'s origin;
+  `API_BASE_URL` and `WEB_BASE_URL` must be https. Staging and local are unchanged.
+- **`infra/render.yaml`** moves off the `socialhood.com` placeholders: web origin
+  `https://amplychat.com` (with C-142), API `api.amplychat.com`, staging `staging.amplychat.com`,
+  `EMAIL_FROM` `Amplychat <support@amplychat.com>` as in `.env.example`.
+- **Dependencies**: `fast-uri` 3.1.8 → 3.1.9 by a lockfile-only edit (a `pnpm update` also drifted
+  rolldown and others, so it wasn't used). pip-audit was clean.
+
+### Left for other tracks
+- `/security` needs a sitemap entry (`PUBLIC_PATHS` in `lib/marketing/site.ts`, SEO track, C-142)
+  and a footer link (legal or SEO track).
+- `docs/ops/deploy.md` still shows `app.amplychat.com` for `WEB_BASE_URL` and the Vercel domain; the
+  SEO track's canonical change updates it to match `infra/render.yaml`.
+
+### Owner decisions (recommended values)
+- Safe harbour on `/security`: recommended "If you follow these rules and act in good faith, we
+  won't take legal action against you for your research."
+- When to submit HSTS preload: after the API and Clerk production subdomains are live on HTTPS.
+- Switch from the Clerk development key to the production instance before real sign-ups.
+
+## C-144 · Legal and trust pages for launch (feature/launch-legal)
+
+Brief: make the public legal pages fit for Meta business verification and App Review, India's DPDP
+Act 2023 and Rules, the IT Rules 2011 (SPDI), Razorpay's and Dodo Payments' site reviews, and Google's
+API Services User Data Policy, for the facts today. Web only: no API change. **Not legal advice: a
+lawyer must review every page before launch (launch checklist §6.4).**
+
+### What changed
+- **`LEGAL` (`apps/web/src/lib/legal.ts`).** `entityName` is `UNCHARTD`. *Decision:* the Udyam legal
+  name in capitals, not "unchartd", because Meta compares the site's legal name with the registration;
+  one value, used by every page, the footer ("© year UNCHARTD") and the structured data. New fields,
+  each rendered only when set: `entityType` (set: "Sole proprietorship registered in India"),
+  `proprietor` (set: Zakaur Rahman), `phone`, `grievanceResponseDays`, `supportResponseTime`.
+  `LegalFacts` shows them in order: Operated by, Business type, Proprietor, Registered address,
+  Phone, Email, Grievance officer. `grievanceDays()` defaults to 30 (the IT Rules 2011 ask for one
+  month while they apply) and never says more than 90 (DPDP Rules, rule 14(3)).
+- **Privacy Policy**, rewritten on the old one: the operator; Facebook Pages and website chat as
+  sources; a "Data from Instagram, Facebook and WhatsApp" section (what we get, why, how long, how to
+  delete: Meta Platform Terms §4); website chat visitors' data (messages, the name and email they
+  give, consent records with the words shown, IP for abuse limits, a random visitor ID in local
+  storage); contacts, orders and consent records; the AI disclosure (drafted by Google Gemini from the
+  business's own knowledge; Auto sends without review only if the business turns it on; paid API, so
+  Google doesn't use it to improve its products); a **Google user data** section with Google's Limited
+  Use sentence (Sheets uses only `drive.file`, a non-sensitive scope, so the statement is not strictly
+  required; it is there because Google's OAuth review looks for it, and it covers Google sign-in
+  through Clerk too); the sub-processor table with a "Where" column; a second table for the services a
+  business connects with its own account (Razorpay, Shopify, Google Sheets, Zapier, the API and
+  webhooks) and exactly what each gets (checked in `razorpay/http.py`: name, phone, order number and
+  amount; Shopify `read_products` only); retention for Pro **and Max**, and the 30-day webhook and
+  Sheets delivery logs (`jobs/tasks/purge.py`); the 24-hour deletion promise (`PURGE_WITHIN`,
+  `services/workspace_deletion.py`); rights with how to ask and which identifier to give (rule 14(1)),
+  consent withdrawal as easy as giving it, nomination, grievances answered within `grievanceDays()`
+  days (rule 14(3)), the Data Protection Board; breach notice contents (rule 7); children; transfers
+  outside India.
+- **Cookies.** *Decision: no banner.* We set only strictly necessary storage: Clerk's session
+  cookies, the `sh_theme` theme cookie (C-129), local storage for view preferences and the widget's
+  visitor ID, and the push service worker. No analytics or ad cookies and no third-party trackers
+  (checked `package.json`: only Sentry, which sets no cookies). The DPDP Act has no cookie-specific
+  rule, and strictly necessary storage needs no consent under the EU ePrivacy rule either, so a
+  statement in the Privacy Policy is enough. Revisit if analytics or an ad pixel is ever added.
+- **Terms**: the operator and proprietor; Facebook Pages "with Meta's approval" and website chat; Max
+  "coming soon"; **Dodo Payments is the merchant of record** (checkout, payment, tax, invoice; its
+  terms apply to the payment); a Delivery section; connected services (Razorpay, Shopify, Sheets,
+  Zapier), and we never hold money a business's customers pay through its Razorpay; the business is
+  the Data Fiduciary for its customers' data; "Contact and complaints".
+- **Refund and Cancellation Policy** (renamed from Refund Policy, same `/refunds`): a Cancelling
+  section (how, when it takes effect, no fee, deleting the workspace cancels at once), because both
+  Razorpay and Dodo ask for a "refund and cancellation" policy; refunds go through Dodo as merchant of
+  record; payments to businesses through their own Razorpay are theirs to refund. The refund terms
+  themselves are unchanged and still OWNER REVIEW.
+- **Shipping and Delivery Policy**, new, `/shipping`. *Decision: its own short page rather than only a
+  Terms section*, so a payment reviewer finds it under the name they look for; Terms has a Delivery
+  section that links to it. It says nothing is shipped, when access starts, what to do if a plan
+  doesn't start, and that businesses' own orders ship on their terms.
+- **Contact us**, new, `/contact`: "About us" (who runs it and what it is, for Razorpay's About us
+  link) and "How to reach us" (email; phone once set; grievances and the reply time; the support reply
+  time once set), the facts card, and links to the FAQ, pricing, data deletion, developers and privacy.
+  `ContactDetails` is in `components/marketing/legal/ContactDetails.tsx`.
+- **Data deletion page**: Instagram **or Facebook** (the callback serves both: `jobs/tasks/privacy.py`),
+  "finishes within 24 hours", and a "Who runs Amplychat" facts card (app-review O-2 wants the legal
+  name on this page too).
+- **Footer and sitemap** (`lib/marketing/site.ts`, shared with the SEO track): the legal links are
+  Privacy policy, Terms of service, Refund and cancellation, Shipping and delivery, Data deletion and
+  Contact us, then Security (`/security`, the security track's page, C-143, at the coordinator's
+  request; it resolves once the branches are combined). `/shipping` and `/contact` are in
+  `PUBLIC_PATHS`; `/security` is left to the security track's sitemap entry.
+- `LEGAL_DOCUMENTS.lastUpdated` is 2026-10-26 for all four documents.
+- `docs/ops/app-review.md` O-2 lists `/contact` and the legal name casing.
+
+### Requirements and where the site meets them
+
+| Requirement | Source | Where |
+|---|---|---|
+| Meta: public privacy policy URL, not geoblocked | [Meta Platform Terms §4(a)](https://developers.facebook.com/terms/) | `/privacy`, linked in every footer |
+| Meta: what Platform Data is processed, how, why, and how to request deletion | [Platform Terms §4(b)](https://developers.facebook.com/terms/) | `/privacy` sections 2, 4 and 10 |
+| Meta: deletion available to every user; data deletion callback and status page | [Platform Terms §4(b)](https://developers.facebook.com/terms/), [data deletion callback](https://developers.facebook.com/docs/development/create-an-app/app-dashboard/data-deletion-callback) | `/data-deletion` (status by code), the API callback, `/privacy#deleting` |
+| Meta verification: legal name, website and email match | `docs/ops/app-review.md` O-2 | `UNCHARTD` and support@amplychat.com on every legal page, the footer and `/contact`; the address once set |
+| DPDP: plain-language notice, itemised data, purposes, how to withdraw consent, exercise rights and complain to the Board | DPDP Act s.5 and s.6; [DPDP Rules, rule 3](https://dpdpa.com/dpdparules/rule3.html) | `/privacy` sections 2, 3 and 11 (consent prompts in the app are the businesses' notices, not ours) |
+| DPDP: publish how to make rights requests and the identifier needed | [rule 14(1)](https://dpdpa.com/dpdparules/rule14.html) | `/privacy#your-rights`, "How to ask" |
+| DPDP: grievance system and response period (at most 90 days) | [rule 14(3)](https://dpdpa.com/dpdparules/rule14.html) | `/privacy#your-rights`, `/contact` (30 days by default) |
+| DPDP: nomination | Act s.14, rule 14(4) | `/privacy#your-rights` |
+| DPDP: contact of the person who answers questions | rule 9 | support@amplychat.com everywhere; the grievance officer once set |
+| DPDP: breach intimation to each affected person and the Board | Act s.8(6), rule 7 | `/privacy#security` |
+| DPDP: children (under 18) | Act s.9 | `/privacy#children`, Terms (18+) |
+| DPDP: retention and erasure | Act s.8(7), rule 8 | `/privacy#retention`, `#deleting` |
+| IT Rules 2011 (SPDI): privacy policy on the website; grievance officer's name and contact published; grievances answered in one month | [IT (SPDI) Rules 2011, rules 4 and 5(9)](https://www.meity.gov.in/writereaddata/files/GSR313E_10511%281%29.pdf) | `/privacy`; one month by default; **the officer's name needs `grievanceOfficer` set** |
+| Razorpay: About us, Contact us, Pricing, Terms, Privacy and Refunds links | [Razorpay business website details](https://razorpay.com/docs/payments/dashboard/account-settings/business-website-details/) | `/contact` (About us and Contact us), `/pricing`, `/terms`, `/privacy`, `/refunds` |
+| Razorpay: Contact us with registered name, address, phone and email; shipping and refund timelines | [Razorpay's guide](https://razorpay.com/learn/breaking-down-the-requirements-for-accepting-international-payments-through-razorpay/) | `/contact` (**phone and address need the owner**), `/shipping`, `/refunds` |
+| Dodo: public pricing with the billing interval, Terms, Privacy, Refund and Cancellation, a monitored contact, linked from the footer, matching the form | [Dodo verification process](https://docs.dodopayments.com/miscellaneous/verification-process), [business verification](https://docs.dodopayments.com/guides/business-verification) | `/pricing`, `/terms`, `/privacy`, `/refunds`, `/contact`, the footer on every page |
+| Google: a privacy policy that documents Google user data use; Limited Use | [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), [Drive scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) (`drive.file` is non-sensitive) | `/privacy#google-user-data` |
+
+Notes on the sources: the DPDP Rules were notified in November 2025 (G.S.R. 846(E)), with most
+duties starting 18 months later (about May 2027); the dpdpa.com pages are a mirror, so check the
+Gazette text. The SPDI Rules apply until the DPDP Act's repeal of IT Act s.43A takes effect.
+Razorpay's own page lists no shipping policy, but its guide and its reviewers ask for one. Dodo's
+docs don't ask for the legal name or a merchant-of-record line on the site; we state both anyway.
+
+### Owner decisions (unset until the owner sets them in `LEGAL`)
+
+| Field | Recommended value | Why it matters |
+|---|---|---|
+| `registeredAddress` | Publish it, or a business address you can receive post at (a virtual office is fine) | Razorpay wants an address on Contact us; Meta may compare it with the Udyam record |
+| `phone` | A business number you answer (a separate SIM or a virtual number) | Razorpay's Contact us check |
+| `grievanceOfficer` | `{ name: "Zakaur Rahman", email: "support@amplychat.com" }` | IT Rules 2011 rule 5(9) want the name published; DPDP rule 9 a contact |
+| `grievanceResponseDays` | 30 (the default) | One month satisfies both the SPDI and DPDP rules |
+| `supportResponseTime` | "within 2 working days" | Shown on `/contact`; promise only what you can keep |
+| `governingLaw` | "the laws of India" | Adds the Governing law section to Terms |
+| `jurisdiction` | "the courts at Bettiah, Bihar" (or the district courts of Pashchim Champaran) | The same section |
+| `effectiveDate` | The day the site goes live | Shown as "Effective …" |
+| Refund terms | Keep the current default (no partial-period refunds, billing errors refunded within 30 days of the charge) unless you want a first-payment money-back window | Marked OWNER REVIEW in `/refunds` |
+
+Also for the owner to confirm: the "Where" column of the privacy table. Render and Vercel are
+Singapore (`docs/ops/deploy.md`, `vercel.json`); Clerk, Cloudinary, Resend and Sentry are given as the
+United States and Dodo as India and where it processes payments, from the providers' defaults, not
+from our account settings. Check each dashboard (Sentry's region shows in the DSN host). The shipping
+page says a paid plan shows "within a few minutes" and to write after an hour; adjust if Dodo's
+webhooks are slower in production.
+
+### Checks
+- `next typegen`, `tsc --noEmit`, `pnpm lint`: clean.
+- Vitest `src/lib/legal.test.tsx` (new: the owner fields stay unset, the new facts render only when
+  set, `grievanceDays` and `telHref`, the contact page with today's config and with every field set,
+  the shipping page in the all-pages check), `src/app/seo.test.ts` (shipping metadata, the two new
+  sitemap paths, the new date), `app/(marketing)`, `components/marketing` and the copy lint: all pass.
+- E2E and screenshots are left to the coordinator's combined pass.
+
+## C-145 · Production on one GCP VM with Docker Compose (feature/vm-deploy)
+
+Brief: the owner created a VM (GCP `amplychat-prod`, e2-standard-2, Singapore, static IP
+34.126.136.162) and wants Amplychat deployed there instead of the Render + Vercel plan
+(`docs/ops/deploy.md`). This entry covers the deploy code, the docs and a local proof. The first
+deploy on the VM is done by the coordinator with the owner.
+
+### What changed
+- **Images.** `apps/api/Dockerfile` uses Python 3.13 slim (trixie) and uv 0.9.5. It runs
+  `uv sync --locked --no-dev` in a builder stage; the runtime has only the venv, `alembic.ini`,
+  `migrations/` and `scripts/worker.sh`, runs as uid 10001 and has a `/healthz` HEALTHCHECK. One
+  image runs the API (CMD: uvicorn as in `render.yaml`), the worker (`bash scripts/worker.sh`) and
+  migrations (`alembic upgrade head`). `apps/web/Dockerfile` builds the pnpm workspace (corepack
+  uses `packageManager`, `pnpm fetch` then an offline install) and runs the Next.js standalone
+  `server.js` as `node` on port 3000. Every `NEXT_PUBLIC_*` in `apps/web/.env.example` is a build
+  argument. The Sentry token is an optional BuildKit secret. `CLERK_SECRET_KEY` comes only at run
+  time.
+- **`next.config.ts`:** `output: "standalone"` with `outputFileTracingRoot` and `turbopack.root` at
+  the monorepo root, **only when `NEXT_OUTPUT=standalone`** (set in the Dockerfile). *Decision:*
+  `next start` in the e2e stack (`scripts/e2e-stack.mjs`) doesn't work with standalone output, and
+  Vercel, `next dev` and the tests have no reason to change. So the default output is untouched.
+- **`infra/vm/`:**
+  - `compose.yml` (project `amplychat`): `caddy` (fixed address 172.30.10.10 on the `edge`
+    network), `web`, and under the profile `api`: `postgres` (pg18 + pgvector, tuned for about
+    1.5 GB, `max_connections=200`), `valkey` (no persistence, `noeviction`, 256 MB), `migrate`
+    (one-shot; `api` and `worker` wait for `service_completed_successfully`), `api` and `worker`.
+    Postgres and Valkey sit on an `internal` network and are never published.
+  - Memory limits total about 5.9 GB. Logs are json-file, 10 MB × 5. Images are
+    `ghcr.io/zakaur-rahman/amplychat-{api,web}:${IMAGE_TAG}`.
+  - **Website-only mode** is `COMPOSE_PROFILES` unset (`caddy` + `web`). The `Caddyfile` turns
+    the proxy error for a missing API into a plain 503 with `Retry-After`.
+  - `Caddyfile`: automatic HTTPS for the three hosts (ACME email support@amplychat.com), `www` →
+    apex 308, no write timeout and `flush_interval -1` for the SSE stream, 10 MB request bodies
+    (the API caps at 5 MB; media goes straight to Cloudinary), zstd/gzip for text but never
+    `text/event-stream`, and no `Server` header.
+  - The Caddyfile also keeps a JSON access log. The log drops OAuth `code`/`state`, `token` and
+    Meta's `hub.verify_token`/`hub.challenge` from query strings. Hosts come from the
+    environment, so a local run uses `localhost`.
+  - `api.env.example` and `web.env.example` tag every variable [fixed], [generated] or [owner].
+  - `gen-secrets.sh` writes `api.env` and `postgres.env` (mode 600, never overwrites, never
+    prints a value). It fills the database password into both, plus `METRICS_TOKEN`, the two
+    webhook verify tokens, a Fernet key and a VAPID P-256 pair from openssl.
+  - `deploy.sh` takes a tag, `--rollback` or `--status`. It locks, writes `IMAGE_TAG`, pulls,
+    runs `up -d` (migrate first), waits for health, records `PREVIOUS_IMAGE_TAG` and prunes
+    images unused for 10 days. When a deploy fails, it starts the previous tag again and exits 1.
+  - `backup.sh`: nightly `pg_dump -Fc`, checked with `pg_restore --list`. It keeps 7 daily and 4
+    weekly dumps and nothing older than 30 days, with an optional `gcloud storage cp` to
+    `BACKUP_GCS_BUCKET`.
+- **`.github/workflows/production.yml`** replaces the Render deploy-hook job:
+  - `prepare` picks the SHA. A manual run's `tag` must be a 40-hex SHA; it skips the build and
+    checks both images exist in GHCR.
+  - `build` is a matrix of `api` and `web`, using Buildx with the GHA cache. It pushes `:<sha>` and
+    `:latest` with `packages: write`.
+  - `deploy` runs in the `production` environment (the owner's approval). It sets up SSH from
+    `VM_HOST`/`VM_USER`/`VM_SSH_KEY`/`VM_KNOWN_HOSTS`, tars `infra/vm/` (never env files) into
+    `/opt/amplychat` and runs `deploy.sh <sha>`.
+- `infra/render.yaml` is marked superseded. Docs: the new `docs/ops/deploy-vm.md` (runbook);
+  pointers at the top of `deploy.md` and `backup.md`, in `runbook.md` and in `branching.md`
+  (deploy step, secrets, workflows, what deploys where). `.gitignore` ignores `*.env`.
+
+### Decisions
+- **The web build variables live in a second environment, `production-build`.** It has no
+  reviewers and its deployment branch is `main`. The brief asks for GitHub *environment*
+  variables. Putting them on `production` would make the build job wait for an approval too,
+  which means two approvals per release. Repository variables would work but aren't
+  per-environment.
+- **The Postgres password is shared through a third file, `postgres.env`,** not by giving the
+  postgres container all of `api.env`. Least privilege: the database container never sees the
+  vendor keys. `gen-secrets.sh` writes the same password to both files.
+- **`IMAGE_TAG` has no default.** `docker compose config` needs it set
+  (`IMAGE_TAG=x docker compose -f infra/vm/compose.yml config`). A `latest` default would let a
+  stray `docker compose up` deploy an image that was built but never approved.
+- **Uvicorn's loop:** auto (uvloop on Linux), as on Render. The selector-loop flag in the e2e stack
+  exists only for Windows.
+- **API forwarded headers** are trusted only from Caddy's fixed address
+  (`FORWARDED_ALLOW_IPS=172.30.10.10`). Rate limits keep reading `X-Forwarded-For` from the right
+  (`CLIENT_IP_HEADER`). Caddy replaces any `X-Forwarded-For` a client sends, so the header holds
+  exactly the client's address.
+- **Worker lanes are 10/4** (staging-sized) instead of Render production's 20/8: two vCPUs shared
+  with Postgres and the web.
+- **One uvicorn process**, as on Render's single instance. SSE, metrics and rate limits are in
+  Valkey, so `--workers 2` is a safe later step.
+- **Valkey has no persistence.** It holds only non-durable data (`docs/ops/backup.md`).
+
+### Follow-ups (not done here)
+- **Privacy policy hosting facts.** `/privacy` names Render and Vercel as sub-processors in
+  Singapore. With the VM, the host is Google Cloud (asia-southeast1, Singapore). The owner and
+  their lawyer should update the sub-processor table and the "where we store data" sentence
+  before launch.
+- **Point-in-time recovery.** The nightly dumps give an RPO of 24 h, against Render's 7 days of
+  point-in-time recovery (§2.13). Add WAL archiving (pgBackRest or WAL-G to the GCS bucket) when
+  the API carries real data.
+- **CSP `upgrade-insecure-requests`** is only added on Vercel builds or when the API URL is https.
+  In website-only mode on the VM it is absent. HSTS already covers the site, so this is cosmetic.
+- **No hosted staging** any more. The Render staging stack is superseded with no VM equivalent.
+
+### Checks (local, Docker Desktop)
+- `IMAGE_TAG=x docker compose -f infra/vm/compose.yml config` validates; `caddy validate` and
+  `caddy fmt` pass. actionlint and shellcheck are clean; yamllint passes (one long line that
+  predates this change).
+- Images built locally: API 125 MB compressed (563 MB on disk), web 109 MB compressed (463 MB on
+  disk).
+- Full stack with a throwaway `api.env` (`APP_ENV=staging`) on ports 8480/8443, with Caddy's
+  internal CA for `localhost`:
+  - `/`, `/contact`, `/pricing` and `/robots.txt` return 200 through Caddy; `www` returns 308 to
+    the apex; HTTP redirects to HTTPS.
+  - The API's `/healthz` returns 200 and `/metrics` returns 401. API responses carry no `Server`
+    header.
+  - Migrations reached 0053, with the `vector`, `pg_trgm` and `pgcrypto` extensions. The worker
+    started both lanes and ran `ping`.
+  - 61 requests with forged `X-Forwarded-For` headers gave 60 × 200 and 1 × 429. The access log
+    dropped the secret query parameters.
+  - `deploy.sh` with a broken API image waited, reported, and rolled back to the good tag.
+  - `backup.sh` produced a dump; retention pruning was correct; the restore drill passed.
+  - Website-only mode: web returns 200 and the API host returns 503 with `Retry-After`.
+- `gen-secrets.sh` output checked in the API image: the Fernet key works and the VAPID private
+  key derives the public key.
+- `docker stats` (idle): worker 371 MB, api 205 MB, postgres 139 MB, web 75 MB, caddy 23 MB,
+  valkey 5 MB.
+- Web: `next typegen`, `tsc --noEmit` and `pnpm lint` are clean.
+- Everything was torn down afterwards.
+
+## C-146 · The signed-in app on dashboard.amplychat.com (feature/dashboard-host)
+
+Brief: the owner wants the app (`/app`, `/w/…`, sign-in, sign-up) at
+`https://dashboard.amplychat.com`, with the public website staying on the apex
+`https://amplychat.com` (canonical, C-142) and the API on `https://api.amplychat.com`. DNS for
+`dashboard` already points at the VM. This supersedes C-142's "no `app.` subdomain" for the app.
+
+### How it works
+- **One Next.js deployment serves both hosts.** The new public build value
+  `NEXT_PUBLIC_APP_URL` is the app's origin. **Unset** (local dev, e2e, CI, staging), or equal to
+  the site's origin, nothing changes: one origin, relative links, no redirects.
+- **Routing** (`apps/web/src/lib/hosts.ts`, called first in `src/proxy.ts`, before Clerk's guard).
+  The host is the `Host` header, which Caddy passes on unchanged.
+  - Site host: `/app`, `/w/…`, `/sign-in…`, `/sign-up…` and `/dev/…` go to the same path and
+    query on the app host (308).
+  - App host: `/` goes to `/app` (307; signed out, `/app` goes on to sign-in as before);
+    `robots.txt` is `Disallow: /` (answered by the proxy); `sitemap.xml` is a 404; every other
+    path that isn't an app page or a shared file goes to the same path and query on the site
+    (308): marketing, legal, `/unsubscribe`, `/data-deletion`, `/llms.txt`, unknown paths. App
+    responses carry `X-Robots-Tag: noindex, nofollow` on top of the `(app)`/`(auth)` layouts'
+    `noindex` (checked: both set `NO_INDEX`).
+  - Both: `/_next`, `/icons`, the manifest, `sw.js`, `/.well-known` (security.txt), the favicon,
+    `apple-icon.png`, `og.png`. Most of them never reach the proxy (its matcher skips static files).
+- **Which pages belong where.** *Decision:* the route groups decide. `(app)`, `(auth)` and `(dev)`
+  are the app; `(marketing)` is the site, **including `/unsubscribe`** (it works signed out and is
+  a public page linked from email) and `/data-deletion` (Meta's status link).
+- **Links without hops** (`lib/marketing/site.ts`): `appOrigin()`, `appUrl(path)` (absolute on
+  the app host when set, else the path) and `siteHref(path)` (absolute on the site when the app
+  has its own host). Marketing CTAs (Hero, How it works, Pricing incl. the Pro sign-up, the GTM
+  pages, the final CTA), the header's Sign in / Start free / Open app, the footer's Sign in and
+  Start free, the 404's actions and the unsubscribe page's "Open notification settings" use
+  `appUrl`. In the app: the auth pages' logo (site home), Settings › API keys' "Read the API
+  reference" and the 404's home and pricing use `siteHref`. Marketing pages' links to each other
+  stay relative.
+- **Clerk.** The production instance is on the root domain, so Clerk shares the session across its
+  subdomains ([Clerk: deploy to production](https://clerk.com/docs/guides/development/deployment/production):
+  "User sessions will also be shared across the subdomains"). With two origins the middleware
+  passes `authorizedParties: [site, app]` (Clerk recommends it against subdomain cookie leaks), and
+  `ClerkProvider` gets `afterSignOutUrl` = the site's home and `allowedRedirectOrigins` = both
+  origins. Sign-in and sign-up URLs stay relative (`/sign-in`, `/sign-up`): they are only ever
+  rendered on the app host. The marketing header's "Open app" for a signed-in visitor keeps working
+  on the apex because the session is shared; if it ever isn't, the visitor just sees "Sign in",
+  which lands in the app already signed in.
+- **Service worker and push** register from the app (Settings, the push prompt), so on the
+  dashboard origin, scope `/`; the subscription is stored by endpoint in the API and doesn't
+  depend on the origin. The manifest (`start_url` and `id` `/app`) is relative, so on the
+  dashboard it is right. *Not changed:* installing from a marketing page on the apex would open
+  `/app` there, which redirects out of scope; the install prompt lives in the app, so this was
+  left alone.
+- **API** (`settings.py`): `WEB_BASE_URL` stays "links into the app" and becomes the dashboard:
+  the OAuth return (`api/v1/oauth.py`), the Dodo checkout and portal returns
+  (`services/billing.py`), notification and digest emails (`notify/templates`), team invitations
+  (`services/team.py`). New optional `SITE_BASE_URL` (property `site_url`, falling back to
+  `WEB_BASE_URL`) for links to public pages: the digest's unsubscribe page (`notify/outbox.py`),
+  Meta's data deletion status URL (`webhooks/meta_privacy.py`) and the chat widget's brand link
+  (`widget/routes.py`). So no email link needs a redirect. The `List-Unsubscribe` header still
+  points at the API.
+- **Production checks** (C-143 extended): `SITE_BASE_URL` must be https when set; its origin must
+  be in `CORS_ALLOWED_ORIGINS` (the site's unsubscribe, data deletion and plans calls run in the
+  browser); `CLERK_AUTHORIZED_PARTIES` must still include `WEB_BASE_URL`'s origin. The site never
+  sends a Clerk token to the API, so the parties list only the dashboard. Tests in
+  `tests/unit/test_settings.py` and `tests/unit/test_site_links.py`.
+- **Infra:** the Caddyfile adds `{$APP_HOST:dashboard.amplychat.com}` → `web:3000` (same upstream;
+  compose passes `APP_HOST`). `api.env.example`: `WEB_BASE_URL=https://dashboard.amplychat.com`,
+  `SITE_BASE_URL=https://amplychat.com`, CORS both, Clerk parties the dashboard. The production
+  workflow and `apps/web/Dockerfile` pass `NEXT_PUBLIC_APP_URL`; `web.env.example` and
+  `apps/web/.env.example` describe it. Docs: `deploy-vm.md` (domains, the DNS row, the build
+  variable, the checks, the vendor step), `deploy.md` (domain rows, §4 variables, §6 vendor URLs
+  with `{SITE}` and `{APP}`), `apps/api/.env.example`, security checklist L-10.
+
+### Owner to-dos (vendor dashboards)
+- **GitHub** `production-build`: set `NEXT_PUBLIC_APP_URL=https://dashboard.amplychat.com`, then
+  rebuild. **VM** `api.env`: the four values above (from `api.env.example`).
+- **Clerk** (production instance): if Domains → allowed subdomains is restricted, allow
+  `amplychat.com` and `dashboard.amplychat.com`; no satellite domain is needed (same root domain).
+  Paths: sign-in `/sign-in`, sign-up `/sign-up` on `https://dashboard.amplychat.com`; after
+  sign-out `https://amplychat.com/`.
+- **Meta app:** App Domains `amplychat.com` and `dashboard.amplychat.com`; Facebook Login for
+  Business / Embedded Signup "Allowed domains for the JavaScript SDK"
+  `https://dashboard.amplychat.com`; Valid OAuth redirect URIs stay on `api.amplychat.com`
+  (`/v1/oauth/instagram/callback`, later `/v1/oauth/facebook/callback`). Privacy policy, terms and
+  data deletion instructions stay `https://amplychat.com/...`.
+- **Sentry** web project allowed domains: both hosts.
+
+### Checks
+- Web: `next typegen`, `tsc --noEmit`, `pnpm lint` clean. Vitest: new `src/lib/hosts.test.ts`
+  (both hosts, unset = nothing moves, `appOrigin`/`appUrl`/`siteHref`) and `src/proxy.test.ts`
+  (the proxy with Clerk stubbed: redirects, robots, sitemap, noindex, `authorizedParties`), the
+  header test with the variable set, and `src/lib`, `app/(marketing)`, `components/marketing`,
+  `not-found`, `auth`, `integrations`, the layout and SEO tests: 93 files, 897 tests pass.
+- API: `ruff check`, `ruff format --check`, `mypy` clean; `tests/unit/test_settings.py` and the
+  new `tests/unit/test_site_links.py` pass.
+- `caddy validate` (caddy:2.10-alpine): valid, `caddy fmt` unchanged; `docker compose config` OK.
+- E2E with the variable unset: `--grep "landing|GR-37|not-found"`, 26 passed.
+- Two hosts locally: `next build` with `NEXT_PUBLIC_APP_URL=http://dashboard.localhost:3200` and
+  `NEXT_PUBLIC_SITE_URL=http://localhost:3200`, `next start`, `curl -H Host:`. Site host: public
+  pages, robots, sitemap, llms.txt, manifest, sw.js, icons, security.txt 200; `/app`, `/w/…?c=1`,
+  `/sign-in`, `/sign-up?redirect_url=…` 308 to the dashboard with the query; the landing page's
+  CTAs are absolute dashboard links. Dashboard host: `/` 307 → `/app`; `/sign-in` 200 with
+  `X-Robots-Tag`; `/app` and `/w/…` go to sign-in when signed out; `robots.txt` is `Disallow: /`;
+  `sitemap.xml` 404; `/pricing`, `/privacy`, `/data-deletion?code=…`, `/llms.txt` 308 to the site;
+  manifest, sw.js, icons, og.png, security.txt 200. Two artifacts of the local run, not of the
+  code: Next rewrites a redirect to a `localhost` origin onto the request's address (the
+  Location read `127.0.0.1:3200`), and the signed-out guard went to Clerk's hosted page because
+  that build had no `NEXT_PUBLIC_CLERK_SIGN_IN_URL` (the Dockerfile defaults it to `/sign-in`).
+  The server was stopped afterwards.
+
+## C-147 · Images in Google Artifact Registry, not GHCR (feature/artifact-registry)
+
+The owner plans to make the repository private later and wanted the setup ready for it now. Public
+GHCR packages would have kept the API image (with its full Python source) public after the
+repository went private, so the images move to **Artifact Registry** before the first deploy.
+
+- **Where:** GCP project `amplychat`, repository `amplychat` (Docker, `asia-southeast1`), images
+  `api` and `web`, private. A clean-up policy keeps the 20 most recent versions and deletes the rest
+  after 60 days.
+- **GitHub → registry, keyless:** Workload Identity Federation (pool `github`, provider
+  `github-actions`) maps GitHub's OIDC token to `github-deployer@amplychat.iam.gserviceaccount.com`
+  (Artifact Registry Writer on the repository only). The provider accepts only this repository, by
+  its numeric id `1399054239` (renames and transfers don't widen it), and only `refs/heads/main`.
+  No Google key is stored in GitHub; `packages: write` is gone from the workflow.
+- **VM → registry, no password:** the VM's default service account has Artifact Registry Reader on
+  the repository (its default scopes allow pulls); `deploy.sh` sets up gcloud's Docker credential
+  helper once.
+- **Identifiers in the workflow, not variables:** the provider path and the service account email
+  aren't secrets and change only with the project, so they sit in `production.yml`'s `env`.
+- **When the repository goes private:** nothing changes for the images. On GitHub Free the
+  environment approval and branch protection stop working (GitHub Pro restores them); set
+  `PRODUCTION_DEPLOY=manual` meanwhile (deploy-vm.md 4.2/4.3).
+- Done on 2026-10-27 with gcloud as the owner's account; the commands are in deploy-vm.md 4.3.

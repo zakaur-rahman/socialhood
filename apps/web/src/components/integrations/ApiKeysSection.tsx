@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Copy, KeyRound, Plus, Trash2 } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from "@/lib/api/queries";
 import type { ApiKey, ApiScope, ApiScopeName } from "@/lib/api/types";
+import { siteHref } from "@/lib/marketing/site";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -63,7 +65,7 @@ export function ApiKeysSection() {
       description={
         <>
           Connect your own tools, or Zapier, to your contacts and conversations.{" "}
-          <Link className="font-medium text-brand-fg underline underline-offset-4" href="/developers/api">
+          <Link className="font-medium text-brand-fg underline underline-offset-4" href={siteHref("/developers/api") as Route}>
             Read the API reference
           </Link>
           .

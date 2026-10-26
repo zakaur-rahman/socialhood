@@ -1,4 +1,5 @@
 import { BadgeCheck, Inbox, ListChecks, Sparkles, Zap, type LucideIcon } from "lucide-react";
+import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -6,6 +7,7 @@ import type { ReactNode } from "react";
 import { HERO_TITLE } from "@/components/marketing/Hero";
 import { LogoMark, MARKETING_CARD } from "@/components/marketing/primitives";
 import { SHOTS } from "@/components/marketing/shots";
+import { siteHref } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -87,7 +89,8 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
           style={{ backgroundImage: "url(/grain.jpg)" }}
         />
         <div className="relative max-w-xl">
-          <Link href="/" className="inline-flex min-h-10 items-center gap-2.5 rounded-lg">
+          {/* The public site's home page, on its own host when the app has one (C-146). */}
+          <Link href={siteHref("/") as Route} className="inline-flex min-h-10 items-center gap-2.5 rounded-lg">
             <LogoMark className="size-9" />
             <span className="text-base font-semibold tracking-tight">Amplychat</span>
           </Link>

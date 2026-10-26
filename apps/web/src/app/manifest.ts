@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { SITE_NAME } from "@/lib/marketing/site";
 import { colorValue } from "@/styles/tokens";
 
 /**
@@ -10,8 +11,8 @@ import { colorValue } from "@/styles/tokens";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/app",
-    name: "Amplychat",
-    short_name: "Amplychat",
+    name: SITE_NAME,
+    short_name: SITE_NAME,
     description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
     start_url: "/app",
     scope: "/",

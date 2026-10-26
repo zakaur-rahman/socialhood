@@ -77,6 +77,54 @@ describe("the web CSP (SEC-11)", () => {
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["Strict-Transport-Security"]).toMatch(/^max-age=\d+/);
     expect(headers["Permissions-Policy"]).toContain("camera=()");
+    expect(headers["X-Permitted-Cross-Domain-Policies"]).toBe("none");
+    expect(headers["Cross-Origin-Opener-Policy"]).toBe("same-origin-allow-popups");
+  });
+
+  it("sends HSTS the preload list accepts: a year or more, every subdomain, preload (C-143)", () => {
+    const hsts = Object.fromEntries(securityHeaders(PRODUCTION).map((h) => [h.key, h.value]))[
+      "Strict-Transport-Security"
+    ];
+    const maxAge = Number(/max-age=(\d+)/.exec(hsts)?.[1]);
+    expect(maxAge).toBeGreaterThanOrEqual(31536000);
+    expect(hsts).toContain("includeSubDomains");
+    expect(hsts).toContain("preload");
+  });
+
+  it("turns off every powerful feature the app doesn't use", () => {
+    const policy = Object.fromEntries(securityHeaders(PRODUCTION).map((h) => [h.key, h.value]))["Permissions-Policy"];
+    for (const feature of ["camera", "microphone", "geolocation", "payment", "usb", "browsing-topics"]) {
+      expect(policy).toContain(`${feature}=()`);
+    }
+    // Nothing is switched on: every entry is the empty allowlist.
+    expect(policy.split(", ").every((entry) => entry.endsWith("=()"))).toBe(true);
+  });
+
+  it("keeps 'unsafe-inline' to scripts and styles, and eval out of production", () => {
+    const withInline = csp
+      .split("; ")
+      .filter((part) => part.includes("'unsafe-inline'"))
+      .map((part) => part.split(" ")[0]);
+    expect(withInline).toEqual(["script-src", "style-src"]);
+    expect(csp).not.toContain("'unsafe-eval'");
+    expect(csp).not.toMatch(/(^|\s)\*(\s|;|$)/); // no bare wildcard source
+  });
+
+  it("upgrades requests on the website-only Vercel launch, which has no API yet", () => {
+    const websiteOnly = { NODE_ENV: "production", VERCEL: "1" };
+    expect(contentSecurityPolicy(websiteOnly)).toContain("upgrade-insecure-requests");
+    expect(contentSecurityPolicy({ NODE_ENV: "production" })).not.toContain("upgrade-insecure-requests");
+    // Without an API the policy still allows only the site and its vendors.
+    expect(directive(contentSecurityPolicy(websiteOnly), "connect-src")).not.toContain("http://localhost:8000");
+  });
+
+  it("follows a Clerk development key to its accounts.dev host", () => {
+    const dev = contentSecurityPolicy({
+      ...PRODUCTION,
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: `pk_test_${btoa("calm-fox-12.clerk.accounts.dev$")}`,
+    });
+    expect(directive(dev, "script-src")).toContain("https://calm-fox-12.clerk.accounts.dev");
+    expect(directive(dev, "connect-src")).toContain("https://calm-fox-12.clerk.accounts.dev");
   });
 });
 

@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
-import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +90,7 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
       {card.available ? (
         <>
           <CtaLink
-            href={card.plan === "pro" ? PRO_SIGN_UP_PATH : SIGN_UP_PATH}
+            href={appUrl(card.plan === "pro" ? PRO_SIGN_UP_PATH : SIGN_UP_PATH)}
             prefetch={false}
             variant={featured ? "primary" : "secondary"}
             className="mt-6 w-full"
@@ -141,7 +141,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
           ))}
         </ul>
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-fg-secondary">
-          {pricing.source === "fallback" ? "Prices couldn't be loaded just now; you'll see the current price when you sign up. " : null}
+          {/* Without the plan list (the API unset or down) each paid card already says the price is shown at sign-up. */}
           {headingLevel === 2 ? (
             <>
               <Link href="/pricing" className="font-medium text-brand-fg underline-offset-4 hover:underline">

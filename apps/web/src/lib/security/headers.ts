@@ -10,7 +10,12 @@
  * the document, and App Router navigations keep the document, so a per-page CSP would block the
  * SDK after an in-app navigation. Scripts keep 'unsafe-inline' because Next.js bootstraps with
  * inline scripts; a nonce would make every page dynamic. Nothing renders user or model content as
- * HTML (React escapes it), which is what the CSP backs up.
+ * HTML (React escapes it), which is what the CSP backs up. Styles keep 'unsafe-inline' because
+ * Clerk's components and React's style props set inline styles (Clerk documents it).
+ *
+ * Production Clerk (C-143): the Frontend API is clerk.amplychat.com, which the live publishable key
+ * encodes, so it follows the key; the accounts.amplychat.com Account Portal is only navigated to,
+ * never loaded into our pages, so it needs no CSP entry.
  */
 
 type Env = Record<string, string | undefined>;
@@ -84,23 +89,49 @@ export function contentSecurityPolicy(env: Env): string {
   const parts = Object.entries(directives).map(([name, values]) =>
     [name, ...new Set(values.filter((value): value is string => Boolean(value)))].join(" "),
   );
-  // Only where the API is https too: a local production build talks to http://localhost.
-  if (!dev && api?.startsWith("https://")) parts.push("upgrade-insecure-requests");
+  // Only where the site is served over https: an https API, or a Vercel build (always https) that
+  // has no API yet (the website-only launch). A local production build talks to http://localhost.
+  if (!dev && (api ? api.startsWith("https://") : env.VERCEL === "1")) parts.push("upgrade-insecure-requests");
   return parts.join("; ");
 }
+
+const PERMISSIONS_POLICY = [
+  "accelerometer",
+  "bluetooth",
+  "browsing-topics",
+  "camera",
+  "display-capture",
+  "geolocation",
+  "gyroscope",
+  "hid",
+  "magnetometer",
+  "microphone",
+  "midi",
+  "payment",
+  "serial",
+  "usb",
+  "xr-spatial-tracking",
+]
+  .map((feature) => `${feature}=()`)
+  .join(", ");
 
 export function securityHeaders(env: Env): { key: string; value: string }[] {
   return [
     { key: "Content-Security-Policy", value: contentSecurityPolicy(env) },
-    { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+    // Two years, every subdomain, and eligible for the browsers' preload list (hstspreload.org asks
+    // for at least a year, includeSubDomains and preload). Submitting the domain is the owner's step.
+    { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     {
       key: "Permissions-Policy",
-      value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      // Features the app never uses are off for every origin, embedded frames included.
+      value: PERMISSIONS_POLICY,
     },
     // Meta's Embedded Signup popup reports back to this window, so popups keep their opener.
     { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+    // Flash and PDF readers may not load cross-domain policy files from this origin.
+    { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   ];
 }

@@ -22,7 +22,7 @@ scrape_configs:
       type: Bearer
       credentials_file: /etc/prometheus/metrics_token
     static_configs:
-      - targets: ["api.socialhood.com"]
+      - targets: ["api.amplychat.com"]
         labels:
           environment: production
 
@@ -33,6 +33,6 @@ scrape_configs:
       type: Bearer
       credentials_file: /etc/prometheus/metrics_token_staging
     static_configs:
-      - targets: ["api.staging.socialhood.com"]
+      - targets: ["api.staging.amplychat.com"]
         labels:
           environment: staging

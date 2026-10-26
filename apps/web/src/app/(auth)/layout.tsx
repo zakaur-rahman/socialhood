@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+import { NO_INDEX } from "@/lib/marketing/seo";
+
+// Sign-in and sign-up are never search results (C-142); robots.txt keeps crawlers out too.
+export const metadata: Metadata = { robots: NO_INDEX };
+
 /** The sign-in and sign-up pages render their own <main> (AuthShell); this adds the skip link. */
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (

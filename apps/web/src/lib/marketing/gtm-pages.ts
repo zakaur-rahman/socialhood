@@ -57,7 +57,7 @@ export const SWITCH_PAGE: GtmPage = {
   name: "Switch from Manychat",
   title: "Switch from Manychat",
   description:
-    "Moving from Manychat to Amplychat: what you can rebuild (comment and DM automations, flows, tags, fields), what is different, and what Amplychat adds: an AI inbox, comment analysis and publishing on a flat plan.",
+    "Moving from Manychat to Amplychat: what you can rebuild, what is different, and what Amplychat adds: an AI inbox, comment analysis and publishing.",
   eyebrow: "Switch from Manychat",
   h1: "Move your Instagram automations from Manychat",
   intro:
@@ -166,7 +166,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
   name: "Amplychat vs Manychat",
   title: "Amplychat vs Manychat",
   description:
-    "A side-by-side of Amplychat and Manychat for Instagram and WhatsApp: automations, AI, comments, publishing, channels and how each is priced, with the sources and the date they were read.",
+    "Amplychat and Manychat side by side for Instagram and WhatsApp: automations, AI, comments, publishing, channels and pricing, with dated sources.",
   eyebrow: "Compare",
   h1: "Amplychat vs Manychat",
   intro:
@@ -308,7 +308,7 @@ export const COMPARE_INTERAKT: GtmPage = {
   name: "Amplychat vs Interakt",
   title: "Amplychat vs Interakt",
   description:
-    "A side-by-side of Amplychat and Interakt for sellers on WhatsApp and Instagram in India: campaigns, catalogue, AI, comments and publishing, with sources and the date they were read.",
+    "Amplychat and Interakt side by side for sellers on WhatsApp and Instagram in India: campaigns, catalogue, AI, comments and publishing, with sources.",
   eyebrow: "Compare",
   h1: "Amplychat vs Interakt",
   intro:
@@ -426,7 +426,7 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
   name: "Comment intelligence",
   title: "Comment intelligence for Instagram",
   description:
-    "See what people say on each Instagram post: sentiment, topics, buying signals and spam, a summary per post and a needs-reply count. Reply, send a DM, hide or delete from one page.",
+    "See what people say on each Instagram post: sentiment, topics, buying signals and spam, with a summary per post. Reply, DM, hide or delete from one page.",
   eyebrow: "Comment intelligence",
   h1: "Know what your comments are telling you",
   intro:
@@ -467,7 +467,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
   name: "The AI inbox",
   title: "The AI inbox for Instagram and WhatsApp",
   description:
-    "One inbox for Instagram DMs and WhatsApp chats. The AI drafts or sends replies from your own knowledge in English, Hindi and Hinglish, and hands over what it can't answer.",
+    "One inbox for Instagram DMs and WhatsApp chats. AI drafts or sends replies from your knowledge in English, Hindi and Hinglish, and hands over the rest.",
   eyebrow: "The AI inbox",
   h1: "One inbox that answers from what you know",
   intro:
@@ -510,7 +510,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
   name: "Publishing",
   title: "Schedule Instagram posts and Stories",
   description:
-    "Plan and schedule Instagram images, carousels, Reels and Stories from one calendar, with AI captions, a media library and hashtag groups, in the same app as your inbox.",
+    "Schedule Instagram images, carousels, Reels and Stories from one calendar, with AI captions, a media library and hashtag groups, next to your inbox.",
   eyebrow: "Publishing",
   h1: "Plan your posts where your customers reply",
   intro:

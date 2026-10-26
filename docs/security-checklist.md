@@ -30,6 +30,53 @@ integration pass (branch `p9/integration`, C-060). So were the fixes it needed i
 files: uvicorn's `--no-server-header` (SEC-11), the client IP behind Render's proxy (rate limits)
 and the `code=` log fields (SEC-07).
 
+## Launch pass (C-143, 2026-10-26)
+
+Branch `feature/launch-sec`, from `main` at eb7bc796, for putting the public website live on
+Vercel at `https://amplychat.com` (the API on Render follows later). It re-checks SEC-05, SEC-06,
+SEC-11, SEC-13 and SEC-14 against the launch setup and adds what a public site needs. The older
+sections below stay as the T9.2 record; where they differ, this section is current.
+
+| # | Check | Status | Evidence |
+|---|---|---|---|
+| L-1 | Web headers | fixed | HSTS is now `max-age=63072000; includeSubDomains; preload`. Permissions-Policy turns off 15 unused features, not 5. `X-Permitted-Cross-Domain-Policies: none` added. `upgrade-insecure-requests` is also sent by a Vercel build with no API (the website-only launch). The CSP, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy` and COOP were already in place. Tests: `src/lib/security/security.test.tsx`. |
+| L-2 | CSP and Clerk production | pass | Clerk's documented CSP is the Frontend API host for `script-src` and `connect-src`, `img.clerk.com`, Turnstile (`challenges.cloudflare.com`) for scripts and frames, `worker-src 'self' blob:` and `style-src 'unsafe-inline'`. All are present. The Frontend API host is decoded from the publishable key, so a live key gives `https://clerk.amplychat.com` and a development key its `*.clerk.accounts.dev` host (tested). `accounts.amplychat.com` (the Account Portal) is only navigated to, so it needs no entry. |
+| L-3 | `unsafe-inline` and `unsafe-eval` | accepted (A-4) | No `unsafe-eval` in production (tested). `'unsafe-inline'` is on `script-src` and `style-src` only (tested). Scripts: Next.js streams per-page inline scripts, so hashes can't cover them, and a nonce would make every page dynamic, the public pages included. Styles: Clerk and React style props set inline styles. Nothing renders user or model HTML (SEC-08). |
+| L-4 | `/.well-known/security.txt` | fixed | RFC 9116: `Contact: mailto:support@amplychat.com`, `Expires` 360 days out, `Preferred-Languages: en`, `Canonical` and `Policy` on the site URL. The route is rebuilt daily, so it never expires without a deploy. `/security` is the policy: how to report, scope, testing rules, no paid bounty. Tests: `src/lib/security/security-txt.test.tsx`. |
+| L-5 | Dependencies | fixed | `pnpm audit --prod`: 2 low and 2 moderate, all `fast-uri@3.1.8` (through `@hookform/resolvers` → `ajv`); bumped to 3.1.9 in the lockfile only, now "No known vulnerabilities found". The T9.2 `@clerk/ui` → `@solana/*` findings are gone. pip-audit on the exported lock: "No known vulnerabilities found". No major upgrades were needed. |
+| L-6 | `NEXT_PUBLIC_*` values | pass | The 12 in use are the API and site URLs, the Clerk publishable key and sign-in paths, the Meta app id and WhatsApp config id, the Sentry DSN, environment and sample rate, `ENABLE_SW` and `VERCEL_ENV`. All are public by design. No client component reads a non-public variable (checked every `"use client"` file). |
+| L-7 | Source maps | pass, made explicit | `productionBrowserSourceMaps: false`. Sentry makes maps only when `SENTRY_AUTH_TOKEN` is set and deletes them after upload (`deleteSourcemapsAfterUpload: true`, now stated in `next.config.ts`). |
+| L-8 | `poweredByHeader`, error pages, `.env` | pass | `poweredByHeader: false`. `global-error.tsx` and both `error.tsx` boundaries show fixed copy and send the error to Sentry; none renders `error.message` or a stack. `.gitignore` ignores `.env` and `.env.*` except the examples. CI runs gitleaks (`secrets` job) and both audits. |
+| L-9 | `/app` and `/w` | pass | `src/proxy.ts`: `clerkMiddleware` calls `auth.protect()` for `/app(.*)` and `/w/(.*)`. |
+| L-10 | CORS and Clerk parties | fixed | Production now refuses CORS origins or Clerk authorized parties that aren't exact https origins (`*`, `https://*.…`, a path, a trailing slash, userinfo), an http `API_BASE_URL` or `WEB_BASE_URL`, and lists without `WEB_BASE_URL`'s origin. `infra/render.yaml` had `socialhood.com` placeholders; it now sets `WEB_BASE_URL`, `CORS_ALLOWED_ORIGINS` and `CLERK_AUTHORIZED_PARTIES` to `https://amplychat.com` (staging `https://staging.amplychat.com`). C-146: the app moves to `https://dashboard.amplychat.com` (`WEB_BASE_URL`); the new `SITE_BASE_URL` (the apex) must be https too and its origin must be in `CORS_ALLOWED_ORIGINS`; `CLERK_AUTHORIZED_PARTIES` lists only the app. Tests: `tests/unit/test_settings.py`. |
+| L-11 | Cookies | pass | The API sets none and never reads them (bearer tokens only). The web sets one, `sh_theme` (`SameSite=Lax`, `Secure` on https, not `HttpOnly` because the page script reads it; it holds only light or dark). Clerk sets its own session cookies. |
+| L-12 | Webhooks and public rate limits | pass | Verified, not rebuilt. Signatures on raw bytes, failing closed: Clerk, Dodo, Instagram, Facebook, WhatsApp, Meta privacy, Shopify (`X-Shopify-Hmac-Sha256`, 503 without a secret) and Razorpay (per-workspace secret). Per-IP limits: `/l/{code}`, the widget frame, session, poll, send and email, and the public API's `/openapi.json`; the public API's sends share the workspace send budget. |
+| L-13 | Website-only deploy | pass | `/dev/tokens` calls `notFound()` in production. The web has no API routes. With no API the CSP allows no extra origin. A Clerk development key exposes nothing secret (a publishable key is public; `CLERK_SECRET_KEY` is server-only), but Clerk shows a "Development mode" badge and caps users, so switch to the production instance before real sign-ups. |
+
+### What the owner does in vendor dashboards
+
+- **Vercel.** Domains: `amplychat.com` → Production, and `www.amplychat.com` → redirect (308) to
+  `amplychat.com`. HTTPS is automatic. Set `NEXT_PUBLIC_SITE_URL=https://amplychat.com` for
+  Production. Turn on **Deployment Protection → Vercel Authentication** for Preview deployments.
+  Previews block the Vercel toolbar under our CSP; that is expected.
+- **HSTS preload.** The header is preload-ready, but submit `amplychat.com` at hstspreload.org
+  only once every subdomain serves HTTPS (`api`, `staging`, `api.staging`, `clerk`, `accounts`).
+  Removal from the list takes months.
+- **Clerk.** Create the production instance for `amplychat.com` and add its DNS records
+  (`clerk`, `accounts`, `clkmail` and the two `_domainkey` CNAMEs it lists). Put its
+  `pk_live_…` and `sk_live_…` keys on Vercel Production. On the API: `CLERK_ISSUER=https://clerk.amplychat.com`,
+  `CLERK_AUTHORIZED_PARTIES=https://amplychat.com`, and the production webhook secret. Turn on bot
+  protection.
+- **2FA** on every account: GitHub, Vercel, Render, Clerk, Meta (Business and the personal
+  Facebook login), Cloudinary, Dodo Payments, Sentry, Resend, Google Cloud (Gemini), the domain
+  registrar and the `support@amplychat.com` mailbox.
+- **GitHub.** Protect `main` and `develop`: pull request required, required checks `api`, `web`,
+  `contract` and `secrets`, no force pushes, no deletion. Turn on Dependabot alerts, and secret
+  scanning with push protection where the plan offers it.
+- **Domain and mail.** Registrar lock on `amplychat.com`. SPF, DKIM and DMARC for the domain
+  (Resend and the support mailbox), DMARC starting at `p=none`. `support@amplychat.com` must
+  receive mail: security.txt and `/security` send reports there.
+
 ## SEC items (§2.12)
 
 | ID | Requirement | Status | Evidence |

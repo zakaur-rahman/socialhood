@@ -6,7 +6,8 @@ import { ThemeSync } from "@/components/theme/ThemeSync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { clerkAppearance } from "@/lib/clerk-appearance";
-import { SITE_NAME } from "@/lib/marketing/site";
+import { verificationMetadata } from "@/lib/marketing/seo";
+import { SITE_NAME, appOrigin, siteHref, siteUrl } from "@/lib/marketing/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
@@ -15,14 +16,24 @@ const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Amplychat", template: "%s · Amplychat" },
+  // Absolute URLs (canonical, Open Graph) on every page resolve against the public origin (C-142).
+  metadataBase: new URL(siteUrl()),
+  applicationName: SITE_NAME,
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
+  // Search Console, Bing Webmaster Tools and Meta domain verification: each tag only when its env var is set.
+  verification: verificationMetadata(),
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
-  appleWebApp: { capable: true, title: "Amplychat", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black" },
 };
 
 // The browser bar: the dark canvas, the default. ThemeSync moves it for Light (and System on a light OS).
 export const viewport: Viewport = { themeColor: colorValue("canvas") };
+
+// C-146: with the app on its own host, sign-out lands on the public site's home page, which Clerk
+// allows only for origins it is told about.
+const app = appOrigin();
+const allowedRedirectOrigins = app ? [siteUrl(), app] : undefined;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -46,7 +57,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
           signInFallbackRedirectUrl="/app"
           signUpFallbackRedirectUrl="/app"
-          afterSignOutUrl="/"
+          afterSignOutUrl={siteHref("/")}
+          allowedRedirectOrigins={allowedRedirectOrigins}
         >
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
           <Toaster />

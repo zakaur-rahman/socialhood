@@ -57,7 +57,8 @@ def unsubscribe_links(
     API's POST /v1/digest/unsubscribe (one click from the mail client); the link in the body
     opens the web page, which posts there, so a link scanner's GET unsubscribes nobody."""
     token = make_token(workspace_id, user_id, settings.token_encryption_keys)
-    page = f"{(settings.web_base_url or '').rstrip('/')}/unsubscribe?token={token}"
+    # A public page on the site (C-146), not in the app: it works signed out.
+    page = f"{(settings.site_url or '').rstrip('/')}/unsubscribe?token={token}"
     headers: dict[str, str] = {}
     if settings.api_base_url:
         endpoint = f"{settings.api_base_url.rstrip('/')}/v1/digest/unsubscribe?token={token}"

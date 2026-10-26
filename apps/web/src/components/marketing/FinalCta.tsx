@@ -2,7 +2,7 @@ import { ArrowRight, BadgeCheck, Gift, Sparkles } from "lucide-react";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import table from "@/lib/marketing/plan-table.json";
-import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 
 import { LampGlow } from "./effects/lamp";
 import { Container, CtaLink } from "./primitives";
@@ -26,7 +26,7 @@ export function FinalCta() {
           Connect Instagram and WhatsApp, add what your business knows, and let the AI draft the replies.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <CtaLink href={SIGN_UP_PATH} prefetch={false} className="w-full px-8 sm:w-auto">
+          <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-8 sm:w-auto">
             Start free <ArrowRight className="size-4" aria-hidden />
           </CtaLink>
           <CtaLink href={`#${SECTION_IDS.pricing}`} variant="secondary" className="w-full px-6 sm:w-auto">

@@ -11,6 +11,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -72,7 +73,13 @@ class Settings(BaseSettings):
 
     app_env: AppEnv = AppEnv.LOCAL
     api_base_url: str | None = None
+    # The web app's origin: every link into the app (emails, OAuth and checkout returns,
+    # invitations). C-146: in production the signed-in app is https://dashboard.amplychat.com.
     web_base_url: str | None = None
+    # C-146: the public website's origin, for links to its public pages (the digest's unsubscribe
+    # page, the data deletion status page, the chat widget's "Amplychat" link). Unset: the same
+    # as WEB_BASE_URL (one origin serves both, as in local development).
+    site_base_url: str | None = None
     # GR-15: the address tracked links (/l/<code>) are built on, if not the API's own, such as a
     # short domain pointed at the API. Neither set: link buttons are sent as written.
     link_base_url: str | None = None
@@ -265,6 +272,7 @@ class Settings(BaseSettings):
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:
             unsafe.append("RATE_LIMITS_ENABLED must be true in production")
+        unsafe.extend(self._origin_problems())
         for name in (
             "ai_provider",
             "dodo_provider",
@@ -285,6 +293,38 @@ class Settings(BaseSettings):
             raise ConfigurationError("Invalid production settings: " + "; ".join(problems))
         return self
 
+    def _origin_problems(self) -> list[str]:
+        # C-143: the browser-facing addresses are https, and the API trusts exact origins only
+        # (no "*", no path), including the web app's own origin.
+        problems = []
+        for name in ("api_base_url", "web_base_url", "site_base_url"):
+            value = getattr(self, name)
+            if value and _https_origin(value) is None:
+                problems.append(f"{name.upper()} must be an https URL")
+        for name in ("cors_allowed_origins", "clerk_authorized_parties"):
+            values: list[str] = getattr(self, name)
+            bad = [value for value in values if _https_origin(value) != value]
+            if bad:
+                problems.append(
+                    f"{name.upper()} must list exact https origins (no path, no wildcard): "
+                    + ", ".join(bad)
+                )
+            web = _https_origin(self.web_base_url or "")
+            if web and values and web not in values:
+                problems.append(f"{name.upper()} must include WEB_BASE_URL's origin {web}")
+        # C-146: the public site calls the API from the browser too (unsubscribe, the data
+        # deletion status, plans), so CORS must allow its origin. It never sends Clerk tokens,
+        # so CLERK_AUTHORIZED_PARTIES needs only the app's origin.
+        site = _https_origin(self.site_base_url or "")
+        if site and self.cors_allowed_origins and site not in self.cors_allowed_origins:
+            problems.append(f"CORS_ALLOWED_ORIGINS must include SITE_BASE_URL's origin {site}")
+        return problems
+
+    @property
+    def site_url(self) -> str | None:
+        """The public site's base URL: SITE_BASE_URL, else WEB_BASE_URL (one origin)."""
+        return self.site_base_url or self.web_base_url
+
     @property
     def is_production(self) -> bool:
         return self.app_env is AppEnv.PRODUCTION
@@ -292,6 +332,19 @@ class Settings(BaseSettings):
     @property
     def is_local(self) -> bool:
         return self.app_env in (AppEnv.LOCAL, AppEnv.TEST)
+
+
+def _https_origin(value: str) -> str | None:
+    """'https://host[:port]' of an https URL, or None for anything else (http, '*', junk)."""
+    try:
+        parts = urlsplit(value.strip())
+    except ValueError:
+        return None
+    if parts.scheme != "https" or not parts.hostname or "*" in parts.netloc:
+        return None
+    if parts.username or parts.password:
+        return None
+    return f"https://{parts.netloc.lower()}"
 
 
 def _is_empty(value: object) -> bool:

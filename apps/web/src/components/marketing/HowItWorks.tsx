@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { Timeline } from "./effects/timeline";
@@ -61,7 +61,7 @@ export function HowItWorks() {
           />
         </div>
         <div className="mt-14 flex justify-center">
-          <CtaLink href={SIGN_UP_PATH} prefetch={false}>
+          <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>
             Start free
           </CtaLink>
         </div>
