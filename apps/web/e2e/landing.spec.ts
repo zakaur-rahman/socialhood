@@ -50,6 +50,7 @@ test.describe("landing page", () => {
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
+        "inbox-shot-title",
         "integrations",
         "features",
         "how-it-works",

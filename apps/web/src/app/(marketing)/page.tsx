@@ -11,6 +11,7 @@ import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Integrations } from "@/components/marketing/Integrations";
 import { Languages } from "@/components/marketing/Languages";
 import { Pricing } from "@/components/marketing/Pricing";
+import { ProductShot } from "@/components/marketing/ProductShot";
 import { SocialProof } from "@/components/marketing/SocialProof";
 import { Stats } from "@/components/marketing/Stats";
 import { Trust } from "@/components/marketing/Trust";
@@ -41,6 +42,7 @@ export default async function HomePage() {
       <ScrollReveal />
       <MarketingMotion>
         <Hero />
+        <ProductShot />
         <Integrations />
         <Features />
         <HowItWorks />

@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HERO_TITLE } from "@/components/marketing/Hero";
+import { ROUTING_SUMMARY } from "@/components/marketing/RoutingDiagram";
 import { SHOTS } from "@/components/marketing/shots";
 import { FAQ } from "@/lib/marketing/faq";
 import { plansFetch, plansFixture } from "@/test/plans";
@@ -42,12 +43,12 @@ describe("the landing page", () => {
 
     expect(fetcher).toHaveBeenCalledOnce();
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
-    // One h1, named in full for screen readers; the cycling word is decorative.
+    // One h1, the headline (C-141).
     const h1 = screen.getByRole("heading", { level: 1 });
     expect(h1).toHaveAccessibleName(HERO_TITLE);
-    expect(h1.querySelector("[data-flip-words]")).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "Where every conversation lands",
       "Connects to where your customers are",
       "Everything your customer conversations need",
       "Set up in three steps",
@@ -62,12 +63,15 @@ describe("the landing page", () => {
       expect(container.querySelector(`section#${id}`)).not.toBeNull();
     }
 
-    // Hero: the two ways in, and the real product, labelled as example data.
+    // Hero: the two ways in, and the routing diagram with its one sentence for screen readers.
+    // The real product follows in its own section, labelled as example data.
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
     expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     expect(screen.getByRole("img", { name: SHOTS.inbox.alt })).toBeInTheDocument();
     expect(screen.getByText(/The Amplychat inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
     expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
+    expect(screen.getByText(ROUTING_SUMMARY)).toBeInTheDocument();
+    expect(container.querySelector("section[aria-labelledby=\"hero-title\"] [data-routing-diagram]")).toHaveAttribute("aria-hidden", "true");
 
     // Features and product rules.
     expect(screen.getByRole("heading", { name: "Ask Amplychat" })).toBeInTheDocument();
@@ -90,8 +94,6 @@ describe("the landing page", () => {
     expect(integrations.getAllByText("With Meta's approval")).toHaveLength(2);
     expect(integrations.getAllByText("Official API")).toHaveLength(2);
     expect(integrations.queryByText(/Messenger isn't supported/)).toBeNull();
-    // Hero: the "Works with" strip, with names only for tools whose logos we don't ship.
-    expect(screen.getByRole("list", { name: "Works with" }).textContent).toMatch(/Shopify.*Razorpay.*Google Sheets.*Zapier/);
 
     // Stats come from the plan table, and there is no social proof section until there is data.
     expect(screen.getByRole("region", { name: "The product in numbers" })).toBeInTheDocument();
