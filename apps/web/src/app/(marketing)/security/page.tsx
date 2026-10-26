@@ -60,7 +60,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
     body: (
       <ul>
         <li>
-          Services we use but don&apos;t run, such as Clerk, Meta, Vercel, Render, Cloudinary, Sentry and Dodo Payments.
+          Services we use but don&apos;t run, such as Clerk, Meta, Google Cloud, Cloudinary, Sentry and Dodo Payments.
           Report those to the provider.
         </li>
         <li>Denial of service, load testing, spam and social engineering of our team or customers.</li>

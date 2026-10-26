@@ -1,7 +1,8 @@
 # Branches, merges and releases
 
 How code gets from a branch to staging and production, and the GitHub settings that enforce it.
-Deploy details (Render, Vercel, secrets per environment) are in [deploy.md](deploy.md).
+Deploy details: production runs on one VM ([deploy-vm.md](deploy-vm.md), C-145); the variable
+reference and vendor URLs are in [deploy.md](deploy.md) (its Render and Vercel steps are superseded).
 
 ## 1. The model
 
@@ -46,9 +47,9 @@ changes (GitHub shows them under Commits).
    migrates first, then the new code takes traffic. Check staging.
 5. To release, open a pull request **`develop` → `main`** and **Create a merge commit**.
 6. CI runs on `main`, then the Production workflow waits for your approval: Actions → the
-   "Production" run → **Review deployments** → `production` → **Approve and deploy**. It calls the
-   Render deploy hooks for that exact commit; the API migrates, then the API and worker switch
-   over. Vercel deploys the web from `main` by itself (section 8). (In `manual` mode, section 6:
+   "Production" run → **Review deployments** → `production` → **Approve and deploy**. The images
+   of that exact commit (built before the approval) go to the VM: the database migrates, then the
+   API, worker and web switch over together ([deploy-vm.md](deploy-vm.md)). (In `manual` mode, section 6:
    Actions → Production → **Run workflow** → `main` instead.)
 
 ## 4. Hotfixes
@@ -174,15 +175,17 @@ blocks every merge (the old check never reports): change the rulesets in the sam
 
 | Secret | Where | Value |
 |---|---|---|
-| `RENDER_DEPLOY_HOOK_API` | environment `production` | Render → `socialhood-api` → Settings → **Deploy Hook** |
-| `RENDER_DEPLOY_HOOK_WORKER` | environment `production` | Render → `socialhood-worker` → Settings → **Deploy Hook** |
+| `VM_HOST` · `VM_USER` · `VM_SSH_KEY` · `VM_KNOWN_HOSTS` | environment `production` | the VM's address, `ubuntu`, the deploy-only private key and its `ssh-keyscan` line ([deploy-vm.md](deploy-vm.md), section 4) |
+| `SENTRY_AUTH_TOKEN` (optional) | environment `production-build` | Sentry source maps for the web image |
 | `CLERK_E2E_PUBLISHABLE_KEY` | repository | Clerk **development** instance publishable key ([testing-e2e.md](../testing-e2e.md)) |
 | `CLERK_E2E_SECRET_KEY` | repository | Clerk **development** instance secret key |
 | `GITLEAKS_LICENSE` | repository | only if the repository belongs to a GitHub organization (free key from gitleaks.io); not needed on a personal account |
 
-A deploy hook URL deploys the service to anyone who has it: keep it only in the environment
-secret, and **Regenerate Hook** in Render if it leaks. (Environment secrets on a private
-repository need GitHub Pro or Team; on Free, add the two hooks as repository secrets instead.)
+The deploy key controls the VM: keep it only in the environment secret, and replace it on the VM
+if it leaks. (The old `RENDER_DEPLOY_HOOK_*` secrets can be deleted, C-145.) The web's public
+build values are **variables** of the environment `production-build` ([deploy-vm.md](deploy-vm.md),
+section 4.2). (Environment secrets on a private repository need GitHub Pro or Team; this
+repository is public.)
 
 **Variables** tab (repository): `PRODUCTION_DEPLOY` = `manual` only when required reviewers are not
 available (see "Plan check" above); leave it unset otherwise.
@@ -192,7 +195,7 @@ available (see "Plan check" above); leave it unset otherwise.
 | Workflow | Runs on | What it does |
 |---|---|---|
 | `ci.yml` (CI) | pull requests into `develop` or `main`; pushes to `develop` and `main` | the four required checks. A newer push to the same branch or pull request cancels the older run. |
-| `production.yml` (Production) | CI finishing green on a push to `main`; "Run workflow" on `main` | waits for approval in `production`, then calls both deploy hooks with the tested commit |
+| `production.yml` (Production) | CI finishing green on a push to `main`; "Run workflow" on `main` (optional tag: deploy that SHA without building, a rollback) | builds and pushes both images to GHCR, waits for approval in `production`, then deploys the tested commit to the VM over SSH (C-145) |
 | `e2e-nightly.yml` (E2E nightly) | 21:30 UTC on `develop`; "Run workflow" on any branch | the Playwright suite against a local sandbox stack ([testing-e2e.md](../testing-e2e.md)) |
 | `ops.yml` (Ops) | pull requests and pushes to `develop` and `main` that touch `infra/prometheus/` | the alert rules and their tests |
 
@@ -202,12 +205,17 @@ repository README.
 
 ## 8. What deploys where
 
+Since C-145 production is one VM ([deploy-vm.md](deploy-vm.md)): a merge into `main` deploys
+the API, worker **and web** together, after CI passes and the owner approves. There is no hosted
+staging or preview stack yet; the Render and Vercel rows below are superseded and kept for
+reference.
+
 | Event | Render staging | Render production | Vercel |
 |---|---|---|---|
 | Pull request opened or updated | | | preview (staging API) |
 | Merge into `develop` | deploys after every check on the commit passes | | `staging` environment |
 | Merge into `main` | | deploys after CI passes **and** the owner approves | production |
 
-The web goes live from `main` without waiting for the production approval, so until you approve
-it runs against the previous API. Keep the API backward compatible with the web that is live (add
-endpoints and fields before the web uses them), and approve release deploys promptly.
+On the VM the web and the API switch over in the same deploy, so the old rule (the web went live
+before the API was approved) no longer bites. Still keep migrations expand-only: a rollback runs
+the previous code on the new schema.

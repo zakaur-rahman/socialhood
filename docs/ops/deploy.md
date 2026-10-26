@@ -1,5 +1,14 @@
 # Deploy: environments, domains and the first deploy (T9.5)
 
+> **Superseded for hosting (C-145).** Production now runs on one Google Cloud VM with Docker
+> Compose: **[deploy-vm.md](deploy-vm.md)** is the runbook (images on GHCR, Caddy, the Production
+> workflow over SSH, backups). The Render and Vercel steps below (sections 1-3, 5, and the Render
+> parts of 7 and 8) are kept for reference only, as is `infra/render.yaml`. Still current and used
+> by the VM runbook: the variable reference (section 4; on the VM they live in
+> `/opt/amplychat/api.env` and `web.env`, and the web's `NEXT_PUBLIC_*` are GitHub build
+> variables), the website-first notes (section 5a), the vendor URLs (section 6) and the
+> production checks in section 7.
+
 This is a step-by-step runbook for the owner. Steps marked **[owner account]** need the business's
 own vendor accounts (§6.5: fresh accounts owned by the business, two-factor authentication on, no
 v1 keys). Nothing here was deployed on the owner's behalf.

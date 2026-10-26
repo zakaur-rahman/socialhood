@@ -1,11 +1,25 @@
+import path from "node:path";
+
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 import { securityHeaders } from "./src/lib/security/headers";
 
+// C-145: the Docker image (apps/web/Dockerfile) builds with NEXT_OUTPUT=standalone: a self-contained
+// server.js with only the node_modules it traces. Everything else (next dev, next start in the e2e
+// stack, Vercel, tests) keeps the default output. Tracing starts at the monorepo root so the
+// workspace packages and pnpm's store are included; Turbopack uses the same root.
+const standalone = process.env.NEXT_OUTPUT === "standalone";
+const monorepoRoot = path.join(__dirname, "..", "..");
+
 // TR-FE-07: one strict config. Never add ignoreBuildErrors or ignoreDuringBuilds.
 const nextConfig: NextConfig = {
   typedRoutes: true,
+  ...(standalone && {
+    output: "standalone",
+    outputFileTracingRoot: monorepoRoot,
+    turbopack: { root: monorepoRoot },
+  }),
   // C-143: no X-Powered-By, and no browser source maps served from the site. Sentry builds its own
   // for the upload (below) and deletes them from the output afterwards.
   poweredByHeader: false,

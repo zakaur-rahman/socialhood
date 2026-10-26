@@ -1,0 +1,98 @@
+# The VM's edge (C-145; docs/ops/deploy-vm.md). Automatic HTTPS (Let's Encrypt, ZeroSSL fallback)
+# for the three hosts; HTTP redirects to HTTPS on its own. The hosts come from the environment
+# (compose.yml) so a local run can use localhost, which Caddy serves from its internal CA.
+#
+# Security headers are not set here: the web app (next.config.ts, SEC-11) and the API send their
+# own, and a second copy would only drift.
+{
+	email {$ACME_EMAIL:support@amplychat.com}
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 60s
+			idle 2m
+			# No write timeout: the API's event stream (GET /v1/w/{wid}/events, SSE) stays open
+			# for minutes, with a ping every 15 s.
+		}
+	}
+}
+
+(common) {
+	# Compress text responses, never text/event-stream (it would buffer events). Responses that
+	# are already compressed (Next.js gzips its own) pass through as they are.
+	encode {
+		zstd
+		gzip
+		match {
+			header Content-Type text/html*
+			header Content-Type text/css*
+			header Content-Type text/plain*
+			header Content-Type text/javascript*
+			header Content-Type application/javascript*
+			header Content-Type application/json*
+			header Content-Type application/problem+json*
+			header Content-Type application/manifest+json*
+			header Content-Type application/xml*
+			header Content-Type image/svg+xml*
+		}
+	}
+	# No "Server: Caddy" or "Via: 1.1 Caddy" (SEC-11: the API never named its server).
+	header -Server
+	header -Via
+	# Access log as JSON on stdout (docker compose logs caddy). Caddy already redacts Cookie,
+	# Set-Cookie and Authorization; secrets that travel in query strings are removed too: OAuth
+	# codes and state, Meta's webhook verify token and challenge, unsubscribe tokens.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request>uri query {
+				delete code
+				delete state
+				delete token
+				delete hub.verify_token
+				delete hub.challenge
+			}
+		}
+	}
+}
+
+# www → the canonical apex (C-142), permanent and method-preserving.
+{$WWW_HOST:www.amplychat.com} {
+	header -Server
+	redir https://{$SITE_HOST:amplychat.com}{uri} 308
+}
+
+# The website and the signed-in app (Next.js).
+{$SITE_HOST:amplychat.com} {
+	import common
+	request_body {
+		max_size 10MB
+	}
+	reverse_proxy web:3000
+}
+
+# The API: the app's calls, webhooks, OAuth callbacks and the website chat widget.
+{$API_HOST:api.amplychat.com} {
+	import common
+	# The API refuses more than 5 MB itself (webhooks; 1 MB elsewhere, api/middleware.py). Media,
+	# videos included (POST_VIDEO_MAX_MB), go from the browser straight to Cloudinary with a signed
+	# upload, never through here.
+	request_body {
+		max_size 10MB
+	}
+	reverse_proxy api:8000 {
+		# Send each server-sent event as soon as it is written.
+		flush_interval -1
+		# A config reload keeps open event streams for up to 5 minutes instead of cutting them.
+		stream_close_delay 5m
+		transport http {
+			dial_timeout 3s
+		}
+	}
+	# The API is not running (website-only mode, a deploy, a crash): a plain 503, not a 502.
+	handle_errors 502 503 504 {
+		header Retry-After 120
+		respond "Service unavailable" 503
+	}
+}

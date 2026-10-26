@@ -17,7 +17,7 @@ const mail = <a href={`mailto:${email}`}>{email}</a>;
 
 // Grounded in the built system: BUILD_SPEC §5.9, C-056 and C-067 (retention and deletion, an
 // account's data, backup exports: docs/ops/backup.md), C-049/C-053 (email and push), C-057 (Sentry
-// scrubbing, Render and Vercel), FR-PRV-01/02 and SEC-11/12, the growth-plan integrations (C-103
+// scrubbing, Google Cloud, C-145), FR-PRV-01/02 and SEC-11/12, the growth-plan integrations (C-103
 // Sheets, C-116 Shopify, C-120 Razorpay, GR-28 website chat, GR-29 Facebook Pages) and the purge
 // jobs (jobs/tasks/purge.py). C-144 checked it against Meta's Platform Terms §4, the DPDP Act and
 // Rules, and Google's API Services User Data Policy.
@@ -279,16 +279,10 @@ function sections(): LegalSection[] {
               </thead>
               <tbody>
                 <tr>
-                  <td>Render</td>
-                  <td>Hosts our API, database and background jobs</td>
+                  <td>Google Cloud</td>
+                  <td>Hosts this website, the web app, our API, database and background jobs, and our backups</td>
                   <td>All data in the service</td>
                   <td>Singapore</td>
-                </tr>
-                <tr>
-                  <td>Vercel</td>
-                  <td>Hosts this website and the web app</td>
-                  <td>Requests to the website and app</td>
-                  <td>Singapore, with a worldwide delivery network</td>
                 </tr>
                 <tr>
                   <td>Google (Gemini API)</td>
@@ -392,8 +386,7 @@ function sections(): LegalSection[] {
       title: "Where your data is stored",
       body: (
         <p>
-          Our API, database and background jobs run on Render in Singapore, and the website and web app run on Vercel, also
-          in Singapore. Some of the providers above process data in other countries, including the United States. We
+          The website, the web app, our API, database and background jobs run on Google Cloud in Singapore. Some of the providers above process data in other countries, including the United States. We
           transfer data outside India only as the DPDP Act allows.
         </p>
       ),

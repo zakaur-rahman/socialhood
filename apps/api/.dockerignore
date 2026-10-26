@@ -1,0 +1,11 @@
+# Build context of apps/api/Dockerfile: only what the image needs (C-145).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!alembic.ini
+!src/
+!migrations/
+!scripts/worker.sh
+**/__pycache__
+**/*.py[cod]

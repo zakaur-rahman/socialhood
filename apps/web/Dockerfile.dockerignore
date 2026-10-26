@@ -1,0 +1,18 @@
+# Build context of apps/web/Dockerfile is the repository root (C-145): send only the web app, the
+# workspace packages and the pnpm files. Never .env files.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!patches/
+!packages/
+!apps/web/
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+apps/web/test-results
+apps/web/playwright-report
+**/*.tsbuildinfo
+apps/web/e2e/.auth
+apps/web/e2e/.stack.json
