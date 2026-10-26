@@ -81,7 +81,7 @@ describe("the legal pages", () => {
     vi.resetModules();
   });
 
-  it("with today's config: no placeholders, no governing-law clause, a Last updated date", async () => {
+  it("with today's config: no placeholders, no governing-law clause, a Last updated date, the operator named", async () => {
     for (const path of ["privacy", "terms", "refunds"] as const) {
       const { default: Page } = await import(`../app/(marketing)/${path}/page.tsx`);
       const { container, unmount } = render(<Page />);
@@ -89,7 +89,9 @@ describe("the legal pages", () => {
       expect(screen.getByText("Last updated 1 October 2026")).toBeInTheDocument();
       expect(container.textContent).not.toMatch(PLACEHOLDER);
       expect(screen.queryByRole("heading", { name: /Governing law/ })).not.toBeInTheDocument();
-      expect(screen.queryByText("Operated by")).not.toBeInTheDocument();
+      // C-139: the operator, unchartd, is set, so each page names it.
+      expect(screen.getAllByText("Operated by").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("unchartd").length).toBeGreaterThan(0);
       unmount();
     }
   });
