@@ -188,6 +188,7 @@ const gradientMeta = [
   { name: "bg-glow-brand", key: "glow-brand", use: "One per view at most: the plan hero" },
   { name: "bg-ambient", key: "ambient", use: "The light behind the glass, fixed on the body; not for components" },
   { name: "bg-glow-brand-top", key: "glow-brand-top", use: "The marketing glow at the top of a section: the hero, the illustration cards" },
+  { name: "bg-glow-brand-centre", key: "glow-brand-centre", use: "A round marketing glow behind one object: the hero's hub" },
 ] as const;
 export const gradientUtilities = gradientMeta.map(({ name, key, use }) => ({
   name,

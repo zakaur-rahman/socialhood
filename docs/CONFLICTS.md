@@ -5991,3 +5991,74 @@ The owner asked for a logo for the new name (C-139) and, from ten concepts and f
 - **Icons regenerated:** `icon-192`, `icon-512`, `icon-maskable-512`, `badge-72` (one colour, bars cut
   out), `apple-icon`, and `favicon.ico`, which is now generated too (16, 32 and 48 px PNGs inside the
   .ico) instead of being a static binary.
+
+## C-141 · Landing hero: the "one door" routing diagram (feature/hero-routing)
+
+The owner asked for the hero laid out like a reference screenshot (a SaaS hero with a two-line
+headline, two CTAs and a hub-and-spoke diagram of tools routed through a central logo tile, with
+hairline structure and hatched side columns), "customised to what we provide". Layout and craft
+only: no copy, logo or icons were taken from it. Web only: no API change.
+
+### What the hero shows
+- **Headline** (the page's one h1, `HERO_TITLE`, which the auth pages also show): "Every DM. Every
+  comment. One inbox." with "One inbox." in `brand-fg` on its own line from `sm`. One-line subhead
+  (`HERO_LINE`): "AI that knows your business drafts or sends the reply on Instagram, WhatsApp and your
+  website, and hands the tricky ones to you." CTAs unchanged ("Start free", "See how it works") and the
+  three-point trust row kept. The "Inbox, AI replies…" pill, FlipWords and the Spotlight beams are
+  gone from the hero (the components stay; nothing else on the landing page used FlipWords).
+- **Structure**: the text sits in a centre column with `line-subtle` side borders (from `lg`); outside
+  it, `hatch-lines` (new utility in globals.css: 1 px `line-subtle` verticals every 6 px, masked to fade
+  downwards). A `line-subtle` hairline divides the text from the diagram. The hub has a round glow,
+  `bg-glow-brand-centre` (new gradient token, registered in tokens.ts).
+- **The diagram** (`RoutingDiagram.tsx`, geometry in `routing.ts`): one coordinate system per layout;
+  the SVG tracks and the HTML nodes are placed from the same numbers (nodes in percent of the box,
+  sized in percent too), so endpoints line up at every width. Tracks are orthogonal with rounded
+  corners (quarter arcs), `line-strong` hairlines, staggered turns so no two cross (a test checks it).
+  - Sources, left: Instagram DMs ("DM" badge), Instagram comments ("Comment"), WhatsApp ("Chat"),
+    Website chat ("Widget"), Facebook Pages ("soon", as in C-138: with Meta's approval). Platform
+    glyphs and the `*-logo` tiles we already ship.
+  - Hub: `LogoMark` on a two-ring bezel with port nubs where the tracks plug in, captioned
+    "{SITE_NAME} AI". Above it, "Your knowledge" and "Your catalogue" joined by dotted tracks, under
+    "Answers only from what you added" (C-122).
+  - Outcomes, right: Reply in the same chat ("Reply", success tile), Needs you, for your team
+    ("Hand-off", warning tile), Razorpay or UPI link ("Pro"), Lead to Google Sheets ("Lead", "Pro";
+    Sheets is Pro and Max, C-103), Monday report (C-130). *Decision:* Zapier and webhooks left out to keep
+    five per side; Integrations lists them right below.
+  - Micro-labels: "Every message comes in" and "The right answer goes out".
+- **Motion** (`effects/RoutingPulses.tsx`, the only client part): one clock (`useAnimationFrame`, runs
+  only while the diagram is on screen) drives four examples of 6.4 s each: a brand pulse with the
+  customer's message on a chip rides from the source into the hub, the hub and the knowledge ties light
+  up, then the answer rides out to its outcome in success (reply, payment, lead) or warning (hand-off)
+  and rests there; each node "breathes" (a ring swells and fades) when a packet arrives. Examples, a
+  made-up shop, two in Hinglish with `lang="hi-Latn"`: DM "Is the blue kurta in M?" → "Yes, ₹1,499.
+  Shall I send the link?"; WhatsApp "Haan, M wala bhej do" → "UPI link sent: ₹1,499"; comment "Mera
+  order damaged aaya" → "Needs you: passed to your team"; website "Do you take bulk orders?" → "Lead
+  added to Google Sheets". Only transforms and opacity move; chips ride on a full-size layer translated
+  by a percentage of itself, so no layout shift.
+- **Static first and reduced motion**: the server sends the whole diagram plus a still frame (the
+  first example's two tracks lit at 60% and both chips in place). That frame is what visitors with
+  `prefers-reduced-motion`, without JavaScript, or before the diagram scrolls into view see; the clock
+  never starts under reduced motion.
+- **Phones and tablets** (below `lg`): a stacked layout (`STACK`): sources in a row on top with short
+  labels, vertical tracks into the hub, "Knowledge" and "Catalogue" beside it, outcomes in a row below;
+  no badges or micro-labels there (no room). Capped at `max-w-md`. Nothing scrolls sideways at 375,
+  768, 1280 or 1536.
+- **Accessibility**: the figure has one sentence for screen readers (`ROUTING_SUMMARY`, a
+  `figcaption.sr-only`); the drawing is `aria-hidden`.
+
+### Product shot and the "Works with" strip
+- The inbox screenshot moved to its own section right after the hero, `ProductShot.tsx` ("See the
+  inbox" / "Where every conversation lands"), with the same `ContainerScroll` tilt and the example-data
+  caption. It is no longer `loading="eager"`/high priority: the headline is the first screen's largest
+  paint now.
+- The "Works with" strip is removed: the diagram shows the channels, and Integrations (next but one)
+  lists every tool with its status.
+
+### Checks
+- `tsc --noEmit` (after `next typegen`), `pnpm lint`, vitest for marketing, `app/(marketing)`, `app`,
+  `auth` and `styles` pass. New `RoutingDiagram.test.tsx`: tracks start at their nodes and end in the
+  hub, none cross, arc maths, and the nodes, 12 tracks per layout, hub, labels and still-frame chips are
+  in `renderToStaticMarkup` with nothing hidden. `page.test.tsx` and `e2e/landing.spec.ts` updated for
+  the new section order and h2.
+- E2E `landing|GR-37|not-found`: 26 passed (layout shift ≤ 0.1 and no sideways scroll at all four
+  widths). Screenshots at 375, 768, 1280 and 1536, with and without reduced motion, checked by eye.
