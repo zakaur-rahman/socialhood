@@ -83,6 +83,8 @@ export const LEGAL_LINKS = [
   { label: "Shipping and delivery", href: "/shipping" },
   { label: "Data deletion", href: "/data-deletion" },
   { label: "Contact us", href: "/contact" },
+  // The security track's responsible-disclosure page (C-143); it exists once the branches combine.
+  { label: "Security", href: "/security" },
 ] as const;
 
 /** The public pages the sitemap lists. */

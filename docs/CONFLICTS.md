@@ -6242,8 +6242,9 @@ lawyer must review every page before launch (launch checklist §6.4).**
   name on this page too).
 - **Footer and sitemap** (`lib/marketing/site.ts`, shared with the SEO track): the legal links are
   Privacy policy, Terms of service, Refund and cancellation, Shipping and delivery, Data deletion and
-  Contact us; `/shipping` and `/contact` are in `PUBLIC_PATHS`. `/security` is not linked here: the
-  security track adds it, and the coordinator adds the footer link when combining.
+  Contact us, then Security (`/security`, the security track's page, C-143, at the coordinator's
+  request; it resolves once the branches are combined). `/shipping` and `/contact` are in
+  `PUBLIC_PATHS`; `/security` is left to the security track's sitemap entry.
 - `LEGAL_DOCUMENTS.lastUpdated` is 2026-10-26 for all four documents.
 - `docs/ops/app-review.md` O-2 lists `/contact` and the legal name casing.
 
