@@ -9,7 +9,7 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 const source = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
-const ORIGIN = "https://app.amplychat.com";
+const ORIGIN = "https://amplychat.com";
 
 type Listener = (event: Record<string, unknown>) => void;
 

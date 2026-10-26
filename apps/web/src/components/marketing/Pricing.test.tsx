@@ -56,8 +56,10 @@ describe("the pricing section", () => {
     expect(within(card("Pro")).getByText(PRICE_AT_SIGN_UP)).toBeInTheDocument();
     expect(within(card("Pro")).getByText("7-day free trial")).toBeInTheDocument();
     expect(within(card("Free")).getByText("3 active automations")).toBeInTheDocument();
-    expect(screen.getByText(/Prices couldn't be loaded just now/)).toBeInTheDocument();
+    // Also the website deployed without the API: no "couldn't load" notice, no blanks or "null".
+    expect(screen.queryByText(/couldn't be loaded/)).toBeNull();
     expect(container.textContent).not.toMatch(/[$₹€£]\s?\d/);
+    expect(container.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
   });
 
   it("only Pro, when it can be bought, gets the moving border (C-068)", () => {

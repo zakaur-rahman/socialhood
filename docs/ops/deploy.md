@@ -19,7 +19,7 @@ v1 keys). Nothing here was deployed on the owner's behalf.
 | Render data | `socialhood-db-staging` (Postgres 18), `socialhood-kv-staging` | `socialhood-db`, `socialhood-kv` |
 | Vercel | Custom environment `staging` (branch `develop`) | Production (branch `main`) |
 | Vercel previews | every pull request, against the staging API | |
-| Web domain | `staging.amplychat.com` | `app.amplychat.com` |
+| Web domain | `staging.amplychat.com` | `amplychat.com` (the site, and the app under `/app`); `www.amplychat.com` redirects to it |
 | API domain | `api.staging.amplychat.com` | `api.amplychat.com` |
 | `APP_ENV` | `staging` | `production` (settings refuse fakes, the sandbox and DEBUG) |
 | Sandbox platform | on (drills and end-to-end runs) | off (SEC-14) |
@@ -33,8 +33,11 @@ never deploys by itself: after CI passes on `main`, the Production workflow wait
 environment `production` for the owner's approval, then calls the Render deploy hooks of
 `socialhood-api` and `socialhood-worker` with that commit ([branching.md](branching.md)).
 
-Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
-`infra/render.yaml` (config groups), Vercel, and every vendor URL in section 5.
+Domains (C-142): the public site and the signed-in app are one Vercel deployment on the apex,
+`https://amplychat.com`, which is the canonical origin for search engines and Meta; the app lives
+under `/app` and `/w/…`. `www.amplychat.com` permanently redirects to the apex. The API is
+`api.amplychat.com`. If the domain changes, change it in `infra/render.yaml` (config groups),
+`DEFAULT_SITE_URL` in `apps/web/src/lib/marketing/site.ts`, Vercel, and every vendor URL in section 6.
 
 ## 2. Accounts and plans [owner account]
 
@@ -130,7 +133,7 @@ API and worker read the same variables.
 |---|---|---|---|
 | `APP_ENV` | config | no | `production` / `staging` |
 | `PYTHON_VERSION` | config | no | `3.13.14` |
-| `API_BASE_URL` · `WEB_BASE_URL` | config | no | `https://api.amplychat.com` · `https://app.amplychat.com` |
+| `API_BASE_URL` · `WEB_BASE_URL` | config | no | `https://api.amplychat.com` · `https://amplychat.com` (the apex: email links, the OAuth return and the checkout return land in the app under it) |
 | `CORS_ALLOWED_ORIGINS` | config | no | the web origin, exact |
 | `DATABASE_URL` | link | yes | Render's `postgresql://…`; the API adds the asyncpg driver itself |
 | `DATABASE_URL_DIRECT` | link | yes | same database, direct (the queue's LISTEN/NOTIFY, migrations) |
@@ -195,7 +198,11 @@ the header's first entry is not used for anything. `--no-server-header` drops `s
 
 | Variable | Secret | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | no | `https://api.amplychat.com` (staging: `https://api.staging.amplychat.com`) |
+| `NEXT_PUBLIC_API_BASE_URL` | no | `https://api.amplychat.com` (staging: `https://api.staging.amplychat.com`). May stay unset for a website-only deploy (section 5a) |
+| `NEXT_PUBLIC_SITE_URL` | no | the canonical origin for canonical links, Open Graph, structured data, `sitemap.xml`, `robots.txt` and `llms.txt`. Production: leave unset (defaults to `https://amplychat.com`) or set exactly that; staging: `https://staging.amplychat.com` |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | no | Production only. Google Search Console → Add property → URL prefix `https://amplychat.com/` → HTML tag; paste only the `content` value. Unset = no tag |
+| `NEXT_PUBLIC_BING_SITE_VERIFICATION` | no | Production only. Bing Webmaster Tools → Add site → HTML Meta Tag (`msvalidate.01`); the `content` value. Unset = no tag (or import the site from Search Console instead) |
+| `NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION` | no | Production only. Meta Business Manager → Business settings → Brand safety → Domains → add `amplychat.com` → Meta-tag method; the `content` value (`<meta name="facebook-domain-verification">`). Unset = no tag |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | no | Clerk → API keys |
 | `CLERK_SECRET_KEY` | yes (Sensitive) | same instance as the API's |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` · `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | no | `/sign-in` · `/sign-up` |
@@ -231,20 +238,49 @@ app has no VAPID variable.
    for both settings), a preview shows the pages but its API calls and sign-in are refused; test
    API-backed changes on staging after the merge to `develop`.
 5. Optional, **Settings → Deployment Checks → Add Checks → GitHub**: `api`, `web`, `contract`,
-   `secrets`. A production deployment then goes live on `app.amplychat.com` only after CI has
+   `secrets`. A production deployment then goes live on `amplychat.com` only after CI has
    passed on its `main` commit. The web does not wait for the production approval, so the API must
    stay compatible with the web that is live (add endpoints before the web uses them), and approve
    release deploys promptly.
-6. **Domains:** `app.amplychat.com` → Production; `staging.amplychat.com` → staging. Add the
-   records Vercel shows (CNAME `cname.vercel-dns.com`, or A for an apex).
+6. **Domains** (Settings → Domains):
+   - `amplychat.com` → Production, the **primary** domain. Add the A record Vercel shows for an
+     apex (or move the domain's nameservers to Vercel).
+   - `www.amplychat.com` → **Redirect to** `amplychat.com`, permanent (308). CNAME
+     `cname.vercel-dns.com`.
+   - `staging.amplychat.com` → the `staging` environment (CNAME `cname.vercel-dns.com`).
+   - If the old `app.amplychat.com` was ever connected, redirect it to `amplychat.com` too.
+   The signed-in app is the same deployment under `/app`; there is no separate app domain.
 7. Deploy, then open the site and sign in.
 8. Security headers and the CSP are in `next.config.ts` (SEC-11). The CSP's `connect-src` must
    allow the Sentry ingest host from your DSN (for example `https://*.ingest.us.sentry.io`), or
    browser errors never arrive.
 
+## 5a. Website first, without the API [owner account]
+
+Meta's business verification compares the legal name, the website and the contact email, so the
+public site can go live before the API (C-142). For that first deploy:
+
+- **Set:** `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (the root layout and the
+  middleware use Clerk on every page; without them every page fails), the Clerk sign-in/up paths,
+  and the three verification variables as you get them. Leave `NEXT_PUBLIC_SITE_URL` unset.
+- **Leave unset:** `NEXT_PUBLIC_API_BASE_URL`. The public pages build and render without it: the
+  plan cards list each plan's features from the bundled plan table and say "See pricing when you
+  sign up" instead of a price (no blank, no "null"); the structured data has no offers; the
+  public API reference (`/developers/api`) says it isn't available right now; the data-deletion
+  status lookup (`/data-deletion?code=…`) shows "Request not found". Nothing else on a public page
+  calls the API, at build or at request time.
+- **What doesn't work yet:** signing up or in reaches the app, which needs the API, so a new
+  account sees the app's error state; the unsubscribe page can't unsubscribe. Until the API is
+  live, consider Clerk → Restrictions → sign-up mode "Restricted" so nobody creates an account
+  they can't use.
+- **After it is live:** in Google Search Console and Bing Webmaster Tools, verify the property
+  (the tags above; or a DNS TXT record, which needs no deploy), then submit
+  `https://amplychat.com/sitemap.xml`. In Meta Business Manager, verify the domain, then start
+  business verification with the same legal name, website and `support@amplychat.com`.
+
 ## 6. Vendor URLs to set per environment [owner account]
 
-Replace `{API}` and `{WEB}` with the environment's domains.
+Replace `{API}` and `{WEB}` with the environment's domains (production: `https://api.amplychat.com` and `https://amplychat.com`).
 
 | Vendor | Setting | Value |
 |---|---|---|
@@ -278,7 +314,7 @@ Staging first, then production. Tick each line.
       Auto Sync off); plans checked. Staging services track `develop` with "After CI checks
       pass"; production services track `main` with auto-deploy off.
 - [ ] Both secrets groups created, filled and linked to both services of their environment.
-- [ ] `api.` and `app.` domains (and the staging pair) resolve, with TLS.
+- [ ] `amplychat.com`, `www.amplychat.com` (redirecting to the apex) and `api.amplychat.com` (and the staging pair) resolve, with TLS.
 - [ ] API pre-deploy ran `alembic upgrade head`; `/healthz` is `{"status":"ok"}`; `/readyz` with
       the token is `ready`.
 - [ ] `/metrics` returns 401 without the token and metrics with it (launch checklist).

@@ -141,7 +141,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
           ))}
         </ul>
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-fg-secondary">
-          {pricing.source === "fallback" ? "Prices couldn't be loaded just now; you'll see the current price when you sign up. " : null}
+          {/* Without the plan list (the API unset or down) each paid card already says the price is shown at sign-up. */}
           {headingLevel === 2 ? (
             <>
               <Link href="/pricing" className="font-medium text-brand-fg underline-offset-4 hover:underline">

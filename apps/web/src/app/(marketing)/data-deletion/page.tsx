@@ -4,6 +4,8 @@ import Link from "next/link";
 
 import type { ReactNode } from "react";
 
+import { BreadcrumbJsonLd } from "@/components/marketing/JsonLd";
+import { LegalFacts } from "@/components/marketing/legal/LegalPage";
 import { Container } from "@/components/marketing/primitives";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,28 +13,29 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { DataDeletionStatus } from "@/lib/api/types";
 import { SUPPORT_EMAIL } from "@/lib/copy";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { cn } from "@/lib/utils";
 import { MARKETING_HEADING, READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Data deletion",
-  description: "How to delete your data from Amplychat, and the status of a data deletion request made through Instagram.",
+  description: `How to delete your data from ${SITE_NAME}, and the status of a data deletion request made through Instagram or Facebook.`,
   path: "/data-deletion",
 });
 
 const STATUS_COPY: Record<DataDeletionStatus["status"], { title: string; body: string }> = {
   received: {
     title: "Request received",
-    body: "We have your request and will delete the data we hold for your Instagram account shortly.",
+    body: "We have your request and will delete the data we hold for your account shortly.",
   },
   processing: {
     title: "Deleting your data",
-    body: "We have disconnected your Instagram account and are deleting the data we hold for it.",
+    body: "We have disconnected your account and are deleting the data we hold for it.",
   },
   completed: {
     title: "Data deleted",
-    body: "We have disconnected your Instagram account and deleted the data we held for it: its conversations, messages, comments, contacts, posts and automations.",
+    body: "We have disconnected your account and deleted the data we held for it: its conversations, messages, comments, contacts, posts and automations.",
   },
   failed: {
     title: "Still deleting your data",
@@ -82,13 +85,13 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
           workspace&apos;s knowledge, settings and billing stay.
         </Option>
         <Option>
-          <strong className="text-fg">Removed Amplychat in Instagram?</strong> If you asked Instagram to delete your
-          data, it gives you a confirmation code and a link to this page. Enter the code below to see how your request is
-          going.
+          <strong className="text-fg">Removed {SITE_NAME} in Instagram or Facebook?</strong> If you asked Meta to delete
+          your data, it gives you a confirmation code and a link to this page. Enter the code below to see how your request
+          is going. Deletion finishes within 24 hours.
         </Option>
         <Option>
           <strong className="text-fg">Anyone else</strong>, including people who messaged or commented on a business that
-          uses Amplychat: email{" "}
+          uses {SITE_NAME}: email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline underline-offset-4">
             {SUPPORT_EMAIL}
           </a>
@@ -116,7 +119,7 @@ function CheckStatus({ code }: { code?: string }) {
       <form action="/data-deletion" method="get">
         <Field id="code">
           <FieldLabel>Check a request</FieldLabel>
-          <FieldDescription id="code-hint">The confirmation code Instagram showed you.</FieldDescription>
+          <FieldDescription id="code-hint">The confirmation code Instagram or Facebook showed you.</FieldDescription>
           <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
             <Input
               name="code"
@@ -156,6 +159,7 @@ export default async function DataDeletionPage({
 
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
+      <BreadcrumbJsonLd name="Data deletion" path="/data-deletion" />
       <Container className="max-w-3xl py-12 sm:py-16">
         {given ? (
           <div className="mb-12 flex flex-col items-start gap-3">
@@ -180,7 +184,7 @@ export default async function DataDeletionPage({
               <>
                 <h1 className={MARKETING_HEADING}>Request not found</h1>
                 <p className="text-sm text-fg-secondary">
-                  Check the link from Instagram, or email {SUPPORT_EMAIL} with your confirmation code.
+                  Check the link from Instagram or Facebook, or email {SUPPORT_EMAIL} with your confirmation code.
                 </p>
               </>
             )}
@@ -188,6 +192,12 @@ export default async function DataDeletionPage({
         ) : null}
         <HowToDelete heading={given ? "h2" : "h1"} />
         <CheckStatus code={given ? code : undefined} />
+        <section aria-labelledby="who-we-are" className="mt-10">
+          <h2 id="who-we-are" className="text-xl font-semibold tracking-tight">
+            Who runs {SITE_NAME}
+          </h2>
+          <LegalFacts />
+        </section>
       </Container>
     </main>
   );

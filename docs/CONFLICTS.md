@@ -6062,3 +6062,245 @@ only: no copy, logo or icons were taken from it. Web only: no API change.
   the new section order and h2.
 - E2E `landing|GR-37|not-found`: 26 passed (layout shift ≤ 0.1 and no sideways scroll at all four
   widths). Screenshots at 375, 768, 1280 and 1536, with and without reduced motion, checked by eye.
+
+## C-142 · Launch SEO: canonical apex, metadata, sitemap, structured data, verification tags (feature/launch-seo)
+
+The public website goes live on Vercel first so Meta can verify the business; this pass makes it
+ready for search engines and for that check.
+
+### Canonical origin (decided)
+- **`https://amplychat.com`** (the apex) is the one public origin. `www.amplychat.com` redirects
+  to it (308, set in Vercel); the signed-in app is the same deployment under `/app` and `/w/…`, so
+  there is no `app.` subdomain any more. `DEFAULT_SITE_URL` (`lib/marketing/site.ts`) is the apex;
+  the API's production `WEB_BASE_URL`, CORS and Clerk authorized parties are the apex too (set in
+  `infra/render.yaml` on feature/launch-sec, C-143; documented in `docs/ops/deploy.md`,
+  `apps/api/.env.example`, BUILD_SPEC OQ-3). Leftover `socialhood.com` hosts in the production
+  workflow's environment URL, the Prometheus targets and the Zapier app's default API base are now
+  `api.amplychat.com` / `api.staging.amplychat.com`.
+- The root layout sets `metadataBase` from the site URL, so every canonical and Open Graph URL is
+  absolute on the apex (also the 404 and the app).
+
+### Metadata
+- Every public page: a unique title of at most 60 characters as shown ("… · Amplychat"), a unique
+  description of 50 to 160 characters, a canonical, Open Graph and a Twitter card with `/og.png`.
+  The landing title is "Amplychat · AI inbox for Instagram and WhatsApp" (`SITE_TITLE_LINE`);
+  `SITE_DESCRIPTION` and eight longer descriptions (pricing, the six GTM pages, the API reference)
+  were shortened. `app/public-metadata.test.ts` finds every `(marketing)` page by glob and holds
+  each `PUBLIC_PATHS` entry to that, so a sitemap entry without a page fails the test.
+- `noindex`: the `(app)` and `(auth)` layouts (`NO_INDEX`), unsubscribe and the 404 (unchanged).
+
+### Sitemap, robots, llms.txt
+- `PUBLIC_PATHS` adds `/developers/api` and `/security` (the page comes from C-143); the footer's
+  "Compare and learn" links the API reference. Each entry has an ISO `lastModified`: the legal
+  pages' "Last updated" date, the others `PAGE_UPDATED` in `site.ts` (bump it when a page's copy
+  changes; a build date would claim every page changed on every deploy).
+- robots.txt also disallows `/sign-up`, `/dev/` and `/api/` (`ROBOTS_DISALLOW`); a test checks no
+  public path, `/apple-icon.png` or `/llms.txt` is blocked.
+- `/llms.txt` (static): the product in plain words and links to every public page.
+
+### Structured data
+- Landing page: one `@graph` with `Organization` (name Amplychat, `legalName` from
+  `LEGAL.entityName`, url, logo `/icons/icon-512.png`, support email, contact point; `sameAs` only
+  once `SOCIAL_PROFILES` has real profiles), `WebSite`, `SoftwareApplication` (offers only when
+  the plan list has a Pro price, else none) and `FAQPage` from the FAQ data.
+- `BreadcrumbList` (Home, then the page) on the GTM pages, pricing, the API reference,
+  data deletion and the three legal pages (from small `layout.tsx` files beside them, so the
+  documents stay untouched). No ratings, reviews or counts anywhere.
+
+### Verification tags
+`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` (`google-site-verification`),
+`NEXT_PUBLIC_BING_SITE_VERIFICATION` (`msvalidate.01`) and
+`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION` (`facebook-domain-verification`), rendered only when
+set (`verificationMetadata`), documented in `apps/web/.env.example` and deploy.md section 4.
+
+### Website without the API
+`next build` with `NEXT_PUBLIC_API_BASE_URL` unset passes and prerenders every public page. The
+plan cards fall back to the bundled plan table and say "See pricing when you sign up"; the
+"Prices couldn't be loaded just now" line is gone (it read as broken on a website-only deploy, and
+the cards already say it). `/developers/api` shows "isn't available right now"; a data-deletion
+status lookup says "Request not found". Clerk keys are still needed on every page (root layout and
+middleware). Deploy.md section 5a covers this first deploy.
+
+### Performance (measured from the build, not a deploy)
+The landing page's LCP is the server-rendered h1 (no hero image); Geist is self-hosted by
+next/font with preload and `font-display: swap`; images below the fold are lazy with `sizes`.
+Client JS on public pages is about 355 to 395 KB gzipped (home 396, pricing 380, a GTM page 365,
+404 354), most of it shared by the root layout: Framer Motion with React DOM (~63 KB), Sentry
+(~67 KB, loaded even with no DSN) and Clerk (~46 KB). Not changed here: making Sentry and Clerk
+load only in the app is a larger change than this pass.
+
+### Owner to-dos
+- Vercel domains: `amplychat.com` primary, `www` redirect, `staging.amplychat.com` (deploy.md §5).
+- Google Search Console and Bing Webmaster Tools: verify `https://amplychat.com/` (tag through the
+  env vars, or DNS TXT), then submit `https://amplychat.com/sitemap.xml`.
+- Meta Business Manager: verify the domain (`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION`), then
+  business verification with the legal name, the website and support@amplychat.com.
+- Add real social profile URLs to `SOCIAL_PROFILES` once they exist.
+
+## C-143 · Launch security pass (feature/launch-sec)
+
+Security hardening for putting the public website live on Vercel at `https://amplychat.com`
+(API on Render later). The full record, with the vendor-dashboard steps for the owner, is the
+"Launch pass" section of `docs/security-checklist.md` (L-1…L-13).
+
+### Decisions made here
+- **HSTS gets `preload`** (two years, `includeSubDomains`). Sending the directive is harmless;
+  submitting the domain to hstspreload.org is the owner's step, after every subdomain is on HTTPS.
+- **`'unsafe-inline'` stays** on `script-src` and `style-src` only (A-4, re-checked): Next.js's
+  per-page inline scripts can't be hashed, and nonces would make the public pages dynamic. A test
+  now pins it to those two directives and keeps `unsafe-eval` out of production.
+- **`upgrade-insecure-requests` on Vercel without an API** (`VERCEL=1` and no
+  `NEXT_PUBLIC_API_BASE_URL`), so the website-only launch gets it; local production builds don't.
+- **Permissions-Policy** turns off 15 features the app never uses; `autoplay` is left alone so a
+  muted marketing video can still play.
+- **security.txt `Expires` is computed**, 360 days ahead (RFC 9116 recommends under a year), and the
+  route revalidates daily, so it never lapses between deploys. Canonical and Policy use `siteUrl()`,
+  so they follow C-142's canonical origin.
+- **`/security` makes no bounty and no legal safe-harbour promise.** It gives the testing rules and
+  says we reply. A safe-harbour sentence is a legal commitment, so it is left to the owner (below).
+- **Production settings refuse inexact origins.** `CORS_ALLOWED_ORIGINS` and
+  `CLERK_AUTHORIZED_PARTIES` must be exact https origins and include `WEB_BASE_URL`'s origin;
+  `API_BASE_URL` and `WEB_BASE_URL` must be https. Staging and local are unchanged.
+- **`infra/render.yaml`** moves off the `socialhood.com` placeholders: web origin
+  `https://amplychat.com` (with C-142), API `api.amplychat.com`, staging `staging.amplychat.com`,
+  `EMAIL_FROM` `Amplychat <support@amplychat.com>` as in `.env.example`.
+- **Dependencies**: `fast-uri` 3.1.8 → 3.1.9 by a lockfile-only edit (a `pnpm update` also drifted
+  rolldown and others, so it wasn't used). pip-audit was clean.
+
+### Left for other tracks
+- `/security` needs a sitemap entry (`PUBLIC_PATHS` in `lib/marketing/site.ts`, SEO track, C-142)
+  and a footer link (legal or SEO track).
+- `docs/ops/deploy.md` still shows `app.amplychat.com` for `WEB_BASE_URL` and the Vercel domain; the
+  SEO track's canonical change updates it to match `infra/render.yaml`.
+
+### Owner decisions (recommended values)
+- Safe harbour on `/security`: recommended "If you follow these rules and act in good faith, we
+  won't take legal action against you for your research."
+- When to submit HSTS preload: after the API and Clerk production subdomains are live on HTTPS.
+- Switch from the Clerk development key to the production instance before real sign-ups.
+
+## C-144 · Legal and trust pages for launch (feature/launch-legal)
+
+Brief: make the public legal pages fit for Meta business verification and App Review, India's DPDP
+Act 2023 and Rules, the IT Rules 2011 (SPDI), Razorpay's and Dodo Payments' site reviews, and Google's
+API Services User Data Policy, for the facts today. Web only: no API change. **Not legal advice: a
+lawyer must review every page before launch (launch checklist §6.4).**
+
+### What changed
+- **`LEGAL` (`apps/web/src/lib/legal.ts`).** `entityName` is `UNCHARTD`. *Decision:* the Udyam legal
+  name in capitals, not "unchartd", because Meta compares the site's legal name with the registration;
+  one value, used by every page, the footer ("© year UNCHARTD") and the structured data. New fields,
+  each rendered only when set: `entityType` (set: "Sole proprietorship registered in India"),
+  `proprietor` (set: Zakaur Rahman), `phone`, `grievanceResponseDays`, `supportResponseTime`.
+  `LegalFacts` shows them in order: Operated by, Business type, Proprietor, Registered address,
+  Phone, Email, Grievance officer. `grievanceDays()` defaults to 30 (the IT Rules 2011 ask for one
+  month while they apply) and never says more than 90 (DPDP Rules, rule 14(3)).
+- **Privacy Policy**, rewritten on the old one: the operator; Facebook Pages and website chat as
+  sources; a "Data from Instagram, Facebook and WhatsApp" section (what we get, why, how long, how to
+  delete: Meta Platform Terms §4); website chat visitors' data (messages, the name and email they
+  give, consent records with the words shown, IP for abuse limits, a random visitor ID in local
+  storage); contacts, orders and consent records; the AI disclosure (drafted by Google Gemini from the
+  business's own knowledge; Auto sends without review only if the business turns it on; paid API, so
+  Google doesn't use it to improve its products); a **Google user data** section with Google's Limited
+  Use sentence (Sheets uses only `drive.file`, a non-sensitive scope, so the statement is not strictly
+  required; it is there because Google's OAuth review looks for it, and it covers Google sign-in
+  through Clerk too); the sub-processor table with a "Where" column; a second table for the services a
+  business connects with its own account (Razorpay, Shopify, Google Sheets, Zapier, the API and
+  webhooks) and exactly what each gets (checked in `razorpay/http.py`: name, phone, order number and
+  amount; Shopify `read_products` only); retention for Pro **and Max**, and the 30-day webhook and
+  Sheets delivery logs (`jobs/tasks/purge.py`); the 24-hour deletion promise (`PURGE_WITHIN`,
+  `services/workspace_deletion.py`); rights with how to ask and which identifier to give (rule 14(1)),
+  consent withdrawal as easy as giving it, nomination, grievances answered within `grievanceDays()`
+  days (rule 14(3)), the Data Protection Board; breach notice contents (rule 7); children; transfers
+  outside India.
+- **Cookies.** *Decision: no banner.* We set only strictly necessary storage: Clerk's session
+  cookies, the `sh_theme` theme cookie (C-129), local storage for view preferences and the widget's
+  visitor ID, and the push service worker. No analytics or ad cookies and no third-party trackers
+  (checked `package.json`: only Sentry, which sets no cookies). The DPDP Act has no cookie-specific
+  rule, and strictly necessary storage needs no consent under the EU ePrivacy rule either, so a
+  statement in the Privacy Policy is enough. Revisit if analytics or an ad pixel is ever added.
+- **Terms**: the operator and proprietor; Facebook Pages "with Meta's approval" and website chat; Max
+  "coming soon"; **Dodo Payments is the merchant of record** (checkout, payment, tax, invoice; its
+  terms apply to the payment); a Delivery section; connected services (Razorpay, Shopify, Sheets,
+  Zapier), and we never hold money a business's customers pay through its Razorpay; the business is
+  the Data Fiduciary for its customers' data; "Contact and complaints".
+- **Refund and Cancellation Policy** (renamed from Refund Policy, same `/refunds`): a Cancelling
+  section (how, when it takes effect, no fee, deleting the workspace cancels at once), because both
+  Razorpay and Dodo ask for a "refund and cancellation" policy; refunds go through Dodo as merchant of
+  record; payments to businesses through their own Razorpay are theirs to refund. The refund terms
+  themselves are unchanged and still OWNER REVIEW.
+- **Shipping and Delivery Policy**, new, `/shipping`. *Decision: its own short page rather than only a
+  Terms section*, so a payment reviewer finds it under the name they look for; Terms has a Delivery
+  section that links to it. It says nothing is shipped, when access starts, what to do if a plan
+  doesn't start, and that businesses' own orders ship on their terms.
+- **Contact us**, new, `/contact`: "About us" (who runs it and what it is, for Razorpay's About us
+  link) and "How to reach us" (email; phone once set; grievances and the reply time; the support reply
+  time once set), the facts card, and links to the FAQ, pricing, data deletion, developers and privacy.
+  `ContactDetails` is in `components/marketing/legal/ContactDetails.tsx`.
+- **Data deletion page**: Instagram **or Facebook** (the callback serves both: `jobs/tasks/privacy.py`),
+  "finishes within 24 hours", and a "Who runs Amplychat" facts card (app-review O-2 wants the legal
+  name on this page too).
+- **Footer and sitemap** (`lib/marketing/site.ts`, shared with the SEO track): the legal links are
+  Privacy policy, Terms of service, Refund and cancellation, Shipping and delivery, Data deletion and
+  Contact us, then Security (`/security`, the security track's page, C-143, at the coordinator's
+  request; it resolves once the branches are combined). `/shipping` and `/contact` are in
+  `PUBLIC_PATHS`; `/security` is left to the security track's sitemap entry.
+- `LEGAL_DOCUMENTS.lastUpdated` is 2026-10-26 for all four documents.
+- `docs/ops/app-review.md` O-2 lists `/contact` and the legal name casing.
+
+### Requirements and where the site meets them
+
+| Requirement | Source | Where |
+|---|---|---|
+| Meta: public privacy policy URL, not geoblocked | [Meta Platform Terms §4(a)](https://developers.facebook.com/terms/) | `/privacy`, linked in every footer |
+| Meta: what Platform Data is processed, how, why, and how to request deletion | [Platform Terms §4(b)](https://developers.facebook.com/terms/) | `/privacy` sections 2, 4 and 10 |
+| Meta: deletion available to every user; data deletion callback and status page | [Platform Terms §4(b)](https://developers.facebook.com/terms/), [data deletion callback](https://developers.facebook.com/docs/development/create-an-app/app-dashboard/data-deletion-callback) | `/data-deletion` (status by code), the API callback, `/privacy#deleting` |
+| Meta verification: legal name, website and email match | `docs/ops/app-review.md` O-2 | `UNCHARTD` and support@amplychat.com on every legal page, the footer and `/contact`; the address once set |
+| DPDP: plain-language notice, itemised data, purposes, how to withdraw consent, exercise rights and complain to the Board | DPDP Act s.5 and s.6; [DPDP Rules, rule 3](https://dpdpa.com/dpdparules/rule3.html) | `/privacy` sections 2, 3 and 11 (consent prompts in the app are the businesses' notices, not ours) |
+| DPDP: publish how to make rights requests and the identifier needed | [rule 14(1)](https://dpdpa.com/dpdparules/rule14.html) | `/privacy#your-rights`, "How to ask" |
+| DPDP: grievance system and response period (at most 90 days) | [rule 14(3)](https://dpdpa.com/dpdparules/rule14.html) | `/privacy#your-rights`, `/contact` (30 days by default) |
+| DPDP: nomination | Act s.14, rule 14(4) | `/privacy#your-rights` |
+| DPDP: contact of the person who answers questions | rule 9 | support@amplychat.com everywhere; the grievance officer once set |
+| DPDP: breach intimation to each affected person and the Board | Act s.8(6), rule 7 | `/privacy#security` |
+| DPDP: children (under 18) | Act s.9 | `/privacy#children`, Terms (18+) |
+| DPDP: retention and erasure | Act s.8(7), rule 8 | `/privacy#retention`, `#deleting` |
+| IT Rules 2011 (SPDI): privacy policy on the website; grievance officer's name and contact published; grievances answered in one month | [IT (SPDI) Rules 2011, rules 4 and 5(9)](https://www.meity.gov.in/writereaddata/files/GSR313E_10511%281%29.pdf) | `/privacy`; one month by default; **the officer's name needs `grievanceOfficer` set** |
+| Razorpay: About us, Contact us, Pricing, Terms, Privacy and Refunds links | [Razorpay business website details](https://razorpay.com/docs/payments/dashboard/account-settings/business-website-details/) | `/contact` (About us and Contact us), `/pricing`, `/terms`, `/privacy`, `/refunds` |
+| Razorpay: Contact us with registered name, address, phone and email; shipping and refund timelines | [Razorpay's guide](https://razorpay.com/learn/breaking-down-the-requirements-for-accepting-international-payments-through-razorpay/) | `/contact` (**phone and address need the owner**), `/shipping`, `/refunds` |
+| Dodo: public pricing with the billing interval, Terms, Privacy, Refund and Cancellation, a monitored contact, linked from the footer, matching the form | [Dodo verification process](https://docs.dodopayments.com/miscellaneous/verification-process), [business verification](https://docs.dodopayments.com/guides/business-verification) | `/pricing`, `/terms`, `/privacy`, `/refunds`, `/contact`, the footer on every page |
+| Google: a privacy policy that documents Google user data use; Limited Use | [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), [Drive scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) (`drive.file` is non-sensitive) | `/privacy#google-user-data` |
+
+Notes on the sources: the DPDP Rules were notified in November 2025 (G.S.R. 846(E)), with most
+duties starting 18 months later (about May 2027); the dpdpa.com pages are a mirror, so check the
+Gazette text. The SPDI Rules apply until the DPDP Act's repeal of IT Act s.43A takes effect.
+Razorpay's own page lists no shipping policy, but its guide and its reviewers ask for one. Dodo's
+docs don't ask for the legal name or a merchant-of-record line on the site; we state both anyway.
+
+### Owner decisions (unset until the owner sets them in `LEGAL`)
+
+| Field | Recommended value | Why it matters |
+|---|---|---|
+| `registeredAddress` | Publish it, or a business address you can receive post at (a virtual office is fine) | Razorpay wants an address on Contact us; Meta may compare it with the Udyam record |
+| `phone` | A business number you answer (a separate SIM or a virtual number) | Razorpay's Contact us check |
+| `grievanceOfficer` | `{ name: "Zakaur Rahman", email: "support@amplychat.com" }` | IT Rules 2011 rule 5(9) want the name published; DPDP rule 9 a contact |
+| `grievanceResponseDays` | 30 (the default) | One month satisfies both the SPDI and DPDP rules |
+| `supportResponseTime` | "within 2 working days" | Shown on `/contact`; promise only what you can keep |
+| `governingLaw` | "the laws of India" | Adds the Governing law section to Terms |
+| `jurisdiction` | "the courts at Bettiah, Bihar" (or the district courts of Pashchim Champaran) | The same section |
+| `effectiveDate` | The day the site goes live | Shown as "Effective …" |
+| Refund terms | Keep the current default (no partial-period refunds, billing errors refunded within 30 days of the charge) unless you want a first-payment money-back window | Marked OWNER REVIEW in `/refunds` |
+
+Also for the owner to confirm: the "Where" column of the privacy table. Render and Vercel are
+Singapore (`docs/ops/deploy.md`, `vercel.json`); Clerk, Cloudinary, Resend and Sentry are given as the
+United States and Dodo as India and where it processes payments, from the providers' defaults, not
+from our account settings. Check each dashboard (Sentry's region shows in the DSN host). The shipping
+page says a paid plan shows "within a few minutes" and to write after an hour; adjust if Dodo's
+webhooks are slower in production.
+
+### Checks
+- `next typegen`, `tsc --noEmit`, `pnpm lint`: clean.
+- Vitest `src/lib/legal.test.tsx` (new: the owner fields stay unset, the new facts render only when
+  set, `grievanceDays` and `telHref`, the contact page with today's config and with every field set,
+  the shipping page in the all-pages check), `src/app/seo.test.ts` (shipping metadata, the two new
+  sitemap paths, the new date), `app/(marketing)`, `components/marketing` and the copy lint: all pass.
+- E2E and screenshots are left to the coordinator's combined pass.

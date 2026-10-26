@@ -7,7 +7,7 @@
  */
 
 // Set with `zapier env:set <version> API_BASE_URL=...`; the default is the production API.
-const apiBase = () => `${process.env.API_BASE_URL || 'https://api.socialhood.com'}/public/v1`;
+const apiBase = () => `${process.env.API_BASE_URL || 'https://api.amplychat.com'}/public/v1`;
 
 /** The API's problem+json error as a Zapier error (its detail is written for people). */
 const handleErrors = (response, z) => {

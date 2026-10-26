@@ -7,6 +7,7 @@ import { Faq } from "@/components/marketing/Faq";
 import { Features } from "@/components/marketing/Features";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Hero } from "@/components/marketing/Hero";
+import { JsonLd } from "@/components/marketing/JsonLd";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Integrations } from "@/components/marketing/Integrations";
 import { Languages } from "@/components/marketing/Languages";
@@ -16,14 +17,15 @@ import { SocialProof } from "@/components/marketing/SocialProof";
 import { Stats } from "@/components/marketing/Stats";
 import { Trust } from "@/components/marketing/Trust";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
-import { jsonLdString, pageMetadata, softwareApplicationJsonLd } from "@/lib/marketing/seo";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/marketing/site";
+import { FAQ } from "@/lib/marketing/faq";
+import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
 
 // ISR: the plan list (prices from Dodo) is read at build and again at most once an hour.
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({
-  title: `${SITE_NAME} · ${SITE_TAGLINE}`,
+  title: `${SITE_NAME} · ${SITE_TITLE_LINE}`,
   description: SITE_DESCRIPTION,
   path: "/",
   absoluteTitle: true,
@@ -38,7 +40,7 @@ export default async function HomePage() {
   const pricing = buildPricing(await fetchPlans());
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(softwareApplicationJsonLd(pricing)) }} />
+      <JsonLd data={landingJsonLd(pricing, FAQ)} />
       <ScrollReveal />
       <MarketingMotion>
         <Hero />
