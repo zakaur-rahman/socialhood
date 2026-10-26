@@ -6062,3 +6062,77 @@ only: no copy, logo or icons were taken from it. Web only: no API change.
   the new section order and h2.
 - E2E `landing|GR-37|not-found`: 26 passed (layout shift ≤ 0.1 and no sideways scroll at all four
   widths). Screenshots at 375, 768, 1280 and 1536, with and without reduced motion, checked by eye.
+
+## C-142 · Launch SEO: canonical apex, metadata, sitemap, structured data, verification tags (feature/launch-seo)
+
+The public website goes live on Vercel first so Meta can verify the business; this pass makes it
+ready for search engines and for that check.
+
+### Canonical origin (decided)
+- **`https://amplychat.com`** (the apex) is the one public origin. `www.amplychat.com` redirects
+  to it (308, set in Vercel); the signed-in app is the same deployment under `/app` and `/w/…`, so
+  there is no `app.` subdomain any more. `DEFAULT_SITE_URL` (`lib/marketing/site.ts`) is the apex;
+  the API's production `WEB_BASE_URL`, CORS and Clerk authorized parties are the apex too (set in
+  `infra/render.yaml` on feature/launch-sec, C-143; documented in `docs/ops/deploy.md`,
+  `apps/api/.env.example`, BUILD_SPEC OQ-3). Leftover `socialhood.com` hosts in the production
+  workflow's environment URL, the Prometheus targets and the Zapier app's default API base are now
+  `api.amplychat.com` / `api.staging.amplychat.com`.
+- The root layout sets `metadataBase` from the site URL, so every canonical and Open Graph URL is
+  absolute on the apex (also the 404 and the app).
+
+### Metadata
+- Every public page: a unique title of at most 60 characters as shown ("… · Amplychat"), a unique
+  description of 50 to 160 characters, a canonical, Open Graph and a Twitter card with `/og.png`.
+  The landing title is "Amplychat · AI inbox for Instagram and WhatsApp" (`SITE_TITLE_LINE`);
+  `SITE_DESCRIPTION` and eight longer descriptions (pricing, the six GTM pages, the API reference)
+  were shortened. `app/public-metadata.test.ts` finds every `(marketing)` page by glob and holds
+  each `PUBLIC_PATHS` entry to that, so a sitemap entry without a page fails the test.
+- `noindex`: the `(app)` and `(auth)` layouts (`NO_INDEX`), unsubscribe and the 404 (unchanged).
+
+### Sitemap, robots, llms.txt
+- `PUBLIC_PATHS` adds `/developers/api` and `/security` (the page comes from C-143); the footer's
+  "Compare and learn" links the API reference. Each entry has an ISO `lastModified`: the legal
+  pages' "Last updated" date, the others `PAGE_UPDATED` in `site.ts` (bump it when a page's copy
+  changes; a build date would claim every page changed on every deploy).
+- robots.txt also disallows `/sign-up`, `/dev/` and `/api/` (`ROBOTS_DISALLOW`); a test checks no
+  public path, `/apple-icon.png` or `/llms.txt` is blocked.
+- `/llms.txt` (static): the product in plain words and links to every public page.
+
+### Structured data
+- Landing page: one `@graph` with `Organization` (name Amplychat, `legalName` from
+  `LEGAL.entityName`, url, logo `/icons/icon-512.png`, support email, contact point; `sameAs` only
+  once `SOCIAL_PROFILES` has real profiles), `WebSite`, `SoftwareApplication` (offers only when
+  the plan list has a Pro price, else none) and `FAQPage` from the FAQ data.
+- `BreadcrumbList` (Home, then the page) on the GTM pages, pricing, the API reference,
+  data deletion and the three legal pages (from small `layout.tsx` files beside them, so the
+  documents stay untouched). No ratings, reviews or counts anywhere.
+
+### Verification tags
+`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` (`google-site-verification`),
+`NEXT_PUBLIC_BING_SITE_VERIFICATION` (`msvalidate.01`) and
+`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION` (`facebook-domain-verification`), rendered only when
+set (`verificationMetadata`), documented in `apps/web/.env.example` and deploy.md section 4.
+
+### Website without the API
+`next build` with `NEXT_PUBLIC_API_BASE_URL` unset passes and prerenders every public page. The
+plan cards fall back to the bundled plan table and say "See pricing when you sign up"; the
+"Prices couldn't be loaded just now" line is gone (it read as broken on a website-only deploy, and
+the cards already say it). `/developers/api` shows "isn't available right now"; a data-deletion
+status lookup says "Request not found". Clerk keys are still needed on every page (root layout and
+middleware). Deploy.md section 5a covers this first deploy.
+
+### Performance (measured from the build, not a deploy)
+The landing page's LCP is the server-rendered h1 (no hero image); Geist is self-hosted by
+next/font with preload and `font-display: swap`; images below the fold are lazy with `sizes`.
+Client JS on public pages is about 355 to 395 KB gzipped (home 396, pricing 380, a GTM page 365,
+404 354), most of it shared by the root layout: Framer Motion with React DOM (~63 KB), Sentry
+(~67 KB, loaded even with no DSN) and Clerk (~46 KB). Not changed here: making Sentry and Clerk
+load only in the app is a larger change than this pass.
+
+### Owner to-dos
+- Vercel domains: `amplychat.com` primary, `www` redirect, `staging.amplychat.com` (deploy.md §5).
+- Google Search Console and Bing Webmaster Tools: verify `https://amplychat.com/` (tag through the
+  env vars, or DNS TXT), then submit `https://amplychat.com/sitemap.xml`.
+- Meta Business Manager: verify the domain (`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION`), then
+  business verification with the legal name, the website and support@amplychat.com.
+- Add real social profile URLs to `SOCIAL_PROFILES` once they exist.
