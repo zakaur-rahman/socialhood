@@ -7,6 +7,7 @@ import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
 
 import { metadata as privacy } from "./(marketing)/privacy/page";
 import { metadata as refunds } from "./(marketing)/refunds/page";
+import { metadata as shipping } from "./(marketing)/shipping/page";
 import { metadata as terms } from "./(marketing)/terms/page";
 import robots from "./robots";
 import sitemap from "./sitemap";
@@ -16,7 +17,8 @@ describe("page metadata", () => {
     for (const [metadata, title, path] of [
       [privacy, "Privacy Policy", "/privacy"],
       [terms, "Terms of Service", "/terms"],
-      [refunds, "Refund Policy", "/refunds"],
+      [refunds, "Refund and Cancellation Policy", "/refunds"],
+      [shipping, "Shipping and Delivery Policy", "/shipping"],
     ] as const) {
       expect(metadata.title).toBe(title);
       expect(metadata.description).toBeTruthy();
@@ -69,11 +71,13 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/privacy",
       "https://socialhood.example/terms",
       "https://socialhood.example/refunds",
+      "https://socialhood.example/shipping",
       "https://socialhood.example/data-deletion",
+      "https://socialhood.example/contact",
       "https://socialhood.example/developers/api",
       "https://socialhood.example/security",
     ]);
-    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-01");
+    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-26");
     // Every page has an ISO date, never a build time.
     for (const entry of entries) expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(entries.some((entry) => /\/(app|w|sign-in|unsubscribe)\b/.test(entry.url))).toBe(false);

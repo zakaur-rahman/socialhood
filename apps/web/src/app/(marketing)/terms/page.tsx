@@ -1,25 +1,29 @@
 import Link from "next/link";
 
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
-import { LEGAL, governingLawClause, operatorName } from "@/lib/legal";
+import { LEGAL, governingLawClause, isSet, operatorName } from "@/lib/legal";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Terms of Service",
-  description:
-    "The terms for using Amplychat: plans and the Pro trial, billing through Dodo Payments, cancellation, acceptable use, AI output and liability.",
+  description: `The terms for using ${SITE_NAME}: plans and the Pro trial, billing through Dodo Payments, cancellation, delivery, acceptable use, AI output and liability.`,
   path: "/terms",
 });
 
+const N = SITE_NAME;
 const email = LEGAL.contactEmail;
 const mail = <a href={`mailto:${email}`}>{email}</a>;
 
 // Grounded in what is built: plans and entitlements (billing/plans.py), the trial and billing rules
-// (FR-BIL-01…07, C-050), the no-follow-gate rule (C-031), Ask Amplychat (read-only in R1).
-// LAWYER REVIEW before launch (launch checklist §6.4); the governing-law clause appears only once
-// lib/legal.ts sets it.
+// (FR-BIL-01…07, C-050), the no-follow-gate rule (C-031), Ask Amplychat (read-only in R1), the
+// integrations' statuses (C-138). C-144 added the operator, Dodo as merchant of record, delivery,
+// connected services and grievances. LAWYER REVIEW before launch (launch checklist §6.4); the
+// governing-law clause appears only once lib/legal.ts sets it.
 function sections(): LegalSection[] {
   const law = governingLawClause(LEGAL);
+  const operator = operatorName(LEGAL);
+  const proprietor = isSet(LEGAL.proprietor) ? LEGAL.proprietor.trim() : null;
   const list: LegalSection[] = [
     {
       id: "agreement",
@@ -27,14 +31,17 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            These terms are an agreement between you and {operatorName(LEGAL)} (&quot;Amplychat&quot;, &quot;we&quot;,
-            &quot;us&quot;) for using the Amplychat website and app. By creating an account or using Amplychat, you
-            accept them. If you use Amplychat for a business, you confirm that you can accept these terms for it, and
+            These terms are an agreement between you and {operator}
+            {proprietor ? <>, a sole proprietorship of {proprietor} registered in India</> : null} (&quot;{N}&quot;,
+            &quot;we&quot;, &quot;us&quot;), for using the {N} website and app. By creating an account or using {N}, you
+            accept them. If you use {N} for a business, you confirm that you can accept these terms for it, and
             &quot;you&quot; includes that business.
           </p>
           <p>
-            Our <Link href="/privacy">Privacy Policy</Link> explains how we handle personal data, and our{" "}
-            <Link href="/refunds">Refund Policy</Link> explains refunds. Both are part of these terms.
+            Our <Link href="/privacy">Privacy Policy</Link> explains how we handle personal data, our{" "}
+            <Link href="/refunds">Refund and Cancellation Policy</Link> explains refunds and cancelling, and our{" "}
+            <Link href="/shipping">Shipping and Delivery Policy</Link> explains how {N} is delivered. All three are part of
+            these terms.
           </p>
         </>
       ),
@@ -45,13 +52,14 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            Amplychat is an inbox and automation tool for Instagram professional accounts and WhatsApp Business numbers.
-            It brings messages and comments into one place, suggests or sends replies with AI using your knowledge base,
-            runs comment and DM automations, schedules and publishes posts, and shows analytics.
+            {N} is an inbox and automation tool for Instagram professional accounts, WhatsApp Business numbers, Facebook
+            Pages (with Meta&apos;s approval) and website chat. It brings messages and comments into one place, suggests or
+            sends replies with AI using your knowledge base, runs comment and DM automations, schedules and publishes posts,
+            takes orders with payment links, and shows analytics.
           </p>
           <p>
-            We improve Amplychat over time, so features may change. If we remove something important you pay for,
-            we&apos;ll tell you in advance.
+            We improve {N} over time, so features may change. If we remove something important you pay for, we&apos;ll
+            tell you in advance.
           </p>
         </>
       ),
@@ -68,7 +76,8 @@ function sections(): LegalSection[] {
             they invite.
           </li>
           <li>
-            You may only connect Instagram and WhatsApp accounts that you or your business own or are authorised to manage.
+            You may only connect Instagram, Facebook, WhatsApp and other accounts that you or your business own or are
+            authorised to manage.
           </li>
         </ul>
       ),
@@ -80,17 +89,19 @@ function sections(): LegalSection[] {
         <>
           <ul>
             <li>
-              <strong>Free</strong> costs nothing and needs no card. <strong>Pro</strong> is a monthly subscription. What each
-              plan includes is shown on our <Link href="/#pricing">pricing section</Link> and in the app.
+              <strong>Free</strong> costs nothing and needs no card. <strong>Pro</strong> is a monthly subscription.{" "}
+              <strong>Max</strong> is coming soon. What each plan includes and costs is shown on our{" "}
+              <Link href="/pricing">pricing page</Link> and in the app.
             </li>
             <li>
               <strong>Trial.</strong> Pro starts with a 7-day free trial, once per workspace. A card is needed to start it.
               Unless you cancel before the trial ends, Pro continues as a paid subscription and your card is charged.
             </li>
             <li>
-              <strong>Payments.</strong> Dodo Payments handles checkout, payments, invoices and your payment method. The price
-              is shown in the app and at checkout. You pay in advance for each monthly period, and the subscription renews
-              automatically until you cancel.
+              <strong>Payments.</strong> Dodo Payments is the merchant of record for our subscriptions: it runs checkout,
+              takes the payment, charges any tax that applies and issues your invoice, and its own terms apply to the
+              payment. The price is shown in the app and at checkout. You pay in advance for each monthly period, and the
+              subscription renews automatically until you cancel.
             </li>
             <li>
               <strong>Cancelling.</strong> The workspace owner can cancel at any time in Settings → Billing. Pro stays active
@@ -121,9 +132,20 @@ function sections(): LegalSection[] {
             </li>
           </ul>
           <p>
-            Refunds are covered by our <Link href="/refunds">Refund Policy</Link>.
+            Refunds are covered by our <Link href="/refunds">Refund and Cancellation Policy</Link>.
           </p>
         </>
+      ),
+    },
+    {
+      id: "delivery",
+      title: "Delivery",
+      body: (
+        <p>
+          {N} is software used online. Nothing is shipped: a plan&apos;s features are available in your workspace as soon
+          as the trial starts or the payment succeeds, and Dodo Payments emails your receipt. Our{" "}
+          <Link href="/shipping">Shipping and Delivery Policy</Link> has the details.
+        </p>
       ),
     },
     {
@@ -131,25 +153,30 @@ function sections(): LegalSection[] {
       title: "Acceptable use",
       body: (
         <>
-          <p>When you use Amplychat you must:</p>
+          <p>When you use {N} you must:</p>
           <ul>
             <li>
               follow the law and Meta&apos;s rules for the platforms you connect, including Meta&apos;s Platform Terms, the
-              Instagram Terms of Use and Community Guidelines, and the WhatsApp Business Messaging and Commerce policies;
+              Instagram Terms of Use and Community Guidelines, Facebook&apos;s Messenger policies, and the WhatsApp Business
+              Messaging and Commerce policies;
             </li>
-            <li>have the right to message the people you message, and respect their choice to stop hearing from you;</li>
-            <li>tell people that a message was sent automatically where the law requires it (Amplychat can add a line for this);</li>
-            <li>keep your knowledge base, messages and posts accurate and lawful.</li>
+            <li>
+              have the right to message the people you message, get their consent where the law or Meta requires it, and
+              respect their choice to stop hearing from you;
+            </li>
+            <li>tell people that a message was sent automatically where the law requires it ({N} can add a line for this);</li>
+            <li>keep your knowledge base, catalogue, messages and posts accurate and lawful.</li>
           </ul>
-          <p>You must not use Amplychat to:</p>
+          <p>You must not use {N} to:</p>
           <ul>
-            <li>send spam, unsolicited bulk messages, or messages outside the windows Instagram and WhatsApp allow;</li>
+            <li>send spam, unsolicited bulk messages, or messages outside the windows Instagram, Messenger and WhatsApp allow;</li>
             <li>make following, liking or sharing a condition for getting something you promised (Instagram doesn&apos;t allow it);</li>
             <li>deceive, harass, threaten or discriminate against anyone, or share illegal or harmful content;</li>
+            <li>sell goods or services that the law, Meta&apos;s commerce policies or your payment provider don&apos;t allow;</li>
             <li>process data you have no right to, or sensitive data you don&apos;t need;</li>
             <li>
-              break, overload, probe or get around the security or limits of Amplychat or Meta&apos;s platforms, or copy,
-              resell or reverse-engineer the service.
+              break, overload, probe or get around the security or limits of {N} or Meta&apos;s platforms, or copy, resell
+              or reverse-engineer the service.
             </li>
           </ul>
         </>
@@ -161,12 +188,14 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            You keep all rights to your content: your knowledge base, posts, media and messages. You allow us to store,
-            process and transmit it only as needed to provide Amplychat to you.
+            You keep all rights to your content: your knowledge base, catalogue, posts, media and messages. You allow us to
+            store, process and transmit it only as needed to provide {N} to you.
           </p>
           <p>
-            You are responsible for your customers&apos; data that you bring into Amplychat, including having a lawful
-            basis to process it. We process it on your behalf, as our <Link href="/privacy">Privacy Policy</Link> describes.
+            You are the Data Fiduciary for your customers&apos; data that you bring into {N}, and you are responsible for
+            having a lawful basis to process it and for answering your customers&apos; requests about it. We process it on
+            your behalf and on your instructions, as our <Link href="/privacy">Privacy Policy</Link> describes, and we help
+            you answer those requests.
           </p>
         </>
       ),
@@ -177,10 +206,10 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            Amplychat&apos;s AI features, including suggested and automatic replies, analysis, summaries, captions and Ask
-            Amplychat, generate content automatically. The AI is instructed to answer only from your knowledge base and
-            the conversation, and to hand a conversation to you when it isn&apos;t sure, but it can still be wrong,
-            incomplete or out of date.
+            {N}&apos;s AI features, including suggested and automatic replies, analysis, summaries, captions and Ask {N},
+            generate content automatically. The AI is instructed to answer only from your knowledge base and the
+            conversation, and to hand a conversation to you when it isn&apos;t sure, but it can still be wrong, incomplete
+            or out of date.
           </p>
           <ul>
             <li>
@@ -191,20 +220,28 @@ function sections(): LegalSection[] {
               your knowledge base accurate.
             </li>
             <li>Don&apos;t rely on AI output for legal, medical, financial or other professional advice.</li>
-            <li>Ask Amplychat only reads your data and prepares drafts for you to review. It never acts by itself.</li>
+            <li>Ask {N} only reads your data and prepares drafts for you to review. It never acts by itself.</li>
           </ul>
         </>
       ),
     },
     {
       id: "platforms",
-      title: "Meta's platforms",
+      title: "Meta's platforms and other services",
       body: (
-        <p>
-          Amplychat depends on Instagram and WhatsApp, which Meta runs. Meta can change its APIs, rules and limits, restrict
-          or suspend accounts, or stop a feature working, and those decisions are outside our control. We&apos;ll adapt
-          Amplychat where we can, but we aren&apos;t responsible for Meta&apos;s actions or for its charges.
-        </p>
+        <>
+          <p>
+            {N} depends on Instagram, Facebook and WhatsApp, which Meta runs. Meta can change its APIs, rules and limits,
+            restrict or suspend accounts, or stop a feature working, and those decisions are outside our control.
+            We&apos;ll adapt {N} where we can, but we aren&apos;t responsible for Meta&apos;s actions or for its charges.
+          </p>
+          <p>
+            You can also connect your own accounts with other services, such as Razorpay, Shopify, Google Sheets and Zapier.
+            Their terms apply to your use of them. Payments your customers make through your Razorpay account are between
+            you and them: we never hold that money, and you are responsible for your orders, deliveries and refunds to your
+            customers.
+          </p>
+        </>
       ),
     },
     {
@@ -212,9 +249,8 @@ function sections(): LegalSection[] {
       title: "Availability",
       body: (
         <p>
-          We work to keep Amplychat running and your data safe, but we don&apos;t promise that it will always be
-          available, uninterrupted or free of errors. We may pause it for maintenance, and we&apos;ll try to do that at
-          quiet times.
+          We work to keep {N} running and your data safe, but we don&apos;t promise that it will always be available,
+          uninterrupted or free of errors. We may pause it for maintenance, and we&apos;ll try to do that at quiet times.
         </p>
       ),
     },
@@ -224,9 +260,9 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            You can stop using Amplychat at any time and delete your workspace in Settings → Workspace. We may suspend or
-            close a workspace that breaks these terms, puts others or the service at risk, or that Meta or the law requires
-            us to stop serving. Where we can, we&apos;ll warn you first and give you a chance to fix the problem.
+            You can stop using {N} at any time and delete your workspace in Settings → Workspace. We may suspend or close a
+            workspace that breaks these terms, puts others or the service at risk, or that Meta or the law requires us to
+            stop serving. Where we can, we&apos;ll warn you first and give you a chance to fix the problem.
           </p>
           <p>After a workspace is deleted, its data is removed as our Privacy Policy describes.</p>
         </>
@@ -237,9 +273,9 @@ function sections(): LegalSection[] {
       title: "Disclaimers",
       body: (
         <p>
-          Apart from what these terms promise, Amplychat is provided &quot;as is&quot; and &quot;as available&quot;. To the
-          extent the law allows, we make no other promises, including about fitness for a particular purpose or the
-          results you will get.
+          Apart from what these terms promise, {N} is provided &quot;as is&quot; and &quot;as available&quot;. To the
+          extent the law allows, we make no other promises, including about fitness for a particular purpose or the results
+          you will get.
         </p>
       ),
     },
@@ -255,12 +291,12 @@ function sections(): LegalSection[] {
               goodwill;
             </li>
             <li>
-              we aren&apos;t liable for messages sent from your accounts, including AI and automated ones, or for the
-              actions of Meta or other third parties;
+              we aren&apos;t liable for messages sent from your accounts, including AI and automated ones, or for the actions
+              of Meta or other third parties;
             </li>
             <li>
-              our total liability for all claims about Amplychat is limited to the amount you paid us in the 12 months
-              before the claim arose.
+              our total liability for all claims about {N} is limited to the amount you paid us in the 12 months before the
+              claim arose.
             </li>
           </ul>
           <p>Nothing in these terms limits liability that the law doesn&apos;t allow to be limited.</p>
@@ -277,7 +313,7 @@ function sections(): LegalSection[] {
       body: (
         <p>
           When we change these terms we update the date at the top. If a change is significant, we&apos;ll tell you by email
-          or in the app before it takes effect. If you keep using Amplychat after that, the new terms apply.
+          or in the app before it takes effect. If you keep using {N} after that, the new terms apply.
         </p>
       ),
     },
@@ -287,10 +323,14 @@ function sections(): LegalSection[] {
   }
   list.push({
     id: "contact",
-    title: "Contact us",
+    title: "Contact and complaints",
     body: (
       <>
-        <p>Questions about these terms? Email {mail}.</p>
+        <p>
+          Questions or complaints about {N} or these terms? Email {mail}; our <Link href="/contact">contact page</Link>{" "}
+          has more ways to reach us. Privacy grievances are answered as our{" "}
+          <Link href="/privacy#your-rights">Privacy Policy</Link> describes.
+        </p>
         <LegalFacts />
       </>
     ),
@@ -307,7 +347,8 @@ export default function TermsPage() {
         <>
           <p>
             The short version: Free is free; Pro is monthly, starts with a 7-day trial (card required), and you can cancel
-            anytime, keeping Pro until the end of the period you&apos;ve paid for.
+            anytime, keeping Pro until the end of the period you&apos;ve paid for. {N} is delivered online; nothing is
+            shipped.
           </p>
           <p>
             Follow Meta&apos;s rules and the law, don&apos;t spam, and check what the AI sends for you: you are responsible

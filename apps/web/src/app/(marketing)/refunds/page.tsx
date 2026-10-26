@@ -1,19 +1,24 @@
+import Link from "next/link";
+
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
 import { LEGAL } from "@/lib/legal";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
-  title: "Refund Policy",
-  description: "When Amplychat refunds a payment for the Pro plan, and how to ask about a charge.",
+  title: "Refund and Cancellation Policy",
+  description: `How to cancel a ${SITE_NAME} subscription, when we refund a payment, and how to ask about a charge.`,
   path: "/refunds",
 });
 
+const N = SITE_NAME;
 const email = LEGAL.contactEmail;
 const mail = <a href={`mailto:${email}`}>{email}</a>;
 
 // OWNER REVIEW: a common default for a monthly SaaS (no refunds for partial periods, billing
-// errors refunded), not yet a business decision. LAWYER REVIEW before launch (§6.4), including
-// consumer-law refund rights where customers live.
+// errors refunded), not yet a business decision. C-144 added cancelling (Razorpay and Dodo both
+// ask for a "refund and cancellation" policy) and the business's own Razorpay payments. LAWYER
+// REVIEW before launch (§6.4), including consumer-law refund rights where customers live.
 const SECTIONS: LegalSection[] = [
   {
     id: "free-and-trial",
@@ -29,13 +34,30 @@ const SECTIONS: LegalSection[] = [
     ),
   },
   {
-    id: "subscriptions",
-    title: "Pro subscriptions",
+    id: "cancelling",
+    title: "Cancelling",
     body: (
       <>
         <p>
-          Pro is paid monthly, in advance. You can cancel at any time, and Pro stays active until the end of the period
-          you&apos;ve paid for. Because you keep full access for that period, we don&apos;t refund:
+          The workspace owner can cancel at any time in Settings → Billing, with no cancellation fee. The cancellation takes
+          effect at the end of the period you&apos;ve paid for: Pro stays active until then, and you can resume before it
+          ends. After that the workspace moves to Free, and nothing more is charged.
+        </p>
+        <p>
+          Deleting your workspace (Settings → Workspace) cancels an active subscription at once. If you can&apos;t reach
+          Settings, email {mail} from the owner&apos;s email address and we&apos;ll cancel it for you.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "subscriptions",
+    title: "Refunds for Pro subscriptions",
+    body: (
+      <>
+        <p>
+          Pro is paid monthly, in advance. Because you keep full access for the period you&apos;ve paid for, we don&apos;t
+          refund:
         </p>
         <ul>
           <li>the rest of a period after you cancel or move to Free;</li>
@@ -66,8 +88,19 @@ const SECTIONS: LegalSection[] = [
     title: "How refunds are paid",
     body: (
       <p>
-        Payments are handled by Dodo Payments, and refunds go back to the original payment method through them. How long a
-        refund takes to appear depends on your bank or card issuer.
+        Dodo Payments is the merchant of record for our subscriptions, so refunds go back to the original payment method
+        through Dodo Payments. How long a refund takes to appear depends on your bank or card issuer.
+      </p>
+    ),
+  },
+  {
+    id: "your-customers",
+    title: "Payments to businesses that use us",
+    body: (
+      <p>
+        When you pay a business through a payment link or UPI it sends from {N}, you are paying that business through its
+        own Razorpay account, not us. Ask that business about cancelling an order or getting a refund; {N} only helps it
+        send the link and record the payment.
       </p>
     ),
   },
@@ -83,7 +116,7 @@ const SECTIONS: LegalSection[] = [
       <>
         <p>
           Email {mail} with your workspace&apos;s name, the date and amount of the charge, and the email address used at
-          checkout.
+          checkout. Our <Link href="/contact">contact page</Link> has more ways to reach us.
         </p>
         <LegalFacts />
       </>
@@ -98,8 +131,9 @@ export default function RefundsPage() {
       sections={SECTIONS}
       summary={
         <p>
-          Cancel anytime and keep Pro until the end of the period you&apos;ve paid for. We don&apos;t refund partial periods
-          or unused credits, but we always refund billing mistakes. Questions about a charge? Email {mail}.
+          Cancel anytime in Settings → Billing and keep Pro until the end of the period you&apos;ve paid for. We don&apos;t
+          refund partial periods or unused credits, but we always refund billing mistakes. Questions about a charge? Email{" "}
+          {mail}.
         </p>
       }
     />

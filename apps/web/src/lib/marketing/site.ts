@@ -79,8 +79,10 @@ export const NAV_LINKS = [
 export const LEGAL_LINKS = [
   { label: "Privacy policy", href: "/privacy" },
   { label: "Terms of service", href: "/terms" },
-  { label: "Refund policy", href: "/refunds" },
+  { label: "Refund and cancellation", href: "/refunds" },
+  { label: "Shipping and delivery", href: "/shipping" },
   { label: "Data deletion", href: "/data-deletion" },
+  { label: "Contact us", href: "/contact" },
 ] as const;
 
 /** The public pages the sitemap lists. */
@@ -96,7 +98,9 @@ export const PUBLIC_PATHS = [
   "/privacy",
   "/terms",
   "/refunds",
+  "/shipping",
   "/data-deletion",
+  "/contact",
   "/developers/api",
   "/security",
 ] as const;
@@ -124,6 +128,7 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/features/ai-inbox": "2026-10-26",
   "/features/publishing": "2026-10-26",
   "/data-deletion": "2026-10-26",
+  "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/security": "2026-10-26",
 };
