@@ -15,8 +15,11 @@ def complete_production() -> dict[str, object]:
     values: dict[str, object] = {**BASE, "app_env": "production"}
     for name in REQUIRED_IN_PRODUCTION:
         values[name] = "x"
-    for name in ("cors_allowed_origins", "clerk_authorized_parties", "token_encryption_keys"):
-        values[name] = "a,b"
+    values["api_base_url"] = "https://api.amplychat.com"
+    values["web_base_url"] = "https://amplychat.com"
+    for name in ("cors_allowed_origins", "clerk_authorized_parties"):
+        values[name] = "https://amplychat.com,https://staging.amplychat.com"
+    values["token_encryption_keys"] = "a,b"
     return values
 
 
@@ -75,7 +78,10 @@ def test_production_refuses_debug_logging() -> None:
 def test_complete_production_settings_load() -> None:
     settings = make(**complete_production())
     assert settings.is_production
-    assert settings.cors_allowed_origins == ["a", "b"]
+    assert settings.cors_allowed_origins == [
+        "https://amplychat.com",
+        "https://staging.amplychat.com",
+    ]
     assert settings.rate_limits_enabled
 
 
@@ -103,6 +109,47 @@ def test_production_refuses_disabled_rate_limits() -> None:
     values["rate_limits_enabled"] = False
     with pytest.raises(ConfigurationError, match="RATE_LIMITS_ENABLED"):
         make(**values)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("cors_allowed_origins", "*"),
+        ("cors_allowed_origins", "https://amplychat.com,http://amplychat.com"),
+        ("cors_allowed_origins", "https://amplychat.com,https://*.amplychat.com"),
+        ("cors_allowed_origins", "https://amplychat.com/"),
+        ("clerk_authorized_parties", "https://amplychat.com,https://amplychat.com/app"),
+        ("clerk_authorized_parties", "https://user@amplychat.com"),
+    ],
+)
+def test_production_refuses_origins_that_are_not_exact_https(name: str, value: str) -> None:
+    # C-143: CORS and Clerk's azp check compare exact origins; anything else is a mistake that
+    # either opens the API to every site or silently refuses the real one.
+    values = complete_production()
+    values[name] = value
+    with pytest.raises(ConfigurationError, match=name.upper()):
+        make(**values)
+
+
+@pytest.mark.parametrize("name", ["api_base_url", "web_base_url"])
+def test_production_refuses_plain_http_base_urls(name: str) -> None:
+    values = complete_production()
+    values[name] = "http://amplychat.com"
+    with pytest.raises(ConfigurationError, match=name.upper()):
+        make(**values)
+
+
+def test_production_needs_the_web_origin_among_the_allowed_origins() -> None:
+    # The canonical move (C-142) from app.amplychat.com to amplychat.com changes all three at once.
+    values = complete_production()
+    values["web_base_url"] = "https://app.amplychat.com"
+    with pytest.raises(ConfigurationError, match="must include WEB_BASE_URL's origin"):
+        make(**values)
+
+
+def test_staging_keeps_its_own_origins() -> None:
+    values = {**complete_production(), "app_env": "staging", "cors_allowed_origins": "*"}
+    assert make(**values).cors_allowed_origins == ["*"]
 
 
 @pytest.mark.parametrize("scheme", ["postgresql", "postgres"])
