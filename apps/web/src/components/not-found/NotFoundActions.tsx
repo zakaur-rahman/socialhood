@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import type { Route } from "next";
 
 import { CtaLink } from "@/components/marketing/primitives";
-import { APP_PATH, SIGN_IN_PATH } from "@/lib/marketing/site";
+import { APP_PATH, SIGN_IN_PATH, appUrl, siteHref } from "@/lib/marketing/site";
 
 /**
  * The public 404's ways out. Visitors get the home page, pricing and sign-in; once Clerk reports a
@@ -15,16 +15,16 @@ export function SiteNotFoundActions() {
   const signedIn = isLoaded && isSignedIn === true;
   return (
     <>
-      <CtaLink href={"/" as Route}>Go to the home page</CtaLink>
-      <CtaLink href={"/pricing" as Route} variant="secondary">
+      <CtaLink href={siteHref("/") as Route}>Go to the home page</CtaLink>
+      <CtaLink href={siteHref("/pricing") as Route} variant="secondary">
         See pricing
       </CtaLink>
       {signedIn ? (
-        <CtaLink href={APP_PATH as Route} variant="ghost" prefetch={false}>
+        <CtaLink href={appUrl(APP_PATH) as Route} variant="ghost" prefetch={false}>
           Open the app
         </CtaLink>
       ) : (
-        <CtaLink href={SIGN_IN_PATH as Route} variant="ghost" prefetch={false}>
+        <CtaLink href={appUrl(SIGN_IN_PATH) as Route} variant="ghost" prefetch={false}>
           Sign in
         </CtaLink>
       )}

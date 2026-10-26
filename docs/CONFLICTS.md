@@ -6426,3 +6426,110 @@ deploy on the VM is done by the coordinator with the owner.
   valkey 5 MB.
 - Web: `next typegen`, `tsc --noEmit` and `pnpm lint` are clean.
 - Everything was torn down afterwards.
+
+## C-146 · The signed-in app on dashboard.amplychat.com (feature/dashboard-host)
+
+Brief: the owner wants the app (`/app`, `/w/…`, sign-in, sign-up) at
+`https://dashboard.amplychat.com`, with the public website staying on the apex
+`https://amplychat.com` (canonical, C-142) and the API on `https://api.amplychat.com`. DNS for
+`dashboard` already points at the VM. This supersedes C-142's "no `app.` subdomain" for the app.
+
+### How it works
+- **One Next.js deployment serves both hosts.** The new public build value
+  `NEXT_PUBLIC_APP_URL` is the app's origin. **Unset** (local dev, e2e, CI, staging), or equal to
+  the site's origin, nothing changes: one origin, relative links, no redirects.
+- **Routing** (`apps/web/src/lib/hosts.ts`, called first in `src/proxy.ts`, before Clerk's guard).
+  The host is the `Host` header, which Caddy passes on unchanged.
+  - Site host: `/app`, `/w/…`, `/sign-in…`, `/sign-up…` and `/dev/…` go to the same path and
+    query on the app host (308).
+  - App host: `/` goes to `/app` (307; signed out, `/app` goes on to sign-in as before);
+    `robots.txt` is `Disallow: /` (answered by the proxy); `sitemap.xml` is a 404; every other
+    path that isn't an app page or a shared file goes to the same path and query on the site
+    (308): marketing, legal, `/unsubscribe`, `/data-deletion`, `/llms.txt`, unknown paths. App
+    responses carry `X-Robots-Tag: noindex, nofollow` on top of the `(app)`/`(auth)` layouts'
+    `noindex` (checked: both set `NO_INDEX`).
+  - Both: `/_next`, `/icons`, the manifest, `sw.js`, `/.well-known` (security.txt), the favicon,
+    `apple-icon.png`, `og.png`. Most of them never reach the proxy (its matcher skips static files).
+- **Which pages belong where.** *Decision:* the route groups decide. `(app)`, `(auth)` and `(dev)`
+  are the app; `(marketing)` is the site, **including `/unsubscribe`** (it works signed out and is
+  a public page linked from email) and `/data-deletion` (Meta's status link).
+- **Links without hops** (`lib/marketing/site.ts`): `appOrigin()`, `appUrl(path)` (absolute on
+  the app host when set, else the path) and `siteHref(path)` (absolute on the site when the app
+  has its own host). Marketing CTAs (Hero, How it works, Pricing incl. the Pro sign-up, the GTM
+  pages, the final CTA), the header's Sign in / Start free / Open app, the footer's Sign in and
+  Start free, the 404's actions and the unsubscribe page's "Open notification settings" use
+  `appUrl`. In the app: the auth pages' logo (site home), Settings › API keys' "Read the API
+  reference" and the 404's home and pricing use `siteHref`. Marketing pages' links to each other
+  stay relative.
+- **Clerk.** The production instance is on the root domain, so Clerk shares the session across its
+  subdomains ([Clerk: deploy to production](https://clerk.com/docs/guides/development/deployment/production):
+  "User sessions will also be shared across the subdomains"). With two origins the middleware
+  passes `authorizedParties: [site, app]` (Clerk recommends it against subdomain cookie leaks), and
+  `ClerkProvider` gets `afterSignOutUrl` = the site's home and `allowedRedirectOrigins` = both
+  origins. Sign-in and sign-up URLs stay relative (`/sign-in`, `/sign-up`): they are only ever
+  rendered on the app host. The marketing header's "Open app" for a signed-in visitor keeps working
+  on the apex because the session is shared; if it ever isn't, the visitor just sees "Sign in",
+  which lands in the app already signed in.
+- **Service worker and push** register from the app (Settings, the push prompt), so on the
+  dashboard origin, scope `/`; the subscription is stored by endpoint in the API and doesn't
+  depend on the origin. The manifest (`start_url` and `id` `/app`) is relative, so on the
+  dashboard it is right. *Not changed:* installing from a marketing page on the apex would open
+  `/app` there, which redirects out of scope; the install prompt lives in the app, so this was
+  left alone.
+- **API** (`settings.py`): `WEB_BASE_URL` stays "links into the app" and becomes the dashboard:
+  the OAuth return (`api/v1/oauth.py`), the Dodo checkout and portal returns
+  (`services/billing.py`), notification and digest emails (`notify/templates`), team invitations
+  (`services/team.py`). New optional `SITE_BASE_URL` (property `site_url`, falling back to
+  `WEB_BASE_URL`) for links to public pages: the digest's unsubscribe page (`notify/outbox.py`),
+  Meta's data deletion status URL (`webhooks/meta_privacy.py`) and the chat widget's brand link
+  (`widget/routes.py`). So no email link needs a redirect. The `List-Unsubscribe` header still
+  points at the API.
+- **Production checks** (C-143 extended): `SITE_BASE_URL` must be https when set; its origin must
+  be in `CORS_ALLOWED_ORIGINS` (the site's unsubscribe, data deletion and plans calls run in the
+  browser); `CLERK_AUTHORIZED_PARTIES` must still include `WEB_BASE_URL`'s origin. The site never
+  sends a Clerk token to the API, so the parties list only the dashboard. Tests in
+  `tests/unit/test_settings.py` and `tests/unit/test_site_links.py`.
+- **Infra:** the Caddyfile adds `{$APP_HOST:dashboard.amplychat.com}` → `web:3000` (same upstream;
+  compose passes `APP_HOST`). `api.env.example`: `WEB_BASE_URL=https://dashboard.amplychat.com`,
+  `SITE_BASE_URL=https://amplychat.com`, CORS both, Clerk parties the dashboard. The production
+  workflow and `apps/web/Dockerfile` pass `NEXT_PUBLIC_APP_URL`; `web.env.example` and
+  `apps/web/.env.example` describe it. Docs: `deploy-vm.md` (domains, the DNS row, the build
+  variable, the checks, the vendor step), `deploy.md` (domain rows, §4 variables, §6 vendor URLs
+  with `{SITE}` and `{APP}`), `apps/api/.env.example`, security checklist L-10.
+
+### Owner to-dos (vendor dashboards)
+- **GitHub** `production-build`: set `NEXT_PUBLIC_APP_URL=https://dashboard.amplychat.com`, then
+  rebuild. **VM** `api.env`: the four values above (from `api.env.example`).
+- **Clerk** (production instance): if Domains → allowed subdomains is restricted, allow
+  `amplychat.com` and `dashboard.amplychat.com`; no satellite domain is needed (same root domain).
+  Paths: sign-in `/sign-in`, sign-up `/sign-up` on `https://dashboard.amplychat.com`; after
+  sign-out `https://amplychat.com/`.
+- **Meta app:** App Domains `amplychat.com` and `dashboard.amplychat.com`; Facebook Login for
+  Business / Embedded Signup "Allowed domains for the JavaScript SDK"
+  `https://dashboard.amplychat.com`; Valid OAuth redirect URIs stay on `api.amplychat.com`
+  (`/v1/oauth/instagram/callback`, later `/v1/oauth/facebook/callback`). Privacy policy, terms and
+  data deletion instructions stay `https://amplychat.com/...`.
+- **Sentry** web project allowed domains: both hosts.
+
+### Checks
+- Web: `next typegen`, `tsc --noEmit`, `pnpm lint` clean. Vitest: new `src/lib/hosts.test.ts`
+  (both hosts, unset = nothing moves, `appOrigin`/`appUrl`/`siteHref`) and `src/proxy.test.ts`
+  (the proxy with Clerk stubbed: redirects, robots, sitemap, noindex, `authorizedParties`), the
+  header test with the variable set, and `src/lib`, `app/(marketing)`, `components/marketing`,
+  `not-found`, `auth`, `integrations`, the layout and SEO tests: 93 files, 897 tests pass.
+- API: `ruff check`, `ruff format --check`, `mypy` clean; `tests/unit/test_settings.py` and the
+  new `tests/unit/test_site_links.py` pass.
+- `caddy validate` (caddy:2.10-alpine): valid, `caddy fmt` unchanged; `docker compose config` OK.
+- E2E with the variable unset: `--grep "landing|GR-37|not-found"`, 26 passed.
+- Two hosts locally: `next build` with `NEXT_PUBLIC_APP_URL=http://dashboard.localhost:3200` and
+  `NEXT_PUBLIC_SITE_URL=http://localhost:3200`, `next start`, `curl -H Host:`. Site host: public
+  pages, robots, sitemap, llms.txt, manifest, sw.js, icons, security.txt 200; `/app`, `/w/…?c=1`,
+  `/sign-in`, `/sign-up?redirect_url=…` 308 to the dashboard with the query; the landing page's
+  CTAs are absolute dashboard links. Dashboard host: `/` 307 → `/app`; `/sign-in` 200 with
+  `X-Robots-Tag`; `/app` and `/w/…` go to sign-in when signed out; `robots.txt` is `Disallow: /`;
+  `sitemap.xml` 404; `/pricing`, `/privacy`, `/data-deletion?code=…`, `/llms.txt` 308 to the site;
+  manifest, sw.js, icons, og.png, security.txt 200. Two artifacts of the local run, not of the
+  code: Next rewrites a redirect to a `localhost` origin onto the request's address (the
+  Location read `127.0.0.1:3200`), and the signed-out guard went to Clerk's hosted page because
+  that build had no `NEXT_PUBLIC_CLERK_SIGN_IN_URL` (the Dockerfile defaults it to `/sign-in`).
+  The server was stopped afterwards.

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { PRICING_PATH, STATUS_LABEL, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
-import { SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { MARKETING_HEADING } from "@/styles/tokens";
 
@@ -94,7 +94,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
           <h1 className={cn(MARKETING_HEADING, "mt-3 text-balance sm:text-5xl")}>{page.h1}</h1>
           <p className="mt-5 text-lg leading-relaxed text-pretty text-fg-secondary">{page.intro}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <CtaLink href={SIGN_UP_PATH} prefetch={false} className="w-full px-6 sm:w-auto">
+            <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-6 sm:w-auto">
               Start free <ArrowRight className="size-4" aria-hidden />
             </CtaLink>
             <CtaLink href={PRICING_PATH} variant="secondary" className="w-full px-6 sm:w-auto">
@@ -186,7 +186,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
             ))}
           </ul>
           <div className="mt-8">
-            <CtaLink href={SIGN_UP_PATH} prefetch={false} className="w-full px-6 sm:w-auto">
+            <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-6 sm:w-auto">
               Start free
             </CtaLink>
           </div>

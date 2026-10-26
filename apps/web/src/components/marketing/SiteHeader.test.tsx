@@ -28,6 +28,17 @@ describe("the header's account actions", () => {
     expect(screen.queryByRole("link", { name: "Start free" })).not.toBeInTheDocument();
   });
 
+  it("links straight to the app's own host when it has one (C-146)", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://dashboard.amplychat.com");
+    try {
+      render(<HeaderAuth />);
+      expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "https://dashboard.amplychat.com/sign-in");
+      expect(screen.getByRole("link", { name: "Start free" })).toHaveAttribute("href", "https://dashboard.amplychat.com/sign-up");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("while Clerk loads it shows what the static page shows: the signed-out actions", () => {
     auth.state = { isLoaded: false, isSignedIn: undefined };
     render(<HeaderAuth />);

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 
-import { APP_PATH, SIGN_IN_PATH, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { APP_PATH, SIGN_IN_PATH, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { CtaLink } from "./primitives";
@@ -19,7 +19,7 @@ export function HeaderAuth({ variant = "bar", onNavigate }: { variant?: "bar" | 
 
   if (signedIn) {
     return (
-      <CtaLink href={APP_PATH} prefetch={false} onClick={onNavigate} className={cn("px-3 sm:px-4", variant === "menu" && "w-full")}>
+      <CtaLink href={appUrl(APP_PATH)} prefetch={false} onClick={onNavigate} className={cn("px-3 sm:px-4", variant === "menu" && "w-full")}>
         Open app
       </CtaLink>
     );
@@ -28,10 +28,10 @@ export function HeaderAuth({ variant = "bar", onNavigate }: { variant?: "bar" | 
   if (variant === "menu") {
     return (
       <div className="grid gap-2">
-        <CtaLink href={SIGN_IN_PATH} variant="secondary" prefetch={false} onClick={onNavigate} className="w-full">
+        <CtaLink href={appUrl(SIGN_IN_PATH)} variant="secondary" prefetch={false} onClick={onNavigate} className="w-full">
           Sign in
         </CtaLink>
-        <CtaLink href={SIGN_UP_PATH} prefetch={false} onClick={onNavigate} className="w-full">
+        <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} onClick={onNavigate} className="w-full">
           Start free
         </CtaLink>
       </div>
@@ -40,10 +40,10 @@ export function HeaderAuth({ variant = "bar", onNavigate }: { variant?: "bar" | 
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">
-      <CtaLink href={SIGN_IN_PATH} variant="ghost" prefetch={false} className="hidden sm:inline-flex">
+      <CtaLink href={appUrl(SIGN_IN_PATH)} variant="ghost" prefetch={false} className="hidden sm:inline-flex">
         Sign in
       </CtaLink>
-      <CtaLink href={SIGN_UP_PATH} prefetch={false} className="px-3 sm:px-4">
+      <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="px-3 sm:px-4">
         Start free
       </CtaLink>
     </div>

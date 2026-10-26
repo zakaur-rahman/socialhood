@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck, Languages, Sparkles } from "lucide-react";
 
-import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { DISPLAY } from "@/styles/tokens";
 
@@ -43,7 +43,7 @@ export function Hero() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-pretty text-fg-secondary sm:text-lg">{HERO_LINE}</p>
             <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-              <CtaLink href={SIGN_UP_PATH} prefetch={false} className="px-6">
+              <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="px-6">
                 Start free <ArrowRight className="size-4" aria-hidden />
               </CtaLink>
               <CtaLink href={`#${SECTION_IDS.howItWorks}`} variant="secondary" className="px-6">

@@ -73,7 +73,13 @@ class Settings(BaseSettings):
 
     app_env: AppEnv = AppEnv.LOCAL
     api_base_url: str | None = None
+    # The web app's origin: every link into the app (emails, OAuth and checkout returns,
+    # invitations). C-146: in production the signed-in app is https://dashboard.amplychat.com.
     web_base_url: str | None = None
+    # C-146: the public website's origin, for links to its public pages (the digest's unsubscribe
+    # page, the data deletion status page, the chat widget's "Amplychat" link). Unset: the same
+    # as WEB_BASE_URL (one origin serves both, as in local development).
+    site_base_url: str | None = None
     # GR-15: the address tracked links (/l/<code>) are built on, if not the API's own, such as a
     # short domain pointed at the API. Neither set: link buttons are sent as written.
     link_base_url: str | None = None
@@ -291,7 +297,7 @@ class Settings(BaseSettings):
         # C-143: the browser-facing addresses are https, and the API trusts exact origins only
         # (no "*", no path), including the web app's own origin.
         problems = []
-        for name in ("api_base_url", "web_base_url"):
+        for name in ("api_base_url", "web_base_url", "site_base_url"):
             value = getattr(self, name)
             if value and _https_origin(value) is None:
                 problems.append(f"{name.upper()} must be an https URL")
@@ -306,7 +312,18 @@ class Settings(BaseSettings):
             web = _https_origin(self.web_base_url or "")
             if web and values and web not in values:
                 problems.append(f"{name.upper()} must include WEB_BASE_URL's origin {web}")
+        # C-146: the public site calls the API from the browser too (unsubscribe, the data
+        # deletion status, plans), so CORS must allow its origin. It never sends Clerk tokens,
+        # so CLERK_AUTHORIZED_PARTIES needs only the app's origin.
+        site = _https_origin(self.site_base_url or "")
+        if site and self.cors_allowed_origins and site not in self.cors_allowed_origins:
+            problems.append(f"CORS_ALLOWED_ORIGINS must include SITE_BASE_URL's origin {site}")
         return problems
+
+    @property
+    def site_url(self) -> str | None:
+        """The public site's base URL: SITE_BASE_URL, else WEB_BASE_URL (one origin)."""
+        return self.site_base_url or self.web_base_url
 
     @property
     def is_production(self) -> bool:

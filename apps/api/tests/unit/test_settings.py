@@ -131,7 +131,7 @@ def test_production_refuses_origins_that_are_not_exact_https(name: str, value: s
         make(**values)
 
 
-@pytest.mark.parametrize("name", ["api_base_url", "web_base_url"])
+@pytest.mark.parametrize("name", ["api_base_url", "web_base_url", "site_base_url"])
 def test_production_refuses_plain_http_base_urls(name: str) -> None:
     values = complete_production()
     values[name] = "http://amplychat.com"
@@ -145,6 +145,43 @@ def test_production_needs_the_web_origin_among_the_allowed_origins() -> None:
     values["web_base_url"] = "https://app.amplychat.com"
     with pytest.raises(ConfigurationError, match="must include WEB_BASE_URL's origin"):
         make(**values)
+
+
+def dashboard_production() -> dict[str, object]:
+    # C-146: the app on dashboard.amplychat.com, the public site on the apex.
+    values = complete_production()
+    values["web_base_url"] = "https://dashboard.amplychat.com"
+    values["site_base_url"] = "https://amplychat.com"
+    values["cors_allowed_origins"] = "https://dashboard.amplychat.com,https://amplychat.com"
+    values["clerk_authorized_parties"] = "https://dashboard.amplychat.com"
+    return values
+
+
+def test_production_accepts_the_app_and_the_site_on_two_origins() -> None:
+    settings = make(**dashboard_production())
+    assert settings.site_url == "https://amplychat.com"
+    assert settings.web_base_url == "https://dashboard.amplychat.com"
+
+
+def test_production_needs_the_site_origin_among_the_cors_origins() -> None:
+    # The site's unsubscribe and data deletion pages call the API from the browser.
+    values = dashboard_production()
+    values["cors_allowed_origins"] = "https://dashboard.amplychat.com"
+    with pytest.raises(ConfigurationError, match="must include SITE_BASE_URL's origin"):
+        make(**values)
+
+
+def test_production_needs_the_app_origin_among_the_authorized_parties() -> None:
+    values = dashboard_production()
+    values["clerk_authorized_parties"] = "https://amplychat.com"
+    with pytest.raises(ConfigurationError, match="CLERK_AUTHORIZED_PARTIES must include WEB_BASE"):
+        make(**values)
+
+
+def test_the_site_url_falls_back_to_the_web_url() -> None:
+    settings = make(**BASE, web_base_url="http://localhost:3000")
+    assert settings.site_url == "http://localhost:3000"
+    assert make(**BASE).site_url is None
 
 
 def test_staging_keeps_its_own_origins() -> None:

@@ -9,9 +9,11 @@ vendor URLs (section 6), and they apply here unchanged.
 2 GB swap), `asia-southeast1-b` (Singapore), Ubuntu 24.04, 50 GB SSD, static IP `34.126.136.162`,
 Docker with Compose v2, app folder `/opt/amplychat` owned by `ubuntu`.
 
-**Domains:** `amplychat.com` serves the website and the app (canonical, C-142). `www.amplychat.com`
-308-redirects to it. `api.amplychat.com` serves the API, webhooks, OAuth callbacks and the website
-chat widget.
+**Domains:** `amplychat.com` serves the public website (canonical, C-142). `www.amplychat.com`
+308-redirects to it. `dashboard.amplychat.com` serves the signed-in app (C-146): the same web
+container, which sends each page to the host that serves it (app pages from the apex to the
+dashboard, public pages the other way, 308). `api.amplychat.com` serves the API, webhooks, OAuth
+callbacks and the website chat widget.
 
 ## 1. What runs where
 
@@ -115,6 +117,7 @@ Caddy sees.
 | A | `amplychat.com` (`@`) | `34.126.136.162` |
 | A | `www` | `34.126.136.162` |
 | A | `api` | `34.126.136.162` |
+| A | `dashboard` | `34.126.136.162` |
 
 - Delete any old A, AAAA or CNAME records on these names, such as Vercel's or Render's. Add no
   AAAA record: the VM has no IPv6.
@@ -127,8 +130,8 @@ Caddy sees.
 - **Resend:** the SPF, DKIM and DMARC records for sending as `support@amplychat.com`
   ([deploy.md](deploy.md), section 6).
 
-Check with `dig +short amplychat.com www.amplychat.com api.amplychat.com`; each should print
-`34.126.136.162`. Caddy can't get certificates until all three resolve.
+Check with `dig +short amplychat.com www.amplychat.com api.amplychat.com dashboard.amplychat.com`;
+each should print `34.126.136.162`. Caddy can't get a host's certificate until it resolves.
 
 ## 4. GitHub [owner account]
 
@@ -183,6 +186,7 @@ definition and end up in the JavaScript:
 | `NEXT_PUBLIC_META_APP_ID` · `NEXT_PUBLIC_WHATSAPP_CONFIG_ID` | the same values as the API's `META_APP_ID` and `WHATSAPP_CONFIG_ID` | full stack |
 | `NEXT_PUBLIC_SENTRY_DSN` | the `socialhood-web` project DSN | optional |
 | `NEXT_PUBLIC_SITE_URL` | leave unset (defaults to `https://amplychat.com`) | |
+| `NEXT_PUBLIC_APP_URL` | `https://dashboard.amplychat.com` (C-146) | website-only and full stack: app pages, sign-in and sign-up move to the dashboard host; unset, everything stays on the apex |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` · `_SIGN_UP_URL` · `NEXT_PUBLIC_SENTRY_ENVIRONMENT` · `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | leave unset (defaults: `/sign-in`, `/sign-up`, `production`, `0.1`) | |
 | `SENTRY_ORG` · `SENTRY_PROJECT` (+ secret `SENTRY_AUTH_TOKEN`) | for source-map upload | optional |
 
@@ -234,6 +238,9 @@ yet ([deploy.md](deploy.md), section 5a lists what works without the API).
    curl -sI https://www.amplychat.com/pricing | grep -i -E '^(HTTP|location)'  # 308 → https://amplychat.com/pricing
    curl -s -o /dev/null -w '%{http_code}\n' https://api.amplychat.com/healthz  # 503 (no API yet)
    curl -sI https://amplychat.com | grep -i -E 'strict-transport|content-security' # the app's headers
+   curl -sI https://amplychat.com/sign-in | grep -i -E '^(HTTP|location)'     # 308 → https://dashboard.amplychat.com/sign-in
+   curl -sI https://dashboard.amplychat.com/pricing | grep -i -E '^(HTTP|location)' # 308 → https://amplychat.com/pricing
+   curl -s https://dashboard.amplychat.com/robots.txt                          # Disallow: /
    ```
 
    On the VM, `cd /opt/amplychat && ./deploy.sh --status` shows the tag and two healthy
@@ -298,7 +305,13 @@ Resend, Sentry).
    address, every visitor shares one rate-limit key; check that Docker's `userland-proxy` is not
    forcing the connections through it (`/etc/docker/daemon.json`).
 6. **Vendor URLs:** set them all as in [deploy.md](deploy.md), section 6, with `{API}` =
-   `https://api.amplychat.com` and `{WEB}` = `https://amplychat.com`. This covers the Meta
+   `https://api.amplychat.com`, `{SITE}` = `https://amplychat.com` and `{APP}` =
+   `https://dashboard.amplychat.com`. In `api.env`, `WEB_BASE_URL` is the dashboard and
+   `SITE_BASE_URL` the apex; CORS lists both and `CLERK_AUTHORIZED_PARTIES` only the dashboard
+   (`api.env.example`). In the Meta app, App Domains lists `amplychat.com` and
+   `dashboard.amplychat.com`, and the JavaScript SDK's allowed domains list
+   `https://dashboard.amplychat.com` (Embedded Signup and Facebook Login run there). In Clerk,
+   allow both web hosts if its allowed subdomains are restricted. This covers the Meta
    webhooks (`/webhooks/instagram` and `/webhooks/whatsapp`), the OAuth redirect
    `/v1/oauth/instagram/callback`, the deauthorize and data-deletion callbacks, the Clerk webhook
    `/webhooks/clerk`, the Dodo webhook `/webhooks/dodo` and the Embedded Signup domain. Meta's form
