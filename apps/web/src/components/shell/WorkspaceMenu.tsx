@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LogoMark as BrandMark } from "@/components/marketing/primitives";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Plan, Role } from "@/lib/api/types";
@@ -42,9 +43,9 @@ export function PlanBadge({ plan, className }: { plan: Plan; className?: string 
   );
 }
 
-/** The logo mark: the shell-gradient tile (UX-SH-01). */
+/** The logo mark in the sidebar: the brand mark (C-140) at the sidebar's size and corners. */
 export function LogoMark({ className }: { className?: string }) {
-  return <span aria-hidden className={cn("bg-shell-gradient size-9 shrink-0 rounded-xl", className)} />;
+  return <BrandMark className={cn("size-9 rounded-xl", className)} />;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 
+import { LOGO_BARS, LOGO_BUBBLE_PATH } from "@/components/marketing/primitives";
 import { OG_IMAGE, SITE_NAME } from "@/lib/marketing/site";
 import { colorValue } from "@/styles/tokens";
 
@@ -55,22 +56,12 @@ export function renderOgImage(): ImageResponse {
               backgroundImage: `linear-gradient(135deg, ${TOKENS.shell1}, ${TOKENS.shell2})`,
             }}
           >
-            <div
-              style={{
-                width: 44,
-                height: 32,
-                borderRadius: 8,
-                background: TOKENS.fg,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-              }}
-            >
-              {[0, 1, 2].map((dot) => (
-                <div key={dot} style={{ width: 7, height: 7, borderRadius: 7, background: TOKENS.brandDeep }} />
+            <svg width="72" height="72" viewBox="0 0 64 64">
+              <path d={LOGO_BUBBLE_PATH} fill={TOKENS.fg} />
+              {LOGO_BARS.map(([x, y, height]) => (
+                <rect key={x} x={x} y={y} width="5" height={height} rx="2.5" fill={TOKENS.brandDeep} />
               ))}
-            </div>
+            </svg>
           </div>
           <div style={{ fontSize: 40, fontWeight: 600, letterSpacing: -1 }}>{SITE_NAME}</div>
         </div>

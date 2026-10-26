@@ -5969,3 +5969,25 @@ domains, and the file reference `knowledge/social-hood-product.md`.
   verify the domain in Resend before the default `EMAIL_FROM` is used.
 - Update Meta redirect URIs, webhook URLs, the Clerk allowed origins and the Google OAuth redirect
   when the domains move; `CORS`/`CSP` env values that name the old domain.
+
+## C-140 · The Amplychat logo: the "amp bubble" (feature/amplychat-logo)
+
+The owner asked for a logo for the new name (C-139) and, from ten concepts and five colour schemes
+(`amplychat-logo.html` outside the repo), asked for the best one to be chosen. Chosen: **A, the
+"amp bubble"**, in the existing indigo tile, with the wordmark in one colour.
+
+- **Why this one:** a chat bubble holding three rising bars, so it says "chat" and "amplify" in one
+  shape; it reads at 16 px (the favicon), where the letter, sparkle and wave concepts lost detail.
+  The two-tone wordmark ("Amply" + "chat" in brand colour) was not chosen: brand colour is for
+  non-text marks (globals.css), and one colour stays readable on any surface.
+- **Colours:** unchanged tokens. The tile is the shell gradient (`shell-1` to `shell-2`), the bubble
+  `on-brand` (`fg` in the generated icons), the bars `brand-deep`. The concepts page used a brighter
+  indigo for presentation; the product keeps its existing tile so the shell does not change.
+- **One shape, four places:** `LogoMark` (`components/marketing/primitives.tsx`, exporting
+  `LOGO_BUBBLE_PATH` and `LOGO_BARS` on a 64-unit tile), the share image (`og.tsx`, same constants),
+  `scripts/generate-icons.mjs` (the same geometry for the PNG icons) and the sidebar.
+  The sidebar's `LogoMark` (`WorkspaceMenu.tsx`) was a plain gradient tile with no mark; it now renders
+  the brand mark.
+- **Icons regenerated:** `icon-192`, `icon-512`, `icon-maskable-512`, `badge-72` (one colour, bars cut
+  out), `apple-icon`, and `favicon.ico`, which is now generated too (16, 32 and 48 px PNGs inside the
+  .ico) instead of being a static binary.
