@@ -1,5 +1,12 @@
 # Backup and restore (T9.5, §2.13)
 
+> **On the VM (C-145)** the database is the compose service `postgres`, backed up nightly by
+> `infra/vm/backup.sh` (7 daily + 4 weekly `pg_dump` files, an optional off-site copy to a GCS
+> bucket with a 30-day lifecycle rule). Setup, the restore drill and a real restore are in
+> [deploy-vm.md](deploy-vm.md), section 7. There is no point-in-time recovery there (RPO 24 h until
+> WAL archiving is added). The retention rules below (30 days for every copy) still apply. The
+> Render sections are kept for reference.
+
 The target (§2.13) is Render Postgres point-in-time recovery with at least 7 days of history, and
 a restore rehearsed once before launch.
 

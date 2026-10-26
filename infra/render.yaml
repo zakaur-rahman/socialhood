@@ -1,3 +1,7 @@
+# SUPERSEDED (C-145): production runs on one GCP VM with Docker Compose (infra/vm/,
+# docs/ops/deploy-vm.md), and .github/workflows/production.yml no longer calls Render deploy hooks.
+# This Blueprint is kept for reference only; don't apply it.
+#
 # Render Blueprint for Social Hood (TR-OPS-02, TR-OPS-03, T9.5). The runbook is docs/ops/deploy.md.
 #
 # One project, two separate stacks: production (deploys `main`) and staging (deploys `develop`),

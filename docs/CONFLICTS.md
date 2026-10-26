@@ -6304,3 +6304,125 @@ webhooks are slower in production.
   the shipping page in the all-pages check), `src/app/seo.test.ts` (shipping metadata, the two new
   sitemap paths, the new date), `app/(marketing)`, `components/marketing` and the copy lint: all pass.
 - E2E and screenshots are left to the coordinator's combined pass.
+
+## C-145 · Production on one GCP VM with Docker Compose (feature/vm-deploy)
+
+Brief: the owner created a VM (GCP `amplychat-prod`, e2-standard-2, Singapore, static IP
+34.126.136.162) and wants Amplychat deployed there instead of the Render + Vercel plan
+(`docs/ops/deploy.md`). This entry covers the deploy code, the docs and a local proof. The first
+deploy on the VM is done by the coordinator with the owner.
+
+### What changed
+- **Images.** `apps/api/Dockerfile` uses Python 3.13 slim (trixie) and uv 0.9.5. It runs
+  `uv sync --locked --no-dev` in a builder stage; the runtime has only the venv, `alembic.ini`,
+  `migrations/` and `scripts/worker.sh`, runs as uid 10001 and has a `/healthz` HEALTHCHECK. One
+  image runs the API (CMD: uvicorn as in `render.yaml`), the worker (`bash scripts/worker.sh`) and
+  migrations (`alembic upgrade head`). `apps/web/Dockerfile` builds the pnpm workspace (corepack
+  uses `packageManager`, `pnpm fetch` then an offline install) and runs the Next.js standalone
+  `server.js` as `node` on port 3000. Every `NEXT_PUBLIC_*` in `apps/web/.env.example` is a build
+  argument. The Sentry token is an optional BuildKit secret. `CLERK_SECRET_KEY` comes only at run
+  time.
+- **`next.config.ts`:** `output: "standalone"` with `outputFileTracingRoot` and `turbopack.root` at
+  the monorepo root, **only when `NEXT_OUTPUT=standalone`** (set in the Dockerfile). *Decision:*
+  `next start` in the e2e stack (`scripts/e2e-stack.mjs`) doesn't work with standalone output, and
+  Vercel, `next dev` and the tests have no reason to change. So the default output is untouched.
+- **`infra/vm/`:**
+  - `compose.yml` (project `amplychat`): `caddy` (fixed address 172.30.10.10 on the `edge`
+    network), `web`, and under the profile `api`: `postgres` (pg18 + pgvector, tuned for about
+    1.5 GB, `max_connections=200`), `valkey` (no persistence, `noeviction`, 256 MB), `migrate`
+    (one-shot; `api` and `worker` wait for `service_completed_successfully`), `api` and `worker`.
+    Postgres and Valkey sit on an `internal` network and are never published.
+  - Memory limits total about 5.9 GB. Logs are json-file, 10 MB × 5. Images are
+    `ghcr.io/zakaur-rahman/amplychat-{api,web}:${IMAGE_TAG}`.
+  - **Website-only mode** is `COMPOSE_PROFILES` unset (`caddy` + `web`). The `Caddyfile` turns
+    the proxy error for a missing API into a plain 503 with `Retry-After`.
+  - `Caddyfile`: automatic HTTPS for the three hosts (ACME email support@amplychat.com), `www` →
+    apex 308, no write timeout and `flush_interval -1` for the SSE stream, 10 MB request bodies
+    (the API caps at 5 MB; media goes straight to Cloudinary), zstd/gzip for text but never
+    `text/event-stream`, and no `Server` header.
+  - The Caddyfile also keeps a JSON access log. The log drops OAuth `code`/`state`, `token` and
+    Meta's `hub.verify_token`/`hub.challenge` from query strings. Hosts come from the
+    environment, so a local run uses `localhost`.
+  - `api.env.example` and `web.env.example` tag every variable [fixed], [generated] or [owner].
+  - `gen-secrets.sh` writes `api.env` and `postgres.env` (mode 600, never overwrites, never
+    prints a value). It fills the database password into both, plus `METRICS_TOKEN`, the two
+    webhook verify tokens, a Fernet key and a VAPID P-256 pair from openssl.
+  - `deploy.sh` takes a tag, `--rollback` or `--status`. It locks, writes `IMAGE_TAG`, pulls,
+    runs `up -d` (migrate first), waits for health, records `PREVIOUS_IMAGE_TAG` and prunes
+    images unused for 10 days. When a deploy fails, it starts the previous tag again and exits 1.
+  - `backup.sh`: nightly `pg_dump -Fc`, checked with `pg_restore --list`. It keeps 7 daily and 4
+    weekly dumps and nothing older than 30 days, with an optional `gcloud storage cp` to
+    `BACKUP_GCS_BUCKET`.
+- **`.github/workflows/production.yml`** replaces the Render deploy-hook job:
+  - `prepare` picks the SHA. A manual run's `tag` must be a 40-hex SHA; it skips the build and
+    checks both images exist in GHCR.
+  - `build` is a matrix of `api` and `web`, using Buildx with the GHA cache. It pushes `:<sha>` and
+    `:latest` with `packages: write`.
+  - `deploy` runs in the `production` environment (the owner's approval). It sets up SSH from
+    `VM_HOST`/`VM_USER`/`VM_SSH_KEY`/`VM_KNOWN_HOSTS`, tars `infra/vm/` (never env files) into
+    `/opt/amplychat` and runs `deploy.sh <sha>`.
+- `infra/render.yaml` is marked superseded. Docs: the new `docs/ops/deploy-vm.md` (runbook);
+  pointers at the top of `deploy.md` and `backup.md`, in `runbook.md` and in `branching.md`
+  (deploy step, secrets, workflows, what deploys where). `.gitignore` ignores `*.env`.
+
+### Decisions
+- **The web build variables live in a second environment, `production-build`.** It has no
+  reviewers and its deployment branch is `main`. The brief asks for GitHub *environment*
+  variables. Putting them on `production` would make the build job wait for an approval too,
+  which means two approvals per release. Repository variables would work but aren't
+  per-environment.
+- **The Postgres password is shared through a third file, `postgres.env`,** not by giving the
+  postgres container all of `api.env`. Least privilege: the database container never sees the
+  vendor keys. `gen-secrets.sh` writes the same password to both files.
+- **`IMAGE_TAG` has no default.** `docker compose config` needs it set
+  (`IMAGE_TAG=x docker compose -f infra/vm/compose.yml config`). A `latest` default would let a
+  stray `docker compose up` deploy an image that was built but never approved.
+- **Uvicorn's loop:** auto (uvloop on Linux), as on Render. The selector-loop flag in the e2e stack
+  exists only for Windows.
+- **API forwarded headers** are trusted only from Caddy's fixed address
+  (`FORWARDED_ALLOW_IPS=172.30.10.10`). Rate limits keep reading `X-Forwarded-For` from the right
+  (`CLIENT_IP_HEADER`). Caddy replaces any `X-Forwarded-For` a client sends, so the header holds
+  exactly the client's address.
+- **Worker lanes are 10/4** (staging-sized) instead of Render production's 20/8: two vCPUs shared
+  with Postgres and the web.
+- **One uvicorn process**, as on Render's single instance. SSE, metrics and rate limits are in
+  Valkey, so `--workers 2` is a safe later step.
+- **Valkey has no persistence.** It holds only non-durable data (`docs/ops/backup.md`).
+
+### Follow-ups (not done here)
+- **Privacy policy hosting facts.** `/privacy` names Render and Vercel as sub-processors in
+  Singapore. With the VM, the host is Google Cloud (asia-southeast1, Singapore). The owner and
+  their lawyer should update the sub-processor table and the "where we store data" sentence
+  before launch.
+- **Point-in-time recovery.** The nightly dumps give an RPO of 24 h, against Render's 7 days of
+  point-in-time recovery (§2.13). Add WAL archiving (pgBackRest or WAL-G to the GCS bucket) when
+  the API carries real data.
+- **CSP `upgrade-insecure-requests`** is only added on Vercel builds or when the API URL is https.
+  In website-only mode on the VM it is absent. HSTS already covers the site, so this is cosmetic.
+- **No hosted staging** any more. The Render staging stack is superseded with no VM equivalent.
+
+### Checks (local, Docker Desktop)
+- `IMAGE_TAG=x docker compose -f infra/vm/compose.yml config` validates; `caddy validate` and
+  `caddy fmt` pass. actionlint and shellcheck are clean; yamllint passes (one long line that
+  predates this change).
+- Images built locally: API 125 MB compressed (563 MB on disk), web 109 MB compressed (463 MB on
+  disk).
+- Full stack with a throwaway `api.env` (`APP_ENV=staging`) on ports 8480/8443, with Caddy's
+  internal CA for `localhost`:
+  - `/`, `/contact`, `/pricing` and `/robots.txt` return 200 through Caddy; `www` returns 308 to
+    the apex; HTTP redirects to HTTPS.
+  - The API's `/healthz` returns 200 and `/metrics` returns 401. API responses carry no `Server`
+    header.
+  - Migrations reached 0053, with the `vector`, `pg_trgm` and `pgcrypto` extensions. The worker
+    started both lanes and ran `ping`.
+  - 61 requests with forged `X-Forwarded-For` headers gave 60 × 200 and 1 × 429. The access log
+    dropped the secret query parameters.
+  - `deploy.sh` with a broken API image waited, reported, and rolled back to the good tag.
+  - `backup.sh` produced a dump; retention pruning was correct; the restore drill passed.
+  - Website-only mode: web returns 200 and the API host returns 503 with `Retry-After`.
+- `gen-secrets.sh` output checked in the API image: the Fernet key works and the VAPID private
+  key derives the public key.
+- `docker stats` (idle): worker 371 MB, api 205 MB, postgres 139 MB, web 75 MB, caddy 23 MB,
+  valkey 5 MB.
+- Web: `next typegen`, `tsc --noEmit` and `pnpm lint` are clean.
+- Everything was torn down afterwards.

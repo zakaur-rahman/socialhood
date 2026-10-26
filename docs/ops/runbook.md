@@ -7,7 +7,9 @@ What to do when an alert fires. Alerts, dashboards and drills: [alerts.md](alert
 First steps for any alert:
 
 1. Open the dashboard (Grafana → Amplychat overview) and Sentry, filtered to the environment.
-2. Check Render: are `socialhood-api` and `socialhood-worker` live, and did a deploy just happen?
+2. Check the deploy (on the VM since C-145: `./deploy.sh --status` and `docker compose ps` in
+   `/opt/amplychat`; roll back with Actions → Production → Run workflow with the previous SHA, or
+   `./deploy.sh --rollback`; [deploy-vm.md](deploy-vm.md), section 8). On Render (superseded): are `socialhood-api` and `socialhood-worker` live, and did a deploy just happen?
    If a deploy caused it, roll back (Render → service → Events → Rollback) and investigate after.
 3. Logs are JSON with `request_id`, `workspace_id`, `user_id` and `job`; Sentry events carry the
    same ids as tags. Search Render logs by `request_id` from a Sentry event.
