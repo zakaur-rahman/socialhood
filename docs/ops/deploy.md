@@ -1,7 +1,7 @@
 # Deploy: environments, domains and the first deploy (T9.5)
 
 > **Superseded for hosting (C-145).** Production now runs on one Google Cloud VM with Docker
-> Compose: **[deploy-vm.md](deploy-vm.md)** is the runbook (images on GHCR, Caddy, the Production
+> Compose: **[deploy-vm.md](deploy-vm.md)** is the runbook (images in Artifact Registry, Caddy, the Production
 > workflow over SSH, backups). The Render and Vercel steps below (sections 1-3, 5, and the Render
 > parts of 7 and 8) are kept for reference only, as is `infra/render.yaml`. Still current and used
 > by the VM runbook: the variable reference (section 4; on the VM they live in

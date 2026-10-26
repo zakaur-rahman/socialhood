@@ -71,10 +71,21 @@ show_failure() {
   done
 }
 
+# The images are private in Artifact Registry (C-147). Docker pulls with the VM's own service
+# account through gcloud's credential helper, set up once here; no password is stored.
+registry_login() {
+  local host="${REGISTRY_HOST:-asia-southeast1-docker.pkg.dev}"
+  if ! grep -q "\"$host\"" "$HOME/.docker/config.json" 2>/dev/null; then
+    log "configuring Docker for $host"
+    gcloud auth configure-docker "$host" --quiet >/dev/null 2>&1 || { log "gcloud auth configure-docker failed"; return 1; }
+  fi
+}
+
 start() {
   # SKIP_PULL=1 uses images already on the machine (a local test of this script).
   if [[ "${SKIP_PULL:-0}" != "1" ]]; then
-    compose pull --quiet || { log "pull failed (is the GHCR package public?)"; return 1; }
+    registry_login || return 1
+    compose pull --quiet || { log "pull failed (the VM's service account needs Artifact Registry Reader)"; return 1; }
   fi
   compose up -d --remove-orphans && wait_healthy
 }
@@ -124,7 +135,7 @@ main() {
       set_var PREVIOUS_IMAGE_TAG "$current"
     fi
     # Images unused by any container and older than 10 days; the previous release stays for a
-    # quick rollback (and every tag can be pulled again from GHCR).
+    # quick rollback (and the last 20 tags can be pulled again from Artifact Registry).
     docker image prune -af --filter "until=240h" >/dev/null || true
     log "deployed $tag"
     compose ps

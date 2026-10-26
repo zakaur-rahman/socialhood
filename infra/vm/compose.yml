@@ -20,7 +20,7 @@ x-logging: &logging
     max-file: "5"
 
 x-api: &api-base
-  image: ${API_IMAGE:-ghcr.io/zakaur-rahman/amplychat-api}:${IMAGE_TAG:?IMAGE_TAG is not set (deploy.sh writes it to .env)}
+  image: ${API_IMAGE:-asia-southeast1-docker.pkg.dev/amplychat/amplychat/api}:${IMAGE_TAG:?IMAGE_TAG is not set (deploy.sh writes it to .env)}
   env_file:
     - path: api.env
       required: false # deploy.sh refuses the full stack without it
@@ -62,7 +62,7 @@ services:
     logging: *logging
 
   web:
-    image: ${WEB_IMAGE:-ghcr.io/zakaur-rahman/amplychat-web}:${IMAGE_TAG:?IMAGE_TAG is not set (deploy.sh writes it to .env)}
+    image: ${WEB_IMAGE:-asia-southeast1-docker.pkg.dev/amplychat/amplychat/web}:${IMAGE_TAG:?IMAGE_TAG is not set (deploy.sh writes it to .env)}
     restart: unless-stopped
     env_file:
       - path: web.env
