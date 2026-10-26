@@ -6,6 +6,7 @@ import { ThemeSync } from "@/components/theme/ThemeSync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { clerkAppearance } from "@/lib/clerk-appearance";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
@@ -36,8 +37,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Clerk Core 3: the provider sits inside <body>. */}
         <ClerkProvider
           appearance={clerkAppearance}
-          // The sign-up card's subtitle (the Free plan needs no card, as the landing page says).
-          localization={{ signUp: { start: { subtitle: "No credit card required." } } }}
+          // The cards' titles name the product from SITE_NAME, not from the Clerk dashboard's
+          // application name (C-139); the sign-up subtitle: the Free plan needs no card, as the
+          // landing page says.
+          localization={{
+            signIn: { start: { title: `Sign in to ${SITE_NAME}`, subtitle: "Welcome back. Sign in to continue." } },
+            signUp: { start: { title: `Create your ${SITE_NAME} account`, subtitle: "No credit card required." } },
+          }}
           signInFallbackRedirectUrl="/app"
           signUpFallbackRedirectUrl="/app"
           afterSignOutUrl="/"
