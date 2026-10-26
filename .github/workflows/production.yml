@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: production
-      url: https://api.socialhood.com/healthz
+      url: https://api.amplychat.com/healthz
     env:
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:

@@ -44,7 +44,7 @@ npm test          # jest, with nock standing in for the API; no network
 npx zapier validate
 ```
 
-`API_BASE_URL` defaults to `https://api.socialhood.com`. For a staging API, set it on the version with
+`API_BASE_URL` defaults to `https://api.amplychat.com`. For a staging API, set it on the version with
 `npx zapier env:set 1.0.0 API_BASE_URL=https://api.staging.example`.
 
 ## Push a private version

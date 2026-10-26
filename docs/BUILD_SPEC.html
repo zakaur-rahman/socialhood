@@ -506,7 +506,7 @@ table.xwide{min-width:980px}
     <tbody>
       <tr><td class="m">OQ-1</td><td>Pricing and currency. The v1 landing page says ₹999/month; the v1 seed says US$10.00/month.</td><td>Prices live only in Dodo products; entitlement numbers in §1.7 are proposals.</td><td>FR-BIL, §1.7</td></tr>
       <tr><td class="m">OQ-2</td><td>Does v1 have real users whose data must move to v2?</td><td><strong>Answered: no.</strong> v1 was a school project and was never deployed. Nothing is migrated; v2 starts on fresh, business-owned accounts.</td><td>§6.5</td></tr>
-      <tr><td class="m">OQ-3</td><td>Production domains.</td><td><code>app.amplychat.com</code> (web) and <code>api.amplychat.com</code> (API).</td><td>Env, OAuth redirect URIs, Meta app settings</td></tr>
+      <tr><td class="m">OQ-3</td><td>Production domains.</td><td><code>amplychat.com</code> (web: the site, and the app under <code>/app</code>; <code>www</code> redirects to it, C-142) and <code>api.amplychat.com</code> (API).</td><td>Env, OAuth redirect URIs, Meta app settings</td></tr>
       <tr><td class="m">OQ-4</td><td>Is the Meta business verified, and will one Meta app hold Instagram Login and WhatsApp?</td><td>One Meta app with both products; business verification done before App Review.</td><td>P2, P3, launch checklist</td></tr>
       <tr><td class="m">OQ-5</td><td>Apply for Instagram's Human Agent feature (7-day human reply window)?</td><td>Yes, feature-flagged off until approved.</td><td>FR-INB-10</td></tr>
       <tr><td class="m">OQ-6</td><td>Which languages should AI replies use?</td><td>Reply in the customer's language; UI in English only.</td><td>TR-AI prompts</td></tr>
@@ -1829,8 +1829,8 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
     <thead><tr><th>Variable</th><th>Service</th><th>Example / default</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td class="m">APP_ENV</td><td>api</td><td class="m">local | staging | production</td><td></td></tr>
-      <tr><td class="m">API_BASE_URL · WEB_BASE_URL</td><td>api</td><td class="m">https://api.amplychat.com · https://app.amplychat.com</td><td>OQ-3</td></tr>
-      <tr><td class="m">CORS_ALLOWED_ORIGINS</td><td>api</td><td class="m">https://app.amplychat.com</td><td>comma-separated</td></tr>
+      <tr><td class="m">API_BASE_URL · WEB_BASE_URL</td><td>api</td><td class="m">https://api.amplychat.com · https://amplychat.com</td><td>OQ-3</td></tr>
+      <tr><td class="m">CORS_ALLOWED_ORIGINS</td><td>api</td><td class="m">https://amplychat.com</td><td>comma-separated</td></tr>
       <tr><td class="m">DATABASE_URL</td><td>api</td><td class="m">postgresql+asyncpg://…</td><td></td></tr>
       <tr><td class="m">DATABASE_URL_DIRECT</td><td>api</td><td class="m">postgresql://…</td><td>job queue (psycopg); direct connection, never through PgBouncer</td></tr>
       <tr><td class="m">BULK_CONCURRENCY_PER_WORKSPACE</td><td>api</td><td class="m">4</td><td>TR-JOB-06</td></tr>
