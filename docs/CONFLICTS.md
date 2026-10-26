@@ -6136,3 +6136,45 @@ load only in the app is a larger change than this pass.
 - Meta Business Manager: verify the domain (`NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION`), then
   business verification with the legal name, the website and support@amplychat.com.
 - Add real social profile URLs to `SOCIAL_PROFILES` once they exist.
+
+## C-143 · Launch security pass (feature/launch-sec)
+
+Security hardening for putting the public website live on Vercel at `https://amplychat.com`
+(API on Render later). The full record, with the vendor-dashboard steps for the owner, is the
+"Launch pass" section of `docs/security-checklist.md` (L-1…L-13).
+
+### Decisions made here
+- **HSTS gets `preload`** (two years, `includeSubDomains`). Sending the directive is harmless;
+  submitting the domain to hstspreload.org is the owner's step, after every subdomain is on HTTPS.
+- **`'unsafe-inline'` stays** on `script-src` and `style-src` only (A-4, re-checked): Next.js's
+  per-page inline scripts can't be hashed, and nonces would make the public pages dynamic. A test
+  now pins it to those two directives and keeps `unsafe-eval` out of production.
+- **`upgrade-insecure-requests` on Vercel without an API** (`VERCEL=1` and no
+  `NEXT_PUBLIC_API_BASE_URL`), so the website-only launch gets it; local production builds don't.
+- **Permissions-Policy** turns off 15 features the app never uses; `autoplay` is left alone so a
+  muted marketing video can still play.
+- **security.txt `Expires` is computed**, 360 days ahead (RFC 9116 recommends under a year), and the
+  route revalidates daily, so it never lapses between deploys. Canonical and Policy use `siteUrl()`,
+  so they follow C-142's canonical origin.
+- **`/security` makes no bounty and no legal safe-harbour promise.** It gives the testing rules and
+  says we reply. A safe-harbour sentence is a legal commitment, so it is left to the owner (below).
+- **Production settings refuse inexact origins.** `CORS_ALLOWED_ORIGINS` and
+  `CLERK_AUTHORIZED_PARTIES` must be exact https origins and include `WEB_BASE_URL`'s origin;
+  `API_BASE_URL` and `WEB_BASE_URL` must be https. Staging and local are unchanged.
+- **`infra/render.yaml`** moves off the `socialhood.com` placeholders: web origin
+  `https://amplychat.com` (with C-142), API `api.amplychat.com`, staging `staging.amplychat.com`,
+  `EMAIL_FROM` `Amplychat <support@amplychat.com>` as in `.env.example`.
+- **Dependencies**: `fast-uri` 3.1.8 → 3.1.9 by a lockfile-only edit (a `pnpm update` also drifted
+  rolldown and others, so it wasn't used). pip-audit was clean.
+
+### Left for other tracks
+- `/security` needs a sitemap entry (`PUBLIC_PATHS` in `lib/marketing/site.ts`, SEO track, C-142)
+  and a footer link (legal or SEO track).
+- `docs/ops/deploy.md` still shows `app.amplychat.com` for `WEB_BASE_URL` and the Vercel domain; the
+  SEO track's canonical change updates it to match `infra/render.yaml`.
+
+### Owner decisions (recommended values)
+- Safe harbour on `/security`: recommended "If you follow these rules and act in good faith, we
+  won't take legal action against you for your research."
+- When to submit HSTS preload: after the API and Clerk production subdomains are live on HTTPS.
+- Switch from the Clerk development key to the production instance before real sign-ups.
