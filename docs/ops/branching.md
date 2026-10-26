@@ -195,7 +195,7 @@ available (see "Plan check" above); leave it unset otherwise.
 | Workflow | Runs on | What it does |
 |---|---|---|
 | `ci.yml` (CI) | pull requests into `develop` or `main`; pushes to `develop` and `main` | the four required checks. A newer push to the same branch or pull request cancels the older run. |
-| `production.yml` (Production) | CI finishing green on a push to `main`; "Run workflow" on `main` (optional tag: deploy that SHA without building, a rollback) | builds and pushes both images to GHCR, waits for approval in `production`, then deploys the tested commit to the VM over SSH (C-145) |
+| `production.yml` (Production) | CI finishing green on a push to `main`; "Run workflow" on `main` (optional tag: deploy that SHA without building, a rollback) | builds and pushes both images to Artifact Registry (C-147), waits for approval in `production`, then deploys the tested commit to the VM over SSH (C-145) |
 | `e2e-nightly.yml` (E2E nightly) | 21:30 UTC on `develop`; "Run workflow" on any branch | the Playwright suite against a local sandbox stack ([testing-e2e.md](../testing-e2e.md)) |
 | `ops.yml` (Ops) | pull requests and pushes to `develop` and `main` that touch `infra/prometheus/` | the alert rules and their tests |
 

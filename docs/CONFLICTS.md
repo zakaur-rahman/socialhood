@@ -6533,3 +6533,27 @@ Brief: the owner wants the app (`/app`, `/w/…`, sign-in, sign-up) at
   Location read `127.0.0.1:3200`), and the signed-out guard went to Clerk's hosted page because
   that build had no `NEXT_PUBLIC_CLERK_SIGN_IN_URL` (the Dockerfile defaults it to `/sign-in`).
   The server was stopped afterwards.
+
+## C-147 · Images in Google Artifact Registry, not GHCR (feature/artifact-registry)
+
+The owner plans to make the repository private later and wanted the setup ready for it now. Public
+GHCR packages would have kept the API image (with its full Python source) public after the
+repository went private, so the images move to **Artifact Registry** before the first deploy.
+
+- **Where:** GCP project `amplychat`, repository `amplychat` (Docker, `asia-southeast1`), images
+  `api` and `web`, private. A clean-up policy keeps the 20 most recent versions and deletes the rest
+  after 60 days.
+- **GitHub → registry, keyless:** Workload Identity Federation (pool `github`, provider
+  `github-actions`) maps GitHub's OIDC token to `github-deployer@amplychat.iam.gserviceaccount.com`
+  (Artifact Registry Writer on the repository only). The provider accepts only this repository, by
+  its numeric id `1399054239` (renames and transfers don't widen it), and only `refs/heads/main`.
+  No Google key is stored in GitHub; `packages: write` is gone from the workflow.
+- **VM → registry, no password:** the VM's default service account has Artifact Registry Reader on
+  the repository (its default scopes allow pulls); `deploy.sh` sets up gcloud's Docker credential
+  helper once.
+- **Identifiers in the workflow, not variables:** the provider path and the service account email
+  aren't secrets and change only with the project, so they sit in `production.yml`'s `env`.
+- **When the repository goes private:** nothing changes for the images. On GitHub Free the
+  environment approval and branch protection stop working (GitHub Pro restores them); set
+  `PRODUCTION_DEPLOY=manual` meanwhile (deploy-vm.md 4.2/4.3).
+- Done on 2026-10-27 with gcloud as the owner's account; the commands are in deploy-vm.md 4.3.

@@ -27,8 +27,8 @@ Internet ──80/443──► caddy ──► web:3000          (Next.js standa
 
 | Piece | Where it is in the repository | On the VM |
 |---|---|---|
-| API image (API, worker and migrations) | `apps/api/Dockerfile` | `ghcr.io/zakaur-rahman/amplychat-api:<sha>` |
-| Web image | `apps/web/Dockerfile` (`NEXT_OUTPUT=standalone`, `next.config.ts`) | `ghcr.io/zakaur-rahman/amplychat-web:<sha>` |
+| API image (API, worker and migrations) | `apps/api/Dockerfile` | `asia-southeast1-docker.pkg.dev/amplychat/amplychat/api:<sha>` |
+| Web image | `apps/web/Dockerfile` (`NEXT_OUTPUT=standalone`, `next.config.ts`) | `asia-southeast1-docker.pkg.dev/amplychat/amplychat/web:<sha>` |
 | Services | `infra/vm/compose.yml` (project `amplychat`) | `/opt/amplychat/compose.yml` |
 | HTTPS, redirects, proxy | `infra/vm/Caddyfile` | `/opt/amplychat/Caddyfile` |
 | Deploy, rollback | `infra/vm/deploy.sh` | `/opt/amplychat/deploy.sh` |
@@ -54,7 +54,7 @@ Internet ──80/443──► caddy ──► web:3000          (Next.js standa
   as well (section 6).
 
 **How a deploy works.** A push to `main` runs CI. When CI passes, the Production workflow builds
-both images and pushes them to GHCR as `:<commit sha>` and `:latest`. It then waits for the
+both images and pushes them to Artifact Registry (private, C-147) as `:<commit sha>` and `:latest`. It then waits for the
 owner's approval in the `production` environment. After approval it copies `infra/vm/` (the
 compose file, the Caddyfile and the scripts, never the env files) to `/opt/amplychat` over SSH and
 runs `deploy.sh <sha>`. The script:
@@ -195,16 +195,43 @@ A changed build variable takes effect only with a new image: run the workflow (s
 **Repository variable** `PRODUCTION_DEPLOY=manual` is needed only if required reviewers aren't
 available ([branching.md](branching.md), section 6).
 
-### 4.3 Images on GHCR
+### 4.3 Images in Artifact Registry (C-147)
 
-The first workflow run creates two packages under the owner's account: `amplychat-api` and
-`amplychat-web`. New packages start **private**. For each one, open it from the profile's
-Packages tab, then Package settings → Change visibility → **Public**. The repository is public,
-and public packages let the VM pull without credentials. The images hold no secrets. Each image
-carries the `org.opencontainers.image.source` label, which links the package to the repository.
+The images are **private**, in the GCP project `amplychat`: repository `amplychat` (Docker,
+`asia-southeast1`), images `api` and `web`. Nothing secret is stored anywhere for it:
 
-Until the packages are public, the deploy job's `docker compose pull` fails with "denied". Make
-them public and run the workflow again.
+- **GitHub pushes without a Google key.** The build job exchanges GitHub's OIDC token through
+  Workload Identity Federation (pool `github`, provider `github-actions`) for the service account
+  `github-deployer@amplychat.iam.gserviceaccount.com`, which has **Artifact Registry Writer** on the
+  repository only. The provider accepts tokens only from this repository (by its numeric id, so a
+  rename or transfer doesn't open it) and only for `refs/heads/main`.
+- **The VM pulls with its own service account** (`561275036552-compute@developer.gserviceaccount.com`,
+  **Artifact Registry Reader** on the repository; its default access scopes are enough).
+  `deploy.sh` runs `gcloud auth configure-docker asia-southeast1-docker.pkg.dev` once, so Docker uses
+  gcloud's credential helper.
+- **Clean-up policy:** the 20 most recent versions are always kept; anything else older than 60
+  days is deleted.
+- **The repository can go private at any time** without touching the images. On GitHub Free a
+  private repository loses environment approvals and branch protection (they need GitHub Pro):
+  then set `PRODUCTION_DEPLOY=manual` (section 4.2).
+
+One-time setup, already done on 2026-10-27 (for a new project, run the same):
+
+```sh
+P=amplychat; N=$(gcloud projects describe $P --format='value(projectNumber)')
+REPO_ID=$(gh api repos/zakaur-rahman/socialhood --jq .id)
+gcloud services enable artifactregistry.googleapis.com iamcredentials.googleapis.com sts.googleapis.com iam.googleapis.com --project $P
+gcloud artifacts repositories create amplychat --repository-format=docker --location=asia-southeast1 --project $P
+gcloud iam service-accounts create github-deployer --project $P
+gcloud artifacts repositories add-iam-policy-binding amplychat --location asia-southeast1 --project $P   --member=serviceAccount:github-deployer@$P.iam.gserviceaccount.com --role=roles/artifactregistry.writer
+gcloud artifacts repositories add-iam-policy-binding amplychat --location asia-southeast1 --project $P   --member=serviceAccount:$N-compute@developer.gserviceaccount.com --role=roles/artifactregistry.reader
+gcloud iam workload-identity-pools create github --location global --project $P
+gcloud iam workload-identity-pools providers create-oidc github-actions --workload-identity-pool github   --location global --project $P --issuer-uri=https://token.actions.githubusercontent.com   --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref   --attribute-condition="assertion.repository_id=='$REPO_ID' && assertion.ref=='refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding github-deployer@$P.iam.gserviceaccount.com --project $P   --role=roles/iam.workloadIdentityUser   --member=principalSet://iam.googleapis.com/projects/$N/locations/global/workloadIdentityPools/github/attribute.repository_id/$REPO_ID
+```
+
+If a pull fails with "denied", check the VM's service account still has the Reader role, and that
+`~/.docker/config.json` on the VM lists `asia-southeast1-docker.pkg.dev` under `credHelpers`.
 
 ## 5. First deploy: the website only
 
@@ -228,8 +255,7 @@ yet ([deploy.md](deploy.md), section 5a lists what works without the API).
 
    Leave `COMPOSE_PROFILES` out of `/opt/amplychat/.env`. That is website-only mode.
 3. **On GitHub:** Actions → Production → Run workflow → branch `main`, tag empty. The run builds
-   both images, then the owner approves `deploy-production`. On the first run, make the two
-   packages public when the build finishes (section 4.3), before you approve.
+   both images, then the owner approves `deploy-production`.
 4. **Check** from your computer:
 
    ```sh

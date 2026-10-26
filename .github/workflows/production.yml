@@ -1,6 +1,9 @@
 # Production deploys to the VM (C-145; runbook: docs/ops/deploy-vm.md, branch model:
 # docs/ops/branching.md). After CI passes on a push to `main`:
-#   1. build: the API and web images, pushed to GHCR (public packages) as :<commit sha> and :latest.
+#   1. build: the API and web images, pushed to Artifact Registry (private, in the GCP project
+#      amplychat; C-147) as :<commit sha> and :latest. No Google key is stored: GitHub's OIDC token
+#      is exchanged through Workload Identity Federation for the github-deployer service account,
+#      which only this repository's main branch can use. The VM pulls with its own service account.
 #   2. deploy: waits for the owner's approval in the `production` environment, copies infra/vm/
 #      to /opt/amplychat on the VM over SSH and runs deploy.sh <sha> there (pull, migrate, start,
 #      wait for health; on failure the previous tag is started again).
@@ -8,7 +11,7 @@
 #
 # Manual runs (Actions → Production → Run workflow, branch main):
 #   tag empty    build and deploy main's head (once CI has passed on it): a redeploy.
-#   tag = <sha>  deploy an image already in GHCR without building: a rollback, or a redeploy of an
+#   tag = <sha>  deploy an image already in Artifact Registry without building: a rollback, or a redeploy of an
 #                older release. The VM files come from that commit too.
 #
 # Setup (docs/ops/deploy-vm.md, section 4):
@@ -42,10 +45,13 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+# Identifiers, not secrets (docs/ops/deploy-vm.md, "Images").
 env:
-  REGISTRY: ghcr.io
-  API_IMAGE: ghcr.io/zakaur-rahman/amplychat-api
-  WEB_IMAGE: ghcr.io/zakaur-rahman/amplychat-web
+  REGISTRY: asia-southeast1-docker.pkg.dev
+  API_IMAGE: asia-southeast1-docker.pkg.dev/amplychat/amplychat/api
+  WEB_IMAGE: asia-southeast1-docker.pkg.dev/amplychat/amplychat/web
+  GCP_WORKLOAD_IDENTITY_PROVIDER: projects/561275036552/locations/global/workloadIdentityPools/github/providers/github-actions
+  GCP_SERVICE_ACCOUNT: github-deployer@amplychat.iam.gserviceaccount.com
 
 jobs:
   prepare:
@@ -64,6 +70,7 @@ jobs:
     permissions:
       actions: read # the manual run checks CI passed on the commit
       contents: read
+      id-token: write # Workload Identity Federation, to check a tag's images exist
     outputs:
       sha: ${{ steps.pick.outputs.sha }}
       build: ${{ steps.pick.outputs.build }}
@@ -99,6 +106,23 @@ jobs:
             exit 1
           fi
 
+      - name: Sign in to Google Cloud (deploying a tag)
+        if: steps.pick.outputs.build == 'false'
+        id: gcp
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Sign in to Artifact Registry (deploying a tag)
+        if: steps.pick.outputs.build == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: oauth2accesstoken
+          password: ${{ steps.gcp.outputs.access_token }}
+
       - name: Check both images exist (deploying a tag)
         if: steps.pick.outputs.build == 'false'
         env:
@@ -106,7 +130,7 @@ jobs:
         run: |
           for image in "$API_IMAGE" "$WEB_IMAGE"; do
             docker manifest inspect "$image:$SHA" > /dev/null \
-              || { echo "::error::$image:$SHA is not in GHCR."; exit 1; }
+              || { echo "::error::$image:$SHA is not in Artifact Registry."; exit 1; }
           done
 
   build:
@@ -119,7 +143,7 @@ jobs:
     environment: production-build
     permissions:
       contents: read
-      packages: write
+      id-token: write # Workload Identity Federation (no Google key in GitHub)
     strategy:
       fail-fast: true
       matrix:
@@ -133,11 +157,20 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Sign in to Google Cloud
+        id: gcp
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Sign in to Artifact Registry
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: oauth2accesstoken
+          password: ${{ steps.gcp.outputs.access_token }}
 
       - name: Build and push the API image
         if: matrix.image == 'api'
