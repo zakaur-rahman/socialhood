@@ -6,7 +6,10 @@ import { securityHeaders } from "./src/lib/security/headers";
 // TR-FE-07: one strict config. Never add ignoreBuildErrors or ignoreDuringBuilds.
 const nextConfig: NextConfig = {
   typedRoutes: true,
+  // C-143: no X-Powered-By, and no browser source maps served from the site. Sentry builds its own
+  // for the upload (below) and deletes them from the output afterwards.
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   async headers() {
     return [
       // SEC-11: CSP, HSTS, framing, referrer and permissions on every route.
@@ -40,7 +43,7 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  sourcemaps: { disable: !sentryUpload },
+  sourcemaps: { disable: !sentryUpload, deleteSourcemapsAfterUpload: true },
   release: { create: sentryUpload, finalize: sentryUpload },
   silent: !process.env.CI,
   telemetry: false,
