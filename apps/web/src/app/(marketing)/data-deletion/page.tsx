@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import type { ReactNode } from "react";
 
+import { BreadcrumbJsonLd } from "@/components/marketing/JsonLd";
 import { Container } from "@/components/marketing/primitives";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -156,6 +157,7 @@ export default async function DataDeletionPage({
 
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
+      <BreadcrumbJsonLd name="Data deletion" path="/data-deletion" />
       <Container className="max-w-3xl py-12 sm:py-16">
         {given ? (
           <div className="mb-12 flex flex-col items-start gap-3">

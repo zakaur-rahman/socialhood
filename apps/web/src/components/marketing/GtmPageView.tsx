@@ -8,6 +8,7 @@ import { SIGN_UP_PATH } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 import { MARKETING_HEADING } from "@/styles/tokens";
 
+import { BreadcrumbJsonLd } from "./JsonLd";
 import { Container, CtaLink, SECTION_EYEBROW } from "./primitives";
 import { SHOTS } from "./shots";
 
@@ -86,6 +87,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
   const shot = page.shot ? SHOTS[page.shot] : null;
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
+      <BreadcrumbJsonLd name={page.name} path={page.path} />
       <section className="py-16 sm:py-20">
         <Container className="max-w-3xl">
           <p className={SECTION_EYEBROW}>{page.eyebrow}</p>

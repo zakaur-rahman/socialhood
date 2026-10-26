@@ -4,7 +4,11 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, isSet } from "@/lib/legal";
 
 import type { Pricing } from "./plans";
-import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "./site";
+import { LOGO_PATH, OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SOCIAL_PROFILES, absoluteUrl, siteUrl } from "./site";
+
+/** Search results cut titles and descriptions near these lengths (C-142); a test holds every public page to them. */
+export const TITLE_MAX = 60;
+export const DESCRIPTION_MAX = 160;
 
 /**
  * A public page's metadata: title, description, canonical URL, Open Graph and Twitter card with
@@ -34,21 +38,84 @@ export function pageMetadata({
   };
 }
 
+/** For pages that must never be indexed: sign-in and sign-up, the app, unsubscribe links, the 404. */
+export const NO_INDEX: Metadata["robots"] = { index: false, follow: false };
+
+type Env = Record<string, string | undefined>;
+
+/**
+ * Site ownership tags for Google Search Console, Bing Webmaster Tools and Meta's domain
+ * verification, each from its env var and rendered only when set (C-142). Next writes
+ * `google-site-verification`; the others go through `other`.
+ */
+export function verificationMetadata(env: Env = process.env): Metadata["verification"] | undefined {
+  const google = env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+  const bing = env.NEXT_PUBLIC_BING_SITE_VERIFICATION?.trim();
+  const facebook = env.NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION?.trim();
+  const other: Record<string, string> = {};
+  if (bing) other["msvalidate.01"] = bing;
+  if (facebook) other["facebook-domain-verification"] = facebook;
+  if (!google && !Object.keys(other).length) return undefined;
+  return { ...(google ? { google } : {}), ...(Object.keys(other).length ? { other } : {}) };
+}
+
+// ---- structured data (schema.org JSON-LD)
+
+/** Stable node ids, so the landing page's graph and the other pages can point at one Organization. */
+export function organizationId(origin: string = siteUrl()): string {
+  return `${origin}/#organization`;
+}
+
+function websiteId(origin: string): string {
+  return `${origin}/#website`;
+}
+
+/**
+ * The business: the product's name, the registered entity as legalName when the legal config has
+ * it, the site, the logo and the support address. sameAs only once real profiles exist.
+ */
+export function organizationJsonLd(origin: string = siteUrl()): Record<string, unknown> {
+  return {
+    "@type": "Organization",
+    "@id": organizationId(origin),
+    name: SITE_NAME,
+    ...(isSet(LEGAL.entityName) ? { legalName: LEGAL.entityName.trim() } : {}),
+    url: `${origin}/`,
+    logo: absoluteUrl(LOGO_PATH, origin),
+    email: SUPPORT_EMAIL,
+    contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: SUPPORT_EMAIL },
+    ...(SOCIAL_PROFILES.length ? { sameAs: [...SOCIAL_PROFILES] } : {}),
+  };
+}
+
+/** The site itself. No SearchAction: the site has no search. */
+export function webSiteJsonLd(origin: string = siteUrl()): Record<string, unknown> {
+  return {
+    "@type": "WebSite",
+    "@id": websiteId(origin),
+    name: SITE_NAME,
+    url: `${origin}/`,
+    description: SITE_DESCRIPTION,
+    inLanguage: "en",
+    publisher: { "@id": organizationId(origin) },
+  };
+}
+
 /**
  * schema.org SoftwareApplication with only what is true: the name, what it does, that it runs in a
- * browser, and the offers the plan list priced (none when the API gave no prices). No ratings,
- * reviews or download counts: there are none.
+ * browser, and the offers the plan list priced (none when the API gave no prices, so a site
+ * deployed without the API still has valid data). No ratings, reviews or download counts: there
+ * are none.
  */
-export function softwareApplicationJsonLd(pricing: Pricing, origin: string = siteUrl()): Record<string, unknown> {
+function softwareApplicationNode(pricing: Pricing, origin: string, publisher: Record<string, unknown>): Record<string, unknown> {
   const pro = pricing.plans.find((card) => card.plan === "pro" && card.available && card.offer);
   const offers = pro?.offer
     ? [
-        { "@type": "Offer", name: "Free", price: "0", priceCurrency: pro.offer.currency, url: `${origin}/#pricing` },
-        { "@type": "Offer", name: "Pro", price: pro.offer.price, priceCurrency: pro.offer.currency, url: `${origin}/#pricing` },
+        { "@type": "Offer", name: "Free", price: "0", priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
+        { "@type": "Offer", name: "Pro", price: pro.offer.price, priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
       ]
     : undefined;
   return {
-    "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     url: `${origin}/`,
@@ -57,9 +124,54 @@ export function softwareApplicationJsonLd(pricing: Pricing, origin: string = sit
     operatingSystem: "Web",
     inLanguage: "en",
     ...(offers ? { offers } : {}),
-    ...(isSet(LEGAL.entityName)
-      ? { provider: { "@type": "Organization", name: LEGAL.entityName.trim(), email: SUPPORT_EMAIL } }
-      : {}),
+    publisher,
+  };
+}
+
+/** The app on its own (the pricing page), with the Organization written out as its publisher. */
+export function softwareApplicationJsonLd(pricing: Pricing, origin: string = siteUrl()): Record<string, unknown> {
+  return { "@context": "https://schema.org", ...softwareApplicationNode(pricing, origin, organizationJsonLd(origin)) };
+}
+
+/** The FAQ section's questions and answers, as written on the page (plain text, no markup). */
+export function faqPageJsonLd(faq: readonly { question: string; answer: string }[], origin: string = siteUrl()): Record<string, unknown> {
+  return {
+    "@type": "FAQPage",
+    "@id": `${origin}/#faq`,
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+}
+
+/** Home, then the page: every inner page sits one level below the landing page. */
+export function breadcrumbJsonLd(name: string, path: string, origin: string = siteUrl()): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${origin}/` },
+      { "@type": "ListItem", position: 2, name, item: absoluteUrl(path, origin) },
+    ],
+  };
+}
+
+/** One @graph for the landing page: the Organization, the WebSite, the app and the FAQ. */
+export function landingJsonLd(
+  pricing: Pricing,
+  faq: readonly { question: string; answer: string }[],
+  origin: string = siteUrl(),
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      organizationJsonLd(origin),
+      webSiteJsonLd(origin),
+      softwareApplicationNode(pricing, origin, { "@id": organizationId(origin) }),
+      faqPageJsonLd(faq, origin),
+    ],
   };
 }
 

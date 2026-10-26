@@ -128,7 +128,18 @@ describe("the landing page", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Will the AI make things up?" })).toBeInTheDocument();
 
     // Structured data with only true fields.
-    const data = jsonLd(container);
+    const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];
+    expect(graph.map((node) => node["@type"])).toEqual(["Organization", "WebSite", "SoftwareApplication", "FAQPage"]);
+    expect(graph[0]).toMatchObject({
+      name: "Amplychat",
+      url: "https://socialhood.example/",
+      logo: "https://socialhood.example/icons/icon-512.png",
+      email: "support@amplychat.com",
+    });
+    expect(graph[0]).not.toHaveProperty("sameAs");
+    expect(graph[1]).toMatchObject({ url: "https://socialhood.example/", publisher: { "@id": "https://socialhood.example/#organization" } });
+    expect((graph[3].mainEntity as unknown[]).length).toBe(FAQ.length);
+    const data = graph[2];
     expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Amplychat", url: "https://socialhood.example/" });
     expect(data.offers).toEqual([
       expect.objectContaining({ name: "Free", price: "0", priceCurrency: "INR" }),
@@ -160,9 +171,12 @@ describe("the landing page", () => {
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
     expect(pricing.getByText("See pricing when you sign up")).toBeInTheDocument();
     expect(pricing.getByText("3 active automations")).toBeInTheDocument();
-    expect(pricing.getByText(/Prices couldn't be loaded just now/)).toBeInTheDocument();
+    // A site deployed without the API reads the same: no "couldn't load" notice, no blanks or "null".
+    expect(pricing.queryByText(/couldn't be loaded/)).toBeNull();
+    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
     expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/[$₹€£]\s?\d/);
-    expect(jsonLd(container)).not.toHaveProperty("offers");
+    const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];
+    expect(graph.find((node) => node["@type"] === "SoftwareApplication")).not.toHaveProperty("offers");
   });
 
   it("without an API address it doesn't call out at all, and still lists the plans", async () => {
@@ -178,7 +192,7 @@ describe("the landing page", () => {
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {
     expect(revalidate).toBe(3600);
-    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox and automations for Instagram and WhatsApp" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox for Instagram and WhatsApp" });
     expect(metadata.alternates?.canonical).toBe("/");
     expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Amplychat" });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
