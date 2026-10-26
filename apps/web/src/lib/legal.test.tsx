@@ -12,7 +12,7 @@ const FULL: LegalConfig = {
   governingLaw: "the laws of India",
   jurisdiction: "the courts at Bengaluru, Karnataka",
   effectiveDate: "2026-10-15",
-  grievanceOfficer: { name: "A. Person", email: "privacy@amplychat.com" },
+  grievanceOfficer: { name: "A. Person", email: "support@amplychat.com" },
   contactEmail: "support@amplychat.com",
 };
 
@@ -55,9 +55,9 @@ describe("the legal config renders only what is set", () => {
     const terms = screen.getAllByRole("term").map((node) => node.textContent);
     expect(terms).toEqual(["Operated by", "Registered address", "Email", "Grievance officer"]);
     expect(screen.getByText("Example Technologies Private Limited")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "A. Person, privacy@amplychat.com" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "A. Person, support@amplychat.com" })).toHaveAttribute(
       "href",
-      "mailto:privacy@amplychat.com",
+      "mailto:support@amplychat.com",
     );
     expect(screen.getByText(/Effective 15 October 2026/)).toBeInTheDocument();
     expect(governingLawClause(FULL)).toBe(

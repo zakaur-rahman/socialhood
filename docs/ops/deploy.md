@@ -168,7 +168,7 @@ API and worker read the same variables.
 | `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (Max in R2) |
 | `DODO_PROVIDER` · `EMAIL_PROVIDER` · `PUSH_PROVIDER` | default | no | real providers; `fake` refused in production |
 | `RESEND_API_KEY` | secrets | yes | Resend → API keys (sending access, one domain) |
-| `EMAIL_FROM` | config | no | `Amplychat <hello@amplychat.com>` |
+| `EMAIL_FROM` | config | no | `Amplychat <support@amplychat.com>` |
 | `VAPID_PUBLIC_KEY` | secrets | no | from `web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | secrets | yes | same pair |
 | `VAPID_SUBJECT` | config | no | `mailto:support@amplychat.com` |

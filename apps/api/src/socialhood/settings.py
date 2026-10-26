@@ -167,7 +167,7 @@ class Settings(BaseSettings):
     dodo_provider: Literal["dodo", "fake"] = "dodo"
 
     resend_api_key: SecretStr | None = None
-    email_from: str = "Amplychat <hello@amplychat.com>"
+    email_from: str = "Amplychat <support@amplychat.com>"
     # fake: keep emails in memory (notify/email_fake.py); refused in production.
     email_provider: Literal["resend", "fake"] = "resend"
 

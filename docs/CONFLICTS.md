@@ -5940,7 +5940,7 @@ proprietorship, **unchartd** (lowercase, as the owner writes it).
   copy, marketing, legal pages, metadata and SEO, emails, API messages, the widget's branding line,
   the Ask prompts (`ai/prompts/agent.v1..v4.md`, edited in place: versions are not hashed and no
   test pinned their text) and test assertions. "Ask Social Hood" is "Ask Amplychat".
-- Domains: `socialhood.com` is `amplychat.com` (support@, privacy@, hello@, api., app., clerk.;
+- Domains: `socialhood.com` is `amplychat.com` (support@ for every address, as the owner set on 2026-10-26: contact, legal and the `EMAIL_FROM` sender; api., app., clerk.;
   `.env.example` and settings defaults; the CSP and SSRF allow-lists and the error type base URL
   follow the constants). The bot user agent is `AmplychatBot` (`amplychatbot` in the robots token).
 - Operator: `LEGAL.entityName` is "unchartd", so the footer reads "(c) year unchartd", the Terms say
@@ -5965,7 +5965,7 @@ domains, and the file reference `knowledge/social-hood-product.md`.
 - Trademark search for "Amplychat" in classes 9 and 42 (and India, since the business is there).
 - Rename the display names in: the Meta app (and its App Review submission text), the Clerk
   application, Razorpay, Dodo Payments, and the Render and Vercel services.
-- Set up email on amplychat.com (support@, privacy@, hello@/noreply@) with SPF, DKIM and DMARC, and
+- Set up email on amplychat.com (support@amplychat.com, the one mailbox; it is also the sender) with SPF, DKIM and DMARC, and
   verify the domain in Resend before the default `EMAIL_FROM` is used.
 - Update Meta redirect URIs, webhook URLs, the Clerk allowed origins and the Google OAuth redirect
   when the domains move; `CORS`/`CSP` env values that name the old domain.
