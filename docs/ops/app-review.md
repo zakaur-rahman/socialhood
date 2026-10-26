@@ -23,7 +23,10 @@ changes this process.
   - [ ] `<web>/` (the footer);
   - [ ] `<web>/privacy`;
   - [ ] `<web>/terms`;
-  - [ ] `<web>/data-deletion`.
+  - [ ] `<web>/data-deletion`;
+  - [ ] `<web>/contact` (C-144). The legal name on the site is `UNCHARTD`, as on the Udyam
+    registration (`LEGAL.entityName` in `apps/web/src/lib/legal.ts`); the address appears only once
+    `LEGAL.registeredAddress` is set, so set it before verification if Meta asks for it to match.
 - [ ] **Meta Business Portfolio verification is approved** (O-3). Advanced Access, which outside
   accounts need, requires it.
 - [ ] **The permission list (section 3 below) is agreed** (O-4).
