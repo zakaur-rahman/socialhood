@@ -85,5 +85,6 @@ async def data_deletion(
     from socialhood.jobs.tasks.privacy import enqueue_request
 
     await enqueue_request(code)  # a lost enqueue is re-queued by sweep_deletions
-    web = (settings.web_base_url or "http://localhost:3000").rstrip("/")
-    return JSONResponse({"url": f"{web}/data-deletion?code={code}", "confirmation_code": code})
+    # The status page is a public page on the site (C-146).
+    site = (settings.site_url or "http://localhost:3000").rstrip("/")
+    return JSONResponse({"url": f"{site}/data-deletion?code={code}", "confirmation_code": code})

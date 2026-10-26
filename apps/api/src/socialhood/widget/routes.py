@@ -120,5 +120,5 @@ async def frame(request: Request, session: Session, w: WidgetId, h: HostName) ->
             ancestors=origin.frame_ancestors(list(row.allowed_domains or []))
         ),
     }
-    page = _page(w, host, settings.web_base_url or DEFAULT_BRAND_URL)
+    page = _page(w, host, settings.site_url or DEFAULT_BRAND_URL)
     return HTMLResponse(page, 200, headers)

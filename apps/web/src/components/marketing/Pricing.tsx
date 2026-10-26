@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
-import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +90,7 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
       {card.available ? (
         <>
           <CtaLink
-            href={card.plan === "pro" ? PRO_SIGN_UP_PATH : SIGN_UP_PATH}
+            href={appUrl(card.plan === "pro" ? PRO_SIGN_UP_PATH : SIGN_UP_PATH)}
             prefetch={false}
             variant={featured ? "primary" : "secondary"}
             className="mt-6 w-full"

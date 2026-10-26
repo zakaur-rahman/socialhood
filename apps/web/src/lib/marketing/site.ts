@@ -5,9 +5,9 @@
  */
 
 /**
- * Used when NEXT_PUBLIC_SITE_URL is unset or not a URL: the canonical public origin (C-142). The
- * apex serves the site and the signed-in app (under /app) from one deployment; www redirects here.
- * The API's WEB_BASE_URL in production is the same origin.
+ * Used when NEXT_PUBLIC_SITE_URL is unset or not a URL: the canonical public origin (C-142); www
+ * redirects here. In production the signed-in app is on its own host, NEXT_PUBLIC_APP_URL
+ * (https://dashboard.amplychat.com, C-146), served by the same deployment.
  */
 export const DEFAULT_SITE_URL = "https://amplychat.com";
 
@@ -27,6 +27,41 @@ export function siteUrl(value: string | undefined = process.env.NEXT_PUBLIC_SITE
 /** An absolute URL on the site for a path ("/privacy"). */
 export function absoluteUrl(path: string, origin: string = siteUrl()): string {
   return new URL(path, `${origin}/`).href;
+}
+
+/**
+ * The signed-in app's own origin (C-146), from NEXT_PUBLIC_APP_URL: "https://dashboard.amplychat.com"
+ * in production. Null when unset, not an http(s) URL, or the same origin as the site: then the app
+ * and the site share one origin (local dev, e2e, CI) and every link stays relative.
+ */
+export function appOrigin(
+  value: string | undefined = process.env.NEXT_PUBLIC_APP_URL,
+  site: string = siteUrl(),
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.origin === site ? null : url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A link into the app ("/sign-up", "/app?plan=pro"): absolute on the app's origin when it has its
+ * own (C-146), so a marketing CTA needs no redirect hop; the path as it is otherwise.
+ */
+export function appUrl(path: string, origin: string | null = appOrigin()): string {
+  return origin ? absoluteUrl(path, origin) : path;
+}
+
+/**
+ * A link from the app to a public page ("/privacy", "/pricing"): absolute on the site when the app
+ * has its own origin (C-146); the path as it is otherwise.
+ */
+export function siteHref(path: string, origin: string | null = appOrigin()): string {
+  return origin ? absoluteUrl(path, siteUrl()) : path;
 }
 
 export const SITE_NAME = "Amplychat";

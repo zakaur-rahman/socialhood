@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, operatorName } from "@/lib/legal";
-import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH, SITE_NAME } from "@/lib/marketing/site";
+import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
 import { EYEBROW } from "@/styles/tokens";
 
 import { Container, Logo } from "./primitives";
@@ -14,8 +14,8 @@ const LINK = "inline-flex min-h-10 min-w-10 items-center rounded-sm text-sm text
 export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {
   const product = [
     ...NAV_LINKS,
-    { label: "Sign in", href: SIGN_IN_PATH },
-    { label: "Start free", href: SIGN_UP_PATH },
+    { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
+    { label: "Start free", href: appUrl(SIGN_UP_PATH) },
   ];
   return (
     <footer className="relative overflow-hidden border-t border-line bg-canvas">

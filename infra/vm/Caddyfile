@@ -1,5 +1,5 @@
 # The VM's edge (C-145; docs/ops/deploy-vm.md). Automatic HTTPS (Let's Encrypt, ZeroSSL fallback)
-# for the three hosts; HTTP redirects to HTTPS on its own. The hosts come from the environment
+# for the four hosts; HTTP redirects to HTTPS on its own. The hosts come from the environment
 # (compose.yml) so a local run can use localhost, which Caddy serves from its internal CA.
 #
 # Security headers are not set here: the web app (next.config.ts, SEC-11) and the API send their
@@ -63,8 +63,19 @@
 	redir https://{$SITE_HOST:amplychat.com}{uri} 308
 }
 
-# The website and the signed-in app (Next.js).
+# The public website (Next.js).
 {$SITE_HOST:amplychat.com} {
+	import common
+	request_body {
+		max_size 10MB
+	}
+	reverse_proxy web:3000
+}
+
+# The signed-in app (C-146): the same Next.js server. It tells the two hosts apart by the Host
+# header, which Caddy passes on as it is, and moves each page to the host that serves it
+# (apps/web/src/lib/hosts.ts).
+{$APP_HOST:dashboard.amplychat.com} {
 	import common
 	request_body {
 		max_size 10MB
