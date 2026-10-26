@@ -106,8 +106,8 @@ function setup(server: Partial<Server> = {}, ws: WorkspaceSummary = workspace) {
 
 async function openPanel() {
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Ask Social Hood" }));
-  const panel = await screen.findByRole("dialog", { name: "Ask Social Hood" });
+  await user.click(screen.getByRole("button", { name: "Ask Amplychat" }));
+  const panel = await screen.findByRole("dialog", { name: "Ask Amplychat" });
   return { user, panel };
 }
 
@@ -118,14 +118,14 @@ beforeEach(() => {
   nav.push.mockReset();
 });
 
-describe("Ask Social Hood panel: opening and closing (FR-AGT-01, UX-A11Y-02)", () => {
+describe("Ask Amplychat panel: opening and closing (FR-AGT-01, UX-A11Y-02)", () => {
   it("opens from its button with the question box focused, and Esc closes it and returns focus", async () => {
     setup();
     const { user, panel } = await openPanel();
-    expect(within(panel).getByRole("textbox", { name: "Ask Social Hood a question" })).toHaveFocus();
+    expect(within(panel).getByRole("textbox", { name: "Ask Amplychat a question" })).toHaveFocus();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(screen.getByRole("button", { name: "Ask Social Hood" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Ask Amplychat" })).toHaveFocus();
   });
 
   it("the Close button closes it", async () => {
@@ -137,16 +137,16 @@ describe("Ask Social Hood panel: opening and closing (FR-AGT-01, UX-A11Y-02)", (
 
   it("Ctrl K and ⌘ K open and close it anywhere; K alone doesn't", async () => {
     setup();
-    expect(screen.getByRole("button", { name: "Ask Social Hood" })).toHaveAttribute("aria-keyshortcuts", "Control+K Meta+K");
+    expect(screen.getByRole("button", { name: "Ask Amplychat" })).toHaveAttribute("aria-keyshortcuts", "Control+K Meta+K");
     const user = userEvent.setup();
     await user.keyboard("k");
     expect(screen.queryByRole("dialog")).toBeNull();
     await user.keyboard("{Control>}k{/Control}");
-    expect(await screen.findByRole("dialog", { name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Ask Amplychat" })).toBeInTheDocument();
     await user.keyboard("{Control>}k{/Control}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(await screen.findByRole("dialog", { name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Ask Amplychat" })).toBeInTheDocument();
   });
 
   it("leaves another open dialog alone", async () => {
@@ -155,7 +155,7 @@ describe("Ask Social Hood panel: opening and closing (FR-AGT-01, UX-A11Y-02)", (
     other.setAttribute("role", "dialog");
     document.body.appendChild(other);
     await userEvent.setup().keyboard("{Control>}k{/Control}");
-    expect(screen.queryByRole("dialog", { name: "Ask Social Hood" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Ask Amplychat" })).toBeNull();
     other.remove();
   });
 
@@ -169,7 +169,7 @@ describe("Ask Social Hood panel: opening and closing (FR-AGT-01, UX-A11Y-02)", (
     await user.keyboard("{Control>}k{/Control}");
     expect(box).toHaveFocus();
     box.blur();
-    await user.click(screen.getByRole("button", { name: "Ask Social Hood" }));
+    await user.click(screen.getByRole("button", { name: "Ask Amplychat" }));
     expect(box).toHaveFocus();
     expect(screen.queryByRole("dialog")).toBeNull();
     box.remove();
@@ -199,7 +199,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     expect(useAskStore.getState().threads.w1).toBe("new1");
   });
 
-  it("shows the question in a neutral bubble with its time on hover, and the answer beside the Social Hood mark", async () => {
+  it("shows the question in a neutral bubble with its time on hover, and the answer beside the Amplychat mark", async () => {
     setup({ runs: { r1: runDetail({ answer: "Your latest reel did well." }) } });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
@@ -234,7 +234,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
   it("Enter asks the typed question; Shift+Enter adds a line", async () => {
     const { posts } = setup();
     const { user, panel } = await openPanel();
-    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = within(panel).getByRole("textbox", { name: "Ask Amplychat a question" });
     await user.type(box, "Top posts{Shift>}{Enter}{/Shift}this month{Enter}");
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(posts()[0].body).toEqual({ request: "Top posts\nthis month" });
@@ -292,7 +292,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     expect(within(steps).getByText("Looking up your latest post").closest("li")).toHaveAttribute("data-status", "succeeded");
     expect(within(steps).getByText("Comparing with 10 earlier posts at 24 hours…")).toHaveClass("text-shimmer");
     // While it works the member can type; the button stops the run instead of asking.
-    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = within(panel).getByRole("textbox", { name: "Ask Amplychat a question" });
     await user.type(box, "and last week?");
     expect(box).toHaveValue("and last week?");
     expect(within(panel).getByRole("button", { name: "Stop" })).toBeEnabled();
@@ -534,7 +534,7 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
       { ...workspace, role: "agent" },
     );
     const { user, panel } = await openPanel();
-    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = within(panel).getByRole("textbox", { name: "Ask Amplychat a question" });
     await user.type(box, "Top posts{Enter}");
     const alert = await within(panel).findByRole("alert");
     expect(alert).toHaveTextContent("You've used all 5,000 AI credits for this month.");
@@ -552,7 +552,7 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
         }),
     });
     const { user, panel } = await openPanel();
-    await user.type(within(panel).getByRole("textbox", { name: "Ask Social Hood a question" }), "Top posts{Enter}");
+    await user.type(within(panel).getByRole("textbox", { name: "Ask Amplychat a question" }), "Top posts{Enter}");
     const alert = await within(panel).findByRole("alert");
     expect(alert).toHaveTextContent("You've used all 5,000 AI credits for this month.");
     expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument();
@@ -566,7 +566,7 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
     });
     const { user, panel } = await openPanel();
     expect(await within(panel).findByText(/You've used all 5,000 AI credits for this month. They reset on 1 Oct./)).toBeInTheDocument();
-    await user.type(within(panel).getByRole("textbox", { name: "Ask Social Hood a question" }), "Top posts");
+    await user.type(within(panel).getByRole("textbox", { name: "Ask Amplychat a question" }), "Top posts");
     expect(within(panel).getByRole("button", { name: "Ask" })).toBeDisabled();
   });
 
@@ -642,7 +642,7 @@ describe("Threads (FR-AGT-01)", () => {
       "Question: First question",
       "Question: Second question",
     ]);
-    await user.type(within(panel).getByRole("textbox", { name: "Ask Social Hood a question" }), "And the third?{Enter}");
+    await user.type(within(panel).getByRole("textbox", { name: "Ask Amplychat a question" }), "And the third?{Enter}");
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(posts()[0].body).toEqual({ request: "And the third?", thread_id: "t1" });
     expect(await within(panel).findByRole("article", { name: "Question: And the third?" })).toBeInTheDocument();
@@ -703,7 +703,7 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
       expect(button).toHaveClass("min-h-8", "pointer-coarse:min-h-10");
     }
     // The question box keeps clear of the phone's home indicator.
-    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = within(panel).getByRole("textbox", { name: "Ask Amplychat a question" });
     expect(box.closest("form")?.parentElement).toHaveClass("pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
   });
 });
@@ -712,7 +712,7 @@ describe("The question box", () => {
   it("is one rounded field with the send button inside, and never shows scroll arrows below its limit", async () => {
     setup();
     const { panel } = await openPanel();
-    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = within(panel).getByRole("textbox", { name: "Ask Amplychat a question" });
     const field = box.parentElement!;
     expect(field).toHaveClass("rounded-xl", "border", "bg-field", "has-[textarea:focus-visible]:outline-brand");
     expect(field.className).not.toMatch(/ring-3/);
@@ -756,7 +756,7 @@ describe("Scrolling", () => {
     useAskStore.getState().setThread("w1", "t1");
     const { user, panel } = await openPanel();
     await within(panel).findByText("Second answer");
-    const log = within(panel).getByRole("log", { name: "Conversation with Social Hood" });
+    const log = within(panel).getByRole("log", { name: "Conversation with Amplychat" });
     Object.defineProperty(log, "scrollHeight", { configurable: true, value: 2000 });
     Object.defineProperty(log, "clientHeight", { configurable: true, value: 500 });
     expect(within(panel).queryByRole("button", { name: "Jump to latest" })).toBeNull();

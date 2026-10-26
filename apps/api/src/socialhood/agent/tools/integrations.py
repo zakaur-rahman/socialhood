@@ -1,4 +1,4 @@
-"""Ask Social Hood's integrations tool (GR-04): list_webhook_endpoints, for "is my Zapier hook
+"""Ask Amplychat's integrations tool (GR-04): list_webhook_endpoints, for "is my Zapier hook
 working?". Owners and admins, like Settings, Integrations. Never the signing secret."""
 
 from __future__ import annotations

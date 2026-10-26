@@ -200,7 +200,7 @@ export function ApiReferenceUnavailable() {
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <Container className="py-12 sm:py-16">
         <p className={SECTION_EYEBROW}>Developers</p>
-        <h1 className={cn(MARKETING_HEADING, "mt-3")}>Social Hood public API</h1>
+        <h1 className={cn(MARKETING_HEADING, "mt-3")}>Amplychat public API</h1>
         <Card padding="roomy" className="mt-6 max-w-xl" role="status">
           <p className="text-sm">The API reference isn&rsquo;t available right now. Try again in a moment.</p>
         </Card>

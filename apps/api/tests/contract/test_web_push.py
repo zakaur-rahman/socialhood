@@ -61,7 +61,7 @@ async def http() -> AsyncIterator[httpx.AsyncClient]:
         ("https://notfcm.googleapis.com.example/x", False),
         ("https://169.254.169.254/latest/meta-data", False),
         ("https://localhost/push", False),
-        ("https://api.socialhood.com/v1/internal", False),
+        ("https://api.amplychat.com/v1/internal", False),
         ("not a url", False),
     ],
 )

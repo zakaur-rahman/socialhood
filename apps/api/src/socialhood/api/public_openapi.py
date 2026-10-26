@@ -19,7 +19,7 @@ from socialhood.api.openapi_errors import describe_problems
 from socialhood.schemas.api_keys import SCOPE_DESCRIPTIONS
 
 DESCRIPTION = (
-    "The Social Hood public API reads and updates a workspace's contacts, tags, conversations "
+    "The Amplychat public API reads and updates a workspace's contacts, tags, conversations "
     "and automation runs, sends messages inside the platform's reply window, and subscribes "
     "REST hooks. Make a key in Settings, Integrations, and send it as "
     "`Authorization: Bearer <key>`. The public API is part of the Pro and Max plans. Each key "
@@ -56,7 +56,7 @@ def public_openapi(app: FastAPI) -> dict[str, Any]:
     ]
     schema = describe_problems(
         get_openapi(
-            title="Social Hood public API",
+            title="Amplychat public API",
             version=__version__,
             description=DESCRIPTION,
             routes=routes,

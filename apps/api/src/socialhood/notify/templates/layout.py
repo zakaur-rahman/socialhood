@@ -95,7 +95,7 @@ def page(*, title: str, preheader: str, heading: str, body_html: str, footer_htm
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="max-width:560px;background:#ffffff;border-radius:12px;">'
         f'<tr><td style="padding:24px 28px 0;font:700 15px/1.4 {FONT};color:{INK};">'
-        "Social Hood</td></tr>"
+        "Amplychat</td></tr>"
         f'<tr><td style="padding:14px 28px 6px;"><h1 style="margin:0 0 8px;font:600 21px/1.35 '
         f'{FONT};color:{INK};">{escape(heading)}</h1></td></tr>'
         f'<tr><td style="padding:0 28px 26px;">{body_html}</td></tr>'
@@ -110,5 +110,5 @@ def page(*, title: str, preheader: str, heading: str, body_html: str, footer_htm
 
 def text_page(*, heading: str, lines: Sequence[str], footer: Sequence[str]) -> str:
     """The plain-text part: the same content, links written out."""
-    parts = ["Social Hood", "", heading, "", *lines, "", "--", *footer]
+    parts = ["Amplychat", "", heading, "", *lines, "", "--", *footer]
     return "\n".join(parts).strip() + "\n"

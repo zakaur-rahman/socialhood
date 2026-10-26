@@ -32,7 +32,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
         <main role="alert" style={{ maxWidth: 420, padding: "40px 24px", textAlign: "center" }}>
           <h1 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>This didn&apos;t load</h1>
           <p style={{ margin: "0 0 20px", fontSize: 14, lineHeight: 1.5, color: colorValue("fg-secondary") }}>
-            Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com.
+            Something went wrong on our side. Try again. If it keeps happening, email support@amplychat.com.
           </p>
           <button
             type="button"

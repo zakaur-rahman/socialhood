@@ -1,14 +1,14 @@
 // Generates the app icons (TR-FE-09) from the brand mark: the shell-gradient tile (UX-SH-01,
 // shell-1 to shell-2 at 135°, read from src/styles/tokens.generated.json) with a white chat
-// bubble. No dependencies: pixels are computed with 4×4 supersampling and written as PNG with
-// node:zlib.
+// bubble holding three brand-deep bars (C-140). No dependencies: pixels are computed with 4×4
+// supersampling and written as PNG with node:zlib.
 //
 //   node scripts/generate-icons.mjs
 //
 // Writes public/icons/icon-192.png, icon-512.png (rounded tile, transparent corners),
 // icon-maskable-512.png (full bleed, mark inside the 80% safe zone), badge-72.png (white
-// mark on transparent, for Android's status bar) and src/app/apple-icon.png (180, full bleed:
-// iOS rounds the corners itself).
+// mark on transparent, for Android's status bar), src/app/apple-icon.png (180, full bleed:
+// iOS rounds the corners itself) and src/app/favicon.ico (16, 32 and 48, PNG inside).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,6 +30,7 @@ function hex(name) {
 const FROM = hex("shell-1");
 const TO = hex("shell-2");
 const MARK = hex("fg");
+const BARS = hex("brand-deep");
 
 // ---- PNG
 
@@ -91,17 +92,26 @@ function inTriangle(x, y, [ax, ay], [bx, by], [cx, cy]) {
   return !(negative && positive);
 }
 
-/** The chat bubble with three dots cut out, scaled around the centre. */
-function inMark(x, y, scale) {
+// The "amp bubble" (C-140), the same shape as LogoMark in components/marketing/primitives.tsx: a
+// chat bubble on a 64-unit tile holding three rising bars, given here as [x, y, height] in units.
+const UNIT = 1 / 64;
+const LOGO_BARS = [
+  [21.5, 30, 7],
+  [29.5, 25, 12],
+  [37.5, 19, 18],
+];
+
+/** What the mark covers at (x, y), scaled around the centre: "bubble", "bar" or null. */
+function markAt(x, y, scale) {
   const u = 0.5 + (x - 0.5) / scale;
   const v = 0.5 + (y - 0.5) / scale;
-  const body = inRoundedRect(u, v, 0.2, 0.24, 0.8, 0.7, 0.13);
-  const tail = inTriangle(u, v, [0.3, 0.64], [0.46, 0.66], [0.26, 0.82]);
-  if (!body && !tail) return false;
-  for (const dx of [0.36, 0.5, 0.64]) {
-    if ((u - dx) ** 2 + (v - 0.47) ** 2 <= 0.048 ** 2) return false;
+  const body = inRoundedRect(u, v, 12 * UNIT, 13 * UNIT, 52 * UNIT, 43 * UNIT, 8 * UNIT);
+  const tail = inTriangle(u, v, [19 * UNIT, 42 * UNIT], [29 * UNIT, 42 * UNIT], [19 * UNIT, 51 * UNIT]);
+  if (!body && !tail) return null;
+  for (const [bx, by, height] of LOGO_BARS) {
+    if (inRoundedRect(u, v, bx * UNIT, by * UNIT, (bx + 5) * UNIT, (by + height) * UNIT, 2.5 * UNIT)) return "bar";
   }
-  return true;
+  return "bubble";
 }
 
 // ---- icons
@@ -140,16 +150,38 @@ function gradient(x, y) {
   return FROM.map((from, i) => from + (TO[i] - from) * t);
 }
 
-/** The tile: gradient with the white mark; `rounded` leaves the corners transparent. */
+/** The tile: gradient with the white bubble and brand-deep bars; `rounded` leaves the corners transparent. */
 function tile({ rounded, markScale }) {
   return (x, y) => {
     if (rounded && !inRoundedRect(x, y, 0, 0, 1, 1, 0.22)) return [0, 0, 0, 0];
-    if (inMark(x, y, markScale)) return [...MARK, 1];
+    const part = markAt(x, y, markScale);
+    if (part === "bar") return [...BARS, 1];
+    if (part === "bubble") return [...MARK, 1];
     return [...gradient(x, y), 1];
   };
 }
 
-const badge = (x, y) => (inMark(x, y, 1.25) ? [...MARK, 1] : [0, 0, 0, 0]);
+// The badge is one colour (Android tints it), so the bars are cut out of the bubble.
+const badge = (x, y) => (markAt(x, y, 1.25) === "bubble" ? [...MARK, 1] : [0, 0, 0, 0]);
+
+/** An .ico holding PNG images (every current browser reads them), one per size. */
+function ico(images) {
+  const header = Buffer.alloc(6 + images.length * 16);
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(images.length, 4);
+  let offset = header.length;
+  images.forEach(({ size, data }, i) => {
+    const entry = 6 + i * 16;
+    header[entry] = size;
+    header[entry + 1] = size;
+    header.writeUInt16LE(1, entry + 4); // colour planes
+    header.writeUInt16LE(32, entry + 6); // bits per pixel
+    header.writeUInt32LE(data.length, entry + 8);
+    header.writeUInt32LE(offset, entry + 12);
+    offset += data.length;
+  });
+  return Buffer.concat([header, ...images.map(({ data }) => data)]);
+}
 
 const outputs = [
   ["public/icons/icon-192.png", 192, tile({ rounded: true, markScale: 1 })],
@@ -165,3 +197,8 @@ for (const [path, size, pixel] of outputs) {
   writeFileSync(file, render(size, pixel));
   console.log(`wrote ${path} (${size}×${size})`);
 }
+
+// The favicon: the rounded tile at the sizes browsers ask for (tab, taskbar, shortcut).
+const favicon = [16, 32, 48].map((size) => ({ size, data: render(size, tile({ rounded: true, markScale: 1.08 })) }));
+writeFileSync(join(root, "src/app/favicon.ico"), ico(favicon));
+console.log("wrote src/app/favicon.ico (16, 32, 48)");

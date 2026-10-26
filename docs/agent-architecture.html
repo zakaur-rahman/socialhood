@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Social Hood Agent Architecture</title>
-<meta name="description" content="How Social Hood's AI agent plans, uses typed tools, executes under deterministic policy, verifies and reports; the R1 read-only scope and the path to autonomy.">
+<title>Amplychat Agent Architecture</title>
+<meta name="description" content="How Amplychat's AI agent plans, uses typed tools, executes under deterministic policy, verifies and reports; the R1 read-only scope and the path to autonomy.">
 <style>
 :root {
   --bg: #fbfbfa; --panel: #ffffff; --fg: #1b1b1f; --muted: #5d5d66; --line: #e3e3e8;
@@ -57,8 +57,8 @@ nav.toc a:hover { color: var(--accent); }
 <body>
 <main>
 
-<h1>Social Hood Agent Architecture</h1>
-<p class="lede">How Social Hood's AI becomes a tool-using agent that understands a request, plans, calls typed tools, executes under deterministic policy, verifies the result and reports it. R1 ships a read-only agent; autonomy grows in R2 and R3 as evaluation, permissions and observability mature.</p>
+<h1>Amplychat Agent Architecture</h1>
+<p class="lede">How Amplychat's AI becomes a tool-using agent that understands a request, plans, calls typed tools, executes under deterministic policy, verifies the result and reports it. R1 ships a read-only agent; autonomy grows in R2 and R3 as evaluation, permissions and observability mature.</p>
 <p class="lede">Companion to <code>BUILD_SPEC.html</code> (requirements FR-AGT-*, TR-AGT-*, task list PA). Written 2026-09-29, after P0–P5 were built.</p>
 
 <nav class="toc">
@@ -86,12 +86,12 @@ nav.toc a:hover { color: var(--accent); }
 </nav>
 
 <h2 id="decisions"><span class="sn">0</span>Summary and decisions</h2>
-<p>The agent is an <strong>orchestration layer over the services Social Hood already has</strong>, not a second product. Sending, scheduling, automations, knowledge, analysis and the auto-reply policy keep their rules; the agent reaches them only through typed tools.</p>
+<p>The agent is an <strong>orchestration layer over the services Amplychat already has</strong>, not a second product. Sending, scheduling, automations, knowledge, analysis and the auto-reply policy keep their rules; the agent reaches them only through typed tools.</p>
 <div class="card">
 <p><strong>Decisions of record (owner, 2026-09-29)</strong></p>
 <ul>
-<li><strong>R1 ships a read-only agent</strong>, "Ask Social Hood": read tools over conversations, comments, posts, analytics, knowledge and schedules. It may <em>prepare</em> an action card that the user completes in the normal UI. Write tools, approvals, permissions and the Copilot and Supervised modes are R2; Autonomous mode and standing conditional workflows are R3.</li>
-<li><strong>Framework: Pydantic AI</strong>, used only for the loop between the model and its tools. Run state, plans, approvals, permissions, credits and audit live in Social Hood's own Postgres tables; durability comes from the existing Procrastinate jobs.</li>
+<li><strong>R1 ships a read-only agent</strong>, "Ask Amplychat": read tools over conversations, comments, posts, analytics, knowledge and schedules. It may <em>prepare</em> an action card that the user completes in the normal UI. Write tools, approvals, permissions and the Copilot and Supervised modes are R2; Autonomous mode and standing conditional workflows are R3.</li>
+<li><strong>Framework: Pydantic AI</strong>, used only for the loop between the model and its tools. Run state, plans, approvals, permissions, credits and audit live in Amplychat's own Postgres tables; durability comes from the existing Procrastinate jobs.</li>
 <li><strong>Facebook Pages stays R2</strong>, LinkedIn posting R3; LinkedIn messaging is not possible (partner-only API).</li>
 </ul>
 </div>
@@ -104,7 +104,7 @@ nav.toc a:hover { color: var(--accent); }
 <tr><td>Fair post comparison at equal age</td><td>Specified (FR-ANL-01 metric snapshots at 1 h, 6 h, 24 h, 72 h, 7 d, 30 d), not built</td></tr>
 <tr><td>Comment sentiment and topics</td><td>Specified for P6 (FR-CMT-02, TR-AI-11)</td></tr>
 <tr><td>Post scheduling</td><td>P7 (FR-PUB-*)</td></tr>
-<tr><td>"Ask Social Hood", assistant that builds automations</td><td>Planned for R3; now R1 (read-only) and R2 (writes)</td></tr>
+<tr><td>"Ask Amplychat", assistant that builds automations</td><td>Planned for R3; now R1 (read-only) and R2 (writes)</td></tr>
 </table></div>
 <h3>Where this design differs from the brief, and why</h3>
 <ol>
@@ -118,10 +118,10 @@ nav.toc a:hover { color: var(--accent); }
 </ol>
 
 <h2 id="prd"><span class="sn">1</span>Product requirements</h2>
-<p><strong>Vision.</strong> Social Hood doesn't only show what happened on social media: it understands what happened, decides what should be done, carries out permitted actions, verifies them and explains the result. Autonomy increases one level at a time, each gated by evaluation results and the owner's settings.</p>
+<p><strong>Vision.</strong> Amplychat doesn't only show what happened on social media: it understands what happened, decides what should be done, carries out permitted actions, verifies them and explains the result. Autonomy increases one level at a time, each gated by evaluation results and the owner's settings.</p>
 <div class="tw"><table>
 <tr><th>ID</th><th>Requirement</th><th>Release</th></tr>
-<tr><td>FR-AGT-01</td><td><strong>Ask Social Hood.</strong> A panel available on every page (and a full page) where a member asks questions in plain language, in English, Hindi or Hinglish. Answers cite the data they used (post, time range, counts) and link to it.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-01</td><td><strong>Ask Amplychat.</strong> A panel available on every page (and a full page) where a member asks questions in plain language, in English, Hindi or Hinglish. Answers cite the data they used (post, time range, counts) and link to it.</td><td><span class="tag r1">R1</span></td></tr>
 <tr><td>FR-AGT-02</td><td><strong>Read tools only in R1.</strong> Conversations, contacts, comments, posts, post metrics, analytics, sentiment and topics, knowledge, scheduled messages and posts, automations and their runs. No tool in R1 changes anything.</td><td><span class="tag r1">R1</span></td></tr>
 <tr><td>FR-AGT-03</td><td><strong>Prepared actions.</strong> When a request needs a change ("schedule a message to Priya tomorrow at 10"), the agent resolves the details and shows an action card that opens the existing UI pre-filled (schedule popover, automation editor, comment reply). The member completes it there.</td><td><span class="tag r1">R1</span></td></tr>
 <tr><td>FR-AGT-04</td><td><strong>Numbers come from the database.</strong> Counts, percentages, averages and comparisons are computed by analytics tools; the model only explains them. Each answer shows the time range and sample size.</td><td><span class="tag r1">R1</span></td></tr>
@@ -219,7 +219,7 @@ ai/prompts/agent.v1.md       NEW: the planner's system prompt
 <li><strong>Answer loop</strong> (questions, R1): the model calls read tools, at most 8 tool calls and 6 model turns per run, then writes the answer. Every tool call is persisted as a step.</li>
 <li><strong>Plan first</strong> (anything with a write, R2): the model returns a typed <code>Plan</code> (steps, each a tool call or a condition), which is validated and shown to the member before any write runs. The executor then runs the plan itself; the model is called again only to re-plan after a failure (at most twice) and to write the final report.</li>
 </ul>
-<p>Pydantic AI runs on Gemini through Social Hood's settings (<code>AI_MODEL_AGENT</code>, default the reply model). Every model call is wrapped in <code>ai.metering.metered</code> and recorded in <code>ai_usage_events</code> with feature <code>agent_turn</code>.</p>
+<p>Pydantic AI runs on Gemini through Amplychat's settings (<code>AI_MODEL_AGENT</code>, default the reply model). Every model call is wrapped in <code>ai.metering.metered</code> and recorded in <code>ai_usage_events</code> with feature <code>agent_turn</code>.</p>
 <h3>Plan and conditions</h3>
 <pre>
 class Step:            id, tool, args (validated by the tool's schema), depends_on: [step ids],
@@ -306,7 +306,7 @@ decide(tool, args, principal, policy) → EXECUTE | APPROVAL | REFUSE(reason)
 </table></div>
 <h3>Fair comparison</h3>
 <ul>
-<li>Instagram returns only lifetime totals at the moment you ask. Social Hood records snapshots at fixed ages after publishing (FR-ANL-01, now <strong>MUST in R1</strong>), so "this post after 24 hours" is compared with "previous posts after 24 hours".</li>
+<li>Instagram returns only lifetime totals at the moment you ask. Amplychat records snapshots at fixed ages after publishing (FR-ANL-01, now <strong>MUST in R1</strong>), so "this post after 24 hours" is compared with "previous posts after 24 hours".</li>
 <li>A post younger than the requested age is compared at its current age against the baseline at the same age (interpolated between snapshots when needed), and the answer says so.</li>
 <li>Posts published before the account was connected have no early snapshots; they join baselines only at ages they have, and the answer states the baseline size. With fewer than 3 comparable posts the agent says there isn't enough history.</li>
 <li>Engagement rate = (likes + comments + shares + saves) ÷ reach at the same age; reported only when reach exists.</li>
@@ -431,7 +431,7 @@ queued ──► planning ──► running ──► succeeded
 
 <h2 id="frontend"><span class="sn">12</span>Frontend plan</h2>
 <ul>
-<li><strong>Ask Social Hood panel</strong> <span class="tag r1">R1</span>: opened from the top bar or <kbd>/</kbd>-style shortcut on any page, 420 px side sheet on desktop, full screen on phones; a full page at <code>/w/[slug]/ask</code> with thread history. Suggested prompts based on what exists ("How did my latest post do?", "What are people complaining about this week?").</li>
+<li><strong>Ask Amplychat panel</strong> <span class="tag r1">R1</span>: opened from the top bar or <kbd>/</kbd>-style shortcut on any page, 420 px side sheet on desktop, full screen on phones; a full page at <code>/w/[slug]/ask</code> with thread history. Suggested prompts based on what exists ("How did my latest post do?", "What are people complaining about this week?").</li>
 <li><strong>Live steps</strong>: while running, a compact list of what the agent is doing ("Looking up your latest post", "Comparing with 10 earlier posts at 24 hours"), from <code>agent.step</code> events. No chain-of-thought is shown; only tool names in plain words and their outcomes.</li>
 <li><strong>Answer cards</strong>: numbers render as small tables and bar rows, with the time range, sample size and links to the posts, conversations or comments used. "Not enough data" and "insights not granted" are explicit states.</li>
 <li><strong>Action cards</strong> <span class="tag r1">R1</span>: "Schedule this message", "Open the automation draft", "Reply to this comment" open the existing screen pre-filled.</li>
@@ -448,7 +448,7 @@ queued ──► planning ──► running ──► succeeded
 <tr><th>Phase</th><th>Scope</th><th>Agent-relevant outcome</th></tr>
 <tr><td>P6 Comments and post intelligence</td><td>As specified (FR-CMT, TR-AI-11) <strong>plus</strong> insights sync, FR-ANL-01 snapshots (raised to MUST), and <code>services/analytics</code> with the §6 functions and their UI (post detail figures, comparison at equal age)</td><td>The data and typed queries every analytics tool needs</td></tr>
 <tr><td>P7 Publishing</td><td>As specified (FR-PUB)</td><td>Scheduled posts for read tools; write tools in R2</td></tr>
-<tr><td><strong>PA Ask Social Hood (new; after P7, before P8)</strong></td><td>Agent runtime (runs, steps, orchestrator, Pydantic AI planner), R1 read and draft tools, time resolver, action cards, Ask panel and page, run history, metering (<code>agent_turn</code>), agent eval set</td><td>The read-only agent</td></tr>
+<tr><td><strong>PA Ask Amplychat (new; after P7, before P8)</strong></td><td>Agent runtime (runs, steps, orchestrator, Pydantic AI planner), R1 read and draft tools, time resolver, action cards, Ask panel and page, run history, metering (<code>agent_turn</code>), agent eval set</td><td>The read-only agent</td></tr>
 <tr><td>P8 Billing, push, digest</td><td>As specified; agent credits in plans</td><td></td></tr>
 <tr><td>P9 Home, hardening, launch</td><td>As specified; agent in the launch checklist and E2E suite</td><td></td></tr>
 </table></div>
@@ -456,7 +456,7 @@ queued ──► planning ──► running ──► succeeded
 <div class="tw"><table>
 <tr><th>Stage</th><th>Adds</th><th>Release</th></tr>
 <tr><td>1 AI foundation</td><td>Analysis, suggestions, summaries, knowledge, Auto replies with policy (done); comment analysis, basic analytics (P6)</td><td><span class="tag r1">R1</span></td></tr>
-<tr><td>2 Ask Social Hood</td><td>Read tools, analytics answers, prepared action cards, run history</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>2 Ask Amplychat</td><td>Read tools, analytics answers, prepared action cards, run history</td><td><span class="tag r1">R1</span></td></tr>
 <tr><td>3 Copilot</td><td>Action gateway, write tools, approvals, permissions, Copilot mode, long tasks with quotes and progress</td><td><span class="tag r2">R2</span></td></tr>
 <tr><td>4 Supervised agent</td><td>Low-risk writes without asking, typed multi-step plans with conditions, re-planning, bulk replies within caps; Facebook Pages tools</td><td><span class="tag r2">R2</span></td></tr>
 <tr><td>5 Social intelligence</td><td>Topic and sentiment trends, best posting times, historical comparisons across formats</td><td><span class="tag r2">R2</span></td></tr>
@@ -571,7 +571,7 @@ Report: which conditions held (with numbers), what was scheduled, or why nothing
 <tr><td>Instagram and WhatsApp messages only inside the 24-hour window (Human Agent tag 7 days after approval; WhatsApp templates outside)</td><td>No cold DMs; scheduled messages must fall inside the window; the agent explains and offers the latest possible time</td></tr>
 <tr><td>Private replies: one per comment, within 7 days</td><td>Bulk private replies to old comments are refused with the reason</td></tr>
 <tr><td>Insights need <code>instagram_business_manage_insights</code> (App Review) and can lag up to 48 h</td><td>Without it: comment and engagement counts only, stated in the answer; insight metrics start at the 24 h snapshot</td></tr>
-<tr><td>Insights are lifetime totals at request time</td><td>Fair comparison requires Social Hood's own snapshots (FR-ANL-01); posts from before connecting have partial history</td></tr>
+<tr><td>Insights are lifetime totals at request time</td><td>Fair comparison requires Amplychat's own snapshots (FR-ANL-01); posts from before connecting have partial history</td></tr>
 <tr><td>Publishing: daily limit (<code>content_publishing_limit</code>), supported formats, media rules (FR-PUB)</td><td><code>schedule_post</code> checks quota and format before scheduling; failures are per target</td></tr>
 <tr><td>API rate limits (business use case usage, TR-PL-09) and the private-reply bucket (750/hour)</td><td>Bulk actions run as queued tasks at the existing bucket rates, with an ETA</td></tr>
 <tr><td>Facebook Pages (R2) and LinkedIn posting (R3) not connected in R1; LinkedIn messaging unavailable</td><td>Per-target result: "Facebook: not connected"</td></tr>
@@ -581,7 +581,7 @@ Report: which conditions held (with numbers), what was scheduled, or why nothing
 
 <h2 id="answer"><span class="sn">20</span>The final question</h2>
 <div class="card">
-<p><strong>"Can Social Hood's autonomous agent safely operate the entire social-media workflow using tools, while analytics, permissions, platform APIs, business rules, and human approval remain under deterministic application control?"</strong></p>
+<p><strong>"Can Amplychat's autonomous agent safely operate the entire social-media workflow using tools, while analytics, permissions, platform APIs, business rules, and human approval remain under deterministic application control?"</strong></p>
 <p><strong>Yes, for the workflows the connected platforms' APIs allow, and in stages.</strong> The architecture keeps every decision that matters out of the model:</p>
 <ul>
 <li><strong>Analytics</strong>: numbers come from typed queries over stored data and snapshots; the model only explains them.</li>

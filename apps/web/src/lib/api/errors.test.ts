@@ -34,7 +34,7 @@ describe("402 problems (C-049)", () => {
 describe("toApiError", () => {
   it("keeps the code, detail, field errors and request id of a problem body", () => {
     const error = toApiError({
-      type: "https://api.socialhood.com/errors/validation_error",
+      type: "https://api.amplychat.com/errors/validation_error",
       title: "The request is not valid",
       status: 422,
       code: "validation_error",

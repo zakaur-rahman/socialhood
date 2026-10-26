@@ -34,7 +34,7 @@ _ALWAYS_ON = "These emails can't be turned off while you're an owner or admin."
 KINDS: dict[str, _Kind] = {
     EmailTemplate.ACCOUNT_NEEDS_RECONNECT: _Kind(
         context="Until it's reconnected, new messages and comments from this account don't reach "
-        "Social Hood and replies can't be sent from it.",
+        "Amplychat and replies can't be sent from it.",
         action="Reconnect the account",
         default_link="/settings/connections",
         why="You're getting this because an account in {workspace} needs attention. " + _ALWAYS_ON,
@@ -78,7 +78,7 @@ def app_url(web_base_url: str, slug: str, path: str | None) -> str:
 
 def render(template: str, data: Mapping[str, Any], *, web_base_url: str) -> RenderedEmail:
     kind = KINDS[template]
-    title = str(data.get("title") or "").strip() or "Social Hood"
+    title = str(data.get("title") or "").strip() or "Amplychat"
     body = str(data.get("body") or "").strip()
     workspace = str(data.get("workspace_name") or "your workspace")
     slug = str(data.get("workspace_slug") or "")

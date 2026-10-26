@@ -312,7 +312,7 @@ export type HashtagGroup = Schemas["HashtagGroup"];
 export type HashtagGroupCreate = Schemas["HashtagGroupCreate"];
 export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
 
-// ---- Ask Social Hood: the read-only agent (PA: FR-AGT-01…07, agent-architecture.html §11, §12)
+// ---- Ask Amplychat: the read-only agent (PA: FR-AGT-01…07, agent-architecture.html §11, §12)
 
 /**
  * VIS-11: a structured follow-up on the run before it (schemas/agent.py RunHints): the same

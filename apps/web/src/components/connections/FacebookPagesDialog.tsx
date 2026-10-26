@@ -76,7 +76,7 @@ export function FacebookPagesDialog({
         <DialogHeader>
           <DialogTitle>Choose your Facebook Pages</DialogTitle>
           <DialogDescription>
-            Social Hood reads and answers messages and comments for the Pages you pick. You can disconnect a Page later.
+            Amplychat reads and answers messages and comments for the Pages you pick. You can disconnect a Page later.
           </DialogDescription>
         </DialogHeader>
         {list.isPending || list.isIdle ? (

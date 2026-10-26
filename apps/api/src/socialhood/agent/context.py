@@ -1,6 +1,6 @@
 """Memory for a run (TR-AGT-02, TA.2; agent-architecture.html §4 Memory).
 
-No separate vector memory: what the agent knows comes from what Social Hood already stores.
+No separate vector memory: what the agent knows comes from what Amplychat already stores.
 
 - Business: the knowledge base through the search_knowledge tool and the product catalogue through
   search_products (GR-31); the brand voice (ai_settings)

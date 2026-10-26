@@ -54,7 +54,7 @@ FRAME_HEADERS = {
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
 }
-DEFAULT_BRAND_URL = "https://socialhood.com"
+DEFAULT_BRAND_URL = "https://amplychat.com"
 REFUSAL = (
     '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex">'
     "<title>Chat</title><p>{message}</p>"

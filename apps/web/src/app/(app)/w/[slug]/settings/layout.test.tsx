@@ -41,7 +41,7 @@ describe("Settings rail (UX-SCR-07)", () => {
       "Website chat",
       "AI rules and takeover",
       "Saved replies",
-      "Ask Social Hood",
+      "Ask Amplychat",
       "Billing and usage",
       "Integrations",
       "Audit log",

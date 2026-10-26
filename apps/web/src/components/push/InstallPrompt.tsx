@@ -24,7 +24,7 @@ export function useInstallEnvironment(): PushEnvironment | null {
 /** F-19 on iPhone: the two steps to add the app to the Home Screen, where push works. */
 export function InstallSteps({ className }: { className?: string }) {
   return (
-    <ol className={cn("space-y-2 text-sm", className)} aria-label="Add Social Hood to your Home Screen">
+    <ol className={cn("space-y-2 text-sm", className)} aria-label="Add Amplychat to your Home Screen">
       <li className="flex items-start gap-2.5">
         <span className="grid size-6 shrink-0 place-items-center rounded-full bg-pressed text-xs font-semibold">1</span>
         <span className="pt-0.5">
@@ -36,7 +36,7 @@ export function InstallSteps({ className }: { className?: string }) {
         <span className="grid size-6 shrink-0 place-items-center rounded-full bg-pressed text-xs font-semibold">2</span>
         <span className="pt-0.5">
           Choose <SquarePlus className="inline size-4 align-[-3px] text-brand-fg" aria-hidden /> Add to Home Screen, then
-          open Social Hood from your Home Screen.
+          open Amplychat from your Home Screen.
         </span>
       </li>
     </ol>

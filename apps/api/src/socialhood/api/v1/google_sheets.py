@@ -110,7 +110,7 @@ async def create_google_sheet(
 async def select_google_sheet(
     request: Request, body: SheetSelect, ctx: CanManageIntegrations, session: Session
 ) -> GoogleSheetsStatus:
-    """Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it
+    """Use a sheet by its link. With the narrow scope Google lets Amplychat open only sheets it
     made or was granted: any other gives 422 on ``link``."""
     await service.select_sheet(
         session, _google(request), _cipher(request), link=body.link, now=datetime.now(UTC)
@@ -124,7 +124,7 @@ async def select_google_sheet(
 async def save_google_sheet_mapping(
     request: Request, body: SheetMappingPut, ctx: CanManageIntegrations, session: Session
 ) -> GoogleSheetsStatus:
-    """Which field goes in which column, in order. A sheet Social Hood made gets its header row
+    """Which field goes in which column, in order. A sheet Amplychat made gets its header row
     updated; a sheet that was already yours is not touched."""
     await service.save_mapping(session, _google(request), _cipher(request), columns=body.columns)
     out = await _status(request, session)

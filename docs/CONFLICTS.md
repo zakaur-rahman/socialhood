@@ -5929,3 +5929,65 @@ copy or branding was taken from it. Web only: no API change.
   0.1. *The existing `layout-shift.spec.ts` covers the app's pages only, not `/`.*
 - *Not done:* no new product screenshots (`public/marketing/*.webp` are unchanged); no Lighthouse run;
   the owner should look at the Hindi and Hinglish examples and the new copy once.
+
+## C-139 · Rename: Social Hood becomes Amplychat (feature/rename-amplychat)
+
+The owner renamed the product to **Amplychat** (amplychat.com). The legal entity behind it is a sole
+proprietorship, **unchartd** (lowercase, as the owner writes it).
+
+### What changed
+- Every name a person can see: "Social Hood" is now "Amplychat" (capital A, rest lowercase) in web
+  copy, marketing, legal pages, metadata and SEO, emails, API messages, the widget's branding line,
+  the Ask prompts (`ai/prompts/agent.v1..v4.md`, edited in place: versions are not hashed and no
+  test pinned their text) and test assertions. "Ask Social Hood" is "Ask Amplychat".
+- Domains: `socialhood.com` is `amplychat.com` (support@ for every address, as the owner set on 2026-10-26: contact, legal and the `EMAIL_FROM` sender; api., app., clerk.;
+  `.env.example` and settings defaults; the CSP and SSRF allow-lists and the error type base URL
+  follow the constants). The bot user agent is `AmplychatBot` (`amplychatbot` in the robots token).
+- Operator: `LEGAL.entityName` is "unchartd", so the footer reads "(c) year unchartd", the Terms say
+  "between you and unchartd ("Amplychat", "we"...)" and the legal facts show "Operated by unchartd".
+  The registered address, governing law, jurisdiction, effective date and grievance officer are
+  still unset and still render nothing (no address, number or name was invented).
+- Living docs (README, BUILD_SPEC, ops, testing, verification, security checklist, dev-whatsapp,
+  product roadmap overview) use the new name. History is untouched: this file, `docs/roadmap/*`,
+  QUESTIONS, ai-eval-log, the generative-UI decision records, competitor notes and the two dated
+  requirement/review pages keep "Social Hood".
+
+### Kept internal (renaming them would break running systems for no reader's benefit)
+The Python package `socialhood` and its imports, the folder and repo names, Docker/compose names, DB
+names (`socialhood`, `socialhood_test_*`), Alembic, `SOCIALHOOD_*` env vars, `socialhood_*` Prometheus
+metrics, Valkey keys, cookie and localStorage keys, the `shk_` key prefix, `window.__socialHoodWidget`
+and the widget's `socialHood: 1` postMessage tag, `@socialhood/*` package names, CI workflow names,
+the Pydantic AI agent name `ask_social_hood` (trace label only), the `.test`/`.example` fake test
+domains, and the file reference `knowledge/social-hood-product.md`.
+
+### Owner to-dos
+- Buy amplychat.com (and consider .in, .co, www redirect); point app., api., docs., clerk. at it.
+- Trademark search for "Amplychat" in classes 9 and 42 (and India, since the business is there).
+- Rename the display names in: the Meta app (and its App Review submission text), the Clerk
+  application, Razorpay, Dodo Payments, and the Render and Vercel services.
+- Set up email on amplychat.com (support@amplychat.com, the one mailbox; it is also the sender) with SPF, DKIM and DMARC, and
+  verify the domain in Resend before the default `EMAIL_FROM` is used.
+- Update Meta redirect URIs, webhook URLs, the Clerk allowed origins and the Google OAuth redirect
+  when the domains move; `CORS`/`CSP` env values that name the old domain.
+
+## C-140 · The Amplychat logo: the "amp bubble" (feature/amplychat-logo)
+
+The owner asked for a logo for the new name (C-139) and, from ten concepts and five colour schemes
+(`amplychat-logo.html` outside the repo), asked for the best one to be chosen. Chosen: **A, the
+"amp bubble"**, in the existing indigo tile, with the wordmark in one colour.
+
+- **Why this one:** a chat bubble holding three rising bars, so it says "chat" and "amplify" in one
+  shape; it reads at 16 px (the favicon), where the letter, sparkle and wave concepts lost detail.
+  The two-tone wordmark ("Amply" + "chat" in brand colour) was not chosen: brand colour is for
+  non-text marks (globals.css), and one colour stays readable on any surface.
+- **Colours:** unchanged tokens. The tile is the shell gradient (`shell-1` to `shell-2`), the bubble
+  `on-brand` (`fg` in the generated icons), the bars `brand-deep`. The concepts page used a brighter
+  indigo for presentation; the product keeps its existing tile so the shell does not change.
+- **One shape, four places:** `LogoMark` (`components/marketing/primitives.tsx`, exporting
+  `LOGO_BUBBLE_PATH` and `LOGO_BARS` on a 64-unit tile), the share image (`og.tsx`, same constants),
+  `scripts/generate-icons.mjs` (the same geometry for the PNG icons) and the sidebar.
+  The sidebar's `LogoMark` (`WorkspaceMenu.tsx`) was a plain gradient tile with no mark; it now renders
+  the brand mark.
+- **Icons regenerated:** `icon-192`, `icon-512`, `icon-maskable-512`, `badge-72` (one colour, bars cut
+  out), `apple-icon`, and `favicon.ico`, which is now generated too (16, 32 and 48 px PNGs inside the
+  .ico) instead of being a static binary.

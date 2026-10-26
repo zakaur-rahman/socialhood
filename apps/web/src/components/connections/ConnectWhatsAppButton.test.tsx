@@ -115,7 +115,7 @@ describe("Connect WhatsApp (F-04)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "This account is connected to another Social Hood workspace. Disconnect it there first.",
+        "This account is connected to another Amplychat workspace. Disconnect it there first.",
       ),
     );
   });
@@ -126,7 +126,7 @@ describe("Connect WhatsApp (F-04)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
     await waitFor(() =>
       expect(onFailure).toHaveBeenCalledWith(
-        "This account is connected to another Social Hood workspace. Disconnect it there first.",
+        "This account is connected to another Amplychat workspace. Disconnect it there first.",
       ),
     );
     expect(toast.error).not.toHaveBeenCalled();

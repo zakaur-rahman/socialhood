@@ -37,7 +37,7 @@ export function GetAlertsCard({
     <InstallPrompt
       storageKey="socialhood:get-alerts-dismissed"
       title="Get alerts on your phone"
-      body="Know as soon as a conversation needs you or a new lead writes, even when Social Hood isn't open."
+      body="Know as soon as a conversation needs you or a new lead writes, even when Amplychat isn't open."
       always
       className="m-3 mb-1"
       action={

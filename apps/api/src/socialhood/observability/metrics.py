@@ -278,7 +278,7 @@ AI_TOKENS = Counter(
 )
 AGENT_VISUALS = Counter(
     "socialhood_agent_visuals_total",
-    "Ask Social Hood visuals by kind and outcome (built, dropped: failed to build or too large, "
+    "Ask Amplychat visuals by kind and outcome (built, dropped: failed to build or too large, "
     "dropped_stored: invalid on read).",
     ("kind", "outcome"),
 )

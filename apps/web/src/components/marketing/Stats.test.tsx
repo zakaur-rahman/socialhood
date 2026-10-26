@@ -44,6 +44,6 @@ describe("the footer wordmark", () => {
     const { container } = render(<SiteFooter year={2026} />);
     const mark = container.querySelector("[data-footer-wordmark]");
     expect(mark).toHaveAttribute("aria-hidden", "true");
-    expect(mark?.textContent).toBe("Social Hood");
+    expect(mark?.textContent).toBe("Amplychat");
   });
 });

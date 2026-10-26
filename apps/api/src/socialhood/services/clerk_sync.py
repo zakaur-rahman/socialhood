@@ -38,7 +38,7 @@ async def apply_event(session: AsyncSession, payload: dict[str, Any]) -> Outcome
 async def _updated(session: AsyncSession, data: dict[str, Any]) -> Outcome:
     profile = parse_clerk_user(data)
     if await users.get_by_clerk_id(session, profile.id) is None:
-        return "ignored"  # never signed in to Social Hood
+        return "ignored"  # never signed in to Amplychat
     await users.update_profile(
         session,
         profile.id,

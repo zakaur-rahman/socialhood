@@ -73,7 +73,7 @@ export function CommentRow({
   /** GR-29: the post's platform, for the words in the delete warning and the private reply's limit. */
   platform?: Platform;
   /**
-   * A reply Ask Social Hood prepared (FR-AGT-03): the row opens with that composer and text. The
+   * A reply Ask Amplychat prepared (FR-AGT-03): the row opens with that composer and text. The
    * column remounts the row (by key) for each new one. A DM opens only if none was sent yet.
    */
   prepared?: { kind: ComposerKind; text: string };

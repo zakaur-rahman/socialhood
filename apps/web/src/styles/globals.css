@@ -309,7 +309,7 @@
   to { background-position: 0 20px, 0 0; }
 }
 
-/* Ask Social Hood: the label of the step a run is on, a light sweeping across the secondary text
+/* Ask Amplychat: the label of the step a run is on, a light sweeping across the secondary text
    (1.6 s per sweep); plain secondary text under reduced motion. Built from tokens only. */
 @utility text-shimmer {
   color: var(--color-fg-secondary);

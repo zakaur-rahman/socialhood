@@ -1,5 +1,5 @@
-"""Ask Social Hood, the agent (TR-AGT-01; agent-architecture.html §2-§4): an orchestration layer
-over the services Social Hood already has, beside ai/ (model plumbing), not inside it.
+"""Ask Amplychat, the agent (TR-AGT-01; agent-architecture.html §2-§4): an orchestration layer
+over the services Amplychat already has, beside ai/ (model plumbing), not inside it.
 
 - orchestrator.py: the run's state machine (plan → steps → verify → report), persisting every step
 - planner.py: the Pydantic AI loop on Gemini (answer loop in R1, plan first for writes in R2)

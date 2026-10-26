@@ -59,7 +59,7 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # pending the owner's plan decisions; the characters of knowledge limit still applies on top.
     "crawl_pages": {"free": 25, "pro": 250, "max": 1000},
     # Website chat widget (GR-28, PD-7 decided 2026-10-24): on every plan. Free shows "Powered by
-    # Social Hood"; Pro and Max can turn it off. New widget chats a day are capped on every plan
+    # Amplychat"; Pro and Max can turn it off. New widget chats a day are capped on every plan
     # to bound abuse (services/widget/chat.py); the cap counts new visitors, not messages.
     "widget_remove_branding": {"free": False, "pro": True, "max": True},
     "widget_conversations_daily": {"free": 50, "pro": 500, "max": 5000},

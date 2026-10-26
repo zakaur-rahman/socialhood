@@ -21,7 +21,7 @@ export function pageMetadata({
   title: string;
   description: string;
   path: string;
-  /** The landing page names itself in full instead of "{title} · Social Hood". */
+  /** The landing page names itself in full instead of "{title} · Amplychat". */
   absoluteTitle?: boolean;
 }): Metadata {
   const shareTitle = absoluteTitle ? title : `${title} · ${SITE_NAME}`;

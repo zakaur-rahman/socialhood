@@ -6,7 +6,7 @@ import { MARKETING_CARD } from "../primitives";
 
 /**
  * Bento Grid, from Aceternity UI's free "bento-grid" (ui.aceternity.com/components/bento-grid),
- * adapted for Social Hood (C-068):
+ * adapted for Amplychat (C-068):
  * - a list (ul/li) with an h3 per card, so the cards read as a list of features;
  * - surfaces, lines and text from the tokens; lucide icons instead of Tabler's (no new
  *   dependency);

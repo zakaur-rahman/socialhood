@@ -77,7 +77,7 @@ type Props = {
   onSend: (input: ReplyInput) => void;
   scheduleOpen: boolean;
   onScheduleOpenChange: (open: boolean) => void;
-  /** A time prepared by Ask Social Hood (FR-AGT-03): the popover opens at it when it fits. */
+  /** A time prepared by Ask Amplychat (FR-AGT-03): the popover opens at it when it fits. */
   scheduleAt?: string | null;
   onChooseTemplate: () => void;
   /** The account can send attachments (capability dm_attachments). */
@@ -552,7 +552,7 @@ export function SchedulePanel({
   text: string;
   assets: MediaAsset[];
   blocked: boolean;
-  /** Ask Social Hood's prepared time (FR-AGT-03), used when it is still inside the limits. */
+  /** Ask Amplychat's prepared time (FR-AGT-03), used when it is still inside the limits. */
   initialAt?: string | null;
   onScheduled: () => void;
 }) {
@@ -599,8 +599,8 @@ export function SchedulePanel({
       {initialAt ? (
         <p className="text-xs text-brand-fg">
           {prepared
-            ? "Prepared by Ask Social Hood. Check the message and time, then schedule."
-            : "Ask Social Hood's time no longer fits the reply window. Pick another."}
+            ? "Prepared by Ask Amplychat. Check the message and time, then schedule."
+            : "Ask Amplychat's time no longer fits the reply window. Pick another."}
         </p>
       ) : null}
       {closesAt ? (

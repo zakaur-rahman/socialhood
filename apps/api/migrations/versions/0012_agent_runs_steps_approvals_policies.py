@@ -1,4 +1,4 @@
-"""Ask Social Hood (§5.5 Agent; FR-AGT-01…15, TR-AGT-01…08): agent_runs, agent_steps,
+"""Ask Amplychat (§5.5 Agent; FR-AGT-01…15, TR-AGT-01…08): agent_runs, agent_steps,
 agent_approvals (R2), agent_policies (one per workspace, backfilled for existing workspaces as
 read_only with every capability off); ai_usage_events.feature takes agent_turn
 

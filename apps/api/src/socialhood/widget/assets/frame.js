@@ -1,4 +1,4 @@
-/* Social Hood chat widget: the chat inside the frame (GR-28). Plain JavaScript, no libraries.
+/* Amplychat chat widget: the chat inside the frame (GR-28). Plain JavaScript, no libraries.
    It opens a session (the server checks the widget id and the site), keeps a visitor key in this
    frame's own storage, sends messages and long-polls for replies. The visitor's session key lives
    in memory only. */
@@ -8,7 +8,7 @@
   var body = document.body;
   var WIDGET = body.getAttribute("data-widget") || "";
   var HOST = body.getAttribute("data-host") || "";
-  var BRAND_URL = body.getAttribute("data-brand-url") || "https://socialhood.com";
+  var BRAND_URL = body.getAttribute("data-brand-url") || "https://amplychat.com";
   var root = document.getElementById("root");
   var STORE_KEY = "sh_visitor_" + WIDGET;
 
@@ -501,7 +501,7 @@
     if (cfg.show_branding) {
       children.push(
         el("footer", {}, [
-          el("a", { href: BRAND_URL, target: "_blank", rel: "noopener noreferrer", text: "Powered by Social Hood" }),
+          el("a", { href: BRAND_URL, target: "_blank", rel: "noopener noreferrer", text: "Powered by Amplychat" }),
         ])
       );
     }

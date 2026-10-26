@@ -9,7 +9,7 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 const source = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
-const ORIGIN = "https://app.socialhood.com";
+const ORIGIN = "https://app.amplychat.com";
 
 type Listener = (event: Record<string, unknown>) => void;
 
@@ -82,7 +82,7 @@ describe("service worker (TR-FE-09)", () => {
   it("always shows something, and never opens another site", async () => {
     const sw = worker();
     await sw.fire("push", pushEvent("not json"));
-    expect(sw.showNotification).toHaveBeenLastCalledWith("Social Hood", expect.objectContaining({ body: "not json" }));
+    expect(sw.showNotification).toHaveBeenLastCalledWith("Amplychat", expect.objectContaining({ body: "not json" }));
     await sw.fire("push", pushEvent({ title: "Hi", url: "https://evil.example/phish" }));
     expect(sw.showNotification).toHaveBeenLastCalledWith("Hi", expect.objectContaining({ data: { url: `${ORIGIN}/app` } }));
   });

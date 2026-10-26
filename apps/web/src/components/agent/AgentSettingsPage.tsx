@@ -47,11 +47,11 @@ const CAPABILITIES: Record<keyof AgentPermissions, string> = {
 export function capabilitySentence(mode: string, permissions: AgentPermissions): string {
   const on = (Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).filter((key) => permissions[key]);
   if (mode === "read_only" || on.length === 0) {
-    return "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself.";
+    return "Ask Amplychat reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself.";
   }
   const list = on.map((key) => CAPABILITIES[key]);
   const joined = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0];
-  return `Ask Social Hood reads your workspace to answer and may ${joined}, following the member's role. Everything else it prepares for someone to finish.`;
+  return `Ask Amplychat reads your workspace to answer and may ${joined}, following the member's role. Everything else it prepares for someone to finish.`;
 }
 
 /**
@@ -67,7 +67,7 @@ export const RUN_FILTERS: readonly { value: string; label: string; statuses: rea
 ];
 
 /**
- * Settings → Agent (agent-architecture.html §12, C-066): what Ask Social Hood may do (read only
+ * Settings → Agent (agent-architecture.html §12, C-066): what Ask Amplychat may do (read only
  * in this release, every write capability off and locked) and the run history, where owners and
  * admins search, filter and open any run's trace (FR-AGT-07).
  */
@@ -78,10 +78,10 @@ export function AgentSettingsPage() {
       <EmptyState
         className="flex-1"
         title="Run history is for owners and admins"
-        body="Your own questions and answers are in Ask Social Hood."
+        body="Your own questions and answers are in Ask Amplychat."
         action={
           <Link href={askHref(workspace.slug)} className="text-sm text-brand-fg underline-offset-4 hover:underline">
-            Open Ask Social Hood
+            Open Ask Amplychat
           </Link>
         }
       />
@@ -91,7 +91,7 @@ export function AgentSettingsPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          title="Ask Social Hood"
+          title="Ask Amplychat"
           description="What the assistant may do in this workspace, and every question it has answered: its steps, tools, results and credits."
           actions={<CreditsStat />}
         />
@@ -135,7 +135,7 @@ function PolicyCard() {
       id="agent-mode"
       icon={<ShieldCheck />}
       title="Capabilities and permissions"
-      description="What Ask Social Hood can do on its own."
+      description="What Ask Amplychat can do on its own."
       aside={
         mode ? (
           <Badge tone="success" size="md">
@@ -239,7 +239,7 @@ export function RunHistory() {
     ) : (
       <EmptyState
         title="No questions yet"
-        body="When someone asks Social Hood a question, the run shows here with every step it took."
+        body="When someone asks Amplychat a question, the run shows here with every step it took."
       />
     );
   } else {

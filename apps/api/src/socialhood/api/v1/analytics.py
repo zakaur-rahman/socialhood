@@ -1,5 +1,5 @@
 """Analytics (§2.15 …/analytics/*; FR-ANL-02, TR-AGT-05; agent-architecture §6 and §11): the
-analytics service for the UI, the same functions Ask Social Hood's tools call. Any member.
+analytics service for the UI, the same functions Ask Amplychat's tools call. Any member.
 
 Figures come from the FR-ANL-01 snapshots; comparisons are at the same age (see
 schemas/analytics.py for the conventions and services/analytics for the rules). An unknown or

@@ -26,7 +26,7 @@ const SCOPES: { value: Scope; label: string; hint: string }[] = [
 
 /**
  * GR-09, the posts slot of an ad click: any ad, or ad ids typed by hand. Listing the account's
- * ads would need Meta's ads_read permission, which Social Hood does not ask for.
+ * ads would need Meta's ads_read permission, which Amplychat does not ask for.
  */
 export function AdsStep({
   draft,

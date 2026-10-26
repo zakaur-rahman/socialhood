@@ -72,7 +72,7 @@ class AiFeature(StrEnum):
     CAPTION_GENERATION = "caption_generation"
     KNOWLEDGE_TEST = "knowledge_test"
     AUTOMATION_AI_REPLY = "automation_ai_reply"
-    AGENT_TURN = "agent_turn"  # each model call of an Ask Social Hood run (TR-AGT-02)
+    AGENT_TURN = "agent_turn"  # each model call of an Ask Amplychat run (TR-AGT-02)
     REPLY_POLISH = "reply_polish"  # the composer's AI Polish (C-063)
 
 

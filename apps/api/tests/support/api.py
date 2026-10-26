@@ -68,7 +68,7 @@ def api_settings(keys: Keys) -> Settings:
         dodo_product_pro_monthly=PRO_PRODUCT,
         dodo_product_max_monthly=MAX_PRODUCT,
         resend_api_key="fake-resend-key-for-tests",
-        email_from="Social Hood <hello@socialhood.test>",
+        email_from="Amplychat <hello@socialhood.test>",
         vapid_public_key=VAPID_PUBLIC_KEY,
         vapid_private_key=VAPID_PRIVATE_KEY,
     )

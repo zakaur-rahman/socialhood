@@ -87,7 +87,7 @@ MESSAGES = {
     "quota_exceeded": "Your workspace has used its AI credits for this period.",
     "ai_unavailable": "The AI didn't respond. Try again in a moment.",
     "ai_invalid_output": "The AI couldn't put an answer together. Try asking again.",
-    "ai_not_configured": "Ask Social Hood isn't set up on this server yet.",
+    "ai_not_configured": "Ask Amplychat isn't set up on this server yet.",
     "forbidden": "The member who asked is no longer in this workspace.",
     "interrupted": "The run stopped before it finished and couldn't be resumed.",
     "internal": "Something went wrong while answering. Try again.",

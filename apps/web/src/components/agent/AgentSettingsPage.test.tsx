@@ -104,7 +104,7 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
     const off = { send_replies: false, schedule_messages: false, schedule_posts: false, create_automations: false, delete_automations: false, bulk_actions: false };
     expect(capabilitySentence("read_only", off)).toMatch(/doesn't send, schedule or change anything itself\.$/);
     expect(capabilitySentence("custom", { ...off, send_replies: true, schedule_posts: true })).toBe(
-      "Ask Social Hood reads your workspace to answer and may send replies and schedule posts, following the member's role. Everything else it prepares for someone to finish.",
+      "Ask Amplychat reads your workspace to answer and may send replies and schedule posts, following the member's role. Everything else it prepares for someone to finish.",
     );
   });
 
@@ -187,7 +187,7 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
   it("is for owners and admins; a member is pointed to their own questions", () => {
     renderWithApi(<AgentSettingsPage />, { handlers: handlers(), ws: { ...workspace, role: "agent" } });
     expect(screen.getByText("Run history is for owners and admins")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Ask Social Hood" })).toHaveAttribute("href", "/w/maple/ask");
+    expect(screen.getByRole("link", { name: "Open Ask Amplychat" })).toHaveAttribute("href", "/w/maple/ask");
   });
 });
 

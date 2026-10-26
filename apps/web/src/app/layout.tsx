@@ -6,6 +6,7 @@ import { ThemeSync } from "@/components/theme/ThemeSync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { clerkAppearance } from "@/lib/clerk-appearance";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
@@ -14,10 +15,10 @@ const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Social Hood", template: "%s · Social Hood" },
+  title: { default: "Amplychat", template: "%s · Amplychat" },
   description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
-  appleWebApp: { capable: true, title: "Social Hood", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: "Amplychat", statusBarStyle: "black" },
 };
 
 // The browser bar: the dark canvas, the default. ThemeSync moves it for Light (and System on a light OS).
@@ -36,8 +37,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Clerk Core 3: the provider sits inside <body>. */}
         <ClerkProvider
           appearance={clerkAppearance}
-          // The sign-up card's subtitle (the Free plan needs no card, as the landing page says).
-          localization={{ signUp: { start: { subtitle: "No credit card required." } } }}
+          // The cards' titles name the product from SITE_NAME, not from the Clerk dashboard's
+          // application name (C-139); the sign-up subtitle: the Free plan needs no card, as the
+          // landing page says.
+          localization={{
+            signIn: { start: { title: `Sign in to ${SITE_NAME}`, subtitle: "Welcome back. Sign in to continue." } },
+            signUp: { start: { title: `Create your ${SITE_NAME} account`, subtitle: "No credit card required." } },
+          }}
           signInFallbackRedirectUrl="/app"
           signUpFallbackRedirectUrl="/app"
           afterSignOutUrl="/"

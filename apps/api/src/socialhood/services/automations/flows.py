@@ -690,7 +690,7 @@ def _action_line(action: Action, member_names: Mapping[uuid.UUID, str]) -> str:
 def describe(
     definition: FlowDefinition, member_names: Mapping[uuid.UUID, str] | None = None
 ) -> list[str]:
-    """One line per step a run can reach, in the order a walk meets them (Ask Social Hood reads
+    """One line per step a run can reach, in the order a walk meets them (Ask Amplychat reads
     a flow this way). ``member_names`` names the member an assign step gives the conversation to."""
     try:
         g = graph(definition)

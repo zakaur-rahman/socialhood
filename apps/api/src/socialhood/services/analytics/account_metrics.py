@@ -1,7 +1,7 @@
 """Account metrics (GR-38; FR-ANL-01): what an account did over a period, and against another.
 
 The read path over ``account_daily_metrics`` (written by snapshot_account_daily, account_daily.py)
-plus the comment and message tables. The route and Ask Social Hood's compare_periods and
+plus the comment and message tables. The route and Ask Amplychat's compare_periods and
 metric_trend tools call the same functions, so a visual's numbers are the route's numbers.
 
 Rules:

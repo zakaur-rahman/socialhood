@@ -240,7 +240,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   // here to give focus back to: New automation takes it (UX-A11Y-02).
   const newAutomation = useRef<HTMLButtonElement>(null);
   const focusNewAutomation = () => newAutomation.current;
-  // FR-AGT-03: an automation draft handed over by Ask Social Hood shows first (instead of the
+  // FR-AGT-03: an automation draft handed over by Ask Amplychat shows first (instead of the
   // gallery on /automations/new); it is taken once from the hand-off store.
   const draftHandoff = useAgentHandoff((state) => state.automationDraft);
   const takeAutomationDraft = useAgentHandoff((state) => state.takeAutomationDraft);

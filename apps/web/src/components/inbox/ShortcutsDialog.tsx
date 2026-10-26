@@ -32,7 +32,7 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
             </Label>
             <p id="single-key-shortcuts-hint" className="text-xs text-fg-secondary">
               On this device. Turn them off if a letter key ever acts by accident, for example with speech input.
-              Shortcuts with Ctrl or ⌘, such as Ctrl K for Ask Social Hood, keep working.
+              Shortcuts with Ctrl or ⌘, such as Ctrl K for Ask Amplychat, keep working.
             </p>
           </div>
           <Switch

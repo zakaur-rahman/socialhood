@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Text Generate Effect, from Aceternity UI's free "text-generate-effect"
- * (ui.aceternity.com/components/text-generate-effect), adapted for Social Hood (C-068):
+ * (ui.aceternity.com/components/text-generate-effect), adapted for Amplychat (C-068):
  * - it starts when it scrolls into view, once, instead of on mount;
  * - variants with a stagger instead of useAnimate, so it needs only LazyMotion's features;
  * - with reduced motion the text is simply there;

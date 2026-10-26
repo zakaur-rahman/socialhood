@@ -2,7 +2,7 @@
 import type { PublicApiDocument } from "@/lib/marketing/public-api";
 
 export const SAMPLE = {
-  info: { title: "Social Hood public API", version: "1.0.0", description: "Read contacts.\n\nErrors are problem+json." },
+  info: { title: "Amplychat public API", version: "1.0.0", description: "Read contacts.\n\nErrors are problem+json." },
   "x-scopes": { "contacts:read": "Read contacts.", "contacts:write": "Create contacts." },
   paths: {
     "/public/v1/contacts": {

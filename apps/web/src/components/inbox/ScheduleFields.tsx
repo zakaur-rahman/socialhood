@@ -43,7 +43,7 @@ export function defaultSchedule(now: Date, timeZone: string, limits: ScheduleLim
 }
 
 /**
- * A time prepared elsewhere (Ask Social Hood's schedule card, FR-AGT-03) as the inputs' values,
+ * A time prepared elsewhere (Ask Amplychat's schedule card, FR-AGT-03) as the inputs' values,
  * or null when it is missing or no longer inside the limits.
  */
 export function preparedSchedule(

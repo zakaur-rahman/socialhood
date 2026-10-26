@@ -1,4 +1,4 @@
-"""Ask Social Hood's activity tool (GR-05): list_recent_failures, for "what's failing?" and "why
+"""Ask Amplychat's activity tool (GR-05): list_recent_failures, for "what's failing?" and "why
 didn't my automation reply?". Owners and admins, like the Activity page. Reasons are the page's
 plain sentences; no payloads, no message text."""
 

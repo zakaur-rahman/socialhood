@@ -1,4 +1,4 @@
-"""Ask Social Hood's sequences tool (GR-24): list_sequences, for "which follow-ups are running?" and
+"""Ask Amplychat's sequences tool (GR-24): list_sequences, for "which follow-ups are running?" and
 "why did Priya stop getting them?". Owners and admins, like Automations. Read-only: what each
 sequence is, how many people are in it, and the latest skips and stops with their reasons. Never a
 message body."""

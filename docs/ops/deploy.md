@@ -19,8 +19,8 @@ v1 keys). Nothing here was deployed on the owner's behalf.
 | Render data | `socialhood-db-staging` (Postgres 18), `socialhood-kv-staging` | `socialhood-db`, `socialhood-kv` |
 | Vercel | Custom environment `staging` (branch `develop`) | Production (branch `main`) |
 | Vercel previews | every pull request, against the staging API | |
-| Web domain | `staging.socialhood.com` | `app.socialhood.com` |
-| API domain | `api.staging.socialhood.com` | `api.socialhood.com` |
+| Web domain | `staging.amplychat.com` | `app.amplychat.com` |
+| API domain | `api.staging.amplychat.com` | `api.amplychat.com` |
 | `APP_ENV` | `staging` | `production` (settings refuse fakes, the sandbox and DEBUG) |
 | Sandbox platform | on (drills and end-to-end runs) | off (SEC-14) |
 | Clerk | development instance, or a second production instance | production instance |
@@ -92,9 +92,9 @@ Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
    ```
 
    Staging and production get different values for every secret.
-6. **Custom domains:** `socialhood-api` → Settings → Custom Domains → `api.socialhood.com`; add the
+6. **Custom domains:** `socialhood-api` → Settings → Custom Domains → `api.amplychat.com`; add the
    CNAME Render shows to your DNS. Render issues the TLS certificate. Same for
-   `api.staging.socialhood.com` on the staging API.
+   `api.staging.amplychat.com` on the staging API.
 7. **Deploy hooks.** `socialhood-api` → **Settings → Deploy Hook**: copy the URL into the GitHub
    environment secret `RENDER_DEPLOY_HOOK_API`; the same for `socialhood-worker` →
    `RENDER_DEPLOY_HOOK_WORKER` ([branching.md](branching.md), section 6). Treat both URLs as
@@ -104,9 +104,9 @@ Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
    extensions and the job queue's tables. Then check:
 
    ```sh
-   curl https://api.socialhood.com/healthz                       # {"status":"ok"}
-   curl -H "Authorization: Bearer $METRICS_TOKEN" https://api.socialhood.com/readyz
-   curl -o /dev/null -w "%{http_code}\n" https://api.socialhood.com/metrics   # 401 (launch checklist)
+   curl https://api.amplychat.com/healthz                       # {"status":"ok"}
+   curl -H "Authorization: Bearer $METRICS_TOKEN" https://api.amplychat.com/readyz
+   curl -o /dev/null -w "%{http_code}\n" https://api.amplychat.com/metrics   # 401 (launch checklist)
    ```
 
    The worker's log shows both lanes starting and a `ping` job every minute.
@@ -130,7 +130,7 @@ API and worker read the same variables.
 |---|---|---|---|
 | `APP_ENV` | config | no | `production` / `staging` |
 | `PYTHON_VERSION` | config | no | `3.13.14` |
-| `API_BASE_URL` · `WEB_BASE_URL` | config | no | `https://api.socialhood.com` · `https://app.socialhood.com` |
+| `API_BASE_URL` · `WEB_BASE_URL` | config | no | `https://api.amplychat.com` · `https://app.amplychat.com` |
 | `CORS_ALLOWED_ORIGINS` | config | no | the web origin, exact |
 | `DATABASE_URL` | link | yes | Render's `postgresql://…`; the API adds the asyncpg driver itself |
 | `DATABASE_URL_DIRECT` | link | yes | same database, direct (the queue's LISTEN/NOTIFY, migrations) |
@@ -143,12 +143,12 @@ API and worker read the same variables.
 | `METRICS_TOKEN` | secrets | yes | random; guards `/metrics` and `/readyz` |
 | `CLERK_SECRET_KEY` | secrets | yes | Clerk → API keys |
 | `CLERK_JWT_KEY` | secrets | no* | Clerk → API keys → PEM public key (one line, `\n` allowed) |
-| `CLERK_ISSUER` | secrets | no* | Clerk Frontend API URL, e.g. `https://clerk.socialhood.com` |
+| `CLERK_ISSUER` | secrets | no* | Clerk Frontend API URL, e.g. `https://clerk.amplychat.com` |
 | `CLERK_AUTHORIZED_PARTIES` | config | no | the web origin |
 | `CLERK_WEBHOOK_SECRET` | secrets | yes | Clerk → Webhooks → signing secret (`whsec_…`) |
 | `TOKEN_ENCRYPTION_KEYS` | secrets | yes | Fernet keys, newest first |
 | `IG_APP_ID` · `IG_APP_SECRET` | secrets | secret: yes | Meta app → Instagram → API setup with Instagram login |
-| `IG_REDIRECT_URI` | config | no | `https://api.socialhood.com/v1/oauth/instagram/callback` |
+| `IG_REDIRECT_URI` | config | no | `https://api.amplychat.com/v1/oauth/instagram/callback` |
 | `IG_WEBHOOK_VERIFY_TOKEN` | secrets | yes | random; also typed into Meta's webhook form |
 | `IG_GRAPH_VERSION` · `META_GRAPH_VERSION` | config | no | `v25.0` |
 | `IG_REQUEST_INSIGHTS_SCOPE` · `FB_REQUEST_INSIGHTS_SCOPE` · `IG_HUMAN_AGENT_ENABLED` | config | no | `false` until Meta approves (`FB_REQUEST_INSIGHTS_SCOPE` asks Facebook Pages for `read_insights`, C-131) |
@@ -168,10 +168,10 @@ API and worker read the same variables.
 | `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (Max in R2) |
 | `DODO_PROVIDER` · `EMAIL_PROVIDER` · `PUSH_PROVIDER` | default | no | real providers; `fake` refused in production |
 | `RESEND_API_KEY` | secrets | yes | Resend → API keys (sending access, one domain) |
-| `EMAIL_FROM` | config | no | `Social Hood <hello@socialhood.com>` |
+| `EMAIL_FROM` | config | no | `Amplychat <support@amplychat.com>` |
 | `VAPID_PUBLIC_KEY` | secrets | no | from `web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | secrets | yes | same pair |
-| `VAPID_SUBJECT` | config | no | `mailto:support@socialhood.com` |
+| `VAPID_SUBJECT` | config | no | `mailto:support@amplychat.com` |
 | `SANDBOX_PLATFORM_ENABLED` | config | no | `false` (production refuses `true`) |
 | `CLIENT_IP_HEADER` | config | no | `x-forwarded-for` (required in production; see "Client IP" below) |
 | `RATE_LIMITS_ENABLED` | default | no | `true` (production refuses `false`) |
@@ -195,7 +195,7 @@ the header's first entry is not used for anything. `--no-server-header` drops `s
 
 | Variable | Secret | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | no | `https://api.socialhood.com` (staging: `https://api.staging.socialhood.com`) |
+| `NEXT_PUBLIC_API_BASE_URL` | no | `https://api.amplychat.com` (staging: `https://api.staging.amplychat.com`) |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | no | Clerk → API keys |
 | `CLERK_SECRET_KEY` | yes (Sensitive) | same instance as the API's |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` · `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | no | `/sign-in` · `/sign-up` |
@@ -222,20 +222,20 @@ app has no VAPID variable.
    environments need Pro). Every other branch, and so every pull request, gets a Preview
    deployment and a link on the pull request.
 4. Environment variables from section 4, separately for Production, staging and **Preview**.
-   Preview uses the staging values: `NEXT_PUBLIC_API_BASE_URL=https://api.staging.socialhood.com`
+   Preview uses the staging values: `NEXT_PUBLIC_API_BASE_URL=https://api.staging.amplychat.com`
    and the staging Clerk keys.
 
    Previews are served from `*.vercel.app` addresses, and the staging API only accepts
-   `https://staging.socialhood.com` (`CORS_ALLOWED_ORIGINS` and `CLERK_AUTHORIZED_PARTIES` are
+   `https://staging.amplychat.com` (`CORS_ALLOWED_ORIGINS` and `CLERK_AUTHORIZED_PARTIES` are
    exact origins). Until the staging API also accepts preview origins (a code change: a pattern
    for both settings), a preview shows the pages but its API calls and sign-in are refused; test
    API-backed changes on staging after the merge to `develop`.
 5. Optional, **Settings → Deployment Checks → Add Checks → GitHub**: `api`, `web`, `contract`,
-   `secrets`. A production deployment then goes live on `app.socialhood.com` only after CI has
+   `secrets`. A production deployment then goes live on `app.amplychat.com` only after CI has
    passed on its `main` commit. The web does not wait for the production approval, so the API must
    stay compatible with the web that is live (add endpoints before the web uses them), and approve
    release deploys promptly.
-6. **Domains:** `app.socialhood.com` → Production; `staging.socialhood.com` → staging. Add the
+6. **Domains:** `app.amplychat.com` → Production; `staging.amplychat.com` → staging. Add the
    records Vercel shows (CNAME `cname.vercel-dns.com`, or A for an apex).
 7. Deploy, then open the site and sign in.
 8. Security headers and the CSP are in `next.config.ts` (SEC-11). The CSP's `connect-src` must
@@ -282,7 +282,7 @@ Staging first, then production. Tick each line.
 - [ ] API pre-deploy ran `alembic upgrade head`; `/healthz` is `{"status":"ok"}`; `/readyz` with
       the token is `ready`.
 - [ ] `/metrics` returns 401 without the token and metrics with it (launch checklist).
-- [ ] No `server` header: `curl -sI https://api.staging.socialhood.com/healthz | grep -i ^server`
+- [ ] No `server` header: `curl -sI https://api.staging.amplychat.com/healthz | grep -i ^server`
       shows nothing (or only Cloudflare's `server: cloudflare`).
 - [ ] The per-IP limit keys on the real client, not on a forged `X-Forwarded-For`: from one
       machine, 61 requests to `/v1/billing/plans`, each with a different forged header, and the
@@ -291,7 +291,7 @@ Staging first, then production. Tick each line.
       ```sh
       for i in $(seq 1 61); do
         curl -s -o /dev/null -w "%{http_code}\n" -H "X-Forwarded-For: 198.51.100.$i" \
-          https://api.staging.socialhood.com/v1/billing/plans
+          https://api.staging.amplychat.com/v1/billing/plans
       done | sort | uniq -c    # 60 × 200 and 1 × 429
       ```
 

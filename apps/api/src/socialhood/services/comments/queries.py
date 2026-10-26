@@ -69,7 +69,7 @@ def filter_condition(name: CommentFilter, *, now: datetime) -> ColumnElement[boo
 
 @dataclass(frozen=True)
 class CommentQuery:
-    """Ask Social Hood's comment filters (get_post_comments, search_comments; TA.4). Every field
+    """Ask Amplychat's comment filters (get_post_comments, search_comments; TA.4). Every field
     narrows; None leaves it open. Deleted comments are never included. Sentiment, intents and
     topic match analysed comments only (TR-AI-11), spam apart unless ``spam`` says otherwise."""
 

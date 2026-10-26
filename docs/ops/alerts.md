@@ -37,7 +37,7 @@ works, using [`infra/prometheus/prometheus.yml`](../../infra/prometheus/promethe
 1. Create a Grafana Cloud stack in the Singapore region.
 2. **Scrape the API:** Connections → Add new connection → **Metrics Endpoint**. Scrape job name
    `socialhood-api` (the `MetricsScrapeDown` rule matches on it), URL
-   `https://api.socialhood.com/metrics`, interval 60 s, authentication **Bearer** with the
+   `https://api.amplychat.com/metrics`, interval 60 s, authentication **Bearer** with the
    production `METRICS_TOKEN`. Add a second job, `socialhood-api-staging`, for staging (then use
    `job=~"socialhood-api.*"` in `MetricsScrapeDown`).
 3. **Load the rules** with `mimirtool` (Stack → Prometheus → details give the URL, instance id and
@@ -120,7 +120,7 @@ Unsigned deliveries are rejected with 401 and counted as `signature_invalid`:
 
 ```sh
 for i in $(seq 1 120); do
-  curl -s -o /dev/null -w "%{http_code} " -X POST https://api.staging.socialhood.com/webhooks/instagram \
+  curl -s -o /dev/null -w "%{http_code} " -X POST https://api.staging.amplychat.com/webhooks/instagram \
     -H "Content-Type: application/json" -d '{"object":"instagram","entry":[]}'
   sleep 5
 done

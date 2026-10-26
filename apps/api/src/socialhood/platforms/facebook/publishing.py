@@ -81,7 +81,7 @@ URL = re.compile(r"https?://[^\s<>\"']+")
 # Facebook error codes (Graph API error reference) with a plain reason. Unknown codes keep the
 # generic reason from platforms.errors.
 REASONS: dict[int, str] = {
-    200: "The Page didn't give Social Hood permission to publish. Reconnect it.",
+    200: "The Page didn't give Amplychat permission to publish. Reconnect it.",
     324: "Facebook couldn't read the photo or video.",
     368: "Facebook has temporarily blocked this Page from posting.",
     506: "Facebook refused this as a duplicate post. Change the text and try again.",

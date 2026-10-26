@@ -98,7 +98,7 @@ export const INTEGRATIONS: Integration[] = [
   },
 ];
 
-/** What Social Hood connects to, each with one line and an honest status. Replaces the old platforms strip (C-138). */
+/** What Amplychat connects to, each with one line and an honest status. Replaces the old platforms strip (C-138). */
 export function Integrations() {
   return (
     <section id={SECTION_IDS.integrations} aria-labelledby="integrations-title" className="scroll-mt-24 border-t border-line-subtle py-16 sm:py-20">

@@ -1,4 +1,4 @@
-"""Ask Social Hood's conversation and scheduling tools against real data (TA.4; FR-AGT-02,
+"""Ask Amplychat's conversation and scheduling tools against real data (TA.4; FR-AGT-02,
 FR-AGT-03, FR-AGT-05, FR-AGT-06): search_conversations, get_conversation, find_contact,
 get_customer, draft_reply, list_scheduled_messages, list_scheduled_posts and
 prepare_scheduled_message, with their caps, caveats, action cards and another workspace's ids."""

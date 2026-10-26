@@ -9,7 +9,7 @@ export const revalidate = 3600;
 export const metadata = pageMetadata({
   title: "Public API",
   description:
-    "The Social Hood public API: authenticate with an API key, read and update contacts, tags and conversations, send messages inside the reply window, and subscribe REST hooks for Zapier.",
+    "The Amplychat public API: authenticate with an API key, read and update contacts, tags and conversations, send messages inside the reply window, and subscribe REST hooks for Zapier.",
   path: "/developers/api",
 });
 
@@ -20,7 +20,7 @@ export default async function PublicApiPage() {
   return (
     <ApiReference
       reference={buildReference(document)}
-      baseUrl={process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.socialhood.com"}
+      baseUrl={process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.amplychat.com"}
     />
   );
 }

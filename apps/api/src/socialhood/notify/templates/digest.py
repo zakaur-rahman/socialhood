@@ -275,7 +275,7 @@ def render(data: Mapping[str, Any], *, web_base_url: str) -> RenderedEmail:
     text_lines += [
         "",
         f"See the full report, with the last 8 weeks: {report}",
-        f"Open Social Hood: {home}",
+        f"Open Amplychat: {home}",
         f"Inbox: {inbox}",
     ]
 

@@ -90,7 +90,7 @@ function Figures({
           }
         >
           <AlertDescription className="text-xs">
-            {handle} didn&apos;t give Social Hood permission to read insights, so reach, views, shares
+            {handle} didn&apos;t give Amplychat permission to read insights, so reach, views, shares
             {story ? " and replies" : " and saves"} aren&apos;t available. Reconnect to allow it.
           </AlertDescription>
         </Alert>
@@ -128,8 +128,8 @@ function Figures({
           <p className="font-medium">No figures yet</p>
           <p className="text-xs text-fg-secondary">
             {story
-              ? "Social Hood reads a Story's figures 1 h, 6 h and 23 h after it's published, before it goes down at 24 h."
-              : "Social Hood reads a post's figures 1 h, 6 h, 24 h, 72 h, 7 days and 30 days after it's published."}{" "}
+              ? "Amplychat reads a Story's figures 1 h, 6 h and 23 h after it's published, before it goes down at 24 h."
+              : "Amplychat reads a post's figures 1 h, 6 h, 24 h, 72 h, 7 days and 30 days after it's published."}{" "}
             Posts published before you connected have figures only from then on.
           </p>
         </div>

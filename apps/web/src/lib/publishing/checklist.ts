@@ -129,7 +129,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const { instagram: ig, facebook: fb } = postPlatforms(selected);
   // Text for Facebook Pages alone, with no media, is a text post (GR-30).
   const textPost = fb && !ig && !story && !reel && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
-  const limitName = ig ? "Instagram" : "Social Hood";
+  const limitName = ig ? "Instagram" : "Amplychat";
 
   // accounts: at least one, each connected and able to publish
   if (targets.length === 0) {
@@ -149,7 +149,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
             ? `${handle} is disconnected. Reconnect it or remove it from this post.`
             : account.status === "error"
               ? `${handle} has a connection problem. Reconnect it or remove it from this post.`
-              : `${handle} didn't give Social Hood permission to publish. Reconnect to allow it.`;
+              : `${handle} didn't give Amplychat permission to publish. Reconnect to allow it.`;
       problems.push(fail("accounts", message, `targets.${index}`));
     });
     // A Reel is for Facebook Pages: Instagram already publishes a single video as a Reel (C-131).

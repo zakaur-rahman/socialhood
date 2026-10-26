@@ -99,10 +99,10 @@ export function activeSegment(pathname: string, slug: string): string | null {
 }
 
 /** Pages outside the nav that still name the phone top bar. */
-const OTHER_TITLES: Record<string, string> = { ask: "Ask Social Hood" };
+const OTHER_TITLES: Record<string, string> = { ask: "Ask Amplychat" };
 
 export function pageTitle(pathname: string, slug: string): string {
   const segment = activeSegment(pathname, slug);
   const item = [...PRIMARY_NAV, SETTINGS_NAV].find((i) => i.segment === segment);
-  return item?.label ?? (segment ? OTHER_TITLES[segment] : undefined) ?? "Social Hood";
+  return item?.label ?? (segment ? OTHER_TITLES[segment] : undefined) ?? "Amplychat";
 }

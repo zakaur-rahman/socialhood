@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LogoMark as BrandMark } from "@/components/marketing/primitives";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Plan, Role } from "@/lib/api/types";
@@ -42,13 +43,13 @@ export function PlanBadge({ plan, className }: { plan: Plan; className?: string 
   );
 }
 
-/** The logo mark: the shell-gradient tile (UX-SH-01). */
+/** The logo mark in the sidebar: the brand mark (C-140) at the sidebar's size and corners. */
 export function LogoMark({ className }: { className?: string }) {
-  return <span aria-hidden className={cn("bg-shell-gradient size-9 shrink-0 rounded-xl", className)} />;
+  return <BrandMark className={cn("size-9 rounded-xl", className)} />;
 }
 
 /**
- * The sidebar's header: logo, "Social Hood" with the plan, and the workspace name. It opens a
+ * The sidebar's header: logo, "Amplychat" with the plan, and the workspace name. It opens a
  * menu to switch between the member's workspaces (GET /v1/workspaces) and to reach workspace
  * settings. Collapsed, it is the logo alone, named by a tooltip.
  */
@@ -84,7 +85,7 @@ export function WorkspaceMenu({
       <span aria-hidden={collapsed} className={cn("flex min-w-0 flex-1 items-center gap-2.5 whitespace-nowrap", sidebarFadeClass(!collapsed))}>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold">Social Hood</span>
+              <span className="truncate text-sm font-semibold">Amplychat</span>
               <PlanBadge plan={workspace.plan} />
             </span>
             <span className="block truncate text-xs text-fg-secondary">{workspace.name}</span>

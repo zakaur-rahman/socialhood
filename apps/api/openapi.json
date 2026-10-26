@@ -22059,7 +22059,7 @@
         "additionalProperties": false,
         "properties": {
           "title": {
-            "default": "Social Hood leads",
+            "default": "Amplychat leads",
             "maxLength": 100,
             "minLength": 1,
             "title": "Title",
@@ -26596,7 +26596,7 @@
     }
   },
   "info": {
-    "title": "Social Hood API",
+    "title": "Amplychat API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
@@ -36954,7 +36954,7 @@
     },
     "/v1/w/{wid}/integrations/google-sheets/mapping": {
       "put": {
-        "description": "Which field goes in which column, in order. A sheet Social Hood made gets its header row\nupdated; a sheet that was already yours is not touched.",
+        "description": "Which field goes in which column, in order. A sheet Amplychat made gets its header row\nupdated; a sheet that was already yours is not touched.",
         "operationId": "save_google_sheet_mapping",
         "parameters": [
           {
@@ -37080,7 +37080,7 @@
         ]
       },
       "put": {
-        "description": "Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it\nmade or was granted: any other gives 422 on ``link``.",
+        "description": "Use a sheet by its link. With the narrow scope Google lets Amplychat open only sheets it\nmade or was granted: any other gives 422 on ``link``.",
         "operationId": "select_google_sheet",
         "parameters": [
           {

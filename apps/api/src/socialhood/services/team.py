@@ -219,7 +219,7 @@ async def _deliver(
     inviter = ctx.user.name or ctx.user.email
     link = settings.web_base_url or ""
     text = (
-        f"{inviter} invited you to join {ctx.workspace.name} on Social Hood as "
+        f"{inviter} invited you to join {ctx.workspace.name} on Amplychat as "
         f"{invitation.role}. Sign in to accept: {link}"
     )
     try:

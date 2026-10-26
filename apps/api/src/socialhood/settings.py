@@ -137,10 +137,10 @@ class Settings(BaseSettings):
     ai_model_reply: str = "gemini-3.5-flash-lite"
     ai_model_reply_complex: str = "gemini-3.8-flash"
     ai_model_embed: str = "gemini-embedding-2"
-    # Ask Social Hood's planner and report (TR-AGT-02); unset: AI_MODEL_REPLY.
+    # Ask Amplychat's planner and report (TR-AGT-02); unset: AI_MODEL_REPLY.
     ai_model_agent: str | None = None
     ai_embed_dim: int = 768
-    # GR-38: Ask Social Hood's runs expose typed visuals (cards, ranked posts, sentiment) beside
+    # GR-38: Ask Amplychat's runs expose typed visuals (cards, ranked posts, sentiment) beside
     # the answer. Off: ``visuals`` is always empty and the prompt doesn't mention them.
     agent_visuals_enabled: bool = False
     # GR-23: WhatsApp broadcasts. Off by default until the legal check of marketing consent in
@@ -167,13 +167,13 @@ class Settings(BaseSettings):
     dodo_provider: Literal["dodo", "fake"] = "dodo"
 
     resend_api_key: SecretStr | None = None
-    email_from: str = "Social Hood <hello@socialhood.com>"
+    email_from: str = "Amplychat <support@amplychat.com>"
     # fake: keep emails in memory (notify/email_fake.py); refused in production.
     email_provider: Literal["resend", "fake"] = "resend"
 
     vapid_public_key: str | None = None
     vapid_private_key: SecretStr | None = None
-    vapid_subject: str = "mailto:support@socialhood.com"
+    vapid_subject: str = "mailto:support@amplychat.com"
     # fake: keep pushes in memory (notify/push_fake.py); refused in production.
     push_provider: Literal["webpush", "fake"] = "webpush"
 

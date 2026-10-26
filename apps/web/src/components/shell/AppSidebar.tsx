@@ -44,7 +44,7 @@ type Props = {
   account?: ReactNode;
   /** The notifications bell (UX-SH-04). */
   notifications?: ReactNode;
-  /** Ask Social Hood's button (FR-AGT-01), under the header; the card around it is drawn here. */
+  /** Ask Amplychat's button (FR-AGT-01), under the header; the card around it is drawn here. */
   ask?: ReactNode;
   /** Called when a link is followed, so the mobile drawer can close. */
   onNavigate?: () => void;
@@ -59,7 +59,7 @@ type Badge = { count: number; label: string };
 
 /**
  * UX-SH-01: the floating sidebar card, expanded (232 px) or collapsed to icons (64 px). Top to
- * bottom: workspace menu, Ask Social Hood, grouped navigation, then Notifications, Settings, Help
+ * bottom: workspace menu, Ask Amplychat, grouped navigation, then Notifications, Settings, Help
  * and Collapse, the AI credits meter, a notice while live updates are reconnecting, and the
  * account card.
  */
@@ -239,7 +239,7 @@ export function AppSidebar({
 }
 
 /**
- * Ask Social Hood as a card: icon tile (with the AI tag), name, "Your AI assistant" and the
+ * Ask Amplychat as a card: icon tile (with the AI tag), name, "Your AI assistant" and the
  * shortcut. The button itself comes from components/agent and keeps its behaviour and name; here
  * it is stretched, transparent, over the card, so the whole card opens it and shows its focus.
  * Collapsed, the button is shown as it is: an icon with a tooltip.
@@ -263,7 +263,7 @@ function AskCard({ ask, collapsed, hint }: { ask: ReactNode; collapsed: boolean;
       <span aria-hidden className={cn("min-w-0 flex-1", sidebarFadeClass(!collapsed))}>
         {/* The name gets its own line, so it is never cut ("Ask Social Ho…"); the shortcut sits with
             the subtitle. */}
-        <span className="block truncate text-sm font-semibold whitespace-nowrap text-fg">Ask Social Hood</span>
+        <span className="block truncate text-sm font-semibold whitespace-nowrap text-fg">Ask Amplychat</span>
         <span className="flex items-center gap-1.5">
           <span className="min-w-0 flex-1 truncate text-xs leading-4 whitespace-nowrap text-fg-secondary">Your AI assistant</span>
           <kbd className={KBD_CLASS}>{hint}</kbd>

@@ -27,7 +27,7 @@ import { toastError } from "@/lib/toast-error";
 
 /**
  * Payments (GR-32): the business's own Razorpay keys and/or UPI address. Money goes to the
- * business's account, never through Social Hood. Razorpay: the keys are checked with Razorpay before
+ * business's account, never through Amplychat. Razorpay: the keys are checked with Razorpay before
  * they are saved, and a webhook address is shown to add in the Razorpay dashboard with the same
  * webhook secret, which is how a paid link reaches the order. UPI has no confirmation from the
  * bank, so those orders are marked paid by hand. Owners and admins; part of Pro.
@@ -223,7 +223,7 @@ function UpiSection({ wid, settings }: { wid: string; settings: PaymentSettings 
       </div>
       <Alert tone="brand">
         A UPI request has no confirmation from the bank. When the customer says they have paid, open the order and mark it
-        paid. Social Hood records who did it and when.
+        paid. Amplychat records who did it and when.
       </Alert>
       <form className="space-y-2" onSubmit={submit}>
         <Field id="upi-vpa" invalid={Boolean(problem)}>

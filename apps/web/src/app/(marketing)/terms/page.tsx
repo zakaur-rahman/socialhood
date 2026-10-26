@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 export const metadata = pageMetadata({
   title: "Terms of Service",
   description:
-    "The terms for using Social Hood: plans and the Pro trial, billing through Dodo Payments, cancellation, acceptable use, AI output and liability.",
+    "The terms for using Amplychat: plans and the Pro trial, billing through Dodo Payments, cancellation, acceptable use, AI output and liability.",
   path: "/terms",
 });
 
@@ -15,7 +15,7 @@ const email = LEGAL.contactEmail;
 const mail = <a href={`mailto:${email}`}>{email}</a>;
 
 // Grounded in what is built: plans and entitlements (billing/plans.py), the trial and billing rules
-// (FR-BIL-01…07, C-050), the no-follow-gate rule (C-031), Ask Social Hood (read-only in R1).
+// (FR-BIL-01…07, C-050), the no-follow-gate rule (C-031), Ask Amplychat (read-only in R1).
 // LAWYER REVIEW before launch (launch checklist §6.4); the governing-law clause appears only once
 // lib/legal.ts sets it.
 function sections(): LegalSection[] {
@@ -27,9 +27,9 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            These terms are an agreement between you and {operatorName(LEGAL)} (&quot;Social Hood&quot;, &quot;we&quot;,
-            &quot;us&quot;) for using the Social Hood website and app. By creating an account or using Social Hood, you
-            accept them. If you use Social Hood for a business, you confirm that you can accept these terms for it, and
+            These terms are an agreement between you and {operatorName(LEGAL)} (&quot;Amplychat&quot;, &quot;we&quot;,
+            &quot;us&quot;) for using the Amplychat website and app. By creating an account or using Amplychat, you
+            accept them. If you use Amplychat for a business, you confirm that you can accept these terms for it, and
             &quot;you&quot; includes that business.
           </p>
           <p>
@@ -45,12 +45,12 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            Social Hood is an inbox and automation tool for Instagram professional accounts and WhatsApp Business numbers.
+            Amplychat is an inbox and automation tool for Instagram professional accounts and WhatsApp Business numbers.
             It brings messages and comments into one place, suggests or sends replies with AI using your knowledge base,
             runs comment and DM automations, schedules and publishes posts, and shows analytics.
           </p>
           <p>
-            We improve Social Hood over time, so features may change. If we remove something important you pay for,
+            We improve Amplychat over time, so features may change. If we remove something important you pay for,
             we&apos;ll tell you in advance.
           </p>
         </>
@@ -131,24 +131,24 @@ function sections(): LegalSection[] {
       title: "Acceptable use",
       body: (
         <>
-          <p>When you use Social Hood you must:</p>
+          <p>When you use Amplychat you must:</p>
           <ul>
             <li>
               follow the law and Meta&apos;s rules for the platforms you connect, including Meta&apos;s Platform Terms, the
               Instagram Terms of Use and Community Guidelines, and the WhatsApp Business Messaging and Commerce policies;
             </li>
             <li>have the right to message the people you message, and respect their choice to stop hearing from you;</li>
-            <li>tell people that a message was sent automatically where the law requires it (Social Hood can add a line for this);</li>
+            <li>tell people that a message was sent automatically where the law requires it (Amplychat can add a line for this);</li>
             <li>keep your knowledge base, messages and posts accurate and lawful.</li>
           </ul>
-          <p>You must not use Social Hood to:</p>
+          <p>You must not use Amplychat to:</p>
           <ul>
             <li>send spam, unsolicited bulk messages, or messages outside the windows Instagram and WhatsApp allow;</li>
             <li>make following, liking or sharing a condition for getting something you promised (Instagram doesn&apos;t allow it);</li>
             <li>deceive, harass, threaten or discriminate against anyone, or share illegal or harmful content;</li>
             <li>process data you have no right to, or sensitive data you don&apos;t need;</li>
             <li>
-              break, overload, probe or get around the security or limits of Social Hood or Meta&apos;s platforms, or copy,
+              break, overload, probe or get around the security or limits of Amplychat or Meta&apos;s platforms, or copy,
               resell or reverse-engineer the service.
             </li>
           </ul>
@@ -162,10 +162,10 @@ function sections(): LegalSection[] {
         <>
           <p>
             You keep all rights to your content: your knowledge base, posts, media and messages. You allow us to store,
-            process and transmit it only as needed to provide Social Hood to you.
+            process and transmit it only as needed to provide Amplychat to you.
           </p>
           <p>
-            You are responsible for your customers&apos; data that you bring into Social Hood, including having a lawful
+            You are responsible for your customers&apos; data that you bring into Amplychat, including having a lawful
             basis to process it. We process it on your behalf, as our <Link href="/privacy">Privacy Policy</Link> describes.
           </p>
         </>
@@ -177,8 +177,8 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            Social Hood&apos;s AI features, including suggested and automatic replies, analysis, summaries, captions and Ask
-            Social Hood, generate content automatically. The AI is instructed to answer only from your knowledge base and
+            Amplychat&apos;s AI features, including suggested and automatic replies, analysis, summaries, captions and Ask
+            Amplychat, generate content automatically. The AI is instructed to answer only from your knowledge base and
             the conversation, and to hand a conversation to you when it isn&apos;t sure, but it can still be wrong,
             incomplete or out of date.
           </p>
@@ -191,7 +191,7 @@ function sections(): LegalSection[] {
               your knowledge base accurate.
             </li>
             <li>Don&apos;t rely on AI output for legal, medical, financial or other professional advice.</li>
-            <li>Ask Social Hood only reads your data and prepares drafts for you to review. It never acts by itself.</li>
+            <li>Ask Amplychat only reads your data and prepares drafts for you to review. It never acts by itself.</li>
           </ul>
         </>
       ),
@@ -201,9 +201,9 @@ function sections(): LegalSection[] {
       title: "Meta's platforms",
       body: (
         <p>
-          Social Hood depends on Instagram and WhatsApp, which Meta runs. Meta can change its APIs, rules and limits, restrict
+          Amplychat depends on Instagram and WhatsApp, which Meta runs. Meta can change its APIs, rules and limits, restrict
           or suspend accounts, or stop a feature working, and those decisions are outside our control. We&apos;ll adapt
-          Social Hood where we can, but we aren&apos;t responsible for Meta&apos;s actions or for its charges.
+          Amplychat where we can, but we aren&apos;t responsible for Meta&apos;s actions or for its charges.
         </p>
       ),
     },
@@ -212,7 +212,7 @@ function sections(): LegalSection[] {
       title: "Availability",
       body: (
         <p>
-          We work to keep Social Hood running and your data safe, but we don&apos;t promise that it will always be
+          We work to keep Amplychat running and your data safe, but we don&apos;t promise that it will always be
           available, uninterrupted or free of errors. We may pause it for maintenance, and we&apos;ll try to do that at
           quiet times.
         </p>
@@ -224,7 +224,7 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            You can stop using Social Hood at any time and delete your workspace in Settings → Workspace. We may suspend or
+            You can stop using Amplychat at any time and delete your workspace in Settings → Workspace. We may suspend or
             close a workspace that breaks these terms, puts others or the service at risk, or that Meta or the law requires
             us to stop serving. Where we can, we&apos;ll warn you first and give you a chance to fix the problem.
           </p>
@@ -237,7 +237,7 @@ function sections(): LegalSection[] {
       title: "Disclaimers",
       body: (
         <p>
-          Apart from what these terms promise, Social Hood is provided &quot;as is&quot; and &quot;as available&quot;. To the
+          Apart from what these terms promise, Amplychat is provided &quot;as is&quot; and &quot;as available&quot;. To the
           extent the law allows, we make no other promises, including about fitness for a particular purpose or the
           results you will get.
         </p>
@@ -259,7 +259,7 @@ function sections(): LegalSection[] {
               actions of Meta or other third parties;
             </li>
             <li>
-              our total liability for all claims about Social Hood is limited to the amount you paid us in the 12 months
+              our total liability for all claims about Amplychat is limited to the amount you paid us in the 12 months
               before the claim arose.
             </li>
           </ul>
@@ -277,7 +277,7 @@ function sections(): LegalSection[] {
       body: (
         <p>
           When we change these terms we update the date at the top. If a change is significant, we&apos;ll tell you by email
-          or in the app before it takes effect. If you keep using Social Hood after that, the new terms apply.
+          or in the app before it takes effect. If you keep using Amplychat after that, the new terms apply.
         </p>
       ),
     },

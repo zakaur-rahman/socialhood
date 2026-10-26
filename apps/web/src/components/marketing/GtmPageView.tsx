@@ -48,7 +48,7 @@ function Compare({ page }: { page: GtmPage }) {
                   Feature
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
-                  Social Hood
+                  Amplychat
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
                   {competitor}
@@ -114,7 +114,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
               className="h-auto w-full max-w-md rounded-2xl border border-line sm:max-w-full"
             />
             <figcaption className="mt-3 text-xs text-fg-secondary">
-              The Social Hood app with example data. The shop, people and messages are made up.
+              The Amplychat app with example data. The shop, people and messages are made up.
             </figcaption>
           </figure>
         </Container>

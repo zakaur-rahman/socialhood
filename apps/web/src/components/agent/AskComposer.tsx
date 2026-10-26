@@ -97,7 +97,7 @@ export function AskComposer({
           composer's does (DESIGN_SYSTEM §8.3). Its radius waits for D-16. */}
       <div className="flex items-end gap-2 rounded-xl border border-line bg-field py-1.5 pr-1.5 pl-4 focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         <label htmlFor={id} className="sr-only">
-          Ask Social Hood a question
+          Ask Amplychat a question
         </label>
         <textarea
           ref={ref}

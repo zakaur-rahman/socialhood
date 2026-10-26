@@ -296,7 +296,7 @@ class SendWindow:
 def send_window(
     conv: Conversation, *, human_agent_enabled: bool, now: datetime
 ) -> SendWindow | None:
-    """What the schedule popover allows now (Ask Social Hood's prepare_scheduled_message, TA.4),
+    """What the schedule popover allows now (Ask Amplychat's prepare_scheduled_message, TA.4),
     by the same rules as ``_check_send_at``; None when no human reply is allowed now or no whole
     minute fits before the window closes."""
     human_agent = _human_agent(conv.platform, human_agent_enabled)

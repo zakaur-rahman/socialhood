@@ -211,7 +211,7 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/w/maple/inbox/c1", { scroll: false }));
   });
 
-  it("FR-AGT-03: an Ask Social Hood card opens the scheduler with its message and time, once", async () => {
+  it("FR-AGT-03: an Ask Amplychat card opens the scheduler with its message and time, once", async () => {
     // Times relative to now, inside an open reply window.
     const hour = 60 * 60_000;
     const sendAt = new Date(Math.ceil((Date.now() + 3 * hour) / 60_000) * 60_000).toISOString();
@@ -226,7 +226,7 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
       handlers: handlers(() => noContent(), { c1: open, c2: kabir }),
     });
     const popover = await screen.findByRole("dialog");
-    expect(within(popover).getByText(/Prepared by Ask Social Hood/)).toBeInTheDocument();
+    expect(within(popover).getByText(/Prepared by Ask Amplychat/)).toBeInTheDocument();
     const expected = toZonedInputs(new Date(sendAt), "Asia/Kolkata");
     expect(within(popover).getByLabelText("Date")).toHaveTextContent(dayLabel(expected.date) ?? "");
     expect(within(popover).getByLabelText("Time")).toHaveValue(expected.time);
@@ -236,7 +236,7 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
   });
 
   // UI-051: Open never overwrites a reply the member typed without asking.
-  it("an Ask Social Hood card keeps a typed reply until the member says to replace it", async () => {
+  it("an Ask Amplychat card keeps a typed reply until the member says to replace it", async () => {
     const user = userEvent.setup();
     const hour = 60 * 60_000;
     const closesAt = new Date(Date.now() + 10 * hour).toISOString();

@@ -216,7 +216,7 @@ async def test_the_connection_goes_to_the_checked_address_under_the_real_name() 
     request = route.calls.last.request
     assert request.headers["host"] == "maple.example:8443"
     assert request.extensions["sni_hostname"] == "maple.example"
-    assert "SocialHoodBot" in request.headers["user-agent"]
+    assert "AmplychatBot" in request.headers["user-agent"]
 
 
 @respx.mock

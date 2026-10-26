@@ -6,7 +6,7 @@ What to do when an alert fires. Alerts, dashboards and drills: [alerts.md](alert
 
 First steps for any alert:
 
-1. Open the dashboard (Grafana → Social Hood overview) and Sentry, filtered to the environment.
+1. Open the dashboard (Grafana → Amplychat overview) and Sentry, filtered to the environment.
 2. Check Render: are `socialhood-api` and `socialhood-worker` live, and did a deploy just happen?
    If a deploy caused it, roll back (Render → service → Events → Rollback) and investigate after.
 3. Logs are JSON with `request_id`, `workspace_id`, `user_id` and `job`; Sentry events carry the

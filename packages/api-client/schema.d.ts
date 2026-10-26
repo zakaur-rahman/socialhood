@@ -2274,7 +2274,7 @@ export interface paths {
         get?: never;
         /**
          * Save Google Sheet Mapping
-         * @description Which field goes in which column, in order. A sheet Social Hood made gets its header row
+         * @description Which field goes in which column, in order. A sheet Amplychat made gets its header row
          *     updated; a sheet that was already yours is not touched.
          */
         put: operations["save_google_sheet_mapping"];
@@ -2295,7 +2295,7 @@ export interface paths {
         get?: never;
         /**
          * Select Google Sheet
-         * @description Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it
+         * @description Use a sheet by its link. With the narrow scope Google lets Amplychat open only sheets it
          *     made or was granted: any other gives 422 on ``link``.
          */
         put: operations["select_google_sheet"];
@@ -12327,7 +12327,7 @@ export interface components {
         SheetCreate: {
             /**
              * Title
-             * @default Social Hood leads
+             * @default Amplychat leads
              */
             title: string;
         };

@@ -10,8 +10,8 @@ import { colorValue } from "@/styles/tokens";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/app",
-    name: "Social Hood",
-    short_name: "Social Hood",
+    name: "Amplychat",
+    short_name: "Amplychat",
     description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
     start_url: "/app",
     scope: "/",

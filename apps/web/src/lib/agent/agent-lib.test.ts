@@ -218,7 +218,7 @@ describe("agent cache patching (TR-FE-04)", () => {
   });
 });
 
-describe("automation drafts from Ask Social Hood (FR-AGT-03)", () => {
+describe("automation drafts from Ask Amplychat (FR-AGT-03)", () => {
   it("lays the prepared values over a new draft in the editor's terms", () => {
     const base = toDefinition(automation({ trigger: null, keywords: [], action: null, message_text: null, public_reply_texts: [] }));
     const body = definitionFromDraft(base, draftCard().prefill);

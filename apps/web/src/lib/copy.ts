@@ -1,7 +1,7 @@
 /** UI copy from §4.7 (UX-COPY-01). Plain, specific, no apologies. */
 import { ApiError } from "@/lib/api/errors";
 
-export const SUPPORT_EMAIL = "support@socialhood.com";
+export const SUPPORT_EMAIL = "support@amplychat.com";
 
 export function errorMessage(error: unknown): string {
   const apiError = error instanceof ApiError ? error : null;
@@ -149,7 +149,7 @@ export function sendFailure(
     case "capability_unavailable":
       return detail && /permission/i.test(detail)
         ? {
-            message: `${handle} didn't give Social Hood permission for this. Reconnect to allow it.`,
+            message: `${handle} didn't give Amplychat permission for this. Reconnect to allow it.`,
             retry: false,
             reconnect: true,
           }
@@ -206,7 +206,7 @@ export function whatsappConnected(displayName: string | null | undefined, number
  * number (FINISH_ONLY_WABA), and its test numbers can't be connected this way at all.
  */
 const WHATSAPP_CONNECT_COPY = {
-  account_in_use: "This account is connected to another Social Hood workspace. Disconnect it there first.",
+  account_in_use: "This account is connected to another Amplychat workspace. Disconnect it there first.",
   wa_choose_business_account:
     "Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one in Meta's popup.",
   wa_no_phone_number:
@@ -312,7 +312,7 @@ function connectErrorResult(error: string, limitParam?: string | null): ConnectR
     case "account_in_use":
       return {
         kind: "error",
-        message: "This account is connected to another Social Hood workspace. Disconnect it there first.",
+        message: "This account is connected to another Amplychat workspace. Disconnect it there first.",
         retry: false,
       };
     case "quota_exceeded": {
@@ -496,15 +496,15 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
   },
   public_api: {
     feature: "Public API access",
-    body: "On Pro, make API keys to connect your own tools, and use the Social Hood app in Zapier.",
+    body: "On Pro, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
   },
   commerce: {
     feature: "The product catalogue",
     body: "On Pro, add products with prices and stock, import them from a CSV file or Shopify, and let the AI answer product questions.",
   },
   widget_remove_branding: {
-    feature: "Hiding \"Powered by Social Hood\"",
-    body: "On Pro, you can turn off the \"Powered by Social Hood\" link in your website chat.",
+    feature: "Hiding \"Powered by Amplychat\"",
+    body: "On Pro, you can turn off the \"Powered by Amplychat\" link in your website chat.",
   },
 };
 

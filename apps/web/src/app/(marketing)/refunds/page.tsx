@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Refund Policy",
-  description: "When Social Hood refunds a payment for the Pro plan, and how to ask about a charge.",
+  description: "When Amplychat refunds a payment for the Pro plan, and how to ask about a charge.",
   path: "/refunds",
 });
 

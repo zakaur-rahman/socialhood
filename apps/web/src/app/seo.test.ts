@@ -19,14 +19,14 @@ describe("page metadata", () => {
       expect(metadata.title).toBe(title);
       expect(metadata.description).toBeTruthy();
       expect(metadata.alternates?.canonical).toBe(path);
-      expect(metadata.openGraph).toMatchObject({ url: path, title: `${title} · Social Hood`, images: [expect.objectContaining({ url: "/og.png" })] });
+      expect(metadata.openGraph).toMatchObject({ url: path, title: `${title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] });
       expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [expect.objectContaining({ url: "/og.png" })] });
     }
   });
 
   it("the landing page names itself in full", () => {
-    expect(pageMetadata({ title: "Social Hood · X", description: "d", path: "/", absoluteTitle: true }).title).toEqual({
-      absolute: "Social Hood · X",
+    expect(pageMetadata({ title: "Amplychat · X", description: "d", path: "/", absoluteTitle: true }).title).toEqual({
+      absolute: "Amplychat · X",
     });
   });
 });
@@ -37,7 +37,7 @@ afterEach(() => {
 
 describe("site URL", () => {
   it("comes from NEXT_PUBLIC_SITE_URL, as an origin", () => {
-    expect(siteUrl("https://www.socialhood.com/some/path/")).toBe("https://www.socialhood.com");
+    expect(siteUrl("https://www.amplychat.com/some/path/")).toBe("https://www.amplychat.com");
   });
 
   it("falls back when unset or not a URL", () => {

@@ -58,7 +58,7 @@ describe("AppSidebar (UX-SH-01)", () => {
     for (const label of ["Home", "Inbox", "Comments", "Contacts", "Leads", "Orders", "Schedule", "Automations", "Knowledge", "Products", "Settings", "Help"]) {
       expect(within(nav).getByText(label)).toBeInTheDocument();
     }
-    expect(within(nav).getByText("Social Hood")).toBeInTheDocument();
+    expect(within(nav).getByText("Amplychat")).toBeInTheDocument();
     expect(within(nav).getByText("Aria Label")).toBeInTheDocument();
     expect(within(nav).getByText("Free")).toBeInTheDocument();
     expect(within(nav).getByText("Priya Nair")).toBeInTheDocument();
@@ -407,25 +407,25 @@ describe("MobileNav (UX-SH-02)", () => {
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
   });
 
-  it("puts Ask Social Hood in the top bar, beside the menu (FR-AGT-01)", () => {
-    renderWithProviders(<MobileNav title="Home" workspace={owner} ask={<button type="button">Ask Social Hood</button>} />);
+  it("puts Ask Amplychat in the top bar, beside the menu (FR-AGT-01)", () => {
+    renderWithProviders(<MobileNav title="Home" workspace={owner} ask={<button type="button">Ask Amplychat</button>} />);
     const bar = screen.getByRole("banner");
     const buttons = within(bar).getAllByRole("button").map((button) => button.textContent || button.getAttribute("aria-label"));
-    expect(buttons).toEqual(["Ask Social Hood", "Open menu"]);
+    expect(buttons).toEqual(["Ask Amplychat", "Open menu"]);
   });
 });
 
-describe("Ask Social Hood in the sidebar (FR-AGT-01)", () => {
+describe("Ask Amplychat in the sidebar (FR-AGT-01)", () => {
   it("sits under the header, above the sections, as a card around the button", async () => {
     const onClick = vi.fn();
     const ask = (
       <button type="button" onClick={onClick}>
-        Ask Social Hood
+        Ask Amplychat
       </button>
     );
     const { rerender } = renderSidebar({ ask });
     const nav = mainNav();
-    const button = within(nav).getByRole("button", { name: "Ask Social Hood" });
+    const button = within(nav).getByRole("button", { name: "Ask Amplychat" });
     const home = within(nav).getByRole("link", { name: "Home" });
     expect(button.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const card = screen.getByTestId("ask-card");
@@ -437,7 +437,7 @@ describe("Ask Social Hood in the sidebar (FR-AGT-01)", () => {
     expect(onClick).toHaveBeenCalledOnce();
 
     rerender({ collapsed: true });
-    expect(within(mainNav()).getByRole("button", { name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(within(mainNav()).getByRole("button", { name: "Ask Amplychat" })).toBeInTheDocument();
     // The same card, text faded out and hidden from assistive tech.
     expect(screen.getByTestId("ask-card")).toBeInTheDocument();
     expect(screen.getByText("Your AI assistant").closest("[aria-hidden=true]")).not.toBeNull();

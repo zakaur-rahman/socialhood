@@ -62,7 +62,7 @@ describe("finishing an Instagram connect (F-03, X-1)", () => {
     ],
     [
       problem(409, "account_in_use", "in use"),
-      "This account is connected to another Social Hood workspace. Disconnect it there first.",
+      "This account is connected to another Amplychat workspace. Disconnect it there first.",
     ],
   ])("explains a refused nonce", async (response, message) => {
     nav.search = "instagram=n0nce";
@@ -93,7 +93,7 @@ describe("finishing an Instagram connect (F-03, X-1)", () => {
   it("an error that can't be retried has no Try again", async () => {
     nav.search = "error=account_in_use";
     renderPage(() => json(account()));
-    await screen.findByText(/connected to another Social Hood workspace/);
+    await screen.findByText(/connected to another Amplychat workspace/);
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 

@@ -27,7 +27,7 @@ class GoogleConnectComplete(RequestModel):
 
 
 class SheetCreate(RequestModel):
-    title: str = Field(default="Social Hood leads", min_length=1, max_length=100)
+    title: str = Field(default="Amplychat leads", min_length=1, max_length=100)
 
 
 class SheetSelect(RequestModel):

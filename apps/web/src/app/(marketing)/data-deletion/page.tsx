@@ -17,7 +17,7 @@ import { MARKETING_HEADING, READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Data deletion",
-  description: "How to delete your data from Social Hood, and the status of a data deletion request made through Instagram.",
+  description: "How to delete your data from Amplychat, and the status of a data deletion request made through Instagram.",
   path: "/data-deletion",
 });
 
@@ -82,13 +82,13 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
           workspace&apos;s knowledge, settings and billing stay.
         </Option>
         <Option>
-          <strong className="text-fg">Removed Social Hood in Instagram?</strong> If you asked Instagram to delete your
+          <strong className="text-fg">Removed Amplychat in Instagram?</strong> If you asked Instagram to delete your
           data, it gives you a confirmation code and a link to this page. Enter the code below to see how your request is
           going.
         </Option>
         <Option>
           <strong className="text-fg">Anyone else</strong>, including people who messaged or commented on a business that
-          uses Social Hood: email{" "}
+          uses Amplychat: email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline underline-offset-4">
             {SUPPORT_EMAIL}
           </a>

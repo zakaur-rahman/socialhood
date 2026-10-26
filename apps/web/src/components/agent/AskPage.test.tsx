@@ -49,7 +49,7 @@ describe("The Ask page (FR-AGT-01)", () => {
   it("lists the member's threads; picking one shows its questions and answers", async () => {
     const user = userEvent.setup();
     renderWithApi(<AskPage />, { handlers: handlers() });
-    expect(screen.getByRole("heading", { level: 1, name: "Ask Social Hood" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Ask Amplychat" })).toBeInTheDocument();
     const history = screen.getByRole("complementary", { name: "Thread history" });
     const threads = await within(history).findByRole("navigation", { name: "Threads" });
     const items = within(threads).getAllByRole("button");
@@ -74,7 +74,7 @@ describe("The Ask page (FR-AGT-01)", () => {
     expect(newThread).toHaveClass("w-full");
     await user.click(newThread);
     expect(await screen.findByRole("list", { name: "Suggested questions" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Ask Social Hood a question" })).toHaveFocus();
+    expect(screen.getByRole("textbox", { name: "Ask Amplychat a question" })).toHaveFocus();
   });
 
   it("groups threads by Today, Yesterday, Previous 7 days and Older, one truncated line each", async () => {
@@ -102,9 +102,9 @@ describe("The Ask page (FR-AGT-01)", () => {
     useAskStore.getState().setThread("w1", "t2");
     renderWithApi(<AskPage />, { handlers: handlers() });
     await screen.findByText("Mostly shipping costs.");
-    const log = screen.getByRole("log", { name: "Conversation with Social Hood" });
+    const log = screen.getByRole("log", { name: "Conversation with Amplychat" });
     expect(log.firstElementChild).toHaveClass("mx-auto", "max-w-3xl");
-    const box = screen.getByRole("textbox", { name: "Ask Social Hood a question" });
+    const box = screen.getByRole("textbox", { name: "Ask Amplychat a question" });
     expect(box.closest("form")?.parentElement).toHaveClass("mx-auto", "max-w-3xl");
   });
 

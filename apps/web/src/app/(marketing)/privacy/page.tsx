@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 export const metadata = pageMetadata({
   title: "Privacy Policy",
   description:
-    "How Social Hood collects, uses, shares, keeps and deletes personal data, including the Instagram and WhatsApp data it receives from Meta.",
+    "How Amplychat collects, uses, shares, keeps and deletes personal data, including the Instagram and WhatsApp data it receives from Meta.",
   path: "/privacy",
 });
 
@@ -25,8 +25,8 @@ const SECTIONS: LegalSection[] = [
     body: (
       <>
         <p>
-          This policy explains how Social Hood (&quot;we&quot;, &quot;us&quot;) handles personal data when you visit our
-          website, when you use the Social Hood app, and when you message or comment on a business that uses Social Hood.
+          This policy explains how Amplychat (&quot;we&quot;, &quot;us&quot;) handles personal data when you visit our
+          website, when you use the Amplychat app, and when you message or comment on a business that uses Amplychat.
         </p>
         <LegalFacts />
         <h3>Our role</h3>
@@ -43,7 +43,7 @@ const SECTIONS: LegalSection[] = [
           </li>
         </ul>
         <p>
-          If you messaged or commented on a business that uses Social Hood, that business is your first point of contact
+          If you messaged or commented on a business that uses Amplychat, that business is your first point of contact
           for your data. You can also write to us and we&apos;ll help the business respond.
         </p>
       </>
@@ -64,7 +64,7 @@ const SECTIONS: LegalSection[] = [
         <p>
           When you connect an Instagram professional account or a WhatsApp Business number, Meta gives us the
           account&apos;s ID, username or phone number, name and profile picture, the permissions you granted, and access
-          tokens that let Social Hood act for the account. We never ask for or receive your Instagram or Facebook
+          tokens that let Amplychat act for the account. We never ask for or receive your Instagram or Facebook
           password, and we store access tokens encrypted.
         </p>
         <h3>Messages, comments and the people who send them</h3>
@@ -88,7 +88,7 @@ const SECTIONS: LegalSection[] = [
         <h3>What the AI produces</h3>
         <p>
           The analysis of messages and comments (intent, sentiment, lead score, language, topics and spam), conversation
-          and comment summaries, suggested replies, knowledge gaps, and your questions to Ask Social Hood with its answers.
+          and comment summaries, suggested replies, knowledge gaps, and your questions to Ask Amplychat with its answers.
         </p>
         <h3>Billing</h3>
         <p>
@@ -110,7 +110,7 @@ const SECTIONS: LegalSection[] = [
       <>
         <ul>
           <li>
-            To run Social Hood: show your conversations and comments, send your replies and automated messages, publish
+            To run Amplychat: show your conversations and comments, send your replies and automated messages, publish
             your posts, run your automations, and send notifications and the weekly digest.
           </li>
           <li>To provide the AI features described below.</li>
@@ -122,7 +122,7 @@ const SECTIONS: LegalSection[] = [
         <p>
           <strong>We don&apos;t sell personal data, we don&apos;t use it for advertising, and we don&apos;t use it to train AI
           models.</strong>{" "}
-          People at Social Hood look at a workspace&apos;s data only when you ask us for help, to investigate a problem or
+          People at Amplychat look at a workspace&apos;s data only when you ask us for help, to investigate a problem or
           abuse, or when the law requires it.
         </p>
       </>
@@ -134,8 +134,8 @@ const SECTIONS: LegalSection[] = [
     body: (
       <>
         <p>
-          Social Hood&apos;s AI features use Google&apos;s Gemini API: analysing messages and comments, suggesting and
-          sending replies, summaries, captions and hashtags, searching your knowledge base, and answering Ask Social Hood
+          Amplychat&apos;s AI features use Google&apos;s Gemini API: analysing messages and comments, suggesting and
+          sending replies, summaries, captions and hashtags, searching your knowledge base, and answering Ask Amplychat
           questions. For each task we send Google the text it needs, such as a message with the recent conversation and
           the relevant parts of your knowledge base, and Google returns the result.
         </p>
@@ -147,14 +147,14 @@ const SECTIONS: LegalSection[] = [
           </li>
           <li>
             With AI analysis turned off for an account, its messages and comments aren&apos;t sent to Google for analysis
-            or summaries. Features you use on purpose, like a suggested reply or Ask Social Hood, still send the text they
+            or summaries. Features you use on purpose, like a suggested reply or Ask Amplychat, still send the text they
             need.
           </li>
           <li>
             A business can add a short line, such as &quot;Sent automatically&quot;, to the messages its automations and
             Auto mode send (Settings → Workspace).
           </li>
-          <li>Ask Social Hood reads your workspace&apos;s data to answer. It never sends, changes or deletes anything.</li>
+          <li>Ask Amplychat reads your workspace&apos;s data to answer. It never sends, changes or deletes anything.</li>
         </ul>
         <p>
           AI output can be wrong. Our <Link href="/terms">Terms of Service</Link> explain who is responsible for what the
@@ -173,7 +173,7 @@ const SECTIONS: LegalSection[] = [
           official APIs. Meta&apos;s own privacy policy covers what happens on its platforms.
         </p>
         <p>
-          <strong>Service providers</strong> that process data for us, only to run Social Hood:
+          <strong>Service providers</strong> that process data for us, only to run Amplychat:
         </p>
         <div className="overflow-x-auto">
           <table>
@@ -239,10 +239,10 @@ const SECTIONS: LegalSection[] = [
         <p>We also send service health metrics to Grafana Cloud. They contain no personal data.</p>
         <p>
           <strong>When the law requires it.</strong> We may disclose data when the law requires it, or to protect the
-          rights, safety or property of our users, the public or Social Hood.
+          rights, safety or property of our users, the public or Amplychat.
         </p>
         <p>
-          <strong>If the business changes hands.</strong> If Social Hood is sold or merged, personal data may pass to the
+          <strong>If the business changes hands.</strong> If Amplychat is sold or merged, personal data may pass to the
           new owner, who must keep protecting it as this policy describes. We&apos;ll tell you before that happens.
         </p>
       </>
@@ -309,7 +309,7 @@ const SECTIONS: LegalSection[] = [
                 <td>90 days</td>
               </tr>
               <tr>
-                <td>Ask Social Hood conversations</td>
+                <td>Ask Amplychat conversations</td>
                 <td>180 days after they finish</td>
               </tr>
               <tr>
@@ -345,7 +345,7 @@ const SECTIONS: LegalSection[] = [
             <strong>Delete your workspace</strong> (Settings → Workspace; owners only). Everything stops at once: access
             tokens are destroyed, accounts are disconnected, automations are paused, and scheduled messages and posts are
             cancelled. An active subscription is cancelled, and the workspace&apos;s data, including uploaded media, is
-            permanently removed within 24 hours. If your Social Hood user account is deleted, the workspaces only you own
+            permanently removed within 24 hours. If your Amplychat user account is deleted, the workspaces only you own
             are deleted the same way.
           </li>
           <li>
@@ -361,7 +361,7 @@ const SECTIONS: LegalSection[] = [
             workspace&apos;s knowledge base, settings, members and billing, and its other accounts, are kept.
           </li>
           <li>
-            <strong>Remove Social Hood from Instagram.</strong> Removing Social Hood in Instagram&apos;s settings disconnects
+            <strong>Remove Amplychat from Instagram.</strong> Removing Amplychat in Instagram&apos;s settings disconnects
             the account. If you also ask for your data to be deleted, Meta sends us your request: we disconnect every
             account connected with your Instagram login, in every workspace, and delete each one&apos;s data as described
             above, along with the raw events Meta sent us for it. You get a confirmation code you can check on our{" "}
@@ -369,7 +369,7 @@ const SECTIONS: LegalSection[] = [
             account&apos;s data is gone.
           </li>
           <li>
-            <strong>Email us</strong> at {mail}. Anyone can ask, including customers of a business that uses Social Hood. We
+            <strong>Email us</strong> at {mail}. Anyone can ask, including customers of a business that uses Amplychat. We
             may need to confirm who you are, and for customers&apos; data we work with the business it belongs to.
           </li>
         </ul>
@@ -418,7 +418,7 @@ const SECTIONS: LegalSection[] = [
             calendar views.
           </li>
           <li>
-            <strong>Service worker.</strong> If you install Social Hood or turn on push notifications, your browser keeps a
+            <strong>Service worker.</strong> If you install Amplychat or turn on push notifications, your browser keeps a
             small script from us that receives the notifications.
           </li>
         </ul>
@@ -435,9 +435,9 @@ const SECTIONS: LegalSection[] = [
     body: (
       <>
         <p>
-          Connections to Social Hood are encrypted with HTTPS. Instagram and WhatsApp connect through Meta&apos;s official
+          Connections to Amplychat are encrypted with HTTPS. Instagram and WhatsApp connect through Meta&apos;s official
           APIs, access tokens are stored encrypted, and every workspace&apos;s data is kept separate from every other
-          workspace. Only the people who run Social Hood can reach our production systems.
+          workspace. Only the people who run Amplychat can reach our production systems.
         </p>
         <p>
           No system is perfectly secure. If a breach affects your personal data, we&apos;ll tell you and the authorities as
@@ -449,7 +449,7 @@ const SECTIONS: LegalSection[] = [
   {
     id: "children",
     title: "Children",
-    body: <p>Social Hood is a tool for businesses. Accounts are for people who are 18 or older.</p>,
+    body: <p>Amplychat is a tool for businesses. Accounts are for people who are 18 or older.</p>,
   },
   {
     id: "changes",
@@ -481,12 +481,12 @@ export default function PrivacyPage() {
       summary={
         <>
           <p>
-            Social Hood is an inbox and automation tool for businesses on Instagram and WhatsApp. To do that, we handle your
+            Amplychat is an inbox and automation tool for businesses on Instagram and WhatsApp. To do that, we handle your
             account data and the messages, comments and profiles of your customers that Meta sends us when they contact your
             business.
           </p>
           <p>
-            We use it only to run Social Hood. <strong>We never sell it, never use it for ads, and never ask for your
+            We use it only to run Amplychat. <strong>We never sell it, never use it for ads, and never ask for your
             Instagram or Facebook password.</strong> You can delete your workspace at any time, and its data is removed
             within 24 hours.
           </p>
