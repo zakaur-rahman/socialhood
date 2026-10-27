@@ -37,10 +37,15 @@ def _dodo(request: Request) -> DodoClient:
 
 
 async def _state(request: Request, ctx: AnyMember, session: Session) -> BillingState:
-    prices = await service.plan_prices(
-        request.app.state.redis, _dodo(request), request.app.state.settings
+    settings = request.app.state.settings
+    prices = await service.plan_prices(request.app.state.redis, _dodo(request), settings)
+    return await service.billing_state(
+        session,
+        ctx.workspace,
+        now=datetime.now(UTC),
+        prices=prices,
+        billing_available=settings.billing_enabled,
     )
-    return await service.billing_state(session, ctx.workspace, now=datetime.now(UTC), prices=prices)
 
 
 @router.get("/billing", operation_id="get_billing")
@@ -48,7 +53,8 @@ async def get_billing(request: Request, ctx: AnyMember, session: Session) -> Bil
     """Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge
     characters, active automations, pending scheduled messages and connected accounts per
     platform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo
-    (cached 1 h; a price Dodo can't give now is left out)."""
+    (cached 1 h; a price Dodo can't give now is left out). ``billing_available`` is false while
+    billing isn't set up on this server (C-149): no prices, and no checkout."""
     return await _state(request, ctx, session)
 
 
@@ -74,7 +80,8 @@ async def create_billing_checkout(
     /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial
     only when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan
     (active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo
-    isn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives."""
+    doesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes
+    until Dodo's signed webhook arrives."""
     out = await service.start_checkout(
         session, ctx, body, dodo=_dodo(request), settings=request.app.state.settings
     )
@@ -89,7 +96,7 @@ async def create_billing_portal(
 ) -> PortalSession:
     """FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened
     in a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo
-    doesn't answer."""
+    doesn't answer; 503 billing_unavailable while billing isn't set up (C-149)."""
     return await service.open_portal(
         session, ctx, dodo=_dodo(request), settings=request.app.state.settings
     )
@@ -100,8 +107,14 @@ async def cancel_billing(request: Request, ctx: CanManageBilling, session: Sessi
     """FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's
     cancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays
     until the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling
-    again answers the same."""
-    await service.set_cancel(session, request.app.state.redis, cancel=True, dodo=_dodo(request))
+    again answers the same. 503 billing_unavailable while billing isn't set up (C-149)."""
+    await service.set_cancel(
+        session,
+        request.app.state.redis,
+        cancel=True,
+        dodo=_dodo(request),
+        settings=request.app.state.settings,
+    )
     await audit.record(session, ctx, "billing.cancelled", "billing")
     await session.commit()
     return await _state(request, ctx, session)
@@ -110,8 +123,14 @@ async def cancel_billing(request: Request, ctx: CanManageBilling, session: Sessi
 @router.post("/billing/resume", operation_id="resume_billing")
 async def resume_billing(request: Request, ctx: CanManageBilling, session: Session) -> BillingState:
     """Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when
-    Dodo has already ended the plan."""
-    await service.set_cancel(session, request.app.state.redis, cancel=False, dodo=_dodo(request))
+    Dodo has already ended the plan. 503 billing_unavailable while billing isn't set up."""
+    await service.set_cancel(
+        session,
+        request.app.state.redis,
+        cancel=False,
+        dodo=_dodo(request),
+        settings=request.app.state.settings,
+    )
     await audit.record(session, ctx, "billing.resumed", "billing")
     await session.commit()
     return await _state(request, ctx, session)
@@ -121,7 +140,8 @@ async def resume_billing(request: Request, ctx: CanManageBilling, session: Sessi
 async def list_billing_plans(request: Request) -> PlanList:
     """Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
     entitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing
-    page and the upgrade dialog's comparison. The same numbers as GET …/billing."""
+    page and the upgrade dialog's comparison. The same numbers as GET …/billing. While billing
+    isn't set up on this server (C-149) Pro and Max are ``available: false`` without prices."""
     return await service.plan_list(
         request.app.state.redis, _dodo(request), request.app.state.settings
     )

@@ -41,7 +41,9 @@ import type { BillingState } from "@/lib/api/types";
 import {
   TRIAL_DAYS,
   billingDate,
+  billingOpen,
   canCheckout,
+  canStartCheckout,
   meterViews,
   planStatus,
   priceOf,
@@ -170,7 +172,9 @@ export function BillingPage() {
             <h2 id="plans-title" className={SECTION_TITLE}>
               Compare plans
             </h2>
-            <p className="text-sm text-fg-secondary">What each plan includes. Max is coming soon.</p>
+            <p className="text-sm text-fg-secondary">
+              What each plan includes. {billingOpen(state) ? "Max is coming soon." : "Pro and Max are coming soon."}
+            </p>
           </div>
           <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
         </section>
@@ -201,7 +205,9 @@ function CurrentPlan({
   const periodEnd = billing.status === "trialing" ? (billing.trial_ends_at ?? billing.current_period_end) : billing.current_period_end;
   const endsOn = periodEnd ? billingDate(periodEnd, workspace.timezone) : null;
   const price = priceOf(billing.plan, billing);
-  const mayCheckout = canCheckout(billing);
+  const mayCheckout = canStartCheckout(billing);
+  // C-149: a Free workspace on a server without billing is told why there's no upgrade.
+  const notOnSale = canCheckout(billing) && !billingOpen(billing);
   const trial = billing.status === "trialing";
 
   const runCancel = () =>
@@ -220,6 +226,7 @@ function CurrentPlan({
 
   const actions = isOwner ? (
     <div className="flex flex-wrap gap-2 md:justify-end">
+      {notOnSale ? <p className="text-sm text-fg-secondary">{billingCopy.paidPlansSoon}</p> : null}
       {mayCheckout ? (
         <Button size="lg" loading={checkout.pending} onClick={() => checkout.start("pro")}>
           {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}

@@ -76,6 +76,22 @@ describe("the pricing section", () => {
     expect(within(card("Max")).queryByRole("link")).not.toBeInTheDocument();
   });
 
+  it("C-149: with no billing on the API yet, Pro is coming soon with its features and no trial or price", () => {
+    const items = plansFixture().items.map((offer) =>
+      offer.plan === "pro" ? { ...offer, available: false, price: null } : offer,
+    );
+    const { container } = render(<Pricing pricing={buildPricing(items)} />);
+    const pro = within(card("Pro"));
+    expect(pro.getAllByText("Coming soon").length).toBeGreaterThan(0);
+    expect(pro.getByText(/Pro isn't available to buy yet/)).toBeInTheDocument();
+    expect(pro.getByText("AI replies: Off, Suggest and Auto")).toBeInTheDocument();
+    expect(pro.queryByText("7-day free trial")).not.toBeInTheDocument();
+    expect(pro.queryByRole("link")).not.toBeInTheDocument();
+    expect(card("Pro").querySelector("[data-frame=moving-border]")).toBeNull();
+    expect(within(card("Free")).getByRole("link", { name: "Start free" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/[$₹€£]\s?\d/);
+  });
+
   it("when Dodo gave no price, Pro says so instead of showing one", () => {
     render(<Pricing pricing={buildPricing(plansFixture({ proPrice: null }).items)} />);
     expect(within(card("Pro")).getByText(PRICE_AT_SIGN_UP)).toBeInTheDocument();

@@ -2,10 +2,11 @@
 # Creates /opt/amplychat/api.env and /opt/amplychat/postgres.env from api.env.example (C-145).
 #
 #   gen-secrets.sh            create both files (refuses to overwrite either)
-#   gen-secrets.sh --check    list the variables still empty in api.env (names only)
+#   gen-secrets.sh --check    list the variables still empty in api.env (names only): the
+#                             required ones, then the [optional] ones apart
 #
 # Fills only the [generated] values, with fresh random ones; [fixed] values are copied and
-# [owner] values stay empty for the owner to paste. Files are mode 600. No value is ever printed.
+# [owner] and [optional] values stay empty for the owner to paste. Files are mode 600. No value is ever printed.
 # Needs bash, openssl and base64 (all on Ubuntu). APP_DIR overrides /opt/amplychat.
 set -euo pipefail
 umask 077
@@ -18,14 +19,41 @@ pg_env="$app_dir/postgres.env"
 
 die() { echo "gen-secrets: $*" >&2; exit 1; }
 
+# The variables under an [optional] tag in a file (C-149): the API starts without them.
+optional_keys() {
+  local tag="" line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    if [[ -z "$line" ]]; then
+      tag=""
+    elif [[ "$line" =~ ^#[[:space:]]*\[(generated|owner|fixed|optional)\] ]]; then
+      tag="${BASH_REMATCH[1]}"
+    elif [[ "$tag" == "optional" && "$line" =~ ^([A-Z0-9_]+)= ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done <"$1"
+}
+
 if [[ "${1:-}" == "--check" ]]; then
   [[ -f "$api_env" ]] || die "$api_env does not exist"
-  empty="$(grep -E '^[A-Z0-9_]+=$' "$api_env" | cut -d= -f1 || true)"
-  if [[ -z "$empty" ]]; then
-    echo "Every variable in $api_env has a value."
+  # Tags from api.env and from the template beside this script, so an api.env made from an older
+  # template still learns which variables are optional.
+  optional="$( { optional_keys "$api_env"; if [[ -f "$template" ]]; then optional_keys "$template"; fi; } | sort -u)"
+  required=()
+  skipped=()
+  while IFS= read -r key; do
+    [[ -z "$key" ]] && continue
+    if grep -qxF "$key" <<<"$optional"; then skipped+=("$key"); else required+=("$key"); fi
+  done < <(grep -E '^[A-Z0-9_]+=$' "$api_env" | cut -d= -f1 || true)
+  if ((${#required[@]} == 0)); then
+    echo "Every required variable in $api_env has a value."
   else
-    echo "Empty in $api_env (required ones stop the API from starting; see the tags in the file):"
-    printf '%s\n' "$empty" | sed 's/^/  /'
+    echo "Required but empty in $api_env (the API won't start until they're set):"
+    printf '  %s\n' "${required[@]}"
+  fi
+  if ((${#skipped[@]} > 0)); then
+    echo "Optional and empty (each of these features stays off):"
+    printf '  %s\n' "${skipped[@]}"
   fi
   exit 0
 fi
@@ -62,7 +90,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   line="${line%$'\r'}"
   if [[ -z "$line" ]]; then
     tag=""
-  elif [[ "$line" =~ ^#[[:space:]]*\[(generated|owner|fixed)\] ]]; then
+  elif [[ "$line" =~ ^#[[:space:]]*\[(generated|owner|fixed|optional)\] ]]; then
     tag="${BASH_REMATCH[1]}"
   fi
   if [[ "$line" =~ ^([A-Z0-9_]+)=(.*)$ ]]; then

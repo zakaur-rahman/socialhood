@@ -32,7 +32,6 @@ REQUIRED_IN_PRODUCTION: tuple[str, ...] = (
     "api_base_url",
     "web_base_url",
     "cors_allowed_origins",
-    "sentry_dsn",
     "metrics_token",
     "clerk_secret_key",
     "clerk_jwt_key",
@@ -52,13 +51,21 @@ REQUIRED_IN_PRODUCTION: tuple[str, ...] = (
     "cloudinary_cloud_name",
     "cloudinary_api_key",
     "cloudinary_api_secret",
-    "dodo_api_key",
-    "dodo_webhook_secret",
-    "dodo_product_pro_monthly",
     "resend_api_key",
     "vapid_public_key",
     "vapid_private_key",
     "client_ip_header",
+)
+
+
+# C-149: billing is optional, like Google Sheets and Shopify. With none of these set, paid plans
+# are off ("not available yet") and every workspace stays on Free; production refuses some but
+# not all of them, so a half-configured billing can't run. SENTRY_DSN is optional too: without
+# it Sentry isn't started (observability/sentry.py).
+BILLING_SETTINGS: tuple[str, ...] = (
+    "dodo_api_key",
+    "dodo_webhook_secret",
+    "dodo_product_pro_monthly",
 )
 
 
@@ -273,6 +280,17 @@ class Settings(BaseSettings):
         if not self.rate_limits_enabled:
             unsafe.append("RATE_LIMITS_ENABLED must be true in production")
         unsafe.extend(self._origin_problems())
+        billing_missing = [
+            name.upper() for name in BILLING_SETTINGS if _is_empty(getattr(self, name))
+        ]
+        if billing_missing and len(billing_missing) < len(BILLING_SETTINGS):
+            unsafe.append(
+                "billing is half configured: set all of "
+                + ", ".join(name.upper() for name in BILLING_SETTINGS)
+                + " or none (missing: "
+                + ", ".join(billing_missing)
+                + ")"
+            )
         for name in (
             "ai_provider",
             "dodo_provider",
@@ -324,6 +342,15 @@ class Settings(BaseSettings):
     def site_url(self) -> str | None:
         """The public site's base URL: SITE_BASE_URL, else WEB_BASE_URL (one origin)."""
         return self.site_base_url or self.web_base_url
+
+    @property
+    def billing_enabled(self) -> bool:
+        """Whether paid plans can be sold (C-149): the fake, or every Dodo setting present.
+        Off: checkout, the portal, cancel, resume and the Dodo webhook answer 503
+        billing_unavailable, and the plan list marks the paid plans unavailable."""
+        if self.dodo_provider == "fake":
+            return True
+        return not any(_is_empty(getattr(self, name)) for name in BILLING_SETTINGS)
 
     @property
     def is_production(self) -> bool:

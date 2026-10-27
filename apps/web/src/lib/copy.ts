@@ -646,6 +646,9 @@ export const billingCopy = {
   checkoutConflict: "This workspace already has a paid plan. Change it from Manage billing.",
   maxUnavailable: "Max isn't available yet.",
   paymentsUnavailable: "Payments aren't available right now. Try again in a few minutes.",
+  /** C-149: billing isn't set up on this server, so only Free exists for now. */
+  paidPlansSoon: "Paid plans aren't available yet. Everything on Free keeps working.",
+  billingUnavailable: "Paid plans aren't available yet.",
   noBillingAccount: "There's no billing account for this workspace yet. It's created when you upgrade.",
   cancelled: (plan: string, date: string) => `${plan} until ${date}`,
   resumed: (plan: string) => `${plan} will renew as usual`,

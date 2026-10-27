@@ -43,6 +43,8 @@ ERROR_CODES: dict[str, ErrorCode] = {
     "method_not_allowed": ErrorCode(405, "Method not allowed"),
     "payload_too_large": ErrorCode(413, "Request body too large"),
     "service_unavailable": ErrorCode(503, "Service unavailable"),
+    # C-149: billing isn't set up on this server (no Dodo settings), so paid plans can't be sold.
+    "billing_unavailable": ErrorCode(503, "Paid plans aren't available yet"),
 }
 
 STATUS_TO_CODE: dict[int, str] = {
