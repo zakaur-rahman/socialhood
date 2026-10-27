@@ -69,5 +69,7 @@ export const THEMED_ROUTE = /^\/(app|w|sign-in|sign-up|dev)(\/|$)/;
  * other page, pins it dark. It must not import anything, so it is a string, built from the cookie
  * name and THEMED_ROUTE. lib/theme.test.ts runs it. (It replaces an inline script in the marketing
  * layout, which React refused to render on a client navigation; ThemePin covers those.)
+ * The regex's `\\s` is doubled: in a template literal `\s` becomes a bare "s", and the script then
+ * found the cookie only when it came first (C-150; Clerk's cookies come first in production).
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement;if(!${THEMED_ROUTE}.test(location.pathname)){d.setAttribute("data-theme","dark");return}var m=document.cookie.match(/(?:^|;\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)d.setAttribute("data-theme",m[1])}catch(e){}})()`;
+export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement;if(!${THEMED_ROUTE}.test(location.pathname)){d.setAttribute("data-theme","dark");return}var m=document.cookie.match(/(?:^|;\\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)d.setAttribute("data-theme",m[1])}catch(e){}})()`;

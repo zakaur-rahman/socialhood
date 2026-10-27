@@ -14,7 +14,7 @@ from typing import Any
 import httpx
 import pytest
 import time_machine
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError
@@ -470,6 +470,47 @@ async def test_channels_connected_counts_active_accounts(team: Team) -> None:
         2,
         ["instagram", "whatsapp"],
     )
+
+
+async def test_a_website_chat_counts_only_when_on_with_a_website(team: Team) -> None:
+    """C-150: opening the website chat settings makes its account; it isn't a connected channel
+    (home count, checklist steps) until the widget is on and has an allowed website."""
+    from socialhood.models.widget import WidgetSettings
+    from socialhood.repositories import social_accounts
+
+    web = await make_account(team.engine, team.wid, platform="web", username="Website chat")
+    async with AsyncSession(team.engine, expire_on_commit=False) as session:
+        with workspace_scope(uuid.UUID(str(team.wid))):
+            row = WidgetSettings(
+                social_account_id=web, enabled=False, allowed_domains=["maple.example"]
+            )
+            session.add(row)
+            await session.commit()
+
+    async def connected() -> tuple[int, list[str], bool]:
+        body = await overview(team)
+        async with AsyncSession(team.engine) as session:
+            with workspace_scope(uuid.UUID(str(team.wid))):
+                live = await social_accounts.any_live(session)
+        return body["accounts_connected"], body["platforms_connected"], live
+
+    assert await connected() == (0, [], False)  # switched off
+
+    async with AsyncSession(team.engine, expire_on_commit=False) as session:
+        with workspace_scope(uuid.UUID(str(team.wid))):
+            widget = await session.get(WidgetSettings, row.id)
+            assert widget is not None
+            widget.enabled, widget.allowed_domains = True, []
+            await session.commit()
+    assert await connected() == (0, [], False)  # on, but no website yet
+
+    async with AsyncSession(team.engine, expire_on_commit=False) as session:
+        with workspace_scope(uuid.UUID(str(team.wid))):
+            widget = await session.get(WidgetSettings, row.id)
+            assert widget is not None
+            widget.allowed_domains = ["maple.example"]
+            await session.commit()
+    assert await connected() == (1, ["web"], True)
 
 
 # ---------------------------------------------------------------- the latest question

@@ -5,10 +5,11 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.connections import AccountStatus, AiMode, SocialAccount
+from socialhood.models.widget import WidgetSettings
 from socialhood.repositories.base import scoped_update
 
 
@@ -58,11 +59,31 @@ async def count_reconnectable(session: AsyncSession, platform: str) -> int:
     return int(count or 0)
 
 
+def counts_as_channel() -> ColumnElement[bool]:
+    """Whether an account is a channel the business has really connected (C-150).
+
+    The website chat's account is made the first time its settings page opens (GR-28), before the
+    business has switched it on or added a website. Until the widget is on and has at least one
+    allowed website it can't receive a chat, so it doesn't count; every other platform's account
+    counts as before.
+    """
+    widget_live = (
+        select(WidgetSettings.id)
+        .where(
+            WidgetSettings.social_account_id == SocialAccount.id,
+            WidgetSettings.enabled.is_(True),
+            func.cardinality(WidgetSettings.allowed_domains) > 0,
+        )
+        .exists()
+    )
+    return or_(SocialAccount.platform != "web", widget_live)
+
+
 async def any_live(session: AsyncSession) -> bool:
     count = await session.scalar(
         select(func.count())
         .select_from(SocialAccount)
-        .where(SocialAccount.status != AccountStatus.DISCONNECTED)
+        .where(SocialAccount.status != AccountStatus.DISCONNECTED, counts_as_channel())
     )
     return bool(count)
 
@@ -75,6 +96,7 @@ async def any_live_with_ai(session: AsyncSession) -> bool:
         .where(
             SocialAccount.status != AccountStatus.DISCONNECTED,
             SocialAccount.ai_mode != AiMode.OFF,
+            counts_as_channel(),
         )
     )
     return bool(count)

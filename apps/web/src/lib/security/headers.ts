@@ -43,6 +43,21 @@ export function clerkFrontendApi(publishableKey: string | undefined): string | n
   }
 }
 
+/**
+ * Whether a production build is served over https, for `upgrade-insecure-requests`: every origin
+ * the build was given (the API, the site, the app's own host) is https and there is at least one,
+ * or it is a Vercel build (always https). The website-only build on the VM (C-145) has no API but
+ * its site and app URLs are https (C-148); a local production build (the e2e stack, a two-host
+ * test on http://localhost) has http origins or none.
+ */
+export function servedOverHttps(env: Env): boolean {
+  if (env.VERCEL === "1") return true;
+  const origins = [env.NEXT_PUBLIC_API_BASE_URL, env.NEXT_PUBLIC_SITE_URL, env.NEXT_PUBLIC_APP_URL]
+    .map(originOf)
+    .filter((origin): origin is string => origin !== null);
+  return origins.length > 0 && origins.every((origin) => origin.startsWith("https://"));
+}
+
 export function contentSecurityPolicy(env: Env): string {
   const dev = env.NODE_ENV !== "production";
   const api = originOf(env.NEXT_PUBLIC_API_BASE_URL);
@@ -89,9 +104,7 @@ export function contentSecurityPolicy(env: Env): string {
   const parts = Object.entries(directives).map(([name, values]) =>
     [name, ...new Set(values.filter((value): value is string => Boolean(value)))].join(" "),
   );
-  // Only where the site is served over https: an https API, or a Vercel build (always https) that
-  // has no API yet (the website-only launch). A local production build talks to http://localhost.
-  if (!dev && (api ? api.startsWith("https://") : env.VERCEL === "1")) parts.push("upgrade-insecure-requests");
+  if (!dev && servedOverHttps(env)) parts.push("upgrade-insecure-requests");
   return parts.join("; ");
 }
 
