@@ -6679,3 +6679,17 @@ Two production bugs the owner found on the first full deploy.
   became a bare `s`: `/(?:^|;s*)sh_theme=…/` matched the theme cookie only when it was the first
   cookie. On localhost it usually was; in production Clerk's cookies come first, so the saved choice
   was never applied before paint. Escaped as `\s`; a test runs the script with other cookies first.
+
+## C-151 · Legacy timezone names in the API image (fix/legacy-timezones)
+
+In production, saving a workspace's timezone failed with "Choose a timezone from the list." for
+`Asia/Calcutta`. Chrome and Brave still report India as `Asia/Calcutta` (ICU's legacy name), and the
+API checks the name against `zoneinfo.available_timezones()`. The API image is
+`python:3.13-slim-trixie`, whose system tzdata has 486 zones: Debian trixie moved the legacy aliases
+(`Asia/Calcutta`, `US/Eastern`, `Europe/Kiev`…) into the separate `tzdata-legacy` package. Locally
+(Windows) zoneinfo reads the `tzdata` Python package, which keeps them, so tests never saw it.
+
+- The runtime stage installs `tzdata-legacy` (599 zones, aliases included), so every name a browser
+  sends is accepted and `ZoneInfo()` resolves it. Names are stored as sent.
+- A build step asserts `Asia/Kolkata`, `Asia/Calcutta`, `US/Eastern` and `Europe/Kiev` are known, so
+  an image without the aliases can't be built again.
