@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { DESCRIPTION_MAX, TITLE_MAX } from "@/lib/marketing/seo";
 import { PUBLIC_PATHS, SITE_NAME } from "@/lib/marketing/site";
 
-import { metadata as appLayout } from "./(app)/layout";
-import { metadata as authLayout } from "./(auth)/layout";
+import { metadata as appLayout } from "./(clerk)/(app)/layout";
+import { metadata as authLayout } from "./(clerk)/(auth)/layout";
 import { metadata as unsubscribe } from "./(marketing)/unsubscribe/page";
 import { metadata as notFound } from "./not-found";
 

@@ -3,6 +3,7 @@ import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+import { appOrigin } from "./src/lib/marketing/site";
 import { securityHeaders } from "./src/lib/security/headers";
 
 // C-145: the Docker image (apps/web/Dockerfile) builds with NEXT_OUTPUT=standalone: a self-contained
@@ -12,14 +13,22 @@ import { securityHeaders } from "./src/lib/security/headers";
 const standalone = process.env.NEXT_OUTPUT === "standalone";
 const monorepoRoot = path.join(__dirname, "..", "..");
 
+// C-148: with the app on its own host (NEXT_PUBLIC_APP_URL), the public pages ship no Clerk. The
+// root layout's RootAuth becomes the Clerk-free version; a layout ships every client component it
+// imports, rendered or not, so the choice is a module swap at build time.
+const splitHosts = appOrigin() !== null;
+const turbopack: NextConfig["turbopack"] = {
+  ...(standalone && { root: monorepoRoot }),
+  ...(splitHosts && {
+    resolveAlias: { "@/components/auth/RootAuth": "./src/components/auth/RootAuth.split.tsx" },
+  }),
+};
+
 // TR-FE-07: one strict config. Never add ignoreBuildErrors or ignoreDuringBuilds.
 const nextConfig: NextConfig = {
   typedRoutes: true,
-  ...(standalone && {
-    output: "standalone",
-    outputFileTracingRoot: monorepoRoot,
-    turbopack: { root: monorepoRoot },
-  }),
+  ...(standalone && { output: "standalone", outputFileTracingRoot: monorepoRoot }),
+  turbopack,
   // C-143: no X-Powered-By, and no browser source maps served from the site. Sentry builds its own
   // for the upload (below) and deletes them from the output afterwards.
   poweredByHeader: false,

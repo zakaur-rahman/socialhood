@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { RootAuth } from "@/components/auth/RootAuth";
 import { ThemeSync } from "@/components/theme/ThemeSync";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { clerkAppearance } from "@/lib/clerk-appearance";
 import { verificationMetadata } from "@/lib/marketing/seo";
-import { SITE_NAME, appOrigin, siteHref, siteUrl } from "@/lib/marketing/site";
+import { SITE_NAME, siteUrl } from "@/lib/marketing/site";
+import { manifestLink } from "@/lib/pwa/manifest";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
@@ -25,15 +25,12 @@ export const metadata: Metadata = {
   verification: verificationMetadata(),
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
   appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black" },
+  // The install manifest: on every page with one origin, only the dashboard's otherwise (C-148).
+  ...manifestLink().root,
 };
 
 // The browser bar: the dark canvas, the default. ThemeSync moves it for Light (and System on a light OS).
 export const viewport: Viewport = { themeColor: colorValue("canvas") };
-
-// C-146: with the app on its own host, sign-out lands on the public site's home page, which Clerk
-// allows only for origins it is told about.
-const app = appOrigin();
-const allowedRedirectOrigins = app ? [siteUrl(), app] : undefined;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -45,25 +42,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="bg-canvas text-fg font-sans antialiased">
-        {/* Clerk Core 3: the provider sits inside <body>. */}
-        <ClerkProvider
-          appearance={clerkAppearance}
-          // The cards' titles name the product from SITE_NAME, not from the Clerk dashboard's
-          // application name (C-139); the sign-up subtitle: the Free plan needs no card, as the
-          // landing page says.
-          localization={{
-            signIn: { start: { title: `Sign in to ${SITE_NAME}`, subtitle: "Welcome back. Sign in to continue." } },
-            signUp: { start: { title: `Create your ${SITE_NAME} account`, subtitle: "No credit card required." } },
-          }}
-          signInFallbackRedirectUrl="/app"
-          signUpFallbackRedirectUrl="/app"
-          afterSignOutUrl={siteHref("/")}
-          allowedRedirectOrigins={allowedRedirectOrigins}
-        >
+        {/* Clerk on every page with one origin; only in app/(clerk) when the app has its own host (C-148). */}
+        <RootAuth>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
           <Toaster />
           <ThemeSync />
-        </ClerkProvider>
+        </RootAuth>
       </body>
     </html>
   );

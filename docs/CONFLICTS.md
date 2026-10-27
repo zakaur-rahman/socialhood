@@ -6558,6 +6558,68 @@ repository went private, so the images move to **Artifact Registry** before the 
   `PRODUCTION_DEPLOY=manual` meanwhile (deploy-vm.md 4.2/4.3).
 - Done on 2026-10-27 with gcloud as the owner's account; the commands are in deploy-vm.md 4.3.
 
+## C-148 · Public pages without Clerk or Sentry in their first load (feature/public-perf)
+
+C-142 measured 355 to 395 KB of gzipped client JS on the public pages, most of it shared: React
+DOM with Framer Motion, Sentry (loaded with no DSN) and Clerk. The signed-in app lives on
+dashboard.amplychat.com (C-146), so the public site doesn't need either.
+
+### Decisions made here
+- **Sentry is a lazy chunk everywhere.** `lib/sentry/client.ts` is the only browser code that
+  imports `@sentry/nextjs`, and only with `import()`. No DSN: nothing is downloaded. With a DSN:
+  the app (`/app`, `/w/…`) starts loading it at once; a public page loads it when the browser is
+  idle (at most 4 s), and an error or unhandled rejection before then loads it and is reported.
+  `instrumentation-client.ts` forwards router transitions once it has loaded; `global-error.tsx`
+  reports through `captureError` (loads first). The app's own error boundaries and VisualView keep
+  their direct import (same module instance). Server and edge Sentry are unchanged.
+- **Clerk only where it is used, when the app has its own host.** `app/(app)` and `app/(auth)`
+  move under one route group, `app/(clerk)` (URLs unchanged), whose layout adds Clerk's provider
+  (`components/auth/AuthProvider.tsx`) once for both, so sign-in → app keeps it mounted. The root
+  layout renders `RootAuth`: with one origin (NEXT_PUBLIC_APP_URL unset: local dev, e2e, CI) it is
+  Clerk's provider on every page, exactly as before; with the app on its own host `next.config.ts`
+  aliases it (Turbopack `resolveAlias`) to `RootAuth.split.tsx`, which loads no Clerk. A module
+  swap, not an `if`: a layout ships every client component it imports whether it renders or not
+  (measured: the `if` version still shipped all three Clerk chunks).
+- **"Open app" from a cookie hint.** The header and the 404 read `useSignedIn()`. With one origin
+  it comes from Clerk's `useAuth`; with the app on its own host from Clerk's `__client_uat` cookie
+  (plain or suffixed, > 0 = signed in), which Clerk keeps on the registrable domain, read after
+  hydration. A stale hint only leads to the dashboard, which asks for sign-in. Owner check after
+  deploy: signed in on the dashboard, the apex header shows "Open app".
+- **CSP `upgrade-insecure-requests`** (`servedOverHttps`): sent by a production build when every
+  origin it was given (API, site, app) is https and there is at least one, or on Vercel. The
+  website-only VM build (no API, https site and app URLs) now sends it; a local production build
+  (http origins or none) still doesn't.
+- **PWA install from the dashboard only.** Browsers ignore a manifest `start_url` that isn't
+  same-origin with the page linking the manifest, so an absolute dashboard `start_url` on the apex
+  wouldn't work, and the relative `/app` opened the apex, which redirects out of the app's scope.
+  The manifest moves from `app/manifest.ts` (Next links that from every page) to a static route,
+  `app/manifest.webmanifest/route.ts` (built by `lib/pwa/manifest.ts`). With one origin the root
+  layout links it (every page, as before); with the app on its own host only `app/(clerk)` pages
+  do, so the public site offers no install and the dashboard installs with `start_url` `/app`.
+- **Not changed:** Framer Motion (the landing's effects and the navbar use it throughout; ~22 KB),
+  the root Toaster and TooltipProvider (~20 KB together). Possible next steps if needed.
+
+### Numbers (first-load JS, gzipped, every `<script src>` of the prerendered page)
+
+| Build | 404 | home | pricing | /compare/manychat | /privacy | /app |
+|---|---|---|---|---|---|---|
+| Before, app on own host, no API | 353 | 395 | 379 | 364 | 359 | 415¹ |
+| After, app on own host, no API | 248 | 290 | 273 | 259 | 253 | 358 |
+| After, app on own host, with API | 248 | 290 | 273 | 259 | 253 | 374 |
+| After, one origin (local, e2e) | 297 | 339 | 323 | 308 | 302 | 358 |
+
+¹ with the API set. Public pages: about −105 KB each (Sentry −56, Clerk −49 plus Clerk's
+clerk-js script from its CDN, which is no longer loaded on them at all).
+
+### Checks
+`next typegen`, `tsc --noEmit`, `pnpm lint`; vitest for app, marketing, not-found, auth, sentry,
+security, pwa, styles, hosts and proxy (480 passed). Builds checked: the split build has no
+manifest link on home, pricing or the 404 and one on /app; the one-origin build has it on every
+page and Clerk on public pages as before; the split build's headers carry
+`upgrade-insecure-requests`. The e2e run (`landing|GR-37|not-found`) didn't start: the main
+checkout's `apps/web/.env.local` holds Clerk live keys and the stack only runs on a development
+instance; CI runs it.
+
 ## C-149 · Production without Dodo (billing off) and without Sentry (feature/optional-billing)
 
 The owner wants the production API live before the Dodo Payments live keys exist, and there is no

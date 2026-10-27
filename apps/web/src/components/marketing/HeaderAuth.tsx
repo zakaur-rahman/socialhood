@@ -1,21 +1,20 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
-
+import { useSignedIn } from "@/components/auth/signed-in";
 import { APP_PATH, SIGN_IN_PATH, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { CtaLink } from "./primitives";
 
 /**
- * The header's account actions. The page is static, so it renders the signed-out actions; once
- * Clerk has loaded in the browser, a signed-in visitor sees "Open app" instead.
+ * The header's account actions. The page is static, so it renders the signed-out actions; once the
+ * browser knows the visitor is signed in (Clerk, or the session cookie hint when the app has its
+ * own host: C-148), they see "Open app" instead.
  *
  * `bar`: the header row (Sign in hides on phones, where the menu has it). `menu`: the phone menu.
  */
 export function HeaderAuth({ variant = "bar", onNavigate }: { variant?: "bar" | "menu"; onNavigate?: () => void }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  const signedIn = isLoaded && isSignedIn === true;
+  const signedIn = useSignedIn();
 
   if (signedIn) {
     return (

@@ -6,7 +6,7 @@ import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { browser, webUrl } from "@/lib/billing/browser";
 import { message } from "@/test/api";
 
-import { clerkFrontendApi, contentSecurityPolicy, originOf, securityHeaders } from "./headers";
+import { clerkFrontendApi, contentSecurityPolicy, originOf, securityHeaders, servedOverHttps } from "./headers";
 
 // T9.2 security pass (SEC-08, SEC-11): headers, navigation to API-supplied URLs, and user or
 // model text that looks like HTML.
@@ -116,6 +116,26 @@ describe("the web CSP (SEC-11)", () => {
     expect(contentSecurityPolicy({ NODE_ENV: "production" })).not.toContain("upgrade-insecure-requests");
     // Without an API the policy still allows only the site and its vendors.
     expect(directive(contentSecurityPolicy(websiteOnly), "connect-src")).not.toContain("http://localhost:8000");
+  });
+
+  it("upgrades requests on the website-only VM build: no API, https site and app (C-148)", () => {
+    const vm = {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_SITE_URL: "https://amplychat.com",
+      NEXT_PUBLIC_APP_URL: "https://dashboard.amplychat.com",
+    };
+    expect(contentSecurityPolicy(vm)).toContain("upgrade-insecure-requests");
+    expect(contentSecurityPolicy({ NODE_ENV: "production", NEXT_PUBLIC_SITE_URL: "https://amplychat.com" })).toContain(
+      "upgrade-insecure-requests",
+    );
+    // Any http origin (a local two-host build) or none at all: no upgrade.
+    const local = { NODE_ENV: "production", NEXT_PUBLIC_SITE_URL: "http://localhost:3200", NEXT_PUBLIC_APP_URL: "http://dashboard.localhost:3200" };
+    expect(contentSecurityPolicy(local)).not.toContain("upgrade-insecure-requests");
+    expect(contentSecurityPolicy({ ...vm, NEXT_PUBLIC_API_BASE_URL: "http://localhost:8100" })).not.toContain(
+      "upgrade-insecure-requests",
+    );
+    expect(contentSecurityPolicy({ ...vm, NODE_ENV: "development" })).not.toContain("upgrade-insecure-requests");
+    expect(servedOverHttps({ NEXT_PUBLIC_SITE_URL: "not a url" })).toBe(false);
   });
 
   it("follows a Clerk development key to its accounts.dev host", () => {

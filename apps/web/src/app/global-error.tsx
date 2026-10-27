@@ -1,8 +1,8 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
+import { captureError } from "@/lib/sentry/client";
 import { colorValue, radiusValue } from "@/styles/tokens";
 
 /**
@@ -12,7 +12,8 @@ import { colorValue, radiusValue } from "@/styles/tokens";
  */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    // C-148: Sentry may not have loaded yet on a public page; this loads it first.
+    captureError(error);
   }, [error]);
 
   return (
