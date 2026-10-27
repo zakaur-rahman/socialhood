@@ -87,7 +87,7 @@ export const colourExceptions: ColourException[] = [
 
   // Consumers that can't read CSS variables.
   { kind: "runtime", where: "app/layout.tsx", reason: "The viewport themeColor is a meta tag: it takes a value, not a variable." },
-  { kind: "runtime", where: "app/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-129)." },
+  { kind: "runtime", where: "lib/pwa/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-129)." },
   { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values, dark: the page can't know the theme (C-129)." },
   { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The marketing site it advertises is always dark (C-129)." },
   { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes the canvas value of the theme on screen, not a variable (C-129)." },
@@ -163,5 +163,5 @@ export const colourExceptions: ColourException[] = [
     match: "#4b5262",
     reason: "A placeholder image drawn for screenshots (an SVG with two greys). A test fixture, not shipped.",
   },
-  { kind: "asset", where: "src/app/manifest.test.ts", match: "#131520", reason: "The test states the canvas value on purpose, so a canvas change has to be a decision." },
+  { kind: "asset", where: "src/lib/pwa/manifest.test.ts", match: "#131520", reason: "The test states the canvas value on purpose, so a canvas change has to be a decision." },
 ];

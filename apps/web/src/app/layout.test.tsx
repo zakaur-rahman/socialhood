@@ -10,7 +10,10 @@ vi.mock("next/font/google", () => ({
   Geist: () => ({ variable: "geist-sans" }),
   Geist_Mono: () => ({ variable: "geist-mono" }),
 }));
-vi.mock("@clerk/nextjs", () => ({ ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("@clerk/nextjs", () => ({
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({ isLoaded: false, isSignedIn: undefined }),
+}));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
 vi.mock("@/components/ui/tooltip", () => ({ TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/theme/ThemeSync", () => ({ ThemeSync: () => null }));
@@ -44,7 +47,7 @@ describe("which routes follow the member's theme (C-129)", () => {
       .filter((entry) => entry.isDirectory() && !entry.name.startsWith("[") && !entry.name.startsWith("("))
       .map((entry) => `/${entry.name}`);
 
-  it.each(["(app)", "(auth)", "(dev)"])("every top-level route in %s follows the cookie", (group) => {
+  it.each(["(clerk)/(app)", "(clerk)/(auth)", "(dev)"])("every top-level route in %s follows the cookie", (group) => {
     for (const path of segments(group)) expect(THEMED_ROUTE.test(path), path).toBe(true);
   });
 
