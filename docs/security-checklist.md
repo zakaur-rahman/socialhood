@@ -118,7 +118,7 @@ sections below stay as the T9.2 record; where they differ, this section is curre
   - `tests/integration/test_account_upkeep.py::test_key_rotation_re_encrypts_every_token`.
 
 ### SEC-04: webhooks fail closed
-- **Startup.** `settings.py` `REQUIRED_IN_PRODUCTION` lists every webhook secret: Clerk, Instagram app secret and verify token, Meta app secret, WhatsApp verify token and Dodo. Outside production, a route without its secret answers 503.
+- **Startup.** `settings.py` `REQUIRED_IN_PRODUCTION` lists every required webhook secret: Clerk, Instagram app secret and verify token, Meta app secret and WhatsApp verify token. Dodo is optional (C-149), like Shopify: without its settings billing is off and `/webhooks/dodo` answers 503 `billing_unavailable` without reading the body; production refuses a partial Dodo set (all of `DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY` or none). Outside production, a route without its secret answers 503.
 - **Signature checks.** All run on the raw bytes, in constant time:
   - `security/signatures.py`
   - `webhooks/instagram.py:33-62`, `whatsapp.py`, `dodo.py:53`, `clerk.py:41-47` and `meta_privacy.py`

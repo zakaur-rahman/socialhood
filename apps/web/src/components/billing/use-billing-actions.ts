@@ -8,9 +8,11 @@ import { useCheckout, usePortal } from "@/lib/api/queries";
 import { browser } from "@/lib/billing/browser";
 import { billingCopy, errorMessage } from "@/lib/copy";
 
-/** C-049: 409 when a paid plan exists, 422 for Max until R2, 503 when Dodo isn't there. */
+/** C-049: 409 when a paid plan exists, 422 for Max until R2, 503 when Dodo isn't there;
+ * C-149: 503 billing_unavailable while paid plans aren't on sale. */
 export function checkoutErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === "billing_unavailable") return billingCopy.billingUnavailable;
     if (error.status === 409) return billingCopy.checkoutConflict;
     if (error.status === 422) return billingCopy.maxUnavailable;
     if (error.status === 503) return billingCopy.paymentsUnavailable;
@@ -21,6 +23,7 @@ export function checkoutErrorMessage(error: unknown): string {
 
 export function portalErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === "billing_unavailable") return billingCopy.billingUnavailable;
     if (error.status === 409) return billingCopy.noBillingAccount;
     if (error.status === 503) return billingCopy.paymentsUnavailable;
     if (error.status === 403) return billingCopy.ownerOnly;

@@ -178,7 +178,7 @@ API and worker read the same variables.
 | `AI_RETRIEVAL_MIN_SIM` · `AUTO_MIN_CONFIDENCE` | default | no | `0.60` · `0.75`, tuned by eval |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` | secrets | no* | Cloudinary console |
 | `CLOUDINARY_API_SECRET` | secrets | yes | Cloudinary console |
-| `DODO_API_KEY` · `DODO_WEBHOOK_SECRET` | secrets | yes | Dodo dashboard (live keys in production) |
+| `DODO_API_KEY` · `DODO_WEBHOOK_SECRET` | secrets | no | Dodo dashboard (live keys in production); with `DODO_PRODUCT_PRO_MONTHLY`, all three or none (C-149: none = billing off, everyone on Free) |
 | `DODO_ENVIRONMENT` | config | no | `live` / `test` |
 | `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (Max in R2) |
 | `DODO_PROVIDER` · `EMAIL_PROVIDER` · `PUSH_PROVIDER` | default | no | real providers; `fake` refused in production |

@@ -396,6 +396,7 @@ export function billingState(overrides: Partial<BillingState> = {}): BillingStat
     cancel_at_period_end: false,
     grace_until: null,
     trial_eligible: false,
+    billing_available: true,
     prices: [],
     entitlements: [{ key: "ai_modes", value: ["off", "suggest", "auto"] }],
     usage: [{ metric: "ai_credits", used: 120, limit: 5000, period_end: "2026-10-01" }],
@@ -403,8 +404,9 @@ export function billingState(overrides: Partial<BillingState> = {}): BillingStat
   };
 }
 
-/** GET /v1/billing/plans (C-049): Free, Pro with its Dodo price and trial, Max not yet available. */
-export function planList(overrides: { proPrice?: PlanOffer["price"] } = {}): PlanList {
+/** GET /v1/billing/plans (C-049): Free, Pro with its Dodo price and trial, Max not yet available.
+ * `billingOff` (C-149): the server has no billing, so Pro is unavailable without a price too. */
+export function planList(overrides: { proPrice?: PlanOffer["price"]; billingOff?: boolean } = {}): PlanList {
   const ent = (plan: "free" | "pro" | "max") => [
     { key: "accounts_per_platform", value: { free: 1, pro: 3, max: 10 }[plan] },
     { key: "active_automations", value: { free: 3, pro: 50, max: null }[plan] },
@@ -418,9 +420,13 @@ export function planList(overrides: { proPrice?: PlanOffer["price"] } = {}): Pla
       { plan: "free", available: true, entitlements: ent("free"), price: null, trial_days: 0 },
       {
         plan: "pro",
-        available: true,
+        available: !overrides.billingOff,
         entitlements: ent("pro"),
-        price: "proPrice" in overrides ? overrides.proPrice : { plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" },
+        price: overrides.billingOff
+          ? null
+          : "proPrice" in overrides
+            ? overrides.proPrice
+            : { plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" },
         trial_days: 7,
       },
       { plan: "max", available: false, entitlements: ent("max"), price: null, trial_days: 0 },

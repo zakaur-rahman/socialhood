@@ -26,6 +26,7 @@ const free = billingState({
   status: "free",
   current_period_end: null,
   trial_eligible: true,
+  billing_available: true,
   prices: [inr],
   entitlements: [{ key: "active_automations", value: 3 }],
   usage: [
@@ -110,6 +111,37 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
     expect(posts("/billing/checkout")[0].body).toEqual({ plan: "pro" });
+  });
+
+  it("C-149: without billing on the server, Free says paid plans aren't on sale and offers no checkout", async () => {
+    setup({
+      billing: { ...free, billing_available: false, prices: [] },
+      handlers: { "GET /v1/billing/plans": () => json(planList({ billingOff: true })) },
+    });
+
+    const current = await screen.findByRole("region", { name: "Free" });
+    expect(current).toHaveTextContent("Paid plans aren't available yet. Everything on Free keeps working.");
+    expect(within(current).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Pro and Max are coming soon\./)).toBeInTheDocument();
+
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
+    expect(cards[1]).toHaveTextContent("Coming soon");
+    expect(cards[1]).toHaveTextContent("Not on sale yet");
+    expect(cards[1]).toHaveTextContent("50 active automations");
+    expect(within(cards[1]).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("C-149: a billing_unavailable answer to checkout says paid plans aren't available", async () => {
+    const user = userEvent.setup();
+    setup({
+      handlers: {
+        "POST /v1/w/:wid/billing/checkout": () => problem(503, "billing_unavailable", "Paid plans aren't available yet."),
+      },
+    });
+    const current = await screen.findByRole("region", { name: "Free" });
+    await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
+    expect(await within(current).findByRole("alert")).toHaveTextContent("Paid plans aren't available yet.");
   });
 
   it("checkout errors get their own copy", async () => {

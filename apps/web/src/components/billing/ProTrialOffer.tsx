@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useBilling } from "@/lib/api/queries";
-import { canCheckout } from "@/lib/billing/plan";
+import { canStartCheckout } from "@/lib/billing/plan";
 import { PRO_PLAN_PARAM } from "@/lib/resolve";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -30,7 +30,8 @@ export function ProTrialOffer() {
     if (!wanted || handled.current) return;
     if (isOwner && billing.isPending) return;
     handled.current = true;
-    if (isOwner && billing.data && canCheckout(billing.data)) upgrade.open(PLAN_UPGRADE);
+    // C-149: nothing to offer while paid plans aren't on sale.
+    if (isOwner && billing.data && canStartCheckout(billing.data)) upgrade.open(PLAN_UPGRADE);
     // Next syncs a native history call with useSearchParams, so the parameter goes without a navigation.
     window.history.replaceState(window.history.state, "", window.location.pathname);
   }, [wanted, isOwner, billing.isPending, billing.data, upgrade]);

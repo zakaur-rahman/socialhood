@@ -13,6 +13,11 @@ status change only when Dodo's signed webhook arrives (billing/lifecycle.py).
 
 Prices come from Dodo's products (TR-BIL-06), cached in Valkey for an hour; a price Dodo can't
 give now is left out (GET …/billing) or null (the public plan list), never guessed.
+
+C-149: billing is optional. Without the Dodo settings (``Settings.billing_enabled`` false) nothing
+here calls Dodo: the paid plans are listed as unavailable without prices, ``billing_available`` is
+false, and checkout, the portal, cancel and resume answer 503 ``billing_unavailable``. Every
+workspace stays on Free, and no trial can start (a trial only ever starts through a checkout).
 """
 
 from __future__ import annotations
@@ -69,6 +74,13 @@ PRICE_FAILURE_TTL_S = 60
 DODO_UNAVAILABLE = "The payment provider didn't answer. Try again in a moment."
 NOT_CONFIGURED = "Payments aren't set up yet."
 FREE_PLAN = "You're on the Free plan."
+BILLING_OFF = "Paid plans aren't available yet."
+
+
+def require_billing(settings: Settings) -> None:
+    """C-149: 503 billing_unavailable while billing isn't set up on this server."""
+    if not settings.billing_enabled:
+        raise ApiError("billing_unavailable", BILLING_OFF)
 
 
 def _value(value: Any) -> int | bool | list[str] | None:
@@ -116,8 +128,11 @@ async def _price(redis: Redis | None, dodo: DodoClient, product_id: str) -> Prod
 async def plan_prices(
     redis: Redis | None, dodo: DodoClient, settings: Settings
 ) -> dict[str, BillingPrice]:
-    """Each paid plan's monthly price from its Dodo product, when Dodo gives one."""
+    """Each paid plan's monthly price from its Dodo product, when Dodo gives one (none, and no
+    call to Dodo, while billing is off)."""
     prices: dict[str, BillingPrice] = {}
+    if not settings.billing_enabled:
+        return prices
     for plan in PAID_PLANS:
         product = product_for(plan, settings)
         price = await _price(redis, dodo, product) if product else None
@@ -132,8 +147,10 @@ async def plan_prices(
 
 
 async def plan_list(redis: Redis | None, dodo: DodoClient, settings: Settings) -> PlanList:
-    """The public plan list: §1.7 entitlements, Dodo prices, the trial, and availability."""
+    """The public plan list: §1.7 entitlements, Dodo prices, the trial, and availability (a paid
+    plan is unavailable while billing is off, C-149)."""
     prices = await plan_prices(redis, dodo, settings)
+    on_sale = settings.billing_enabled
     return PlanList(
         items=[
             PlanOffer(
@@ -141,7 +158,7 @@ async def plan_list(redis: Redis | None, dodo: DodoClient, settings: Settings) -
                 price=prices.get(plan),
                 trial_days=TRIAL_DAYS[plan],
                 entitlements=entitlements_of(plan),
-                available=AVAILABLE[plan],
+                available=AVAILABLE[plan] and (plan == "free" or on_sale),
             )
             for plan in PLANS
         ]
@@ -157,6 +174,7 @@ async def billing_state(
     *,
     now: datetime,
     prices: dict[str, BillingPrice] | None = None,
+    billing_available: bool,
 ) -> BillingState:
     """The current workspace's billing state (its session's workspace scope)."""
     sub = await subscriptions.current(session)
@@ -210,6 +228,7 @@ async def billing_state(
         grace_until=sub.grace_until if sub is not None else None,
         trial_eligible=not await workspaces.trial_used_by_owner(session, workspace),
         prices=list((prices or {}).values()),
+        billing_available=billing_available,
         entitlements=entitlements_of(plan),
         usage=meters,
     )
@@ -255,6 +274,7 @@ async def start_checkout(
 ) -> CheckoutSession:
     """TR-BIL-01: Dodo's hosted checkout for ``body.plan``. The return URL changes nothing by
     itself (FR-BIL-02): the plan changes with Dodo's signed webhook."""
+    require_billing(settings)
     if not AVAILABLE[body.plan]:
         raise ApiError(
             "validation_error",
@@ -293,6 +313,7 @@ async def open_portal(
     session: AsyncSession, ctx: WorkspaceContext, *, dodo: DodoClient, settings: Settings
 ) -> PortalSession:
     """FR-BIL-04: Dodo's customer portal (payment method, invoices)."""
+    require_billing(settings)
     sub = await subscriptions.current(session)
     if sub is None or not sub.dodo_customer_id:
         raise ApiError("conflict", "There's no billing account yet. Upgrade to create one.")
@@ -308,10 +329,11 @@ async def open_portal(
 
 
 async def set_cancel(
-    session: AsyncSession, redis: Redis, *, cancel: bool, dodo: DodoClient
+    session: AsyncSession, redis: Redis, *, cancel: bool, dodo: DodoClient, settings: Settings
 ) -> None:
     """FR-BIL-04, TR-BIL-06: cancel at the end of the period, or resume before it. 409 on the
     Free plan, or (resume) when nothing is cancelled. The plan itself stays until Dodo ends it."""
+    require_billing(settings)
     sub = await subscriptions.current(session)
     if (
         sub is None

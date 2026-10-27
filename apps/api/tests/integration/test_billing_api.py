@@ -19,7 +19,14 @@ from socialhood.billing.dodo import DodoError
 from socialhood.billing.dodo_fake import FAKE_CHECKOUT_BASE, FAKE_PORTAL_BASE, FakeDodo
 from socialhood.billing.plans import ENTITLEMENTS, entitlement
 from tests.support.api import WEB, Clerk, sign_in
-from tests.support.billing import PRO_PRICE_MINOR, PRO_PRODUCT, make_payment, set_subscription
+from tests.support.billing import (
+    PRO_PRICE_MINOR,
+    PRO_PRODUCT,
+    dodo_event,
+    make_payment,
+    post_dodo_event,
+    set_subscription,
+)
 from tests.support.ingest import stream
 
 
@@ -138,9 +145,11 @@ async def test_checkout_is_503_when_dodo_fails_or_isnt_set_up(
     down = await owner.post("/billing/checkout", {"plan": "pro"})
     assert (down.status_code, down.json()["code"]) == (503, "service_unavailable")
 
+    # C-149: without the Pro product, billing as a whole is off.
     app.state.settings = app.state.settings.model_copy(update={"dodo_product_pro_monthly": None})
     missing = await owner.post("/billing/checkout", {"plan": "pro"})
-    assert (missing.status_code, missing.json()["detail"]) == (503, "Payments aren't set up yet.")
+    assert (missing.status_code, missing.json()["code"]) == (503, "billing_unavailable")
+    assert missing.json()["detail"] == "Paid plans aren't available yet."
 
 
 async def test_only_the_owner_can_use_billing_actions(
@@ -380,3 +389,93 @@ async def test_payment_history_never_shows_another_workspaces_payments(
         f"/v1/w/{other_wid}/billing/payments", headers=clerk.headers(owner.clerk_id)
     )
     assert crossed.status_code == 404
+
+
+# ---------------------------------------------------------------- billing off (C-149)
+
+BILLING_OFF = {"dodo_api_key": None, "dodo_webhook_secret": None, "dodo_product_pro_monthly": None}
+
+
+def billing_off(app: FastAPI) -> None:
+    """The server has no Dodo settings: paid plans aren't on sale."""
+    app.state.settings = app.state.settings.model_copy(update=BILLING_OFF)
+    assert not app.state.settings.billing_enabled
+
+
+async def test_every_billing_action_is_billing_unavailable_without_dodo(
+    app: FastAPI, owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    # A paid row (left from an earlier setup) still never reaches Dodo.
+    await paid(owner, fake_dodo)
+    billing_off(app)
+    asked = len(fake_dodo.calls)
+
+    for path, body in (
+        ("/billing/checkout", {"plan": "pro"}),
+        ("/billing/checkout", {"plan": "max"}),
+        ("/billing/portal", None),
+        ("/billing/cancel", None),
+        ("/billing/resume", None),
+    ):
+        response = await owner.post(path, body)
+        assert response.status_code == 503, (path, response.text)
+        problem = response.json()
+        assert problem["code"] == "billing_unavailable"
+        assert problem["detail"] == "Paid plans aren't available yet."
+    assert len(fake_dodo.calls) == asked
+    assert fake_dodo.checkouts == []
+
+
+async def test_the_dodo_webhook_is_billing_unavailable_without_dodo(
+    app: FastAPI, client: httpx.AsyncClient, engine: AsyncEngine
+) -> None:
+    billing_off(app)
+    response = await post_dodo_event(client, dodo_event("subscription.active", {}))
+    assert (response.status_code, response.json()["code"]) == (503, "billing_unavailable")
+    async with engine.connect() as conn:
+        stored = await conn.scalar(text("SELECT count(*) FROM webhook_events"))
+    assert stored == 0
+
+
+async def test_the_plan_list_marks_paid_plans_unavailable_without_dodo(
+    app: FastAPI, client: httpx.AsyncClient, fake_dodo: FakeDodo
+) -> None:
+    billing_off(app)
+    response = await client.get("/v1/billing/plans")
+
+    assert response.status_code == 200, response.text
+    items = {item["plan"]: item for item in response.json()["items"]}
+    assert {plan: item["available"] for plan, item in items.items()} == {
+        "free": True,
+        "pro": False,
+        "max": False,
+    }
+    assert [item["price"] for item in items.values()] == [None, None, None]
+    # The entitlements still show what each plan will include.
+    assert {e["key"] for e in items["pro"]["entitlements"]} == set(ENTITLEMENTS)
+    assert fake_dodo.calls == []
+
+
+async def test_get_billing_says_billing_is_off_and_stays_on_free(
+    app: FastAPI, owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    assert (await owner.billing())["billing_available"] is True
+    billing_off(app)
+
+    billing = await owner.billing()
+    assert billing["billing_available"] is False
+    assert (billing["plan"], billing["status"]) == ("free", "free")
+    assert billing["prices"] == []
+    limits = {m["metric"]: m["limit"] for m in billing["usage"]}
+    assert limits["ai_credits"] == entitlement("free", "ai_credits_monthly")
+
+
+async def test_readyz_says_whether_billing_and_sentry_are_on(
+    app: FastAPI, client: httpx.AsyncClient
+) -> None:
+    ready = (await client.get("/readyz")).json()
+    assert ready["features"] == {"billing": "on", "sentry": "off"}
+    billing_off(app)
+    ready = (await client.get("/readyz")).json()
+    assert ready["status"] == "ready"
+    assert ready["features"]["billing"] == "off"
