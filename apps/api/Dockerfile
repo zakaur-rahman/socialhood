@@ -35,8 +35,15 @@ ENV PATH=/app/.venv/bin:$PATH \
     APP_ENV=production
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home app
+# Trixie's tzdata leaves out the legacy zone names (Asia/Calcutta, US/Eastern…) that browsers still
+# report from Intl; without them a workspace's timezone is refused (C-151). tzdata-legacy adds them.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tzdata-legacy \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
+# Fail the build if the zone names the browsers send aren't known (C-151).
+RUN python -c "from zoneinfo import available_timezones as a; z = a(); assert {'Asia/Kolkata', 'Asia/Calcutta', 'US/Eastern', 'Europe/Kiev'} <= z, 'legacy timezones missing'"
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY scripts/worker.sh ./scripts/worker.sh
