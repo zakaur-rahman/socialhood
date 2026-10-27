@@ -6600,3 +6600,20 @@ API refused to start. Both are now optional, the way Google Sheets and Shopify a
   the fake and outside production), the Sentry warning, every billing route and the webhook with
   billing off, the plan list and GET …/billing, `/readyz`; web: the billing page, the upgrade
   dialog, the `?plan=pro` offer, the plan helpers and the marketing pricing card.
+
+## C-150 · Website chat isn't a connected channel until it's live; theme kept on refresh (fix/web-chat-channel-count)
+
+Two production bugs the owner found on the first full deploy.
+
+- **"1 channel connected" with nothing connected.** Opening Settings → Website chat makes the
+  workspace's `web` account (GR-28) as `active`, before the widget is switched on or has a website.
+  The home page's count and platform line, and the checklist's "Connect an account" and "Choose an
+  AI mode" steps, counted it. Now `repositories/social_accounts.counts_as_channel()` decides once:
+  a `web` account counts only while its widget is **enabled** and has **at least one allowed
+  website** (until then it can't receive a chat); every other platform counts as before. Used by
+  `overview_stats.accounts_connected`, `any_live` and `any_live_with_ai`. Test:
+  `test_a_website_chat_counts_only_when_on_with_a_website`.
+- **Theme reset on every refresh.** `THEME_INIT_SCRIPT` is a template literal, so the regex's `\s`
+  became a bare `s`: `/(?:^|;s*)sh_theme=…/` matched the theme cookie only when it was the first
+  cookie. On localhost it usually was; in production Clerk's cookies come first, so the saved choice
+  was never applied before paint. Escaped as `\s`; a test runs the script with other cookies first.
