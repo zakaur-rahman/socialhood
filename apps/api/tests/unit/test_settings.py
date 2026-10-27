@@ -75,6 +75,43 @@ def test_production_refuses_debug_logging() -> None:
         make(**values)
 
 
+BILLING = ("dodo_api_key", "dodo_webhook_secret", "dodo_product_pro_monthly")
+
+
+def test_production_runs_without_billing_and_sentry() -> None:
+    # C-149: Dodo and Sentry are optional, like Google Sheets and Shopify.
+    values = complete_production()
+    for name in ("sentry_dsn", *BILLING):
+        values.pop(name, None)
+        assert name not in REQUIRED_IN_PRODUCTION
+    settings = make(**values)
+    assert settings.sentry_dsn is None
+    assert not settings.billing_enabled
+
+
+def test_production_with_every_dodo_setting_has_billing() -> None:
+    values = complete_production()
+    values.update({name: "x" for name in BILLING})
+    assert make(**values).billing_enabled
+
+
+@pytest.mark.parametrize("missing", BILLING)
+def test_production_refuses_half_configured_billing(missing: str) -> None:
+    values = complete_production()
+    values.update({name: "x" for name in BILLING})
+    values[missing] = ""
+    with pytest.raises(ConfigurationError, match="billing is half configured") as info:
+        make(**values)
+    assert missing.upper() in str(info.value)
+
+
+def test_billing_outside_production() -> None:
+    assert not make(**BASE).billing_enabled
+    assert make(**BASE, dodo_provider="fake").billing_enabled
+    # A partial set is allowed (and simply off) outside production.
+    assert not make(**BASE, dodo_api_key="x").billing_enabled
+
+
 def test_complete_production_settings_load() -> None:
     settings = make(**complete_production())
     assert settings.is_production

@@ -122,6 +122,8 @@ async def cancel_orphan_subscription(subscription_id: str) -> None:
 @app.task(name="reconcile_billing", queue=BULK, queueing_lock="reconcile_billing")
 async def reconcile_billing(timestamp: int) -> None:
     rt = runtime()
+    if not rt.settings.billing_enabled:
+        return  # C-149: no Dodo to reconcile with; every workspace is on Free
     dodo = get_dodo(rt.http, rt.settings)
     await asyncio.wait_for(
         reconcile_all(rt.sessionmaker, dodo, redis=rt.redis, settings=rt.settings),

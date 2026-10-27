@@ -28,6 +28,7 @@ const freeBilling = billingState({
   plan: "free",
   status: "free",
   trial_eligible: true,
+  billing_available: true,
   entitlements: [{ key: "ai_modes", value: ["off", "suggest"] }],
 });
 

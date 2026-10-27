@@ -263,7 +263,7 @@ async def test_without_a_secret_the_dodo_webhook_fails_closed(
             raw = json.dumps(dodo_event("subscription.active", {})).encode()
             response = await client.post("/webhooks/dodo", content=raw, headers=signed_headers(raw))
         assert response.status_code == 503
-        assert response.json()["code"] == "service_unavailable"
+        assert response.json()["code"] == "billing_unavailable"
         assert await _stored(engine) == []
     finally:
         await app.state.http.aclose()

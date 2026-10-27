@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_THEME,
@@ -92,6 +92,16 @@ describe("the head script (runs before first paint)", () => {
     document.cookie = `${THEME_COOKIE}=${choice}; path=/`;
     run(THEME_INIT_SCRIPT);
     expect(document.documentElement).toHaveAttribute("data-theme", choice);
+  });
+
+  it("finds the cookie when other cookies come before it (C-150: Clerk's do, in production)", () => {
+    // The browser joins cookies with "; " in the order it holds them.
+    const cookie = vi
+      .spyOn(document, "cookie", "get")
+      .mockReturnValue(`__client_uat=1700000000; __session=abc; ${THEME_COOKIE}=light`);
+    run(THEME_INIT_SCRIPT);
+    expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    cookie.mockRestore();
   });
 
   it("leaves the page as rendered (Dark) with no cookie or a bad one", () => {

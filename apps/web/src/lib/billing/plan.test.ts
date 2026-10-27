@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { formatPrice, inferEntitlement, planIncludes, planOffers, upgradeCopy } from "@/lib/copy";
 import { billingState } from "@/test/api";
 
-import { canCheckout, daysUntil, meterViews, planHighlights, planStatus, priceOf } from "./plan";
+import { billingOpen, canCheckout, canStartCheckout, daysUntil, meterViews, planHighlights, planStatus, priceOf } from "./plan";
 
 const now = new Date("2026-09-30T06:00:00Z");
 const tz = "Asia/Kolkata";
@@ -65,6 +65,14 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
     expect(canCheckout(billingState({ plan: "free", status: "expired" }))).toBe(true);
     expect(canCheckout(billingState({ status: "trialing" }))).toBe(false);
     expect(canCheckout(billingState({ status: "on_hold" }))).toBe(false);
+  });
+
+  it("C-149: no checkout or trial is offered while billing is off on the server", () => {
+    const free = billingState({ plan: "free", status: "free" });
+    const off = { ...free, billing_available: false };
+    expect([billingOpen(free), canStartCheckout(free)]).toEqual([true, true]);
+    expect([billingOpen(off), canCheckout(off), canStartCheckout(off)]).toEqual([false, true, false]);
+    expect(canStartCheckout(undefined)).toBe(true);
   });
 
   it("days left round up", () => {

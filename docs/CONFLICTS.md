@@ -6619,3 +6619,63 @@ page and Clerk on public pages as before; the split build's headers carry
 `upgrade-insecure-requests`. The e2e run (`landing|GR-37|not-found`) didn't start: the main
 checkout's `apps/web/.env.local` holds Clerk live keys and the stack only runs on a development
 instance; CI runs it.
+
+## C-149 · Production without Dodo (billing off) and without Sentry (feature/optional-billing)
+
+The owner wants the production API live before the Dodo Payments live keys exist, and there is no
+Sentry project yet. `REQUIRED_IN_PRODUCTION` listed `SENTRY_DSN` and the three Dodo values, so the
+API refused to start. Both are now optional, the way Google Sheets and Shopify are.
+
+- **Billing on or off:** `Settings.billing_enabled` is true with `DODO_PROVIDER=fake` or with all of
+  `DODO_API_KEY`, `DODO_WEBHOOK_SECRET` and `DODO_PRODUCT_PRO_MONTHLY` set. Production refuses a
+  partial set ("billing is half configured … all or none"), so a half-configured billing can't
+  run; outside production a partial set is simply off. `DODO_PROVIDER=fake` stays refused in
+  production. `DODO_PRODUCT_MAX_MONTHLY` stays optional on its own (Max is R2).
+- **With billing off:** checkout, the portal, cancel and resume answer **503
+  `billing_unavailable`** ("Paid plans aren't available yet."), before any other check, and never
+  call Dodo; so does `POST /webhooks/dodo` (nothing stored). 503 rather than 409, because it is
+  the server, not the workspace's state, that can't do it, and the existing "Dodo isn't set up"
+  answer was already 503 (`service_unavailable`); the new code lets the web tell it apart from an
+  outage. The 6-hourly `reconcile_billing` job returns at once.
+- **What the UI reads:** `GET /v1/billing/plans` keeps all three plans with their entitlements
+  but marks Pro and Max `available: false` with no prices (no Dodo calls); `GET …/billing` has a
+  new required `billing_available` field and no prices. The web's `canStartCheckout` (checkout
+  allowed and billing open) gates every Upgrade and trial offer: the billing page says "Paid plans
+  aren't available yet. Everything on Free keeps working." with no button and Pro "Coming soon /
+  Not on sale yet" in the plan cards; the upgrade dialog every 402 opens names the limit and says
+  the same, with "View billing" for the owner; `?plan=pro` from the pricing page offers nothing.
+  The marketing pricing shows Pro as "Coming soon" with what it includes and no trial or CTA.
+- **Trials:** a trial only ever starts through a Dodo checkout (and its signed webhook), so none
+  can start while billing is off. `trial_eligible` keeps its meaning (the owner hasn't used one);
+  the UI ignores it while `billing_available` is false. Workspaces stay on Free; limits come from
+  the plan table as usual.
+- **Sentry:** an empty `SENTRY_DSN` means Sentry isn't started, as before outside production; in
+  production one `sentry_off` warning is logged per process. The web's Sentry was already optional.
+- **Visibility:** one `billing_off` warning at startup; `/readyz` (behind `METRICS_TOKEN`) has
+  `features: {"billing": "on"|"off", "sentry": "on"|"off"}`, which never makes it unready.
+- **Ops:** `infra/vm/api.env.example` has a new `[optional]` tag (Sentry, Dodo, Google, Shopify).
+  `gen-secrets.sh --check` lists required empty values apart from optional ones, reading the tags
+  from `api.env` and from the template beside it (so an `api.env` made from the older template
+  still learns them). deploy-vm.md section 6 and 10, deploy.md and the security checklist (SEC-04)
+  say what is required.
+- **Tests:** settings (production without Dodo and Sentry loads; each partial Dodo set refused;
+  the fake and outside production), the Sentry warning, every billing route and the webhook with
+  billing off, the plan list and GET …/billing, `/readyz`; web: the billing page, the upgrade
+  dialog, the `?plan=pro` offer, the plan helpers and the marketing pricing card.
+
+## C-150 · Website chat isn't a connected channel until it's live; theme kept on refresh (fix/web-chat-channel-count)
+
+Two production bugs the owner found on the first full deploy.
+
+- **"1 channel connected" with nothing connected.** Opening Settings → Website chat makes the
+  workspace's `web` account (GR-28) as `active`, before the widget is switched on or has a website.
+  The home page's count and platform line, and the checklist's "Connect an account" and "Choose an
+  AI mode" steps, counted it. Now `repositories/social_accounts.counts_as_channel()` decides once:
+  a `web` account counts only while its widget is **enabled** and has **at least one allowed
+  website** (until then it can't receive a chat); every other platform counts as before. Used by
+  `overview_stats.accounts_connected`, `any_live` and `any_live_with_ai`. Test:
+  `test_a_website_chat_counts_only_when_on_with_a_website`.
+- **Theme reset on every refresh.** `THEME_INIT_SCRIPT` is a template literal, so the regex's `\s`
+  became a bare `s`: `/(?:^|;s*)sh_theme=…/` matched the theme cookie only when it was the first
+  cookie. On localhost it usually was; in production Clerk's cookies come first, so the saved choice
+  was never applied before paint. Escaped as `\s`; a test runs the script with other cookies first.

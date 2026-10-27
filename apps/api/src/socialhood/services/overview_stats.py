@@ -99,6 +99,7 @@ from socialhood.models.inbox import (
 from socialhood.models.media import MediaItem
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import knowledge as knowledge_repo
+from socialhood.repositories import social_accounts as social_accounts_repo
 from socialhood.services.analytics.common import DateRange, View, date_range, zone
 from socialhood.services.analytics.sentiment import sentiment_distribution
 from socialhood.services.analytics.stats import engagement_rate
@@ -713,12 +714,17 @@ async def accounts_needing_attention(session: AsyncSession) -> list[AccountAtten
 
 
 async def accounts_connected(session: AsyncSession) -> tuple[int, list[str]]:
-    """Active accounts, and their platforms (Instagram first)."""
+    """Active accounts, and their platforms (Instagram first). A website chat that is off or has no
+    website yet isn't a connected channel (C-150)."""
     ws = require_workspace()
     rows = (
         await session.execute(
             select(SocialAccount.platform, func.count())
-            .where(SocialAccount.workspace_id == ws, SocialAccount.status == AccountStatus.ACTIVE)
+            .where(
+                SocialAccount.workspace_id == ws,
+                SocialAccount.status == AccountStatus.ACTIVE,
+                social_accounts_repo.counts_as_channel(),
+            )
             .group_by(SocialAccount.platform)
             .order_by(SocialAccount.platform)
         )

@@ -18,6 +18,7 @@ const freeBilling = billingState({
   plan: "free",
   status: "free",
   trial_eligible: true,
+  billing_available: true,
   prices: [{ plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" }],
   entitlements: [
     { key: "active_automations", value: 3 },
@@ -60,7 +61,7 @@ function setup({
     upgradeDialog: true,
     handlers: {
       "GET /v1/w/:wid/billing": () => json(billing),
-      "GET /v1/billing/plans": () => json(planList()),
+      "GET /v1/billing/plans": () => json(planList({ billingOff: !billing.billing_available })),
       "POST /v1/w/:wid/automations/:id/activate": gate,
       "POST /v1/w/:wid/billing/checkout": checkout,
     },
@@ -96,6 +97,19 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     expect(within(dialog).getByRole("button", { name: "Upgrade to Pro" })).toBeInTheDocument();
     expect(dialog).toHaveTextContent("Pro is ₹999 a month.");
+  });
+
+  it("C-149: without billing on the server it names the limit and says paid plans aren't on sale", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ billing: { ...freeBilling, billing_available: false, prices: [] } });
+    await user.click(screen.getByRole("button", { name: "Activate" }));
+    const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
+    expect(dialog).toHaveTextContent("Free includes 3 active automations.");
+    expect(dialog).toHaveTextContent("Paid plans aren't available yet. Everything on Free keeps working.");
+    expect(dialog).not.toHaveTextContent("Pro includes 50 active automations.");
+    expect(within(dialog).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(calls.some((c) => c.path.endsWith("/billing/checkout"))).toBe(false);
   });
 
   it("AI credits: the limit and the reset date", async () => {

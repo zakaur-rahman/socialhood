@@ -19,7 +19,7 @@ from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.runtime import make_http_client
 from socialhood.kv import make_redis
 from socialhood.observability import http as observability_http
-from socialhood.observability.logging import configure_logging
+from socialhood.observability.logging import configure_logging, get_logger
 from socialhood.observability.metrics import Flusher
 from socialhood.observability.sentry import init_sentry, instrument_running_loop
 from socialhood.settings import Settings, get_settings
@@ -34,12 +34,17 @@ from socialhood.webhooks import shopify as shopify_webhook
 from socialhood.webhooks import whatsapp as whatsapp_webhook
 from socialhood.widget import routes as widget_files
 
+log = get_logger(__name__)
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
     # Before the routers are added, so Sentry's FastAPI integration wraps them (no DSN: no-op).
     init_sentry(settings, component="api")
+    if not settings.billing_enabled:
+        # C-149: no Dodo settings. Every workspace stays on Free; checkout answers 503.
+        log.warning("billing_off", detail="Dodo isn't configured: paid plans aren't on sale")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

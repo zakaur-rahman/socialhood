@@ -12,6 +12,7 @@ const free = billingState({
   plan: "free",
   status: "free",
   trial_eligible: true,
+  billing_available: true,
   prices: [{ plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" }],
 });
 
@@ -53,6 +54,13 @@ describe("?plan=pro from the pricing page (UI-ISS-073)", () => {
   it("does not offer it on a paid plan, but still drops the parameter", async () => {
     search.value = "plan=pro";
     setup("owner", billingState());
+    await waitFor(() => expect(window.location.search).toBe(""));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("C-149: does not offer it while paid plans aren't on sale", async () => {
+    search.value = "plan=pro";
+    setup("owner", { ...free, billing_available: false, prices: [] });
     await waitFor(() => expect(window.location.search).toBe(""));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

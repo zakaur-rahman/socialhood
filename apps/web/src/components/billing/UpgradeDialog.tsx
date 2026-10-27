@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useUpgradeDialog, type UpgradeRequest } from "@/lib/api/provider";
 import { useBilling, useBillingPlans, usageMeter } from "@/lib/api/queries";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
-import { METRIC_FOR_ENTITLEMENT, TRIAL_DAYS, canCheckout, entitlementOf, priceOf } from "@/lib/billing/plan";
+import { METRIC_FOR_ENTITLEMENT, TRIAL_DAYS, billingOpen, canStartCheckout, entitlementOf, priceOf } from "@/lib/billing/plan";
 import { billingCopy, planOffers, pricePerMonth, upgradeCopy } from "@/lib/copy";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -57,20 +57,27 @@ export function UpgradeDialog() {
   const state = billing.data;
   const isOwner = workspace.role === "owner";
   const isAgent = workspace.role === "agent";
-  const mayPay = isOwner && canCheckout(state);
+  const mayPay = isOwner && canStartCheckout(state);
   const credits = usageMeter(state, METRIC_FOR_ENTITLEMENT.ai_credits_monthly);
   const copy = upgradeCopy(
     { ...shown, limit: limitFor(shown, state) },
     { plan: state?.plan ?? null, resetsOn: credits?.period_end ?? null },
   );
   const pro = plans.data?.items.find((item) => item.plan === "pro");
-  const offer = canCheckout(state) ? proOffer(shown, pro) : null;
+  const offer = canStartCheckout(state) ? proOffer(shown, pro) : null;
   const price = priceOf("pro", state, plans.data?.items);
   const perMonth = price ? pricePerMonth(price) : null;
   const trialDays = pro?.trial_days || TRIAL_DAYS;
   const trial = Boolean(state?.trial_eligible);
   const pitch = mayPay ? (trial ? billingCopy.trialOffer(trialDays, perMonth) : perMonth ? billingCopy.proPrice(perMonth) : null) : null;
-  const roleNote = isOwner ? null : workspace.role === "admin" ? billingCopy.ownerOnly : billingCopy.askOwner;
+  // C-149: while paid plans aren't on sale, say so instead of offering an upgrade.
+  const roleNote = !billingOpen(state)
+    ? billingCopy.paidPlansSoon
+    : isOwner
+      ? null
+      : workspace.role === "admin"
+        ? billingCopy.ownerOnly
+        : billingCopy.askOwner;
 
   const onOpenChange = (next: boolean) => {
     if (next) return;

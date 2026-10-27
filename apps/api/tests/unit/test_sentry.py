@@ -77,6 +77,19 @@ def test_no_dsn_means_no_sentry() -> None:
     assert not sentry_sdk.get_client().is_active()
 
 
+def test_no_dsn_in_production_warns_once() -> None:
+    # C-149: Sentry is optional in production; one warning line says it is off.
+    reset_for_tests()
+    production = make_settings().model_copy(update={"app_env": AppEnv.PRODUCTION})
+    with structlog.testing.capture_logs() as logs:
+        assert init_sentry(production, component="api") is False
+        assert init_sentry(production, component="api") is False
+    assert [entry["event"] for entry in logs] == ["sentry_off"]
+    assert logs[0]["log_level"] == "warning"
+    assert not sentry_sdk.get_client().is_active()
+    reset_for_tests()
+
+
 def test_environment_release_and_sample_rate_come_from_settings() -> None:
     transport = Capture()
     settings = make_settings(

@@ -5313,6 +5313,10 @@
       },
       "BillingState": {
         "properties": {
+          "billing_available": {
+            "title": "Billing Available",
+            "type": "boolean"
+          },
           "cancel_at_period_end": {
             "title": "Cancel At Period End",
             "type": "boolean"
@@ -5404,6 +5408,7 @@
           "status",
           "cancel_at_period_end",
           "trial_eligible",
+          "billing_available",
           "prices",
           "entitlements",
           "usage"
@@ -26603,7 +26608,7 @@
   "paths": {
     "/v1/billing/plans": {
       "get": {
-        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing\npage and the upgrade dialog's comparison. The same numbers as GET \u2026/billing.",
+        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing\npage and the upgrade dialog's comparison. The same numbers as GET \u2026/billing. While billing\nisn't set up on this server (C-149) Pro and Max are ``available: false`` without prices.",
         "operationId": "list_billing_plans",
         "responses": {
           "200": {
@@ -30832,7 +30837,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
-        "description": "Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge\ncharacters, active automations, pending scheduled messages and connected accounts per\nplatform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo\n(cached 1 h; a price Dodo can't give now is left out).",
+        "description": "Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge\ncharacters, active automations, pending scheduled messages and connected accounts per\nplatform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo\n(cached 1 h; a price Dodo can't give now is left out). ``billing_available`` is false while\nbilling isn't set up on this server (C-149): no prices, and no checkout.",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -30886,7 +30891,7 @@
     },
     "/v1/w/{wid}/billing/cancel": {
       "post": {
-        "description": "FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's\ncancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays\nuntil the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling\nagain answers the same.",
+        "description": "FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's\ncancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays\nuntil the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling\nagain answers the same. 503 billing_unavailable while billing isn't set up (C-149).",
         "operationId": "cancel_billing",
         "parameters": [
           {
@@ -30940,7 +30945,7 @@
     },
     "/v1/w/{wid}/billing/checkout": {
       "post": {
-        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\nisn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives.",
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\ndoesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
         "operationId": "create_billing_checkout",
         "parameters": [
           {
@@ -31087,7 +31092,7 @@
     },
     "/v1/w/{wid}/billing/portal": {
       "post": {
-        "description": "FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened\nin a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo\ndoesn't answer.",
+        "description": "FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened\nin a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo\ndoesn't answer; 503 billing_unavailable while billing isn't set up (C-149).",
         "operationId": "create_billing_portal",
         "parameters": [
           {
@@ -31141,7 +31146,7 @@
     },
     "/v1/w/{wid}/billing/resume": {
       "post": {
-        "description": "Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when\nDodo has already ended the plan.",
+        "description": "Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when\nDodo has already ended the plan. 503 billing_unavailable while billing isn't set up.",
         "operationId": "resume_billing",
         "parameters": [
           {
