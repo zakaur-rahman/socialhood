@@ -44,6 +44,16 @@ export function canCheckout(billing: BillingState | undefined): boolean {
   return !billing || billing.plan === "free" || billing.status === "free" || billing.status === "expired";
 }
 
+/** C-149: whether paid plans are on sale on this server (false: billing isn't set up yet). */
+export function billingOpen(billing: BillingState | undefined): boolean {
+  return billing?.billing_available !== false;
+}
+
+/** A checkout or trial may be offered: no paid plan, and paid plans are on sale (C-149). */
+export function canStartCheckout(billing: BillingState | undefined): boolean {
+  return canCheckout(billing) && billingOpen(billing);
+}
+
 export type StatusTone = "neutral" | "brand" | "warning" | "danger";
 
 export type PlanStatus = {

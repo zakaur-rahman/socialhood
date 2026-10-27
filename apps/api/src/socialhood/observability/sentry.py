@@ -1,7 +1,8 @@
 """Sentry on the API and the worker (TR-OPS-01, SEC-12, T9.3).
 
 Nothing happens without ``SENTRY_DSN``: local runs and tests send nothing, and every
-``sentry_sdk`` call is a no-op. With a DSN, every event and transaction passes ``scrub_event``:
+``sentry_sdk`` call is a no-op. It is optional in production too (C-149): there, one warning
+line says Sentry is off. With a DSN, every event and transaction passes ``scrub_event``:
 
 - the request keeps only its method and its URL without the query string: no headers (so no
   Authorization or cookies), no body, no client IP;
@@ -34,7 +35,7 @@ from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sentry_sdk.transport import Transport
 
 from socialhood import __version__
-from socialhood.observability.logging import REDACTED, is_secret_key
+from socialhood.observability.logging import REDACTED, get_logger, is_secret_key
 from socialhood.settings import Settings
 
 if TYPE_CHECKING:
@@ -80,6 +81,8 @@ _LONG_TOKEN = re.compile(
 _QUERY = re.compile(r"\?[^\s\"'#]*")
 
 _initialized: Component | None = None
+_warned_off = False
+log = get_logger(__name__)
 
 
 def init_sentry(
@@ -90,8 +93,11 @@ def init_sentry(
     ``transport`` is for tests. The asyncio integration needs the running loop, so callers turn
     it on with ``instrument_running_loop`` from inside it (the API's lifespan, the first job).
     """
-    global _initialized
+    global _initialized, _warned_off
     if not settings.sentry_dsn:
+        if settings.is_production and not _warned_off:
+            _warned_off = True
+            log.warning("sentry_off", detail="SENTRY_DSN is empty: errors aren't sent to Sentry")
         return False
     if _initialized is not None and sentry_sdk.get_client().is_active():
         return True
@@ -138,10 +144,11 @@ def instrument_running_loop() -> None:
 
 
 def reset_for_tests() -> None:
-    global _initialized
+    global _initialized, _warned_off
     sentry_sdk.get_client().close()
     sentry_sdk.get_global_scope().set_client(None)  # back to the no-op client
     _initialized = None
+    _warned_off = False
 
 
 # ---------------------------------------------------------------- structlog → Sentry

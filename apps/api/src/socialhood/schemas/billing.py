@@ -45,6 +45,9 @@ class BillingState(ResponseModel):
     cancel_at_period_end: bool
     grace_until: datetime | None = None
     trial_eligible: bool
+    # C-149: false while billing isn't set up on this server: paid plans aren't on sale, so the
+    # UI offers no checkout or trial (the workspace stays on Free).
+    billing_available: bool
     prices: list[BillingPrice]
     entitlements: list[EntitlementValue]
     usage: list[UsageMeter]
@@ -82,7 +85,7 @@ class PlanOffer(ResponseModel):
     price: BillingPrice | None = None
     trial_days: int = Field(ge=0)  # 7 for Pro, once per workspace and owner email (FR-BIL-03)
     entitlements: list[EntitlementValue]
-    available: bool  # false for Max until R2
+    available: bool  # false for Max until R2, and for Pro and Max while billing is off (C-149)
 
 
 class PlanList(ResponseModel):

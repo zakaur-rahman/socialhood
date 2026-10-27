@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
-import { TRIAL_DAYS, canCheckout, planHighlights } from "@/lib/billing/plan";
+import { TRIAL_DAYS, canStartCheckout, planHighlights } from "@/lib/billing/plan";
 import { PLAN_NAME, billingCopy, formatPrice } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +59,7 @@ export function PlanCards({
   }
 
   const current = billing.plan;
-  const mayPay = isOwner && canCheckout(billing);
+  const mayPay = isOwner && canStartCheckout(billing);
   return (
     <ul className="grid gap-4 md:grid-cols-3" aria-label="Plans">
       {plans.data.items.map((offer) => {
@@ -100,6 +100,9 @@ export function PlanCards({
                   {formatPrice(offer.price)}
                   <span className="text-sm font-normal text-fg-secondary"> a month</span>
                 </>
+              ) : !offer.available ? (
+                // C-149: not on sale (Max until R2, or no billing on this server yet): no price to show.
+                <span className="text-base font-normal text-fg-secondary">Not on sale yet</span>
               ) : (
                 <span className="text-base font-normal text-fg-secondary">Price shown at checkout</span>
               )}

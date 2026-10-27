@@ -61,6 +61,19 @@ function PlanCardView({ card, index }: { card: PlanCard; index: number }) {
   );
 }
 
+function FeatureList({ card }: { card: PlanCard }) {
+  return (
+    <ul className="mt-6 space-y-2.5 border-t border-line pt-6 text-sm" aria-label={`${card.name} includes`}>
+      {card.features.map((feature) => (
+        <li key={feature} className="flex items-start gap-2.5">
+          <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />
+          <span>{feature}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean }) {
   return (
     <div className="flex h-full flex-col p-6">
@@ -100,14 +113,15 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
           {card.plan === "pro" ? (
             <p className="mt-2 text-center text-xs text-fg-secondary">You can start the trial as soon as you sign up.</p>
           ) : null}
-          <ul className="mt-6 space-y-2.5 border-t border-line pt-6 text-sm" aria-label={`${card.name} includes`}>
-            {card.features.map((feature) => (
-              <li key={feature} className="flex items-start gap-2.5">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
+          <FeatureList card={card} />
+        </>
+      ) : card.plan === "pro" ? (
+        // C-149: paid plans aren't on sale yet (no billing on the server); Pro still shows what it includes.
+        <>
+          <p className="mt-6 text-sm leading-relaxed text-fg-secondary">
+            Pro isn&apos;t available to buy yet. Start on Free today and upgrade when it opens.
+          </p>
+          <FeatureList card={card} />
         </>
       ) : (
         <p className="mt-6 text-sm leading-relaxed text-fg-secondary">

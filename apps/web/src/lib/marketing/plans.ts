@@ -219,7 +219,9 @@ function cardFrom(offer: PlanOfferBody): PlanCard {
     price: price ? formatPrice(price) : null,
     offer: price ? { price: decimalAmount(price.amount_minor, price.currency), currency: price.currency } : null,
     trialDays: offer.trial_days,
-    features: offer.available ? planFeatures(offer.entitlements) : [],
+    // Pro lists what it will include even while it isn't on sale (C-149: no billing yet); Max
+    // stays a short note until R2.
+    features: offer.available || offer.plan === "pro" ? planFeatures(offer.entitlements) : [],
     available: offer.available,
   };
 }

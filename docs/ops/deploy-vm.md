@@ -277,8 +277,15 @@ yet ([deploy.md](deploy.md), section 5a lists what works without the API).
 
 ## 6. The full stack
 
-Do this once the vendor accounts exist (Clerk production, Meta app, Gemini, Cloudinary, Dodo live,
-Resend, Sentry).
+Do this once the required vendor accounts exist (Clerk production, Meta app, Gemini, Cloudinary,
+Resend). Dodo live and Sentry are optional (C-149): the API starts without them. Without Dodo,
+billing is off: every workspace stays on Free, the app and the pricing page show Pro and Max as
+"coming soon", and the billing routes and the Dodo webhook answer 503 `billing_unavailable`.
+Without Sentry, errors stay in the logs only. The API logs one `billing_off` and one `sentry_off`
+warning at startup, and `/readyz` reports both under `features`. Turn either on later by filling
+its values in `api.env` and restarting `api` and `worker`; the Dodo values go in all together
+(`DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY`): with only some of them the
+API refuses to start.
 
 1. **Make the secrets** on the VM:
 
@@ -286,7 +293,7 @@ Resend, Sentry).
    cd /opt/amplychat
    ./gen-secrets.sh            # creates api.env and postgres.env (mode 600), prints names only
    nano api.env                # paste each [owner] value after its "="
-   ./gen-secrets.sh --check    # lists what is still empty
+   ./gen-secrets.sh --check    # lists what is still empty: required, then [optional]
    ```
 
    `gen-secrets.sh` fills only the **generated** values:
@@ -507,15 +514,15 @@ docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KE
 ## 10. Owner-provided values (names only)
 
 **`api.env`** (required in production):
-- `SENTRY_DSN`
 - `CLERK_SECRET_KEY`, `CLERK_JWT_KEY`, `CLERK_ISSUER`, `CLERK_WEBHOOK_SECRET`
 - `IG_APP_ID`, `IG_APP_SECRET`, `META_APP_ID`, `META_APP_SECRET`, `WHATSAPP_CONFIG_ID`
 - `GEMINI_API_KEY`
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY`
 - `RESEND_API_KEY`
 
-**`api.env`** (optional; each feature stays off while empty):
+**`api.env`** (optional, tagged `[optional]`; each feature stays off while empty, C-149):
+- `SENTRY_DSN`
+- `DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY`: all three or none
 - `DODO_PRODUCT_MAX_MONTHLY`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`

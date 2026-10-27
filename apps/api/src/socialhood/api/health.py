@@ -1,7 +1,9 @@
 """Operational endpoints (SEC-12).
 
 /healthz says only that the process is up. /readyz checks Postgres and Valkey; outside local and
-test environments it needs ``Authorization: Bearer {METRICS_TOKEN}`` so it is not public.
+test environments it needs ``Authorization: Bearer {METRICS_TOKEN}`` so it is not public. Its
+``features`` say which optional parts are set up (C-149): billing (Dodo) and Sentry, "on" or
+"off". They never make the API unready.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ class Health(BaseModel):
 class Ready(BaseModel):
     status: Literal["ready"]
     checks: dict[str, str]
+    features: dict[str, Literal["on", "off"]]
 
 
 @router.get("/healthz")
@@ -58,4 +61,8 @@ async def readyz(request: Request) -> Ready:
     if any(v != "ok" for v in checks.values()):
         failed = ", ".join(k for k, v in checks.items() if v != "ok")
         raise ApiError("service_unavailable", f"Not ready: {failed}")
-    return Ready(status="ready", checks=checks)
+    features: dict[str, Literal["on", "off"]] = {
+        "billing": "on" if settings.billing_enabled else "off",
+        "sentry": "on" if settings.sentry_dsn else "off",
+    }
+    return Ready(status="ready", checks=checks, features=features)
