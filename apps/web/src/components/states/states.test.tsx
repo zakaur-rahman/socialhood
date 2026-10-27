@@ -30,10 +30,20 @@ describe("ErrorState (§4.7)", () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
-  it("uses the offline message for network failures", () => {
-    const offline = new ApiError({ type: "about:blank", title: "Request failed", status: 0, code: "network" });
-    render(<ErrorState error={offline} />);
+  it("says we couldn't be reached when a request fails on a working connection", () => {
+    const failed = new ApiError({ type: "about:blank", title: "Request failed", status: 0, code: "network" });
+    render(<ErrorState error={failed} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "We couldn't reach Amplychat. Try again in a moment. If it keeps happening, email support@amplychat.com.",
+    );
+  });
+
+  it("uses the offline message only when the browser is offline", () => {
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const failed = new ApiError({ type: "about:blank", title: "Request failed", status: 0, code: "network" });
+    render(<ErrorState error={failed} />);
     expect(screen.getByRole("alert")).toHaveTextContent("You're offline. Reconnect and try again.");
+    online.mockRestore();
   });
 });
 

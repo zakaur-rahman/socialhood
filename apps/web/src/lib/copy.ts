@@ -1,12 +1,18 @@
 /** UI copy from §4.7 (UX-COPY-01). Plain, specific, no apologies. */
 import { ApiError } from "@/lib/api/errors";
+import { SITE_NAME } from "@/lib/marketing/site";
 
 export const SUPPORT_EMAIL = "support@amplychat.com";
 
 export function errorMessage(error: unknown): string {
   const apiError = error instanceof ApiError ? error : null;
-  if (apiError?.code === "network" || (typeof navigator !== "undefined" && !navigator.onLine)) {
+  // "Offline" only when the browser says so; a failed request on a working connection means our
+  // side couldn't be reached (a deploy, the API down), which "offline" would wrongly blame on them.
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
     return "You're offline. Reconnect and try again.";
+  }
+  if (apiError?.code === "network") {
+    return `We couldn't reach ${SITE_NAME}. Try again in a moment. If it keeps happening, email ${SUPPORT_EMAIL}.`;
   }
   if (apiError && apiError.status >= 400 && apiError.status < 500 && apiError.detail) {
     return apiError.detail;
