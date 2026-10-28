@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LEGAL } from "@/lib/legal";
+import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
-import { breadcrumbJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
+import { LANDING_LANGUAGES, breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
 import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
 
+import { metadata as hinglish } from "./(marketing)/hi/page";
+import { metadata as landing } from "./(marketing)/page";
 import { metadata as privacy } from "./(marketing)/privacy/page";
 import { metadata as refunds } from "./(marketing)/refunds/page";
 import { metadata as shipping } from "./(marketing)/shipping/page";
@@ -76,7 +79,15 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/contact",
       "https://socialhood.example/developers/api",
       "https://socialhood.example/security",
+      "https://socialhood.example/guides",
+      "https://socialhood.example/hi",
+      ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
+    // C-153: the index takes the newest guide's date, each guide its own updated date.
+    expect(entries.find((entry) => entry.url.endsWith("/guides"))?.lastModified).toBe(guidesUpdated());
+    for (const guide of GUIDES) {
+      expect(entries.find((entry) => entry.url.endsWith(`/guides/${guide.slug}`))?.lastModified).toBe(guide.updated);
+    }
     expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-26");
     // Every page has an ISO date, never a build time.
     for (const entry of entries) expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -142,6 +153,24 @@ describe("structured data (C-142)", () => {
     expect(org).not.toHaveProperty("aggregateRating");
   });
 
+  it("a guide's breadcrumb goes Home, Guides, then the guide (C-153)", () => {
+    expect(
+      breadcrumbTrailJsonLd(
+        [
+          { name: "Guides", path: "/guides" },
+          { name: "A guide", path: "/guides/a-guide" },
+        ],
+        "https://socialhood.example",
+      ),
+    ).toMatchObject({
+      itemListElement: [
+        { position: 1, item: "https://socialhood.example/" },
+        { position: 2, name: "Guides", item: "https://socialhood.example/guides" },
+        { position: 3, name: "A guide", item: "https://socialhood.example/guides/a-guide" },
+      ],
+    });
+  });
+
   it("a breadcrumb goes Home, then the page", () => {
     expect(breadcrumbJsonLd("Pricing", "/pricing", "https://socialhood.example")).toEqual({
       "@context": "https://schema.org",
@@ -159,6 +188,25 @@ describe("/llms.txt", () => {
     const text = llmsText("https://socialhood.example");
     expect(text.startsWith("# Amplychat\n")).toBe(true);
     for (const path of PUBLIC_PATHS) expect(text, path).toContain(`(https://socialhood.example${path === "/" ? "/" : path})`);
+    for (const guide of GUIDES) expect(text, guide.slug).toContain(`(https://socialhood.example/guides/${guide.slug})`);
     expect(text).not.toMatch(/undefined|null/);
+  });
+});
+
+describe("hreflang between the landing page and its Hinglish version (C-153)", () => {
+  it("each names the other and itself, with x-default on English", () => {
+    expect(LANDING_LANGUAGES).toEqual({ en: "/", hi: "/hi", "x-default": "/" });
+    expect(landing.alternates).toMatchObject({ canonical: "/", languages: LANDING_LANGUAGES });
+    expect(hinglish.alternates).toMatchObject({ canonical: "/hi", languages: LANDING_LANGUAGES });
+    expect(hinglish.openGraph).toMatchObject({ locale: "hi_IN", url: "/hi" });
+  });
+
+  it("the sitemap lists the pair as alternates of each other, and no other page", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://socialhood.example");
+    const entries = sitemap();
+    const languages = { en: "https://socialhood.example/", hi: "https://socialhood.example/hi", "x-default": "https://socialhood.example/" };
+    expect(entries.find((entry) => entry.url === "https://socialhood.example/")?.alternates).toEqual({ languages });
+    expect(entries.find((entry) => entry.url === "https://socialhood.example/hi")?.alternates).toEqual({ languages });
+    expect(entries.filter((entry) => entry.alternates).length).toBe(2);
   });
 });

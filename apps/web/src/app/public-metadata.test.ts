@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import { describe, expect, it } from "vitest";
 
+import { GUIDES } from "@/lib/marketing/guides";
 import { DESCRIPTION_MAX, TITLE_MAX } from "@/lib/marketing/seo";
 import { PUBLIC_PATHS, SITE_NAME } from "@/lib/marketing/site";
 
 import { metadata as appLayout } from "./(clerk)/(app)/layout";
 import { metadata as authLayout } from "./(clerk)/(auth)/layout";
+import {
+  dynamicParams as guideDynamicParams,
+  generateMetadata as generateGuideMetadata,
+  generateStaticParams as guideStaticParams,
+} from "./(marketing)/guides/[slug]/page";
 import { metadata as unsubscribe } from "./(marketing)/unsubscribe/page";
 import { metadata as notFound } from "./not-found";
 
@@ -62,5 +68,32 @@ describe("pages that are never indexed (C-142)", () => {
     expect(authLayout.robots).toMatchObject({ index: false });
     expect(unsubscribe.robots).toMatchObject({ index: false });
     expect(notFound.robots).toMatchObject({ index: false });
+  });
+});
+
+describe("every guide's metadata (C-153)", () => {
+  it.each(GUIDES.map((guide) => [guide.slug] as const))("/guides/%s: title, description, canonical, article Open Graph, the feed", async (slug) => {
+    const metadata = (await generateGuideMetadata({ params: Promise.resolve({ slug }) } as never)) as Metadata;
+    const title = shownTitle(metadata.title);
+    expect(title.length, title).toBeLessThanOrEqual(TITLE_MAX);
+    const description = metadata.description as string;
+    expect(description.length, description).toBeGreaterThanOrEqual(50);
+    expect(description.length, description).toBeLessThanOrEqual(DESCRIPTION_MAX);
+    expect(metadata.alternates?.canonical).toBe(`/guides/${slug}`);
+    expect(metadata.alternates?.types).toMatchObject({ "application/rss+xml": [expect.objectContaining({ url: "/guides/rss.xml" })] });
+    expect(metadata.openGraph).toMatchObject({ type: "article", url: `/guides/${slug}`, authors: ["Amplychat team"] });
+    expect(metadata.robots).toBeUndefined();
+  });
+
+  it("only the listed guides are built; any other slug is a 404", () => {
+    expect(guideStaticParams()).toEqual(GUIDES.map((guide) => ({ slug: guide.slug })));
+    expect(guideDynamicParams).toBe(false);
+  });
+
+  it("guide titles and descriptions are unique among every public page", () => {
+    const titles = [...PAGES.flatMap(([, m]) => (m ? [shownTitle(m.title)] : [])), ...GUIDES.map((g) => `${g.title} · ${SITE_NAME}`)];
+    const descriptions = [...PAGES.flatMap(([, m]) => (m ? [m.description] : [])), ...GUIDES.map((g) => g.description)];
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(new Set(descriptions).size).toBe(descriptions.length);
   });
 });

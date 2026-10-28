@@ -6694,6 +6694,89 @@ API checks the name against `zoneinfo.available_timezones()`. The API image is
 - A build step asserts `Asia/Kolkata`, `Asia/Calcutta`, `US/Eastern` and `Europe/Kiev` are known, so
   an image without the aliases can't be built again.
 
+## C-153 · Guides section and a Hinglish page (feature/launch-blog)
+
+To rank for real searches the public site needs useful content. A **Guides** section with its
+first four articles, and the product explained in Hinglish at `/hi`. Web only: no API change.
+
+### Content model (decided)
+- **Typed React modules, no MDX, no CMS.** `@next/mdx` isn't installed, and a guide's claims should
+  change in the same pull request as the code behind them. Each guide is a `Guide` in
+  `lib/marketing/guides/*.tsx`: slug, title (at most 48 characters, so "… · Amplychat" stays within
+  60), description (50 to 160), h1, published and updated ISO dates, author (`GUIDE_AUTHOR`,
+  "Amplychat team" from `SITE_NAME`), reading time, tags, an optional hero (an existing `SHOTS`
+  screenshot), optional FAQ, related links, and `Body`, a component of h2/h3 sections inside the
+  shared prose styles (`components/marketing/prose.ts`, moved out of `LegalPage`).
+- `GUIDES` (index.ts) is newest first; the index, the article route, the sitemap, the feed and
+  llms.txt read it. `guides.test.tsx` holds every guide to the metadata lengths, 900 to 1,500 words
+  in the body, a reading time of words / 200 rounded, sentence-case headings, no "please", no h1 in
+  a body, internal links only to pages that exist, and the JSON-LD fields.
+
+### Routes and SEO markup
+- `/guides` (index: cards with topics, byline, date and reading time; an RSS link) and
+  `/guides/[slug]` (`generateStaticParams`, `dynamicParams = false`, so any other slug is a 404).
+  Both use `pageMetadata`; a guide adds `og:type article` with published and modified times, author
+  and tags (`pageMetadata({ article })`), and both advertise the feed (`alternates.types`).
+- **Structured data:** each guide emits one `@graph` with an `Article` (headline, description, url,
+  `datePublished`, `dateModified`, author an Organization "Amplychat team", publisher the full
+  `Organization` with `legalName`, the share image, keywords) and a `FAQPage` when the guide has its
+  own questions on the page (all four do), plus a three-level `BreadcrumbList` (Home, Guides, the
+  guide; `breadcrumbTrailJsonLd`). The index has Home, Guides. *`Article` rather than `BlogPosting`:
+  these are evergreen guides, not dated posts.*
+- **`/guides/rss.xml`** (static route handler): RSS 2.0 with each guide's h1, link, description,
+  date and topics. Descriptions only, not the full text.
+- Sitemap: `/guides` and `/hi` in `PUBLIC_PATHS`; each guide is added by `sitemap.ts` with its
+  `updated` date as lastmod, and `/guides` takes the newest guide's date. llms.txt has a Guides
+  section and the Hinglish page. The header nav and the footer's Product column gain "Guides"
+  (`NAV_LINKS`); the footer's "Compare and learn" links the Hinglish page (with `lang`).
+
+### The four guides
+How to auto-reply to Instagram DMs without sounding like a bot; WhatsApp Business API vs the app;
+comment-to-DM automations; replying in Hinglish. Every product claim matches the GTM pages and the
+code: Off/Suggest/Auto with Auto on Pro, answers only from knowledge with knowledge gaps, Needs you
+and the pause when you reply, the brand voice settings, keyword matching as a word, exactly or
+anywhere (`MatchMode`), post scope including the next post, random public replies, tap-first, the
+follow invitation never a condition, the send queue, templates from the inbox when the window has
+closed (`TemplatePicker`), payment requests on Pro and Max, AI Polish keeping Hinglish in Latin
+letters (`polish.v1`), `hi-Latn` in the analysis, Hinglish filler words in catalogue matching,
+small talk. Gated features are worded as gated: Meta's approval for connections, Live comments and
+ad chats; broadcasts "built, not switched on" (O-11); WhatsApp product messages need the business's
+catalogue and Meta's approval. Meta's rules stated: one private reply per comment within 7 days,
+the 24-hour window, templates and opt-in, per-message template pricing with a link to Meta's page
+("under Meta's current pricing" for free service replies). *The app/API coexistence on one number is
+described as "Meta has started letting some businesses…" and not claimed for Amplychat.* No
+numbers, customers or quotes; the one example conversation is labelled as a made-up shop.
+
+### Hinglish page (decided)
+- **`/hi` in Hinglish (Roman script)**, the way most Indian sellers type, rather than Devanagari
+  Hindi. Short: hero, six feature cards, one labelled example, "what to know" (Meta's approval, the
+  24-hour window, Meta's WhatsApp fees, the three languages, Free with no card), sign-up. Same
+  design and tokens; `lang="hi-Latn"` on its `<main>`, links to English pages marked `lang="en"`.
+- **hreflang `hi`, not `hi-Latn`**: search engines document language (and region) codes for
+  hreflang, not script subtags; the content's own `lang` says `hi-Latn`. `/` and `/hi` both carry
+  `en`, `hi` and `x-default` (English) alternates (`LANDING_LANGUAGES`), in their `<head>` and in
+  the sitemap (`alternates.languages`); own canonicals; Open Graph locale `hi_IN` on `/hi`.
+- **A native speaker should review the Hinglish copy** (and the Hinglish examples in the Hinglish
+  guide) before launch.
+
+### Checks
+`next typegen`, `tsc --noEmit`, `pnpm lint`; vitest for `lib/marketing`, `components/marketing`,
+`app/(marketing)`, `app/seo.test.ts`, `app/public-metadata.test.ts` (each guide's generated
+metadata, static params, uniqueness) and `styles` (design lint). New `e2e/guides.spec.ts` (index,
+a guide's byline and JSON-LD, the 404 for an unknown slug, hreflang both ways, the feed and the
+sitemap, no sideways scroll at 375, 768 and 1280 px), run with the landing, GR-37 and not-found
+specs; screenshots of `/guides`, a guide and `/hi` at 375 and 1280 when `GUIDES_SHOTS_DIR` is set.
+The e2e fixtures answer `/_next/image` with a 1 px stand-in, so with `GUIDES_SHOTS_DIR` set the
+spec removes that route and waits for images before each screenshot. All 34 specs in the landing,
+GR-37, not-found and C-153 run passed. The guide hero loads eagerly (it sits under the header) and is
+at most 16 rem wide on phones and 20 rem from `sm`, so a tall phone screenshot doesn't push the text
+far down.
+
+### Owner to-dos
+- Have a native Hindi/Hinglish speaker read `/hi` and the Hinglish guide's examples.
+- Read the four guides once for tone; bump a guide's `updated` date when its copy changes.
+- After deploy, submit the sitemap again in Search Console so the guides are found.
+
 ## C-154 · Nightly e2e failures (fix/nightly-e2e-failures)
 
 The first full nightly e2e (run 40712737521 on develop 1fce7680) had 3 failures and 5 flaky tests.
