@@ -1,23 +1,28 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
-
-import { Button } from "@/components/ui/button";
-import { minWidth } from "@/lib/breakpoints";
-import { NAV_LINKS } from "@/lib/marketing/site";
-import { cn } from "@/lib/utils";
-
-import { HeaderAuth } from "./HeaderAuth";
-import { MARKETING_CARD } from "./primitives";
+import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 /**
  * The phone menu (below md): a disclosure under the header bar with the section links and the
  * account actions. Escape or following a link closes it; Escape returns focus to the button.
+ *
+ * The server renders the panel's content and the button's classes (SiteHeader), so this island
+ * holds only the open state: no `cn`, Button, Link or token code reaches the public pages from it
+ * (C-152).
  */
-export function MobileMenu() {
+export function MobileMenu({
+  buttonClassName,
+  panelClassName,
+  wideQuery,
+  children,
+}: {
+  buttonClassName: string;
+  panelClassName: string;
+  /** Where the phone layout ends (`minWidth("md")`), from the server so the token mirror stays there. */
+  wideQuery: string;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const button = useRef<HTMLButtonElement>(null);
@@ -30,7 +35,7 @@ export function MobileMenu() {
       button.current?.focus();
     };
     // Grown past the phone layout, the menu has nothing to show.
-    const wide = window.matchMedia(minWidth("md"));
+    const wide = window.matchMedia(wideQuery);
     const onWide = () => {
       if (wide.matches) setOpen(false);
     };
@@ -40,44 +45,31 @@ export function MobileMenu() {
       document.removeEventListener("keydown", onKey);
       wide.removeEventListener("change", onWide);
     };
-  }, [open]);
+  }, [open, wideQuery]);
 
-  const close = () => setOpen(false);
+  // Following any link in the panel closes it.
+  const onPanelClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target instanceof Element && event.target.closest("a")) setOpen(false);
+  };
 
   return (
     <div className="md:hidden">
-      <Button
+      <button
         ref={button}
         type="button"
-        variant="ghost"
-        size="icon-lg"
+        data-slot="button"
+        data-variant="ghost"
+        data-size="icon-lg"
+        className={buttonClassName}
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
       >
         {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
-      </Button>
-      {/* It floats over the page, so the floating elevation (DESIGN_SYSTEM §6), on the panel. */}
-      <div id={panelId} hidden={!open} className={cn(MARKETING_CARD, "absolute inset-x-0 top-full mt-2 shadow-floating")}>
-        <nav aria-label="Main" className="px-3 pt-2 pb-4">
-          <ul className="grid">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href as Route}
-                  onClick={close}
-                  className="flex min-h-11 items-center rounded-lg px-2 text-base text-fg transition-colors duration-normal hover:bg-hover"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 border-t border-line pt-4">
-            <HeaderAuth variant="menu" onNavigate={close} />
-          </div>
-        </nav>
+      </button>
+      <div id={panelId} hidden={!open} className={panelClassName} onClick={onPanelClick}>
+        {children}
       </div>
     </div>
   );

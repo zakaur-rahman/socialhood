@@ -3,7 +3,7 @@
 import { m, useAnimationFrame, useInView, useMotionTemplate, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { useRef, type ReactNode } from "react";
 
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 /**
  * Moving Border, from Aceternity UI's free "moving-border" (ui.aceternity.com/components/moving-border),
@@ -26,7 +26,7 @@ export function MovingBorderFrame({
   const inView = useInView(ref);
   const reduce = useReducedMotion();
   return (
-    <div ref={ref} data-frame="moving-border" className={cn("relative overflow-hidden rounded-2xl bg-brand-line p-px", className)}>
+    <div ref={ref} data-frame="moving-border" className={cx("relative overflow-hidden rounded-2xl bg-brand-line p-px", className)}>
       {inView && !reduce ? (
         <div aria-hidden data-effect="moving-border" className="absolute inset-0">
           <MovingBorder duration={duration} rx="16" ry="16">

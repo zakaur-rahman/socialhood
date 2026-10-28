@@ -5,10 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // fake `auth`, so these tests see only the host routing (C-146) and the sign-in guard.
 const protect = vi.fn(async () => undefined);
 const options = vi.fn();
+const clerkRan = vi.fn();
 vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: (handler: (auth: unknown, request: NextRequest) => unknown, opts: unknown) => {
     options(opts);
-    return (request: NextRequest) => handler({ protect }, request);
+    return (request: NextRequest) => {
+      clerkRan(request.nextUrl.pathname);
+      return handler({ protect }, request);
+    };
   },
   createRouteMatcher: (patterns: string[]) => (request: NextRequest) =>
     patterns.some((pattern) => new RegExp(`^${pattern}$`).test(request.nextUrl.pathname)),
@@ -18,7 +22,8 @@ async function loadProxy(appUrl: string | undefined) {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_APP_URL", appUrl ?? "");
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
-  return (await import("./proxy")).default as unknown as (request: NextRequest) => Promise<Response | undefined>;
+  const proxy = (await import("./proxy")).default as unknown as (request: NextRequest, event: unknown) => Promise<Response | undefined>;
+  return (request: NextRequest) => proxy(request, {});
 }
 
 function request(url: string): NextRequest {
@@ -28,6 +33,7 @@ function request(url: string): NextRequest {
 beforeEach(() => {
   protect.mockClear();
   options.mockClear();
+  clerkRan.mockClear();
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -38,6 +44,7 @@ describe("proxy with NEXT_PUBLIC_APP_URL unset (one origin)", () => {
     expect(await proxy(request("http://localhost:3000/sign-in"))).toBeUndefined();
     expect(await proxy(request("http://localhost:3000/app"))).toBeUndefined();
     expect(protect).toHaveBeenCalledOnce();
+    expect(clerkRan).toHaveBeenCalledTimes(3);
     expect(options).toHaveBeenCalledWith({ authorizedParties: undefined });
   });
 });
@@ -56,7 +63,18 @@ describe("proxy with the app on dashboard.amplychat.com", () => {
     expect(response?.status).toBe(308);
     expect(response?.headers.get("location")).toBe(`${APP}/w/maple/inbox?c=1`);
     expect(protect).not.toHaveBeenCalled();
-    expect(await proxy(request("https://amplychat.com/pricing"))).toBeUndefined();
+  });
+
+  it("lets the public site through without running Clerk (C-152)", async () => {
+    const proxy = await loadProxy(APP);
+    for (const path of ["/", "/pricing", "/privacy?x=1"]) {
+      const response = await proxy(request(`https://amplychat.com${path}`));
+      expect(response?.status).toBe(200);
+      expect(response?.headers.get("x-middleware-next")).toBe("1");
+      expect(response?.headers.get("x-robots-tag")).toBeNull();
+    }
+    expect(clerkRan).not.toHaveBeenCalled();
+    expect(protect).not.toHaveBeenCalled();
   });
 
   it("moves public pages off the app host and sends its home to /app", async () => {

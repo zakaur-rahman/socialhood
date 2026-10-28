@@ -1,5 +1,7 @@
 import "@/components/marketing/effects/effects.css";
 
+import { Suspense } from "react";
+
 import { AutomationShowcase } from "@/components/marketing/AutomationShowcase";
 import { MarketingMotion } from "@/components/marketing/effects/MarketingMotion";
 import { ScrollReveal } from "@/components/marketing/effects/ScrollReveal";
@@ -36,28 +38,54 @@ export const metadata = pageMetadata({
 /**
  * The landing page (§3.1 "/"): what the product does, how, on which platforms, and what it costs.
  * Server-rendered; the effects (C-068) are small client islands inside MarketingMotion, and every
- * one of them is still with reduced motion.
+ * one of them is still with reduced motion. Each section after the hero sits in its own Suspense
+ * boundary, which adds only comment markers to the HTML but lets React hydrate a section at a time,
+ * yielding to the browser in between, instead of in one long task (C-152).
  */
 export default async function HomePage() {
   const pricing = buildPricing(await fetchPlans());
   return (
-    <main id="main" tabIndex={-1} className="flex-1 outline-none">
+    <main id="main" tabIndex={-1} data-landing="" className="flex-1 outline-none">
       <JsonLd data={landingJsonLd(pricing, FAQ)} />
       <ScrollReveal />
       <MarketingMotion>
         <Hero />
-        <ProductShot />
-        <Integrations />
-        <Features />
-        <HowItWorks />
-        <AutomationShowcase />
-        <Languages />
-        <Stats />
-        <SocialProof />
-        <Pricing pricing={pricing} />
-        <Trust />
-        <Faq />
-        <FinalCta />
+        <Suspense>
+          <ProductShot />
+        </Suspense>
+        <Suspense>
+          <Integrations />
+        </Suspense>
+        <Suspense>
+          <Features />
+        </Suspense>
+        <Suspense>
+          <HowItWorks />
+        </Suspense>
+        <Suspense>
+          <AutomationShowcase />
+        </Suspense>
+        <Suspense>
+          <Languages />
+        </Suspense>
+        <Suspense>
+          <Stats />
+        </Suspense>
+        <Suspense>
+          <SocialProof />
+        </Suspense>
+        <Suspense>
+          <Pricing pricing={pricing} />
+        </Suspense>
+        <Suspense>
+          <Trust />
+        </Suspense>
+        <Suspense>
+          <Faq />
+        </Suspense>
+        <Suspense>
+          <FinalCta />
+        </Suspense>
       </MarketingMotion>
     </main>
   );

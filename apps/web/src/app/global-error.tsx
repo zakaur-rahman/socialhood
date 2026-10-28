@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 
 import { captureError } from "@/lib/sentry/client";
-import { colorValue, radiusValue } from "@/styles/tokens";
+import { colorValue, radiusValue } from "@/styles/token-values";
 
 /**
  * The last-resort boundary (RG-07): it replaces the root layout when that layout itself throws, so
  * it carries its own `<html>` and `<body>` and none of the app's styles or components. The look is
- * inline, with the token values from styles/tokens.ts (colorValue), since the CSS isn't loaded.
+ * inline, with the token values from styles/token-values.ts (colorValue), since the CSS isn't loaded.
  */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {

@@ -7,6 +7,7 @@ import { SITE_NAME } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { RoutingPulses } from "./effects/RoutingPulses";
+import { StillFrame } from "./effects/routing-frame";
 import { LogoMark } from "./primitives";
 import { LAYOUTS, percent, trackD, type OutcomeId, type Point, type RoutingLayout, type SourceId } from "./routing";
 
@@ -118,7 +119,7 @@ function Diagram({ layout }: { layout: RoutingLayout }) {
         ))}
       </svg>
 
-      <RoutingPulses layout={layout.name} />
+      <RoutingPulses layout={layout.name} still={<StillFrame layout={layout} />} />
 
       {/* What the AI answers from, above the hub (beside it on phones). */}
       {wide ? (

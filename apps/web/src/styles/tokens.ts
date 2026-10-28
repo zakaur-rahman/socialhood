@@ -11,8 +11,9 @@ import { tokenValues } from "./tokens.generated";
 /** `swatch` is a literal class so Tailwind emits the variable (it only keeps theme values in use). */
 export type ColorToken = { name: string; value: string; light: string; use: string; swatch: string };
 
-/** The two themes (C-129). Dark is the default; a token's `value` is its dark value, `light` its light one. */
-export type Theme = "dark" | "light";
+/** The two themes (C-129) and the values for code that can't read CSS variables, from token-values.ts (C-152). */
+export type { Theme } from "./token-values";
+export { colorValue, radiusValue } from "./token-values";
 
 /** What each colour is for, by name. Every `--color-*` in globals.css needs an entry (tokens.test.ts). */
 const colorMeta: Record<string, { use: string; swatch: string }> = {
@@ -139,29 +140,6 @@ export const colorTokens: ColorToken[] = Object.entries(tokenValues.colors as Re
 
 /** The names `colorMeta` describes, for the test that every token has a description and no entry is stale. */
 export const describedColors: string[] = Object.keys(colorMeta);
-
-/**
- * A colour token's value, for the consumers that can't read CSS variables: Clerk (it computes
- * shades), the OG image (Satori), the manifest and the viewport (UI-ISS-095). They read it here
- * instead of restating the hex, so a token change reaches them too. A chart alias resolves to the
- * token it points at. `theme` picks the dark (default) or light value (C-129); a consumer that follows
- * the user's choice passes the resolved theme, one that is dark on purpose (the OG image, the
- * manifest, the global error page) passes nothing.
- */
-export function colorValue(name: string, theme: Theme = "dark"): string {
-  const colors = (theme === "light" ? tokenValues.colorsLight : tokenValues.colors) as Record<string, string>;
-  const aliases = tokenValues.colorAliases as Record<string, string>;
-  const found = colors[name] ?? colors[aliases[name]];
-  if (found === undefined) throw new Error(`Unknown colour token: ${name}`);
-  return found;
-}
-
-/** A radius token's value (`lg` is 0.5rem), for Clerk and the global error page, which can't use `rounded-lg`. */
-export function radiusValue(name: string): string {
-  const found = (tokenValues.radius as Record<string, string>)[name];
-  if (found === undefined) throw new Error(`Unknown radius token: ${name}`);
-  return found;
-}
 
 /**
  * The chart palette (COLOR_SYSTEM §11.6, UI-ISS-097): aliases of existing tokens, no new hues.

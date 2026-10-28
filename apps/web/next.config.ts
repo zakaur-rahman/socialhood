@@ -50,6 +50,8 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // C-152: AVIF first (about a third smaller than WebP for the screenshots), WebP for the rest.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "**.cdninstagram.com" },

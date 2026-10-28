@@ -29,7 +29,7 @@ export function ProductShot() {
               width={SHOTS.inbox.width}
               height={SHOTS.inbox.height}
               alt={SHOTS.inbox.alt}
-              sizes="(min-width: 1072px) 1008px, calc(100vw - 2.5rem)"
+              sizes="(min-width: 1072px) 1008px, calc(100vw - 3rem)"
               className="h-auto w-full"
             />
           </ContainerScroll>
