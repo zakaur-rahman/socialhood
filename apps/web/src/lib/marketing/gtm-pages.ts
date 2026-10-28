@@ -155,7 +155,9 @@ export const SWITCH_PAGE: GtmPage = {
   ],
   honesty: [
     "Instagram and WhatsApp connections depend on Meta's approval of Amplychat's app. Features marked as needing Meta's approval work in our test setup and reach your account once Meta enables them.",
-    "What we say about Manychat comes from Manychat's own help centre, checked on 29 October 2026. Its help centre blocks automated reading, so we checked it through a search engine's copy. Check manychat.com before you decide.",
+    // help.manychat.com and manychat.com answer automated reads with 403, so on 2026-10-29 their
+    // articles were read through a search engine's copy of them (C-155).
+    "What we say about Manychat comes from Manychat's own help centre, checked on 29 October 2026. Check manychat.com before you decide.",
   ],
   sources: [
     {
@@ -305,7 +307,9 @@ export const COMPARE_MANYCHAT: GtmPage = {
     ],
   },
   honesty: [
-    "Manychat's column comes from Manychat's own help centre and product updates, checked on 29 October 2026. Its help centre and pricing page block automated reading, so we checked those pages through a search engine's copy. \"Not found\" means we didn't see it there, not that Manychat lacks it.",
+    // help.manychat.com and manychat.com answer automated reads with 403, so on 2026-10-29 the help
+    // articles and pricing were read through a search engine's copy of them (C-155).
+    "Manychat's column comes from Manychat's own help centre and product updates, checked on 29 October 2026. \"Not found\" means we didn't see it there, not that Manychat lacks it.",
     "Manychat's plans and prices change and can vary by region, so check manychat.com before you decide.",
     "Our column is checked against our own code. Anything that depends on Meta, Shopify or a legal review says so.",
   ],
