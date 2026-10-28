@@ -29,6 +29,12 @@ async function appears(page: Page, target: Locator) {
     .toBe(true);
 }
 
+/** Open the "Add step" menu named ``menu`` and pick ``kind`` from that menu, not another one. */
+async function addStep(page: Page, menu: string, kind: RegExp) {
+  await page.getByRole("button", { name: menu }).click();
+  await page.getByRole("menu", { name: menu }).getByRole("menuitem", { name: kind }).click();
+}
+
 async function shows(page: Page, text: string) {
   await appears(page, page.getByRole("log", { name: /^Messages with / }).getByText(text));
 }
@@ -85,15 +91,14 @@ for (const size of SIZES) {
       await message.getByRole("button", { name: "Add a quick reply" }).click();
       await message.getByRole("textbox", { name: "Quick reply 2" }).fill("Prices");
 
-      // Each quick reply leads to its own message.
-      await page.getByRole("button", { name: "Add step to Quick reply 1 of step 2" }).click();
-      await page.getByRole("menuitem", { name: /^Send/ }).click();
+      // Each quick reply leads to its own message. The item is picked from the menu just opened:
+      // the one before may still be closing (its exit animation) when the next opens.
+      await addStep(page, "Add step to Quick reply 1 of step 2", /^Send/);
       await message
         .getByRole("group", { name: "Quick reply 1 of step 2" })
         .getByRole("textbox", { name: "Message" })
         .fill("Here's the guide.");
-      await page.getByRole("button", { name: "Add step to Quick reply 2 of step 2" }).click();
-      await page.getByRole("menuitem", { name: /^Send/ }).click();
+      await addStep(page, "Add step to Quick reply 2 of step 2", /^Send/);
       await message
         .getByRole("group", { name: "Quick reply 2 of step 2" })
         .getByRole("textbox", { name: "Message" })

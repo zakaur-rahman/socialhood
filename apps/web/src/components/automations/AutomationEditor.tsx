@@ -285,6 +285,9 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
 
   const active = server.status === "active";
   const statusBusy = activate.isPending || pause.isPending;
+  // C-154: the API names a flow's problems by step index, and they can only be put on the steps
+  // (and listed with a link to each) once the steps are here; until then Activate waits for them.
+  const flowLoading = flow.phase === "loading";
   const account = accounts.find((item) => item.id === draft.social_account_id);
   const nameError = errors.name;
 
@@ -318,7 +321,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             <Pause aria-hidden /> Pause
           </Button>
         ) : (
-          <Button size="lg" onClick={() => void onActivate()} disabled={statusBusy} loading={activate.isPending}>
+          <Button size="lg" onClick={() => void onActivate()} disabled={statusBusy || flowLoading} loading={activate.isPending}>
             <Play aria-hidden /> Activate
           </Button>
         )}

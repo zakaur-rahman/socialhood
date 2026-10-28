@@ -70,7 +70,7 @@ function validation(errors: { field: string; message: string }[]): Response {
  */
 function renderEditor(
   initial: Automation,
-  { activate, compiled }: { activate?: () => Response; compiled?: FlowBody } = {},
+  { activate, compiled, flowLoaded }: { activate?: () => Response; compiled?: FlowBody; flowLoaded?: Promise<void> } = {},
 ) {
   let current = initial;
   let stored: FlowBody = SAVED_FLOW.definition as FlowBody;
@@ -99,10 +99,12 @@ function renderEditor(
       },
       "POST /v1/w/:wid/automations/:id/activate": () =>
         activate ? activate() : json((current = { ...current, status: "active", display_status: "active" })),
-      "GET /v1/w/:wid/automations/:id/flow": () =>
-        current.flow_source === "flow"
+      "GET /v1/w/:wid/automations/:id/flow": async () => {
+        await flowLoaded;
+        return current.flow_source === "flow"
           ? json({ ...SAVED_FLOW, definition: stored })
-          : json({ ...SAVED_FLOW, version: 0, source: "legacy", definition: compiled ?? stored }),
+          : json({ ...SAVED_FLOW, version: 0, source: "legacy", definition: compiled ?? stored });
+      },
       "PUT /v1/w/:wid/automations/:id/flow": (call: Call) => {
         stored = call.body as FlowBody;
         saved.push(stored);
@@ -193,5 +195,25 @@ describe("AutomationEditor flow (GR-13)", () => {
     await user.click(within(attention).getByRole("button", { name: /^Go to step 3/ }));
     expect(within(cards[2]).getByRole("textbox", { name: "Message" })).toHaveFocus();
     expect(screen.getByTestId("status-pill")).toHaveTextContent("Draft");
+  });
+
+  it("waits for the steps before it activates, so the API's errors land on them (C-154)", async () => {
+    const user = userEvent.setup();
+    let release = () => {};
+    const flowLoaded = new Promise<void>((resolve) => (release = resolve));
+    renderEditor(automation({ flow_source: "flow", trigger: "dm_keyword", public_reply_texts: [] }), {
+      flowLoaded,
+      activate: () => validation([{ field: "flow.steps.2.text", message: "Write the message to send." }]),
+    });
+    const activateButton = await screen.findByRole("button", { name: "Activate" });
+    expect(activateButton).toBeDisabled();
+
+    release();
+    await screen.findByTestId("flow-editor");
+    expect(activateButton).toBeEnabled();
+    await user.click(activateButton);
+    const attention = await screen.findByTestId("flow-attention");
+    expect(attention).toHaveTextContent("Write the message to send.");
+    expect(within(attention).getByRole("button", { name: /^Go to step 3/ })).toBeVisible();
   });
 });
