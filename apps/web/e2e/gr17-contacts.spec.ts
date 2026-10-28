@@ -118,7 +118,12 @@ test.describe("GR-17 contacts", () => {
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto(`/w/${workspace.slug}/contacts`);
     await page.getByRole("searchbox", { name: "Search contacts" }).fill(username);
-    await page.getByTestId("contact-row").first().getByRole("button", { name: /^Open / }).click();
+    // The search waits a moment before it asks, and the unfiltered rows stay until it answers; the
+    // sandbox's backfilled contacts (C-154) can be first there. Open the row once it is this one.
+    const row = page.getByTestId("contact-row");
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText(username);
+    await row.getByRole("button", { name: /^Open / }).click();
 
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();

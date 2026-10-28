@@ -6776,3 +6776,33 @@ far down.
 - Have a native Hindi/Hinglish speaker read `/hi` and the Hinglish guide's examples.
 - Read the four guides once for tone; bump a guide's `updated` date when its copy changes.
 - After deploy, submit the sitemap again in Search Console so the guides are found.
+
+## C-154 · Nightly e2e failures (fix/nightly-e2e-failures)
+
+The first full nightly e2e (run 40712737521 on develop 1fce7680) had 3 failures and 5 flaky tests.
+Two were product bugs, the rest specs that drifted or raced the sandbox's background sync.
+
+- **F-07 (Sent, and Failed + Retry), F-08 (Insert): a reply stuck on queued.** Product bug. A
+  send's 202 is the message as queued; the API reads the sender's name and stores the idempotent
+  response after committing, so the worker can send and publish `message.updated` (Sent or Failed)
+  before the 202 reaches the browser. The composer then wrote the queued snapshot over the newer
+  copy, and nothing moved it again. Now a send's, a retry's and a product message's response go
+  through `applyQueuedResponse` (lib/inbox/cache): it replaces the optimistic bubble or a copy
+  still queued, never one the worker has moved on. Events replace as before. Test:
+  `cache.test.ts` "upsertQueuedResponse".
+- **GR-13 activation error with no step named.** Product bug. Activate was enabled while the flow's
+  steps were still loading; the API's errors name steps by index, so with no steps they were placed
+  nowhere and only the toast showed. Activate now waits for the steps (disabled while the flow
+  loads). Test: `AutomationEditorFlow.test.tsx` "waits for the steps before it activates".
+- **GR-13 build at 1280 px.** Spec: "Add step" for the second quick reply opened while the first
+  menu was still closing, so `menuitem /^Send/` matched both. Items are picked from the named menu.
+- **GR-34 latest week.** Spec. Connecting the sandbox account backfills conversations and comments
+  one to three days back in the worker, which from midweek on lands in the latest finished week,
+  between the spec reading the API and opening the page. Each pass now reads the API and then holds
+  the page to it, read again until a pass sees one state. Weeks before the first with data say
+  "No data before <week>" (C-129), which the spec now accepts beside "N weeks without data".
+- **GR-17 drawer.** Spec. The search is debounced and the unfiltered rows stay until it answers, so
+  the first row could be a backfilled contact; the spec edited that one. It now opens the row once
+  the list shows only the searched contact.
+- **GR-23 New broadcast.** Spec. With no broadcasts the empty state offers "New broadcast" as well
+  as the header; the spec waits for the empty list and takes the header's.

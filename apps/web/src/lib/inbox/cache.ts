@@ -297,6 +297,24 @@ export function applyMessage(queryClient: QueryClient, wid: string, conversation
   );
 }
 
+/**
+ * C-154: a send's or a retry's 202 is the message as queued, read before the worker took it. The
+ * worker's message.updated (Sent, Failed) can arrive first, and must not be put back to queued:
+ * the snapshot only replaces a copy that is still queued (or the optimistic bubble).
+ */
+export function upsertQueuedResponse(data: MessagePages, message: Message): MessagePages {
+  const newer = data.pages.some((page) =>
+    page.items.some((m) => m.id === message.id && m.status !== null && m.status !== "queued"),
+  );
+  return newer ? data : upsertMessageInPages(data, message);
+}
+
+export function applyQueuedResponse(queryClient: QueryClient, wid: string, conversationId: string, message: Message): void {
+  queryClient.setQueryData<MessagePages>(keys.messages(wid, conversationId), (data) =>
+    data?.pages ? upsertQueuedResponse(data, message) : data,
+  );
+}
+
 /** Messages oldest first, from the newest-first pages. */
 export function flattenMessages(data: MessagePages | undefined): Message[] {
   if (!data) return [];

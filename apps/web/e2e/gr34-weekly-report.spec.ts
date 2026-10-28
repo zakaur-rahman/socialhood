@@ -21,35 +21,44 @@ const number = new Intl.NumberFormat("en-US");
 test.describe("GR-34 weekly report", () => {
   test("the latest week shows the API's numbers, with gaps said and not zeroed", async ({ page, api, sandbox }) => {
     const { workspace } = sandbox;
-    const report = await api.call<Report>("GET", `/v1/w/${workspace.id}/reports/weekly`);
-    expect(report.series_weeks).toBe(8);
-    expect(report.weeks[0]).toBe(report.week_start);
+    // C-154: connecting the sandbox account backfills its recent conversations and comments in the
+    // worker (one to three days back, so in the finished week from midweek on), and they can land
+    // between reading the API and opening the page. Each pass reads the API, then opens the page
+    // and holds it to those numbers; a pass that saw the backfill land part way is read again.
+    await expect(async () => {
+      const report = await api.call<Report>("GET", `/v1/w/${workspace.id}/reports/weekly`);
+      expect(report.series_weeks).toBe(8);
+      expect(report.weeks[0]).toBe(report.week_start);
 
-    await page.goto(`/w/${workspace.slug}/reports`);
-    await expect(page.getByRole("heading", { level: 1, name: "Weekly report" })).toBeVisible();
-    await expect(page.getByTestId("report-span")).toContainText("Monday to Sunday");
+      await page.goto(`/w/${workspace.slug}/reports`);
+      await expect(page.getByRole("heading", { level: 1, name: "Weekly report" })).toBeVisible();
+      await expect(page.getByTestId("report-span")).toContainText("Monday to Sunday");
+      const quick = { timeout: 5_000 };
 
-    // A figure with something to show is a tile with a chart; one with nothing in any of the weeks
-    // shown is named in the line under the tiles (C-129), never drawn as a row of zeros.
-    const idleLine = (await page.getByTestId("report-idle").count()) ? ((await page.getByTestId("report-idle").textContent()) ?? "") : "";
-    let tiles = 0;
-    for (const metric of report.metrics) {
-      const tile = page.locator(`[data-metric="${metric.key}"]`).first();
-      if ((await tile.count()) === 0) {
-        expect(idleLine, `${metric.label} is named as having no activity`).toContain(metric.label);
-        continue;
+      // A figure with something to show is a tile with a chart; one with nothing in any of the
+      // weeks shown is named in the line under the tiles (C-129), never drawn as a row of zeros.
+      const idleLine = (await page.getByTestId("report-idle").count()) ? ((await page.getByTestId("report-idle").textContent()) ?? "") : "";
+      let tiles = 0;
+      for (const metric of report.metrics) {
+        const tile = page.locator(`[data-metric="${metric.key}"]`).first();
+        if ((await tile.count()) === 0) {
+          expect(idleLine, `${metric.label} is named as having no activity`).toContain(metric.label);
+          continue;
+        }
+        tiles += 1;
+        await expect(tile).toBeVisible(quick);
+        const shown = tile.getByTestId("metric-value");
+        if (metric.value === null) await expect(shown).toHaveText("—", quick);
+        else if (metric.unit === "count") await expect(shown).toHaveText(number.format(Math.round(metric.value)), quick);
+        await expect(tile.getByTestId("series-chart")).toBeVisible(quick);
+        const gaps = metric.series.filter((p) => p.value === null).length;
+        // Gaps in the middle are counted ("1 week without data"); weeks before the first one with
+        // data are said as "No data before <the first week>".
+        if (gaps > 0) await expect(tile.getByTestId("series-gaps")).toContainText(/without data|^No data before /, quick);
+        else await expect(tile.getByTestId("series-gaps")).toHaveCount(0, quick);
       }
-      tiles += 1;
-      await expect(tile).toBeVisible();
-      const shown = tile.getByTestId("metric-value");
-      if (metric.value === null) await expect(shown).toHaveText("—");
-      else if (metric.unit === "count") await expect(shown).toHaveText(number.format(Math.round(metric.value)));
-      await expect(tile.getByTestId("series-chart")).toBeVisible();
-      const gaps = metric.series.filter((p) => p.value === null).length;
-      if (gaps > 0) await expect(tile.getByTestId("series-gaps")).toContainText(/without data/);
-      else await expect(tile.getByTestId("series-gaps")).toHaveCount(0);
-    }
-    expect(tiles + (idleLine ? 1 : 0)).toBeGreaterThan(0);
+      expect(tiles + (idleLine ? 1 : 0)).toBeGreaterThan(0);
+    }).toPass({ timeout: 90_000 });
   });
 
   test("the week is in the address and the picker moves between weeks", async ({ page, api, sandbox }) => {
