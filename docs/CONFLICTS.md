@@ -6873,3 +6873,138 @@ Two were product bugs, the rest specs that drifted or raced the sandbox's backgr
   the list shows only the searched contact.
 - **GR-23 New broadcast.** Spec. With no broadcasts the empty state offers "New broadcast" as well
   as the header; the spec waits for the empty list and takes the header's.
+
+## C-155 · The public site in the owner's paper-and-night design, global and for creators too (feature/site-redesign)
+
+The owner supplied a landing-page design and decided (2026-10-29): use its layout and look for the
+whole public site; the design file is for layout and visual style only, every word comes from our
+own site; go global (no Hindi/Hinglish marketing, `/hi` and the Hinglish guide taken down, neutral
+demo data in dollars); speak to creators and influencers as well as businesses. The signed-in app
+(the `(clerk)` group, sign-in and sign-up) keeps its own theme.
+
+**C-155 supersedes C-127 to C-129 for the public site.** The public pages are no longer pinned
+dark: they render their own palette whatever theme the member chose for the app.
+
+### Theme and tokens
+- `globals.css` gains the site palette as `@theme` tokens (`paper`, `paper-deep`, `sheet`, `ink*`,
+  `rule*`, `night*`, `iris*`, `site-ok/wait/stop*`, `handoff*`, `comment`, `avatar-1..6`), each the
+  same in both app themes (listed in `themeInvariant`, described in `tokens.ts`).
+- A `.site` block in `globals.css` names them for the stylesheet (`--paper`, `--ink`, `--night` …,
+  plus the alpha shades and the site's shadows, all `color-mix` of a token) and re-points the app
+  tokens a public page uses (`canvas`, `panel`, `fg`, `fg-secondary`, `line*`, `brand*`, `success`,
+  `warning` …) at paper, and at night inside `.night`. So shared pieces (cards, prose, badges,
+  tables, the 404 illustration) wear the site's colours with no per-page change.
+- `components/site/site.css` holds the layout and components (header, footer, hero, scenes, plan
+  cards, FAQ, bands), every colour a variable, all in the components layer under `.site`, so
+  utilities still win and nothing reaches the app. Imported by the marketing layout and the 404.
+- The head script and `ThemePin` pin `<html>` to `light` on public routes (`SITE_THEME`), for the
+  browser's own parts; `theme-color` is the paper (`applySiteThemeColor`, the marketing layout's
+  viewport, and `ThemeSync` on public paths). Dark/Light/System in the app are unchanged.
+- Fonts: Funnel Display and Funnel Sans via `next/font/google` (variable files, `display: swap`,
+  preloaded on public pages only: `components/site/fonts.ts`). Geist stays the app's font but is
+  no longer preloaded, since public pages never show it.
+
+### Pages
+- **Landing** rebuilt in the design's order: hero (scroll-scrubbed pile of messages sorting into one
+  inbox; plays by itself on phones), the facts strip, "How it works" on a night band (knowledge
+  scan, wires to the cited words, the draft writing itself, a hand-off and a knowledge gap),
+  comment-to-DM automation (a creator's Reel, live comments, the DM, an editable keyword), Off,
+  Suggest and Auto switch over four messages plus the three setup steps, features, integrations
+  with their status, security and privacy (night), pricing, FAQ, closing (night) and footer (night).
+- Every scene is **server-rendered in a meaningful still state** (the sorted inbox, the finished
+  draft, a few comments and a sent DM, Suggest). One client island, `LandingMotion`, loads
+  `landing-motion.ts` after load and animates with transforms, opacity and classes only (CLS 0);
+  with reduced motion only the switch and the keyword field work. On wide screens the hero's notes
+  wait for the script (with a 3 s CSS fallback) because that scene starts scattered.
+- **framer-motion is gone** from the app (only the old landing effects used it), with the old
+  sections, effects, illustrations and the routing diagram.
+- **Every other public page** (pricing, features/*, compare/*, switch-from-manychat, developers/api,
+  guides, legal pages, contact, security, data deletion, unsubscribe, the 404) uses the new header,
+  footer, type, buttons (`CtaLink` is now the site's button), kickers and bands. Narrow columns
+  start at the same left edge as the page.
+- **Pricing** in the design's plan cards, still from the plans API: a plan that can't be bought
+  says "Coming soon" (`available: false`), Max is a line under the cards until it can be bought, and
+  the outlined plan is Pro when it is on sale, Free otherwise. Free's big number is zero in Pro's
+  currency, or "Free" when there is no price. The closing's "7-day trial of Pro" perk shows only
+  while Pro is on sale (it was always shown).
+
+### Wording (owner's correction: our words, the design's layout)
+Everything on the public site is our existing copy placed into the design's sections. Where it
+differs from today's site, and why:
+- **Languages removed** (owner): the hero trust row's "English, Hindi and Hinglish", the Languages
+  section, the strip's "3 languages", the FAQ "Which languages does the AI support?", the feature
+  card's "in English, Hindi and Hinglish", SITE_DESCRIPTION, the share image, llms.txt, the
+  sign-in panel's benefit line, the guides (one section and two bullets) and the AI inbox page.
+- **Global and creators** (owner): SITE_DESCRIPTION, the share image and its alt, llms.txt, the RSS
+  description and the guides index say "businesses and creators"; "small sellers in India" and
+  similar became "small businesses"; "India's consent rules" became "consent rules" (feature card,
+  GTM pages, plan matrix, guides); guide examples use a denim jacket, "their city" and "what's the
+  price"; the WhatsApp guide's title is now "WhatsApp Business API vs app for small business".
+- **Truth fixes:** Instagram's integration row no longer lists insights as included ("Post insights
+  follow Meta's approval": `IG_REQUEST_INSIGHTS_SCOPE` is off in production); the closing's
+  "7-day trial of Pro" shows only while Pro is on sale; the Interakt row no longer says Pro is
+  "priced in rupees".
+- **Rearranged, same words:** the knowledge section uses the "AI replies from your own knowledge"
+  card title and the "Will the AI make things up?" answer; the modes section uses "Set up in three
+  steps" as its kicker and "Let the AI draft or reply" as its heading, and the mode descriptions are
+  the FAQ's answers; the strip is C-138's numbers ("1 inbox", "200 AI credits", "3 automations")
+  plus "Official Meta APIs" with the footer's no-password line; the catalogue card's "Part of Pro."
+  is a "Pro" chip; Max's note sits under the plan cards as "Max: …"; the automation steps keep their
+  titles with shorter bodies (the keyword line became the field label "The keyword is yours"); the
+  integrations intro says "Each row" for "Each card"; the hero eyebrow is SITE_TAGLINE.
+- **New microcopy, kept minimal, for the scenes the design adds:** the hero captions ("Every DM.
+  Every comment." / "One inbox. Example data."), the scroll hint, the inbox chips; the knowledge
+  scene's four step labels (from the feature cards), the draft's states, its citations, the
+  hand-off line and "Knowledge gap: bulk orders / Add an answer"; "Automation on this Reel", "DMs
+  sent from this Reel", the creator's Reel caption, the DM's link and follow lines, the comment
+  summary legend; the mode table's labels and outcomes and the Off description ("No drafts.
+  Messages still arrive tagged with intent, sentiment and a lead score, and you reply yourself.");
+  the switch's sentence "Try the switch to see what each does with the same four messages."; the
+  Free card's "Available now", and "Cancel anytime." under a priced Pro without a trial.
+- **Demo data:** neutral names (Maya R., Sam K., Leo M., Nina, Theo), Toronto, a linen shirt at $39,
+  a denim jacket at $79 and a cotton scarf at $19, the made-up shop "Indigo Lane" and a made-up
+  creator "mia.makes" whose Reel uses our own LINK keyword example. Real plan prices still come from
+  the plans API.
+- **Removed with the old landing:** the inbox screenshot section, the screenshot timeline and the
+  footer's oversized wordmark. The "Is there a mobile app?" answer is our existing one (install
+  from the browser, push notifications; on iPhone from the Home Screen, iOS 16.4 or later).
+
+### Measured
+Local production build made the way the VM makes it (standalone, split hosts), Lighthouse 12.8.2,
+three runs each, medians; same machine and method as C-152. Before: develop 5b246b2b.
+
+| | before | after |
+|---|---|---|
+| Mobile performance | 72 | 90 |
+| Mobile LCP | 3.88 s | 3.11 s |
+| Mobile TBT | 501 ms | 198 ms |
+| Mobile Speed Index | 4.0 s | 1.7 s |
+| Mobile accessibility | 100 | 100 |
+| Desktop performance | 99 | 100 |
+| Desktop LCP | 0.83 s | 0.67 s |
+| Accessibility, SEO, best practices (both) | 100 | 100 |
+| CLS | 0 | 0 |
+
+*C-152's `content-visibility: auto` on the lower landing sections was tried again and dropped: it
+gave 93 on mobile but 96 accessibility (axe hit-tested the pricing notes against the night band
+behind a skipped section). Accessibility 100 wins.*
+
+### Checks
+`next typegen`, `tsc --noEmit` and `pnpm lint` clean; the whole web vitest suite passes (275 files,
+2,983 tests), including the design lint, the token tests (generated files refreshed), theme,
+public metadata, SEO, guides and the rewritten landing and pricing tests (one h1, the FAQ JSON-LD
+equal to the FAQ on the page, no Hindi or Hinglish, honest statuses, the C-149 states). E2E
+`landing|GR-37|not-found|C-153|guides` on the e2e stack: 33 passed. The landing spec now checks the
+still scenes, the script taking over, the mode switch and the keyword field, the section order, no
+sideways scroll and CLS under 0.1 at 375, 768, 1280 and 1536; the guides spec checks the 308s for
+/hi and the Hinglish guide. `vitest.setup.ts` stands in for the Google fonts. framer-motion is
+removed from package.json and the lockfile.
+
+### For the owner
+- Read the new microcopy listed above, the creator example and the demo data.
+- Still seller-only and left for you: the guides index title "Guides for Instagram and WhatsApp
+  sellers" and its h1 "Sell better in the DMs"; the hero line "AI that knows your business …".
+- Razorpay and UPI are the only payment rails; the page states them as facts, which reads Indian.
+- The plan matrix still says "Pro has a 7-day free trial" while Pro isn't on sale (the plan's
+  rule, not an offer today).
+- The share image stays dark (one picture for every theme).

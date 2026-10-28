@@ -496,11 +496,3 @@ body:has(.site) {
 @keyframes site-fall { 0% { opacity: 0; transform: translateY(-30px) rotate(-3deg); } 12%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(8px); } }
 @keyframes site-show { to { opacity: 1; } }
 
-/* The landing page's sections after the first three (C-152, kept in C-155): the browser skips their
-   style, layout and paint until they come near the screen. `auto` keeps each one's real height once
-   it has been laid out, so nothing jumps on the way back. The third (how it works) scrolls a sticky
-   scene, so it stays out. */
-[data-landing] > section:nth-of-type(n + 4) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 60rem;
-}
