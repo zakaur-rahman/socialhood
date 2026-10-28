@@ -1,7 +1,3 @@
-import "@/components/marketing/effects/effects.css";
-
-import { MarketingMotion } from "@/components/marketing/effects/MarketingMotion";
-import { ScrollReveal } from "@/components/marketing/effects/ScrollReveal";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { BreadcrumbJsonLd, JsonLd } from "@/components/marketing/JsonLd";
 import { PlanMatrix } from "@/components/marketing/PlanMatrix";
@@ -21,19 +17,17 @@ export const metadata = pageMetadata({
   path: PRICING_PATH,
 });
 
-/** GR-37: the plans with prices from Dodo, then every limit from the API's plan table. */
+/** GR-37: the plans with prices from Dodo, then every limit from the API's plan table (C-155 look). */
 export default async function PricingPage() {
   const pricing = buildPricing(await fetchPlans());
+  const pro = pricing.plans.find((card) => card.plan === "pro");
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <JsonLd data={softwareApplicationJsonLd(pricing)} />
       <BreadcrumbJsonLd name="Pricing" path={PRICING_PATH} />
-      <ScrollReveal />
-      <MarketingMotion>
-        <Pricing pricing={pricing} headingLevel={1} />
-        <PlanMatrix />
-        <FinalCta />
-      </MarketingMotion>
+      <Pricing pricing={pricing} headingLevel={1} />
+      <PlanMatrix />
+      <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
     </main>
   );
 }

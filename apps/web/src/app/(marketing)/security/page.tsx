@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { SECURITY_POLICY_PATH, SECURITY_TXT_PATH } from "@/lib/security/security-txt";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING, READING } from "@/styles/tokens";
+import { READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Security",
@@ -106,7 +106,7 @@ export default function SecurityPage() {
       <Container className="py-12 sm:py-16">
         <header className="max-w-3xl">
           <p className={SECTION_EYEBROW}>Trust</p>
-          <h1 className={cn(MARKETING_HEADING, "mt-3")}>Security</h1>
+          <h1 className={"h-page"}>Security</h1>
           <Card
             padding="roomy"
             className={cn(READING, "mt-6 text-fg-secondary [&_a]:text-brand-fg [&_a]:underline [&_a]:underline-offset-4")}

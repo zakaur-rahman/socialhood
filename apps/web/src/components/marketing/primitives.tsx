@@ -2,10 +2,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/marketing/site";
+import { cx } from "@/lib/cx";
 import { cn } from "@/lib/utils";
-import { EYEBROW, MARKETING_HEADING } from "@/styles/tokens";
 
 /**
  * The logo mark (C-140): the shell-gradient tile with the "amp bubble", a chat bubble holding three
@@ -47,45 +46,29 @@ export function Logo({ className }: { className?: string }) {
   return (
     // No prefetch (C-152): the logo is on screen at once on every public page, and on the home page
     // its prefetch fetched the page being read (180 KB of RSC, then decoded on the main thread).
-    <Link href="/" prefetch={false} className={cn("flex min-h-10 items-center gap-2.5 rounded-lg", className)}>
-      <LogoMark />
-      <span className="text-base font-semibold tracking-tight">{SITE_NAME}</span>
+    <Link href="/" prefetch={false} className={cx("brand", className)}>
+      <LogoMark className="size-7" />
+      <span>{SITE_NAME}</span>
     </Link>
   );
 }
 
 export { MARKETING_CARD, MARKETING_CARD_GLASS, MARKETING_CARD_HOVER } from "./classes";
 
-/** The Button variant behind each call to action. */
-const CTA_BUTTON = { primary: "default", secondary: "secondary", ghost: "ghost" } as const;
+/** The site's button for each call to action (C-155, site.css): ink, outlined, or a quiet link. */
+const CTA_CLASS = { primary: "btn btn-main", secondary: "btn btn-line", ghost: "btn btn-ghost" } as const;
 
-export type CtaVariant = keyof typeof CTA_BUTTON;
+export type CtaVariant = keyof typeof CTA_CLASS;
 
-/**
- * C-068's extras on top of the Button recipe: a small lift on hover (motion-safe only; the
- * transition adds `translate` to the recipe's colour properties), the primary's brand glow
- * (DESIGN_SYSTEM §6: `shadow-brand/10–25`, marketing only), and the ghost's secondary text, like
- * the nav links beside it.
- */
-const CTA_EXTRA: Record<CtaVariant, string> = {
-  primary: "shadow-glow-button",
-  secondary: "",
-  ghost: "text-fg-secondary",
-};
-const LIFT = "transition-[color,background-color,border-color,filter,translate] motion-safe:hover:-translate-y-0.5";
-
-/**
- * A call to action's classes: Button's `xl` (40 px on every pointer, so 40 px on touch too) in the
- * matching variant, merged with the marketing extras and the caller's classes (padding, width).
- */
+/** A call to action's classes: the site button in the matching variant, plus the caller's classes. */
 export function ctaClass(variant: CtaVariant = "primary", className?: string): string {
-  return cn(buttonVariants({ variant: CTA_BUTTON[variant], size: "xl" }), LIFT, CTA_EXTRA[variant], className);
+  return cx(CTA_CLASS[variant], className);
 }
 
 /**
- * A link styled as a button, with Button's data attributes. Links to Clerk's pages aren't
- * prefetched: their scripts are heavy and most visitors only read the page. Nor are links to a
- * section of the page being read (`#…`): prefetching them fetched that page again (C-152).
+ * A link styled as a button. Links to Clerk's pages aren't prefetched: their scripts are heavy and
+ * most visitors only read the page. Nor are links to a section of the page being read (`#…`):
+ * prefetching them fetched that page again (C-152).
  */
 export function CtaLink({
   href,
@@ -108,9 +91,7 @@ export function CtaLink({
       href={href as Route}
       prefetch={href.startsWith("#") ? false : prefetch}
       onClick={onClick}
-      data-slot="button"
-      data-variant={CTA_BUTTON[variant]}
-      data-size="xl"
+      data-variant={variant}
       className={ctaClass(variant, className)}
     >
       {children}
@@ -118,10 +99,19 @@ export function CtaLink({
   );
 }
 
-/** A section's eyebrow: the EYEBROW role in the brand's text colour. */
-export const SECTION_EYEBROW = cn(EYEBROW, "text-brand-fg");
+/** A section's kicker (C-155): a short sentence-case line in the accent above a heading. */
+export const SECTION_EYEBROW = "kicker";
 
-/** A landing section's heading block: a small eyebrow, the h2 and an optional intro. */
+/** A page's h1 on the inner pages, and a section's h2 (site.css). */
+export const PAGE_HEADING = "h-page";
+export const SECTION_TITLE = "h2";
+/** A band's heading inside a page (smaller than a landing section's). */
+export const BAND_TITLE = "h-sec";
+
+/**
+ * A section's heading block on the site (C-155): the kicker, the heading and an optional lede,
+ * left-aligned; `split` sets the lede beside the heading on wide screens, as the landing page does.
+ */
 export function SectionHeading({
   id,
   eyebrow,
@@ -129,28 +119,49 @@ export function SectionHeading({
   intro,
   className,
   level = 2,
+  split = true,
 }: {
   id: string;
   eyebrow: string;
-  title: string;
+  title: ReactNode;
   intro?: ReactNode;
   className?: string;
   /** 1 on a page whose first section this is (the pricing page has no other h1). */
   level?: 1 | 2;
+  split?: boolean;
 }) {
   const Heading = level === 1 ? "h1" : "h2";
-  return (
-    <div className={cn("mx-auto max-w-2xl text-center", className)}>
+  const head = (
+    <div>
       <p className={SECTION_EYEBROW}>{eyebrow}</p>
-      <Heading id={id} className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
+      <Heading id={id} className={SECTION_TITLE}>
         {title}
       </Heading>
-      {intro ? <p className="mt-4 text-base leading-relaxed text-pretty text-fg-secondary">{intro}</p> : null}
+    </div>
+  );
+  if (!intro) return <div className={className}>{head}</div>;
+  return split ? (
+    <div className={cx("split-head", className)}>
+      {head}
+      <p className="lede">{intro}</p>
+    </div>
+  ) : (
+    <div className={className}>
+      {head}
+      <p className="lede">{intro}</p>
     </div>
   );
 }
 
-/** The page width every marketing section shares, with a 16 px gutter on phones. */
+/**
+ * The page width every public section shares (site.css `.wrap`: 1240 px, 32 px gutters, 16 px on
+ * phones). The caller's classes go on an inner box, so a narrow column (`max-w-3xl`) starts at the
+ * same left edge as every other section instead of floating in the middle (C-155).
+ */
 export function Container({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("mx-auto w-full max-w-6xl px-4 sm:px-6", className)}>{children}</div>;
+  return (
+    <div className="wrap">
+      <div className={className}>{children}</div>
+    </div>
+  );
 }

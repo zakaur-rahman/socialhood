@@ -11,9 +11,9 @@ import { Container } from "./primitives";
  */
 export function PlanMatrix() {
   return (
-    <section id="compare-plans" aria-labelledby="compare-plans-title" className="scroll-mt-24 border-t border-line-subtle py-16 sm:py-20">
+    <section id="compare-plans" aria-labelledby="compare-plans-title" className="band scroll-mt-24">
       <Container>
-        <h2 id="compare-plans-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h2 id="compare-plans-title" className="h-sec">
           Compare every limit
         </h2>
         <p className="mt-3 max-w-2xl text-base text-fg-secondary">

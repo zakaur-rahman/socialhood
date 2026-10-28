@@ -1,9 +1,10 @@
 import { expect, test } from "./support/fixtures";
 
 /**
- * The landing page (C-138), signed out: every feature illustration has content (they were empty
- * boxes once), the sections come in the planned order, nothing scrolls sideways on a phone, and
- * the page's layout shift stays under 0.1 (Google's "good") while it loads and is scrolled through.
+ * The landing page (C-155), signed out: the scenes have content before any script, they come to
+ * life once it loads (the hero's notes move, the mode switch works, the keyword field changes the
+ * automation), the sections come in the planned order, nothing scrolls sideways, and the page's
+ * layout shift stays under 0.1 (Google's "good") while it loads and is scrolled through.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -17,7 +18,7 @@ const VIEWPORTS = [
 
 test.describe("landing page", () => {
   for (const { name, size } of VIEWPORTS) {
-    test(`illustrations are filled, layout is stable and fits (${name})`, async ({ page }) => {
+    test(`scenes are filled and live, layout is stable and fits (${name})`, async ({ page }) => {
       await page.setViewportSize(size);
       await page.addInitScript(() => {
         const w = window as unknown as { __cls: number };
@@ -31,12 +32,22 @@ test.describe("landing page", () => {
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-      // The pictures are in the markup before any scrolling.
-      const boxes = page.locator("[data-illustration]");
-      expect(await boxes.count()).toBeGreaterThanOrEqual(10);
-      for (const box of await boxes.all()) {
-        expect(((await box.textContent()) ?? "").trim().length).toBeGreaterThan(10);
-      }
+      // The scenes are in the markup before any scrolling: the sorted inbox, the knowledge, the comments.
+      await expect(page.locator("[data-stage] .note")).toHaveCount(8);
+      await expect(page.locator("[data-kb] .line")).not.toHaveCount(0);
+      await expect(page.locator("[data-comments] .cmt")).not.toHaveCount(0);
+      // The motion script arrives after load and takes the scenes over.
+      await expect(page.locator("[data-hero-scrub][data-live]")).toHaveCount(1, { timeout: 15_000 });
+
+      // The mode switch and the keyword field work.
+      const modes = page.locator("section#modes");
+      await modes.getByRole("button", { name: /Auto/ }).click();
+      await expect(modes.getByRole("button", { name: /Auto/ })).toHaveAttribute("aria-pressed", "true");
+      await expect(modes.getByText("Sent by the AI").first()).toBeVisible();
+      const keyword = page.getByRole("textbox", { name: "The keyword is yours" });
+      await keyword.fill("guide");
+      await expect(keyword).toHaveValue("GUIDE");
+      await expect(page.locator("[data-kw-show]")).toHaveText("GUIDE");
 
       // Scroll through the whole page, as a visitor would.
       const height = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -50,15 +61,14 @@ test.describe("landing page", () => {
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
-        "inbox-shot-title",
-        "integrations",
-        "features",
-        "how-it-works",
-        "showcase-title",
-        "languages-title",
         "The product in numbers",
+        "how-it-works",
+        "automations",
+        "modes",
+        "features",
+        "integrations",
+        "security",
         "pricing",
-        "trust-title",
         "faq",
         "cta-title",
       ]);

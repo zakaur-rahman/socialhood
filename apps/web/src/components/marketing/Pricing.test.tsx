@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { buildPricing } from "@/lib/marketing/plans";
 import { plansFixture } from "@/test/plans";
@@ -10,24 +10,11 @@ function card(name: string) {
   return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
 }
 
-/** jsdom has no IntersectionObserver; nothing is on screen, so Pro's moving glow stays idle. */
-class IdleObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-  takeRecords() {
-    return [];
-  }
-}
-
-describe("the pricing section", () => {
-  beforeEach(() => vi.stubGlobal("IntersectionObserver", IdleObserver));
-  afterEach(() => vi.unstubAllGlobals());
-
+describe("the pricing section (C-155 layout)", () => {
   it("shows the API's price in its currency, the trial and the entitlements", () => {
     render(<Pricing pricing={buildPricing(plansFixture().items)} />);
     const pro = within(card("Pro"));
-    expect(pro.getByText("₹999").parentElement).toHaveTextContent(/^₹999 a month$/);
+    expect(pro.getByText("₹999")).toHaveTextContent(/^₹999 a month$/);
     expect(pro.getByText("7-day free trial")).toBeInTheDocument();
     expect(pro.getByText(/A card is required to start the trial/)).toBeInTheDocument();
     expect(pro.getByText("AI replies: Off, Suggest and Auto")).toBeInTheDocument();
@@ -35,12 +22,13 @@ describe("the pricing section", () => {
 
     const free = within(card("Free"));
     expect(free.getByText("No card needed")).toBeInTheDocument();
+    expect(free.getByText("₹0")).toBeInTheDocument();
     expect(free.getByText("90 days of message history")).toBeInTheDocument();
     expect(free.getByRole("link", { name: "Start free" })).toHaveAttribute("href", "/sign-up");
 
-    const max = within(card("Max"));
-    expect(max.getAllByText("Coming soon").length).toBeGreaterThan(0);
-    expect(max.queryByRole("link")).not.toBeInTheDocument();
+    // Max can't be bought: a line under the cards, no card and no link.
+    expect(screen.queryByRole("heading", { level: 3, name: "Max" })).toBeNull();
+    expect(screen.getByText(/Max:/).closest("p")).toHaveTextContent("isn't available to buy yet");
     expect(screen.queryByText(PRICE_AT_SIGN_UP)).not.toBeInTheDocument();
   });
 
@@ -62,18 +50,9 @@ describe("the pricing section", () => {
     expect(container.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
   });
 
-  it("only Pro, when it can be bought, gets the moving border (C-068)", () => {
-    render(<Pricing pricing={buildPricing(plansFixture().items)} />);
-    expect(card("Pro").querySelector("[data-frame=moving-border]")).not.toBeNull();
-    expect(card("Free").querySelector("[data-frame=moving-border]")).toBeNull();
-    expect(card("Max").querySelector("[data-frame=moving-border]")).toBeNull();
-  });
-
-  it("the fallback keeps the same cards: Pro framed, Max coming soon, no price", () => {
-    render(<Pricing pricing={buildPricing(null)} />);
-    expect(card("Pro").querySelector("[data-frame=moving-border]")).not.toBeNull();
-    expect(within(card("Max")).getAllByText("Coming soon").length).toBeGreaterThan(0);
-    expect(within(card("Max")).queryByRole("link")).not.toBeInTheDocument();
+  it("outlines the plan to start on: Pro when it can be bought", () => {
+    const { container } = render(<Pricing pricing={buildPricing(plansFixture().items)} />);
+    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Pro");
   });
 
   it("C-149: with no billing on the API yet, Pro is coming soon with its features and no trial or price", () => {
@@ -87,7 +66,7 @@ describe("the pricing section", () => {
     expect(pro.getByText("AI replies: Off, Suggest and Auto")).toBeInTheDocument();
     expect(pro.queryByText("7-day free trial")).not.toBeInTheDocument();
     expect(pro.queryByRole("link")).not.toBeInTheDocument();
-    expect(card("Pro").querySelector("[data-frame=moving-border]")).toBeNull();
+    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Free");
     expect(within(card("Free")).getByRole("link", { name: "Start free" })).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/[$₹€£]\s?\d/);
   });

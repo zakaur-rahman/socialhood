@@ -87,42 +87,17 @@ export const colourExceptions: ColourException[] = [
 
   // Consumers that can't read CSS variables.
   { kind: "runtime", where: "app/layout.tsx", reason: "The viewport themeColor is a meta tag: it takes a value, not a variable." },
+  { kind: "runtime", where: "app/(marketing)/layout.tsx", reason: "The public site's viewport themeColor is a meta tag: the paper value, not a variable (C-155)." },
   { kind: "runtime", where: "lib/pwa/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-129)." },
   { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values, dark: the page can't know the theme (C-129)." },
-  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The marketing site it advertises is always dark (C-129)." },
-  { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes the canvas value of the theme on screen, not a variable (C-129)." },
+  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The card stays on the dark canvas (C-129): a share image is one picture for every theme." },
+  { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes a value, not a variable: the canvas of the theme on screen (C-129), or the public site's paper (C-155)." },
   { kind: "runtime", where: "lib/clerk-appearance.ts", reason: "Clerk computes shades from its `variables`, so they must be values; its element styles use the variables." },
   {
     kind: "code",
     where: "components/marketing/og.tsx",
     match: "rgba(0,0,0,0)",
     reason: "The glow's transparent end: Satori parses only the comma form and needs an explicit transparent stop.",
-  },
-
-  // Marketing effects: decorative, built from token variables with a fixed share (color-mix).
-  {
-    kind: "code",
-    where: "components/marketing/effects/lamp.tsx",
-    match: "color-mix(",
-    reason: "The lamp's two cones: brand at 65% over transparent, in an inline conic gradient. A marketing effect, not a theme colour.",
-  },
-  {
-    kind: "code",
-    where: "components/marketing/effects/spotlight-new.tsx",
-    match: "color-mix(",
-    reason: "The spotlight's three beams: brand tints at 3 to 13%, in inline radial gradients. A marketing effect.",
-  },
-  {
-    kind: "code",
-    where: "components/marketing/effects/moving-border.tsx",
-    match: "bg-[radial-gradient(",
-    reason: "The moving border's light spot: a radial gradient of brand-fg that rotates around the frame. A marketing effect.",
-  },
-  {
-    kind: "code",
-    where: "components/marketing/AutomationShowcase.tsx",
-    match: "bg-[radial-gradient(",
-    reason: "A circular brand glow behind the automation shot (closest-side, not the top glow's ellipse). Marketing only.",
   },
 
   // Deliberate states the lint can't derive.

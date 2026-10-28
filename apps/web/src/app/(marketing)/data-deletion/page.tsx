@@ -16,7 +16,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING, READING } from "@/styles/tokens";
+import { READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Data deletion",
@@ -70,7 +70,7 @@ function Option({ children }: { children: ReactNode }) {
 function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
   return (
     <section aria-labelledby="how-to-delete" className="mt-2">
-      <Heading id="how-to-delete" className={Heading === "h1" ? MARKETING_HEADING : "text-xl font-semibold tracking-tight"}>
+      <Heading id="how-to-delete" className={Heading === "h1" ? "h-page" : "h-sec"}>
         {Heading === "h1" ? "Delete your data" : "How to delete your data"}
       </Heading>
       <ol data-legal-prose="" className="mt-5 space-y-4">
@@ -165,7 +165,7 @@ export default async function DataDeletionPage({
           <div className="mb-12 flex flex-col items-start gap-3">
             {copy && request ? (
               <>
-                <h1 className={MARKETING_HEADING}>{copy.title}</h1>
+                <h1 className="h-page">{copy.title}</h1>
                 <p className="text-sm text-fg-secondary">{copy.body}</p>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   <dt className="text-fg-secondary">Confirmation code</dt>
@@ -182,7 +182,7 @@ export default async function DataDeletionPage({
               </>
             ) : (
               <>
-                <h1 className={MARKETING_HEADING}>Request not found</h1>
+                <h1 className="h-page">Request not found</h1>
                 <p className="text-sm text-fg-secondary">
                   Check the link from Instagram or Facebook, or email {SUPPORT_EMAIL} with your confirmation code.
                 </p>
@@ -193,7 +193,7 @@ export default async function DataDeletionPage({
         <HowToDelete heading={given ? "h2" : "h1"} />
         <CheckStatus code={given ? code : undefined} />
         <section aria-labelledby="who-we-are" className="mt-10">
-          <h2 id="who-we-are" className="text-xl font-semibold tracking-tight">
+          <h2 id="who-we-are" className="h-sec">
             Who runs {SITE_NAME}
           </h2>
           <LegalFacts />

@@ -1,54 +1,69 @@
-import { ArrowRight, BadgeCheck, Gift, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
-import table from "@/lib/marketing/plan-table.json";
 import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 
-import { LampGlow } from "./effects/lamp";
-import { Container, CtaLink } from "./primitives";
+import { MINI_ROWS, SOURCES } from "./landing/data";
+import { CtaLink } from "./primitives";
 
-const PERKS = [
-  { icon: Gift, text: "Free plan, no card needed" },
-  { icon: Sparkles, text: `${table.trial_days.pro}-day trial of Pro` },
-  { icon: BadgeCheck, text: "Official Meta APIs, no password asked" },
-];
-
-/** The last call to action, under the Lamp's light (C-068). The text sits below the glow, on the canvas. */
-export function FinalCta() {
+/**
+ * The last call to action, on a night band (C-155), with a small inbox where a few example messages
+ * land (CSS only; still with reduced motion). `trialDays` is Pro's trial when Pro is on sale, so the
+ * perk is only claimed when it can be taken (C-149).
+ */
+export function FinalCta({ trialDays = 0, pricingHref = `#${SECTION_IDS.pricing}` }: { trialDays?: number; pricingHref?: string }) {
+  const perks = [
+    "Free plan, no card needed",
+    ...(trialDays > 0 ? [`${trialDays}-day trial of Pro`] : []),
+    "Official Meta APIs, no password asked",
+  ];
   return (
-    <section aria-labelledby="cta-title" className="relative isolate overflow-hidden border-t border-line-subtle bg-canvas">
-      <LampGlow />
-      <Container className="relative z-10 pt-52 pb-20 text-center sm:pt-56">
-        <h2 id="cta-title" className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Bring every customer conversation into one inbox
-        </h2>
-        <p className="mx-auto mt-5 max-w-xl text-base text-pretty text-fg-secondary">
-          Connect Instagram and WhatsApp, add what your business knows, and let the AI draft the replies.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-8 sm:w-auto">
-            Start free <ArrowRight className="size-4" aria-hidden />
-          </CtaLink>
-          <CtaLink href={`#${SECTION_IDS.pricing}`} variant="secondary" className="w-full px-6 sm:w-auto">
-            See pricing
-          </CtaLink>
-          {/* A text link, not a button: it may wrap at 320 px. */}
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className="inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium text-fg-secondary underline-offset-4 transition-colors duration-normal hover:text-fg hover:underline"
-          >
-            Questions? {SUPPORT_EMAIL}
-          </a>
+    <section className="night close" aria-labelledby="cta-title">
+      <div className="wrap close-grid">
+        <div>
+          <h2 id="cta-title">Bring every customer conversation into one inbox</h2>
+          <p className="close-p">Connect Instagram and WhatsApp, add what your business knows, and let the AI draft the replies.</p>
+          <div className="ctas">
+            <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>
+              Start free <ArrowRight className="size-4" aria-hidden />
+            </CtaLink>
+            <CtaLink href={pricingHref} variant="secondary">
+              See pricing
+            </CtaLink>
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="btn btn-ghost">
+              Questions? {SUPPORT_EMAIL}
+            </a>
+          </div>
+          <ul className="facts" aria-label="What you get">
+            {perks.map((perk) => (
+              <li key={perk}>
+                <Check className="size-4" strokeWidth={2.4} aria-hidden />
+                {perk}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-fg-secondary" aria-label="What you get">
-          {PERKS.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-1.5">
-              <Icon className="size-3.5 text-brand-fg" aria-hidden />
-              {text}
-            </li>
-          ))}
-        </ul>
-      </Container>
+        <div className="mini" aria-hidden>
+          <div className="mini-h">
+            <b>Inbox</b>
+            <span>Today</span>
+          </div>
+          <ul className="mini-list">
+            {MINI_ROWS.map((row) => (
+              <li key={row.name} className={row.falling ? "mrow2 falling" : "mrow2"}>
+                <span className="app" style={{ "--c": SOURCES[row.source].colour } as CSSProperties}>
+                  <i />
+                </span>
+                <span className="grow">
+                  <b>{row.name}</b> {row.text}
+                </span>
+                <span className={`tag t-${row.tone}`}>{row.tag}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </section>
   );
 }

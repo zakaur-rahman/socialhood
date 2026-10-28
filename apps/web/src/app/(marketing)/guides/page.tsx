@@ -9,12 +9,11 @@ import { GUIDES, GUIDES_FEED_PATH, GUIDES_PATH, guidePath } from "@/lib/marketin
 import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Guides for Instagram and WhatsApp sellers",
   description:
-    "Practical guides for Indian sellers on Instagram and WhatsApp: DM auto-replies, comment-to-DM automations, the WhatsApp API and replying in Hinglish.",
+    "Practical guides for businesses and creators on Instagram and WhatsApp: DM auto-replies, comment-to-DM automations and the WhatsApp Business API.",
   path: GUIDES_PATH,
   feeds: { [`${SITE_NAME} guides`]: GUIDES_FEED_PATH },
 });
@@ -24,13 +23,13 @@ export default function GuidesPage() {
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <BreadcrumbJsonLd name="Guides" path={GUIDES_PATH} />
-      <section className="py-16 sm:py-20">
+      <section className="page-head">
         <Container className="max-w-3xl">
           <p className={SECTION_EYEBROW}>Guides</p>
-          <h1 className={cn(MARKETING_HEADING, "mt-3 text-balance sm:text-5xl")}>Sell better in the DMs</h1>
+          <h1 className={"h-page"}>Sell better in the DMs</h1>
           <p className="mt-5 text-lg leading-relaxed text-pretty text-fg-secondary">
-            Practical guides for businesses that sell on Instagram and WhatsApp in India: answering faster without sounding
-            like a bot, turning comments into conversations, and the rules Meta sets for all of it.
+            Practical guides for businesses and creators on Instagram and WhatsApp: answering faster without sounding like a
+            bot, turning comments into conversations, and the rules Meta sets for all of it.
           </p>
           <p className="mt-4 text-sm">
             <a
@@ -43,7 +42,7 @@ export default function GuidesPage() {
         </Container>
       </section>
 
-      <section aria-labelledby="guides-list-title" className="border-t border-line-subtle py-14 sm:py-16">
+      <section aria-labelledby="guides-list-title" className="band">
         <Container className="max-w-3xl">
           <h2 id="guides-list-title" className="sr-only">
             All guides

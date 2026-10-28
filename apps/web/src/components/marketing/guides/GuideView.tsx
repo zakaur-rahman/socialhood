@@ -8,7 +8,6 @@ import { articleJsonLd, breadcrumbTrailJsonLd } from "@/lib/marketing/seo";
 import { PRICING_PATH } from "@/lib/marketing/gtm-pages";
 import { SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING } from "@/styles/tokens";
 
 import { JsonLd } from "../JsonLd";
 import { Container, CtaLink, MARKETING_CARD, SECTION_EYEBROW } from "../primitives";
@@ -89,7 +88,7 @@ export function GuideView({ guide }: { guide: Guide }) {
           </Link>
           <header className="mt-4">
             <p className={SECTION_EYEBROW}>Guide</p>
-            <h1 id="guide-title" className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
+            <h1 id="guide-title" className={"h-page"}>
               {guide.h1}
             </h1>
             <div className="mt-4 flex flex-col gap-3">
@@ -125,7 +124,7 @@ export function GuideView({ guide }: { guide: Guide }) {
         {guide.faq?.length ? (
           <section aria-labelledby="guide-faq-title" className="mt-14 border-t border-line-subtle py-14">
             <Container className="max-w-3xl">
-              <h2 id="guide-faq-title" className="text-2xl font-semibold tracking-tight">
+              <h2 id="guide-faq-title" className="h-sec">
                 Common questions
               </h2>
               <dl className="mt-6 space-y-6">
@@ -144,7 +143,7 @@ export function GuideView({ guide }: { guide: Guide }) {
       <section aria-labelledby="guide-next-title" className="border-t border-line-subtle py-14">
         <Container className="max-w-3xl">
           <div className={cn(MARKETING_CARD, "p-6 sm:p-8")}>
-            <h2 id="guide-next-title" className="text-xl font-semibold tracking-tight">
+            <h2 id="guide-next-title" className="h-sec">
               Try it on your own messages
             </h2>
             <p className="mt-3 text-base leading-relaxed text-fg-secondary">

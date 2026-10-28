@@ -2,18 +2,19 @@
 
 import { useLayoutEffect } from "react";
 
-import { applyThemeAttribute, readThemeCookie } from "@/lib/theme";
+import { SITE_THEME, applySiteThemeColor, applyThemeAttribute, readThemeCookie } from "@/lib/theme";
 
 /**
- * For a page that is always dark (the marketing pages): sets `data-theme="dark"` on <html> before
- * paint on a client navigation, and gives the user's choice back when the page unmounts. The first
- * load is pinned by the root layout's head script (THEME_INIT_SCRIPT, by route), because this runs only
- * after hydration. The subtree also carries `scheme-dark`, so its colours are dark even for the
- * moment before either runs.
+ * For the public pages (C-155): sets `data-theme` on <html> to the site's light scheme before paint
+ * on a client navigation, and gives the user's choice back when the page unmounts. The first load
+ * is pinned by the root layout's head script (THEME_INIT_SCRIPT, by route), because this runs only
+ * after hydration. The site's colours don't depend on it (the `.site` frame sets its own palette);
+ * it keeps the browser's own parts (scrollbars, form controls) and the browser bar on paper.
  */
 export function ThemePin() {
   useLayoutEffect(() => {
-    applyThemeAttribute("dark");
+    applyThemeAttribute(SITE_THEME);
+    applySiteThemeColor();
     return () => applyThemeAttribute(readThemeCookie(document.cookie));
   }, []);
   return null;

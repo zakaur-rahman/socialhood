@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING, READING } from "@/styles/tokens";
+import { READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Contact us",
@@ -17,7 +17,7 @@ export const metadata = pageMetadata({
 
 const N = SITE_NAME;
 const LINK = "font-medium text-brand-fg underline underline-offset-4";
-const HEADING = "text-xl font-semibold tracking-tight text-fg";
+const HEADING = "h-sec";
 
 const HELP_LINKS: { label: string; href: string; note: string }[] = [
   { label: "Frequently asked questions", href: "/#faq", note: `Common questions about ${SITE_NAME}` },
@@ -32,7 +32,7 @@ export default function ContactPage() {
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <Container className="max-w-3xl py-12 sm:py-16">
         <p className={SECTION_EYEBROW}>Contact</p>
-        <h1 className={cn(MARKETING_HEADING, "mt-3")}>Contact us</h1>
+        <h1 className={"h-page"}>Contact us</h1>
         <p className={cn(READING, "mt-4 text-fg-secondary")}>
           Questions about {N}, your plan or your data? Write to us and a person will answer.
         </p>

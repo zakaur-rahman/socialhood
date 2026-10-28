@@ -6,7 +6,6 @@ import Link from "next/link";
 import { PRICING_PATH, STATUS_LABEL, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
 import { SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
-import { MARKETING_HEADING } from "@/styles/tokens";
 
 import { BreadcrumbJsonLd } from "./JsonLd";
 import { Container, CtaLink, SECTION_EYEBROW } from "./primitives";
@@ -29,9 +28,9 @@ function Compare({ page }: { page: GtmPage }) {
   if (!page.compare) return null;
   const { competitor, caption, rows } = page.compare;
   return (
-    <section aria-labelledby="compare-title" className="border-t border-line-subtle py-14 sm:py-16">
+    <section aria-labelledby="compare-title" className="band">
       <Container>
-        <h2 id="compare-title" className="text-2xl font-semibold tracking-tight">
+        <h2 id="compare-title" className="h-sec">
           Side by side
         </h2>
         {/* The table scrolls inside this box on a phone; the page itself never scrolls sideways. */}
@@ -88,10 +87,10 @@ export function GtmPageView({ page }: { page: GtmPage }) {
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <BreadcrumbJsonLd name={page.name} path={page.path} />
-      <section className="py-16 sm:py-20">
+      <section className="page-head">
         <Container className="max-w-3xl">
           <p className={SECTION_EYEBROW}>{page.eyebrow}</p>
-          <h1 className={cn(MARKETING_HEADING, "mt-3 text-balance sm:text-5xl")}>{page.h1}</h1>
+          <h1 className={"h-page"}>{page.h1}</h1>
           <p className="mt-5 text-lg leading-relaxed text-pretty text-fg-secondary">{page.intro}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-6 sm:w-auto">
@@ -123,9 +122,9 @@ export function GtmPageView({ page }: { page: GtmPage }) {
       ) : null}
 
       {page.blocks.map((block) => (
-        <section key={block.id} id={block.id} aria-labelledby={`${block.id}-title`} className="scroll-mt-24 border-t border-line-subtle py-14 sm:py-16">
+        <section key={block.id} id={block.id} aria-labelledby={`${block.id}-title`} className="band scroll-mt-24">
           <Container>
-            <h2 id={`${block.id}-title`} className="text-2xl font-semibold tracking-tight">
+            <h2 id={`${block.id}-title`} className="h-sec">
               {block.title}
             </h2>
             {block.intro ? <p className="mt-3 max-w-2xl text-base text-fg-secondary">{block.intro}</p> : null}
@@ -143,9 +142,9 @@ export function GtmPageView({ page }: { page: GtmPage }) {
 
       <Compare page={page} />
 
-      <section aria-labelledby="checked-title" className="border-t border-line-subtle py-14 sm:py-16">
+      <section aria-labelledby="checked-title" className="band">
         <Container className="max-w-3xl">
-          <h2 id="checked-title" className="text-2xl font-semibold tracking-tight">
+          <h2 id="checked-title" className="h-sec">
             What to know before you decide
           </h2>
           <ul className="mt-6 list-disc space-y-3 pl-5 text-sm leading-relaxed text-fg-secondary">
@@ -171,9 +170,9 @@ export function GtmPageView({ page }: { page: GtmPage }) {
         </Container>
       </section>
 
-      <section aria-labelledby="related-title" className="border-t border-line-subtle py-14 sm:py-16">
+      <section aria-labelledby="related-title" className="band">
         <Container className="max-w-3xl">
-          <h2 id="related-title" className="text-2xl font-semibold tracking-tight">
+          <h2 id="related-title" className="h-sec">
             Keep reading
           </h2>
           <ul className="mt-5 grid gap-1 text-sm">

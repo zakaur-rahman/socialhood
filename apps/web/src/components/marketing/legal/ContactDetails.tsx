@@ -7,7 +7,7 @@ import { LegalFacts } from "./LegalPage";
 
 const N = SITE_NAME;
 const LINK = "font-medium text-brand-fg underline underline-offset-4";
-const HEADING = "text-xl font-semibold tracking-tight text-fg";
+const HEADING = "h-sec";
 
 /**
  * C-144: the "About us" and "Contact us" page payment providers and Meta look for: the business's

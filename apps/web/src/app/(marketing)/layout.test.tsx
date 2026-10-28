@@ -4,14 +4,27 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/components/marketing/SiteHeader", () => ({ SiteHeader: () => <header>header</header> }));
 vi.mock("@/components/marketing/SiteFooter", () => ({ SiteFooter: () => <footer>footer</footer> }));
 vi.mock("@/components/theme/ThemePin", () => ({ ThemePin: () => null }));
+vi.mock("@/components/site/fonts", () => ({ SITE_FONTS: "font-display-var font-sans-var" }));
+vi.mock("@/components/site/site.css", () => ({}));
 
-import MarketingLayout from "./layout";
+import { colorValue } from "@/styles/token-values";
 
-describe("the marketing layout (C-129)", () => {
+import MarketingLayout, { viewport } from "./layout";
+
+describe("the marketing layout (C-155)", () => {
   const html = renderToStaticMarkup(<MarketingLayout params={Promise.resolve({})}>{<main>page</main>}</MarketingLayout>);
 
-  it("pins the dark scheme on its subtree, so the public site stays dark in a light app", () => {
-    expect(html).toMatch(/<div class="scheme-dark [^"]*bg-canvas/);
+  it("wraps the page in the site frame with its fonts, whatever the app's theme", () => {
+    expect(html).toMatch(/<div class="site font-display-var font-sans-var /);
+    expect(html).not.toContain("scheme-dark");
+  });
+
+  it("puts the browser bar on the site's paper", () => {
+    expect(viewport.themeColor).toBe(colorValue("paper"));
+  });
+
+  it("starts with a skip link to the page's main", () => {
+    expect(html).toMatch(/<a href="#main"[^>]*>Skip to content<\/a>/);
   });
 
   it("renders no inline script (React won't run one on a client navigation; the root layout's head script pins <html> by route)", () => {

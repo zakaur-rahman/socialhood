@@ -86,7 +86,7 @@ export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Amplychat: the AI inbox for businesses that sell on Instagram and WhatsApp",
+  alt: "Amplychat: the AI inbox for businesses and creators on Instagram and WhatsApp",
   type: "image/png",
 };
 

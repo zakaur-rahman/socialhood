@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { LEGAL, LEGAL_DOCUMENTS, legalDate, legalFacts, type LegalConfig, type LegalDocumentKey } from "@/lib/legal";
 import { cn } from "@/lib/utils";
-import { EYEBROW, MARKETING_HEADING, READING } from "@/styles/tokens";
+import { EYEBROW, READING } from "@/styles/tokens";
 
 import { Container, SECTION_EYEBROW } from "../primitives";
 import { PROSE } from "../prose";
@@ -60,7 +60,7 @@ export function LegalPage({
       <Container className="py-12 sm:py-16">
         <header className="max-w-3xl">
           <p className={SECTION_EYEBROW}>Legal</p>
-          <h1 className={cn(MARKETING_HEADING, "mt-3")}>{title}</h1>
+          <h1 className={"h-page"}>{title}</h1>
           <LegalDates document={document} />
           <Card
             padding="roomy"

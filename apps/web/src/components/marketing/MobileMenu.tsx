@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 /**
- * The phone menu (below md): a disclosure under the header bar with the section links and the
+ * The phone menu (below 900 px, C-155): a disclosure under the header bar with the section links and the
  * account actions. Escape or following a link closes it; Escape returns focus to the button.
  *
  * The server renders the panel's content and the button's classes (SiteHeader), so this island
@@ -19,7 +19,7 @@ export function MobileMenu({
 }: {
   buttonClassName: string;
   panelClassName: string;
-  /** Where the phone layout ends (`minWidth("md")`), from the server so the token mirror stays there. */
+  /** Where the phone layout ends, from the server (the header's breakpoint). */
   wideQuery: string;
   children: ReactNode;
 }) {
@@ -53,13 +53,10 @@ export function MobileMenu({
   };
 
   return (
-    <div className="md:hidden">
+    <div>
       <button
         ref={button}
         type="button"
-        data-slot="button"
-        data-variant="ghost"
-        data-size="icon-lg"
         className={buttonClassName}
         aria-expanded={open}
         aria-controls={panelId}

@@ -1,26 +1,19 @@
-import "@/components/marketing/effects/effects.css";
-
-import { Suspense } from "react";
-
-import { AutomationShowcase } from "@/components/marketing/AutomationShowcase";
-import { MarketingMotion } from "@/components/marketing/effects/MarketingMotion";
-import { ScrollReveal } from "@/components/marketing/effects/ScrollReveal";
 import { Faq } from "@/components/marketing/Faq";
-import { Features } from "@/components/marketing/Features";
 import { FinalCta } from "@/components/marketing/FinalCta";
-import { Hero } from "@/components/marketing/Hero";
 import { JsonLd } from "@/components/marketing/JsonLd";
-import { HowItWorks } from "@/components/marketing/HowItWorks";
-import { Integrations } from "@/components/marketing/Integrations";
-import { Languages } from "@/components/marketing/Languages";
+import { Channels } from "@/components/marketing/landing/Channels";
+import { Comments } from "@/components/marketing/landing/Comments";
+import { Decide } from "@/components/marketing/landing/Decide";
+import { Features } from "@/components/marketing/landing/Features";
+import { Hero } from "@/components/marketing/landing/Hero";
+import { LandingMotion } from "@/components/marketing/landing/LandingMotion";
+import { Modes } from "@/components/marketing/landing/Modes";
+import { Strip } from "@/components/marketing/landing/Strip";
+import { Trust } from "@/components/marketing/landing/Trust";
 import { Pricing } from "@/components/marketing/Pricing";
-import { ProductShot } from "@/components/marketing/ProductShot";
-import { SocialProof } from "@/components/marketing/SocialProof";
-import { Stats } from "@/components/marketing/Stats";
-import { Trust } from "@/components/marketing/Trust";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { FAQ } from "@/lib/marketing/faq";
-import { LANDING_LANGUAGES, landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
+import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
 
 // ISR: the plan list (prices from Dodo) is read at build and again at most once an hour.
@@ -31,62 +24,32 @@ export const metadata = pageMetadata({
   description: SITE_DESCRIPTION,
   path: "/",
   absoluteTitle: true,
-  // hreflang: this page and its Hinglish version name each other (C-153).
-  languages: { ...LANDING_LANGUAGES },
 });
 
 /**
- * The landing page (§3.1 "/"): what the product does, how, on which platforms, and what it costs.
- * Server-rendered; the effects (C-068) are small client islands inside MarketingMotion, and every
- * one of them is still with reduced motion. Each section after the hero sits in its own Suspense
- * boundary, which adds only comment markers to the HTML but lets React hydrate a section at a time,
- * yielding to the browser in between, instead of in one long task (C-152).
+ * The landing page (§3.1 "/", C-155): the owner's design, paper bands and night bands, with the
+ * site's own words. Every section is server-rendered and meaningful without script; one small
+ * island (LandingMotion) brings the scenes to life after load, and leaves them still under reduced
+ * motion. The pricing cards and the trial perk come from the plans API.
  */
 export default async function HomePage() {
   const pricing = buildPricing(await fetchPlans());
+  const pro = pricing.plans.find((card) => card.plan === "pro");
   return (
     <main id="main" tabIndex={-1} data-landing="" className="flex-1 outline-none">
       <JsonLd data={landingJsonLd(pricing, FAQ)} />
-      <ScrollReveal />
-      <MarketingMotion>
-        <Hero />
-        <Suspense>
-          <ProductShot />
-        </Suspense>
-        <Suspense>
-          <Integrations />
-        </Suspense>
-        <Suspense>
-          <Features />
-        </Suspense>
-        <Suspense>
-          <HowItWorks />
-        </Suspense>
-        <Suspense>
-          <AutomationShowcase />
-        </Suspense>
-        <Suspense>
-          <Languages />
-        </Suspense>
-        <Suspense>
-          <Stats />
-        </Suspense>
-        <Suspense>
-          <SocialProof />
-        </Suspense>
-        <Suspense>
-          <Pricing pricing={pricing} />
-        </Suspense>
-        <Suspense>
-          <Trust />
-        </Suspense>
-        <Suspense>
-          <Faq />
-        </Suspense>
-        <Suspense>
-          <FinalCta />
-        </Suspense>
-      </MarketingMotion>
+      <Hero />
+      <Strip />
+      <Decide />
+      <Comments />
+      <Modes />
+      <Features />
+      <Channels />
+      <Trust />
+      <Pricing pricing={pricing} />
+      <Faq />
+      <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
+      <LandingMotion />
     </main>
   );
 }

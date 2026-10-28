@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { HERO_TITLE } from "@/components/marketing/Hero";
+import { HERO_TITLE } from "@/components/marketing/landing/copy";
 import { LogoMark, MARKETING_CARD } from "@/components/marketing/primitives";
 import { SHOTS } from "@/components/marketing/shots";
 import { siteHref } from "@/lib/marketing/site";
@@ -20,7 +20,7 @@ const BENEFITS: Record<AuthMode, Benefit[]> = {
     {
       icon: Sparkles,
       title: "AI replies from your own knowledge",
-      body: "It drafts or sends replies using only what's in your knowledge base, in English, Hindi and Hinglish.",
+      body: "It drafts or sends replies using only what's in your knowledge base.",
     },
     {
       icon: Inbox,

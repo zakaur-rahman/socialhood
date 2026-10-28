@@ -152,6 +152,46 @@
   --color-chart-series-5: light-dark(#E87BA4, #D55181);   /* magenta */
   --color-chart-series-6: light-dark(#2A8FD8, #2F8FE0);   /* blue */
 
+  /* The public site (C-155): the owner's paper and night palette, the same in both app themes (the
+     public pages have their own look, independent of the member's choice). site.css and the .site
+     block below use them; the app never does. */
+  --color-paper: #F5F5F2;
+  --color-paper-deep: #EDEDE9;
+  --color-sheet: #FFFFFF;
+  --color-ink: #121317;
+  --color-ink-secondary: #464953;
+  --color-ink-tertiary: #686B74;
+  --color-rule: #DFDFDA;
+  --color-rule-subtle: #EAEAE6;
+  --color-night: #0F1017;
+  --color-night-raised: #181923;
+  --color-night-high: #232532;
+  --color-night-ink: #F2F2F5;
+  --color-night-ink-secondary: #B7B8C4;
+  --color-night-ink-tertiary: #8E909E;
+  --color-iris: #4B3FE0;
+  --color-iris-ink: #3A2FC2;
+  --color-iris-soft: #ECEAFD;
+  --color-iris-night: #A8A1FF;
+  --color-iris-mist: #B9B4F5;
+  --color-site-ok: #1C7343;
+  --color-site-ok-soft: #E3F1E8;
+  --color-site-wait: #985200;
+  --color-site-wait-soft: #FBEEDC;
+  --color-site-wait-mark: #D08A22;
+  --color-site-stop: #A43535;
+  --color-site-stop-soft: #F8E6E6;
+  --color-handoff: #F2A23A;
+  --color-handoff-ink: #F6CF97;
+  --color-handoff-ink-strong: #FBE3BF;
+  --color-comment: #E07FA8;
+  --color-avatar-1: #F3DDB9;
+  --color-avatar-2: #E3DDF8;
+  --color-avatar-3: #D7EEDF;
+  --color-avatar-4: #F6D3E2;
+  --color-avatar-5: #DCE8F6;
+  --color-avatar-6: #E6E6E1;
+
   /* Type: the two sizes the scale lacked, each with its line height (C-070) */
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */
   --text-md: 0.9375rem;  --text-md--line-height: 1.5rem;     /* 15/24: reading (Ask, legal prose) */
@@ -450,4 +490,95 @@
 @keyframes nf-twinkle {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.25; }
+}
+
+/* The public site's frame (C-155; it replaces the always-dark site of C-127 to C-129). The marketing
+   layout and the public 404 wrap their pages in `.site`, and a night band is `.night` inside it.
+   Two jobs here, both values and nothing else (the layout rules are components/site/site.css):
+   1. Short names for the site palette, so site.css reads like the owner's design file, plus the
+      shades the palette needs (alpha steps of a base token) and the site's shadows.
+   2. The app tokens re-pointed at the site palette, so the shared pieces a public page uses
+      (cards, prose, badges, tables: bg-panel, text-fg-secondary, border-line …) wear paper inside
+      `.site` and night inside `.night`, whatever theme the member chose for the app. A token
+      derived with color-mix() resolves where it is declared, so the derived ones are restated. */
+.site {
+  --paper: var(--color-paper); --paper-2: var(--color-paper-deep); --sheet: var(--color-sheet);
+  --ink: var(--color-ink); --ink-2: var(--color-ink-secondary); --ink-3: var(--color-ink-tertiary);
+  --rule: var(--color-rule); --rule-2: var(--color-rule-subtle);
+  --night: var(--color-night); --night-2: var(--color-night-raised); --night-3: var(--color-night-high);
+  --night-ink: var(--color-night-ink); --night-ink-2: var(--color-night-ink-secondary); --night-ink-3: var(--color-night-ink-tertiary);
+  --night-rule: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
+  --night-line: color-mix(in srgb, var(--color-night-ink) 22%, transparent);
+  --night-dash: color-mix(in srgb, var(--color-night-ink) 20%, transparent);
+  --night-chip: color-mix(in srgb, var(--color-night-ink) 7%, transparent);
+  --iris: var(--color-iris); --iris-ink: var(--color-iris-ink); --iris-soft: var(--color-iris-soft); --iris-night: var(--color-iris-night); --iris-mist: var(--color-iris-mist);
+  --iris-hit: color-mix(in srgb, var(--color-iris) 30%, transparent);
+  --iris-hit-line: color-mix(in srgb, var(--color-iris-night) 50%, transparent);
+  --iris-wash: color-mix(in srgb, var(--color-iris) 16%, transparent);
+  --iris-wash-line: color-mix(in srgb, var(--color-iris-night) 32%, transparent);
+  --iris-scan: color-mix(in srgb, var(--color-iris-night) 14%, transparent);
+  --ok: var(--color-site-ok); --ok-soft: var(--color-site-ok-soft);
+  --wait: var(--color-site-wait); --wait-soft: var(--color-site-wait-soft); --wait-mark: var(--color-site-wait-mark);
+  --stop: var(--color-site-stop); --stop-soft: var(--color-site-stop-soft);
+  --handoff-fill: color-mix(in srgb, var(--color-handoff) 12%, transparent);
+  --handoff-line: color-mix(in srgb, var(--color-handoff) 30%, transparent);
+  --handoff-ink: var(--color-handoff-ink); --handoff-ink-strong: var(--color-handoff-ink-strong);
+  --ig: var(--color-instagram); --cm: var(--color-comment); --wa: var(--color-whatsapp); --web: var(--color-web); --fb: var(--color-facebook);
+  --av-1: var(--color-avatar-1); --av-2: var(--color-avatar-2); --av-3: var(--color-avatar-3);
+  --av-4: var(--color-avatar-4); --av-5: var(--color-avatar-5); --av-6: var(--color-avatar-6);
+  --paper-veil: color-mix(in srgb, var(--color-paper) 90%, transparent);
+  --ink-shade: color-mix(in srgb, var(--color-ink) 60%, transparent);
+  --ink-strike: color-mix(in srgb, var(--color-ink) 30%, transparent);
+  --on-ink: var(--color-sheet);
+  --shadow-panel: 0 1px 2px color-mix(in srgb, var(--color-ink) 4%, transparent), 0 40px 80px -40px color-mix(in srgb, var(--color-ink) 35%, transparent);
+  --shadow-note: 0 22px 40px -18px color-mix(in srgb, var(--color-ink) 42%, transparent), 0 2px 6px color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --shadow-token: 0 8px 20px -8px color-mix(in srgb, var(--color-iris) 70%, transparent);
+
+  --color-canvas: var(--color-paper);
+  --color-panel: var(--color-sheet);
+  --color-overlay: var(--color-sheet);
+  --color-field: var(--color-paper);
+  --color-raised: var(--color-paper-deep);
+  --color-raised-hover: var(--color-rule-subtle);
+  --color-fg: var(--color-ink);
+  --color-fg-secondary: var(--color-ink-secondary);
+  --color-line: var(--color-rule);
+  --color-line-subtle: var(--color-rule-subtle);
+  --color-line-strong: var(--color-ink-tertiary);
+  --color-line-control: var(--color-ink-tertiary);
+  --color-line-glass: var(--color-rule);
+  --color-hover: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --color-pressed: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  --color-panel-glass: var(--color-sheet);
+  --color-card-glass: var(--color-sheet);
+  --color-brand: var(--color-iris);
+  --color-brand-strong: var(--color-iris);
+  --color-brand-fg: var(--color-iris);
+  --color-brand-soft: var(--color-iris-soft);
+  --color-brand-line: color-mix(in srgb, var(--color-iris) 40%, transparent);
+  --color-success: var(--color-site-ok);
+  --color-success-soft: var(--color-site-ok-soft);
+  --color-warning: var(--color-site-wait);
+  --color-warning-soft: var(--color-site-wait-soft);
+  color-scheme: light;
+}
+.site .night {
+  --color-canvas: var(--color-night);
+  --color-panel: var(--color-night-raised);
+  --color-overlay: var(--color-night-raised);
+  --color-field: var(--color-night-raised);
+  --color-raised: var(--color-night-high);
+  --color-fg: var(--color-night-ink);
+  --color-fg-secondary: var(--color-night-ink-secondary);
+  --color-line: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
+  --color-line-subtle: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
+  --color-line-strong: var(--color-night-ink-tertiary);
+  --color-line-control: var(--color-night-ink-tertiary);
+  --color-hover: color-mix(in srgb, var(--color-night-ink) 6%, transparent);
+  --color-panel-glass: var(--color-night-raised);
+  --color-card-glass: var(--color-night-raised);
+  --color-brand: var(--color-iris-night);
+  --color-brand-fg: var(--color-iris-night);
+  --color-brand-soft: var(--color-night-high);
+  color-scheme: dark;
 }

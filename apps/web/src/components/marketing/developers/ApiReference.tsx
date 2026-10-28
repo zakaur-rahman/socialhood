@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { curlExample, type Reference, type ReferenceField, type ReferenceOperation } from "@/lib/marketing/public-api";
 import { cn } from "@/lib/utils";
-import { EYEBROW, MARKETING_HEADING, READING, SECTION_TITLE } from "@/styles/tokens";
+import { EYEBROW, READING, SECTION_TITLE } from "@/styles/tokens";
 
 import { Container, SECTION_EYEBROW } from "../primitives";
 
@@ -107,7 +107,7 @@ export function ApiReference({ reference, baseUrl }: { reference: Reference; bas
       <Container className="py-12 sm:py-16">
         <header className="max-w-3xl">
           <p className={SECTION_EYEBROW}>Developers</p>
-          <h1 className={cn(MARKETING_HEADING, "mt-3")}>{reference.title}</h1>
+          <h1 className={"h-page"}>{reference.title}</h1>
           <p className="mt-2 text-sm text-fg-secondary">Version {reference.version}</p>
           <div className={cn(READING, "mt-6 space-y-3 text-fg-secondary")}>
             {reference.paragraphs.map((paragraph) => (
@@ -200,7 +200,7 @@ export function ApiReferenceUnavailable() {
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <Container className="py-12 sm:py-16">
         <p className={SECTION_EYEBROW}>Developers</p>
-        <h1 className={cn(MARKETING_HEADING, "mt-3")}>Amplychat public API</h1>
+        <h1 className={"h-page"}>Amplychat public API</h1>
         <Card padding="roomy" className="mt-6 max-w-xl" role="status">
           <p className="text-sm">The API reference isn&rsquo;t available right now. Try again in a moment.</p>
         </Card>
