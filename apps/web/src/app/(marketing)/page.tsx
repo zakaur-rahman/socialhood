@@ -20,7 +20,7 @@ import { Stats } from "@/components/marketing/Stats";
 import { Trust } from "@/components/marketing/Trust";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { FAQ } from "@/lib/marketing/faq";
-import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
+import { LANDING_LANGUAGES, landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
 
 // ISR: the plan list (prices from Dodo) is read at build and again at most once an hour.
@@ -31,6 +31,8 @@ export const metadata = pageMetadata({
   description: SITE_DESCRIPTION,
   path: "/",
   absoluteTitle: true,
+  // hreflang: this page and its Hinglish version name each other (C-153).
+  languages: { ...LANDING_LANGUAGES },
 });
 
 /**

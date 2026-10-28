@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { applyMessage } from "@/lib/inbox/cache";
+import { applyQueuedResponse } from "@/lib/inbox/cache";
 
 import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type { Message, ProductMessageSend, WaCatalogueConnectInput, WaCatalogueStatus } from "../types";
@@ -70,7 +70,7 @@ export function useSendProductMessage(wid: string, conversationId: string) {
           body,
         }),
       ),
-    onSuccess: (message) => applyMessage(queryClient, wid, conversationId, message),
+    onSuccess: (message) => applyQueuedResponse(queryClient, wid, conversationId, message),
     meta: INLINE_PLAN_LIMITS,
   });
 }

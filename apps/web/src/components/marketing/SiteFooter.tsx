@@ -53,7 +53,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           <ul className="mt-3 grid gap-1 sm:gap-1.5">
             {LEARN_LINKS.map((link) => (
               <li key={link.href}>
-                <Link href={link.href as Route} className={LINK}>
+                <Link href={link.href as Route} lang={link.lang} className={LINK}>
                   {link.label}
                 </Link>
               </li>
