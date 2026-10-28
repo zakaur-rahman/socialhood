@@ -58,7 +58,10 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
     // Compose it.
     await page.goto(`/w/${workspace.slug}/broadcasts`);
     await expect(page.getByRole("heading", { name: "Broadcasts", level: 1 })).toBeVisible();
-    await page.getByRole("link", { name: /New/ }).click();
+    // With no broadcasts yet, the empty list offers New broadcast as well as the page header:
+    // wait for the list, then take the header's.
+    await expect(page.getByText("No broadcasts yet")).toBeVisible();
+    await page.getByRole("link", { name: "New broadcast" }).first().click();
     await page.getByLabel("Name").fill(`Diwali sale ${stamp}`);
     await page.getByRole("combobox", { name: "Segment" }).click();
     await page.getByRole("option", { name: segmentName }).click();

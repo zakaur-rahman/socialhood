@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { applyMessage } from "@/lib/inbox/cache";
+import { applyMessage, applyQueuedResponse } from "@/lib/inbox/cache";
 import { useInboxStore } from "@/lib/inbox/store";
 import { uuid } from "@/lib/uuid";
 
@@ -114,7 +114,7 @@ export function useSendReply(wid: string, conversationId: string) {
             body: entry.body,
           }),
         );
-        applyMessage(queryClient, wid, entry.conversationId, message);
+        applyQueuedResponse(queryClient, wid, entry.conversationId, message);
         useInboxStore.getState().removeOutbox(clientId);
       } catch (error) {
         const apiError = toApiError(error);
@@ -174,7 +174,7 @@ export function useSendReply(wid: string, conversationId: string) {
         const updated = await unwrap(
           api.POST("/v1/w/{wid}/messages/{message_id}/retry", { params: { path: { wid, message_id: message.id } } }),
         );
-        applyMessage(queryClient, wid, conversationId, updated);
+        applyQueuedResponse(queryClient, wid, conversationId, updated);
       } catch (error) {
         const apiError = toApiError(error);
         applyMessage(queryClient, wid, conversationId, {
