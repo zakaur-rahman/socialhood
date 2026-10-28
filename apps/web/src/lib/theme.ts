@@ -10,7 +10,7 @@
  * allows inline scripts (lib/security/headers.ts), so a small script in <head> sets the attribute
  * before anything paints. No cookie, or Dark, leaves the server-rendered default.
  */
-import { colorValue, type Theme } from "@/styles/tokens";
+import { colorValue, type Theme } from "@/styles/token-values";
 
 export const THEME_COOKIE = "sh_theme";
 export const THEME_CHOICES = ["dark", "light", "system"] as const;

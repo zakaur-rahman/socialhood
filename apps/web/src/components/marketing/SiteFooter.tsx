@@ -83,11 +83,11 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
         </Container>
       </div>
-      {/* An oversized, decorative wordmark (C-138): the product name from the constant, in the edge colour. */}
+      {/* An oversized, decorative wordmark (C-138): the product name from the constant, in the control-edge colour (3:1 on the canvas, C-152). */}
       <p
         aria-hidden
         data-footer-wordmark=""
-        className="pointer-events-none -mt-2 -mb-[0.2em] text-center text-5xl sm:text-8xl lg:text-9xl leading-none font-semibold tracking-tighter whitespace-nowrap text-line-subtle select-none"
+        className="pointer-events-none -mt-2 -mb-[0.2em] text-center text-5xl sm:text-8xl lg:text-9xl leading-none font-semibold tracking-tighter whitespace-nowrap text-line-control select-none"
       >
         {SITE_NAME}
       </p>

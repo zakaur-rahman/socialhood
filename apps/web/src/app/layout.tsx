@@ -3,8 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { RootAuth } from "@/components/auth/RootAuth";
 import { ThemeSync } from "@/components/theme/ThemeSync";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { verificationMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME, siteUrl } from "@/lib/marketing/site";
 import { manifestLink } from "@/lib/pwa/manifest";
@@ -13,7 +11,9 @@ import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
 
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Mono isn't preloaded (C-152): no page shows it above the fold (code samples, IDs, figures in the
+// app), and a preload put its 25 KB ahead of the page on every first visit. It loads when used.
+const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
   // Absolute URLs (canonical, Open Graph) on every page resolve against the public origin (C-142).
@@ -43,9 +43,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="bg-canvas text-fg font-sans antialiased">
         {/* Clerk on every page with one origin; only in app/(clerk) when the app has its own host (C-148). */}
+        {/* Toasts and tooltips belong to the app: app/(clerk)/layout.tsx mounts them (C-152). */}
         <RootAuth>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-          <Toaster />
+          {children}
           <ThemeSync />
         </RootAuth>
       </body>

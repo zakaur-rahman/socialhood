@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { appOrigin } from "@/lib/marketing/site";
 import { manifestLink } from "@/lib/pwa/manifest";
 
@@ -12,8 +14,17 @@ export const metadata: Metadata = manifestLink().app;
  * the app on its own host they get Clerk's provider here, once for both groups, so moving from
  * sign-in into the app keeps it mounted; the public pages then load none of Clerk (C-148). With one
  * origin the root layout already wraps every page in it.
+ *
+ * The toasts and the tooltips' shared delay live here too, not in the root layout: the public pages
+ * use neither, and a layout ships its client components to every page under it (C-152).
  */
 export default function ClerkLayout({ children }: LayoutProps<"/">) {
-  if (!appOrigin()) return children;
-  return <AuthProvider>{children}</AuthProvider>;
+  const app = (
+    <>
+      <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+      <Toaster />
+    </>
+  );
+  if (!appOrigin()) return app;
+  return <AuthProvider>{app}</AuthProvider>;
 }

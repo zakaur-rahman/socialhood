@@ -3,9 +3,9 @@
 import { m, useScroll, useTransform } from "framer-motion";
 import { useRef, type ReactNode } from "react";
 
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
-import { MARKETING_CARD } from "../primitives";
+import { MARKETING_CARD } from "../classes";
 
 /**
  * Container Scroll Animation, from Aceternity UI's free "container-scroll-animation"
@@ -24,10 +24,10 @@ export function ContainerScroll({ children, className }: { children: ReactNode; 
   const scale = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
 
   return (
-    <div ref={ref} className={cn("relative [perspective:1000px]", className)}>
+    <div ref={ref} className={cx("relative [perspective:1000px]", className)}>
       <m.div
         style={{ rotateX, scale }}
-        className={cn(MARKETING_CARD, "mx-auto w-full origin-top p-1.5 shadow-glow will-change-transform motion-reduce:transform-none! sm:p-2")}
+        className={cx(MARKETING_CARD, "mx-auto w-full origin-top p-1.5 shadow-glow will-change-transform motion-reduce:transform-none! sm:p-2")}
       >
         <div className="overflow-hidden rounded-xl border border-line bg-canvas">{children}</div>
       </m.div>

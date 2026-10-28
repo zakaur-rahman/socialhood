@@ -12,7 +12,7 @@ import {
   writeThemeCookie,
   type ThemeChoice,
 } from "@/lib/theme";
-import type { Theme } from "@/styles/tokens";
+import type { Theme } from "@/styles/token-values";
 
 const listeners = new Set<() => void>();
 

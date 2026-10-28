@@ -4,6 +4,14 @@
  * runs only under prefers-reduced-motion: no-preference; otherwise everything is static.
  */
 
+/* ---- The landing page's sections below the first two (C-152): the browser skips their style,
+   layout and paint until they come near the screen, which takes most of that work out of the load.
+   `auto` keeps each one's real height once it has been laid out, so nothing jumps on the way back. */
+[data-landing] > section:nth-of-type(n + 3) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56rem;
+}
+
 /* ---- Scroll reveal (ScrollReveal.tsx): hidden only once JavaScript has armed it. */
 @media (prefers-reduced-motion: no-preference) {
   [data-reveal-armed] [data-reveal] {

@@ -6693,3 +6693,70 @@ API checks the name against `zoneinfo.available_timezones()`. The API image is
   sends is accepted and `ZoneInfo()` resolves it. Names are stored as sent.
 - A build step asserts `Asia/Kolkata`, `Asia/Calcutta`, `US/Eastern` and `Europe/Kiev` are known, so
   an image without the aliases can't be built again.
+
+## C-152 · Mobile speed and contrast on the public site (feature/launch-speed)
+
+Live Lighthouse on amplychat.com (2026-10-28): mobile performance 76 (LCP 3.6 s, TBT 440 ms),
+accessibility 97 on mobile and 96 on desktop (the footer wordmark's contrast).
+
+**Measured** on a local production build made the way the VM makes it (standalone, split hosts),
+Lighthouse 12.8.2, three runs each, medians. Local numbers differ from live, and this machine is
+noisy (a single run can drop 20 points), so read the trend, not the last digit. Two local artefacts
+were removed from the "before" so it compares like with like: Clerk's development instance makes a
+handshake redirect on every cookie-less visit (production doesn't), and the standalone trace on
+Windows misses sharp's DLLs, so images went out unresized (the VM's Linux image resizes them).
+
+| | before | after |
+|---|---|---|
+| Mobile performance | 81 | 84–86 |
+| Mobile LCP | 4.35 s | 3.6 s |
+| Mobile Speed Index | 3.0 s | 2.6–2.7 s |
+| Mobile TBT | 190–590 ms | 150–320 ms |
+| Mobile accessibility | 97 | 100 |
+| Desktop performance | 99 | 99 |
+| Desktop LCP | 0.96 s | 0.80 s |
+| Desktop accessibility | 96 | 100 |
+| CLS | 0 | 0 |
+
+The goal of 90 on mobile isn't reached locally. With scripts blocked the same page scores 98 (LCP
+2.3 s): what is left is React's hydration of a ~3,300-element page and the framework's own scripts,
+which Lighthouse's simulation counts into LCP because headless Chrome's first frame lands after them.
+The next levers are a smaller landing DOM (Features and the two hero diagrams are the biggest) and
+CSS-only versions of the framer-motion effects (lamp, moving border, trace line, scroll tilts), so
+motion's code leaves the first load; both change how the page looks and are left for a decision.
+
+**What changed**
+
+- **Proxy:** on the public site's host the proxy returns before Clerk runs. The public pages never
+  ask who is signed in (C-148: no Clerk in their bundle; the header reads the `__client_uat` hint),
+  so this only drops work per request and the handshake redirect a visitor with a stale session
+  paid on the first byte. The app host and one-origin setups run Clerk as before.
+- **No prefetch of the page being read:** the logo, the header's section links (`/#…`) and CTA links
+  to `#…` don't prefetch. The logo's prefetch fetched the home page's RSC again (180 KB) and decoded
+  it on the main thread during load.
+- **Less to download on the landing page** (Lighthouse, mobile, transferred): scripts 307 KB → 237
+  KB, prefetch fetches 45 KB → 0, fonts 74 KB → 49 KB, everything 554 KB → 409 KB. `cn`'s tailwind-merge tables, Button and Radix left the public
+  bundle. HeaderAuth and the 404's actions render both link sets on the server and a small client
+  switch (`SignedInSwitch`) picks one; MobileMenu gets its content and classes from the server; the
+  effects use `cx` (lib/cx.ts, a plain join) where nothing overrides a class; `MARKETING_CARD*`
+  moved to `marketing/classes.ts`. The toasts and the tooltip provider moved from the root layout to
+  `app/(clerk)/layout.tsx`: the public pages use neither. `colorValue`/`radiusValue` moved to
+  `styles/token-values.ts` (tokens.ts re-exports them), so the theme sync and the global error page
+  no longer bring the token catalogue's descriptions.
+- **Motion after load:** LazyMotion's features download once the page is idle after load, and the
+  hero's pulses are a server-rendered still frame until then; the moving layer
+  (`RoutingPulsesLive`) is imported only when the page has settled, the diagram is on screen and
+  motion is allowed, and it mounts only the example that is playing.
+- **Hydration and rendering:** each landing section after the hero is its own Suspense boundary, so
+  React hydrates section by section with yields in between, and sections from the third on have
+  `content-visibility: auto` (with a remembered intrinsic size), so their style and layout wait
+  until they come near the screen.
+- **Fonts and images:** Geist Mono isn't preloaded (no page shows it above the fold); images are
+  offered as AVIF first; the inbox shot's `sizes` matches its real width on phones.
+- **Contrast:** the footer wordmark uses `line-control` (3:1 or more on every surface by design)
+  instead of `line-subtle` (1.19:1). The hero's moving chips draw their words from a pseudo-element:
+  they fade in and out, so for a moment their text sat below contrast; the diagram is decorative and
+  the still frame keeps real text.
+- **Not done:** a modern `browserslist` would make Next's output less modern, not more (its default
+  targets are Chrome 111, Safari 16.4…), and the "legacy JavaScript" Lighthouse names is Next's
+  polyfill module, which it always includes; it carries no score weight.
