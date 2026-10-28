@@ -109,6 +109,7 @@ export const NAV_LINKS = [
   { label: "How it works", href: `/#${SECTION_IDS.howItWorks}` },
   { label: "Pricing", href: `/#${SECTION_IDS.pricing}` },
   { label: "FAQ", href: `/#${SECTION_IDS.faq}` },
+  { label: "Guides", href: "/guides" },
 ] as const;
 
 export const LEGAL_LINKS = [
@@ -122,7 +123,10 @@ export const LEGAL_LINKS = [
   { label: "Security", href: "/security" },
 ] as const;
 
-/** The public pages the sitemap lists. */
+/**
+ * The public pages the sitemap lists. Each guide (/guides/{slug}, lib/marketing/guides) is added by
+ * the sitemap itself, and /guides takes its date from the newest guide (C-153).
+ */
 export const PUBLIC_PATHS = [
   "/",
   "/pricing",
@@ -140,6 +144,8 @@ export const PUBLIC_PATHS = [
   "/contact",
   "/developers/api",
   "/security",
+  "/guides",
+  "/hi",
 ] as const;
 
 /**
@@ -168,10 +174,14 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/security": "2026-10-26",
+  "/hi": "2026-10-28",
 };
 
-/** The footer's "Compare and learn" links to the go-to-market pages (GR-37). */
-export const LEARN_LINKS = [
+/**
+ * The footer's "Compare and learn" links to the go-to-market pages (GR-37) and the Hinglish page
+ * (C-153); `lang` marks a label that isn't English. The guides are in NAV_LINKS (header and footer).
+ */
+export const LEARN_LINKS: readonly { label: string; href: string; lang?: string }[] = [
   { label: "Plans and limits", href: "/pricing" },
   { label: "Switch from Manychat", href: "/switch-from-manychat" },
   { label: "Amplychat vs Manychat", href: "/compare/manychat" },
@@ -180,4 +190,5 @@ export const LEARN_LINKS = [
   { label: "The AI inbox", href: "/features/ai-inbox" },
   { label: "Publishing", href: "/features/publishing" },
   { label: "Public API", href: "/developers/api" },
-] as const;
+  { label: `${SITE_NAME} Hinglish mein`, href: "/hi", lang: "hi-Latn" },
+];

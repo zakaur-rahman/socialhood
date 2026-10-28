@@ -1,6 +1,7 @@
 import { SUPPORT_EMAIL } from "@/lib/copy";
 
 import { GTM_PAGES } from "./gtm-pages";
+import { GUIDES, GUIDES_PATH, guidePath } from "./guides";
 import { LEGAL_LINKS, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, siteUrl } from "./site";
 
 /**
@@ -21,6 +22,12 @@ export function llmsText(origin: string = siteUrl()): string {
     link("Home", "/", "what the product does, how it works, plans and common questions"),
     link("Pricing", "/pricing", "plans and every limit side by side"),
     ...GTM_PAGES.filter((page) => page.path !== "/pricing").map((page) => link(page.name, page.path, page.description)),
+    link(`${SITE_NAME} in Hinglish`, "/hi", "the product explained in Hinglish (Hindi in Latin letters)"),
+    "",
+    "## Guides",
+    "",
+    link("All guides", GUIDES_PATH, "practical guides for businesses that sell on Instagram and WhatsApp in India"),
+    ...GUIDES.map((guide) => link(guide.h1, guidePath(guide.slug), guide.description)),
     "",
     "## Developers",
     "",
