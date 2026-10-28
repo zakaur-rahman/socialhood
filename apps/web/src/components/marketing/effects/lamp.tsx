@@ -2,7 +2,7 @@
 
 import { m, useReducedMotion } from "framer-motion";
 
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 /**
  * Lamp, from Aceternity UI's free "lamp" (ui.aceternity.com/components/lamp), adapted for Social
@@ -18,7 +18,7 @@ export function LampGlow({ className }: { className?: string }) {
   const open = { opacity: 1, width: "30rem" };
   const viewport = { once: true, margin: "0px 0px -20% 0px" };
   return (
-    <div aria-hidden data-effect="lamp" className={cn("pointer-events-none absolute inset-x-0 top-0 isolate h-80 overflow-hidden", className)}>
+    <div aria-hidden data-effect="lamp" className={cx("pointer-events-none absolute inset-x-0 top-0 isolate h-80 overflow-hidden", className)}>
       <div className="relative flex h-full w-full scale-y-125 items-center justify-center max-sm:scale-x-60">
         <m.div
           initial={{ opacity: 0.5, width: "15rem" }}

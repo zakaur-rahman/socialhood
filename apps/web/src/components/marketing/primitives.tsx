@@ -45,21 +45,16 @@ export const LOGO_BARS = [
 /** The logo linking home; the wordmark is the link's name. */
 export function Logo({ className }: { className?: string }) {
   return (
-    <Link href="/" className={cn("flex min-h-10 items-center gap-2.5 rounded-lg", className)}>
+    // No prefetch (C-152): the logo is on screen at once on every public page, and on the home page
+    // its prefetch fetched the page being read (180 KB of RSC, then decoded on the main thread).
+    <Link href="/" prefetch={false} className={cn("flex min-h-10 items-center gap-2.5 rounded-lg", className)}>
       <LogoMark />
       <span className="text-base font-semibold tracking-tight">{SITE_NAME}</span>
     </Link>
   );
 }
 
-/**
- * The marketing card surface (C-127): `rounded-2xl` (DESIGN_SYSTEM §4), a `line` edge and the
- * `panel` fill. A card that reacts to hover adds `MARKETING_CARD_HOVER`; a card laid over the page
- * glow wears the `panel-glass` fill instead. Add padding and layout at the call site.
- */
-export const MARKETING_CARD = "rounded-2xl border border-line bg-panel";
-export const MARKETING_CARD_GLASS = "rounded-2xl border border-line bg-panel-glass";
-export const MARKETING_CARD_HOVER = "transition-colors duration-slow hover:border-line-strong";
+export { MARKETING_CARD, MARKETING_CARD_GLASS, MARKETING_CARD_HOVER } from "./classes";
 
 /** The Button variant behind each call to action. */
 const CTA_BUTTON = { primary: "default", secondary: "secondary", ghost: "ghost" } as const;
@@ -89,7 +84,8 @@ export function ctaClass(variant: CtaVariant = "primary", className?: string): s
 
 /**
  * A link styled as a button, with Button's data attributes. Links to Clerk's pages aren't
- * prefetched: their scripts are heavy and most visitors only read the page.
+ * prefetched: their scripts are heavy and most visitors only read the page. Nor are links to a
+ * section of the page being read (`#…`): prefetching them fetched that page again (C-152).
  */
 export function CtaLink({
   href,
@@ -110,7 +106,7 @@ export function CtaLink({
   return (
     <Link
       href={href as Route}
-      prefetch={prefetch}
+      prefetch={href.startsWith("#") ? false : prefetch}
       onClick={onClick}
       data-slot="button"
       data-variant={CTA_BUTTON[variant]}

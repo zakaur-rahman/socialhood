@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { cn } from "@/lib/utils";
+import { cx } from "@/lib/cx";
 
 /**
  * Resizable Navbar, from Aceternity UI's free "resizable-navbar"
@@ -28,7 +28,7 @@ export function Navbar({ children, className, threshold = 64 }: { children: Reac
     return () => window.removeEventListener("scroll", update);
   }, [threshold]);
   return (
-    <header data-floating={floating || undefined} className={cn("group/nav sticky top-0 z-40 px-3 sm:px-4", className)}>
+    <header data-floating={floating || undefined} className={cx("group/nav sticky top-0 z-40 px-3 sm:px-4", className)}>
       {children}
     </header>
   );
@@ -37,7 +37,7 @@ export function Navbar({ children, className, threshold = 64 }: { children: Reac
 export function NavBody({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={cn(
+      className={cx(
         "relative mx-auto flex h-16 w-full max-w-6xl items-center gap-4 rounded-none border border-transparent px-3 sm:px-4",
         "transition-[max-width,translate,border-radius,background-color,border-color,box-shadow] duration-slow ease-standard motion-reduce:transition-none",
         "group-data-[floating]/nav:translate-y-3 group-data-[floating]/nav:rounded-2xl group-data-[floating]/nav:border-line",

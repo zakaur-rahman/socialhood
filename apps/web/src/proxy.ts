@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
 import { APP_ROBOTS_TXT, hostRoute } from "@/lib/hosts";
 import { appOrigin, siteUrl } from "@/lib/marketing/site";
@@ -14,19 +14,11 @@ const isAppRoute = createRouteMatcher(["/app(.*)", "/w/(.*)"]);
 const app = appOrigin();
 const authorizedParties = app ? [siteUrl(), app] : undefined;
 
-export default clerkMiddleware(
+const clerk = clerkMiddleware(
   async (auth, request) => {
-    // C-146: send each page to the host that serves it before anything else runs.
-    const route = hostRoute(request.headers.get("host"), request.nextUrl.pathname, request.nextUrl.search);
-    if (route.kind === "redirect") return NextResponse.redirect(route.location, route.status);
-    if (route.kind === "robots") {
-      return new NextResponse(APP_ROBOTS_TXT, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
-    }
-    if (route.kind === "not-found") return new NextResponse("Not found", { status: 404 });
-
     if (isAppRoute(request)) await auth.protect();
 
-    if (route.host === "app") {
+    if (app) {
       // Nothing on the app host is a search result (its layouts say noindex too).
       const response = NextResponse.next();
       response.headers.set("X-Robots-Tag", "noindex, nofollow");
@@ -35,6 +27,23 @@ export default clerkMiddleware(
   },
   { authorizedParties },
 );
+
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  // C-146: send each page to the host that serves it before anything else runs.
+  const route = hostRoute(request.headers.get("host"), request.nextUrl.pathname, request.nextUrl.search);
+  if (route.kind === "redirect") return NextResponse.redirect(route.location, route.status);
+  if (route.kind === "robots") {
+    return new NextResponse(APP_ROBOTS_TXT, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  if (route.kind === "not-found") return new NextResponse("Not found", { status: 404 });
+
+  // C-152: the public site never asks who is signed in (its pages load no Clerk, C-148; the header
+  // reads the cookie hint), so Clerk doesn't run there. That saves its work on every page and the
+  // handshake redirect a signed-in visitor's stale session would otherwise cost the first byte.
+  if (route.host === "site") return NextResponse.next();
+
+  return clerk(request, event);
+}
 
 export const config = {
   matcher: [
