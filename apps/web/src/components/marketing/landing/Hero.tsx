@@ -40,7 +40,7 @@ export function Hero() {
                 {SITE_TAGLINE}
               </p>
               <h1 id="hero-title" className="h1">
-                Every DM. Every comment. <em>One inbox.</em>
+                <span className="phrase">Every DM.</span> <span className="phrase">Every comment.</span> <em>One inbox.</em>
               </h1>
               <p className="hero-sub">{HERO_LINE}</p>
               <div className="ctas">

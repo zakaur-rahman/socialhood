@@ -130,6 +130,8 @@ body:has(.site) {
     & .hero-sticky { position: sticky; top: calc(var(--nav-h) + env(safe-area-inset-top, 0px)); height: calc(100vh - var(--nav-h) - env(safe-area-inset-top, 0px)); min-height: 640px; overflow: hidden; }
     & .hero-grid { height: 100%; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; }
     & .hero-copy { padding-bottom: 24px; }
+    /* Each phrase of the headline stays whole; bold Geist is wide enough to split "Every comment." */
+    & .h1 .phrase { white-space: nowrap; }
     & .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); margin: 0 0 26px; }
     & .eyebrow .dots { display: inline-flex; gap: 4px; }
     & .eyebrow .dots i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
