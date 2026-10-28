@@ -68,10 +68,10 @@ export function renderOgImage(): ImageResponse {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ fontSize: 68, fontWeight: 700, lineHeight: 1.08, letterSpacing: -2, maxWidth: 1000 }}>
-            The AI inbox for businesses that sell on Instagram and WhatsApp
+            The AI inbox for businesses and creators on Instagram and WhatsApp
           </div>
           <div style={{ fontSize: 30, color: TOKENS.fgSecondary, maxWidth: 980, lineHeight: 1.35 }}>
-            Replies from your own business knowledge, comment and DM automations, in English, Hindi and Hinglish.
+            Replies from your own business knowledge, plus comment and DM automations.
           </div>
         </div>
 

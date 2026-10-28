@@ -9,8 +9,8 @@ function Body() {
   return (
     <>
       <p>
-        If you sell on Instagram, your DMs are your shop counter. Someone asks the price of a kurta at 11 at night, someone
-        else wants to know if you deliver to Guwahati, a third person just sends “details?” under a Reel. Answering all of it
+        If you sell on Instagram, your DMs are your shop counter. Someone asks the price of a denim jacket at 11 at night, someone
+        else wants to know if you deliver to their city, a third person just sends “details?” under a Reel. Answering all of it
         by hand works until the day a post takes off. Then the questions pile up, replies go out hours late, and some people
         buy from whoever answered first.
       </p>
@@ -36,10 +36,6 @@ function Body() {
           with “Dear valued customer” sounds like someone else.
         </li>
         <li>
-          <strong>They ignore the language.</strong> A customer who writes “price kya hai?” and gets a formal English reply
-          notices the switch.
-        </li>
-        <li>
           <strong>They guess.</strong> The fastest way to lose trust is a confident reply with the wrong price or a delivery
           promise you can&apos;t keep.
         </li>
@@ -48,7 +44,7 @@ function Body() {
       <h2>Start with the questions you actually get</h2>
       <p>
         Before you automate anything, scroll back through your last few weeks of DMs and note the questions that come up
-        again and again. For most small sellers the list is short: price, sizes and colours, stock, delivery areas and time,
+        again and again. For most small businesses the list is short: price, sizes and colours, stock, delivery areas and time,
         cash on delivery, returns and exchanges, and how to order. Write each one down with the answer you would give.
       </p>
       <p>
@@ -79,7 +75,7 @@ function Body() {
       <h2>Answer from your facts, never from a guess</h2>
       <p>
         The difference between a useful AI reply and a dangerous one is where the facts come from. A general chatbot will
-        happily invent a delivery time that sounds right. For a shop, that is a problem you pay for later in refunds and
+        happily invent a delivery time that sounds right. For a business, that is a problem you pay for later in refunds and
         angry comments.
       </p>
       <p>
@@ -87,15 +83,6 @@ function Body() {
         product catalogue) and the conversation itself. When the answer isn&apos;t there, it doesn&apos;t make one up: the
         conversation goes to you, and the question is recorded as a knowledge gap so you can add the answer once and have it
         covered next time. Over a few weeks, the gaps list turns into a map of what your customers really want to know.
-      </p>
-
-      <h2>Reply in the customer&apos;s language</h2>
-      <p>
-        Indian customers switch languages freely: English, Hindi in Devanagari, and Hinglish, which is Hindi typed in
-        English letters with English words mixed in. A reply that follows the customer&apos;s choice feels like a person
-        wrote it. {N} reads the language of each message and drafts the reply in English, Hindi or Hinglish to match, even
-        when your knowledge is written in English. There is more on this in our guide to{" "}
-        <Link href="/guides/replying-in-hinglish">replying in Hinglish</Link>.
       </p>
 
       <h2>Decide what never gets an automatic answer</h2>
@@ -169,11 +156,11 @@ export const INSTAGRAM_DM_AUTO_REPLIES: Guide = {
   slug: "instagram-dm-auto-replies",
   title: "Instagram DM auto-replies without the bot feel",
   description:
-    "Auto-reply to Instagram DMs in your own voice: answer from your facts, match the customer's language, and hand the hard messages to a person.",
+    "Auto-reply to Instagram DMs in your own voice: answer from your facts, never guess, and hand the hard messages to a person.",
   h1: "How to auto-reply to Instagram DMs without sounding like a bot",
   published: "2026-10-28",
-  updated: "2026-10-28",
-  readingMinutes: 6,
+  updated: "2026-10-29",
+  readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["Instagram", "AI replies"],
   hero: "aiDraft",

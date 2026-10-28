@@ -37,10 +37,6 @@ export const FAQ: { question: string; answer: string }[] = [
       "No. It only publishes posts you create and schedule. Ask Amplychat never publishes, sends or changes anything by itself.",
   },
   {
-    question: "Which languages does the AI support?",
-    answer: "English, Hindi and Hinglish.",
-  },
-  {
     question: "Is there a mobile app?",
     answer:
       "Amplychat works in any modern browser on phone and computer, and you can install it as an app from the browser to get push notifications. On iPhone, add it to your Home Screen first (iOS 16.4 or later).",

@@ -182,7 +182,7 @@ describe("the pricing page", () => {
     expect(broadcasts).toHaveTextContent("Not included");
     expect(broadcasts).toHaveTextContent("2,500");
     expect(broadcasts).toHaveTextContent("25,000");
-    expect(broadcasts).toHaveTextContent(/Coming soon: broadcasts open after our review of India's consent rules/);
+    expect(broadcasts).toHaveTextContent(/Coming soon: broadcasts open after our review of consent rules/);
     expect(screen.getByRole("row", { name: /Remove Powered by Amplychat/ })).toHaveTextContent("Not included");
     expect(screen.getByText(/Catalogue and sequence limits are our current proposals and may change/)).toBeInTheDocument();
   });

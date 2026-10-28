@@ -16,7 +16,7 @@ import { SITE_NAME } from "../site";
  */
 
 /** The topics a guide is filed under; the index shows them on each card. */
-export type GuideTag = "Instagram" | "WhatsApp" | "Automations" | "AI replies" | "Hindi and Hinglish";
+export type GuideTag = "Instagram" | "WhatsApp" | "Automations" | "AI replies";
 
 export type GuideFaq = { question: string; answer: string };
 /** A link to read next; `lang` when its label is not in English. */

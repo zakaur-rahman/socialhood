@@ -78,7 +78,7 @@ export const MATRIX: MatrixGroup[] = [
         key: "broadcast_recipients_monthly",
         label: "WhatsApp broadcast recipients a month",
         format: { kind: "quota" },
-        note: "Coming soon: broadcasts open after our review of India's consent rules. Meta bills the messages to your business.",
+        note: "Coming soon: broadcasts open after our review of consent rules. Meta bills the messages to your business.",
       },
       { key: "commerce", label: "Product catalogue", format: { kind: "flag" }, note: "Shopify sync arrives with our Shopify app listing." },
       { key: "catalogue_products", label: "Products in the catalogue", format: { kind: "quota" } },

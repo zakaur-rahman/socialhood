@@ -4,7 +4,7 @@
  *
  * - Our side is checked against the code and docs/CONFLICTS.md (the entry is named next to the
  *   claim). A feature that waits on something the owner has to do is worded that way: "soon" for
- *   Facebook, broadcasts (O-11, the India consent check) and the Shopify sync (O-10), "approval"
+ *   Facebook, broadcasts (O-11, the consent check) and the Shopify sync (O-10), "approval"
  *   for Instagram features Meta only delivers after App Review (C-077).
  * - A competitor claim is only what docs/competitors.md or docs/competitor-manychat.md record
  *   with a source, or what was read from the vendor's own page on the date given. A comment next
@@ -138,7 +138,7 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "WhatsApp broadcasts are coming soon",
-          body: "Broadcasts are built and open after our review of India's consent rules. Until then, Amplychat doesn't send marketing broadcasts.",
+          body: "Broadcasts are built and open after our review of consent rules. Until then, Amplychat doesn't send marketing broadcasts.",
         },
       ],
     },
@@ -235,7 +235,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Broadcasts",
-        ours: { status: "soon", text: "WhatsApp broadcasts are built and open after our review of India's consent rules." },
+        ours: { status: "soon", text: "WhatsApp broadcasts are built and open after our review of consent rules." },
         // source: competitor-manychat.md section 1 (2026-10-22)
         theirs: { status: "yes", text: "To segments: WhatsApp templates, and Instagram within the 24 hour window." },
       },
@@ -308,7 +308,7 @@ export const COMPARE_INTERAKT: GtmPage = {
   name: "Amplychat vs Interakt",
   title: "Amplychat vs Interakt",
   description:
-    "Amplychat and Interakt side by side for sellers on WhatsApp and Instagram in India: campaigns, catalogue, AI, comments and publishing, with sources.",
+    "Amplychat and Interakt side by side for businesses on WhatsApp and Instagram: campaigns, catalogue, AI, comments and publishing, with sources.",
   eyebrow: "Compare",
   h1: "Amplychat vs Interakt",
   intro:
@@ -341,7 +341,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Bulk WhatsApp campaigns",
-        ours: { status: "soon", text: "Broadcasts are built and open after our review of India's consent rules. Pro and Max only." },
+        ours: { status: "soon", text: "Broadcasts are built and open after our review of consent rules. Pro and Max only." },
         // source: interakt.shop/pricing, read 2026-10-25: one-time and ongoing campaigns with click and conversion tracking on Growth
         theirs: { status: "yes", text: "One-time and ongoing campaigns with click and conversion tracking." },
       },
@@ -395,7 +395,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Starting price",
-        ours: { status: "yes", text: "A Free plan with no card. Pro is priced in rupees on the pricing page." },
+        ours: { status: "yes", text: "A Free plan with no card. See the pricing page for Pro." },
         // source: interakt.shop/pricing, read 2026-10-25: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
         theirs: { status: "yes", text: "₹999 a month for Instagram only and ₹2,799 for WhatsApp and Instagram (Growth), plus taxes." },
       },
@@ -467,7 +467,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
   name: "The AI inbox",
   title: "The AI inbox for Instagram and WhatsApp",
   description:
-    "One inbox for Instagram DMs and WhatsApp chats. AI drafts or sends replies from your knowledge in English, Hindi and Hinglish, and hands over the rest.",
+    "One inbox for Instagram DMs and WhatsApp chats. AI drafts or sends replies from your knowledge, and hands over the rest.",
   eyebrow: "The AI inbox",
   h1: "One inbox that answers from what you know",
   intro:
@@ -478,7 +478,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
       title: "How it works",
       items: [
         { title: "You choose how much the AI does", body: "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Pro." },
-        { title: "Only your knowledge", body: "Answers come from the documents, questions and products you add, in English, Hindi and Hinglish. When the answer isn't there it doesn't guess." },
+        { title: "Only your knowledge", body: "Answers come from the documents, questions and products you add. When the answer isn't there it doesn't guess." },
         { title: "Escalation you can rely on", body: "Refunds, legal threats, complaints, abuse, low confidence, or your own phrases go to Needs you. Replying yourself pauses the AI." },
         { title: "Questions it couldn't answer", body: "Each unanswered question is recorded, so you know what to add to your knowledge." },
       ],

@@ -1,6 +1,5 @@
 import { COMMENT_TO_DM } from "./comment-to-dm-automations";
 import { INSTAGRAM_DM_AUTO_REPLIES } from "./instagram-dm-auto-replies";
-import { REPLYING_IN_HINGLISH } from "./replying-in-hinglish";
 import type { Guide } from "./types";
 import { WHATSAPP_API_VS_APP } from "./whatsapp-business-api-vs-app";
 
@@ -10,7 +9,7 @@ export * from "./types";
  * Every guide, newest first (C-153); ties keep the order written here. The index, the article
  * routes, the sitemap, the RSS feed and llms.txt all read this list.
  */
-export const GUIDES: readonly Guide[] = [INSTAGRAM_DM_AUTO_REPLIES, WHATSAPP_API_VS_APP, COMMENT_TO_DM, REPLYING_IN_HINGLISH]
+export const GUIDES: readonly Guide[] = [INSTAGRAM_DM_AUTO_REPLIES, WHATSAPP_API_VS_APP, COMMENT_TO_DM]
   .map((guide, order) => ({ guide, order }))
   .sort((a, b) => b.guide.published.localeCompare(a.guide.published) || a.order - b.order)
   .map(({ guide }) => guide);

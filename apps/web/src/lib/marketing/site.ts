@@ -70,7 +70,7 @@ export const SITE_TAGLINE = "AI inbox and automations for Instagram and WhatsApp
 export const SITE_TITLE_LINE = "AI inbox for Instagram and WhatsApp";
 /** The landing page's description (and the default): at most 160 characters, for search results. */
 export const SITE_DESCRIPTION =
-  "Instagram DMs, comments and WhatsApp in one inbox. AI replies from your business knowledge in English, Hindi and Hinglish, plus comment and DM automations.";
+  "Instagram DMs, comments and WhatsApp in one inbox for businesses and creators. AI replies from your own knowledge, plus comment and DM automations.";
 
 /** The logo for structured data (Organization.logo): the 512 px app icon, a square PNG. */
 export const LOGO_PATH = "/icons/icon-512.png";
@@ -145,7 +145,6 @@ export const PUBLIC_PATHS = [
   "/developers/api",
   "/security",
   "/guides",
-  "/hi",
 ] as const;
 
 /**
@@ -162,24 +161,24 @@ export const ROBOTS_DISALLOW = ["/app$", "/app/", "/w/", "/sign-in", "/sign-up",
  * A build date would tell crawlers every page changed on every deploy, which isn't true.
  */
 export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>> = {
-  "/": "2026-10-26",
-  "/pricing": "2026-10-26",
-  "/switch-from-manychat": "2026-10-26",
-  "/compare/manychat": "2026-10-26",
-  "/compare/interakt": "2026-10-26",
+  "/": "2026-10-29",
+  "/pricing": "2026-10-29",
+  "/switch-from-manychat": "2026-10-29",
+  "/compare/manychat": "2026-10-29",
+  "/compare/interakt": "2026-10-29",
   "/features/comment-intelligence": "2026-10-26",
-  "/features/ai-inbox": "2026-10-26",
+  "/features/ai-inbox": "2026-10-29",
   "/features/publishing": "2026-10-26",
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/security": "2026-10-26",
-  "/hi": "2026-10-28",
 };
 
 /**
- * The footer's "Compare and learn" links to the go-to-market pages (GR-37) and the Hinglish page
- * (C-153); `lang` marks a label that isn't English. The guides are in NAV_LINKS (header and footer).
+ * The footer's "Compare and learn" links to the go-to-market pages (GR-37); `lang` marks a label
+ * that isn't English. The guides are in NAV_LINKS (header and footer). The Hinglish page (C-153)
+ * was taken down in C-155: /hi redirects to /.
  */
 export const LEARN_LINKS: readonly { label: string; href: string; lang?: string }[] = [
   { label: "Plans and limits", href: "/pricing" },
@@ -190,5 +189,4 @@ export const LEARN_LINKS: readonly { label: string; href: string; lang?: string 
   { label: "The AI inbox", href: "/features/ai-inbox" },
   { label: "Publishing", href: "/features/publishing" },
   { label: "Public API", href: "/developers/api" },
-  { label: `${SITE_NAME} Hinglish mein`, href: "/hi", lang: "hi-Latn" },
 ];

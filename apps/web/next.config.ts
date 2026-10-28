@@ -49,6 +49,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // C-155: the site is global and in English only. The Hinglish page and the Hinglish guide were
+  // taken down; their URLs move permanently (308) so links and search results still land somewhere.
+  // These run before the proxy (src/proxy.ts), so the host split never sees them.
+  async redirects() {
+    return [
+      { source: "/hi", destination: "/", permanent: true },
+      { source: "/guides/replying-in-hinglish", destination: "/guides", permanent: true },
+    ];
+  },
   images: {
     // C-152: AVIF first (about a third smaller than WebP for the screenshots), WebP for the rest.
     formats: ["image/avif", "image/webp"],

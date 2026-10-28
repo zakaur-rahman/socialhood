@@ -27,7 +27,7 @@ describe("the guides (C-153)", () => {
     const published = GUIDES.map((guide) => guide.published);
     expect([...published].sort().reverse()).toEqual(published);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
-    expect(GUIDES.length).toBeGreaterThanOrEqual(4);
+    expect(GUIDES.length).toBeGreaterThanOrEqual(3);
   });
 
   it.each(GUIDES.map((guide) => [guide.slug, guide] as const))("%s: metadata fits search results", (slug, guide) => {
@@ -69,7 +69,7 @@ describe("the guides (C-153)", () => {
     }
     // Internal links go to pages that exist.
     for (const [, href] of html.matchAll(/href="(\/[^"#]*)"/g)) {
-      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", "/hi", ...GUIDES.map((g) => guidePath(g.slug))]).toContain(href);
+      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", ...GUIDES.map((g) => guidePath(g.slug))]).toContain(href);
     }
   });
 

@@ -10,7 +10,7 @@ function Body() {
     <>
       <p>
         You have seen it under Reels everywhere: “Comment LINK and I&apos;ll DM it to you.” A few seconds after you comment,
-        a message arrives with the product page, the recipe or the discount code. For a seller it does two jobs at once. The
+        a message arrives with the product page, the recipe or the discount code. For a business or a creator it does two jobs at once. The
         post gets comments, which helps it reach more people, and every interested person lands in your DMs, where a sale
         actually happens.
       </p>
@@ -71,7 +71,7 @@ function Body() {
       </p>
       <ul>
         <li>
-          <strong>As a word</strong> in the comment, so “link bhejo” and “LINK 🙏” both count, but “linked” doesn&apos;t.
+          <strong>As a word</strong> in the comment, so “send the link” and “LINK 🙏” both count, but “linked” doesn&apos;t.
         </li>
         <li>
           <strong>Exactly</strong>, when the comment must be the keyword and nothing else.
@@ -81,8 +81,8 @@ function Body() {
         </li>
       </ul>
       <p>
-        Indian customers often reply in Hindi or Hinglish, so if you ask for “PRICE”, expect “price?” and “price kitna hai”
-        too. Matching the keyword as a word catches both. Or listen for any comment on a post where every commenter wants the
+        People rarely type exactly what you asked for, so if you ask for “PRICE”, expect “price?” and “what&apos;s the
+        price” too. Matching the keyword as a word catches both. Or listen for any comment on a post where every commenter wants the
         same thing.
       </p>
 
@@ -92,7 +92,7 @@ function Body() {
         the thread looks automated. Write three or four versions and let the tool pick one at random each time.
       </p>
       <p>
-        <strong>The first DM</strong> should say who you are and what is coming, in one line: “Hi! Here&apos;s the kurta you
+        <strong>The first DM</strong> should say who you are and what is coming, in one line: “Hi! Here&apos;s the denim jacket you
         asked about. Tap below and I&apos;ll send the link.” Then the button.
       </p>
       <p>
@@ -156,7 +156,7 @@ export const COMMENT_TO_DM: Guide = {
     "Set up an Instagram comment-to-DM automation that sends the link when someone comments LINK: Instagram's rules, tap-first DMs and keyword tips.",
   h1: "Comment-to-DM automations: send the link when someone comments “LINK”",
   published: "2026-10-28",
-  updated: "2026-10-28",
+  updated: "2026-10-29",
   readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["Instagram", "Automations"],

@@ -3,11 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEGAL } from "@/lib/legal";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
-import { LANDING_LANGUAGES, breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
+import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
 import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
 
-import { metadata as hinglish } from "./(marketing)/hi/page";
-import { metadata as landing } from "./(marketing)/page";
 import { metadata as privacy } from "./(marketing)/privacy/page";
 import { metadata as refunds } from "./(marketing)/refunds/page";
 import { metadata as shipping } from "./(marketing)/shipping/page";
@@ -80,7 +78,6 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/developers/api",
       "https://socialhood.example/security",
       "https://socialhood.example/guides",
-      "https://socialhood.example/hi",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.
@@ -193,20 +190,19 @@ describe("/llms.txt", () => {
   });
 });
 
-describe("hreflang between the landing page and its Hinglish version (C-153)", () => {
-  it("each names the other and itself, with x-default on English", () => {
-    expect(LANDING_LANGUAGES).toEqual({ en: "/", hi: "/hi", "x-default": "/" });
-    expect(landing.alternates).toMatchObject({ canonical: "/", languages: LANDING_LANGUAGES });
-    expect(hinglish.alternates).toMatchObject({ canonical: "/hi", languages: LANDING_LANGUAGES });
-    expect(hinglish.openGraph).toMatchObject({ locale: "hi_IN", url: "/hi" });
+describe("one English site, no Hinglish page (C-155)", () => {
+  it("page metadata names only the canonical path, with no hreflang alternates or other locale", () => {
+    const metadata = pageMetadata({ title: "Amplychat · X", description: "d", path: "/", absoluteTitle: true });
+    expect(metadata.alternates).toEqual({ canonical: "/" });
+    expect(metadata.openGraph).not.toHaveProperty("locale");
   });
 
-  it("the sitemap lists the pair as alternates of each other, and no other page", () => {
+  it("the sitemap, llms.txt and the guides leave out /hi and the Hinglish guide", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://socialhood.example");
     const entries = sitemap();
-    const languages = { en: "https://socialhood.example/", hi: "https://socialhood.example/hi", "x-default": "https://socialhood.example/" };
-    expect(entries.find((entry) => entry.url === "https://socialhood.example/")?.alternates).toEqual({ languages });
-    expect(entries.find((entry) => entry.url === "https://socialhood.example/hi")?.alternates).toEqual({ languages });
-    expect(entries.filter((entry) => entry.alternates).length).toBe(2);
+    expect(entries.filter((entry) => entry.alternates)).toEqual([]);
+    expect(entries.some((entry) => /\/hi$|hinglish/.test(entry.url))).toBe(false);
+    expect(llmsText("https://socialhood.example")).not.toMatch(/\/hi\b|hinglish|hindi|india/i);
+    expect(GUIDES.some((guide) => guide.slug === "replying-in-hinglish")).toBe(false);
   });
 });

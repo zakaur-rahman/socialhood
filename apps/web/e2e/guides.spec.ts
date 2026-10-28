@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { expect, test } from "./support/fixtures";
 
 /**
- * C-153 guides and the Hinglish page, signed out: one h1, metadata, structured data, hreflang,
- * the feed and the sitemap, no sideways scroll at 375, 768 and 1280 px. With GUIDES_SHOTS_DIR set,
- * it also saves full-page screenshots there for a look.
+ * C-153 guides, signed out: one h1, metadata, structured data, the feed and the sitemap, the
+ * redirects left by the Hinglish page and guide (C-155), no sideways scroll at 375, 768 and
+ * 1280 px. With GUIDES_SHOTS_DIR set, it also saves full-page screenshots there for a look.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -19,14 +19,14 @@ async function jsonLd(page: import("@playwright/test").Page): Promise<Record<str
   return blocks.map((text) => JSON.parse(text) as Record<string, unknown>);
 }
 
-test.describe("C-153 guides and the Hinglish page", () => {
+test.describe("C-153 guides", () => {
   test("the index lists the guides newest first and links to each", async ({ page }) => {
     await page.goto("/guides");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page).toHaveTitle(/Guides for Instagram and WhatsApp sellers · Amplychat/);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/guides$/);
     await expect(page.locator('link[rel="alternate"][type="application/rss+xml"]')).toHaveAttribute("href", /\/guides\/rss\.xml$/);
-    await expect(page.getByRole("article")).toHaveCount(4);
+    await expect(page.getByRole("article")).toHaveCount(3);
     await page.getByRole("link", { name: /Comment-to-DM automations/ }).click();
     await expect(page).toHaveURL(new RegExp(`${GUIDE}$`));
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Comment-to-DM automations");
@@ -52,34 +52,37 @@ test.describe("C-153 guides and the Hinglish page", () => {
     expect(response?.status()).toBe(404);
   });
 
-  test("the Hinglish page and the landing page name each other", async ({ page }) => {
-    await page.goto("/hi");
-    await expect(page.locator("main")).toHaveAttribute("lang", "hi-Latn");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/hi$/);
-    await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
-    await expect(page.locator('link[rel="alternate"][hreflang="hi"]')).toHaveAttribute("href", /\/hi$/);
+  test("the Hinglish page and guide are gone: their URLs move permanently, and nothing names a language alternate (C-155)", async ({ page, request }) => {
+    for (const [from, to] of [
+      ["/hi", "/"],
+      ["/guides/replying-in-hinglish", "/guides"],
+    ] as const) {
+      const response = await request.get(from, { maxRedirects: 0 });
+      expect(response.status(), from).toBe(308);
+      expect(new URL(response.headers()["location"] ?? "", "http://x").pathname, from).toBe(to);
+    }
 
     await page.goto("/");
-    await expect(page.locator('link[rel="alternate"][hreflang="hi"]')).toHaveAttribute("href", /\/hi$/);
-    await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
+    await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(0);
     const footer = page.getByRole("contentinfo");
     await expect(footer.getByRole("link", { name: "Guides" })).toHaveAttribute("href", "/guides");
-    await expect(footer.getByRole("link", { name: "Amplychat Hinglish mein" })).toHaveAttribute("lang", "hi-Latn");
+    await expect(footer.getByRole("link", { name: /Hinglish/ })).toHaveCount(0);
   });
 
   test("the feed and the sitemap list the guides", async ({ request }) => {
     const feed = await request.get("/guides/rss.xml");
     expect(feed.ok()).toBe(true);
     expect(feed.headers()["content-type"]).toContain("application/rss+xml");
-    expect((await feed.text()).match(/<item>/g)).toHaveLength(4);
+    expect((await feed.text()).match(/<item>/g)).toHaveLength(3);
 
     const sitemap = await (await request.get("/sitemap.xml")).text();
-    for (const path of ["/guides</loc>", "/hi</loc>", `${GUIDE}</loc>`]) expect(sitemap).toContain(path);
-    expect(sitemap).toContain('hreflang="hi"');
+    for (const path of ["/guides</loc>", `${GUIDE}</loc>`]) expect(sitemap).toContain(path);
+    expect(sitemap).not.toContain("/hi</loc>");
+    expect(sitemap).not.toContain("hinglish");
+    expect(sitemap).not.toContain("hreflang");
   });
 
-  for (const path of ["/guides", GUIDE, "/hi"]) {
+  for (const path of ["/guides", GUIDE]) {
     test(`${path} fits 375, 768 and 1280 px`, async ({ page }) => {
       // The fixtures answer optimised images with a 1 px stand-in; screenshots need the real ones.
       if (SHOTS_DIR) await page.context().unroute("**/_next/image?**");
