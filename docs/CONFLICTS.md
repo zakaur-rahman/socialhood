@@ -6900,9 +6900,12 @@ dark: they render their own palette whatever theme the member chose for the app.
 - The head script and `ThemePin` pin `<html>` to `light` on public routes (`SITE_THEME`), for the
   browser's own parts; `theme-color` is the paper (`applySiteThemeColor`, the marketing layout's
   viewport, and `ThemeSync` on public paths). Dark/Light/System in the app are unchanged.
-- Fonts: Funnel Display and Funnel Sans via `next/font/google` (variable files, `display: swap`,
-  preloaded on public pages only: `components/site/fonts.ts`). Geist stays the app's font but is
-  no longer preloaded, since public pages never show it.
+- Fonts: Geist, the app's font, with headings at 700 and tight tracking (h1 -0.05em). The design's
+  Funnel Display and Funnel Sans were tried first; the owner found them off, compared sixteen
+  families on our own hero (2026-10-29) and asked for "more modern, minimal and bold", and I chose
+  Geist Bold: clean at headline sizes, the most readable body of the set, and one type across the
+  site and the app. One `next/font` Geist in the root layout, preloaded again (every first view
+  shows it); `components/site/fonts.ts` is gone.
 
 ### Pages
 - **Landing** rebuilt in the design's order: hero (scroll-scrubbed pile of messages sorting into one

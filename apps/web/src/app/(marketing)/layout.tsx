@@ -4,7 +4,6 @@ import type { Metadata, Viewport } from "next";
 
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
-import { SITE_FONTS } from "@/components/site/fonts";
 import { ThemePin } from "@/components/theme/ThemePin";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/marketing/site";
 import { colorValue } from "@/styles/token-values";
@@ -23,7 +22,7 @@ export const viewport: Viewport = { themeColor: colorValue("paper") };
 
 /**
  * The public site (C-155): header, the page, footer, in the owner's paper-and-night design. The
- * `.site` frame sets its own palette (styles/globals.css) and fonts (Funnel Display and Sans), so it
+ * `.site` frame sets its own palette (styles/globals.css) and type (Geist, bold headings), so it
  * looks the same whatever theme the visitor chose for the app; <html> is pinned to the light scheme
  * (the root layout's head script on a first load, ThemePin on a client navigation). This replaces
  * the always-dark site of C-127 to C-129. Pages stay server-rendered and static; only the header's
@@ -31,7 +30,7 @@ export const viewport: Viewport = { themeColor: colorValue("paper") };
  */
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className={`site ${SITE_FONTS} flex min-h-dvh flex-col`}>
+    <div className="site flex min-h-dvh flex-col">
       <ThemePin />
       <a href="#main" className="btn btn-main skip">
         Skip to content

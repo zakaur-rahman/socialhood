@@ -10,10 +10,9 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
 
-// The app's type. Not preloaded since C-155: the public pages, which share this layout, set their
-// own fonts (Funnel, components/site/fonts.ts) and never show Geist, so a preload there only took
-// bandwidth from the first view. The app's stylesheet asks for it as soon as it renders text.
-const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], preload: false });
+// The type of the app and the public site (C-155: the site's headings are Geist at 700). Preloaded,
+// since every first view shows it.
+const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 // Mono isn't preloaded (C-152): no page shows it above the fold (code samples, IDs, figures in the
 // app), and a preload put its 25 KB ahead of the page on every first visit. It loads when used.
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], preload: false });
