@@ -6972,6 +6972,21 @@ differs from today's site, and why:
   footer's oversized wordmark. The "Is there a mobile app?" answer is our existing one (install
   from the browser, push notifications; on iPhone from the Home Screen, iOS 16.4 or later).
 
+- **Comparison pages** (owner approved, 2026-10-29): to keep comparative claims truthful and not
+  misleading, /switch-from-manychat, /compare/manychat and /compare/interakt now (1) show a
+  trademark and no-affiliation note under the sources ("Manychat is a trademark of its owner.
+  Amplychat isn't affiliated with or endorsed by Manychat. Details checked on {date}. If something
+  has changed, tell us at {support email}."), built from a `competitor` field on the page data
+  with the latest `checked` date of its sources (lib/marketing/competitor-note.ts); and (2) cite the
+  vendor's own pages first: Manychat's help centre and product updates, Interakt's pricing page,
+  all checked 2026-10-29. Claims the official pages contradicted were corrected (Manychat AI is
+  in beta and answers from your knowledge, not "a paid add-on"; TikTok is unavailable in the UK
+  and EU, not "open beta"; Interakt's AI is its own WhatsApp AI agents add-on, not "early, through
+  a partner"), claims they didn't fully confirm were softened (comment-to-DM "the same set", Make,
+  QR codes), and the third-party blogs were dropped except Kanal, kept only for Meta's rule
+  against requiring a follow. Manychat's help centre blocks automated reading, so it was read
+  through a search engine's copy; the pages say so. Source dates now read "29 October 2026".
+
 ### Measured
 Local production build made the way the VM makes it (standalone, split hosts), Lighthouse 12.8.2,
 three runs each, medians; same machine and method as C-152. Before: develop 5b246b2b.

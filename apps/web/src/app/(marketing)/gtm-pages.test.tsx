@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SUPPORT_EMAIL } from "@/lib/copy";
+import { latestChecked } from "@/lib/marketing/competitor-note";
 import { GTM_PAGES, PRICING_PATH, type GtmPage } from "@/lib/marketing/gtm-pages";
 import { PUBLIC_PATHS } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
@@ -115,8 +117,9 @@ describe("Amplychat vs Manychat", () => {
     const row = within(table).getByRole("row", { name: /^Broadcasts/ });
     expect(within(row).getAllByText("Coming soon")).toHaveLength(1);
     expect(within(table).getByRole("row", { name: /^Publishing posts/ })).toHaveTextContent("Not found");
-    expect(screen.getByText(/third-party guides written in 2026/)).toBeInTheDocument();
-    expect(screen.getAllByText(/read 2026-10-22/).length).toBeGreaterThan(3);
+    expect(screen.getByText(/Manychat's own help centre and product updates, checked on 29 October 2026/)).toBeInTheDocument();
+    expect(screen.getAllByText(/read 29 October 2026/).length).toBeGreaterThan(3);
+    expect(screen.getByRole("link", { name: "Manychat help: Pro plan" })).toHaveAttribute("href", expect.stringMatching(/^https:\/\/help\.manychat\.com\//));
   });
 });
 
@@ -124,9 +127,34 @@ describe("Amplychat vs Interakt", () => {
   it("cites Interakt's pricing page with the date read and says its prices change", () => {
     render(<ComparisonInterakt />);
     expect(screen.getByRole("link", { name: "Interakt pricing" })).toHaveAttribute("href", "https://www.interakt.shop/pricing/");
-    expect(screen.getByText(/read 2026-10-25/)).toBeInTheDocument();
+    expect(screen.getByText(/read 29 October 2026/)).toBeInTheDocument();
     expect(screen.getByText(/check interakt.shop before you decide/)).toBeInTheDocument();
     expect(screen.getByRole("row", { name: /^Payments and checkout in chat/ })).toHaveTextContent(/Yes.*Razorpay/);
+  });
+});
+
+describe("the trademark and no-affiliation note", () => {
+  const COMPETITOR_PAGES = [
+    { name: "Manychat", Component: SwitchPage, page: GTM_PAGES[0] },
+    { name: "Manychat", Component: ComparisonManychat, page: GTM_PAGES[1] },
+    { name: "Interakt", Component: ComparisonInterakt, page: GTM_PAGES[2] },
+  ];
+
+  it.each(COMPETITOR_PAGES)("names $name, says we aren't affiliated and dates the check", ({ name, Component, page }) => {
+    expect(page.competitor).toBe(name);
+    expect(latestChecked(page)).toBe("2026-10-29");
+    render(<Component />);
+    const note = screen.getByText(new RegExp(`^${name} is a trademark of its owner`));
+    expect(note).toHaveTextContent(
+      `${name} is a trademark of its owner. Amplychat isn't affiliated with or endorsed by ${name}. Details checked on 29 October 2026. If something has changed, tell us at ${SUPPORT_EMAIL}.`,
+    );
+    expect(within(note).getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);
+  });
+
+  it("is not on the feature pages", () => {
+    for (const page of GTM_PAGES.slice(3)) expect(page.competitor).toBeUndefined();
+    render(<FeatureAiInbox />);
+    expect(screen.queryByText(/is a trademark of its owner/)).not.toBeInTheDocument();
   });
 });
 

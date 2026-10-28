@@ -6,11 +6,15 @@
  *   claim). A feature that waits on something the owner has to do is worded that way: "soon" for
  *   Facebook, broadcasts (O-11, the consent check) and the Shopify sync (O-10), "approval"
  *   for Instagram features Meta only delivers after App Review (C-077).
- * - A competitor claim is only what docs/competitors.md or docs/competitor-manychat.md record
- *   with a source, or what was read from the vendor's own page on the date given. A comment next
- *   to each claim names that source and date. Never write that a competitor lacks something unless
- *   a source says so; "not found" means the sources we read did not show it.
- * - No competitor logos or trademarks beyond the plain names, no "best" or "#1".
+ * - A competitor claim comes from the vendor's own pages first (pricing, help centre, product
+ *   updates), read on the date given. A third-party source stays only where the vendor's pages
+ *   don't cover the claim, and its comment says so. A comment next to each claim names its source
+ *   and date. Never write that a competitor lacks something unless a source says so; "not found"
+ *   means the sources we read did not show it. Where an official page contradicts a claim, the
+ *   claim follows the official page.
+ * - No competitor logos or trademarks beyond the plain names, no "best" or "#1". Each page about a
+ *   competitor names it in `competitor`, which shows the trademark and no-affiliation note
+ *   (competitor-note.ts) with the latest `checked` date of its sources.
  * - Money: no price of ours is written anywhere; ours comes from Dodo through the plan list.
  */
 
@@ -33,6 +37,8 @@ export type PageLink = { label: string; href: string };
 
 export type GtmPage = {
   path: string;
+  /** The competitor the page is about, for the trademark and no-affiliation note. */
+  competitor?: string;
   /** Short name for links and the footer. */
   name: string;
   title: string;
@@ -54,12 +60,15 @@ export type GtmPage = {
 
 export const SWITCH_PAGE: GtmPage = {
   path: "/switch-from-manychat",
+  competitor: "Manychat",
   name: "Switch from Manychat",
   title: "Switch from Manychat",
   description:
     "Moving from Manychat to Amplychat: what you can rebuild, what is different, and what Amplychat adds: an AI inbox, comment analysis and publishing.",
   eyebrow: "Switch from Manychat",
   h1: "Move your Instagram automations from Manychat",
+  // "Plans cap features, not contacts" is set against Manychat's billing by active contacts:
+  // Manychat help centre "Active Contacts", read 2026-10-29.
   intro:
     "Rebuild your comment and DM automations in an inbox that also answers from your own knowledge, reads every comment and publishes your posts. Plans cap features, not contacts, so a post that goes viral doesn't change your bill.",
   blocks: [
@@ -133,6 +142,7 @@ export const SWITCH_PAGE: GtmPage = {
           body: "Facebook Pages and Messenger are built but wait on Meta's approval. Amplychat has no TikTok, Telegram, SMS or email channels.",
         },
         {
+          // Meta's rule against requiring a follow: Kanal (third-party; Manychat's pages don't state it), read 2026-10-22
           title: "Triggers we don't have",
           body: "Share to DM and follow-based triggers aren't offered. Our follow nudge invites someone to follow but never holds content back until they do, because Meta's rules forbid requiring a follow.",
         },
@@ -145,11 +155,26 @@ export const SWITCH_PAGE: GtmPage = {
   ],
   honesty: [
     "Instagram and WhatsApp connections depend on Meta's approval of Amplychat's app. Features marked as needing Meta's approval work in our test setup and reach your account once Meta enables them.",
-    "Manychat's own pages block automated reading, so what we say about Manychat comes from third-party guides written in 2026 and read on 2026-10-22. Check manychat.com before you decide.",
+    "What we say about Manychat comes from Manychat's own help centre, checked on 29 October 2026. Its help centre blocks automated reading, so we checked it through a search engine's copy. Check manychat.com before you decide.",
   ],
   sources: [
-    { label: "Kanal: Manychat for Instagram (triggers, Meta rules)", url: "https://getkanal.com/blog/manychat-instagram", checked: "2026-10-22" },
-    { label: "Chatarmin: Manychat pricing 2026", url: "https://chatarmin.com/en/blog/manychat-pricing", checked: "2026-10-22" },
+    {
+      label: "Manychat help: Active Contacts",
+      url: "https://help.manychat.com/hc/en-us/articles/25800323349020-Active-Contacts",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Share to DM trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/23431135317916-Share-to-DM-trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Follow to DM on Instagram (beta)",
+      url: "https://help.manychat.com/hc/en-us/articles/23096654243740-Follow-to-DM-on-Instagram-Say-Hi-to-New-Followers-BETA",
+      checked: "2026-10-29",
+    },
+    // Third-party: Meta's rule against requiring a follow isn't on Manychat's pages; Kanal summarises it.
+    { label: "Kanal: Manychat for Instagram (Meta's rules on follows)", url: "https://getkanal.com/blog/manychat-instagram", checked: "2026-10-22" },
   ],
   related: [
     { label: "Amplychat vs Manychat", href: "/compare/manychat" },
@@ -163,6 +188,7 @@ export const SWITCH_PAGE: GtmPage = {
 
 export const COMPARE_MANYCHAT: GtmPage = {
   path: "/compare/manychat",
+  competitor: "Manychat",
   name: "Amplychat vs Manychat",
   title: "Amplychat vs Manychat",
   description:
@@ -177,6 +203,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       title: "Which fits you",
       items: [
         {
+          // source: Manychat help centre (Flow Builder, Share to DM, Follow to DM beta, Free plan channels, SMS, TikTok), read 2026-10-29
           title: "Manychat may fit better if",
           body: "you need a free-form flow canvas, share-to-DM or follow triggers, or channels such as TikTok, Telegram, SMS and email.",
         },
@@ -194,105 +221,190 @@ export const COMPARE_MANYCHAT: GtmPage = {
       {
         feature: "Channels",
         ours: { status: "yes", text: "Instagram and WhatsApp. Facebook Pages and Messenger are built and wait on Meta's approval." },
-        // source: competitor-manychat.md section 1 (Kanal, Setsmart; read 2026-10-22)
-        theirs: { status: "yes", text: "Instagram, WhatsApp, Messenger, Telegram, SMS and email, and TikTok in open beta." },
+        // source: Manychat help centre, read 2026-10-29: Free plan (Instagram, TikTok, Messenger, Telegram), Pro plan (adds WhatsApp, SMS and email), SMS channel (through Twilio), TikTok connection (not for UK or EU accounts). Replaces "TikTok in open beta" (Kanal, 2026-10-22).
+        theirs: { status: "yes", text: "Instagram, WhatsApp, Messenger, Telegram, SMS and email, and TikTok outside the UK and EU." },
       },
       {
         feature: "Comment to DM",
         ours: { status: "yes", text: "One post, all posts or the next post; keyword or any comment; public reply variations." },
-        // source: competitor-manychat.md section 1, Kanal (2026-10-22)
-        theirs: { status: "yes", text: "The same set." },
+        // source: Manychat help centre "Instagram Post and Reel Comments trigger", read 2026-10-29. It doesn't confirm every option we had listed, so "The same set" is softened.
+        theirs: { status: "yes", text: "Comment triggers on posts and Reels, with keyword matching." },
       },
       {
         feature: "Story replies and mentions",
         ours: { status: "yes" },
-        // source: competitor-manychat.md section 1 (Kanal, 2026-10-22)
+        // source: Manychat help centre "Instagram Story Reply Trigger" and "Instagram Story Mention Reply trigger", read 2026-10-29
         theirs: { status: "yes" },
       },
       {
         feature: "Live comments, ads, entry links and QR codes",
         ours: { status: "approval", text: "Built. Meta only sends these events to apps it has approved." },
-        // source: competitor-manychat.md section 1 (Kanal, 2026-10-22)
-        theirs: { status: "yes" },
+        // source: Manychat help centre "Instagram Live Comments Trigger", "Instagram Ads Trigger" and "Instagram Ref URL Trigger", read 2026-10-29. QR codes for Instagram aren't named there, so the cell names the three triggers.
+        theirs: { status: "yes", text: "Live comment, ad and ref link triggers." },
       },
       {
         feature: "Share to DM and follow to DM",
         ours: { status: "no", text: "Our follow nudge never holds content back until someone follows." },
-        // source: competitor-manychat.md section 1; Manychat community post 2025-11-06 (read 2026-10-22)
-        theirs: { status: "yes", text: "Share to DM; follow to DM is in beta." },
+        // source: Manychat help centre "Share to DM trigger" and "Follow to DM on Instagram [BETA]" (availability decided by Meta), read 2026-10-29
+        theirs: { status: "yes", text: "Share to DM; follow to DM is in beta where Meta makes it available." },
       },
       {
         feature: "Flow builder",
         ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split." },
-        // source: competitor-manychat.md section 1 (visual drag-and-drop canvas; Kanal, 2026-10-22)
-        theirs: { status: "yes", text: "A visual drag-and-drop canvas." },
+        // source: Manychat help centre "How to build a Manychat automation" (Flow Builder, a visual editor on a canvas), read 2026-10-29
+        theirs: { status: "yes", text: "A visual editor on a canvas." },
       },
       {
         feature: "Contacts, tags and fields",
         ours: { status: "yes", text: "With consent records, a lead stage and CSV export." },
-        // source: competitor-manychat.md section 1 (2026-10-22)
+        // source: Manychat help centre "Contacts tab: Overview" (filters, segments, tags) and "Data Collection block and Custom User Fields", read 2026-10-29
         theirs: { status: "yes", text: "Contacts, tags, custom fields and segments." },
       },
       {
         feature: "Broadcasts",
         ours: { status: "soon", text: "WhatsApp broadcasts are built and open after our review of consent rules." },
-        // source: competitor-manychat.md section 1 (2026-10-22)
-        theirs: { status: "yes", text: "To segments: WhatsApp templates, and Instagram within the 24 hour window." },
+        // source: Manychat help centre "Broadcasting in Manychat" and "Broadcasting in WhatsApp" (a template reaches everyone; a regular message only people inside the 24-hour window), read 2026-10-29
+        theirs: { status: "yes", text: "Broadcasts to your contacts. Outside the 24-hour window, WhatsApp needs an approved template." },
       },
       {
         feature: "Team inbox",
         ours: { status: "yes", text: "Roles, assignment, saved replies and business hours." },
-        // source: competitor-manychat.md section 1; Guideflow tutorials (2026-10-22)
-        theirs: { status: "yes", text: "Shared inbox, roles and conversation assignment." },
+        // source: Manychat help centre "Manychat Inbox", "User roles and team management" and "Conversations auto-assignment", read 2026-10-29
+        theirs: { status: "yes", text: "Shared inbox, roles, and manual or automatic assignment, with inbox seats by plan." },
       },
       {
         feature: "Integrations",
         ours: { status: "yes", text: "Webhooks on every plan. API, Zapier app and Google Sheets on Pro and Max." },
-        // source: competitor-manychat.md section 1; Zapier's Manychat page (2026-10-22)
-        theirs: { status: "yes", text: "Zapier, Make, Google Sheets and others." },
+        // source: Manychat help centre "Zapier Integration" and "Google Sheets integration", read 2026-10-29. Make is dropped: no Manychat page we read names it.
+        theirs: { status: "yes", text: "Zapier, Google Sheets and others." },
       },
       {
         feature: "AI answers from your knowledge",
         ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of questions it couldn't answer." },
-        // source: competitor-manychat.md section 2 item 3 (Mooon AI review, 2026-10-22); sources differ on whether it is an add-on or in Pro
-        theirs: { status: "yes", text: "Reviews describe it as a paid add-on that puts generated replies into a scripted flow." },
+        // source: Manychat product updates "Your new AI hub (beta)" (2025-10-22) and "Knowledge v2" (2026-02-24), read 2026-10-29: AI replies from links and text you add and routes uncertain messages to your team; help centre "Pro plan" lists AI. Replaces the reviews' "paid add-on" wording (Mooon AI, 2026-10-22).
+        theirs: { status: "yes", text: "Manychat AI, in beta, replies from links and text you add and can pass uncertain messages to your team." },
       },
       {
         feature: "Comment analysis per post",
         ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary." },
-        // source: competitor-manychat.md section 2 item 2: comments are triggers; analysis not found (2026-10-22)
+        // source: Manychat help centre "Instagram Post and Reel Comments trigger", read 2026-10-29: comments start automations; analysis of comments not found
         theirs: { status: "not-found", text: "Comments are used as triggers." },
       },
       {
         feature: "Publishing posts",
         ours: { status: "yes", text: "Instagram images, carousels, Reels and Stories. Facebook publishing waits on Meta's approval." },
-        // source: competitor-manychat.md section 2 item 1: no publishing found (2026-10-22)
+        // source: Manychat help centre and product updates, read 2026-10-29: no publishing or post scheduling found
         theirs: { status: "not-found" },
       },
       {
         feature: "How it is priced",
         ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts." },
-        // source: Chatarmin, Layer3 Labs, DMChamp 2026 (read 2026-10-22): billed by active contacts since 2 March 2026; Pro from $39 a month for 2,500 contacts. Indicative; check manychat.com.
-        theirs: { status: "yes", text: "By active contacts since 2 March 2026. Pro from $39 a month for 2,500 contacts, reported by third-party guides." },
+        // source: Manychat help centre "Pro plan" and "Active Contacts", read 2026-10-29: plans from 2 March 2026 billed by active contacts a month; Pro $39 a month on monthly billing for 2,500 active contacts; prices can vary by region. Replaces the third-party guides (Chatarmin, Layer3 Labs, DMChamp, 2026-10-22).
+        theirs: { status: "yes", text: "By active contacts a month, on plans introduced on 2 March 2026. Pro is $39 a month for 2,500 active contacts on monthly billing." },
       },
     ],
   },
   honesty: [
-    "Manychat blocks automated reading of its own pages, so its column comes from third-party guides written in 2026 and read on 2026-10-22. \"Not found\" means those guides didn't show it, not that Manychat lacks it.",
+    "Manychat's column comes from Manychat's own help centre and product updates, checked on 29 October 2026. Its help centre and pricing page block automated reading, so we checked those pages through a search engine's copy. \"Not found\" means we didn't see it there, not that Manychat lacks it.",
+    "Manychat's plans and prices change and can vary by region, so check manychat.com before you decide.",
     "Our column is checked against our own code. Anything that depends on Meta, Shopify or a legal review says so.",
   ],
   sources: [
-    { label: "Kanal: Manychat for Instagram", url: "https://getkanal.com/blog/manychat-instagram", checked: "2026-10-22" },
-    { label: "Chatarmin: Manychat pricing 2026", url: "https://chatarmin.com/en/blog/manychat-pricing", checked: "2026-10-22" },
-    { label: "Layer3 Labs: Manychat pricing 2026", url: "https://www.layer3labs.io/guides/manychat-pricing", checked: "2026-10-22" },
-    { label: "DMChamp: Manychat pricing, contacts and AI costs", url: "https://dmchamp.com/resources/manychat-pricing-2026/", checked: "2026-10-22" },
     {
-      label: "Manychat community: Share to DM trigger",
-      url: "https://community.manychat.com/product-updates/reward-followers-for-sharing-your-posts-to-their-stories-7643",
-      checked: "2026-10-22",
+      label: "Manychat help: Pro plan",
+      url: "https://help.manychat.com/hc/en-us/articles/25800228332572-Pro-plan",
+      checked: "2026-10-29",
     },
-    { label: "Mooon AI: Manychat review", url: "https://blog.mooonai.com/en/manychat", checked: "2026-10-22" },
-    { label: "Zapier: Manychat integrations", url: "https://zapier.com/apps/manychat/integrations", checked: "2026-10-22" },
+    {
+      label: "Manychat help: Active Contacts",
+      url: "https://help.manychat.com/hc/en-us/articles/25800323349020-Active-Contacts",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Free plan (channels)",
+      url: "https://help.manychat.com/hc/en-us/articles/25800197498652-Free-plan",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: How to connect TikTok",
+      url: "https://help.manychat.com/hc/en-us/articles/17928990909084-How-to-connect-TikTok-to-Manychat",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Instagram Post and Reel Comments trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/14281316989724-Instagram-Post-and-Reel-Comments-trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Instagram Live Comments Trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/14281275933724-Instagram-Live-Comments-Trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Instagram Ads Trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/14281321942428-Instagram-Ads-Trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Instagram Ref URL Trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/14281276006684-Instagram-Ref-URL-Trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Share to DM trigger",
+      url: "https://help.manychat.com/hc/en-us/articles/23431135317916-Share-to-DM-trigger",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Follow to DM on Instagram (beta)",
+      url: "https://help.manychat.com/hc/en-us/articles/23096654243740-Follow-to-DM-on-Instagram-Say-Hi-to-New-Followers-BETA",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: How to build a Manychat automation",
+      url: "https://help.manychat.com/hc/en-us/articles/14281166306332-How-to-build-a-Manychat-automation",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Contacts tab",
+      url: "https://help.manychat.com/hc/en-us/articles/14281110746012-Contacts-tab-Overview",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Broadcasting in WhatsApp",
+      url: "https://help.manychat.com/hc/en-us/articles/14281461353756-Broadcasting-in-WhatsApp",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Manychat Inbox",
+      url: "https://help.manychat.com/hc/en-us/articles/14281070478748-Manychat-Inbox",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: User roles and team management",
+      url: "https://help.manychat.com/hc/en-us/articles/14281172274460-User-roles-and-team-management",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Zapier Integration",
+      url: "https://help.manychat.com/hc/en-us/articles/14281281340188-Zapier-Integration",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat help: Google Sheets integration",
+      url: "https://help.manychat.com/hc/en-us/articles/14281248811292-Google-Sheets-integration",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat product updates: Your new AI hub (beta)",
+      url: "https://community.manychat.com/product-updates/your-new-ai-hub-beta-is-live-smarter-replies-faster-setup-same-manychat-magic-7631",
+      checked: "2026-10-29",
+    },
+    {
+      label: "Manychat product updates: Knowledge v2",
+      url: "https://community.manychat.com/product-updates/knowledge-v2-import-website-content-and-review-what-your-ai-knows-9132",
+      checked: "2026-10-29",
+    },
   ],
   related: [
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
@@ -305,6 +417,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
 
 export const COMPARE_INTERAKT: GtmPage = {
   path: "/compare/interakt",
+  competitor: "Interakt",
   name: "Amplychat vs Interakt",
   title: "Amplychat vs Interakt",
   description:
@@ -336,14 +449,14 @@ export const COMPARE_INTERAKT: GtmPage = {
       {
         feature: "Channels",
         ours: { status: "yes", text: "WhatsApp and Instagram. Facebook waits on Meta's approval." },
-        // source: interakt.shop/pricing, read 2026-10-25: Growth and Advanced list WhatsApp and Instagram; the Instagram-only Starter is shown at 999 rupees
+        // source: interakt.shop/pricing, read 2026-10-29: Starter is Instagram only (999 rupees) or one channel; Growth, Advanced and Enterprise list WhatsApp and Instagram
         theirs: { status: "yes", text: "WhatsApp and Instagram, depending on the plan." },
       },
       {
         feature: "Bulk WhatsApp campaigns",
         ours: { status: "soon", text: "Broadcasts are built and open after our review of consent rules. Pro and Max only." },
-        // source: interakt.shop/pricing, read 2026-10-25: one-time and ongoing campaigns with click and conversion tracking on Growth
-        theirs: { status: "yes", text: "One-time and ongoing campaigns with click and conversion tracking." },
+        // source: interakt.shop/pricing, read 2026-10-29: one-time and ongoing campaigns from Starter; click and conversion tracking from Growth
+        theirs: { status: "yes", text: "One-time and ongoing campaigns, with click and conversion tracking from the Growth plan." },
       },
       {
         feature: "Product catalogue",
@@ -351,8 +464,8 @@ export const COMPARE_INTERAKT: GtmPage = {
           status: "approval",
           text: "Add products by hand or CSV; the AI answers price and stock from it, and you can send a product or product list in WhatsApp from the inbox. The WhatsApp catalogue messages need your Meta catalogue set up and Meta's approval. Shopify sync is coming soon. Pro and Max.",
         },
-        // source: interakt.shop/pricing, read 2026-10-25: catalogue creation and product message templates on Growth
-        theirs: { status: "yes", text: "Catalogue creation and product message templates." },
+        // source: interakt.shop/pricing, read 2026-10-29: WhatsApp catalogue creation, product and catalogue message templates and Shopify catalogue auto-sync, from Growth
+        theirs: { status: "yes", text: "Catalogue creation, product message templates and Shopify catalogue sync, from the Growth plan." },
       },
       {
         feature: "Payments and checkout in chat",
@@ -360,58 +473,53 @@ export const COMPARE_INTERAKT: GtmPage = {
           status: "yes",
           text: "Send a payment request in the chat: a Razorpay link paid to your own Razorpay account, or your UPI ID marked paid by hand. Orders are tracked in the Orders page. Pro and Max. We do not hold your money, and we do not offer WhatsApp Pay.",
         },
-        // source: docs/competitors.md (Hyperleap Interakt alternatives 2026; InstantDM vs Interakt; read 2026-10-22): checkout and WhatsApp Pay
-        theirs: { status: "yes", text: "Checkout and WhatsApp Pay, according to third-party guides." },
+        // source: interakt.shop/pricing, read 2026-10-29: "Send Payment Links from Inbox" on Starter; "WhatsApp Checkout Bot" and "Native WhatsApp Payment (WhatsApp Pay)" on Growth. Replaces the third-party guides (Hyperleap, InstantDM, 2026-10-22).
+        theirs: { status: "yes", text: "Payment links from the inbox, and a WhatsApp checkout bot with WhatsApp Pay from the Growth plan." },
       },
       {
         feature: "Comment to DM on Instagram",
         ours: { status: "yes", text: "Keyword or any comment, on chosen posts or all, with a private reply." },
-        // source: docs/competitors.md at-a-glance table: comment and DM automation on Instagram (2026-10-22)
-        theirs: { status: "yes", text: "Instagram automation is listed in the comparison guides." },
+        // source: interakt.shop/pricing, read 2026-10-29: Instagram plans list "Unlimited DMs & Comments", "Price Please Automation", giveaway automation and custom auto replies
+        theirs: { status: "yes", text: "Comment and DM automations such as price-please replies and giveaways." },
       },
       {
         feature: "AI answers from your knowledge",
         ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of unanswered questions." },
-        // source: docs/competitors.md: "early (Haptik)" per third-party guides (2026-10-22)
-        theirs: { status: "yes", text: "Described by third-party guides as early, through a partner." },
+        // source: interakt.shop/pricing, read 2026-10-29: "WhatsApp AI Agents" (sales, lead qualification, customer support) as an add-on for Growth and Advanced; AnswerBot runs with up to 5 website URLs. Replaces "early, through a partner" from third-party guides (2026-10-22).
+        theirs: { status: "yes", text: "WhatsApp AI agents for sales, lead qualification and support, as a paid add-on on the Growth and Advanced plans." },
       },
       {
         feature: "Comment analysis per post",
         ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary." },
-        // source: docs/competitors.md distinctive list: no competitor page read showed it (2026-10-22)
+        // source: interakt.shop/pricing, read 2026-10-29: the analytics listed are conversation and agent performance analytics; comment analysis not found
         theirs: { status: "not-found" },
       },
       {
         feature: "Publishing Instagram posts",
         ours: { status: "yes", text: "Images, carousels, Reels and Stories." },
-        // source: docs/competitors.md at-a-glance: publishing not found for Interakt (2026-10-22)
+        // source: interakt.shop/pricing, read 2026-10-29: scheduling or publishing posts not found in the plan features
         theirs: { status: "not-found" },
       },
       {
         feature: "Team inbox",
         ours: { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan." },
-        // source: interakt.shop/pricing, read 2026-10-25: unlimited agents on Growth and Advanced; the page is inconsistent about roles
-        theirs: { status: "yes", text: "Unlimited agents on higher plans; the pricing page is unclear about roles." },
+        // source: interakt.shop/pricing, read 2026-10-29: "Unlimited agents (All Roles)" on the Growth card but "Unlimited Agents (owner role)" in its feature list; all roles on Advanced and Enterprise
+        theirs: { status: "yes", text: "Unlimited agents from the Growth plan; the pricing page is unclear which roles Growth includes." },
       },
       {
         feature: "Starting price",
         ours: { status: "yes", text: "A Free plan with no card. See the pricing page for Pro." },
-        // source: interakt.shop/pricing, read 2026-10-25: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
+        // source: interakt.shop/pricing, read 2026-10-29: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
         theirs: { status: "yes", text: "₹999 a month for Instagram only and ₹2,799 for WhatsApp and Instagram (Growth), plus taxes." },
       },
     ],
   },
   honesty: [
-    "Interakt's column comes from its pricing page, read on 2026-10-25, and from third-party guides read on 2026-10-22. Its plans and prices change, so check interakt.shop before you decide.",
-    "\"Not found\" means we didn't see it in what we read, not that Interakt lacks it.",
+    "Interakt's column comes from its own pricing page, read on 29 October 2026. Its plans and prices change, so check interakt.shop before you decide.",
+    "\"Not found\" means we didn't see it on Interakt's pricing page, not that Interakt lacks it.",
     "Neither company's plans include Meta's WhatsApp messaging fees, which Meta charges to your business.",
   ],
-  sources: [
-    { label: "Interakt pricing", url: "https://www.interakt.shop/pricing/", checked: "2026-10-25" },
-    { label: "Hyperleap: Interakt alternatives 2026", url: "https://hyperleap.ai/comparison/best-interakt-alternatives-2026", checked: "2026-10-22" },
-    { label: "InstantDM vs Interakt", url: "https://instantdm.com/vs/interakt", checked: "2026-10-22" },
-    { label: "respond.io: Interakt review", url: "https://respond.io/blog/interakt-review", checked: "2026-10-22" },
-  ],
+  sources: [{ label: "Interakt pricing", url: "https://www.interakt.shop/pricing/", checked: "2026-10-29" }],
   related: [
     { label: "Amplychat vs Manychat", href: "/compare/manychat" },
     { label: "The AI inbox", href: "/features/ai-inbox" },

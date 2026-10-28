@@ -3,6 +3,8 @@ import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { legalDate } from "@/lib/legal";
+import { competitorNote } from "@/lib/marketing/competitor-note";
 import { PRICING_PATH, STATUS_LABEL, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
 import { SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
@@ -80,10 +82,12 @@ function Compare({ page }: { page: GtmPage }) {
 /**
  * A go-to-market page (GR-37): the hero with one h1, the content blocks as h2 sections, a
  * side-by-side table on the comparison pages, how it was checked (what is not done, the sources
- * and the date each was read), related pages and a sign-up. The content is lib/marketing/gtm-pages.ts.
+ * and the date each was read, and on a competitor's page the trademark and no-affiliation note),
+ * related pages and a sign-up. The content is lib/marketing/gtm-pages.ts.
  */
 export function GtmPageView({ page }: { page: GtmPage }) {
   const shot = page.shot ? SHOTS[page.shot] : null;
+  const note = competitorNote(page);
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <BreadcrumbJsonLd name={page.name} path={page.path} />
@@ -161,11 +165,20 @@ export function GtmPageView({ page }: { page: GtmPage }) {
                     <a href={source.url} rel="noopener noreferrer" className={LINK}>
                       {source.label}
                     </a>{" "}
-                    <span>(read {source.checked})</span>
+                    <span>(read {legalDate(source.checked) ?? source.checked})</span>
                   </li>
                 ))}
               </ul>
             </>
+          ) : null}
+          {note ? (
+            <p className="mt-8 rounded-2xl border border-line bg-panel p-4 text-sm leading-relaxed text-fg-secondary">
+              {note.text}{" "}
+              <a href={`mailto:${note.email}`} className={LINK}>
+                {note.email}
+              </a>
+              .
+            </p>
           ) : null}
         </Container>
       </section>

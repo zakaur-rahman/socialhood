@@ -41,6 +41,12 @@ test.describe("GR-37 go-to-market pages", () => {
     await page.goto("/compare/interakt");
     await expect(page.getByRole("table", { name: "Amplychat and Interakt feature by feature" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Interakt pricing" })).toHaveAttribute("href", "https://www.interakt.shop/pricing/");
+    await expect(page.getByText(/Interakt is a trademark of its owner\. Amplychat isn't affiliated with or endorsed by Interakt\./)).toBeVisible();
+
+    for (const path of ["/compare/manychat", "/switch-from-manychat"]) {
+      await page.goto(path);
+      await expect(page.getByText(/Manychat is a trademark of its owner\. Amplychat isn't affiliated with or endorsed by Manychat\./)).toBeVisible();
+    }
 
     await page.goto("/pricing");
     await expect(page.getByRole("table", { name: "WhatsApp and products" })).toBeVisible();
