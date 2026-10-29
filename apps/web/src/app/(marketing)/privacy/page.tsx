@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
-import { LEGAL, grievanceDays, operatorName } from "@/lib/legal";
+import { SubprocessorTable } from "@/components/marketing/legal/SubprocessorTable";
+import { LEGAL, grievanceDays, isSet, operatorName } from "@/lib/legal";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Privacy Policy",
-  description: `How ${SITE_NAME} collects, uses, shares, keeps and deletes personal data, including the Instagram, Facebook and WhatsApp data it receives from Meta.`,
+  description: `How ${SITE_NAME} collects, uses, shares, keeps and deletes personal data, including Instagram, Facebook and WhatsApp data, and your GDPR, CCPA and DPDP rights.`,
   path: "/privacy",
 });
 
@@ -15,15 +16,20 @@ const N = SITE_NAME;
 const email = LEGAL.contactEmail;
 const mail = <a href={`mailto:${email}`}>{email}</a>;
 
-// Grounded in the built system: BUILD_SPEC §5.9, C-056 and C-067 (retention and deletion, an
-// account's data, backup exports: docs/ops/backup.md), C-049/C-053 (email and push), C-057 (Sentry
-// scrubbing, Google Cloud, C-145), FR-PRV-01/02 and SEC-11/12, the growth-plan integrations (C-103
-// Sheets, C-116 Shopify, C-120 Razorpay, GR-28 website chat, GR-29 Facebook Pages) and the purge
-// jobs (jobs/tasks/purge.py). C-144 checked it against Meta's Platform Terms §4, the DPDP Act and
-// Rules, and Google's API Services User Data Policy.
-// LAWYER REVIEW before launch (launch checklist §6.4).
+// Grounded in the built system: BUILD_SPEC §5.9, C-056 and C-067 (retention and deletion),
+// C-049/C-053 (email and push), C-057 (Sentry scrubbing), C-145 (one GCP VM in asia-southeast1,
+// nightly backups kept at most 30 days: infra/vm/backup.sh), C-149 (billing and Sentry off until
+// configured), FR-PRV-01/02 and SEC-11/12, the growth-plan integrations (C-103 Sheets, C-116 Shopify,
+// C-120 Razorpay, GR-28 website chat, GR-29 Facebook Pages) and the purge jobs (jobs/tasks/purge.py).
+// C-144 checked it against Meta's Platform Terms §4, the DPDP Act and Rules, and Google's API
+// Services User Data Policy. C-156 added the GDPR mechanics (roles, legal bases, transfers, rights by
+// region), the CCPA section, the shared subprocessor list (lib/subprocessors.ts) and the Gemini
+// paid-tier facts (ai/gemini.py uses an API key on the Gemini Developer API, not Vertex AI; Google's
+// Gemini API Additional Terms, effective 2026-03-23, read 2026-10-29). NOT reviewed by a lawyer (no
+// lawyer budget, C-156).
 function sections(): LegalSection[] {
   const operator = operatorName(LEGAL);
+  const where = isSet(LEGAL.publicLocation) ? LEGAL.publicLocation.trim() : "India";
   return [
     {
       id: "who-we-are",
@@ -31,28 +37,30 @@ function sections(): LegalSection[] {
       body: (
         <>
           <p>
-            {N} is run by {operator} (&quot;we&quot;, &quot;us&quot;), a sole proprietorship registered in India. This
-            policy explains how we handle personal data when you visit our website, when you use the {N} app, and when you
-            message or comment on a business that uses {N}, on Instagram, Facebook, WhatsApp or a website chat.
+            {N} is run by {operator} (&quot;we&quot;, &quot;us&quot;), a sole proprietorship registered in India and based
+            in {where}. This policy explains how we handle personal data when you visit our website, when you use the {N}{" "}
+            app, and when you message or comment on a business or creator that uses {N}, on Instagram, Facebook, WhatsApp
+            or a website chat.
           </p>
           <LegalFacts />
           <h3>Our role</h3>
           <ul>
             <li>
-              <strong>Your account data</strong> (for example your name and email): we decide how it is used and are
-              responsible for it. Under India&apos;s Digital Personal Data Protection Act, 2023 (DPDP Act), we are its Data
-              Fiduciary.
+              <strong>Your account data</strong> (for example your name, email, workspace and billing details): we decide
+              how it is used and are responsible for it. We are its <strong>controller</strong> under the GDPR and its Data
+              Fiduciary under India&apos;s Digital Personal Data Protection Act, 2023 (DPDP Act).
             </li>
             <li>
-              <strong>Your customers&apos; data</strong> (the messages, comments and profiles that arrive from Instagram,
-              Facebook, WhatsApp and website chat): the business that connected the account decides why it is processed,
-              and is the Data Fiduciary for it. We process it on that business&apos;s behalf and on its instructions, as its
-              Data Processor.
+              <strong>Your customers&apos; and followers&apos; data</strong> (the messages, comments, contacts and profiles
+              that arrive from Instagram, Facebook, WhatsApp and website chat, or that a business adds): the business or
+              creator that connected the account decides why it is processed, and is its controller (and Data Fiduciary).
+              We process it on their behalf and on their instructions, as their <strong>processor</strong> (Data
+              Processor), under our <Link href="/dpa">Data Processing Agreement</Link>.
             </li>
           </ul>
           <p>
-            If you messaged or commented on a business that uses {N}, that business is your first point of contact for
-            your data. You can also write to us and we&apos;ll help the business respond.
+            If you messaged or commented on a business or creator that uses {N}, they are your first point of contact for
+            your data, and their own privacy notice applies. You can also write to us and we&apos;ll help them respond.
           </p>
         </>
       ),
@@ -102,12 +110,12 @@ function sections(): LegalSection[] {
             tags and custom fields; orders with their items, amounts, delivery address and payment status; and records of
             each customer&apos;s consent to marketing messages, including when and how it was given or withdrawn.
           </p>
-          <h3>Content you add, and insights</h3>
+          <h3>Content you add</h3>
           <p>
             Your knowledge base (text, the content of web pages you link, and files you upload), product catalogue,
-            automations, sequences, scheduled posts and messages, captions, and the photos and videos you upload. If you
-            grant the insights permission, your posts&apos; and account&apos;s insights, such as reach, views, likes,
-            comments, saves and shares.
+            automations, sequences, scheduled posts and messages, captions, and the photos and videos you upload. {N} can
+            also show your posts&apos; and account&apos;s insights, such as reach and saves, but only if you grant Meta&apos;s
+            insights permission; we don&apos;t ask for it today.
           </p>
           <h3>What the AI produces</h3>
           <p>
@@ -116,8 +124,8 @@ function sections(): LegalSection[] {
           </p>
           <h3>Billing</h3>
           <p>
-            Your plan, subscription status and payment status. Card and other payment details go to Dodo Payments, which
-            handles checkout; we never see or store full card numbers.
+            Your plan and subscription status. Paid plans aren&apos;t on sale yet. When they are, card and other payment
+            details go to Dodo Payments, which runs checkout; we never see or store full card numbers.
           </p>
           <h3>Technical data</h3>
           <p>
@@ -129,28 +137,70 @@ function sections(): LegalSection[] {
     },
     {
       id: "how-we-use-it",
-      title: "How we use it",
+      title: "How we use it, and our legal bases",
       body: (
         <>
-          <ul>
-            <li>
-              To run {N}: show your conversations and comments, send your replies and automated messages, publish your
-              posts, run your automations, and send notifications and the weekly digest.
-            </li>
-            <li>To provide the AI features described below.</li>
-            <li>To send data to the tools you connect, such as Google Sheets, Zapier or your own webhooks.</li>
-            <li>To manage your plan and billing, and to email you about your account.</li>
-            <li>To help when you contact support.</li>
-            <li>To keep the service secure, prevent abuse and fix errors.</li>
-            <li>To meet our legal obligations.</li>
-          </ul>
           <p>
-            <strong>
-              We don&apos;t sell personal data, we don&apos;t use it for advertising, and we don&apos;t use it to train AI
-              models.
-            </strong>{" "}
-            People at {N} look at a workspace&apos;s data only when you ask us for help, to investigate a problem or
-            abuse, or when the law requires it.
+            For the data we control, this table shows each purpose and the legal basis we rely on under the GDPR (Article
+            6(1)). For your customers&apos; and followers&apos; data, the business or creator chooses the legal basis; we
+            only process it to provide {N} to them.
+          </p>
+          <div className="overflow-x-auto">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Purpose</th>
+                  <th scope="col">Data</th>
+                  <th scope="col">Legal basis</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Run your account and workspace: show your conversations, send your replies and automated messages, publish
+                    posts, run automations and the AI features you use, and connect the tools you choose
+                  </td>
+                  <td>Account, workspace and connected-account details, content you add</td>
+                  <td>Performing our contract with you (Art. 6(1)(b))</td>
+                </tr>
+                <tr>
+                  <td>Email and push notifications, the weekly digest, and messages about your account</td>
+                  <td>Email address, push subscription, notification choices</td>
+                  <td>Contract (Art. 6(1)(b)); you can turn the optional ones off in Settings</td>
+                </tr>
+                <tr>
+                  <td>Plans, AI credits and, once paid plans open, billing</td>
+                  <td>Plan, subscription status, AI credit use</td>
+                  <td>Contract (Art. 6(1)(b)); keeping tax and accounting records the law requires (Art. 6(1)(c))</td>
+                </tr>
+                <tr>
+                  <td>Answer you when you contact support</td>
+                  <td>What you send us, your account details</td>
+                  <td>Contract (Art. 6(1)(b)) or our legitimate interest in answering you (Art. 6(1)(f))</td>
+                </tr>
+                <tr>
+                  <td>Keep {N} secure, prevent abuse and spam, limit request rates and fix errors</td>
+                  <td>IP addresses, request details, error reports with message text removed</td>
+                  <td>Our legitimate interest in a secure, working service for everyone (Art. 6(1)(f))</td>
+                </tr>
+                <tr>
+                  <td>Meet our legal obligations, and establish or defend legal claims</td>
+                  <td>What the obligation or claim needs</td>
+                  <td>Legal obligation (Art. 6(1)(c)); legitimate interest (Art. 6(1)(f))</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Where we rely on legitimate interests, we have weighed them against your rights, and you can object (see{" "}
+            <a href="#your-rights">Your rights</a>). Under India&apos;s DPDP Act we process your account data for the
+            purposes you give it to us for, and you can withdraw consent at any time.
+          </p>
+          <p>
+            <strong>We don&apos;t sell personal data, we don&apos;t use it for advertising, and we don&apos;t train AI
+            models on it.</strong>{" "}
+            We don&apos;t send marketing emails. People at {N} look at a workspace&apos;s data only when you ask us for
+            help, to investigate a problem or abuse, or when the law requires it.
           </p>
         </>
       ),
@@ -160,25 +210,49 @@ function sections(): LegalSection[] {
       title: "Data from Instagram, Facebook and WhatsApp",
       body: (
         <>
-          <p>In short, for the data Meta&apos;s platforms send us when a business connects an account:</p>
+          <p>When a business or creator connects an account, Meta&apos;s platforms send us:</p>
           <ul>
             <li>
-              <strong>What we get:</strong> the account&apos;s profile and access tokens, the messages and comments sent to
-              and from it, the profiles Meta shares of the people who write, and the insights you allow (see{" "}
-              <a href="#what-we-collect">What we collect</a>).
+              <strong>Instagram:</strong> the account&apos;s ID, username, name and profile picture; direct messages,
+              including replies to and mentions in stories, with their photos, videos, voice notes, stickers and reactions;
+              comments and replies on posts and Reels; the posts {N} publishes for the account; and, for the people who
+              message or comment, their name, username, profile picture, whether they follow the account, and the ad or
+              link a chat started from.
             </li>
             <li>
-              <strong>Why:</strong> only to provide {N} to that business: its inbox, replies, AI drafts and automations,
-              publishing and analytics. We don&apos;t sell it, use it for ads, or share it with data brokers.
+              <strong>Facebook Pages</strong> (with Meta&apos;s approval): the Page&apos;s ID and name; Messenger messages
+              to the Page; comments on the Page&apos;s posts; and the name and profile picture Meta shares for the people
+              who write.
             </li>
             <li>
-              <strong>How long:</strong> for the period in <a href="#retention">How long we keep it</a>; raw events from
-              Meta are deleted after 30 days.
+              <strong>WhatsApp:</strong> the business number&apos;s ID, display name and phone number; messages sent to and
+              from it, including photos, videos, voice notes, documents, locations, button replies and orders; whether each
+              message was delivered and read; and the customer&apos;s WhatsApp phone number, profile name and the ad a chat
+              started from.
+            </li>
+            <li>The access tokens and permissions the account holder granted.</li>
+          </ul>
+          <p>
+            <strong>Why:</strong> only to provide {N} to that business or creator: its inbox, replies, AI drafts and
+            automations, publishing and analytics. We don&apos;t sell this data, use it for ads, share it with data brokers,
+            or use it to build profiles of people across businesses.
+          </p>
+          <p>
+            <strong>Deleting it:</strong>
+          </p>
+          <ul>
+            <li>
+              Disconnecting an account deletes its access token at once, and no new messages or comments arrive for it.
+              What was already stored stays in the workspace until the business deletes it.
             </li>
             <li>
-              <strong>Deleting it:</strong> anyone can ask us to delete their data, by removing {N} in their Instagram or
-              Facebook settings and asking for deletion, on our <Link href="/data-deletion">data deletion page</Link>, or by
-              emailing {mail} (see <a href="#deleting">Deleting your data</a>).
+              Deleting an account&apos;s data (Disconnect and delete data, in Settings → Connections), deleting the
+              workspace, or a deletion request through Instagram or Facebook removes everything stored for the account
+              within 24 hours. Raw events from Meta are deleted after 30 days in any case.
+            </li>
+            <li>
+              Anyone can ask: on our <Link href="/data-deletion">data deletion page</Link>, or by emailing {mail}. See{" "}
+              <a href="#deleting">Deleting your data</a>.
             </li>
           </ul>
           <p>
@@ -198,8 +272,16 @@ function sections(): LegalSection[] {
             replies, summaries, captions and hashtags, searching your knowledge base, and answering Ask {N} questions.
             Replies are drafted from the business&apos;s own knowledge base and the conversation. For each task we send
             Google the text it needs, such as a message with the recent conversation and the relevant parts of the knowledge
-            base, and Google returns the result. We use Google&apos;s paid API service, under which Google doesn&apos;t use
-            what we send to improve its products.
+            base, and Google returns the result.
+          </p>
+          <p>
+            We use the Gemini API as a paid service. Under{" "}
+            <a href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer">
+              Google&apos;s terms for the paid Gemini API
+            </a>
+            , Google doesn&apos;t use what we send, or what it returns, to improve its products. Google keeps it for a
+            limited time to detect misuse, and may store or cache it briefly in any country where it has facilities. We
+            don&apos;t use your data to train AI models either.
           </p>
           <ul>
             <li>
@@ -217,9 +299,13 @@ function sections(): LegalSection[] {
             </li>
             <li>Ask {N} reads your workspace&apos;s data to answer. It never sends, changes or deletes anything.</li>
           </ul>
+          <h3>Automated decisions</h3>
           <p>
-            AI output can be wrong. Our <Link href="/terms">Terms of Service</Link> explain who is responsible for what the
-            AI sends.
+            The AI drafts and sends replies, scores leads, flags likely spam and, if a business turns it on, hides spam
+            comments. These help a business run its inbox; none of them makes a decision that has a legal or similarly
+            significant effect on anyone. A person at the business can review and change any of them, and the business can
+            switch Auto mode and spam hiding off at any time. AI output can be wrong; our{" "}
+            <Link href="/terms#ai-features">Terms of Service</Link> explain who is responsible for what the AI sends.
           </p>
         </>
       ),
@@ -265,74 +351,15 @@ function sections(): LegalSection[] {
             Meta&apos;s official APIs.
           </p>
           <p>
-            <strong>Service providers</strong> that process data for us, only to run {N}:
+            <strong>Our subprocessors</strong>, the service providers that process data for us, only to run {N}. The list is
+            kept on our <Link href="/subprocessors">subprocessors page</Link>, which is the up-to-date version:
           </p>
-          <div className="overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Provider</th>
-                  <th scope="col">What they do for us</th>
-                  <th scope="col">Data involved</th>
-                  <th scope="col">Where</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Google Cloud</td>
-                  <td>Hosts this website, the web app, our API, database and background jobs, and our backups</td>
-                  <td>All data in the service</td>
-                  <td>Singapore</td>
-                </tr>
-                <tr>
-                  <td>Google (Gemini API)</td>
-                  <td>AI features</td>
-                  <td>Text of messages, comments, knowledge and questions sent for an AI task</td>
-                  <td>Google&apos;s data centres, including the United States</td>
-                </tr>
-                <tr>
-                  <td>Cloudinary</td>
-                  <td>Stores and delivers media and files</td>
-                  <td>Photos, videos and files you upload or receive in messages</td>
-                  <td>United States and a worldwide delivery network</td>
-                </tr>
-                <tr>
-                  <td>Clerk</td>
-                  <td>Sign-up, sign-in and sessions, with bot protection (Cloudflare Turnstile)</td>
-                  <td>Name, email address, profile photo, sign-in activity</td>
-                  <td>United States</td>
-                </tr>
-                <tr>
-                  <td>Dodo Payments</td>
-                  <td>Merchant of record for our subscriptions: checkout, payments, tax, invoices</td>
-                  <td>Owner&apos;s email address, workspace ID, payment details</td>
-                  <td>India and the countries where it processes payments</td>
-                </tr>
-                <tr>
-                  <td>Resend</td>
-                  <td>Sends our emails</td>
-                  <td>Email addresses and the content of notification and digest emails</td>
-                  <td>United States</td>
-                </tr>
-                <tr>
-                  <td>Sentry</td>
-                  <td>Error tracking</td>
-                  <td>
-                    Technical error reports. We strip message text, email addresses, tokens, cookies and request bodies before
-                    they are sent.
-                  </td>
-                  <td>United States</td>
-                </tr>
-                <tr>
-                  <td>Browser push services (for example Google, Apple, Mozilla, Microsoft)</td>
-                  <td>Deliver phone and desktop notifications you turn on</td>
-                  <td>Notifications, encrypted so that only your device can read them</td>
-                  <td>The provider&apos;s own services</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>We also send service health metrics to Grafana Cloud. They contain no personal data.</p>
+          <SubprocessorTable />
+          <p>
+            Browser push services (for example Google, Apple, Mozilla and Microsoft) deliver the notifications you turn on,
+            encrypted so only your device can read them. Service health metrics go to Grafana Cloud and contain no personal
+            data. Once paid plans open, Dodo Payments handles payments as merchant of record, under its own privacy policy.
+          </p>
           <p>
             <strong>Tools a business connects.</strong> A business can connect its own accounts with other services. We then
             send them what the business sets up, on its instructions, and their own terms and privacy policies apply:
@@ -382,13 +409,28 @@ function sections(): LegalSection[] {
       ),
     },
     {
-      id: "where",
-      title: "Where your data is stored",
+      id: "transfers",
+      title: "Where your data goes",
       body: (
-        <p>
-          The website, the web app, our API, database and background jobs run on Google Cloud in Singapore. Some of the providers above process data in other countries, including the United States. We
-          transfer data outside India only as the DPDP Act allows.
-        </p>
+        <>
+          <p>
+            We are in India. The website, the app, our API, database, background jobs and backups run on Google Cloud in
+            Singapore (asia-southeast1). Some of our subprocessors process data in other countries, mainly the United
+            States, and Google may process AI requests wherever it has facilities. Each one&apos;s location is on the{" "}
+            <Link href="/subprocessors">subprocessors page</Link>.
+          </p>
+          <ul>
+            <li>
+              <strong>From the EEA and the UK</strong>, where the destination has no adequacy decision, we rely
+              on the European Commission&apos;s Standard Contractual Clauses (and the UK Addendum to them): in our{" "}
+              <Link href="/dpa#transfers">Data Processing Agreement</Link> with business customers, and in our
+              subprocessors&apos; data processing terms. You can ask us for a copy at {email}.
+            </li>
+            <li>
+              <strong>From India</strong>, we transfer data outside India only as the DPDP Act allows.
+            </li>
+          </ul>
+        </>
       ),
     },
     {
@@ -406,6 +448,12 @@ function sections(): LegalSection[] {
               </thead>
               <tbody>
                 <tr>
+                  <td>Your user account (name, email, profile photo)</td>
+                  <td>
+                    While your account exists. When it is deleted, the workspaces only you own are deleted too (see below).
+                  </td>
+                </tr>
+                <tr>
                   <td>
                     A workspace&apos;s data: conversations, comments, contacts, consent records, orders, knowledge,
                     automations, posts, media and settings
@@ -418,9 +466,13 @@ function sections(): LegalSection[] {
                     message files
                   </td>
                   <td>
-                    Until you delete that account&apos;s data (or Meta asks us to), then permanently removed within 24 hours,
-                    usually within minutes.
+                    Until the business deletes that account&apos;s data (or Meta asks us to), then permanently removed within
+                    24 hours, usually within minutes.
                   </td>
+                </tr>
+                <tr>
+                  <td>A disconnected account&apos;s access token</td>
+                  <td>Deleted at once when the account is disconnected</td>
                 </tr>
                 <tr>
                   <td>Messages on the Free plan (including after a paid plan ends)</td>
@@ -456,7 +508,7 @@ function sections(): LegalSection[] {
                 </tr>
                 <tr>
                   <td>Database backups</td>
-                  <td>Recovery history 7 days; backup exports 30 days, then deleted.</td>
+                  <td>Nightly copies: the last 7 days and the last 4 Sundays, never more than 30 days, then deleted.</td>
                 </tr>
                 <tr>
                   <td>Records of data deletion requests (a confirmation code, the Meta account ID and the status)</td>
@@ -466,9 +518,9 @@ function sections(): LegalSection[] {
             </table>
           </div>
           <p>
-            Deleted data can remain in our database backups until those backups expire: the database&apos;s recovery history
-            is kept for 7 days, and backup exports for 30 days, after which they are deleted. Dodo Payments keeps payment
-            records for as long as the law requires.
+            Deleted data can remain in our database backups until those backups expire, at most 30 days later. Daily jobs
+            remove data when its period ends. Once paid plans open, Dodo Payments keeps payment records for as long as the
+            law requires.
           </p>
         </>
       ),
@@ -516,10 +568,68 @@ function sections(): LegalSection[] {
     },
     {
       id: "your-rights",
-      title: "Your rights and grievances",
+      title: "Your rights",
       body: (
         <>
-          <p>Under the DPDP Act, and similar laws elsewhere, you can ask us to:</p>
+          <h3>Everyone</h3>
+          <p>Wherever you live, you can ask us to:</p>
+          <ul>
+            <li>tell you what personal data we hold about you and give you a copy;</li>
+            <li>correct it or delete it;</li>
+            <li>stop using it for something you object to.</li>
+          </ul>
+          <p>
+            Email {mail} from the email address of your {N} account, or tell us the Instagram username, Facebook name or
+            WhatsApp number you messaged a business from, so we can find your data and confirm it&apos;s yours. Your
+            account settings also let you correct your details and delete your data yourself. If your data reached us through
+            a business&apos;s account, we pass your request to that business and help it respond. We never charge for a
+            request and never treat you worse for making one.
+          </p>
+
+          <h3>EEA and UK (GDPR)</h3>
+          <p>If the GDPR or the UK GDPR applies, you have the right to:</p>
+          <ul>
+            <li>access your personal data (Article 15) and have it corrected (Article 16) or erased (Article 17);</li>
+            <li>restrict how we use it (Article 18);</li>
+            <li>receive the data you gave us in a portable format (Article 20);</li>
+            <li>object to processing based on our legitimate interests (Article 21);</li>
+            <li>withdraw consent at any time, where we rely on it, without affecting what came before;</li>
+            <li>
+              not be subject to a decision based solely on automated processing that has legal or similarly significant
+              effects (Article 22); we don&apos;t make such decisions;
+            </li>
+            <li>
+              complain to a data protection authority, in particular where you live or work (Article 77). In the UK, that is
+              the Information Commissioner&apos;s Office.
+            </li>
+          </ul>
+          <p>We answer within one month, which the law lets us extend by two more months for complex requests.</p>
+
+          <h3>California (CCPA/CPRA)</h3>
+          <ul>
+            <li>
+              In the last 12 months we have collected the categories of personal information described in{" "}
+              <a href="#what-we-collect">What we collect</a>: identifiers (such as name, email, username and IP address),
+              customer records, commercial information (your plan), internet activity (request and error logs) and the
+              content of messages, for the purposes in <a href="#how-we-use-it">How we use it</a>.
+            </li>
+            <li>
+              <strong>We don&apos;t sell or share personal information</strong>, as the CCPA defines those words, and
+              haven&apos;t done so in the last 12 months. We don&apos;t knowingly sell or share the personal information of
+              anyone under 16.
+            </li>
+            <li>
+              We honour <strong>Global Privacy Control</strong>: if your browser sends it, we treat it as a request to opt
+              out of sale and sharing. Because we do neither, nothing changes for you.
+            </li>
+            <li>
+              You can ask to know, delete and correct your personal information. You can use an authorised agent; we may
+              ask them for proof. We won&apos;t discriminate against you for using these rights.
+            </li>
+          </ul>
+
+          <h3>India (DPDP Act)</h3>
+          <p>Under the DPDP Act, you can ask us to:</p>
           <ul>
             <li>give you a summary of the personal data we hold about you and how we process it;</li>
             <li>correct, complete or update it;</li>
@@ -531,20 +641,12 @@ function sections(): LegalSection[] {
             <li>let someone you nominate exercise these rights if you die or can&apos;t act yourself;</li>
             <li>address a grievance about how we handle your data.</li>
           </ul>
-          <h3>How to ask</h3>
-          <p>
-            Email {mail} from the email address of your {N} account, or tell us the Instagram username, Facebook name or
-            WhatsApp number you messaged a business from, so we can find your data and confirm it&apos;s yours. Your
-            account settings also let you correct your details and delete your data yourself. If your data reached us through
-            a business&apos;s account, we pass your request to that business and help it respond.
-          </p>
           <h3>Grievances</h3>
           <p>
-            Write to {mail} with &quot;Grievance&quot; in the subject. We acknowledge it and answer within{" "}
-            {grievanceDays(LEGAL)} days. If you aren&apos;t satisfied with our answer, you can complain to the Data Protection
-            Board of India, or to the data protection authority where you live.
+            Write to our Grievance Officer at {mail} with &quot;Grievance&quot; in the subject. We acknowledge it and answer
+            within {grievanceDays(LEGAL)} days. If you aren&apos;t satisfied with our answer, you can complain to the Data
+            Protection Board of India, or to the data protection authority where you live.
           </p>
-          <p>Depending on where you live, you may have other rights too, such as objecting to processing or getting a copy of your data.</p>
         </>
       ),
     },
@@ -552,30 +654,12 @@ function sections(): LegalSection[] {
       id: "cookies",
       title: "Cookies and local storage",
       body: (
-        <>
-          <p>We only use cookies and storage the site needs to work, so we don&apos;t show a cookie banner:</p>
-          <ul>
-            <li>
-              <strong>Sign-in cookies.</strong> Clerk&apos;s cookies keep you signed in and protect sign-in. Sign-up and
-              sign-in may show a Cloudflare Turnstile check, through Clerk, to stop bots.
-            </li>
-            <li>
-              <strong>Theme cookie.</strong> One cookie remembers whether you chose the dark, light or system theme.
-            </li>
-            <li>
-              <strong>Local storage.</strong> The app remembers a few view preferences in your browser, such as your inbox
-              and calendar views. The website chat keeps a random visitor ID so a visitor&apos;s conversation continues.
-            </li>
-            <li>
-              <strong>Service worker.</strong> If you install {N} or turn on push notifications, your browser keeps a small
-              script from us that receives the notifications.
-            </li>
-          </ul>
-          <p>
-            We don&apos;t use analytics, advertising or tracking cookies, and we don&apos;t load third-party analytics or ad
-            scripts. Error reports go to Sentry without cookies.
-          </p>
-        </>
+        <p>
+          We only use cookies and browser storage that {N} needs to work: Clerk&apos;s sign-in cookies, a theme cookie, and
+          a few view preferences and the website chat&apos;s visitor ID in local storage. We don&apos;t use analytics,
+          advertising or tracking cookies, so there is no cookie banner. Every item, what it&apos;s for and how long it
+          lasts is on our <Link href="/cookies">cookies page</Link>.
+        </p>
       ),
     },
     {
@@ -586,13 +670,14 @@ function sections(): LegalSection[] {
           <p>
             Connections to {N} are encrypted with HTTPS. Instagram, Facebook and WhatsApp connect through Meta&apos;s
             official APIs, access tokens and payment keys are stored encrypted, and every workspace&apos;s data is kept
-            separate from every other workspace. Only the people who run {N} can reach our production systems.
+            separate from every other workspace. Only the people who run {N} can reach our production systems. Annex 2 of
+            our <Link href="/dpa#annex-2">Data Processing Agreement</Link> lists our security measures.
           </p>
           <p>
             No system is perfectly secure. If a breach affects your personal data, we&apos;ll tell you without delay what
             happened, what it may mean for you, what we&apos;re doing about it and what you can do, and we&apos;ll report it
             to the Data Protection Board of India and other authorities as the law requires. When a breach affects a
-            business&apos;s customers, we tell the business so it can tell them.
+            business&apos;s customers, we tell the business without undue delay, and within 72 hours, so it can tell them.
           </p>
         </>
       ),
@@ -602,9 +687,11 @@ function sections(): LegalSection[] {
       title: "Children",
       body: (
         <p>
-          {N} is a tool for businesses. Accounts are for people who are 18 or older, and we don&apos;t knowingly collect
-          children&apos;s data for our own purposes. A business&apos;s customers may include children; the business is
-          responsible for that data, and we never use it to track or target anyone with advertising.
+          {N} is a tool for businesses and creators. Accounts are for people who are 18 or older, and we don&apos;t
+          knowingly collect children&apos;s data for our own purposes. If you think a child has created an account, email{" "}
+          {mail} and we&apos;ll delete it. A business&apos;s customers or a creator&apos;s followers may include children;
+          the business or creator is responsible for that data, and we never use it to track or target anyone with
+          advertising.
         </p>
       ),
     },
@@ -642,9 +729,10 @@ export default function PrivacyPage() {
       summary={
         <>
           <p>
-            {N} is an inbox and automation tool for businesses on Instagram, Facebook, WhatsApp and website chat. To do
-            that, we handle your account data and the messages, comments and profiles of your customers that Meta and your
-            website send us when they contact your business.
+            {N} is an inbox and automation tool for businesses and creators on Instagram, Facebook, WhatsApp and website
+            chat. To do that, we handle your account data, and the messages, comments and profiles that Meta and your
+            website send us when people contact you. For your account data we are the controller; for your customers&apos;
+            and followers&apos; data, you are, and we process it for you.
           </p>
           <p>
             We use it only to run {N}.{" "}
