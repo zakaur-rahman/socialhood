@@ -7026,3 +7026,85 @@ removed from package.json and the lockfile.
 - The plan matrix still says "Pro has a 7-day free trial" while Pro isn't on sale (the plan's
   rule, not an offer today).
 - The share image stays dark (one picture for every theme).
+
+## C-156 · Site trust pass
+
+### C-156 (compare)
+
+Seven new comparison pages and a `/compare` hub, from the owner-approved competitor review
+(2026-10-29), following the GR-37 and C-155 rules in `lib/marketing/gtm-pages.ts`: the vendor's own
+pages only, each read on 2026-10-29, a source comment above every competitor cell, the `competitor`
+field so the trademark and no-affiliation note renders, a balanced "Which fits you" block, no
+logos and no "best". Not reviewed by a lawyer.
+
+- **Pages:** `/compare/linkdm`, `/compare/instantdm`, `/compare/inro`, `/compare/creatorflow`
+  (Instagram DM tools) and `/compare/wati`, `/compare/aisensy`, `/compare/spur` (WhatsApp
+  platforms). None skipped: each vendor's own pricing and feature pages could be read with a
+  plain fetch. No site was read around a block; where a read failed (see AiSensy) that page wasn't
+  used for the claim.
+- **Hub `/compare`:** an intro, "How we compare" (vendor sources, dates, our side checked against
+  our code, "not found" ≠ lacks), cards in two groups (`COMPARE_GROUPS`: Manychat, Switch from
+  Manychat, LinkDM, InstantDM, Inrō, CreatorFlow; Interakt, Wati, AiSensy, Spur) with each page's
+  latest source date, and a general trademark note with the support address. Breadcrumbs JSON-LD.
+  *No CollectionPage/ItemList JSON-LD: the codebase has no pattern for one, so none was invented.*
+- **Breadcrumbs:** a `/compare/*` page is now Home, Compare, the page (it was Home, the page).
+- **Our column** shares cells defined once at the top of the block: Instagram, WhatsApp and website
+  chat in one inbox (C-111, on every plan), Facebook "built and waits on Meta's approval" (C-077),
+  broadcasts "soon" (O-11), the catalogue "with Meta's approval" and Shopify "coming soon" (O-10),
+  the AI answering only from documents, Q&A, products and website pages (knowledge types
+  `faq/text/url/file` and the site crawl, migrations 0009 and 0030), the follow nudge that never
+  gates, and Meta's WhatsApp fees paid by the business to Meta with no markup (owner, 2026-10-29).
+  "Analytics" on the CreatorFlow page names only what is built: the weekly report (GR-34) and lead
+  scores; link-click tracking was not claimed.
+- **Sitemap and llms.txt:** the eight paths are added to `PUBLIC_PATHS` and `PAGE_UPDATED`
+  (2026-10-29) so the sitemap lists them; llms.txt lists the comparisons automatically from
+  `GTM_PAGES` and gets one "Compare" line for the hub. `GTM_PATHS` includes `/compare`. The footer
+  (`LEARN_LINKS`) is left to the pages agent.
+
+Sources and what was softened, per competitor (all read 2026-10-29):
+- **LinkDM** — linkdm.com/pricing, linkdm.com home (features, FAQ). Prices USD: Free (1,000 DMs a
+  month), Pro $19 a month or $182 a year, Platinum+ $99 a month. Broadcasts come only from a home
+  banner ("Broadcasts let you send timely DMs to active contacts!"), so the cell says "Instagram DMs
+  to active contacts" and no more. AI replies, a team inbox, comment analysis and post scheduling:
+  not found (the DM Planner drafts DMs for posts, which isn't publishing).
+- **InstantDM** — instantdm.com/pricing, instantdm.com home. Prices USD, billed yearly: Legend Pro
+  $9.99, Trendsetter $24.99, Trendsetter Pro $49.99 a month; Free 500 DM automations. The AI is
+  described as the pricing page does (an agent step on your own OpenAI, Claude, Gemini or DeepSeek
+  key, with human takeover); "answers from a knowledge base" was not claimed. WhatsApp is listed only
+  as a support channel. The per-plan marks in its table were hard to read, so plan placement is
+  kept to what the plan lists name.
+- **Inrō** — inro.social/pricing, inro.social home. Prices EUR: Free (100 activated contacts),
+  Pro "starting at €12.99 per month", annual €1,249, Managed from €299. Live comments are marked
+  differently in two places on its pricing page, so Live is left out of its cell. "Instagram content
+  management" on Pro is reported as is; scheduling posts stays "not found".
+- **CreatorFlow** — creatorflow.so/pricing, creatorflow.so home (first read timed out; the
+  second read worked). Prices in "$" without a currency code (said on the page): Pro $15 a month or
+  $12 billed yearly, Growth $30 or $24. AI replies: "not found", with its own line that you write
+  every message. Its comparison table's checkmarks didn't come through, so per-plan claims follow
+  the plan lists only.
+- **Wati** — wati.io/pricing, wati.io home, Astra help "How to train your AI agent" (updated
+  2026-06-02), Wati help "Set up an Astra AI agent for Instagram" (updated 2026-10-22). Prices INR,
+  billed quarterly: Growth ₹2,699, Pro ₹5,799, Business ₹16,799 a month. The trust centre
+  (trust.wati.io) returned 403 in the review and wasn't used. Whether Wati marks up Meta's fees isn't
+  stated; the cell says only that template messages are charged on top from its rate card.
+  "No free plan was shown" was drafted and removed (it would read as "lacks").
+- **AiSensy** — aisensy.com/pricing (add-ons, billing, Meta fees) and AiSensy's own
+  aisensy.com/aisensy-vs-interakt (plan prices, agents). The pricing page's plan cards didn't come
+  through in two reads (the page renders them late), so the plan prices (from ₹1,500 a month; Pro
+  ₹3,200 a month) come from the vendor's comparison page, which has no date; the page says so.
+  Third-party price lists that disagree (₹999, ₹2,399, ₹4,999) were not used. Instagram messaging
+  and comment-to-DM: not found on AiSensy's pages or by a site search. A fetch of AiSensy's `m.`
+  subdomain was refused by the session's safety check as a way round the main site and was not
+  retried.
+- **Spur** — spurnow.com/en/pricing, spurnow.com/en/llm-info (its page for AI assistants, last
+  reviewed 2026-10-07), spurnow.com home. Prices USD: AI Acquire $15 a month or $12 billed yearly
+  ($144), AI Max $399 a month billed yearly; 14-day trial; llm-info says there is no free plan (the
+  cell quotes that rather than marking a status). The home page FAQ still lists "AI Powered Question
+  Answering (Coming Soon)" while llm-info and pricing describe AI agents on knowledge; the cell
+  follows llm-info and pricing. The review notes say a Spur help article admits a markup on Meta's
+  rates; that article wasn't re-read, so no markup is claimed.
+
+Checks: `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest for `app/(marketing)`, `app/seo`,
+`app/public-metadata`, `lib/marketing`, `components/marketing` and `styles` (design lint) pass.
+E2E (`gr37-gtm-pages.spec.ts`, now with the new pages, the hub and each trademark note) is left to
+the coordinator.
