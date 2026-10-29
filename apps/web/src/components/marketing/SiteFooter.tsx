@@ -37,7 +37,7 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
         <div className="foot-grid">
           <div className="foot-about">
             <Logo />
-            <p className="about">One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.</p>
+            <p className="about">One inbox for Instagram, WhatsApp and website chat, with AI that answers from your business knowledge.</p>
             <p className="about">
               Questions? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
             </p>

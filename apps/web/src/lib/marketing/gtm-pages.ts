@@ -1446,7 +1446,7 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
 export const FEATURE_AI_INBOX: GtmPage = {
   path: "/features/ai-inbox",
   name: "The AI inbox",
-  title: "The AI inbox for Instagram and WhatsApp",
+  title: "AI inbox for Instagram, WhatsApp and web chat",
   description:
     "One inbox for Instagram DMs and WhatsApp chats. AI drafts or sends replies from your knowledge, and hands over the rest.",
   eyebrow: "The AI inbox",
