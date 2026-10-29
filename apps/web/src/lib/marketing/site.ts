@@ -65,12 +65,12 @@ export function siteHref(path: string, origin: string | null = appOrigin()): str
 }
 
 export const SITE_NAME = "Amplychat";
-export const SITE_TAGLINE = "AI inbox and automations for Instagram and WhatsApp";
+export const SITE_TAGLINE = "AI inbox and automations for Instagram, WhatsApp and website chat";
 /** The landing page's title after the name: "Amplychat · …" stays within 60 characters. */
-export const SITE_TITLE_LINE = "AI inbox for Instagram and WhatsApp";
+export const SITE_TITLE_LINE = "AI inbox for Instagram, WhatsApp and web chat";
 /** The landing page's description (and the default): at most 160 characters, for search results. */
 export const SITE_DESCRIPTION =
-  "Instagram DMs, comments and WhatsApp in one inbox for businesses and creators. AI replies from your own knowledge, plus comment and DM automations.";
+  "One AI inbox for Instagram DMs and comments, WhatsApp and your website chat. Replies from your own knowledge, plus comment-to-DM automations.";
 
 /** The logo for structured data (Organization.logo): the 512 px app icon, a square PNG. */
 export const LOGO_PATH = "/icons/icon-512.png";
@@ -86,7 +86,7 @@ export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Amplychat: the AI inbox for businesses and creators on Instagram and WhatsApp",
+  alt: "Amplychat: Every DM. Every comment. One inbox. For Instagram, WhatsApp and website chat.",
   type: "image/png",
 };
 
