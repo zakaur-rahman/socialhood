@@ -7,7 +7,7 @@ import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/
 import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 
-import { CtaLink, SECTION_EYEBROW, SECTION_TITLE } from "./primitives";
+import { CtaLink, PAGE_HEADING, SECTION_EYEBROW, UTILITY_TITLE } from "./primitives";
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -123,7 +123,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
         <div className="split-head">
           <div>
             <p className={SECTION_EYEBROW}>Pricing</p>
-            <Heading id="pricing-title" className={SECTION_TITLE}>
+            <Heading id="pricing-title" className={headingLevel === 1 ? PAGE_HEADING : UTILITY_TITLE}>
               Start free, upgrade when you grow
             </Heading>
           </div>

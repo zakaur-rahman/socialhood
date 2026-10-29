@@ -244,7 +244,7 @@ function decideScene(root: ParentNode) {
     node.parentNode?.replaceChild(fragment, node);
   }
   const words = [...text.querySelectorAll<HTMLElement>(".w")];
-  text.classList.add("typing");
+  text.classList.add("is-typing");
   section.dataset.live = "";
 
   type Wire = { path: SVGPathElement; len: number; c1: SVGCircleElement; c2: SVGCircleElement };
@@ -345,7 +345,7 @@ function decideScene(root: ParentNode) {
     render,
     dispose: () => {
       delete section.dataset.live;
-      text.classList.remove("typing");
+      text.classList.remove("is-typing");
     },
   };
 }
@@ -463,7 +463,7 @@ function comments(root: ParentNode, reduce: boolean): Cleanup {
     later(() => bubble("pb r", DM_SCRIPT.button), 1600);
     let typing: HTMLElement | null = null;
     later(() => {
-      typing = el("div", "typing");
+      typing = el("div", "dm-typing");
       typing.append(el("i", ""), el("i", ""), el("i", ""));
       dm.append(typing);
     }, 2100);

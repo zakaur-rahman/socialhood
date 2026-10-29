@@ -106,3 +106,37 @@ describe("the light palette's order", () => {
     expect(l("raised-hover")).toBeLessThan(l("raised"));
   });
 });
+
+/**
+ * The public site's pairs (C-157, docs/landing-page-audit/06 §1): one value in both themes, so they
+ * are read once. Text is 4.5:1, a control's edge and a mark 3:1.
+ */
+describe("the public site's palette", () => {
+  const solid = (name: string): Rgb => over(parse(colorValue(name)), [0, 0, 0]);
+  const pairs: Array<[string, string, number]> = [
+    ["ink", "paper", 4.5],
+    ["ink-secondary", "paper-deep", 4.5],
+    ["ink-tertiary", "paper", 4.5],
+    ["ink-tertiary", "paper-deep", 4.5],
+    ["ink-tertiary", "iris-soft", 4.5],
+    ["iris", "paper", 4.5],
+    ["iris", "paper-deep", 4.5],
+    ["iris-ink", "iris-soft", 4.5],
+    ["night-ink-secondary", "night", 4.5],
+    ["night-ink-tertiary", "night", 4.5],
+    ["night-ink-tertiary", "night-raised", 4.5],
+    ["iris-night", "night", 4.5],
+    ["site-line-control", "paper", 3],
+    ["site-line-control", "paper-deep", 3],
+    ["site-line-control", "sheet", 3],
+    ["night-line-control", "night", 3],
+    ["night-line-control", "night-raised", 3],
+    ["instagram-night", "night-raised", 3],
+    ["web-night", "night-high", 3],
+    ["site-wait-mark", "paper", 3],
+    ["iris-mist", "sheet", 3],
+  ];
+  it.each(pairs)("%s on %s is %s:1 or more", (fg, bg, floor) => {
+    expect(ratio(solid(fg), solid(bg))).toBeGreaterThanOrEqual(floor);
+  });
+});

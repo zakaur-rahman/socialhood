@@ -160,9 +160,11 @@
   --color-sheet: #FFFFFF;
   --color-ink: #121317;
   --color-ink-secondary: #464953;
-  --color-ink-tertiary: #686B74;
-  --color-rule: #DFDFDA;
+  --color-ink-tertiary: #5E616A;       /* C-157: 5.66 on paper, 5.27 on paper-deep, 5.23 on iris-soft (was #686B74, 4.5 near-misses) */
+  --color-rule: #DFDFDA;               /* hairlines only: 1.22 on paper, never a control's edge */
   --color-rule-subtle: #EAEAE6;
+  --color-site-line-control: #82848B;  /* C-157: the edge that identifies a control on paper (WCAG 1.4.11): 3.42 paper, 3.18 paper-deep, 3.74 sheet */
+  --color-night-line-control: #6A6C76; /* C-157: the same on night: 3.63 night, 3.34 night-raised */
   --color-night: #0F1017;
   --color-night-raised: #181923;
   --color-night-high: #232532;
@@ -173,12 +175,14 @@
   --color-iris-ink: #3A2FC2;
   --color-iris-soft: #ECEAFD;
   --color-iris-night: #A8A1FF;
-  --color-iris-mist: #B9B4F5;
+  --color-iris-mist: #8A82EB;          /* C-157: 3.24 on sheet as a mark (was #B9B4F5, 1.92) */
   --color-site-ok: #1C7343;
   --color-site-ok-soft: #E3F1E8;
   --color-site-wait: #985200;
   --color-site-wait-soft: #FBEEDC;
-  --color-site-wait-mark: #D08A22;
+  --color-site-wait-mark: #B06A00;     /* C-157: 3.92 on paper (was #D08A22, 2.62) */
+  --color-instagram-night: #E0559A;    /* C-157: the Instagram mark on night: 4.94 night-raised, 4.29 night-high */
+  --color-web-night: #2AA597;          /* C-157: the website-chat mark on night: 5.01 night-high */
   --color-site-stop: #A43535;
   --color-site-stop-soft: #F8E6E6;
   --color-handoff: #F2A23A;
@@ -191,6 +195,56 @@
   --color-avatar-4: #F6D3E2;
   --color-avatar-5: #DCE8F6;
   --color-avatar-6: #E6E6E1;
+
+  /* The public site's scales (C-157, docs/landing-page-audit/06). Values only; the `.site` block
+     below gives them short names for components/site/site.css, and that reference is also what
+     keeps Tailwind from dropping them as unused. Fluid steps run from 390 to 1440 px.
+     Type: two H2 tiers (story and utility), display and page H1; the role names are purposes. */
+  --text-site-display: clamp(2.75rem, 2.193rem + 2.286vw, 4.25rem);  --text-site-display--line-height: 1;    /* 44 → 68: the landing H1 */
+  --text-site-h1: clamp(2.25rem, 1.693rem + 2.286vw, 3.75rem);       --text-site-h1--line-height: 1.04;      /* 36 → 60: an inner page's H1 */
+  --text-site-h2: clamp(2rem, 1.536rem + 1.905vw, 3.25rem);          --text-site-h2--line-height: 1.06;      /* 32 → 52: a story section */
+  --text-site-h2-sm: clamp(1.75rem, 1.471rem + 1.143vw, 2.5rem);     --text-site-h2-sm--line-height: 1.08;   /* 28 → 40: a utility section (FAQ, pricing) */
+  --text-site-h3: clamp(1.5rem, 1.314rem + 0.762vw, 2rem);           --text-site-h3--line-height: 1.12;      /* 24 → 32: a band inside a page */
+  --text-site-stat: clamp(2.75rem, 2.286rem + 1.905vw, 4rem);        --text-site-stat--line-height: 1;       /* 44 → 64: prices */
+  --text-site-stat-sm: clamp(1.5rem, 1.314rem + 0.762vw, 2rem);      --text-site-stat-sm--line-height: 1.1;  /* 24 → 32: facts, tabular */
+  --text-site-title: 1.25rem;     --text-site-title--line-height: 1.25;    /* 20: card and item titles */
+  --text-site-lede: clamp(1.0625rem, 1.016rem + 0.19vw, 1.1875rem);  --text-site-lede--line-height: 1.55;    /* 17 → 19 */
+  --text-site-body: 1rem;         --text-site-body--line-height: 1.6;      /* 16 */
+  --text-site-body-sm: 0.9375rem; --text-site-body-sm--line-height: 1.55;  /* 15: card bodies, buttons, nav */
+  --text-site-label: 0.875rem;    --text-site-label--line-height: 1.5;     /* 14: facts, footer */
+  --text-site-caption: 0.8125rem; --text-site-caption--line-height: 1.45;  /* 13: captions, legends */
+  --text-site-micro: 0.75rem;     --text-site-micro--line-height: 1.35;    /* 12, the floor: tags, chips */
+  --tracking-site-display: -0.045em;
+  --tracking-site-h1: -0.04em;
+  --tracking-site-h2: -0.035em;
+  --tracking-site-h2-sm: -0.03em;
+  --tracking-site-h3: -0.025em;
+  --tracking-site-title: -0.015em;
+  /* Rhythm: the space between sections, between two same-colour bands, under a heading block, an
+     inner page's band, and the page's side gutter. The 4 px steps inside components are Tailwind's
+     own spacing (`--space-*` on .site). */
+  --spacing-site-section: clamp(72px, 6vw + 40px, 128px);
+  --spacing-site-section-tight: clamp(48px, 4vw + 24px, 88px);
+  --spacing-site-head: clamp(32px, 2.5vw + 16px, 56px);
+  --spacing-site-band: clamp(56px, 48px + 1.5vw, 72px);
+  --spacing-site-gutter: clamp(16px, 3vw + 4px, 64px);
+  --container-site: 1240px;  /* C-074 exempts the marketing site from "pages fill the width" */
+  /* Radii: five steps (50% and 999px stay literal for dots and pills) */
+  --radius-site-xs: 6px;   /* tags, chips, citations */
+  --radius-site-sm: 10px;  /* nav buttons, inputs, menu items, switch segments */
+  --radius-site-md: 12px;  /* buttons, notes, bubbles */
+  --radius-site-lg: 18px;  /* cards, panels, tables, the menu panel */
+  --radius-site-xl: 22px;  /* plan cards, the DM frame */
+  /* Motion easings, after transitions.dev's scale: smooth-out for anything that moves or opens,
+     in-out for a swap in place. The durations are --motion-site-* in :root below. */
+  --ease-site-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-site-in-out: ease-in-out;
+  /* The site's breakpoints. CSS media queries can't read a variable, so site.css writes the same
+     numbers (each query says which token it is); SiteHeader reads site-nav from the generated file. */
+  --breakpoint-site-sm: 32.5rem;    /* 520: plan padding, the two-column footer */
+  --breakpoint-site-nav: 47.5rem;   /* 760: the phone header below it, the links from it (tablets) */
+  --breakpoint-site-md: 56.25rem;   /* 900: one column, the scroll scenes off */
+  --breakpoint-site-wide: 66.25rem; /* 1060: the hero, the machine and the footer re-flow */
 
   /* Type: the two sizes the scale lacked, each with its line height (C-070) */
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */
@@ -318,6 +372,17 @@
   --motion-fast: 120ms;    /* hover, press, toggles, menus, popovers, tooltips; every exit */
   --motion-normal: 150ms;  /* content arriving in place: live message, inline reveals */
   --motion-slow: 200ms;    /* surfaces: dialogs, sheets, the drawer, panels, the suggestion bar */
+  /* The public site's durations (C-157), transitions.dev's scale, chosen by what the motion does
+     (not the nearest number). Closes are quicker than opens; hover-in is quick, nothing delays a
+     close. site.css reads them through the short names on .site (--dur-*). */
+  --motion-site-stagger: 40ms;     /* per-item offset; total stagger stays under ~300 ms */
+  --motion-site-micro: 80ms;       /* an intent delay (a tooltip), a large stagger */
+  --motion-site-quick: 150ms;      /* colour on hover, a press, a close, a text swap */
+  --motion-site-fast: 250ms;       /* an open (menu, disclosure), an icon swap, a toggle, an accordion */
+  --motion-site-medium: 350ms;     /* a panel's close */
+  --motion-site-slow: 400ms;       /* a panel's open, content revealed in place */
+  --motion-site-very-slow: 500ms;  /* an emphasis moment, a text reveal */
+  --motion-site-entrance: 1200ms;  /* the ceiling for a one-shot scene (the hero's sort) */
 }
 @utility duration-fast { --tw-duration: var(--motion-fast); transition-duration: var(--motion-fast); }
 @utility duration-normal { --tw-duration: var(--motion-normal); transition-duration: var(--motion-normal); }
@@ -452,7 +517,8 @@
   @supports not selector(::-webkit-scrollbar) {
     * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
   }
-  /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070). */
+  /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070).
+     The public site (`.site`) is the exception: its headings are Geist 700 (C-155, C-157). */
   strong, b { font-weight: 600; }
   /* Reduced motion (DESIGN_SYSTEM §7.4, C-070): overlays, their scrims and skeletons appear and
      leave at once. A safety net under the primitives' own motion-reduce: classes. */
@@ -533,6 +599,60 @@
   --shadow-panel: 0 1px 2px color-mix(in srgb, var(--color-ink) 4%, transparent), 0 40px 80px -40px color-mix(in srgb, var(--color-ink) 35%, transparent);
   --shadow-note: 0 22px 40px -18px color-mix(in srgb, var(--color-ink) 42%, transparent), 0 2px 6px color-mix(in srgb, var(--color-ink) 6%, transparent);
   --shadow-token: 0 8px 20px -8px color-mix(in srgb, var(--color-iris) 70%, transparent);
+  /* The header once the page scrolls (C-157): a soft drop and no rule, no blur. */
+  --shadow-nav: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--color-ink) 28%, transparent);
+  --line-control: var(--color-site-line-control); --night-line-control: var(--color-night-line-control);
+  --ig-night: var(--color-instagram-night); --web-night: var(--color-web-night);
+
+  /* C-157: the scales (from @theme above) under short names for site.css. */
+  --fs-display: var(--text-site-display); --lh-display: var(--text-site-display--line-height); --tr-display: var(--tracking-site-display);
+  --fs-h1: var(--text-site-h1); --lh-h1: var(--text-site-h1--line-height); --tr-h1: var(--tracking-site-h1);
+  --fs-h2: var(--text-site-h2); --lh-h2: var(--text-site-h2--line-height); --tr-h2: var(--tracking-site-h2);
+  --fs-h2-sm: var(--text-site-h2-sm); --lh-h2-sm: var(--text-site-h2-sm--line-height); --tr-h2-sm: var(--tracking-site-h2-sm);
+  --fs-h3: var(--text-site-h3); --lh-h3: var(--text-site-h3--line-height); --tr-h3: var(--tracking-site-h3);
+  --fs-stat: var(--text-site-stat); --lh-stat: var(--text-site-stat--line-height);
+  --fs-stat-sm: var(--text-site-stat-sm); --lh-stat-sm: var(--text-site-stat-sm--line-height);
+  --fs-title: var(--text-site-title); --lh-title: var(--text-site-title--line-height); --tr-title: var(--tracking-site-title);
+  --fs-lede: var(--text-site-lede); --lh-lede: var(--text-site-lede--line-height);
+  --fs-body: var(--text-site-body); --lh-body: var(--text-site-body--line-height);
+  --fs-body-sm: var(--text-site-body-sm); --lh-body-sm: var(--text-site-body-sm--line-height);
+  --fs-label: var(--text-site-label); --lh-label: var(--text-site-label--line-height);
+  --fs-caption: var(--text-site-caption); --lh-caption: var(--text-site-caption--line-height);
+  --fs-micro: var(--text-site-micro); --lh-micro: var(--text-site-micro--line-height);
+  /* The 4 px grid is Tailwind's own spacing unit; the rhythm tokens are fluid. */
+  --space-1: calc(var(--spacing) * 1); --space-2: calc(var(--spacing) * 2); --space-3: calc(var(--spacing) * 3);
+  --space-4: calc(var(--spacing) * 4); --space-5: calc(var(--spacing) * 5); --space-6: calc(var(--spacing) * 6);
+  --space-8: calc(var(--spacing) * 8); --space-10: calc(var(--spacing) * 10); --space-12: calc(var(--spacing) * 12);
+  --space-14: calc(var(--spacing) * 14); --space-16: calc(var(--spacing) * 16);
+  --space-section: var(--spacing-site-section); --space-section-tight: var(--spacing-site-section-tight);
+  --space-head: var(--spacing-site-head); --space-band: var(--spacing-site-band); --gutter: var(--spacing-site-gutter);
+  --wrap-max: var(--container-site);
+  --r-xs: var(--radius-site-xs); --r-sm: var(--radius-site-sm); --r-md: var(--radius-site-md); --r-lg: var(--radius-site-lg); --r-xl: var(--radius-site-xl);
+  /* Motion (transitions.dev's scale): durations, the two easings, and the travel, scale and blur
+     each kind of move may use. */
+  --dur-stagger: var(--motion-site-stagger); --dur-micro: var(--motion-site-micro); --dur-quick: var(--motion-site-quick);
+  --dur-fast: var(--motion-site-fast); --dur-medium: var(--motion-site-medium); --dur-slow: var(--motion-site-slow);
+  --dur-very-slow: var(--motion-site-very-slow); --dur-entrance: var(--motion-site-entrance);
+  --ease: var(--ease-site-out); --ease-swap: var(--ease-site-in-out);
+  --dist-micro: 4px; --dist-small: 6px; --dist-base: 8px; --dist-medium: 12px; --dist-large: 30px;
+  --scale-large: 0.96; --scale-medium: 0.97; --scale-small: 0.98; --scale-tiny: 0.99;
+  --blur-small: 2px; --blur-medium: 3px; --blur-large: 8px;
+
+  /* C-157: semantic roles, so a component states each colour once and a night band re-points
+     them (below) instead of site.css overriding every component inside `.night`. Iris has four
+     roles only: links, focus, selection and AI moments. */
+  --s-bg: var(--color-paper); --s-surface: var(--color-sheet); --s-surface-2: var(--color-paper-deep);
+  --s-text: var(--color-ink); --s-text-2: var(--color-ink-secondary); --s-text-3: var(--color-ink-tertiary);
+  --s-line: var(--color-rule); --s-line-2: var(--color-rule-subtle); --s-line-control: var(--color-site-line-control);
+  --s-hover: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --s-link: var(--color-iris); --s-link-hover: var(--color-iris-ink);
+  --s-focus: var(--color-iris);
+  --s-selection: var(--color-iris-soft); --s-selection-fg: var(--color-ink);
+  --s-cta-bg: var(--color-ink); --s-cta-fg: var(--color-sheet);
+  --s-cta-hover: color-mix(in srgb, var(--color-ink) 82%, var(--color-sheet));
+  --scrim: color-mix(in srgb, var(--color-ink) 28%, transparent);  /* behind the phone menu */
+  /* The app's primary button (bg-brand-gradient) wears the site's ink on public pages: one CTA look. */
+  --gradient-brand: linear-gradient(var(--color-ink), var(--color-ink));
 
   --color-canvas: var(--color-paper);
   --color-panel: var(--color-sheet);
@@ -545,7 +665,7 @@
   --color-line: var(--color-rule);
   --color-line-subtle: var(--color-rule-subtle);
   --color-line-strong: var(--color-ink-tertiary);
-  --color-line-control: var(--color-ink-tertiary);
+  --color-line-control: var(--color-site-line-control);
   --color-line-glass: var(--color-rule);
   --color-hover: color-mix(in srgb, var(--color-ink) 5%, transparent);
   --color-pressed: color-mix(in srgb, var(--color-ink) 9%, transparent);
@@ -573,12 +693,24 @@
   --color-line: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
   --color-line-subtle: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
   --color-line-strong: var(--color-night-ink-tertiary);
-  --color-line-control: var(--color-night-ink-tertiary);
+  --color-line-control: var(--color-night-line-control);
   --color-hover: color-mix(in srgb, var(--color-night-ink) 6%, transparent);
   --color-panel-glass: var(--color-night-raised);
   --color-card-glass: var(--color-night-raised);
   --color-brand: var(--color-iris-night);
+  --color-brand-strong: var(--color-iris-night);
   --color-brand-fg: var(--color-iris-night);
   --color-brand-soft: var(--color-night-high);
+  /* C-157: the semantic roles on night (see .site) */
+  --s-bg: var(--color-night); --s-surface: var(--color-night-raised); --s-surface-2: var(--color-night-high);
+  --s-text: var(--color-night-ink); --s-text-2: var(--color-night-ink-secondary); --s-text-3: var(--color-night-ink-tertiary);
+  --s-line: color-mix(in srgb, var(--color-night-ink) 10%, transparent); --s-line-2: color-mix(in srgb, var(--color-night-ink) 10%, transparent);
+  --s-line-control: var(--color-night-line-control);
+  --s-hover: color-mix(in srgb, var(--color-night-ink) 6%, transparent);
+  --s-link: var(--color-iris-night); --s-link-hover: var(--color-night-ink);
+  --s-focus: var(--color-iris-night);
+  --s-selection: color-mix(in srgb, var(--color-iris) 45%, transparent); --s-selection-fg: var(--color-night-ink);
+  --s-cta-bg: var(--color-sheet); --s-cta-fg: var(--color-night);
+  --s-cta-hover: color-mix(in srgb, var(--color-sheet) 86%, var(--color-night));
   color-scheme: dark;
 }

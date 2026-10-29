@@ -19,7 +19,7 @@ export function LogoMark({ className }: { className?: string }) {
       data-logo-mark=""
       className={cn("bg-shell-gradient grid size-8 shrink-0 place-items-center rounded-lg text-on-brand", className)}
     >
-      <svg viewBox="0 0 64 64" className="size-full" fill="none">
+      <svg viewBox="0 0 64 64" className="size-full" fill="none" aria-hidden focusable="false">
         <path d={LOGO_BUBBLE_PATH} fill="currentColor" />
         <g className="fill-brand-deep">
           {LOGO_BARS.map(([x, y, height]) => (
@@ -99,12 +99,18 @@ export function CtaLink({
   );
 }
 
-/** A section's kicker (C-155): a short sentence-case line in the accent above a heading. */
+/**
+ * A section's kicker (C-155): a short sentence-case line above a heading, in the tertiary ink (C-157:
+ * iris is kept for links, focus, selection and AI moments). The landing page drops them (C-157).
+ */
 export const SECTION_EYEBROW = "kicker";
 
 /** A page's h1 on the inner pages, and a section's h2 (site.css). */
 export const PAGE_HEADING = "h-page";
+/** A story section's h2: the larger tier (C-157, 32 → 52 px). */
 export const SECTION_TITLE = "h2";
+/** A utility section's h2 (FAQ, pricing): the smaller tier (C-157, 28 → 40 px). */
+export const UTILITY_TITLE = "h2-sm";
 /** A band's heading inside a page (smaller than a landing section's). */
 export const BAND_TITLE = "h-sec";
 
@@ -154,8 +160,8 @@ export function SectionHeading({
 }
 
 /**
- * The page width every public section shares (site.css `.wrap`: 1240 px, 32 px gutters, 16 px on
- * phones). The caller's classes go on an inner box, so a narrow column (`max-w-3xl`) starts at the
+ * The page width every public section shares (site.css `.wrap`: 1240 px of content between
+ * fluid gutters, 16 px on phones to 64 px on wide screens, C-157). The caller's classes go on an inner box, so a narrow column (`max-w-3xl`) starts at the
  * same left edge as every other section instead of floating in the middle (C-155).
  */
 export function Container({ className, children }: { className?: string; children: ReactNode }) {

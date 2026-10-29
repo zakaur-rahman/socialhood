@@ -86,7 +86,7 @@ export function Hero() {
                               <i />
                               {SOURCES[note.source].label}
                             </span>
-                            <span className="time num">{note.ago}</span>
+                            <span className="time num" aria-hidden>{note.ago}</span>
                           </div>
                           <div className="note-main">
                             <b>{note.name}</b>

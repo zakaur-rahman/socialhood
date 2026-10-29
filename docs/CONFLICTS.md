@@ -7301,3 +7301,160 @@ Checks: `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest for `app/(mark
 `app/public-metadata`, `lib/marketing`, `components/marketing` and `styles` (design lint) pass.
 E2E (`gr37-gtm-pages.spec.ts`, now with the new pages, the hub and each trademark note) is left to
 the coordinator.
+
+## C-157 · Premium landing build
+
+The owner approved the landing page audit (`docs/landing-page-audit/`, 01–07) on 2026-10-30 and asked
+for a premium page using the installed design skills. The work is in two stages on
+`feature/site-redesign`: stage 1 builds the design system, the shell and the Phase 1 fixes; stage 2
+rebuilds the landing sections on top of it.
+
+### C-157 (stage 1)
+
+**Phase 1 fixes (05, LP-1.x).**
+- LP-1.1, the invisible AI draft: the draft's "words appear" state is now `.ddraft-t.is-typing`, and
+  the DM's typing dots are `.dm-typing`. The two had shared `.typing`, so the dots' pill background
+  and inline-flex landed on the draft (1.1:1). `landing.spec.ts` now asserts that the draft's text box
+  stays transparent and block-level after the scroll.
+- LP-1.2, the H1: the display step (44 → 68 px) is capped by its column. `.hero-copy` is a size
+  container and the hero H1 is `min(var(--fs-display), 13cqi)`; "Every comment." is about 7.3em wide.
+  The hero grid is 1fr/1fr and the copy sits above the scene (z-index). Measured at 375, 768, 1280
+  and 1440: each phrase's right edge is at or inside the copy column.
+- LP-1.4, the phone menu: a tap outside the button and the panel closes it (one `pointerdown`
+  listener, the scrim included). Tab and Shift+Tab stay inside the button and the panel while it is
+  open, and Escape returns focus to the button. The menu's links are 48 px tall, and the bar's CTA is
+  44 px tall below 760 px. The menu adds only Sign in, so one "Start free" shows with it open. A
+  signed-in visitor gets nothing extra in it, because "Open app" is already in the bar.
+  - **Judgment call:** the brief said "focus is contained", while 05 said "Tab past the last item
+    closes it". Containment was built, because the open menu now has a scrim over the page.
+- LP-1.3, the secondary CTA borders: `.btn-line` uses `--s-line-control`. That is #82848B on paper
+  (3.42:1, 3.18 on paper-deep, 3.74 on sheet) and #6A6C76 on night (3.63, 3.34 on night-raised).
+- LP-1.5, the closer: its H2 is 700 at the story tier. The max-width is 20ch, not 14ch: at 14ch the
+  heading ran to four lines at 1440, and 20ch gives three.
+- LP-1.6, the dimmed knowledge lines: these are now dimmed by colour (night-ink-3, 5.52:1) instead of
+  opacity .5/.35.
+- The hidden hero time labels have `aria-hidden` (the T7 finding in 07).
+- The two nav landmarks are now named "Main" (the bar) and "Menu" (the phone panel).
+- The logo's svg has `aria-hidden` and `focusable="false"`.
+- Body text in `.site` (p, li, dd, blockquote, figcaption) has `text-wrap: pretty`. Every heading,
+  the FAQ's h3s included, has `balance`.
+
+**Tokens (06, LP-2.1).** The raw values are in `@theme`, and the short names on `.site` are in
+`globals.css`. That reference also keeps Tailwind 4 from dropping theme variables that only `site.css`
+reads; a check with Tailwind's compiler confirmed that it removes unreferenced ones. `pnpm tokens` now
+also generates `spacing` and `containers`.
+- Type: `--text-site-{display,h1,h2,h2-sm,h3,stat,stat-sm,title,lede,body,body-sm,label,caption,micro}`,
+  each with its line height, and `--tracking-site-*`. On `.site` they are `--fs-*`, `--lh-*` and
+  `--tr-*`.
+- Space: the 4 px steps are `--space-1…16` on `.site`, from Tailwind's own `--spacing`. The rhythm
+  tokens are `--spacing-site-{section,section-tight,head,band,gutter}` (on `.site`: `--space-section`,
+  `--space-section-tight`, `--space-head`, `--space-band`, `--gutter`). The container is
+  `--container-site` (1240), or `--wrap-max` on `.site`.
+- Radii: `--radius-site-{xs,sm,md,lg,xl}` (6, 10, 12, 18, 22), `--r-*` on `.site`.
+- Breakpoints: `--breakpoint-site-{sm,nav,md,wide}` (520, 760, 900, 1060). `SiteHeader` reads
+  `site-nav` from the generated file. `site.css` has to write the numbers, because a media query can't
+  read a variable, so each query names its token.
+- Motion (transitions-dev's scale):
+  - durations `--motion-site-{stagger,micro,quick,fast,medium,slow,very-slow,entrance}` (40, 80, 150,
+    250, 350, 400, 500, 1200 ms), `--dur-*` on `.site`;
+  - easings `--ease-site-out` (smooth-out) and `--ease-site-in-out`, which are `--ease` and
+    `--ease-swap` on `.site`;
+  - travel, scale and blur steps `--dist-*`, `--scale-*` and `--blur-*`.
+- Colour:
+  - ink-tertiary #686B74 → #5E616A;
+  - new `site-line-control` #82848B and `night-line-control` #6A6C76;
+  - the 06 §1 mark fixes: `iris-mist` #8A82EB, `site-wait-mark` #B06A00, and new `instagram-night`
+    #E0559A and `web-night` #2AA597;
+  - `.site` now maps the app's `line-control` to the new control edge, and `brand-strong` to
+    iris-night inside `.night`;
+  - `--gradient-brand` in `.site` is flat ink, so the app's primary button looks like the site's;
+  - `contrast.test.ts` asserts 21 of the site's pairs (LP-4.7).
+- Semantic roles: `--s-{bg,surface,surface-2,text,text-2,text-3,line,line-2,line-control,hover,link,link-hover,focus,selection,selection-fg,cta-bg,cta-fg,cta-hover}`
+  are defined on `.site` and re-pointed in `.site .night` (LP-5.2 for the shared parts). The `.night`
+  overrides for buttons, the kicker, the lede, links, focus and cards are gone.
+- Iris now has four roles only: links, focus, selection and AI moments.
+  - The primary button's hover is a lighter ink (`--s-cta-hover`), not iris.
+  - The kicker, the feature icons, the step numbers and the trust icons are in ink-3 or night-ink-2.
+  - The FAQ summary no longer turns iris on hover.
+- `globals.css` notes that `.site` uses 700 for its headings (LP-5.5).
+
+**System in `site.css`.** These shared parts are now on the tokens: base, the container and section
+rhythm, headings, lede, links, buttons, chips, cards, header, footer, pricing, FAQ, the closer's
+heading, and inner-page heads and bands.
+- Two H2 tiers: `.h2` is the story tier, 32 → 52 px, 18ch. `.h2-sm` is the utility tier, 28 → 40 px,
+  20ch. `UTILITY_TITLE` in `primitives.tsx` names the utility tier, and `Faq` and `Pricing` use it
+  (`/pricing` keeps its H1 at the page tier).
+- `.h-page` is 26ch.
+- All headings are 700. Card and item titles (`--fs-title`, 20 px) stay 600, because they are a text
+  role and not a heading tier (06 §2).
+- `.split-head` is 1.25fr/.75fr.
+- `.after-head` and the head-to-content margins use `--space-head`. `.sec-tight` is new.
+- Each component writes its states once:
+  - hover only under `@media (hover: hover)`;
+  - active is a 1 px press;
+  - one focus ring from `--s-focus`;
+  - disabled for `:disabled` and `[aria-disabled="true"]`.
+- `::selection` uses the palette.
+- Inner-page bands are now separated by space alone: the top rule is gone, and a band that follows
+  another has a 24 px top padding.
+- The scene CSS (hero, strip, decide, machine, modes, features, channels, trust) is left for stage 2.
+  Only the Phase 1 fixes, the accent changes and the head gaps touched it.
+
+**Shell.**
+- Header:
+  - It is a plain paper bar with no blur and no rule. Once the page scrolls, `HeaderScrollState`
+    (one IntersectionObserver on a sentinel) adds a soft drop (`--shadow-nav`) through
+    `data-scrolled`.
+  - From 760 px the links show (the tablet tier, LP-3.2). At 761–1060 px the gaps are 20 px. At 768
+    px the logo, the five links, Sign in and Start free fit on one line.
+  - The links are 44 px tall, with an underline on hover.
+  - The phone menu has a scrim and opens like a dropdown (250 ms from 0.97, `@starting-style`). It
+    closes at once.
+- Footer: the hairline above the bottom row is replaced by space. The links are 44 px tall at 900 px
+  or narrower and underline on hover. Everything is on the `--s-*` roles. One rule is kept where the
+  closer's night band meets it.
+- Pause control (WCAG 2.2.2): `components/site/MotionToggle.tsx` (server) and `motion-control.ts`
+  (plain DOM, `bindMotionControl(scope)`). It is a round 44 px button with a fixed name, and
+  `aria-pressed` shows the paused state. The pause and play icons swap with transitions-dev's icon
+  swap. Pausing sets `data-motion-paused` on the `[data-motion-scope]` element, and `site.css` then
+  pauses every CSS animation inside it. The button stays hidden with no script and with reduced
+  motion. It has unit tests. Stage 2 wires it to the looping scenes.
+
+**Other public pages.** Every public page picks up the new system through the shared classes, with no
+content changed. That covers the H1 at the page tier, the bands, the cards, the buttons, the 3:1
+control edges, the darker ink-3 and the footer.
+- Checked at 375 and 1280: /pricing, /features/ai-inbox, /compare, /compare/interakt, /for-creators,
+  /safety, /changelog, /ai-info, /guides, /privacy, /contact and a 404.
+- Also at 768 and 1440: /pricing, /for-creators and /privacy.
+- No page scrolls sideways.
+
+**Skill advice I overrode or did not apply.**
+- Taste (design-taste-frontend): "buttons square or fully round, not the 9–16 px soft radius". Kept
+  12 px, because the owner's design file and 06 set it.
+- Taste: "no violet". Iris stays (an owner decision), limited to four roles.
+- Taste: "no thin rules". The footer keeps one rule between the two night bands, and the scenes and
+  real tables keep theirs (`data-ui` territory).
+- Impeccable craft floor: "tracking floor -0.04em". Display and page H1 use -0.04em, not 06's
+  -0.045em; the H2 and H3 tracking follows 06.
+- Impeccable and Taste ban kickers (eyebrows). The landing's kickers are stage 2's to delete. On the
+  inner pages, `SECTION_EYEBROW` is restyled to a quiet ink-3 label and not removed, because deleting
+  it would change those pages' content, which this stage doesn't own.
+- transitions-dev's snippets ship their own `t-*` classes and `:root` blocks. Only its token scale and
+  the icon-swap and dropdown timings were taken, under `.site` names, to keep the stylesheet small
+  and avoid a global `:root` that the app would share.
+- Taste wants the footer to end on the name at full width. Not done: the owner asked to subtract
+  clutter.
+
+**Left for stage 2 or later.**
+- `landing-motion.ts` still writes 901 and reads `--nav-h` from `<html>` (LP-4.6).
+- The closer's `.falling` loop and the hero bob.
+- The footer's about line, which still names only Instagram and WhatsApp (LP-4.8).
+- `MARKETING_CARD` (shared with the app's auth shell, so not re-pointed).
+
+Checks:
+- `next typegen`, `tsc --noEmit` and `pnpm lint` are clean.
+- vitest passes for `components/marketing`, `components/site`, `styles` (tokens, design lint,
+  contrast), `app/(marketing)`, `lib/marketing` and not-found: 418 + 98 tests.
+- Screenshots were taken on a dev server on :3160 at 375, 768, 1280 and 1440.
+- e2e is left to the coordinator: the updated `landing.spec.ts` and the new `site-shell.spec.ts`
+  (menu, tablet links, scrolled bar).

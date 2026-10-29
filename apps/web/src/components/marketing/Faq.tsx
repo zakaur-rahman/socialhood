@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { FAQ, type FaqItem } from "@/lib/marketing/faq";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
-import { SECTION_EYEBROW, SECTION_TITLE } from "./primitives";
+import { SECTION_EYEBROW, UTILITY_TITLE } from "./primitives";
 
 /**
  * Common questions (C-155 layout): the heading on the left, native <details> on the right, so
@@ -29,7 +29,7 @@ export function Faq({
       <div className="wrap faq">
         <div>
           <p className={SECTION_EYEBROW}>FAQ</p>
-          <h2 id={`${id}-title`} className={SECTION_TITLE}>
+          <h2 id={`${id}-title`} className={UTILITY_TITLE}>
             {title}
           </h2>
           <p className="lede">

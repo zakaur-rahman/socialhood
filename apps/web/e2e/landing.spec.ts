@@ -57,6 +57,14 @@ test.describe("landing page", () => {
       }
       await page.waitForTimeout(500);
 
+      // LP-1.1 (C-157): the AI draft keeps a transparent, block-level text box while it writes, so it
+      // stays readable on the dark card (the DM's typing dots once shared its class).
+      const draft = await page.locator(".ddraft-t").evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { background: style.backgroundColor, display: style.display };
+      });
+      expect(draft).toEqual({ background: "rgba(0, 0, 0, 0)", display: "block" });
+
       // Sections in order.
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
