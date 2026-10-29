@@ -5,11 +5,12 @@ import Link from "next/link";
 
 import { legalDate } from "@/lib/legal";
 import { competitorNote } from "@/lib/marketing/competitor-note";
-import { PRICING_PATH, STATUS_LABEL, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
+import { COMPARE_PATH, PRICING_PATH, STATUS_LABEL, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
+import { breadcrumbTrailJsonLd } from "@/lib/marketing/seo";
 import { SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
-import { BreadcrumbJsonLd } from "./JsonLd";
+import { BreadcrumbJsonLd, JsonLd } from "./JsonLd";
 import { Container, CtaLink, SECTION_EYEBROW } from "./primitives";
 import { SHOTS } from "./shots";
 
@@ -90,7 +91,17 @@ export function GtmPageView({ page }: { page: GtmPage }) {
   const note = competitorNote(page);
   return (
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
-      <BreadcrumbJsonLd name={page.name} path={page.path} />
+      {/* A comparison sits under the /compare hub (C-156): Home, Compare, the page. */}
+      {page.path.startsWith(`${COMPARE_PATH}/`) ? (
+        <JsonLd
+          data={breadcrumbTrailJsonLd([
+            { name: "Compare", path: COMPARE_PATH },
+            { name: page.name, path: page.path },
+          ])}
+        />
+      ) : (
+        <BreadcrumbJsonLd name={page.name} path={page.path} />
+      )}
       <section className="page-head">
         <Container className="max-w-3xl">
           <p className={SECTION_EYEBROW}>{page.eyebrow}</p>

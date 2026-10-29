@@ -7,12 +7,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { latestChecked } from "@/lib/marketing/competitor-note";
-import { GTM_PAGES, PRICING_PATH, type GtmPage } from "@/lib/marketing/gtm-pages";
+import {
+  COMPARE_AISENSY,
+  COMPARE_CREATORFLOW,
+  COMPARE_GROUPS,
+  COMPARE_INRO,
+  COMPARE_INSTANTDM,
+  COMPARE_INTERAKT,
+  COMPARE_LINKDM,
+  COMPARE_MANYCHAT,
+  COMPARE_PATH,
+  COMPARE_SPUR,
+  COMPARE_WATI,
+  FEATURE_AI_INBOX,
+  FEATURE_COMMENT_INTELLIGENCE,
+  FEATURE_PUBLISHING,
+  GTM_PAGES,
+  PRICING_PATH,
+  SWITCH_PAGE,
+  type GtmPage,
+} from "@/lib/marketing/gtm-pages";
 import { PUBLIC_PATHS } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
 
+import ComparisonAisensy, { metadata as aisensyMetadata } from "./compare/aisensy/page";
+import ComparisonCreatorflow, { metadata as creatorflowMetadata } from "./compare/creatorflow/page";
+import ComparisonInro, { metadata as inroMetadata } from "./compare/inro/page";
+import ComparisonInstantdm, { metadata as instantdmMetadata } from "./compare/instantdm/page";
 import ComparisonInterakt, { metadata as interaktMetadata } from "./compare/interakt/page";
+import ComparisonLinkdm, { metadata as linkdmMetadata } from "./compare/linkdm/page";
 import ComparisonManychat, { metadata as manychatMetadata } from "./compare/manychat/page";
+import CompareHub, { metadata as compareHubMetadata } from "./compare/page";
+import ComparisonSpur, { metadata as spurMetadata } from "./compare/spur/page";
+import ComparisonWati, { metadata as watiMetadata } from "./compare/wati/page";
 import FeatureAiInbox, { metadata as aiInboxMetadata } from "./features/ai-inbox/page";
 import FeatureComments, { metadata as commentsMetadata } from "./features/comment-intelligence/page";
 import FeaturePublishing, { metadata as publishingMetadata } from "./features/publishing/page";
@@ -29,13 +56,25 @@ class IdleObserver {
 }
 
 const PAGES: { page: GtmPage; Component: () => ReactElement; metadata: Metadata }[] = [
-  { page: GTM_PAGES[0], Component: SwitchPage, metadata: switchMetadata },
-  { page: GTM_PAGES[1], Component: ComparisonManychat, metadata: manychatMetadata },
-  { page: GTM_PAGES[2], Component: ComparisonInterakt, metadata: interaktMetadata },
-  { page: GTM_PAGES[3], Component: FeatureComments, metadata: commentsMetadata },
-  { page: GTM_PAGES[4], Component: FeatureAiInbox, metadata: aiInboxMetadata },
-  { page: GTM_PAGES[5], Component: FeaturePublishing, metadata: publishingMetadata },
+  { page: SWITCH_PAGE, Component: SwitchPage, metadata: switchMetadata },
+  { page: COMPARE_MANYCHAT, Component: ComparisonManychat, metadata: manychatMetadata },
+  { page: COMPARE_INTERAKT, Component: ComparisonInterakt, metadata: interaktMetadata },
+  { page: COMPARE_LINKDM, Component: ComparisonLinkdm, metadata: linkdmMetadata },
+  { page: COMPARE_INSTANTDM, Component: ComparisonInstantdm, metadata: instantdmMetadata },
+  { page: COMPARE_INRO, Component: ComparisonInro, metadata: inroMetadata },
+  { page: COMPARE_CREATORFLOW, Component: ComparisonCreatorflow, metadata: creatorflowMetadata },
+  { page: COMPARE_WATI, Component: ComparisonWati, metadata: watiMetadata },
+  { page: COMPARE_AISENSY, Component: ComparisonAisensy, metadata: aisensyMetadata },
+  { page: COMPARE_SPUR, Component: ComparisonSpur, metadata: spurMetadata },
+  { page: FEATURE_COMMENT_INTELLIGENCE, Component: FeatureComments, metadata: commentsMetadata },
+  { page: FEATURE_AI_INBOX, Component: FeatureAiInbox, metadata: aiInboxMetadata },
+  { page: FEATURE_PUBLISHING, Component: FeaturePublishing, metadata: publishingMetadata },
 ];
+
+it("every go-to-market page is rendered by a test here", () => {
+  expect(PAGES.map((entry) => entry.page)).toEqual(expect.arrayContaining(GTM_PAGES));
+  expect(PAGES).toHaveLength(GTM_PAGES.length);
+});
 
 describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
   it("has its metadata, Open Graph and a sitemap entry", () => {
@@ -89,10 +128,19 @@ describe("the content rules (GR-37)", () => {
 
   it("describes what waits on the owner honestly", () => {
     const status = (page: GtmPage, feature: string) => page.compare?.rows.find((row) => row.feature === feature)?.ours;
-    expect(status(GTM_PAGES[1], "Broadcasts")?.status).toBe("soon");
-    expect(status(GTM_PAGES[1], "Live comments, ads, entry links and QR codes")?.status).toBe("approval");
-    expect(status(GTM_PAGES[2], "Bulk WhatsApp campaigns")?.status).toBe("soon");
-    expect(status(GTM_PAGES[2], "Product catalogue")?.text).toMatch(/Shopify sync is coming soon/);
+    expect(status(COMPARE_MANYCHAT, "Broadcasts")?.status).toBe("soon");
+    expect(status(COMPARE_MANYCHAT, "Live comments, ads, entry links and QR codes")?.status).toBe("approval");
+    expect(status(COMPARE_INTERAKT, "Bulk WhatsApp campaigns")?.status).toBe("soon");
+    expect(status(COMPARE_INTERAKT, "Product catalogue")?.text).toMatch(/Shopify sync is coming soon/);
+    for (const page of [COMPARE_LINKDM, COMPARE_WATI, COMPARE_AISENSY, COMPARE_SPUR]) expect(status(page, "Broadcasts")?.status).toBe("soon");
+    expect(status(COMPARE_WATI, "Catalogue and commerce")?.status).toBe("approval");
+    expect(status(COMPARE_SPUR, "Shopify and catalogue")?.text).toMatch(/Shopify sync is coming soon/);
+    for (const page of [COMPARE_WATI, COMPARE_AISENSY, COMPARE_SPUR]) {
+      expect(status(page, "Meta's WhatsApp fees")?.text).toBe("You pay Meta directly through your own WhatsApp Business account. Amplychat adds no markup.");
+    }
+    for (const page of [COMPARE_LINKDM, COMPARE_INSTANTDM, COMPARE_INRO, COMPARE_CREATORFLOW, COMPARE_WATI, COMPARE_AISENSY, COMPARE_SPUR]) {
+      expect(status(page, "Channels")?.text).toMatch(/Facebook Pages and Messenger are built and wait on Meta's approval/);
+    }
   });
 });
 
@@ -135,9 +183,16 @@ describe("Amplychat vs Interakt", () => {
 
 describe("the trademark and no-affiliation note", () => {
   const COMPETITOR_PAGES = [
-    { name: "Manychat", Component: SwitchPage, page: GTM_PAGES[0] },
-    { name: "Manychat", Component: ComparisonManychat, page: GTM_PAGES[1] },
-    { name: "Interakt", Component: ComparisonInterakt, page: GTM_PAGES[2] },
+    { name: "Manychat", Component: SwitchPage, page: SWITCH_PAGE },
+    { name: "Manychat", Component: ComparisonManychat, page: COMPARE_MANYCHAT },
+    { name: "Interakt", Component: ComparisonInterakt, page: COMPARE_INTERAKT },
+    { name: "LinkDM", Component: ComparisonLinkdm, page: COMPARE_LINKDM },
+    { name: "InstantDM", Component: ComparisonInstantdm, page: COMPARE_INSTANTDM },
+    { name: "Inrō", Component: ComparisonInro, page: COMPARE_INRO },
+    { name: "CreatorFlow", Component: ComparisonCreatorflow, page: COMPARE_CREATORFLOW },
+    { name: "Wati", Component: ComparisonWati, page: COMPARE_WATI },
+    { name: "AiSensy", Component: ComparisonAisensy, page: COMPARE_AISENSY },
+    { name: "Spur", Component: ComparisonSpur, page: COMPARE_SPUR },
   ];
 
   it.each(COMPETITOR_PAGES)("names $name, says we aren't affiliated and dates the check", ({ name, Component, page }) => {
@@ -152,9 +207,61 @@ describe("the trademark and no-affiliation note", () => {
   });
 
   it("is not on the feature pages", () => {
-    for (const page of GTM_PAGES.slice(3)) expect(page.competitor).toBeUndefined();
+    for (const page of [FEATURE_COMMENT_INTELLIGENCE, FEATURE_AI_INBOX, FEATURE_PUBLISHING]) expect(page.competitor).toBeUndefined();
     render(<FeatureAiInbox />);
     expect(screen.queryByText(/is a trademark of its owner/)).not.toBeInTheDocument();
+  });
+});
+
+describe("the new comparisons (C-156)", () => {
+  it.each([
+    { Component: ComparisonLinkdm, page: COMPARE_LINKDM, source: "LinkDM pricing", url: "https://linkdm.com/pricing" },
+    { Component: ComparisonInstantdm, page: COMPARE_INSTANTDM, source: "InstantDM pricing", url: "https://instantdm.com/pricing" },
+    { Component: ComparisonInro, page: COMPARE_INRO, source: "Inrō pricing", url: "https://www.inro.social/pricing" },
+    { Component: ComparisonCreatorflow, page: COMPARE_CREATORFLOW, source: "CreatorFlow pricing", url: "https://creatorflow.so/pricing" },
+    { Component: ComparisonWati, page: COMPARE_WATI, source: "Wati pricing", url: "https://www.wati.io/pricing/" },
+    { Component: ComparisonAisensy, page: COMPARE_AISENSY, source: "AiSensy pricing", url: "https://www.aisensy.com/pricing" },
+    { Component: ComparisonSpur, page: COMPARE_SPUR, source: "Spur pricing", url: "https://www.spurnow.com/en/pricing" },
+  ])("$page.path: a table, the vendor's own pages as sources, and a balanced choice", ({ Component, page, source, url }) => {
+    render(<Component />);
+    const name = page.competitor as string;
+    const table = screen.getByRole("table", { name: `Amplychat and ${name} feature by feature` });
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Feature", "Amplychat", name]);
+    expect(within(table).getByRole("row", { name: /^How it is priced/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: source })).toHaveAttribute("href", url);
+    expect(screen.getByRole("heading", { level: 3, name: `${name} may fit better if` })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Amplychat may fit better if" })).toBeInTheDocument();
+    expect(screen.getByText(/check \S+ before you decide/)).toBeInTheDocument();
+    // Official vendor pages only: every source is on the vendor's own domain.
+    const domain = new URL(url).hostname.replace(/^www\./, "");
+    for (const item of page.sources) expect(new URL(item.url).hostname.endsWith(domain), item.url).toBe(true);
+    expect(page.related).toContainEqual({ label: "All comparisons", href: COMPARE_PATH });
+  });
+});
+
+describe("the /compare hub (C-156)", () => {
+  it("has its metadata and a sitemap entry", () => {
+    expect(compareHubMetadata.alternates?.canonical).toBe(COMPARE_PATH);
+    expect(compareHubMetadata).toMatchObject({ openGraph: { url: COMPARE_PATH }, twitter: { card: "summary_large_image" } });
+    expect(PUBLIC_PATHS).toContain(COMPARE_PATH);
+  });
+
+  it("explains how we compare and lists every comparison and Switch from Manychat in two groups", () => {
+    render(<CompareHub />);
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: "How we compare" })).toBeInTheDocument();
+    expect(screen.getByText(/Our column is checked against our own code/)).toBeInTheDocument();
+    expect(COMPARE_GROUPS.map((group) => group.title)).toEqual(["Instagram DM tools", "WhatsApp platforms"]);
+    for (const group of COMPARE_GROUPS) {
+      const section = within(screen.getByRole("region", { name: group.title }));
+      for (const page of group.pages) expect(section.getByRole("link", { name: page.name })).toHaveAttribute("href", page.path);
+    }
+    const listed = COMPARE_GROUPS.flatMap((group) => group.pages);
+    expect(listed).toContain(SWITCH_PAGE);
+    for (const page of GTM_PAGES.filter((item) => item.competitor)) expect(listed).toContain(page);
+    expect(screen.getAllByText("Checked on 29 October 2026")).toHaveLength(listed.length);
+    expect(screen.getByText(/Product names on these pages are trademarks of their owners/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);
   });
 });
 

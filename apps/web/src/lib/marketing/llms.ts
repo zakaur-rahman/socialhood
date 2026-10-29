@@ -1,6 +1,6 @@
 import { SUPPORT_EMAIL } from "@/lib/copy";
 
-import { GTM_PAGES } from "./gtm-pages";
+import { COMPARE_PATH, GTM_PAGES } from "./gtm-pages";
 import { GUIDES, GUIDES_PATH, guidePath } from "./guides";
 import { LEGAL_LINKS, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, siteUrl } from "./site";
 
@@ -31,7 +31,7 @@ export function llmsText(origin: string = siteUrl()): string {
     link("Pricing", "/pricing", "plans and every limit side by side"),
     link("For creators", "/for-creators", "comment-to-DM, scheduling, AI replies from your notes, comment analysis"),
     link("For businesses", "/for-businesses", "one inbox for Instagram, WhatsApp and web chat, AI from your knowledge, leads"),
-    link("All comparisons", "/compare", "how Amplychat compares with other tools"),
+    link("All comparisons", COMPARE_PATH, "how Amplychat compares with other tools"),
     ...GTM_PAGES.filter((page) => page.path !== "/pricing").map((page) => link(page.name, page.path, page.description)),
     "",
     "## Guides",
