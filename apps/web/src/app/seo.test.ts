@@ -6,9 +6,13 @@ import { llmsText } from "@/lib/marketing/llms";
 import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
 import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
 
+import { metadata as accessibility } from "./(marketing)/accessibility/page";
+import { metadata as cookies } from "./(marketing)/cookies/page";
+import { metadata as dpa } from "./(marketing)/dpa/page";
 import { metadata as privacy } from "./(marketing)/privacy/page";
 import { metadata as refunds } from "./(marketing)/refunds/page";
 import { metadata as shipping } from "./(marketing)/shipping/page";
+import { metadata as subprocessors } from "./(marketing)/subprocessors/page";
 import { metadata as terms } from "./(marketing)/terms/page";
 import robots from "./robots";
 import sitemap from "./sitemap";
@@ -20,6 +24,10 @@ describe("page metadata", () => {
       [terms, "Terms of Service", "/terms"],
       [refunds, "Refund and Cancellation Policy", "/refunds"],
       [shipping, "Shipping and Delivery Policy", "/shipping"],
+      [subprocessors, "Subprocessors", "/subprocessors"],
+      [cookies, "Cookies and Storage", "/cookies"],
+      [dpa, "Data Processing Agreement", "/dpa"],
+      [accessibility, "Accessibility Statement", "/accessibility"],
     ] as const) {
       expect(metadata.title).toBe(title);
       expect(metadata.description).toBeTruthy();
@@ -85,7 +93,7 @@ describe("/sitemap.xml", () => {
     for (const guide of GUIDES) {
       expect(entries.find((entry) => entry.url.endsWith(`/guides/${guide.slug}`))?.lastModified).toBe(guide.updated);
     }
-    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-26");
+    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-29");
     // Every page has an ISO date, never a build time.
     for (const entry of entries) expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(entries.some((entry) => /\/(app|w|sign-in|unsubscribe)\b/.test(entry.url))).toBe(false);

@@ -7026,3 +7026,125 @@ removed from package.json and the lockfile.
 - The plan matrix still says "Pro has a 7-day free trial" while Pro isn't on sale (the plan's
   rule, not an offer today).
 - The share image stays dark (one picture for every theme).
+
+## C-156 · Site trust pass
+
+The competitor review's "do now" list plus the legal items (owner, 2026-10-29), built by three
+parallel agents on `feature/site-trust-legal`, `…-pages` and `…-compare`. Each adds its own
+sub-section below; the coordinator merges them with a union.
+
+### C-156 (legal)
+
+**No lawyer has reviewed any of this.** The owner has no lawyer budget; the text follows standard
+practice and was checked against the code, not against legal advice. Every page carries a "NOT
+reviewed by a lawyer" code comment.
+
+**Owner decisions applied (2026-10-29)**
+- One email, `SUPPORT_EMAIL`, for support, privacy, the grievance officer and DPA requests.
+- `LEGAL.grievanceOfficer` is `{ role: "Grievance Officer, UNCHARTD", email: SUPPORT_EMAIL }`: a role,
+  no personal name. The type gained `role`; `legalFacts` shows "Grievance Officer, UNCHARTD
+  (support@amplychat.com)".
+- The full address is never published. New `LEGAL.publicLocation: "Bihar, India"`, shown as
+  "Location" in the facts card (a set `registeredAddress` would replace it), and used in the
+  privacy policy and the DPA. `registeredAddress` stays unset.
+- `governingLaw: "the laws of India"`, so Terms now has a Governing law section; `jurisdiction`
+  stays unset (no courts named).
+- `effectiveDate: "2026-10-30"`, a placeholder: **the coordinator moves it to the release date.**
+  Every legal page shows "Last updated …" (from `LEGAL_DOCUMENTS`) and "Effective …".
+- WhatsApp fees: Terms says customers pay Meta directly through their own WhatsApp Business account
+  and we add no markup.
+
+**What changed**
+- `lib/legal.ts`: the fields above; `LEGAL_DOCUMENTS` gained `subprocessors`, `cookies`, `dpa` and
+  `accessibility` (all 2026-10-29); privacy and terms moved to 2026-10-29. The sitemap reads these
+  dates, so the pages agent only has to add the four paths to `PUBLIC_PATHS`.
+- `lib/subprocessors.ts` + `components/marketing/legal/SubprocessorTable.tsx`: **one list**
+  (provider, purpose, data, location, link to its DPA or privacy page) rendered by `/subprocessors`,
+  the privacy policy ("Who we share it with") and the DPA's Annex 3.
+- **Privacy policy:** controller for account data, processor for the messages, contacts and profiles
+  a business or creator brings (including a creator's followers), with the DPA linked; a GDPR Art. 6
+  legal-basis table; "Data from Instagram, Facebook and WhatsApp" itemised per platform (from the
+  parsers: story replies and mentions, stickers, reactions, referrals; WhatsApp documents,
+  locations, button replies and orders) and matched to `/data-deletion`; international transfers
+  (India, GCP Singapore, subprocessors mainly in the US, Gemini wherever Google has facilities; SCCs
+  and the UK Addendum for EEA/UK); a retention table from the code (`jobs/tasks/purge.py`,
+  `message_history_days`, `infra/vm/backup.sh`: nightly dumps, 7 daily + 4 weekly, never over 30
+  days; the old "7 days of recovery history" was Render's PITR and is gone); automated decisions;
+  rights split into Everyone / EEA and UK (GDPR) / California (CCPA/CPRA, no sale or sharing, GPC
+  honoured) / India (DPDP Act, the existing text) / Grievances; children; the cookie section now
+  points to `/cookies`; insights say "we don't ask for it today" (the scope flag is off).
+- **`/subprocessors`**: the table, "Others who receive data" (Meta, Dodo once billing opens, tools a
+  business connects, push services, Grafana Cloud), "Last updated" and "To be told about changes,
+  email support@amplychat.com".
+- **`/cookies`**: two tables read from the code (Clerk's `__client`, `__session`, `__client_uat` and
+  their suffixed forms, Cloudflare's `__cf_bm`/`_cfuvid` on Clerk's domains, `sh_theme`; every
+  `socialhood:*` local/session storage key, the widget's `sh_visitor_<widget>` and the service
+  worker), "No tracking, so no banner", and Meta's SDK on Connect WhatsApp.
+- **`/dpa`**: incorporated into the Terms on acceptance; roles; Art. 28(3) duties (instructions,
+  confidentiality, security, subprocessors, assistance, breach notice within 72 hours, deletion or
+  return, audits); SCCs 2021/914 Modules 2 and 3 by reference (Clause 7 docking on, Clause 9(a)
+  Option 2, Clause 11 option off, Clauses 17/18: the exporter's member state, else Ireland); the UK
+  Addendum B1.0 (Table 4: neither party may end it); DPDP and CCPA service-provider terms; Annexes
+  1 (processing details), 2 (security measures, true to infra/vm, `security/crypto.py`, HSTS in
+  `lib/security/headers.ts`, Meta signature checks, CI's pip-audit / pnpm audit / gitleaks) and 3
+  (the shared list).
+- **Terms**: "AI features" (modelled on Wati §11: no warranty of accuracy, the user reviews, the
+  business is responsible for what Auto sends, no decisions with legal or similarly significant
+  effects), the DPA incorporated with a subprocessors link, "Pro isn't on sale yet" in Plans, the
+  no-markup line, Governing law.
+- **`/accessibility`**: WCAG 2.2 AA as an aim, not a claim; axe and keyboard testing; known limits;
+  report to `SUPPORT_EMAIL`, reply within 5 working days.
+- Tests: `legal.test.tsx` (today's config, Location vs address, grievance role, all eight documents
+  with dates and no placeholders, one subprocessor list on three pages, rights headings, Terms' AI
+  section and DPA link, cookies) and `seo.test.ts` (metadata for the four new routes).
+
+**Judgment calls**
+- **Gemini and training.** `ai/gemini.py` and `agent/planner.py` use `genai.Client(api_key=…)` and
+  `GoogleProvider(api_key=…)`: the Gemini Developer API, not Vertex AI. Google's Gemini API
+  Additional Terms (effective 2026-03-23, read 2026-10-29) say Paid Services don't use prompts or
+  responses to improve Google's products, log them "for a limited period" for abuse detection, and
+  may store or cache them in any country with Google facilities; Unpaid Services do use them and may
+  have human review. The API is "paid" only when the key's Cloud project has an active billing
+  account. `infra/vm/api.env.example` asks for "a paid, billing-enabled Gemini key", so the policy
+  says we use the paid service. **Owner: confirm the production key's project has billing on;
+  otherwise the AI paragraph is false.** "We don't train AI models on your data" is about us and is
+  true (we train none).
+- **Disconnect does not delete stored data.** The brief asked for "deleted when the account is
+  disconnected or a deletion is requested". The code deletes the token on disconnect but keeps
+  stored data until "Disconnect and delete data", workspace deletion or a Meta deletion request, so
+  the policy says exactly that, matching `/data-deletion`.
+- **Dodo is not listed as a subprocessor.** As merchant of record it is a controller of payment data
+  under its own policy, and billing is off (C-149). It is under "Others who receive data".
+- **Subprocessor notice: 30 days by email to each workspace owner**, with an urgent-replacement
+  exception, objection, and a pro-rata refund of prepaid fees if unresolved. A common market term;
+  the owner must actually send those emails.
+- **Audits:** written answers first; an on-site or auditor audit on 30 days' notice, once a year
+  unless a breach or an authority requires it, at the customer's cost.
+- **SCC options** chosen as the usual SaaS defaults (above). No Swiss addendum (not asked for).
+- **CCPA section** is written though we are very likely under the CCPA's thresholds; it promises
+  only what is true (no sale or sharing, GPC honoured trivially).
+- **No EU/UK representative (GDPR Art. 27) is named.** We may need one if we target EU/UK users at
+  scale; not claimed, not done.
+- **Locations** in the subprocessor table are each provider's default region, not read from our
+  dashboards (as C-144 noted). Cloudinary has no public DPA URL that resolves (two tried, both 404),
+  so its privacy policy is linked.
+- **Cloudflare cookie names and lifetimes** on `/cookies` come from Clerk's and Cloudflare's docs,
+  not from inspecting production. Clerk can change them.
+- The **proprietor's personal name** (Zakaur Rahman, C-144) is still shown in the facts card; the
+  owner's "no personal name" decision was for the grievance officer only.
+- The `sh_theme` cookie is set only by the app's theme switch; the public site sets no cookie of
+  its own.
+
+**For the coordinator / owner**
+- Move `LEGAL.effectiveDate` to the release date.
+- Pages agent: add `/subprocessors`, `/cookies`, `/dpa`, `/accessibility` to `PUBLIC_PATHS`, the
+  footer and llms.txt.
+- Owner: confirm Gemini billing; check each provider's region in its dashboard; if an off-site
+  backup bucket is enabled, create it in asia-southeast1 so "backups in Singapore" stays true.
+- `lib/whatsapp/embedded-signup.ts` initialises Meta's SDK with `autoLogAppEvents: true`, which
+  lets Meta log SDK events from the Connect WhatsApp click. The cookies page says Meta's SDK "may
+  tell Meta that it was used". Consider setting it to false (not changed here: not a legal file).
+
+**Checks:** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `src/lib`, `src/app`,
+`src/components/marketing`, `src/styles`: 99 files, 1,189 tests pass. Builds, e2e and screenshots
+are left to the coordinator.
