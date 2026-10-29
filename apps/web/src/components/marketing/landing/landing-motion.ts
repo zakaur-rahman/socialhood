@@ -305,7 +305,11 @@ function decideScene(root: ParentNode) {
     kb.classList.toggle("scanning", scanning);
     const hit = p >= 0.27 && p < 0.7;
     for (const line of lines) {
-      const top = line.offsetTop + (line.offsetParent as HTMLElement | null)!.offsetTop;
+      // No offsetParent while the scene isn't laid out (a breakpoint change, a frame after leaving
+      // the page): leave the line as it is until it's back.
+      const parent = line.offsetParent as HTMLElement | null;
+      if (!parent) continue;
+      const top = line.offsetTop + parent.offsetTop;
       line.classList.toggle("seen", scanning && scanTop > top);
       line.classList.toggle("hit", hit && !!line.dataset.m);
     }
