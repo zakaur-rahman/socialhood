@@ -118,3 +118,5 @@ Merged from the three research files. Where two researchers scored the same area
 7. **FAQ.** OK to show 6–8 questions on the landing and move the rest to a page (the JSON-LD follows)?
 8. **Copy proposals.** Approve or reject each: eyebrow H-1, trust row H-4, "Try your own keyword", Modes kicker "AI reply modes", the email as a text line in the closer.
 9. **Monospace labels.** OK to use Geist Mono (it ships with Geist) at 12 px for "Example data" and status labels, or stay Geist-only?
+10. **Section labels** (from [07](07-skill-reviews.md)). Both skills would delete the ten small labels above the headings; documents 02 and 04 restyle them. Delete, or keep them restyled?
+11. **Razorpay and UPI** (from 07). They are India-only but headline items in Features and Integrations on a global page. Move them to a "Payments" line under Integrations, or keep them as they are?
