@@ -155,7 +155,7 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.sha }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Sign in to Google Cloud
         id: gcp
