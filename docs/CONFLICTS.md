@@ -7636,3 +7636,101 @@ stage bar's colour 350 → 250 ms.
 18,634 px). e2e and Lighthouse are left to the coordinator: `landing.spec.ts` (new order, no scrub,
 the hero sort ends, FAQ 6–8 + link, no unpaused infinite animation, the comment and phone pause
 controls, the pinned frame) and the new "/faq" test in the same file.
+
+### C-157 (performance)
+
+The coordinator's measure after stage 2 read `/` mobile 94 → 87 (TBT 112 → 255 ms, Speed Index 1.56 →
+2.53 s) and accessibility 100 → 97. Profiled before changing anything.
+
+**Cause.**
+- **Most of the drop was the machine, not the page.** Rebuilt the pre-C-157 commit (9f3aae04) and
+  measured it in the same session as HEAD (3e598bfa), same method: pre-C-157 mobile median 92 (91 / 92 /
+  93; LCP 3031, TBT 162, SI 1754), HEAD 90 (90 / 93 / 79; LCP 3050, TBT 224, SI 1779). The recorded
+  94 and 87 came from two other sessions; this laptop had about 1.6 GB of free memory during this one.
+- **The CSS suspects are not the cost.** With the scripts off, a forced full style and layout of `/`
+  takes 15.8 ms; without `text-wrap: pretty` 15.5, without `balance` 14.2, without `:has(.site)` no
+  less, and without the `13cqi` size container the same total (it moves about 7 ms from style to
+  layout). Traced page loads (4× CPU, A/B by rewriting the stylesheet) put every variant inside the
+  noise. `@starting-style` only applies to the phone menu, which is hidden at load.
+- **JS did not grow.** CPU profile of a load (4× CPU, 4 runs): 661 ms of JS self time before C-157,
+  594 ms after; the motion chunk fell from 178 to 46 ms. The first style + layout task is about the
+  same (84–177 ms before, 104–171 ms after, unthrottled), on fewer elements.
+- **What decides the score on this page (before and after C-157).** Lighthouse simulates LCP from all
+  main-thread work before the first observed paint: the first style, layout and paint of the whole page
+  (about 1,000 elements, below the fold included) and the react-dom bootstrap. TBT is mostly that
+  react-dom task (36–50 ms unthrottled, 165–205 ms simulated). Speed Index is 1.4 × the observed index
+  plus 0.4 × a layout-weighted one, so any post-load task that lays out (the motion script reading
+  geometry at start, the hero sort starting about 0.4 s after load) pulls it up.
+- **Accessibility.** The "Pro" tag was the button's ink at 72% opacity on the sheet (4.16:1). The two
+  target-size failures at 375 were footer links ("All comparisons", "Safety") partly under the sticky
+  bar's logo and Start free at the end of the scroll; axe counts a target overlapped by another as
+  obscured.
+
+**Fix** (commits 5bd22871 and 79294f8c).
+- `content-visibility: auto` (`contain-intrinsic-size: auto 900px`) on the landing's bands after How
+  it works: the first frame styles, lays out and paints only the hero, the strip and How it works.
+  Traced A/B (4× CPU, medians of 5): style 274 → 176 ms, layout 336 → 195 ms, paint 90 → 63 ms, longest
+  task 287 → 183 ms.
+  - Those bands also get `overflow: hidden`. A skipped band is only 900 px tall, and its forced
+    layout spills past it, so axe (Lighthouse doesn't scroll) read the features links and the pricing
+    link as iris on the next night band (2.78:1, a11y 96). Clipped to the band, the unpainted overflow
+    is skipped; once a band renders it grows to its content, and `.site` already clips sideways, so the
+    rule changes nothing visible.
+  - How it works stays out: its frame pins with `position: sticky`, which a clipping band would break.
+    The footer stays out too: an axe pass that stops above the true bottom read unrendered footer
+    links as sitting on paper.
+- How it works reads its geometry (knowledge lines, wires, path lengths) when it nears the viewport and
+  after a resize there, not at start-up, so the motion script's first task forces no layout.
+- The hero's one sort (still 1.2 s, still only while the inbox is half on screen) starts about 1.5 s
+  after the load event at an idle moment (`requestIdleCallback`, 500 ms timeout), not about 0.4 s after.
+  The brief named this option. It keeps the sort clear of hydration finishing on a slow phone and of
+  the first screen's paint.
+- "Pro" is ink-3 (about 6:1 on the sheet); on the pressed (ink) button it keeps on-ink at 72%.
+- The sticky bar's containing block is the header plus the page (a wrapper in the marketing layout),
+  not the footer: the bar scrolls away as the footer arrives, so it never sits over the footer's links.
+  `layout.test.tsx` pins the structure.
+- Not changed: `text-wrap`, the `13cqi` H1 (no cost found, so no reason to touch the fit at every
+  width), the tokens, the `--s-*` roles, `HeaderScrollState`, the order and the copy.
+
+**Before / after** (local standalone build, split hosts, port 3155, Lighthouse 12.8.2, medians of 3).
+"Recorded" is the coordinator's measure; "re-measured" is HEAD in this session, then the fix.
+
+| `/` mobile | Recorded before C-157 | Recorded HEAD | Re-measured pre-C-157 | Re-measured HEAD | **After** |
+|---|---|---|---|---|---|
+| Performance | 94 | 87 | 92 | 90 | **94** (92 / 94 / 94) |
+| LCP (the H1) | 2953 ms | 3282 ms | 3031 ms | 3050 ms | **2949 ms** |
+| TBT | 112 ms | 255 ms | 162 ms | 224 ms | **116 ms** |
+| Speed Index | 1555 ms | 2534 ms | 1754 ms | 1779 ms | **1402 ms** |
+| CLS | 0 | 0 | 0 | 0 | **0** |
+| Accessibility | 100 | 97 | 100 | 97 | **100** |
+
+| | Recorded HEAD | Re-measured HEAD | **After** |
+|---|---|---|---|
+| `/` desktop performance | 100 | 100 | **100** ×3 |
+| `/` desktop TBT / SI | 44 / 925 ms | 0 / 590 ms | **0 / 498 ms** |
+| `/` desktop LCP / CLS / a11y | 687 ms / 0 / 97 | 648 ms / 0 / 97 | **641 ms / 0 / 100** |
+| `/pricing` mobile performance | 89 (1 run) | 94 | **95** ×3 |
+| `/pricing` mobile LCP / TBT / SI | 2916 / 277 / 1611 ms | 2857 / 126 / 1407 ms | **2804 / 112 / 1399 ms** |
+
+`/pricing` accessibility stays 98: the `heading-order` finding (A-2), outside this task.
+
+**axe-core 4.13** (wcag2a/aa, 21a/aa, 22aa, best-practice).
+- At load with no scroll, as Lighthouse does it: 0 violations at 375, 412, 768 and 1350, provided the
+  hero's sort isn't playing.
+- Scrolled to the true bottom: 0 violations at 375 and 1280.
+- The coordinator's `premium/axe.cjs` (stops at 25/50/75 % and the end): no `.pro` and no target-size
+  failure. Two violations come and go from run to run, both elements caught mid-animation by an axe
+  snapshot: the Automations token while it flies, and the hero's "AI draft" tag while it fades during
+  the sort. Neither is a colour problem at rest. An axe step should wait until `document.getAnimations()`
+  is empty.
+- With bands that grow as they render, a scroll loop that reads `scrollHeight` once now stops above
+  the bottom. Re-read it inside the loop.
+
+**Left, with evidence.**
+- TBT is now mostly the react-dom bootstrap task (165–205 ms simulated), which includes reading about
+  113 KB of RSC payload.
+  - The root `not-found.tsx` (the site header and footer around the 404) is in every public page's
+    payload, three times (rows of about 5 KB per footer, plus the header): about a fifth of the payload.
+  - Trimming it is a site-wide change to the 404's shell, so it was left out of this task.
+- Medians on this laptop move by ±2 points from run to run (a single mobile run read 79). `/` mobile
+  sits at 94, on the target and not above it.
