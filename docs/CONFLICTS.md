@@ -7467,3 +7467,172 @@ Checks:
 - **Not touched** (other agent's scope): the footer "about" line (`SiteFooter.tsx`) still says "Instagram and WhatsApp"; change it to match `app/layout.tsx`'s default description. `gtm-pages.ts` page titles (`/features/ai-inbox` is pinned by `gr37-gtm-pages.spec.ts`) were left as they are.
 - **Canonical slash:** `canonical: "/"` is resolved by Next against `metadataBase`; it renders without the trailing slash and the JSON-LD ids use `/`. Left alone: both forms resolve to one page, and the metadata tests pin `"/"`.
 - JSON-LD: `WebSite` and `SoftwareApplication` both take `SITE_DESCRIPTION`, so they follow the new line; a test pins it.
+
+### C-157 (stage 2)
+
+The landing rebuilt on stage 1's system (05 phases 2–3 and the 4.x items for the landing).
+
+**Order.** Hero → Strip (the hero's bottom edge) → How it works (night) → Automations → Modes
+(paper-deep) → Security (night) → Who it's for → Features with the connections → Set up in three
+steps (night) → Pricing → FAQ (paper-deep) → Closer (night). A night band every two or three
+sections; Security moved up from eighth to sixth.
+- **Judgment call:** 04 left the setup steps on paper before Pricing, which made four light bands in
+  a row after Security. The steps became a short night band instead, the "night every 2–3 sections"
+  rule winning over 04's band colour.
+
+**Hero (LP-2.3, LP-3.1, LP-3.3).**
+- No scroll-scrub and no bob. The server renders the sorted inbox, which is the first frame with or
+  without script.
+- After idle (the motion script is still idle-loaded), one sort of 1.2 s (the entrance token,
+  smooth-out, WAAPI, transforms and opacity only): the newest message (Maya R.) fades out of its slot
+  and lands on top while the two rows above make room, then moves back to its place. The end state is
+  the server's. Measured locally at 1440: it starts about 0.4 s after load, CLS 0, LCP is the H1.
+  - **Judgment call:** a sort needs an unsorted start, and the owner wants the first frame sorted.
+    The "new message arrives and is sorted" reading keeps both.
+- The inbox is a `data-ui` product fragment, 380–528 px (`clamp(380px, 38vw, 528px)`), with rows in
+  the app's density (source, time, name, message, tag) and the three-part channel line on top.
+- Copy column: the tagline (`SITE_TAGLINE`, now with website chat) with the three channel dots, the
+  H1 (untouched), the sub-line led by "For small businesses and creators:", "Start free" (ink) and
+  "See how it works" (outlined; a text link below 520 px, under a full-width "Start free"), and the
+  trust row ("Official Meta APIs", "Free plan, no card needed"; both true, unchanged).
+- Tablet tier (≤900): one column, the H1 at the display token (52.6 px at 768, the phrases flow on two
+  lines), the inbox 460 px on the copy's left edge. Phones hide the "8 conversations" count so the
+  chips fit.
+- "Scroll to sort the inbox" and the caption swap are gone; "Example data" sits under the scene.
+
+**Strip (LP-2.12).** Values at `--fs-stat-sm`, tabular, no rules, as the hero's base. "Official Meta
+APIs" (said in the hero row, Security and the closer) is replaced by **"50 website chats: New chats a
+day on your site, on the Free plan."**, read from plan-table.json `widget_conversations_daily.free`
+(billing/plans.py; services/widget/chat.py counts each new chat against it).
+
+**How it works (LP-2.4, LP-4.3, LP-4.6): the peak.**
+- The heading and lede are inside the pinned frame; the scrub is 200vh (from 340vh). The frame fits
+  1440×900 and 1366×768 (a `height ≤ 820px` tier tightens it).
+- p = 0 is never empty: the question, "Tagged: product question" (MODES wording), and the AI draft
+  frame starting to write. Then the scan, the wires, the draft word by word, "Sent by you", the second
+  question, the hand-off and the gap. The draft fix (LP-1.1) is kept; `.ddraft-t` stays transparent.
+- The scan moves with a transform on a flat tint (no gradient, 07 T8). The stage bar fills by
+  `scaleX`.
+- LP-4.6: the 901 literal and the `--nav-h` read from `<html>` are gone. The script asks the frame
+  itself: `getComputedStyle(sticky).position === "sticky"` decides scrub or play, and the frame's
+  `top` is the offset. The breakpoint lives once, in site.css (and reduced motion unpins it there
+  too).
+- LP-4.3: every layout read (the knowledge's height, each line's top, the wire geometry, the path
+  lengths) happens in `layout()`, batched reads-then-writes, on start, on a rAF-debounced resize and
+  when fonts arrive. A frame only writes. rAF runs only while the section is visible (scrub) or while
+  it plays.
+- Where it doesn't pin (≤900), it plays once over 9 s when on screen, then holds, with a pause control
+  in the thread header (the toggle hides when it ends). The old 16 s loop and the 9 s hero loop are
+  gone.
+- The knowledge cards lost their icons; their titles are `<p>`, not h3 (LP-4.9).
+
+**Automations.** The kicker is gone. The Reel has a typographic cover ("My studio tour" on night)
+instead of the grey video icon (LP-2.13). The keyword field has a 1.5 px ink edge at rest (LP-3.6).
+The stream now plays one round (8 comments) while on screen and then holds, with a pause control
+(WCAG 2.2.2). The summary bar is removed (its claim is Comment intelligence in Features). A link to
+the comment-to-DM guide is in the lede.
+
+**Modes.** Modes only: the setup steps moved to their own band. "Pro" beside Auto is plain text, not
+a pill. The table is `data-ui`.
+
+**Security.** No icons, no rules: five points set large in three columns, the points not said
+elsewhere first, "Official Meta APIs" last. A link to /security joins the Privacy Policy link.
+
+**Who it's for (LP-2.8, new).** Two cards to /for-creators and /for-businesses, with each page's own
+name, h1 and intro (lib/marketing/solutions.ts); the channel line on top (Instagram; all three).
+No new claims.
+
+**Features + connections (LP-2.6).** One section (`#features`, utility tier). Ask Amplychat leads as
+a wide card; the other seven are a two-column list set at the h3 size, no icons, no tiles, no rules.
+Scheduling and Comment intelligence link to their pages, and a line under the list links the AI
+inbox, comment intelligence, publishing and /compare (LP-4.10). "A chat widget for your website" is
+dropped from the list (Website chat is a connection). The connections are a sub-block
+(`#integrations`, so every nav and footer anchor still lands): a four-column grid of name, one line
+and a status dot, with the WhatsApp guide linked from the WhatsApp line. Razorpay and UPI are one
+"Payments." line under the grid.
+
+**Set up in three steps.** A night band, three columns, the `<ol>` with no visible numbers.
+
+**Pricing.** On the landing only, the "Pricing" kicker is gone (/pricing keeps it above its H1). The
+plan cards are sheets with no outline (the plan to start on keeps a 2 px ink edge), the limit rows
+and the credits table lost their rules, and "How AI credits work" is a sheet that no longer stretches.
+
+**FAQ.** Eight questions on the landing: auto-replies, making things up, taking over, ban risk,
+password, personal accounts, the follow gate, WhatsApp fees (the creator questions included; the
+C-156 test still finds ban risk, password and takeover). Each is a sheet on the paper-deep band.
+"See all questions" links /faq. The landing's FAQPage JSON-LD is built from the same list, so it
+matches exactly.
+- **New page /faq:** all 17 questions the site answers (the 15 that were on the landing plus
+  "robotic replies" and "Free plan limits", already used by /for-*), in four groups, with FAQPage
+  JSON-LD in the same order and words (`/faq#faq`), BreadcrumbList, metadata, the sitemap
+  (PUBLIC_PATHS, PAGE_UPDATED 2026-10-30), llms.txt (Product) and the footer (Resources, "Common
+  questions").
+
+**Closer.** One action ("Start free"), the email as a text line ("Questions? Write to …"), the perks
+row. The heading is two lines at 1440 (25ch). The mini inbox is still: no `.falling` loop.
+
+**Motif and colour (LP-2.10, LP-2.11).** The channel colours are the one motif: the source marks
+(a comment is Instagram's colour drawn as a ring, so `--cm` is no longer used on the landing), the
+three dots by the tagline, and a 3 px channel line on the hero inbox, the closer's inbox and the
+audience cards. On night, `--ig` and `--web` point at their night variants. Iris is left on links,
+focus, selection and the AI (the draft, the wires, the scan, "One inbox.", the DM's AI parts).
+
+**Elsewhere.**
+- Footer about line: "One inbox for Instagram, WhatsApp and website chat, with AI that answers from
+  your business knowledge." (LP-4.8).
+- /features/ai-inbox title: "AI inbox for Instagram, WhatsApp and web chat". Website chat is true (it
+  lands in the same inbox). "web chat" because "website chat" made the shown title 61 characters
+  (the cap is 60), the same call the og stage made. `gr37-gtm-pages.spec.ts` updated.
+- `Faq` takes `eyebrow` (the /for-* pages pass "FAQ", so they're unchanged) and shows the /faq link
+  only for the landing list.
+
+**Tokens.** The landing's scene CSS is rewritten on the tokens: `--space-*`, `--fs-*`/`--lh-*`/
+`--tr-*`, `--r-*`, `--dur-*`, `--ease`/`--ease-swap`, `--dist-*`, `--scale-*`. Literal px remain only
+for the marks and scene geometry with no token (8–10 px marks, 2–3 px lines, 22–60 px row and avatar
+sizes, 380 px and 528 px scene widths). The old hero, scroll-hint, `.falling`, `site-bob`,
+`site-fall` and `site-show` CSS is deleted. transitions-polish pass: the mode swap's stagger 60 → 40
+ms (the stagger token); the comment entrance 500 → 400 ms (content arriving, not an emphasis); the
+stage bar's colour 350 → 250 ms.
+
+**Skill verdicts.**
+- Impeccable critique (degraded, single-context: a subagent under the owner's cap on parallel agents;
+  detector run on the URL; no overlay injection, no snapshot written to the repo): before 22/32, after
+  25/32 (heuristics 7 and 9 n/a). The detector: before 1 finding (overused-font, the owner's Geist);
+  after 2 (overused-font; nested-cards on `.ddraft` in the thread, a draft message inside a chat
+  window in a `data-ui` fragment, kept).
+- Taste inspector: before 10 FAIL and 4 WARN; after 3 FAIL entries and 6 WARN. The FAILs left:
+  - headline-lines: the hero H1 is three phrases on three lines (the owner's headline and sizes, 44 →
+    68 px); at 390 px "Your customers' messages, handled with care" and "Bring every customer
+    conversation into one inbox" run three lines at the 32 px floor. The wording rule (C-155, current
+    site words) wins over cutting them.
+  - eyebrow: the plan taglines ("To get started.") above the price. A false positive: a price is not
+    a heading, and the tagline belongs to the plan name above it.
+  - WARNs defended: the footer's one rule (stage 1), no photographs or footage (software shows its
+    own interface; the scenes are `data-ui` fragments), 3 short texts under 13 px (pricing chips),
+    "off-centre" (the measure from the widest text block, not the frame; the wrap is symmetric).
+
+**Skill advice overridden, and why.**
+- Taste "no eyebrow": the hero tagline line stays (the owner asked for an eyebrow that names website
+  chat); it is a sentence-case line with the channel dots, not a label or a pill. Every section
+  kicker is deleted.
+- Taste "no styled accent word": "One inbox." stays iris (the owner's headline, also on the share
+  image).
+- Taste "≤2 lines at every width": see above (the H1, two copy-locked H2s at 390).
+- Taste "≥4 real pictures, one clip": none. No honest photograph of this product's world exists, and
+  stock would be filler; the five scenes are marked `data-ui` and count as the pictures.
+- Taste "no thin rules": the product scenes keep their rows and edges (`data-ui`), and the footer
+  keeps stage 1's one rule.
+- Taste "no violet": iris stays (owner), limited to links, focus, selection and AI.
+- Impeccable craft floor "no colored border-left over 1 px on list items": 05 LP-2.11 proposed a 3 px
+  left bar per row. Not done; the motif is the source marks and a top channel line instead.
+- 04's "a What's new liveness line in the closer" and 05 LP-3.9 (pricing compaction) were not done:
+  the brief asked for one CTA and the email only, and the pricing cards are shared with /pricing.
+
+**Checks.** `next typegen`, `tsc --noEmit` and `pnpm lint` clean. vitest for `app/(marketing)`
+(with the new `faq/page.test.tsx`), `lib/marketing`, `components/marketing`, `components/site`,
+`styles`, `app/seo.test.ts`, `app/public-metadata.test.ts`, `app/layout.test.tsx` and
+`lib/copy-lint.test.ts`: 23 files, 508 tests pass. Screenshots on a dev server on :3160 at 375, 430,
+768, 1366, 1440 and 1920; full pages at 375 and 1440 (1440: 15,428 → 12,175 px; 375: 19,410 →
+18,634 px). e2e and Lighthouse are left to the coordinator: `landing.spec.ts` (new order, no scrub,
+the hero sort ends, FAQ 6–8 + link, no unpaused infinite animation, the comment and phone pause
+controls, the pinned frame) and the new "/faq" test in the same file.
