@@ -74,7 +74,7 @@ export function LegalPage({
           </Card>
         </header>
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[14rem_1fr]">
+        <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[14rem_minmax(0,1fr)]">
           <nav aria-labelledby="contents-title" className="lg:sticky lg:top-24 lg:self-start">
             <h2 id="contents-title" className={EYEBROW}>
               Contents
@@ -94,7 +94,7 @@ export function LegalPage({
             </ol>
           </nav>
 
-          <div data-legal-prose="" className={`max-w-3xl space-y-12 ${PROSE}`}>
+          <div data-legal-prose="" className={`min-w-0 max-w-3xl space-y-12 ${PROSE}`}>
             {sections.map((section, index) => (
               <section key={section.id} aria-labelledby={section.id}>
                 <h2 id={section.id}>
