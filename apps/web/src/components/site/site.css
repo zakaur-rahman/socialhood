@@ -115,7 +115,8 @@ body:has(.site) {
 
     /* ---- footer */
     & .foot { padding-block: 64px 40px; border-top: 1px solid var(--night-rule); }
-    & .foot-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 40px; }
+    /* C-156: the about column and five link columns; the about column takes its own row below 1060 px. */
+    & .foot-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(5, minmax(0, 1fr)); gap: 40px 28px; }
     & .foot h2 { margin: 0 0 14px; font-family: var(--text); font-size: 14px; font-weight: 600; color: var(--night-ink); }
     & .foot ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
     & .foot ul a { display: inline-flex; align-items: center; min-height: 32px; text-decoration: none; font-size: 14px; color: var(--night-ink-2); }
@@ -124,6 +125,7 @@ body:has(.site) {
     & .foot .about a { color: var(--night-ink); font-weight: 500; text-underline-offset: 4px; }
     & .foot-bot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--night-rule); font-size: 13px; color: var(--night-ink-3); }
     & .foot-bot p { margin: 0; }
+    & .foot-bot .foot-fine { flex-basis: 100%; font-size: 12px; }
 
     /* ---- hero */
     & .hero-scrub { position: relative; height: 250vh; }
@@ -411,6 +413,8 @@ body:has(.site) {
       & .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
       & .machine { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
       & .machine .rule { grid-column: 1 / -1; grid-row: 2; }
+      & .foot-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      & .foot-about { grid-column: 1 / -1; }
     }
     @media (max-width: 900px) {
       & .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -444,7 +448,7 @@ body:has(.site) {
       & .plans { gap: 20px; }
       & .steps { gap: 24px; }
       & .crow { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-      & .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      & .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       & .foot ul a { min-height: 40px; }
       & .summary { grid-template-columns: minmax(0, 1fr); }
       & .summary .total { grid-row: auto; grid-column: auto; text-align: left; }
@@ -458,7 +462,7 @@ body:has(.site) {
     @media (max-width: 520px) {
       & .plan { padding: 24px; }
       & .price { font-size: 52px; }
-      & .foot-grid { grid-template-columns: minmax(0, 1fr); }
+      & .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; }
       & .stage { height: 600px; }
       & .line .r { display: none; }
     }

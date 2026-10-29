@@ -86,6 +86,16 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/developers/api",
       "https://socialhood.example/security",
       "https://socialhood.example/guides",
+      "https://socialhood.example/for-creators",
+      "https://socialhood.example/for-businesses",
+      "https://socialhood.example/safety",
+      "https://socialhood.example/changelog",
+      "https://socialhood.example/ai-info",
+      "https://socialhood.example/compare",
+      "https://socialhood.example/subprocessors",
+      "https://socialhood.example/cookies",
+      "https://socialhood.example/dpa",
+      "https://socialhood.example/accessibility",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.

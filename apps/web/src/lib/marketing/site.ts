@@ -115,13 +115,108 @@ export const NAV_LINKS = [
 export const LEGAL_LINKS = [
   { label: "Privacy policy", href: "/privacy" },
   { label: "Terms of service", href: "/terms" },
+  { label: "Security", href: "/security" },
+  { label: "Data deletion", href: "/data-deletion" },
   { label: "Refund and cancellation", href: "/refunds" },
   { label: "Shipping and delivery", href: "/shipping" },
-  { label: "Data deletion", href: "/data-deletion" },
+  // C-156: the legal agent's pages; they exist once the C-156 branches combine.
+  { label: "Subprocessors", href: "/subprocessors" },
+  { label: "Cookies", href: "/cookies" },
+  { label: "Data processing agreement", href: "/dpa" },
+  { label: "Accessibility", href: "/accessibility" },
   { label: "Contact us", href: "/contact" },
-  // The security track's responsible-disclosure page (C-143); it exists once the branches combine.
-  { label: "Security", href: "/security" },
 ] as const;
+
+/**
+ * Where the business is, as the site shows it (C-156): the state and country only, never the full
+ * address. RECONCILE: if lib/legal.ts gains a location field (the legal agent's C-156 work), read
+ * it from LEGAL instead and delete this constant.
+ */
+export const COMPANY_LOCATION = "Bihar, India";
+
+/**
+ * The hosted status page (C-156), from NEXT_PUBLIC_STATUS_URL: an http(s) URL, or null when it is
+ * unset or not a URL, and then the footer has no Status link. Read at build time like every
+ * NEXT_PUBLIC_* value.
+ */
+export function statusUrl(value: string | undefined = process.env.NEXT_PUBLIC_STATUS_URL): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+export type FooterLink = { label: string; href: string; external?: boolean };
+export type FooterColumn = { id: string; title: string; links: FooterLink[] };
+
+/**
+ * The footer's columns (C-156). Status shows only when the status page is configured. No social
+ * links: the business has no profiles yet (SOCIAL_PROFILES).
+ */
+export function footerColumns(status: string | null = statusUrl()): FooterColumn[] {
+  return [
+    {
+      id: "product",
+      title: "Product",
+      links: [
+        { label: "Features", href: `/#${SECTION_IDS.features}` },
+        { label: "Pricing", href: "/pricing" },
+        { label: "How it works", href: `/#${SECTION_IDS.howItWorks}` },
+        { label: "What's new", href: "/changelog" },
+        ...(status ? [{ label: "Status", href: status, external: true }] : []),
+        { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
+      ],
+    },
+    {
+      id: "solutions",
+      title: "Solutions",
+      links: [
+        { label: "For creators", href: "/for-creators" },
+        { label: "For businesses", href: "/for-businesses" },
+        { label: "Developers", href: "/developers/api" },
+      ],
+    },
+    {
+      id: "compare",
+      title: "Compare",
+      links: [
+        { label: "vs Manychat", href: "/compare/manychat" },
+        { label: "vs Interakt", href: "/compare/interakt" },
+        { label: "Switch from Manychat", href: "/switch-from-manychat" },
+        { label: "All comparisons", href: "/compare" },
+      ],
+    },
+    {
+      id: "resources",
+      title: "Resources",
+      links: [
+        { label: "Guides", href: "/guides" },
+        { label: "AI info", href: "/ai-info" },
+        { label: "Safety", href: "/safety" },
+        { label: "Contact", href: "/contact" },
+      ],
+    },
+    {
+      id: "legal",
+      title: "Legal and trust",
+      links: [
+        { label: "Privacy", href: "/privacy" },
+        { label: "Terms", href: "/terms" },
+        { label: "Security", href: "/security" },
+        { label: "Data deletion", href: "/data-deletion" },
+        { label: "Refunds", href: "/refunds" },
+        { label: "Shipping", href: "/shipping" },
+        { label: "Subprocessors", href: "/subprocessors" },
+        { label: "Cookies", href: "/cookies" },
+        { label: "DPA", href: "/dpa" },
+        { label: "Accessibility", href: "/accessibility" },
+      ],
+    },
+  ];
+}
 
 /**
  * The public pages the sitemap lists. Each guide (/guides/{slug}, lib/marketing/guides) is added by
@@ -145,6 +240,18 @@ export const PUBLIC_PATHS = [
   "/developers/api",
   "/security",
   "/guides",
+  // C-156 (pages)
+  "/for-creators",
+  "/for-businesses",
+  "/safety",
+  "/changelog",
+  "/ai-info",
+  // C-156: the compare agent's hub and the legal agent's pages; they exist once the branches combine.
+  "/compare",
+  "/subprocessors",
+  "/cookies",
+  "/dpa",
+  "/accessibility",
 ] as const;
 
 /**
@@ -173,20 +280,15 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/security": "2026-10-26",
+  "/for-creators": "2026-10-29",
+  "/for-businesses": "2026-10-29",
+  "/safety": "2026-10-29",
+  "/ai-info": "2026-10-29",
+  "/compare": "2026-10-29",
+  // The legal pages take their "Last updated" date from LEGAL_DOCUMENTS once the legal agent adds
+  // them there (that wins in the sitemap); these stand in until then.
+  "/subprocessors": "2026-10-29",
+  "/cookies": "2026-10-29",
+  "/dpa": "2026-10-29",
+  "/accessibility": "2026-10-29",
 };
-
-/**
- * The footer's "Compare and learn" links to the go-to-market pages (GR-37); `lang` marks a label
- * that isn't English. The guides are in NAV_LINKS (header and footer). The Hinglish page (C-153)
- * was taken down in C-155: /hi redirects to /.
- */
-export const LEARN_LINKS: readonly { label: string; href: string; lang?: string }[] = [
-  { label: "Plans and limits", href: "/pricing" },
-  { label: "Switch from Manychat", href: "/switch-from-manychat" },
-  { label: "Amplychat vs Manychat", href: "/compare/manychat" },
-  { label: "Amplychat vs Interakt", href: "/compare/interakt" },
-  { label: "Comment intelligence", href: "/features/comment-intelligence" },
-  { label: "The AI inbox", href: "/features/ai-inbox" },
-  { label: "Publishing", href: "/features/publishing" },
-  { label: "Public API", href: "/developers/api" },
-];
