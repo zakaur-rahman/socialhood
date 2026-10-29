@@ -417,7 +417,8 @@ body:has(.site) {
     }
     & .switch button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
     /* Auto is part of Pro: said in words beside the label, not a badge. */
-    & .switch .pro { font-size: var(--fs-caption); font-weight: 500; color: inherit; opacity: .72; }
+    & .switch .pro { font-size: var(--fs-caption); font-weight: 500; color: var(--ink-3); }
+    & .switch button[aria-pressed="true"] .pro { color: inherit; opacity: .72; }
     & .mode-desc { font-size: var(--fs-body); color: var(--ink-2); margin: var(--space-4) 0 0; min-height: 52px; max-width: 60ch; }
     & .mtable { margin-top: var(--space-6); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
     & .mrow { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-5); align-items: center; padding: var(--space-5) var(--space-6); border-top: 1px solid var(--rule-2); }

@@ -35,8 +35,12 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <a href="#main" className="btn btn-main skip">
         Skip to content
       </a>
-      <SiteHeader />
-      <div className="flex flex-1 flex-col">{children}</div>
+      {/* The bar sticks only over the page, not the footer (C-157): it scrolls away as the footer
+          arrives, so it never sits over the footer's links on a phone (axe target-size). */}
+      <div className="flex flex-1 flex-col">
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">{children}</div>
+      </div>
       <SiteFooter />
     </div>
   );

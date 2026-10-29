@@ -26,6 +26,10 @@ describe("the marketing layout (C-155)", () => {
     expect(html).toMatch(/<a href="#main"[^>]*>Skip to content<\/a>/);
   });
 
+  it("keeps the sticky bar's containing block to the page, so the bar leaves before the footer (C-157)", () => {
+    expect(html).toMatch(/<div class="[^"]*"><header>header<\/header><div class="[^"]*"><main>page<\/main><\/div><\/div><footer>footer<\/footer>/);
+  });
+
   it("renders no inline script (React won't run one on a client navigation; the root layout's head script pins <html> by route)", () => {
     expect(html).not.toContain("<script");
   });
