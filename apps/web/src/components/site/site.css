@@ -59,6 +59,14 @@ body:has(.site) {
       padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
     }
     & .sec { padding-block: var(--space-section); }
+    /* Below the first screen the browser skips style, layout and paint until a band nears the
+       viewport (C-157 performance): the landing's bands after How it works. `auto` remembers each
+       band's real height once it has rendered. While a band is skipped its content can be taller than
+       the placeholder; `overflow: hidden` (inert once it renders: a band always grows to its content,
+       and .site already clips sideways) keeps that unpainted overflow from being read as sitting on the
+       next band (axe's contrast check in Lighthouse). How it works stays out: it pins with sticky,
+       which a clipping band would break. */
+    & [data-landing] > section:not(.hero, .strip, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: hidden; }
     /* A section that follows one of the same colour starts closer (the two paddings read as one gap). */
     & .sec-tight { padding-top: var(--space-section-tight); }
     /* The gap from a heading block to what it introduces: one value on every section. */

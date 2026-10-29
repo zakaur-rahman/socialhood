@@ -2,10 +2,10 @@
  * The landing page's scenes in motion (C-155, C-157), loaded by LandingMotion once the page has
  * settled. Plain DOM over the server-rendered markup: nothing here re-renders React, and every move
  * is a transform, an opacity or a class, so no layout box moves (CLS stays 0). Layout is read once
- * (on start, on a debounced resize, when fonts arrive) and frames only write.
+ * (when a scene nears the viewport, on a debounced resize, when fonts arrive) and frames only write.
  *
- * - Hero: one short sort once the page is idle (about a second): the newest message lands on top,
- *   then moves to its place in the sorted inbox the server rendered, and the scene holds.
+ * - Hero: one short sort (1.2 s), about 1.5 s after load at an idle moment: the newest message lands
+ *   on top, then moves to its place in the sorted inbox the server rendered, and the scene holds.
  * - How it works: where its CSS pins the frame (wide screens), the scroll plays it: a scan over the
  *   knowledge, wires to the cited words, the draft writing itself, the hand-off and the gap. Where it
  *   doesn't pin (phones, tablets), it plays once when on screen, with a pause control.
@@ -25,6 +25,8 @@ const seg = (p: number, a: number, b: number) => clamp((p - a) / (b - a), 0, 1);
 /** The site's motion tokens (globals.css): the one-shot ceiling and the smooth-out curve. */
 const ENTRANCE_MS = 1200;
 const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+/** The hero's sort starts this long after the load event (and then at an idle moment). */
+const SORT_AFTER_LOAD_MS = 1500;
 /** How long How it works plays by itself where it doesn't pin. */
 const DECIDE_PLAY_MS = 9000;
 
@@ -121,19 +123,34 @@ function heroSort(root: ParentNode): Cleanup {
     animations[0].finished.then(() => arriving.style.removeProperty("z-index")).catch(() => {});
   };
 
-  // Once, and only while the hero is on screen (a reload further down the page skips it).
-  let observer: IntersectionObserver | null = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      observer?.disconnect();
-      observer = null;
-      play();
-    },
-    { threshold: 0.5 },
-  );
-  observer.observe(list);
+  // Once, and only while the hero is on screen (a reload further down the page skips it). It waits
+  // until about 1.5 s after load and an idle moment (C-157 performance), so it never competes with
+  // the page's own start-up work (hydration finishing on a slow phone) and its frames don't land in
+  // the first screen's paint.
+  let observer: IntersectionObserver | null = null;
+  let idle = 0;
+  const watch = () => {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer?.disconnect();
+        observer = null;
+        play();
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(list);
+  };
+  const loadEnd = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  const wait = Math.max(0, (loadEnd?.loadEventEnd || performance.now()) + SORT_AFTER_LOAD_MS - performance.now());
+  const timer = window.setTimeout(() => {
+    if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(watch, { timeout: 500 });
+    else watch();
+  }, wait);
 
   return () => {
+    window.clearTimeout(timer);
+    if (idle) window.cancelIdleCallback(idle);
     observer?.disconnect();
     animations.forEach((animation) => animation.cancel());
     arriving.style.removeProperty("z-index");
@@ -209,9 +226,21 @@ function decide(root: ParentNode): Cleanup {
       });
     }
   };
+  // The scene's geometry is read only once it nears the viewport (and again after a resize there):
+  // until then the band is skipped by the browser (site.css, content-visibility), and reading it at
+  // start-up would force its layout for nothing (C-157 performance).
+  let measured = false;
+  const measure = () => {
+    scene.layout();
+    measured = true;
+  };
   const relayout = perFrame(() => {
     setMode();
-    scene.layout();
+    if (!visible) {
+      measured = false;
+      return;
+    }
+    measure();
     if (!pinned) scene.render(auto.progress, true);
     tick();
   });
@@ -220,7 +249,9 @@ function decide(root: ParentNode): Cleanup {
     (entries) => {
       visible = entries.some((entry) => entry.isIntersecting);
       auto.last = 0;
-      if (visible) tick();
+      if (!visible) return;
+      if (!measured) measure();
+      tick();
     },
     { rootMargin: "100px" },
   );
@@ -232,7 +263,6 @@ function decide(root: ParentNode): Cleanup {
   window.addEventListener("resize", relayout);
   void document.fonts?.ready.then(() => !disposed && relayout());
   setMode();
-  scene.layout();
 
   return () => {
     disposed = true;

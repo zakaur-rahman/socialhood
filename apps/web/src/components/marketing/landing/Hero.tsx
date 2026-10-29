@@ -22,8 +22,8 @@ export const HERO_SCENE_LABEL = `Example: ${HERO_NOTES.length} messages from Ins
 /**
  * The first screen (C-155, reworked C-157): the headline, who it is for, the two ways in, and the
  * inbox, server-rendered already sorted, so the first frame means something with or without script.
- * Once the page is idle, landing-motion.ts plays one short sort (a new message lands on top and
- * moves to its place, about a second, transforms only) and holds. The headline is the page's
+ * About 1.5 s after load, at an idle moment, landing-motion.ts plays one short sort (a new message
+ * lands on top and moves to its place, 1.2 s, transforms only) and holds. The headline is the page's
  * largest paint and never moves.
  */
 export function Hero() {
