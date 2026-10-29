@@ -174,7 +174,7 @@ jobs:
 
       - name: Build and push the API image
         if: matrix.image == 'api'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: apps/api
           file: apps/api/Dockerfile
@@ -192,7 +192,7 @@ jobs:
       # secrets. CLERK_SECRET_KEY is not here: the VM passes it at run time (web.env).
       - name: Build and push the web image
         if: matrix.image == 'web'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile
