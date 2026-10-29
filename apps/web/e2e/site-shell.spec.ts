@@ -16,6 +16,8 @@ test.describe("site shell", () => {
     await expect(menu).toBeVisible();
     await expect(menu.getByRole("link", { name: "Sign in" })).toBeVisible();
     await expect(menu.getByRole("link", { name: "Start free" })).toHaveCount(0);
+    // The panel opens with a short scale-in; measure once it has settled.
+    await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((animation) => animation.finished)));
     // Touch targets: the menu's links are 48 px, the bar's Start free 44 px.
     const linkBox = await menu.getByRole("link", { name: "Pricing" }).boundingBox();
     expect(linkBox?.height).toBeGreaterThanOrEqual(48);
