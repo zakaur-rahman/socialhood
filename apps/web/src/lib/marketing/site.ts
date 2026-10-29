@@ -188,6 +188,7 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
       title: "Resources",
       links: [
         { label: "Guides", href: "/guides" },
+        { label: "Common questions", href: "/faq" },
         { label: "AI info", href: "/ai-info" },
         { label: "Safety", href: "/safety" },
         { label: "Contact", href: "/contact" },
@@ -252,6 +253,8 @@ export const PUBLIC_PATHS = [
   "/cookies",
   "/dpa",
   "/accessibility",
+  // C-157: every question, out of the landing page
+  "/faq",
 ] as const;
 
 /**
@@ -268,7 +271,7 @@ export const ROBOTS_DISALLOW = ["/app$", "/app/", "/w/", "/sign-in", "/sign-up",
  * A build date would tell crawlers every page changed on every deploy, which isn't true.
  */
 export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>> = {
-  "/": "2026-10-29",
+  "/": "2026-10-30",
   "/pricing": "2026-10-29",
   "/switch-from-manychat": "2026-10-29",
   "/compare/manychat": "2026-10-29",
@@ -292,4 +295,5 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/for-businesses": "2026-10-29",
   "/safety": "2026-10-29",
   "/ai-info": "2026-10-29",
+  "/faq": "2026-10-30",
 };

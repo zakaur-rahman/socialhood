@@ -29,6 +29,7 @@ export function llmsText(origin: string = siteUrl()): string {
     "",
     link("Home", "/", "what the product does, how it works, plans and common questions"),
     link("Pricing", "/pricing", "plans and every limit side by side"),
+    link("Common questions", "/faq", "every question we answer: the AI, Instagram and WhatsApp, plans, AI credits and support"),
     link("For creators", "/for-creators", "comment-to-DM, scheduling, AI replies from your notes, comment analysis"),
     link("For businesses", "/for-businesses", "one inbox for Instagram, WhatsApp and website chat, AI from your knowledge, leads"),
     link("All comparisons", COMPARE_PATH, "how Amplychat compares with other tools"),

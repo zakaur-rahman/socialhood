@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { SECTION_IDS } from "@/lib/marketing/site";
@@ -10,6 +12,8 @@ type Integration = {
   tone: "live" | "waiting" | "yours";
   /** The mark beside the name: a platform colour, or none. */
   mark?: string;
+  /** A guide that explains it (LP-4.10). */
+  guide?: { label: string; href: string };
 };
 
 // One line each, and the honest status: what runs today, what waits for Meta's approval, what
@@ -27,6 +31,7 @@ export const INTEGRATIONS: Integration[] = [
   {
     name: "WhatsApp",
     body: "A WhatsApp Business number your business owns, through Meta's Embedded Signup. Meta bills its fees to you.",
+    guide: { label: "The WhatsApp Business API, explained", href: "/guides/whatsapp-business-api-vs-app" },
     status: "Official API",
     tone: "live",
     mark: "var(--wa)",
@@ -58,12 +63,6 @@ export const INTEGRATIONS: Integration[] = [
     tone: "waiting",
   },
   {
-    name: "Razorpay and UPI",
-    body: "Payment links and UPI requests in the chat. The money goes to your own account, never through us.",
-    status: "Your own account",
-    tone: "yours",
-  },
-  {
     name: "Google Sheets",
     body: "Send leads to a spreadsheet you own, as they arrive.",
     status: "Pro and Max",
@@ -77,40 +76,55 @@ export const INTEGRATIONS: Integration[] = [
   },
 ];
 
+/**
+ * Payments, as one quiet line under the connections (C-157): India's rails, not a headline item on
+ * a global page. Built: razorpay/ (payment links, UPI requests), to the business's own account.
+ */
+export const PAYMENTS = "Razorpay payment links and UPI requests in the chat, for businesses in India. The money goes to your own account, never through us.";
+
 const DOT = { live: "var(--ok)", waiting: "var(--wait-mark)", yours: "var(--iris)" } as const;
 
-/** What Amplychat connects to, a row each with one line and an honest status (C-155). */
-export function Channels() {
+/**
+ * What Amplychat connects to (C-155), inside the Features section since C-157: a grid of each
+ * connection with one line and an honest status, then the payments line.
+ */
+export function Connections() {
   return (
-    <section className="sec" id={SECTION_IDS.integrations} aria-labelledby="integrations-title" style={{ paddingTop: 40 }}>
-      <div className="wrap">
-        <div className="split-head">
-          <div>
-            <p className="kicker">Integrations</p>
-            <h2 id="integrations-title" className="h2">
-              Connects to where your customers are
-            </h2>
-          </div>
-          <p className="lede">
-            Instagram and WhatsApp connect only through Meta&apos;s official APIs, and we never ask for your password. Each row
-            says what runs today.
-          </p>
-        </div>
-        <ul className="chan">
-          {INTEGRATIONS.map((item) => (
-            <li key={item.name} className="crow">
-              <h3 style={item.mark ? ({ "--c": item.mark } as CSSProperties) : undefined}>
-                <i aria-hidden />
-                {item.name}
-              </h3>
-              <p>{item.body}</p>
-              <span className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
-                {item.status}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <div className="conn" id={SECTION_IDS.integrations}>
+      <div className="split-head">
+        <h3 id="integrations-title" className="h-sec">
+          Connects to where your customers are
+        </h3>
+        <p className="lede">
+          Instagram and WhatsApp connect only through Meta&apos;s official APIs, and we never ask for your password. Each one
+          says what runs today.
+        </p>
       </div>
-    </section>
+      <ul className="chan">
+        {INTEGRATIONS.map((item) => (
+          <li key={item.name} className="crow">
+            <h4 style={item.mark ? ({ "--c": item.mark } as CSSProperties) : undefined}>
+              <i aria-hidden />
+              {item.name}
+            </h4>
+            <p>
+              {item.body}
+              {item.guide ? (
+                <>
+                  {" "}
+                  <Link href={item.guide.href as Route}>{item.guide.label}</Link>
+                </>
+              ) : null}
+            </p>
+            <span className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
+              {item.status}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="pay">
+        <b>Payments.</b> {PAYMENTS}
+      </p>
+    </div>
   );
 }

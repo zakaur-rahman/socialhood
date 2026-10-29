@@ -155,7 +155,7 @@ export function SolutionPageView({ page, pricing }: { page: SolutionPage; pricin
         </Container>
       </section>
 
-      <Faq items={page.faq} lede="Short answers about safety, the AI and the plans." />
+      <Faq items={page.faq} eyebrow="FAQ" lede="Short answers about safety, the AI and the plans." />
 
       <section aria-labelledby="related-title" className="band">
         <Container className="max-w-3xl">

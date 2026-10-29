@@ -112,6 +112,7 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/cookies",
       "https://socialhood.example/dpa",
       "https://socialhood.example/accessibility",
+      "https://socialhood.example/faq",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.

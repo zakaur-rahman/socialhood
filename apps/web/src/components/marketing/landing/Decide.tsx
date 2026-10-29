@@ -1,11 +1,10 @@
-import { CircleAlert, Clock, ListOrdered, Truck } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { MotionToggle } from "@/components/site/MotionToggle";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
 import { KNOWLEDGE, SHOP } from "./data";
-
-const DOC_ICON = { list: ListOrdered, truck: Truck, clock: Clock } as const;
 
 /** The four things the AI does with a message, from the feature cards. */
 export const DECIDE_STEPS = [
@@ -27,42 +26,39 @@ const DRAFT: [string, ("a" | "b" | "c")?][] = [
 ];
 
 /**
- * "How it works" on a night band (C-155): the shop's knowledge on the left, a conversation on the
- * right. The AI's draft points to the lines it used, and a question the knowledge doesn't cover
- * goes to Needs you as a gap. Server-rendered with every step shown; on wide screens the scroll
- * scrubs it (a scan over the knowledge, wires to the cited words, the draft writing itself), on
- * phones it plays when on screen, and with reduced motion it stays as rendered.
+ * "How it works" on a night band (C-155; C-157 makes it the page's one peak): the shop's knowledge
+ * on the left, a conversation on the right. The AI's draft points to the lines it used, and a
+ * question the knowledge doesn't cover goes to Needs you as a gap. The heading sits inside the
+ * pinned frame, and the frame opens on the customer's question, already tagged, never empty.
+ * Server-rendered with every step shown; on wide screens about one screen of scroll plays it (a scan
+ * over the knowledge, wires to the cited words, the draft writing itself, the hand-off and the gap),
+ * on phones it plays once when on screen (with a pause control), and with reduced motion it stays
+ * as rendered.
  */
 export function Decide() {
   return (
-    <section className="night" id={SECTION_IDS.howItWorks} aria-labelledby="decide-title" data-decide="">
-      <div className="wrap decide-head">
-        <p className="kicker">How it works</p>
-        <h2 id="decide-title" className="h2">
-          AI replies from your own knowledge
-        </h2>
-        <p className="lede">
-          The AI is instructed to answer only from your knowledge base and your conversation. When the answer isn&apos;t
-          there, it doesn&apos;t guess: it hands the conversation to you and records the question as a knowledge gap.
-        </p>
-      </div>
+    <section className="night decide" id={SECTION_IDS.howItWorks} aria-labelledby="decide-title" data-decide="" data-motion-scope="">
       <div className="decide-scrub" data-decide-scrub="">
-        <div className="decide-sticky">
+        <div className="decide-sticky" data-decide-sticky="">
           <div className="wrap">
+            <div className="decide-head">
+              <h2 id="decide-title" className="h2">
+                AI replies from your own knowledge
+              </h2>
+              <p className="lede">
+                The AI is instructed to answer only from your knowledge base and your conversation. When the answer isn&apos;t
+                there, it doesn&apos;t guess: it hands the conversation to you and records the question as a knowledge gap.
+              </p>
+            </div>
             <div className="decide-grid" data-dgrid="">
-              <div className="kb" data-kb="">
+              <div className="kb" data-kb="" data-ui="">
                 <div className="kb-h">
                   <span>{SHOP}&apos;s knowledge</span>
                   <span>{KNOWLEDGE.length} sources</span>
                 </div>
-                {KNOWLEDGE.map((doc) => {
-                  const Icon = DOC_ICON[doc.icon];
-                  return (
+                {KNOWLEDGE.map((doc) => (
                     <div key={doc.title} className="doc">
-                      <h3>
-                        <Icon className="size-3.5" aria-hidden />
-                        {doc.title}
-                      </h3>
+                      <p className="doc-h">{doc.title}</p>
                       <ul>
                         {doc.lines.map((line) => (
                           <li key={line.text} className={line.cite ? "line hit" : "line"} data-m={line.cite}>
@@ -72,12 +68,11 @@ export function Decide() {
                         ))}
                       </ul>
                     </div>
-                  );
-                })}
+                ))}
                 <div className="scan" data-scan="" aria-hidden />
               </div>
               <svg className="wires" data-wires="" aria-hidden />
-              <div className="thread">
+              <div className="thread" data-ui="">
                 <div className="thread-h">
                   <span className="av" style={{ "--bg": "var(--av-1)" } as CSSProperties}>
                     M
@@ -89,10 +84,14 @@ export function Decide() {
                       Instagram DM
                     </span>
                   </span>
+                  <MotionToggle className="decide-toggle" label="Pause the example" />
                 </div>
                 <div className="thread-b">
-                  <p className="bub in fx" data-q1="">
+                  <p className="bub in" data-q1="">
                     Is the linen shirt in M? Do you deliver to Toronto? How long does it take?
+                  </p>
+                  <p className="read fx" data-read="">
+                    Tagged: product question
                   </p>
                   <div className="ddraft fx" data-draft="">
                     <div className="ddraft-h">

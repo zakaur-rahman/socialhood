@@ -1,5 +1,8 @@
-import { Hand, Link2, MessageCircle, MessageSquareReply, Send, Video } from "lucide-react";
+import { Hand, Link2, MessageCircle, MessageSquareReply, Send } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties } from "react";
+
+import { MotionToggle } from "@/components/site/MotionToggle";
 
 import { CREATOR, COMMENT_STREAM, DEFAULT_KEYWORD, DM_SCRIPT } from "./data";
 
@@ -20,42 +23,34 @@ function seedComments() {
     .map((comment) => ({ ...comment, text: comment.text.replace("{K}", DEFAULT_KEYWORD).replace("{k}", DEFAULT_KEYWORD.toLowerCase()) }));
 }
 
-/** The comment summary under the scene: example counts. */
-const SUMMARY = [
-  { key: "k-ask", label: "31 asked for the link", share: 31 },
-  { key: "k-other", label: "14 other comments, mostly positive", share: 14 },
-  { key: "k-spam", label: "3 spam, hidden", share: 3 },
-];
-
 /**
  * "Comment LINK, get the link in a DM" (C-155): a creator's Reel, the automation, and the DM it
  * sends. Server-rendered with a few comments and a finished DM; when it comes on screen (and motion
- * is allowed) comments keep arriving, the ones with the keyword light up and a DM is sent for each.
- * The keyword field changes the keyword the scene listens for.
+ * is allowed) one round of comments arrives, the ones with the keyword light up and a DM is sent for
+ * each, then it holds (C-157: no endless loop, and a pause control while it plays). The keyword
+ * field changes the keyword the scene listens for.
  */
 export function Comments() {
   const sample = COMMENT_STREAM.find((comment) => comment.match && comment.name)!;
   return (
-    <section className="sec" id="automations" aria-labelledby="automations-title">
+    <section className="sec" id="automations" aria-labelledby="automations-title" data-motion-scope="">
       <div className="wrap">
         <div className="split-head">
-          <div>
-            <p className="kicker">Automations</p>
-            <h2 id="automations-title" className="h2">
-              Comment LINK, get the link in a DM
-            </h2>
-          </div>
+          <h2 id="automations-title" className="h2">
+            Comment LINK, get the link in a DM
+          </h2>
           <p className="lede">
             Turn comments into conversations, the way Instagram allows. Replies are queued to stay within Instagram&apos;s
-            sending limits, so a busy post is handled safely.
+            sending limits, so a busy post is handled safely.{" "}
+            <Link href="/guides/comment-to-dm-automations">Read the comment-to-DM guide</Link>
           </p>
         </div>
 
         <div className="machine" data-machine="">
-          <div className="post">
+          <div className="post" data-ui="">
             <div className="post-img" aria-hidden>
               <span className="reel">Reel</span>
-              <Video className="size-16" strokeWidth={1.25} />
+              <span className="cover">My studio tour</span>
             </div>
             <p className="post-cap">
               <b>{CREATOR.handle}</b> {CREATOR.post}
@@ -76,7 +71,7 @@ export function Comments() {
             </ul>
           </div>
 
-          <div className="rule" data-rule="">
+          <div className="rule" data-rule="" data-ui="">
             <h3 className="rule-h">Automation on this Reel</h3>
             <ol className="rsteps">
               {STEPS.map(({ icon: Icon, title, body }, index) => (
@@ -104,7 +99,7 @@ export function Comments() {
             </p>
           </div>
 
-          <div className="dm">
+          <div className="dm" data-ui="">
             <div className="dm-h">
               <span className="av" data-dm-av="" style={avatar(sample.avatar)} aria-hidden>
                 {sample.user.charAt(0).toUpperCase()}
@@ -134,23 +129,9 @@ export function Comments() {
           </span>
         </div>
 
-        <div className="summary">
-          <div className="bar" aria-hidden>
-            {SUMMARY.map((item) => (
-              <span key={item.key} className={item.key} style={{ flex: item.share }} />
-            ))}
-          </div>
-          <ul className="legend">
-            {SUMMARY.map((item) => (
-              <li key={item.key}>
-                <i className={item.key} aria-hidden />
-                {item.label}
-              </li>
-            ))}
-          </ul>
-          <p className="total">
-            <b className="num">48</b>comments, with sentiment, topics and a summary
-          </p>
+        <div className="machine-foot">
+          <p className="cap">Example data</p>
+          <MotionToggle label="Pause the example" />
         </div>
       </div>
     </section>

@@ -74,53 +74,85 @@ export const FAQ_MADE_UP: FaqItem = {
     "The AI is instructed to answer only from your knowledge base and your conversation. When the answer isn't there, it doesn't guess: it hands the conversation to you and records the question as a knowledge gap.",
 };
 
-/** The landing page's questions: the product guide's "Common questions", plus its WhatsApp costs. */
+export const FAQ_AUTO_REPLY: FaqItem = {
+  question: "Can Amplychat reply to my customers automatically?",
+  answer:
+    "Yes. With Auto mode (Pro), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to \"Needs you\" for a person to answer. On Free, the AI suggests replies and you send them.",
+};
+
+export const FAQ_ACCOUNTS: FaqItem = {
+  question: "Can I connect more than one Instagram account?",
+  answer: "Yes. Free includes 1 account per platform, and Pro includes 3.",
+};
+
+export const FAQ_24_HOURS: FaqItem = {
+  question: "Why can't I message a customer who wrote to me days ago?",
+  answer:
+    "Instagram only allows businesses to message a customer within 24 hours of the customer's last message. Once they write again, you can reply. Amplychat shows when this window closes.",
+};
+
+export const FAQ_FOLLOW_GATE: FaqItem = {
+  question: "Can my automation require people to follow me before sending the link?",
+  answer:
+    "No. Instagram's rules don't allow making a follow a condition. Amplychat can politely invite people to follow, and it always sends what they asked for.",
+};
+
+export const FAQ_POSTS: FaqItem = {
+  question: "Does Amplychat post to my account without asking?",
+  answer:
+    "No. It only publishes posts you create and schedule. Ask Amplychat never publishes, sends or changes anything by itself.",
+};
+
+export const FAQ_MOBILE: FaqItem = {
+  question: "Is there a mobile app?",
+  answer:
+    "Amplychat works in any modern browser on phone and computer, and you can install it as an app from the browser to get push notifications. On iPhone, add it to your Home Screen first (iOS 16.4 or later).",
+};
+
+export const FAQ_CREDITS: FaqItem = {
+  question: "What happens when I run out of AI credits?",
+  answer: "AI features pause until your credits reset or you upgrade. Everything else keeps working.",
+};
+
+export const FAQ_CANCEL: FaqItem = {
+  question: "Can I cancel anytime?",
+  answer: "Yes. Pro stays active until the end of the period you've paid for, then your workspace moves to Free.",
+};
+
+export const FAQ_SUPPORT: FaqItem = {
+  question: "How do I contact support?",
+  answer: `Email ${SUPPORT_EMAIL}.`,
+};
+
+/**
+ * The landing page's questions (C-157: 8 of them, the ones a visitor asks before signing up, the
+ * creator questions among them). The FAQPage JSON-LD on / repeats exactly these; /faq has them all.
+ */
 export const FAQ: FaqItem[] = [
-  {
-    question: "Can Amplychat reply to my customers automatically?",
-    answer:
-      "Yes. With Auto mode (Pro), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to \"Needs you\" for a person to answer. On Free, the AI suggests replies and you send them.",
-  },
+  FAQ_AUTO_REPLY,
   FAQ_MADE_UP,
-  FAQ_PROFESSIONAL,
-  FAQ_PASSWORD,
   FAQ_TAKEOVER,
-  {
-    question: "Can I connect more than one Instagram account?",
-    answer: "Yes. Free includes 1 account per platform, and Pro includes 3.",
-  },
-  {
-    question: "Why can't I message a customer who wrote to me days ago?",
-    answer:
-      "Instagram only allows businesses to message a customer within 24 hours of the customer's last message. Once they write again, you can reply. Amplychat shows when this window closes.",
-  },
   FAQ_BAN_RISK,
-  {
-    question: "Can my automation require people to follow me before sending the link?",
-    answer:
-      "No. Instagram's rules don't allow making a follow a condition. Amplychat can politely invite people to follow, and it always sends what they asked for.",
-  },
-  {
-    question: "Does Amplychat post to my account without asking?",
-    answer:
-      "No. It only publishes posts you create and schedule. Ask Amplychat never publishes, sends or changes anything by itself.",
-  },
-  {
-    question: "Is there a mobile app?",
-    answer:
-      "Amplychat works in any modern browser on phone and computer, and you can install it as an app from the browser to get push notifications. On iPhone, add it to your Home Screen first (iOS 16.4 or later).",
-  },
-  {
-    question: "What happens when I run out of AI credits?",
-    answer: "AI features pause until your credits reset or you upgrade. Everything else keeps working.",
-  },
+  FAQ_PASSWORD,
+  FAQ_PROFESSIONAL,
+  FAQ_FOLLOW_GATE,
   FAQ_WHATSAPP_FEES,
-  {
-    question: "Can I cancel anytime?",
-    answer: "Yes. Pro stays active until the end of the period you've paid for, then your workspace moves to Free.",
-  },
-  {
-    question: "How do I contact support?",
-    answer: `Email ${SUPPORT_EMAIL}.`,
-  },
 ];
+
+/** The /faq page (C-157): every question the site answers, in groups. Its FAQPage JSON-LD lists the same, in order. */
+export const FAQ_GROUPS: { id: string; title: string; items: FaqItem[] }[] = [
+  { id: "the-ai", title: "The AI", items: [FAQ_AUTO_REPLY, FAQ_MADE_UP, FAQ_ROBOTIC, FAQ_TAKEOVER] },
+  {
+    id: "instagram-and-whatsapp",
+    title: "Instagram and WhatsApp",
+    items: [FAQ_PROFESSIONAL, FAQ_PASSWORD, FAQ_ACCOUNTS, FAQ_24_HOURS, FAQ_BAN_RISK, FAQ_FOLLOW_GATE, FAQ_POSTS],
+  },
+  { id: "plans", title: "Plans and billing", items: [FAQ_FREE_LIMIT, FAQ_CREDITS, FAQ_WHATSAPP_FEES, FAQ_CANCEL] },
+  { id: "the-app", title: "The app and support", items: [FAQ_MOBILE, FAQ_SUPPORT] },
+];
+
+/** Every question on /faq, in the page's order. */
+export const FAQ_ALL: FaqItem[] = FAQ_GROUPS.flatMap((group) => group.items);
+
+/** Where the full list lives. */
+export const FAQ_PATH = "/faq";

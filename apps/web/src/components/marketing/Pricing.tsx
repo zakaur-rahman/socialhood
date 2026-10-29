@@ -122,7 +122,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
       <div className="wrap">
         <div className="split-head">
           <div>
-            <p className={SECTION_EYEBROW}>Pricing</p>
+            {headingLevel === 1 ? <p className={SECTION_EYEBROW}>Pricing</p> : null}
             <Heading id="pricing-title" className={headingLevel === 1 ? PAGE_HEADING : UTILITY_TITLE}>
               Start free, upgrade when you grow
             </Heading>

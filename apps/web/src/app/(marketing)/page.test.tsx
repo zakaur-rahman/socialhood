@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HERO_SCENE_LABEL, HERO_TITLE } from "@/components/marketing/landing/Hero";
-import { FAQ } from "@/lib/marketing/faq";
+import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
 import { SITE_DESCRIPTION } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
 
@@ -49,29 +49,50 @@ describe("the landing page", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
       "AI replies from your own knowledge",
       "Comment LINK, get the link in a DM",
-      "Let the AI draft or reply",
-      "Everything your customer conversations need",
-      "Connects to where your customers are",
+      "Off, Suggest or Auto, for each account",
       "Your customers' messages, handled with care",
+      "Who it's for",
+      "Everything your customer conversations need",
+      "Set up in three steps",
       "Start free, upgrade when you grow",
       "Common questions",
       "Bring every customer conversation into one inbox",
     ]);
-    for (const id of ["how-it-works", "automations", "modes", "features", "integrations", "pricing", "faq"]) {
-      expect(container.querySelector(`section#${id}`)).not.toBeNull();
-    }
+    // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
+    expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
+      "hero",
+      "strip",
+      "how-it-works",
+      "automations",
+      "modes",
+      "security",
+      "who-its-for",
+      "features",
+      "setup",
+      "pricing",
+      "faq",
+      "night close",
+    ]);
+    expect(container.querySelector("section#features #integrations")).not.toBeNull();
+    // No labels over the headings (C-157).
+    expect(container.querySelectorAll("main .kicker")).toHaveLength(0);
 
     // Hero: the two ways in, the facts, and the scene as one labelled picture of example data.
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
     expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
+    expect(screen.getByText("For small businesses and creators:")).toBeInTheDocument();
+    expect(screen.getByText(/AI inbox and automations for Instagram, WhatsApp and website chat/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: HERO_SCENE_LABEL })).toBeInTheDocument();
     // The server renders the sorted inbox: what needs a person comes first.
     const tags = [...container.querySelectorAll(".note .tag")].map((tag) => tag.textContent);
     expect(tags.slice(0, 2)).toEqual(["Needs you", "Needs you"]);
 
-    // The strip's numbers come from the plan table.
-    expect(screen.getByRole("region", { name: "The product in numbers" })).toHaveTextContent("200 AI credits");
+    // The strip's numbers come from the plan table, and no fact repeats the hero's (C-157).
+    const strip = screen.getByRole("region", { name: "The product in numbers" });
+    expect(strip).toHaveTextContent("200 AI credits");
+    expect(strip).toHaveTextContent("50 website chats");
+    expect(strip).not.toHaveTextContent("Official Meta APIs");
 
     // How it works: the draft cites the knowledge it used, and a gap goes to a person.
     const how = within(container.querySelector("section#how-it-works") as HTMLElement);
@@ -85,11 +106,12 @@ describe("the landing page", () => {
     expect(automations.getByText(/Never a condition for getting the link/)).toBeInTheDocument();
     expect(automations.getByRole("textbox", { name: "The keyword is yours" })).toHaveValue("LINK");
 
-    // Modes: a pressed Suggest, with Auto marked Pro, and the three setup steps.
+    // Modes: a pressed Suggest, with Auto marked Pro; the three setup steps have their own band.
     const modes = within(container.querySelector("section#modes") as HTMLElement);
     expect(modes.getByRole("button", { name: "Suggest" })).toHaveAttribute("aria-pressed", "true");
     expect(modes.getByRole("button", { name: /Auto/ })).toHaveTextContent("Pro");
-    expect(modes.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+    const setup = within(container.querySelector("section#setup") as HTMLElement);
+    expect(setup.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Connect your accounts",
       "Add your knowledge",
       "Let the AI draft or reply",
@@ -98,16 +120,31 @@ describe("the landing page", () => {
     // Features and product rules.
     expect(screen.getByRole("heading", { name: "Ask Amplychat" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
-    // Integrations: each with an honest status.
-    const integrations = within(container.querySelector("section#integrations") as HTMLElement);
-    expect(integrations.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+    // Who it's for: the two audience pages.
+    const audience = within(container.querySelector("section#who-its-for") as HTMLElement);
+    expect(audience.getByRole("link", { name: "For creators" })).toHaveAttribute("href", "/for-creators");
+    expect(audience.getByRole("link", { name: "For businesses" })).toHaveAttribute("href", "/for-businesses");
+    // Deep links to the feature pages, the guides and the comparisons (LP-4.10).
+    for (const href of [
+      "/features/ai-inbox",
+      "/features/comment-intelligence",
+      "/features/publishing",
+      "/compare",
+      "/guides/comment-to-dm-automations",
+      "/guides/whatsapp-business-api-vs-app",
+      "/security",
+    ]) {
+      expect(container.querySelector(`main a[href="${href}"]`), href).not.toBeNull();
+    }
+    // Integrations: each with an honest status; payments are one line, not a headline item.
+    const integrations = within(container.querySelector("#integrations") as HTMLElement);
+    expect(integrations.getAllByRole("heading", { level: 4 }).map((h) => h.textContent)).toEqual([
       "Instagram",
       "WhatsApp",
       "Website chat",
       "Facebook Pages",
       "Live comments and ad replies",
       "Shopify",
-      "Razorpay and UPI",
       "Google Sheets",
       "Zapier and the public API",
     ]);
@@ -116,6 +153,7 @@ describe("the landing page", () => {
     expect(integrations.getAllByText("Official API")).toHaveLength(2);
     // Insights wait for a permission production doesn't ask for yet.
     expect(integrations.getByText(/Post insights follow Meta's approval/)).toBeInTheDocument();
+    expect(integrations.getByText(/Razorpay payment links and UPI requests/)).toBeInTheDocument();
 
     // No language marketing (C-155).
     expect(container.textContent).not.toMatch(/Hindi|Hinglish/);
@@ -124,12 +162,19 @@ describe("the landing page", () => {
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
     expect(pricing.getByText("₹999")).toBeInTheDocument();
 
-    // FAQ: every question, as a native disclosure.
+    // FAQ: the eight most asked, as native disclosures, and a link to every question on /faq.
+    expect(FAQ.length).toBeGreaterThanOrEqual(6);
+    expect(FAQ.length).toBeLessThanOrEqual(8);
+    expect(FAQ_ALL.length).toBeGreaterThan(FAQ.length);
     expect(container.querySelectorAll("section#faq details")).toHaveLength(FAQ.length);
     expect(screen.getByRole("heading", { level: 3, name: "Will the AI make things up?" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See all questions" })).toHaveAttribute("href", "/faq");
 
-    // The closing claims Pro's trial only while Pro is on sale.
+    // The closing claims Pro's trial only while Pro is on sale; one action, and the email as a line of text.
     expect(screen.getByText("7-day trial of Pro")).toBeInTheDocument();
+    const close = container.querySelector("section.close") as HTMLElement;
+    expect(within(close).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/sign-up", "mailto:support@amplychat.com"]);
+    expect(close.querySelector(".falling")).toBeNull();
 
     // Structured data with only true fields, and the FAQ exactly as written on the page.
     const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];

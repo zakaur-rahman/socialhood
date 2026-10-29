@@ -6,25 +6,33 @@
  * moving scenes play the same messages the still frame shows.
  */
 
-/** Where a message came from: the mark colour (a site.css variable) and its label. */
+/**
+ * Where a message came from: the mark colour (a site.css variable) and its label. The three channel
+ * colours are the page's one graphic motif (C-157): a comment is Instagram's colour drawn as a ring,
+ * not a second pink.
+ */
 export const SOURCES = {
   dm: { label: "Instagram DM", colour: "var(--ig)" },
-  comment: { label: "Comment on your Reel", colour: "var(--cm)" },
+  comment: { label: "Comment on your Reel", colour: "var(--ig)" },
   whatsapp: { label: "WhatsApp", colour: "var(--wa)" },
   web: { label: "Website chat", colour: "var(--web)" },
 } as const;
 
 export type SourceKey = keyof typeof SOURCES;
+
+/** The three channels, in the motif's order: Instagram, WhatsApp, website chat. */
+export const CHANNELS = ["dm", "whatsapp", "web"] as const satisfies readonly SourceKey[];
 /** A chip's tone: the site's tag classes. */
 export type Tone = "need" | "draft" | "ok" | "stop" | "plain";
 
-export type HeroNote = { source: SourceKey; name: string; text: string; ago: string; tag: string; tone: Tone };
+/** `arrives`: the newest message, which the one-shot sort lands on top and moves to its place. */
+export type HeroNote = { source: SourceKey; name: string; text: string; ago: string; tag: string; tone: Tone; arrives?: boolean };
 
 /** The hero's inbox, sorted as the inbox sorts it: what needs a person first. */
 export const HERO_NOTES: HeroNote[] = [
   { source: "dm", name: "Sam K.", text: "Can I talk to a person, please?", ago: "9m", tag: "Needs you", tone: "need" },
   { source: "whatsapp", name: "Leo M.", text: "My order arrived damaged", ago: "31m", tag: "Needs you", tone: "need" },
-  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", ago: "2m", tag: "AI draft", tone: "draft" },
+  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", ago: "2m", tag: "AI draft", tone: "draft", arrives: true },
   { source: "whatsapp", name: "Nina", text: "What time do you open on Sunday?", ago: "26m", tag: "AI draft", tone: "draft" },
   { source: "dm", name: "Theo", text: "Do you deliver to Toronto?", ago: "12m", tag: "AI draft", tone: "draft" },
   { source: "web", name: "Visitor", text: "Do you take bulk orders?", ago: "5m", tag: "Lead", tone: "ok" },
@@ -33,10 +41,9 @@ export const HERO_NOTES: HeroNote[] = [
 ];
 
 /** The shop's knowledge in the "how it works" scene; `cite` marks the lines the draft uses. */
-export const KNOWLEDGE: { title: string; icon: "list" | "truck" | "clock"; lines: { text: string; right?: string; cite?: "a" | "b" | "c" }[] }[] = [
+export const KNOWLEDGE: { title: string; lines: { text: string; right?: string; cite?: "a" | "b" | "c" }[] }[] = [
   {
     title: "Price list",
-    icon: "list",
     lines: [
       { text: "Linen shirt · Blue, White, Sage · S to XL", right: "$39", cite: "a" },
       { text: "Denim jacket · M, L", right: "$79" },
@@ -45,7 +52,6 @@ export const KNOWLEDGE: { title: string; icon: "list" | "truck" | "clock"; lines
   },
   {
     title: "Delivery FAQ",
-    icon: "truck",
     lines: [
       { text: "Orders ship within 2 working days.", cite: "b" },
       { text: "Delivery takes 3 to 5 days.", cite: "c" },
@@ -54,7 +60,6 @@ export const KNOWLEDGE: { title: string; icon: "list" | "truck" | "clock"; lines
   },
   {
     title: "Opening hours",
-    icon: "clock",
     lines: [{ text: "Monday to Saturday, 10 AM to 7 PM." }, { text: "Sunday, 12 PM to 5 PM." }],
   },
 ];
@@ -134,10 +139,10 @@ export const MODES: Record<ModeKey, { label: string; description: string; outcom
   },
 };
 
-/** The closing scene's inbox rows. */
-export const MINI_ROWS: { source: SourceKey; name: string; text: string; tag: string; tone: Tone; falling: boolean }[] = [
-  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", tag: "AI draft", tone: "draft", falling: true },
-  { source: "whatsapp", name: "Nina", text: "What time do you open on Sunday?", tag: "AI draft", tone: "draft", falling: true },
-  { source: "comment", name: "ana.wears", text: "LINK", tag: "Sent by DM", tone: "ok", falling: true },
-  { source: "web", name: "Visitor", text: "Do you take bulk orders?", tag: "Needs you", tone: "need", falling: false },
+/** The closing scene's inbox rows: a still inbox (C-157: no loop). */
+export const MINI_ROWS: { source: SourceKey; name: string; text: string; tag: string; tone: Tone }[] = [
+  { source: "web", name: "Visitor", text: "Do you take bulk orders?", tag: "Needs you", tone: "need" },
+  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", tag: "AI draft", tone: "draft" },
+  { source: "whatsapp", name: "Nina", text: "What time do you open on Sunday?", tag: "AI draft", tone: "draft" },
+  { source: "comment", name: "ana.wears", text: "LINK", tag: "Sent by DM", tone: "ok" },
 ];
