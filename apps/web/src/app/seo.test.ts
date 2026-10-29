@@ -4,7 +4,16 @@ import { LEGAL } from "@/lib/legal";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
 import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
-import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
+import {
+  DEFAULT_SITE_URL,
+  OG_IMAGE,
+  PUBLIC_PATHS,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_TITLE_LINE,
+  siteUrl,
+} from "@/lib/marketing/site";
 
 import { metadata as accessibility } from "./(marketing)/accessibility/page";
 import { metadata as cookies } from "./(marketing)/cookies/page";
@@ -229,5 +238,22 @@ describe("one English site, no Hinglish page (C-155)", () => {
     expect(entries.some((entry) => /\/hi$|hinglish/.test(entry.url))).toBe(false);
     expect(llmsText("https://socialhood.example")).not.toMatch(/\/hi\b|hinglish|hindi|india/i);
     expect(GUIDES.some((guide) => guide.slug === "replying-in-hinglish")).toBe(false);
+  });
+});
+
+describe("the positioning line (C-157)", () => {
+  it("names Instagram, WhatsApp and website chat in the title, description, tagline, share alt, JSON-LD and llms.txt", () => {
+    expect(SITE_TAGLINE).toMatch(/Instagram, WhatsApp and website chat/);
+    expect(SITE_TITLE_LINE).toMatch(/Instagram, WhatsApp and web chat/);
+    expect(`${SITE_NAME} · ${SITE_TITLE_LINE}`.length).toBeLessThanOrEqual(60);
+    expect(SITE_DESCRIPTION).toMatch(/Instagram DMs and comments, WhatsApp and your website chat/);
+    expect(SITE_DESCRIPTION).toMatch(/comment-to-DM/);
+    expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    expect(OG_IMAGE.alt).toMatch(/Every DM\. Every comment\. One inbox\./);
+    expect(OG_IMAGE.alt).toMatch(/website chat/);
+    expect(OG_IMAGE).toMatchObject({ url: "/og.png", width: 1200, height: 630 });
+    const llms = llmsText("https://socialhood.example");
+    expect(llms).toContain(SITE_DESCRIPTION);
+    expect(llms).toMatch(/website chat/);
   });
 });

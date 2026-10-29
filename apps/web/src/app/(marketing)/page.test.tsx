@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HERO_SCENE_LABEL, HERO_TITLE } from "@/components/marketing/landing/Hero";
 import { FAQ } from "@/lib/marketing/faq";
+import { SITE_DESCRIPTION } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
 
 import HomePage, { metadata, revalidate } from "./page";
@@ -150,6 +151,8 @@ describe("the landing page", () => {
     });
     const data = graph[2];
     expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Amplychat", url: "https://socialhood.example/" });
+    expect(data.description).toBe(SITE_DESCRIPTION);
+    expect(data.description).toMatch(/website chat/);
     expect(data.offers).toEqual([
       expect.objectContaining({ name: "Free", price: "0", priceCurrency: "INR" }),
       expect.objectContaining({ name: "Pro", price: "999.00", priceCurrency: "INR" }),
@@ -209,7 +212,7 @@ describe("the landing page", () => {
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {
     expect(revalidate).toBe(3600);
-    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox for Instagram and WhatsApp" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox for Instagram, WhatsApp and web chat" });
     expect(metadata.alternates?.canonical).toBe("/");
     expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Amplychat" });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });

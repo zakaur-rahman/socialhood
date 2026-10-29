@@ -7458,3 +7458,12 @@ Checks:
 - Screenshots were taken on a dev server on :3160 at 375, 768, 1280 and 1440.
 - e2e is left to the coordinator: the updated `landing.spec.ts` and the new `site-shell.spec.ts`
   (menu, tablet links, scrolled bar).
+
+### C-157 (og and metadata)
+- **Share image redrawn on paper** (`components/marketing/og.tsx`): `paper` canvas, `ink` text, the `iris` accent only on "One inbox.", the logo tile, the H1 "Every DM. Every comment. One inbox." in Geist 700 with tight tracking, and the line "For Instagram, WhatsApp and website chat." The colours come from `styles/tokens.ts`; no hex literals.
+- **Font:** Satori reads static TTF, not the variable woff2 `next/font` ships, so the Geist 700 static TTF (SIL OFL, from Google Fonts, 32 KB) is committed at `components/marketing/fonts/Geist-Bold.ttf` and read with `readFile(join(process.cwd(), ...))`. The route stays `force-static`: drawn once at build and cached. No new dependency.
+- **C-129 "stays dark" exception removed:** the `og.tsx` runtime reason now says it is drawn on the site's paper (C-157); the glow's `rgba(0,0,0,0)` code exception is deleted (the gradient is gone); the stale static-asset note for `og.png` is corrected.
+- **Positioning line:** one line everywhere, naming website chat and comment-to-DM. Title uses "web chat" (the title is capped at 60 characters; "website chat" gives 61). Everything else says "website chat". Judgment call, for the owner to confirm.
+- **Not touched** (other agent's scope): the footer "about" line (`SiteFooter.tsx`) still says "Instagram and WhatsApp"; change it to match `app/layout.tsx`'s default description. `gtm-pages.ts` page titles (`/features/ai-inbox` is pinned by `gr37-gtm-pages.spec.ts`) were left as they are.
+- **Canonical slash:** `canonical: "/"` is resolved by Next against `metadataBase`; it renders without the trailing slash and the JSON-LD ids use `/`. Left alone: both forms resolve to one page, and the metadata tests pin `"/"`.
+- JSON-LD: `WebSite` and `SoftwareApplication` both take `SITE_DESCRIPTION`, so they follow the new line; a test pins it.

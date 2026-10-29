@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   applicationName: SITE_NAME,
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
-  description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
+  description: "One inbox for Instagram, WhatsApp and website chat, with AI that answers from your business knowledge.",
   // Search Console, Bing Webmaster Tools and Meta domain verification: each tag only when its env var is set.
   verification: verificationMetadata(),
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
