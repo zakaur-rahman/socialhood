@@ -2,6 +2,7 @@ import { FinalCta } from "@/components/marketing/FinalCta";
 import { BreadcrumbJsonLd, JsonLd } from "@/components/marketing/JsonLd";
 import { PlanMatrix } from "@/components/marketing/PlanMatrix";
 import { Pricing } from "@/components/marketing/Pricing";
+import { WhatsAppCharges } from "@/components/marketing/WhatsAppCharges";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata, softwareApplicationJsonLd } from "@/lib/marketing/seo";
 import { PRICING_PATH } from "@/lib/marketing/gtm-pages";
@@ -17,7 +18,7 @@ export const metadata = pageMetadata({
   path: PRICING_PATH,
 });
 
-/** GR-37: the plans with prices from Dodo, then every limit from the API's plan table (C-155 look). */
+/** GR-37: the plans with prices from Dodo, every limit from the API's plan table (C-155 look), then Meta's WhatsApp charges (C-156). */
 export default async function PricingPage() {
   const pricing = buildPricing(await fetchPlans());
   const pro = pricing.plans.find((card) => card.plan === "pro");
@@ -27,6 +28,7 @@ export default async function PricingPage() {
       <BreadcrumbJsonLd name="Pricing" path={PRICING_PATH} />
       <Pricing pricing={pricing} headingLevel={1} />
       <PlanMatrix />
+      <WhatsAppCharges />
       <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
     </main>
   );

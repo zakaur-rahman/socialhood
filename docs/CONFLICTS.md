@@ -7026,3 +7026,78 @@ removed from package.json and the lockfile.
 - The plan matrix still says "Pro has a 7-day free trial" while Pro isn't on sale (the plan's
   rule, not an offer today).
 - The share image stays dark (one picture for every theme).
+
+## C-156 · Site trust pass
+
+### C-156 (pages)
+The owner approved the competitor review's "do now" list (2026-10-29). This part builds the footer,
+the audience pages, safety, what's new, the AI fact sheet, the creator FAQ, WhatsApp charges on
+pricing and the status link. Nothing here was reviewed by a lawyer.
+
+- **Footer** (`SiteFooter`, data in `lib/marketing/site.ts` `footerColumns`): Product, Solutions,
+  Compare, Resources, and Legal and trust, on the night band; the bottom bar reads "© {year} UNCHARTD
+  · Bihar, India", the official-API line and "Amplychat isn't affiliated with or endorsed by Meta.
+  Instagram and WhatsApp are trademarks of Meta Platforms, Inc." No social links. "Start free" and
+  the old "Compare and learn" list (`LEARN_LINKS`) are gone from the footer; the feature pages are
+  still linked from the audience pages and llms.txt. The grid is the about column plus five
+  columns at 1280, five columns under the about row below 1060 px, three below 900 px and two
+  below 520 px.
+- **"Bihar, India"** is `COMPANY_LOCATION` in `lib/marketing/site.ts`, because `lib/legal.ts` had no
+  location field on this branch. *To reconcile:* if the legal agent adds one to `LEGAL`, the footer
+  and /ai-info read it from there and the constant goes.
+- **Status link:** `NEXT_PUBLIC_STATUS_URL` (build time; the Dockerfile, the production workflow,
+  `.env.example` and `docs/ops/deploy-vm.md` carry it). Only an http(s) URL shows "Status" in the
+  footer's Product column; unset, it's hidden.
+- **/for-creators and /for-businesses** (`lib/marketing/solutions.ts`, `SolutionPageView`): the hero,
+  "Sounds familiar?" before and after, the features with their status (Live comments "With Meta's
+  approval"), the integrations with their honest statuses (businesses; the landing page's
+  `INTEGRATIONS`), plans by audience size ("Just starting", "Growing", "Established") mapped to
+  Free and Pro, Pro's state and price only from the plans API ("Coming soon" while billing is off),
+  the FAQ with its FAQPage JSON-LD (the same objects the page renders), related pages. No
+  testimonials. Story replies and mentions are listed as built (C-082, C-083), as the comparison
+  pages already say. Collaborators are on posts and Reels, not Stories (C-134).
+- **Answers checked against the code:** ban risk (the 750-an-hour private-reply bucket in
+  `platforms/buckets.py`, the 7-day limit); password (Instagram login, Meta's sign-up window,
+  encrypted tokens); robotic replies (tone, emoji level, do's and don'ts, sign-off in
+  `AiSettings`); take-over (`human_takeover`: 2 hours by default, 30 minutes, 24 hours or until
+  resumed; Instagram app replies count); the Free limit (3 active automations, 10 scheduled posts
+  a month, 200 credits with in-app notices at 80% and 100%, and **Free deletes messages older than
+  90 days**, `jobs/tasks/purge.py`, so the answer doesn't say "nothing is deleted").
+- **/safety:** our per-account pacing from `platforms/buckets.py` (750 private replies an hour,
+  100 a second for Instagram text, 10 for media, 80 for WhatsApp), the queue and its order,
+  nothing sent twice, the 7-day and 24-hour rules, official login, what we never do (scraping,
+  follow-gating, selling engagement, cold Instagram DMs, posting behind your back), what happens if
+  Meta restricts an account (reconnect-needed, sends held, the owners' email, the Activity page,
+  only temporary errors retried) and that no one can promise no restrictions. *Follow-gating:* flow
+  branches can test "follows you" (C-031's nudge became a branch, GR-03), so the page says our
+  invite and templates never gate and asks members not to build a flow that does, rather than
+  claiming the product makes it impossible.
+- **/changelog ("What's new"):** `lib/marketing/changelog.ts`, from develop's merged PRs #13 to
+  #176 (September's pre-PR merges have no number): user-facing features only, with "With Meta's
+  approval" where it applies. Left out: infrastructure, tests, the design system, dependency bumps,
+  billing (off in production, C-149), broadcasts (off, `BROADCASTS_ENABLED`), Ask's charts
+  (`AGENT_VISUALS_ENABLED` off) and #178 (not merged yet). The sitemap date is the newest entry's.
+- **/ai-info:** what it is, who it's for and not for, channels (the integrations' statuses), plans
+  from `plan-table.json` with each plan's state from the plans API, honest limits (new, App Review
+  pending, insights permission not requested, Shopify listing, broadcasts soon, no certification or
+  partner badge, no uptime figure), the company (UNCHARTD, Bihar, India, the support email), and
+  claims to avoid. llms.txt points at it first, with /safety and /changelog. llms.txt never says
+  "India" (the C-155 test), so the location stays on the page.
+- **Landing FAQ:** adds "Do I have to share my Instagram password?", "Can I take over a
+  conversation from the AI?" and "Can automations get my Instagram account banned?"; the WhatsApp
+  fees answer now says Meta charges by message type and country, paid directly, no markup.
+  Shared objects in `lib/marketing/faq.ts`, so the landing and audience pages say the same words.
+- **Pricing:** a "WhatsApp message charges" band after the limits: per template message by category
+  and country, the 24-hour window in plain words, "You pay Meta directly through your own
+  WhatsApp Business account. Amplychat adds no markup.", separate from the plan, and a link to
+  Meta's pricing page. No rates are copied (they change).
+- **Header:** no "Solutions" entry. The header already holds five links and two buttons between
+  901 and 1060 px, and a menu would need a client dropdown the C-155 header avoids; the footer,
+  llms.txt and the sitemap link both pages.
+- **Sitemap and llms.txt** list /for-creators, /for-businesses, /safety, /changelog, /ai-info and the
+  other agents' /compare, /subprocessors, /cookies, /dpa and /accessibility. On this branch alone
+  the public-metadata test fails for those five (no page yet); it passes once the branches combine.
+
+**For the owner:** read the audience pages' copy and the tier descriptions; the "claims to avoid"
+list; the safety page's sentence on follow branches; whether Meta's "free replies inside the
+24-hour window" wording should be checked against Meta's pricing page on the day you publish.

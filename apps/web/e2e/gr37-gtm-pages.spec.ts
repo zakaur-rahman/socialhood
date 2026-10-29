@@ -62,7 +62,7 @@ test.describe("GR-37 go-to-market pages", () => {
     await page.goto("/");
     const footer = page.getByRole("contentinfo");
     await expect(footer.getByRole("link", { name: "Switch from Manychat" })).toHaveAttribute("href", "/switch-from-manychat");
-    await footer.getByRole("link", { name: "Plans and limits" }).click();
+    await footer.getByRole("link", { name: "Pricing", exact: true }).click();
     await expect(page).toHaveURL(/\/pricing$/);
   });
 });

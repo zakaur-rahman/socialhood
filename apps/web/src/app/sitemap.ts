@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { LEGAL_DOCUMENTS } from "@/lib/legal";
+import { CHANGELOG_PATH, changelogUpdated } from "@/lib/marketing/changelog";
 import { GUIDES, GUIDES_PATH, guidePath, guidesUpdated } from "@/lib/marketing/guides";
 import { PAGE_UPDATED, PUBLIC_PATHS, absoluteUrl, siteUrl } from "@/lib/marketing/site";
 
@@ -8,6 +9,8 @@ const LAST_MODIFIED: Record<string, string> = {
   ...PAGE_UPDATED,
   ...Object.fromEntries(Object.values(LEGAL_DOCUMENTS).map((document) => [document.path, document.lastUpdated])),
   [GUIDES_PATH]: guidesUpdated(),
+  // C-156: What's new changes when an entry is added.
+  [CHANGELOG_PATH]: changelogUpdated(),
   ...Object.fromEntries(GUIDES.map((guide) => [guidePath(guide.slug), guide.updated])),
 };
 
