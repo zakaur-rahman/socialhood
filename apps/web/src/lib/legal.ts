@@ -129,6 +129,11 @@ export function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, "")}`;
 }
 
+/** Where the business is, as the site shows it (C-156): the state and country only, never the full address. */
+export function publicLocation(legal: LegalConfig = LEGAL): string {
+  return isSet(legal.publicLocation) ? legal.publicLocation.trim() : "India";
+}
+
 export type LegalFact = { label: string; value: string; href?: string };
 
 /** The "who we are" details that are set, in order; unset ones are left out entirely. */

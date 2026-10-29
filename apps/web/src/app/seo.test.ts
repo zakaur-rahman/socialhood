@@ -99,7 +99,6 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/safety",
       "https://socialhood.example/changelog",
       "https://socialhood.example/ai-info",
-      "https://socialhood.example/compare",
       "https://socialhood.example/subprocessors",
       "https://socialhood.example/cookies",
       "https://socialhood.example/dpa",

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
 import { SubprocessorTable } from "@/components/marketing/legal/SubprocessorTable";
-import { LEGAL, isSet, operatorName } from "@/lib/legal";
+import { LEGAL, operatorName, publicLocation } from "@/lib/legal";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
@@ -23,7 +23,7 @@ const mail = <a href={`mailto:${email}`}>{email}</a>;
 // the shared list in lib/subprocessors.ts. NOT reviewed by a lawyer (no lawyer budget, C-156).
 function sections(): LegalSection[] {
   const operator = operatorName(LEGAL);
-  const where = isSet(LEGAL.publicLocation) ? LEGAL.publicLocation.trim() : "India";
+  const where = publicLocation();
   return [
     {
       id: "about",

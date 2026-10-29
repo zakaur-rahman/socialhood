@@ -3,11 +3,11 @@ import Link from "next/link";
 import { InfoPage, type InfoSection } from "@/components/marketing/InfoPage";
 import { INTEGRATIONS } from "@/components/marketing/landing/Channels";
 import { PLAN_NAME, SUPPORT_EMAIL } from "@/lib/copy";
-import { LEGAL, operatorName } from "@/lib/legal";
+import { LEGAL, operatorName, publicLocation } from "@/lib/legal";
 import table from "@/lib/marketing/plan-table.json";
 import { type PlanCard, buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata } from "@/lib/marketing/seo";
-import { COMPANY_LOCATION, SITE_DESCRIPTION, SITE_NAME } from "@/lib/marketing/site";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/marketing/site";
 
 // ISR like the pricing page: whether each plan can be bought, and Pro's price, come from the plans API.
 export const revalidate = 3600;
@@ -137,7 +137,7 @@ function sections(plans: PlanCard[]): InfoSection[] {
       body: (
         <ul>
           <li>
-            {SITE_NAME} is run by {operatorName(LEGAL)}, {COMPANY_LOCATION}.
+            {SITE_NAME} is run by {operatorName(LEGAL)}, {publicLocation()}.
           </li>
           <li>
             Contact for support, privacy and data requests: <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.

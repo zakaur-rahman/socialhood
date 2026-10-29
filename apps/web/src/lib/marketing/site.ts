@@ -127,12 +127,6 @@ export const LEGAL_LINKS = [
   { label: "Contact us", href: "/contact" },
 ] as const;
 
-/**
- * Where the business is, as the site shows it (C-156): the state and country only, never the full
- * address. RECONCILE: if lib/legal.ts gains a location field (the legal agent's C-156 work), read
- * it from LEGAL instead and delete this constant.
- */
-export const COMPANY_LOCATION = "Bihar, India";
 
 /**
  * The hosted status page (C-156), from NEXT_PUBLIC_STATUS_URL: an http(s) URL, or null when it is
@@ -254,8 +248,6 @@ export const PUBLIC_PATHS = [
   "/safety",
   "/changelog",
   "/ai-info",
-  // C-156: the compare agent's hub and the legal agent's pages; they exist once the branches combine.
-  "/compare",
   "/subprocessors",
   "/cookies",
   "/dpa",
@@ -300,11 +292,4 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/for-businesses": "2026-10-29",
   "/safety": "2026-10-29",
   "/ai-info": "2026-10-29",
-  "/compare": "2026-10-29",
-  // The legal pages take their "Last updated" date from LEGAL_DOCUMENTS once the legal agent adds
-  // them there (that wins in the sitemap); these stand in until then.
-  "/subprocessors": "2026-10-29",
-  "/cookies": "2026-10-29",
-  "/dpa": "2026-10-29",
-  "/accessibility": "2026-10-29",
 };

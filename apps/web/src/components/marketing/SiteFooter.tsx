@@ -2,8 +2,8 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
-import { LEGAL, operatorName } from "@/lib/legal";
-import { COMPANY_LOCATION, SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
+import { LEGAL, operatorName, publicLocation } from "@/lib/legal";
+import { SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
 import { Logo } from "./primitives";
 
@@ -57,7 +57,7 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
         </div>
         <div className="foot-bot">
           <p>
-            © {year} {operatorName(LEGAL)} · {COMPANY_LOCATION}
+            © {year} {operatorName(LEGAL)} · {publicLocation()}
           </p>
           <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
           <p className="foot-fine">

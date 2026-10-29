@@ -47,7 +47,8 @@ export function loadFacebookSdk(appId: string): Promise<FacebookSdk> {
     window.fbAsyncInit = () => {
       const fb = window.FB;
       if (!fb) return reject(new Error("Facebook's sign-in didn't load."));
-      fb.init({ appId, autoLogAppEvents: true, xfbml: false, version: GRAPH_VERSION });
+      // No automatic app-event logging to Meta (C-156): the SDK is here only to open the sign-up window.
+      fb.init({ appId, autoLogAppEvents: false, xfbml: false, version: GRAPH_VERSION });
       resolve(fb);
     };
     const script = document.createElement("script");
