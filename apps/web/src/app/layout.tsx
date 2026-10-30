@@ -10,6 +10,8 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
 
+// The type of the app and the public site (C-155: the site's headings are Geist at 700). Preloaded,
+// since every first view shows it.
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 // Mono isn't preloaded (C-152): no page shows it above the fold (code samples, IDs, figures in the
 // app), and a preload put its 25 KB ahead of the page on every first visit. It loads when used.
@@ -20,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   applicationName: SITE_NAME,
   title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
-  description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
+  description: "One inbox for Instagram, WhatsApp and website chat, with AI that answers from your business knowledge.",
   // Search Console, Bing Webmaster Tools and Meta domain verification: each tag only when its env var is set.
   verification: verificationMetadata(),
   // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).

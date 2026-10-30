@@ -37,7 +37,7 @@ export function guidesFeed(guides: readonly Guide[] = GUIDES, origin: string = s
     `    <title>${escapeXml(`${SITE_NAME} guides`)}</title>`,
     `    <link>${escapeXml(absoluteUrl(GUIDES_PATH, origin))}</link>`,
     `    <atom:link href="${escapeXml(absoluteUrl(GUIDES_FEED_PATH, origin))}" rel="self" type="application/rss+xml"/>`,
-    "    <description>Practical guides for businesses that sell on Instagram and WhatsApp in India.</description>",
+    "    <description>Practical guides for businesses and creators on Instagram and WhatsApp.</description>",
     "    <language>en</language>",
     ...(updated ? [`    <lastBuildDate>${rssDate(updated)}</lastBuildDate>`] : []),
     ...items,

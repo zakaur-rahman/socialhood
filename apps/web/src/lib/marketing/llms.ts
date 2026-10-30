@@ -1,6 +1,6 @@
 import { SUPPORT_EMAIL } from "@/lib/copy";
 
-import { GTM_PAGES } from "./gtm-pages";
+import { COMPARE_PATH, GTM_PAGES } from "./gtm-pages";
 import { GUIDES, GUIDES_PATH, guidePath } from "./guides";
 import { LEGAL_LINKS, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, siteUrl } from "./site";
 
@@ -15,18 +15,31 @@ export function llmsText(origin: string = siteUrl()): string {
     "",
     `> ${SITE_DESCRIPTION}`,
     "",
-    `${SITE_NAME} is a web app for businesses that sell on Instagram and WhatsApp. It uses Meta's official APIs. There is a Free plan; prices for paid plans are on the pricing page. Questions: ${SUPPORT_EMAIL}.`,
+    `${SITE_NAME} is a web app for businesses and creators: one inbox for Instagram, WhatsApp and website chat, with AI replies from your own knowledge and comment-to-DM automations. Instagram and WhatsApp connect through Meta's official APIs. There is a Free plan; prices for paid plans are on the pricing page. Questions: ${SUPPORT_EMAIL}.`,
+    "",
+    `For a plain fact sheet about ${SITE_NAME} (what it is, who it's for, channels and their status, plans, honest limits and claims to avoid), read the AI info page first.`,
+    "",
+    "## Start here",
+    "",
+    link("AI info", "/ai-info", "a fact sheet for AI assistants: what is true today, and what not to claim"),
+    link("Safety", "/safety", "Meta's limits and how sends are queued, official login, and what we never do"),
+    link("What's new", "/changelog", "dated list of shipped features"),
     "",
     "## Product",
     "",
     link("Home", "/", "what the product does, how it works, plans and common questions"),
+    link("How it works", "/how-it-works", "the product step by step: connect, add knowledge, one inbox, AI replies, hand-off, automations and results"),
+    link("Features", "/features", "every feature with its status and plan limits"),
     link("Pricing", "/pricing", "plans and every limit side by side"),
+    link("Common questions", "/faq", "every question we answer: the AI, Instagram and WhatsApp, plans, AI credits and support"),
+    link("For creators", "/for-creators", "comment-to-DM, scheduling, AI replies from your notes, comment analysis"),
+    link("For businesses", "/for-businesses", "one inbox for Instagram, WhatsApp and website chat, AI from your knowledge, leads"),
+    link("All comparisons", COMPARE_PATH, "how Amplychat compares with other tools"),
     ...GTM_PAGES.filter((page) => page.path !== "/pricing").map((page) => link(page.name, page.path, page.description)),
-    link(`${SITE_NAME} in Hinglish`, "/hi", "the product explained in Hinglish (Hindi in Latin letters)"),
     "",
     "## Guides",
     "",
-    link("All guides", GUIDES_PATH, "practical guides for businesses that sell on Instagram and WhatsApp in India"),
+    link("All guides", GUIDES_PATH, "practical guides on Instagram DM auto-replies, comment-to-DM automations and the WhatsApp Business API"),
     ...GUIDES.map((guide) => link(guide.h1, guidePath(guide.slug), guide.description)),
     "",
     "## Developers",

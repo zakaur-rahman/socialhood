@@ -75,7 +75,47 @@ export const tokenValues = {
     "chart-series-3": "#199E70",
     "chart-series-4": "#C98500",
     "chart-series-5": "#D55181",
-    "chart-series-6": "#2F8FE0"
+    "chart-series-6": "#2F8FE0",
+    "paper": "#F5F5F2",
+    "paper-deep": "#EDEDE9",
+    "sheet": "#FFFFFF",
+    "ink": "#121317",
+    "ink-secondary": "#464953",
+    "ink-tertiary": "#5E616A",
+    "rule": "#DFDFDA",
+    "rule-subtle": "#EAEAE6",
+    "site-line-control": "#82848B",
+    "night-line-control": "#6A6C76",
+    "night": "#0F1017",
+    "night-raised": "#181923",
+    "night-high": "#232532",
+    "night-ink": "#F2F2F5",
+    "night-ink-secondary": "#B7B8C4",
+    "night-ink-tertiary": "#8E909E",
+    "iris": "#4B3FE0",
+    "iris-ink": "#3A2FC2",
+    "iris-soft": "#ECEAFD",
+    "iris-night": "#A8A1FF",
+    "iris-mist": "#8A82EB",
+    "site-ok": "#1C7343",
+    "site-ok-soft": "#E3F1E8",
+    "site-wait": "#985200",
+    "site-wait-soft": "#FBEEDC",
+    "site-wait-mark": "#B06A00",
+    "instagram-night": "#E0559A",
+    "web-night": "#2AA597",
+    "site-stop": "#A43535",
+    "site-stop-soft": "#F8E6E6",
+    "handoff": "#F2A23A",
+    "handoff-ink": "#F6CF97",
+    "handoff-ink-strong": "#FBE3BF",
+    "comment": "#E07FA8",
+    "avatar-1": "#F3DDB9",
+    "avatar-2": "#E3DDF8",
+    "avatar-3": "#D7EEDF",
+    "avatar-4": "#F6D3E2",
+    "avatar-5": "#DCE8F6",
+    "avatar-6": "#E6E6E1"
   },
   "colorsLight": {
     "canvas": "#F5F6FB",
@@ -150,7 +190,47 @@ export const tokenValues = {
     "chart-series-3": "#1BAF7A",
     "chart-series-4": "#EDA100",
     "chart-series-5": "#E87BA4",
-    "chart-series-6": "#2A8FD8"
+    "chart-series-6": "#2A8FD8",
+    "paper": "#F5F5F2",
+    "paper-deep": "#EDEDE9",
+    "sheet": "#FFFFFF",
+    "ink": "#121317",
+    "ink-secondary": "#464953",
+    "ink-tertiary": "#5E616A",
+    "rule": "#DFDFDA",
+    "rule-subtle": "#EAEAE6",
+    "site-line-control": "#82848B",
+    "night-line-control": "#6A6C76",
+    "night": "#0F1017",
+    "night-raised": "#181923",
+    "night-high": "#232532",
+    "night-ink": "#F2F2F5",
+    "night-ink-secondary": "#B7B8C4",
+    "night-ink-tertiary": "#8E909E",
+    "iris": "#4B3FE0",
+    "iris-ink": "#3A2FC2",
+    "iris-soft": "#ECEAFD",
+    "iris-night": "#A8A1FF",
+    "iris-mist": "#8A82EB",
+    "site-ok": "#1C7343",
+    "site-ok-soft": "#E3F1E8",
+    "site-wait": "#985200",
+    "site-wait-soft": "#FBEEDC",
+    "site-wait-mark": "#B06A00",
+    "instagram-night": "#E0559A",
+    "web-night": "#2AA597",
+    "site-stop": "#A43535",
+    "site-stop-soft": "#F8E6E6",
+    "handoff": "#F2A23A",
+    "handoff-ink": "#F6CF97",
+    "handoff-ink-strong": "#FBE3BF",
+    "comment": "#E07FA8",
+    "avatar-1": "#F3DDB9",
+    "avatar-2": "#E3DDF8",
+    "avatar-3": "#D7EEDF",
+    "avatar-4": "#F6D3E2",
+    "avatar-5": "#DCE8F6",
+    "avatar-6": "#E6E6E1"
   },
   "themed": [
     "color:canvas",
@@ -230,6 +310,62 @@ export const tokenValues = {
     "glow-button": "0 10px 15px -3px color-mix(in srgb, var(--color-brand) 25%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-brand) 25%, transparent)"
   },
   "fontSizes": {
+    "site-display": {
+      "size": "clamp(2.75rem, 2.193rem + 2.286vw, 4.25rem)",
+      "lineHeight": "1"
+    },
+    "site-h1": {
+      "size": "clamp(2.25rem, 1.693rem + 2.286vw, 3.75rem)",
+      "lineHeight": "1.04"
+    },
+    "site-h2": {
+      "size": "clamp(2rem, 1.536rem + 1.905vw, 3.25rem)",
+      "lineHeight": "1.06"
+    },
+    "site-h2-sm": {
+      "size": "clamp(1.75rem, 1.471rem + 1.143vw, 2.5rem)",
+      "lineHeight": "1.08"
+    },
+    "site-h3": {
+      "size": "clamp(1.5rem, 1.314rem + 0.762vw, 2rem)",
+      "lineHeight": "1.12"
+    },
+    "site-stat": {
+      "size": "clamp(2.75rem, 2.286rem + 1.905vw, 4rem)",
+      "lineHeight": "1"
+    },
+    "site-stat-sm": {
+      "size": "clamp(1.5rem, 1.314rem + 0.762vw, 2rem)",
+      "lineHeight": "1.1"
+    },
+    "site-title": {
+      "size": "1.25rem",
+      "lineHeight": "1.25"
+    },
+    "site-lede": {
+      "size": "clamp(1.0625rem, 1.016rem + 0.19vw, 1.1875rem)",
+      "lineHeight": "1.55"
+    },
+    "site-body": {
+      "size": "1rem",
+      "lineHeight": "1.6"
+    },
+    "site-body-sm": {
+      "size": "0.9375rem",
+      "lineHeight": "1.55"
+    },
+    "site-label": {
+      "size": "0.875rem",
+      "lineHeight": "1.5"
+    },
+    "site-caption": {
+      "size": "0.8125rem",
+      "lineHeight": "1.45"
+    },
+    "site-micro": {
+      "size": "0.75rem",
+      "lineHeight": "1.35"
+    },
     "2xs": {
       "size": "0.6875rem",
       "lineHeight": "1rem"
@@ -240,12 +376,23 @@ export const tokenValues = {
     }
   },
   "tracking": {
+    "site-display": "-0.045em",
+    "site-h1": "-0.04em",
+    "site-h2": "-0.035em",
+    "site-h2-sm": "-0.03em",
+    "site-h3": "-0.025em",
+    "site-title": "-0.015em",
     "eyebrow": "0.08em"
   },
   "leading": {
     "display": "1.08"
   },
   "radius": {
+    "site-xs": "6px",
+    "site-sm": "10px",
+    "site-md": "12px",
+    "site-lg": "18px",
+    "site-xl": "22px",
     "sm": "0.25rem",
     "md": "0.375rem",
     "lg": "0.5rem",
@@ -253,20 +400,44 @@ export const tokenValues = {
     "2xl": "1rem"
   },
   "easings": {
+    "site-out": "cubic-bezier(0.22, 1, 0.36, 1)",
+    "site-in-out": "ease-in-out",
     "standard": "cubic-bezier(0.4, 0, 0.2, 1)",
     "enter": "cubic-bezier(0, 0, 0.2, 1)",
     "exit": "cubic-bezier(0.4, 0, 1, 1)"
   },
   "breakpoints": {
+    "site-sm": "32.5rem",
+    "site-nav": "47.5rem",
+    "site-md": "56.25rem",
+    "site-wide": "66.25rem",
     "md": "48rem",
     "lg": "64rem",
     "xl": "80rem",
     "wide": "90rem"
   },
+  "spacing": {
+    "site-section": "clamp(72px, 6vw + 40px, 128px)",
+    "site-section-tight": "clamp(48px, 4vw + 24px, 88px)",
+    "site-head": "clamp(32px, 2.5vw + 16px, 56px)",
+    "site-band": "clamp(56px, 48px + 1.5vw, 72px)",
+    "site-gutter": "clamp(16px, 3vw + 4px, 64px)"
+  },
+  "containers": {
+    "site": "1240px"
+  },
   "motion": {
     "fast": "120ms",
     "normal": "150ms",
-    "slow": "200ms"
+    "slow": "200ms",
+    "site-stagger": "40ms",
+    "site-micro": "80ms",
+    "site-quick": "150ms",
+    "site-fast": "250ms",
+    "site-medium": "350ms",
+    "site-slow": "400ms",
+    "site-very-slow": "500ms",
+    "site-entrance": "1200ms"
   },
   "gradients": {
     "brand": "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%)",

@@ -1,7 +1,7 @@
 /**
  * The legal details the Privacy Policy, Terms of Service, the refund, shipping and contact pages
- * need but the code can't know. The owner fills these in (with the lawyer's review, launch
- * checklist §6.4). Every field but the email is optional: the pages render a field only when it is
+ * need but the code can't know. The owner fills these in (C-144, C-156; no lawyer has reviewed
+ * them: the owner has no lawyer budget). Every field but the email is optional: the pages render a field only when it is
  * set, so no "[Company]" placeholder is ever shown publicly, and a clause that depends on an unset
  * field (governing law) is left out.
  */
@@ -18,8 +18,13 @@ export type LegalConfig = {
   entityType?: string;
   /** The proprietor of a sole proprietorship. */
   proprietor?: string;
-  /** Its registered (and operating) address, on one line. Shown on every legal page once set. */
+  /**
+   * Its full registered address, on one line. Shown on every legal page once set. C-156: the owner
+   * decided never to publish the full address, so this stays unset; `publicLocation` is shown instead.
+   */
   registeredAddress?: string;
+  /** Where the business is, at state and country level only (C-156), e.g. "Bihar, India". */
+  publicLocation?: string;
   /** A phone number customers can call, as it should be shown, e.g. "+91 98765 43210". */
   phone?: string;
   /** The law the Terms are governed by, e.g. "the laws of India". */
@@ -28,8 +33,11 @@ export type LegalConfig = {
   jurisdiction?: string;
   /** When the documents take effect, as an ISO date ("2026-10-15"). */
   effectiveDate?: string;
-  /** DPDP Act: the person who answers privacy questions and grievances, if not the support inbox. */
-  grievanceOfficer?: { name?: string; email?: string };
+  /**
+   * DPDP Act rule 9 and IT Rules 2011 rule 5(9): who answers privacy questions and grievances. `role`
+   * is a job title shown instead of a personal name (C-156: "Grievance Officer, UNCHARTD").
+   */
+  grievanceOfficer?: { name?: string; role?: string; email?: string };
   /**
    * The days we take to answer a grievance. Unset means 30: the IT Rules 2011 (rule 5(9)) ask for
    * one month while they apply, the DPDP Rules (rule 14(3)) for at most 90 days.
@@ -41,32 +49,48 @@ export type LegalConfig = {
   contactEmail: string;
 };
 
-// OWNER REVIEW: everything left undefined is an owner decision; see C-144 in docs/CONFLICTS.md for
-// the recommended values. Set a field and it appears on the pages; nothing else needs changing.
+// OWNER REVIEW: everything left undefined is an owner decision; see C-144 and C-156 in
+// docs/CONFLICTS.md. Set a field and it appears on the pages; nothing else needs changing.
+// Not reviewed by a lawyer (C-156: no lawyer budget).
 export const LEGAL: LegalConfig = {
   entityName: "UNCHARTD",
   entityType: "Sole proprietorship registered in India",
   proprietor: "Zakaur Rahman",
-  registeredAddress: undefined, // the owner hasn't decided whether to publish it
+  registeredAddress: undefined, // C-156: never published; publicLocation is shown instead
+  publicLocation: "Bihar, India",
   phone: undefined,
-  governingLaw: undefined,
-  jurisdiction: undefined,
-  effectiveDate: undefined,
-  grievanceOfficer: undefined,
+  governingLaw: "the laws of India",
+  jurisdiction: undefined, // C-156: left unset by the owner
+  // C-156: a placeholder; the coordinator moves it to the release date.
+  effectiveDate: "2026-10-31",
+  grievanceOfficer: { role: "Grievance Officer, UNCHARTD", email: SUPPORT_EMAIL },
   grievanceResponseDays: undefined,
   supportResponseTime: undefined,
   contactEmail: SUPPORT_EMAIL,
 };
 
-export type LegalDocumentKey = "privacy" | "terms" | "refunds" | "shipping";
+export type LegalDocumentKey =
+  | "privacy"
+  | "terms"
+  | "refunds"
+  | "shipping"
+  | "subprocessors"
+  | "cookies"
+  | "dpa"
+  | "accessibility";
 
 /** Each document's page and the date its text last changed (shown as "Last updated"). */
 export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, { title: string; path: string; lastUpdated: string }> = {
-  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-10-26" },
-  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-10-26" },
+  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-10-29" },
+  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-10-29" },
   // OWNER REVIEW: the refund terms are a default for a monthly SaaS, not a decision yet.
   refunds: { title: "Refund and Cancellation Policy", path: "/refunds", lastUpdated: "2026-10-26" },
   shipping: { title: "Shipping and Delivery Policy", path: "/shipping", lastUpdated: "2026-10-26" },
+  // C-156: the subprocessor list, the cookie table, the DPA and the accessibility statement.
+  subprocessors: { title: "Subprocessors", path: "/subprocessors", lastUpdated: "2026-10-29" },
+  cookies: { title: "Cookies and Storage", path: "/cookies", lastUpdated: "2026-10-29" },
+  dpa: { title: "Data Processing Agreement", path: "/dpa", lastUpdated: "2026-10-29" },
+  accessibility: { title: "Accessibility Statement", path: "/accessibility", lastUpdated: "2026-10-29" },
 };
 
 /** The most days the DPDP Rules (rule 14(3)) allow for answering a grievance. */
@@ -105,6 +129,11 @@ export function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, "")}`;
 }
 
+/** Where the business is, as the site shows it (C-156): the state and country only, never the full address. */
+export function publicLocation(legal: LegalConfig = LEGAL): string {
+  return isSet(legal.publicLocation) ? legal.publicLocation.trim() : "India";
+}
+
 export type LegalFact = { label: string; value: string; href?: string };
 
 /** The "who we are" details that are set, in order; unset ones are left out entirely. */
@@ -114,13 +143,16 @@ export function legalFacts(config: LegalConfig = LEGAL): LegalFact[] {
   if (isSet(config.entityType)) facts.push({ label: "Business type", value: config.entityType.trim() });
   if (isSet(config.proprietor)) facts.push({ label: "Proprietor", value: config.proprietor.trim() });
   if (isSet(config.registeredAddress)) facts.push({ label: "Registered address", value: config.registeredAddress.trim() });
+  else if (isSet(config.publicLocation)) facts.push({ label: "Location", value: config.publicLocation.trim() });
   if (isSet(config.phone)) facts.push({ label: "Phone", value: config.phone.trim(), href: telHref(config.phone.trim()) });
   if (isSet(config.contactEmail)) {
     facts.push({ label: "Email", value: config.contactEmail.trim(), href: `mailto:${config.contactEmail.trim()}` });
   }
   const officer = config.grievanceOfficer;
-  if (officer && (isSet(officer.name) || isSet(officer.email))) {
-    const value = [officer.name, officer.email].filter(isSet).map((part) => part.trim()).join(", ");
+  const who = officer ? [officer.name, officer.role].find(isSet)?.trim() : undefined;
+  if (officer && (who || isSet(officer.email))) {
+    const email = isSet(officer.email) ? officer.email.trim() : null;
+    const value = who && email ? `${who} (${email})` : (who ?? email ?? "");
     facts.push({
       label: "Grievance officer",
       value,

@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
   // for the upload (below) and deletes them from the output afterwards.
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  // C-161 v2: no floating "N" dev-tools button. It only ever shows under `next dev` (never in a
+  // production build), but it sat over the page in every local screenshot. Next's error overlay
+  // still appears for build and runtime errors.
+  devIndicators: false,
   async headers() {
     return [
       // SEC-11: CSP, HSTS, framing, referrer and permissions on every route.
@@ -47,6 +51,15 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
         ],
       },
+    ];
+  },
+  // C-155: the site is global and in English only. The Hinglish page and the Hinglish guide were
+  // taken down; their URLs move permanently (308) so links and search results still land somewhere.
+  // These run before the proxy (src/proxy.ts), so the host split never sees them.
+  async redirects() {
+    return [
+      { source: "/hi", destination: "/", permanent: true },
+      { source: "/guides/replying-in-hinglish", destination: "/guides", permanent: true },
     ];
   },
   images: {

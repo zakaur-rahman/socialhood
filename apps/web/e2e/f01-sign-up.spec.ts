@@ -25,6 +25,9 @@ test.describe("F-01 sign up and first run", () => {
     await page.goto("/sign-up");
     await page.getByLabel("Email address").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(`E2e-${randomBytes(12).toString("hex")}!`);
+    // C-158: with Clerk's "Require express consent to legal documents" on, the card has a checkbox.
+    const consent = page.locator("#legalAccepted-field");
+    if (await consent.count()) await consent.check();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
 
     // Email verification: Clerk's test addresses take 424242.

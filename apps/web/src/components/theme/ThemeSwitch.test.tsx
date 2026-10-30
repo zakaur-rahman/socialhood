@@ -89,12 +89,12 @@ describe("useTheme (C-129)", () => {
 });
 
 describe("ThemePin", () => {
-  it("pins <html> dark while mounted and gives the user's choice back on unmount", () => {
-    document.cookie = `${THEME_COOKIE}=light; path=/`;
-    document.documentElement.setAttribute("data-theme", "light");
+  it("pins <html> to the site's light scheme while mounted and gives the user's choice back on unmount (C-155)", () => {
+    document.cookie = `${THEME_COOKIE}=dark; path=/`;
+    document.documentElement.setAttribute("data-theme", "dark");
     const view = render(<ThemePin />);
-    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-    view.unmount();
     expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    view.unmount();
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
 });

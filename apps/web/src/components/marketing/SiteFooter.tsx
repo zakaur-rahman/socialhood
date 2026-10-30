@@ -1,96 +1,89 @@
+import { ArrowRight } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, operatorName } from "@/lib/legal";
-import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
-import { EYEBROW } from "@/styles/tokens";
+import { SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
-import { Container, Logo } from "./primitives";
+import { Logo } from "./primitives";
 
-const LINK = "inline-flex min-h-10 min-w-10 items-center rounded-sm text-sm text-fg-secondary transition-colors hover:text-fg sm:min-h-8 sm:min-w-0";
-
-/** Product and legal links, the support address, and the copyright line. */
-export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {
-  const product = [
-    ...NAV_LINKS,
-    { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
-    { label: "Start free", href: appUrl(SIGN_UP_PATH) },
-  ];
+function FooterItem({ link }: { link: FooterLink }) {
+  // The status page and an app link on its own host are other origins: a plain link, no prefetch.
+  if (link.external || /^https?:/.test(link.href)) {
+    return (
+      <a href={link.href} rel={link.external ? "noopener" : undefined}>
+        {link.label}
+      </a>
+    );
+  }
   return (
-    <footer className="relative overflow-hidden border-t border-line bg-canvas">
-      <Container className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
-        <div className="max-w-sm">
-          <Logo />
-          <p className="mt-3 text-sm leading-relaxed text-fg-secondary">
-            One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.
-          </p>
-          <p className="mt-4 text-sm">
-            <span className="text-fg-secondary">Questions? </span>
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline-offset-4 hover:underline">
-              {SUPPORT_EMAIL}
-            </a>
-          </p>
+    <Link href={link.href as Route} prefetch={false}>
+      {link.label}
+    </Link>
+  );
+}
+
+/**
+ * The footer on a night band (C-155, columns C-156), the second half of the page's closing
+ * composition (C-161 v2): a night-line rule opens it, then the brand column (the name, one sentence,
+ * "Contact us"), product, solutions, comparisons, resources, and legal and trust (that group across
+ * two columns); a quiet bar with the business and the Meta fine print; then the name at full width,
+ * decorative. No email and no location here (owner, C-161); /contact and the legal pages carry them.
+ * Status appears only when NEXT_PUBLIC_STATUS_URL is set. No social links until the business has
+ * profiles.
+ */
+export function SiteFooter({ year = new Date().getFullYear(), status }: { year?: number; status?: string | null }) {
+  const columns = footerColumns(status);
+  const operator = operatorName(LEGAL);
+  return (
+    <footer className="night foot">
+      <div className="wrap">
+        <div className="foot-grid">
+          <div className="foot-about">
+            <Logo />
+            <p className="about">One inbox for Instagram, WhatsApp and website chat, with AI that answers from your business knowledge.</p>
+            <Link href="/contact" prefetch={false} className="foot-contact">
+              Contact us <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </div>
+          {columns.map((column) => (
+            <nav key={column.id} aria-labelledby={`footer-${column.id}`} className={column.id === "legal" ? "foot-two" : undefined}>
+              <h2 id={`footer-${column.id}`}>{column.title}</h2>
+              <ul>
+                {column.links.map((link) => (
+                  <li key={link.href}>
+                    <FooterItem link={link} />
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
-        <nav aria-labelledby="footer-product">
-          <h2 id="footer-product" className={EYEBROW}>
-            Product
-          </h2>
-          <ul className="mt-3 grid gap-1 sm:gap-1.5">
-            {product.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href as Route} prefetch={false} className={LINK}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav aria-labelledby="footer-learn">
-          <h2 id="footer-learn" className={EYEBROW}>
-            Compare and learn
-          </h2>
-          <ul className="mt-3 grid gap-1 sm:gap-1.5">
-            {LEARN_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href as Route} lang={link.lang} className={LINK}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav aria-labelledby="footer-legal">
-          <h2 id="footer-legal" className={EYEBROW}>
-            Legal
-          </h2>
-          <ul className="mt-3 grid gap-1 sm:gap-1.5">
-            {LEGAL_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href as Route} className={LINK}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </Container>
-      <div className="border-t border-line-subtle">
-        <Container className="flex flex-col gap-2 py-6 text-xs text-fg-secondary sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {year} {operatorName(LEGAL)}
+        <div className="foot-bot">
+          <p className="foot-copy">
+            <span>
+              © {year} {operator}.
+            </span>
+            {operator !== SITE_NAME && (
+              <>
+                {" "}
+                <span>
+                  {SITE_NAME} is a product of {operator}.
+                </span>
+              </>
+            )}
           </p>
-          <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
-        </Container>
+          <div className="foot-legal">
+            <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
+            <p className="foot-fine">
+              {SITE_NAME} isn&apos;t affiliated with or endorsed by Meta. Instagram and WhatsApp are trademarks of Meta Platforms, Inc.
+            </p>
+          </div>
+        </div>
+        <p className="foot-word" aria-hidden>
+          {SITE_NAME}
+        </p>
       </div>
-      {/* An oversized, decorative wordmark (C-138): the product name from the constant, in the control-edge colour (3:1 on the canvas, C-152). */}
-      <p
-        aria-hidden
-        data-footer-wordmark=""
-        className="pointer-events-none -mt-2 -mb-[0.2em] text-center text-5xl sm:text-8xl lg:text-9xl leading-none font-semibold tracking-tighter whitespace-nowrap text-line-control select-none"
-      >
-        {SITE_NAME}
-      </p>
     </footer>
   );
 }

@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import "@/components/site/site.css";
 
-import { ThemePin } from "@/components/theme/ThemePin";
+import type { Metadata, Viewport } from "next";
+
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
+import { ThemePin } from "@/components/theme/ThemePin";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/marketing/site";
+import { colorValue } from "@/styles/token-values";
 
 // Relative canonical, Open Graph and Twitter URLs on the public pages resolve against the site URL.
 // Pages that don't set their own openGraph (data-deletion's status, unsubscribe) inherit these.
@@ -14,25 +17,30 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: [OG_IMAGE] },
 };
 
+// The browser bar on the site's paper (C-155); ThemeSync keeps it there after hydration.
+export const viewport: Viewport = { themeColor: colorValue("paper") };
+
 /**
- * The public site: header, the page, footer. Always dark (C-129): the wrapper pins the dark
- * scheme (`scheme-dark`) so its colours are dark whatever the visitor chose for the app, and <html>
- * is pinned too (the root layout's head script on a first load, ThemePin on a client navigation), so the
- * scrollbars and the overscroll match. Pages stay server-rendered and static; only the
- * header's account actions and phone menu run in the browser. Each page renders its own <main>.
+ * The public site (C-155): header, the page, footer, in the owner's paper-and-night design. The
+ * `.site` frame sets its own palette (styles/globals.css) and type (Geist, bold headings), so it
+ * looks the same whatever theme the visitor chose for the app; <html> is pinned to the light scheme
+ * (the root layout's head script on a first load, ThemePin on a client navigation). This replaces
+ * the always-dark site of C-127 to C-129. Pages stay server-rendered and static; only the header's
+ * account actions and phone menu, and the landing page's scenes, run in the browser.
  */
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="scheme-dark flex min-h-dvh flex-col bg-canvas bg-ambient bg-fixed">
+    <div className="site flex min-h-dvh flex-col">
       <ThemePin />
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-lg bg-brand-strong text-sm font-medium text-on-brand focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
-      >
+      <a href="#main" className="btn btn-main skip">
         Skip to content
       </a>
-      <SiteHeader />
-      <div className="flex flex-1 flex-col">{children}</div>
+      {/* The bar sticks only over the page, not the footer (C-157): it scrolls away as the footer
+          arrives, so it never sits over the footer's links on a phone (axe target-size). */}
+      <div className="flex flex-1 flex-col">
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">{children}</div>
+      </div>
       <SiteFooter />
     </div>
   );

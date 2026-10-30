@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { DESCRIPTION_MAX, TITLE_MAX, articleJsonLd } from "../seo";
 import { SITE_NAME } from "../site";
 import { guidesFeed } from "./feed";
-import { GUIDES, GUIDE_AUTHOR, findGuide, guidePath, guidesUpdated } from "./index";
+import { GUIDES, GUIDE_AUTHOR, findGuide, guidePath, guidesUpdated, sectionId } from "./index";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -27,7 +27,7 @@ describe("the guides (C-153)", () => {
     const published = GUIDES.map((guide) => guide.published);
     expect([...published].sort().reverse()).toEqual(published);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
-    expect(GUIDES.length).toBeGreaterThanOrEqual(4);
+    expect(GUIDES.length).toBeGreaterThanOrEqual(3);
   });
 
   it.each(GUIDES.map((guide) => [guide.slug, guide] as const))("%s: metadata fits search results", (slug, guide) => {
@@ -69,8 +69,28 @@ describe("the guides (C-153)", () => {
     }
     // Internal links go to pages that exist.
     for (const [, href] of html.matchAll(/href="(\/[^"#]*)"/g)) {
-      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", "/hi", ...GUIDES.map((g) => guidePath(g.slug))]).toContain(href);
+      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", ...GUIDES.map((g) => guidePath(g.slug))]).toContain(href);
     }
+  });
+
+  it.each(GUIDES.map((guide) => [guide.slug, guide] as const))("%s: the contents list every section, with unique ids and an anchor (C-159)", (_, guide) => {
+    const html = renderToStaticMarkup(createElement(guide.Body));
+    const headings = [...html.matchAll(/<h2 id="([^"]+)">(.*?)<\/h2>/g)].map(([, id, inner]) => ({
+      id,
+      text: inner.replace(/<[^>]+>/g, "").replace(/&#x27;|&apos;/g, "'"),
+      anchor: inner.includes(`href="#${id}"`),
+    }));
+    expect(html.match(/<h2/g)?.length).toBe(headings.length);
+    expect(headings.map((h) => h.text)).toEqual([...guide.sections]);
+    expect(headings.map((h) => h.id)).toEqual(guide.sections.map(sectionId));
+    expect(new Set(headings.map((h) => h.id)).size).toBe(headings.length);
+    for (const heading of headings) expect(heading.anchor, heading.id).toBe(true);
+    expect(headings.map((h) => h.id)).not.toContain("common-questions");
+  });
+
+  it("section ids are lowercase words and hyphens", () => {
+    expect(sectionId("Write answers the way you'd say them")).toBe("write-answers-the-way-youd-say-them");
+    expect(sectionId("After the DM: the conversation")).toBe("after-the-dm-the-conversation");
   });
 
   it("each guide's structured data names the article, its dates, author and publisher", () => {
