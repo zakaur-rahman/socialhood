@@ -80,49 +80,59 @@ export function Hero() {
               </ul>
             </div>
 
-            <figure className="stage" data-stage="" data-motion-scope="">
-              <div className="inbox" data-inbox="" data-ui="" role="img" aria-label={HERO_SCENE_LABEL}>
-                <span className="inbox-frame" aria-hidden>
-                  <span className="chan-line">
-                    {CHANNELS.map((key) => (
-                      <i key={key} style={{ "--c": SOURCES[key].colour } as CSSProperties} />
-                    ))}
-                  </span>
-                </span>
-                <div className="panel-h">
-                  <b>Inbox</b>
-                  <span className="num">{HERO_NOTES.length} conversations</span>
-                  <span className="chips">
-                    <span className="tag t-need">{need} need you</span>
-                    <span className="tag t-draft">{drafts} AI drafts</span>
-                  </span>
-                </div>
-                <ol className="notes" data-notes="">
-                  {HERO_NOTES.map((note, i) => (
-                    <li key={note.name + note.text} className="note" style={pile(i)}>
-                      <span className={note.source === "comment" ? "app app-ring" : "app"} style={{ "--c": SOURCES[note.source].colour } as CSSProperties}>
-                        <i />
-                        {SOURCES[note.source].label}
-                      </span>
-                      <span className="time num">{note.ago}</span>
-                      <span className="note-main">
-                        <b>{note.name}</b>
-                        <span>{note.text}</span>
-                      </span>
-                      <span className={`tag t-${note.tone}`}>{note.tag}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <figcaption className="stage-cap" data-ui="">
-                Example data
-                <MotionToggle label="Pause the inbox animation" className="stage-toggle" />
-              </figcaption>
-            </figure>
+            <HeroInbox />
           </div>
         </div>
       </div>
       <Strip />
     </section>
+  );
+}
+
+/**
+ * The sorted inbox (C-157), the hero's scene: also shown by /how-it-works (C-160), which plays its sort
+ * once when it comes into view. `toggle`: the pause control, which only the hero's script binds.
+ */
+export function HeroInbox({ toggle = true }: { toggle?: boolean } = {}) {
+  return (
+    <figure className="stage" data-stage="" data-motion-scope="">
+      <div className="inbox" data-inbox="" data-ui="" role="img" aria-label={HERO_SCENE_LABEL}>
+        <span className="inbox-frame" aria-hidden>
+          <span className="chan-line">
+            {CHANNELS.map((key) => (
+              <i key={key} style={{ "--c": SOURCES[key].colour } as CSSProperties} />
+            ))}
+          </span>
+        </span>
+        <div className="panel-h">
+          <b>Inbox</b>
+          <span className="num">{HERO_NOTES.length} conversations</span>
+          <span className="chips">
+            <span className="tag t-need">{need} need you</span>
+            <span className="tag t-draft">{drafts} AI drafts</span>
+          </span>
+        </div>
+        <ol className="notes" data-notes="">
+          {HERO_NOTES.map((note, i) => (
+            <li key={note.name + note.text} className="note" style={pile(i)}>
+              <span className={note.source === "comment" ? "app app-ring" : "app"} style={{ "--c": SOURCES[note.source].colour } as CSSProperties}>
+                <i />
+                {SOURCES[note.source].label}
+              </span>
+              <span className="time num">{note.ago}</span>
+              <span className="note-main">
+                <b>{note.name}</b>
+                <span>{note.text}</span>
+              </span>
+              <span className={`tag t-${note.tone}`}>{note.tag}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <figcaption className="stage-cap" data-ui="">
+        Example data
+        {toggle ? <MotionToggle label="Pause the inbox animation" className="stage-toggle" /> : null}
+      </figcaption>
+    </figure>
   );
 }

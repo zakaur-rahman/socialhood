@@ -4,14 +4,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Ico } from "@/components/marketing/landing/Ico";
-import { SECTION_IDS, siteHref } from "@/lib/marketing/site";
+import { FEATURES_PATH, HOW_IT_WORKS_PATH, siteHref } from "@/lib/marketing/site";
 
 import { RequestedPath } from "./RequestedPath";
 
 /** Where a lost visitor most likely meant to go: the footer's own labels and addresses. */
 const PLACES: { label: string; href: string; icon: LucideIcon }[] = [
-  { label: "Features", href: `/#${SECTION_IDS.features}`, icon: LayoutGrid },
-  { label: "How it works", href: `/#${SECTION_IDS.howItWorks}`, icon: Workflow },
+  { label: "Features", href: FEATURES_PATH, icon: LayoutGrid },
+  { label: "How it works", href: HOW_IT_WORKS_PATH, icon: Workflow },
   { label: "Guides", href: "/guides", icon: BookOpenText },
   { label: "Common questions", href: "/faq", icon: CircleHelp },
   { label: "What's new", href: "/changelog", icon: Newspaper },

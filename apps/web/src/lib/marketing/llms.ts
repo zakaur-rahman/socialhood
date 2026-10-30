@@ -28,6 +28,8 @@ export function llmsText(origin: string = siteUrl()): string {
     "## Product",
     "",
     link("Home", "/", "what the product does, how it works, plans and common questions"),
+    link("How it works", "/how-it-works", "the product step by step: connect, add knowledge, one inbox, AI replies, hand-off, automations and results"),
+    link("Features", "/features", "every feature with its status and plan limits"),
     link("Pricing", "/pricing", "plans and every limit side by side"),
     link("Common questions", "/faq", "every question we answer: the AI, Instagram and WhatsApp, plans, AI credits and support"),
     link("For creators", "/for-creators", "comment-to-DM, scheduling, AI replies from your notes, comment analysis"),
