@@ -3,6 +3,8 @@ import { type LucideIcon, Radio, Sheet, ShoppingCart, Wallet, Webhook } from "lu
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import type { Platform } from "@/lib/api/types";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
 import { Ico } from "./Ico";
@@ -13,8 +15,9 @@ type Integration = {
   /** What is true today, in a few words (C-122, C-138). */
   status: string;
   tone: "live" | "waiting" | "yours";
-  /** The mark beside the name: a channel's colour (the page's motif), or else an icon (C-157 motion). */
+  /** A channel's own mark, drawn in its colour (the page's motif); other rows get an icon (C-157 motion). */
   mark?: string;
+  platform?: Platform;
   icon?: LucideIcon;
   /** A guide that explains it (LP-4.10). */
   guide?: { label: string; href: string };
@@ -31,6 +34,7 @@ export const INTEGRATIONS: Integration[] = [
     status: "Official API",
     tone: "live",
     mark: "var(--ig)",
+    platform: "instagram",
   },
   {
     name: "WhatsApp",
@@ -39,6 +43,7 @@ export const INTEGRATIONS: Integration[] = [
     status: "Official API",
     tone: "live",
     mark: "var(--wa)",
+    platform: "whatsapp",
   },
   {
     name: "Website chat",
@@ -46,6 +51,7 @@ export const INTEGRATIONS: Integration[] = [
     status: "On every plan",
     tone: "live",
     mark: "var(--web)",
+    platform: "web",
   },
   {
     name: "Facebook Pages",
@@ -53,6 +59,7 @@ export const INTEGRATIONS: Integration[] = [
     status: "With Meta's approval",
     tone: "waiting",
     mark: "var(--fb)",
+    platform: "facebook",
   },
   {
     // C-157 (organize): shortened from "Live comments and ad replies" so it fits one line in a card; the
@@ -115,9 +122,9 @@ export function Connections() {
         {INTEGRATIONS.map((item) => (
           <li key={item.name} className="crow">
             <h4>
-              {item.mark ? (
-                <Ico className="ico-mark">
-                  <i style={{ "--c": item.mark } as CSSProperties} />
+              {item.platform ? (
+                <Ico className="ico-mark" style={{ "--c": item.mark } as CSSProperties}>
+                  <PlatformGlyph platform={item.platform} />
                 </Ico>
               ) : (
                 <Ico icon={item.icon} />

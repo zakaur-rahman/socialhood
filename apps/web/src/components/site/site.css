@@ -651,6 +651,8 @@ body:has(.site) {
     & .ico svg { width: 20px; height: 20px; }
     & :is(.feat-lead, .fcard, .crow, .pay, .aud-card) .ico { background: var(--s-surface-2); }
     & .ico-ai { color: var(--s-link); }
+    /* A channel's own glyph (the app's PlatformGlyph) in the channel's colour: the page's motif. */
+    & .ico-mark { color: var(--c); }
     /* Cards: they rise into place as they scroll in, lift on hover, press by 1 px. The rise is a
        `translate` and the lift a `transform`, so the two compose instead of fighting. Hover in and out
        at the fast token (250 ms, smooth-out); the edge and the drop strengthen with it. */

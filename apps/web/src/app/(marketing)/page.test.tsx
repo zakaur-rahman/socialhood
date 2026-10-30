@@ -256,10 +256,12 @@ describe("the landing page", () => {
         expect(tile).toHaveAttribute("aria-hidden");
       }
     }
-    // A channel keeps its colour mark (in the tile) instead of an icon; the others get an icon.
-    const instagram = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === "Instagram")!;
-    expect(instagram.querySelector(".ico-mark i")).not.toBeNull();
-    expect(instagram.querySelector(".ico svg")).toBeNull();
+    // A channel shows its own glyph in its colour (the motif); the others get an icon.
+    for (const name of ["Instagram", "WhatsApp", "Website chat", "Facebook Pages"]) {
+      const row = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === name)!;
+      expect(row.querySelector(".ico-mark svg")).not.toBeNull();
+      expect((row.querySelector(".ico-mark") as HTMLElement).style.getPropertyValue("--c")).not.toBe("");
+    }
     const shopify = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === "Shopify")!;
     expect(shopify.querySelector(".ico svg")).not.toBeNull();
     // Only the AI's card wears iris.
