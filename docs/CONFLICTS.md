@@ -8059,3 +8059,90 @@ strip starts below the first screen. (For the coordinator's e2e run; checked the
 `components/marketing`, `components/site`, `styles`: 16 files, 410 tests pass. Screenshots on :3162 at
 1366×768, 1440×900, 1536×864, 1920×1080, 1920×890, 2560×1440 (scroll 0, 40 %, end of pin, 200 px past),
 375×812 and 768×1024; no sideways scroll at any size.
+
+## C-158 · Sign-in and sign-up pages
+
+### C-158 · Auth pages
+
+The owner asked (2026-10-30) to audit the sign-in and sign-up pages, bring them up to the new public
+site (C-155, C-157) and add the Terms and Privacy Policy links. Branch `feature/auth-pages`, from
+`feature/site-redesign`. Audit, before and after screenshots and the skill reviews are in the session
+scratchpad (`auth/audit.md`, `auth/before-*.png`, `auth/after-*.png`); none are committed.
+
+**What the audit found (top items).** No visible keyboard focus on Clerk's buttons and links (Clerk
+sets `outline: 0`); Clerk's consent links at 2.9:1 and its consent checkbox edge at about 1.3:1 in
+Dark; no legal link on sign-in at all; a side panel the site has moved past: the old inbox
+screenshot with old demo data (Pune, a Hinglish message, which C-155 removed from the public site),
+a brand glow, film grain, a gradient Continue, tinted icon chips; two logos on desktop; the card
+narrower on sign-in than on sign-up. SEO (noindex), the skip link, one h1 and no sideways scroll were
+already right.
+
+**What changed.**
+- **Panel = the site's night band.** From `lg`, the left column is `bg-night` with the night inks:
+  theme-invariant, so it reads the same in Dark and Light, as the site's night bands do, while the
+  form column keeps the member's theme (C-129). Logo (back to the public home via `siteHref("/")`),
+  the landing's headline at `text-site-h2-sm` bold, broken only between its phrases, the hero's line
+  ("For small businesses and creators: …"), three plain lines of the site's own copy (unchanged from
+  UI-079: no icon chips), and `SITE_TAGLINE` with the three channel marks at the foot. The panel stays
+  put while the form column scrolls. No screenshot, glow, grain or gradient.
+- **Below `lg`:** a bar with the logo, the card, the legal line. The tablet's benefit grid and the
+  untilted screenshot are gone: the page is the task.
+  - **Judgment call:** phones and tablets lose the pitch. They arrive from the site or an invite;
+    the form is what they came for, and the pitch cost a 1,400 px page at 768.
+- **Clerk's card** (`authCardAppearance`, moved from `AuthShell` to `lib/clerk-appearance.ts` so the
+  client bundle that renders Clerk no longer imports the server shell): no in-card logo (one logo per
+  page); title 20 px bold, left-aligned; the primary button flat ink (`fg` on `canvas`, the site's
+  `.btn-main`; near-white in Dark), no arrow, hover at 88 % opacity; 44 px controls; no shadow at rest;
+  the app's focus outline restated on every link, button and checkbox; field errors in `danger-fg`;
+  24 px side padding under 480 px. The card fills a 400 px column on both pages. The app-wide Clerk
+  appearance (user menu, account modal) is unchanged.
+- **The consent checkbox** (Clerk's "Require express consent to legal documents"; `@clerk/ui` 1.38
+  names its parts `formFieldCheckboxInput` and `formFieldCheckboxLabel`, there are no `legalConsent*`
+  element keys): a 16 px box with the 3:1 `line-control` edge (as an outline, so focus replaces it),
+  `brand-strong` when checked, label in `fg-secondary`, links `brand-fg` underlined.
+- **Lint:** the design lint now knows the site's type roles (`text-site-*`) as text sizes, not colours
+  (its `--text-*` pattern skipped hyphenated names). The grain exception for AuthShell is removed.
+
+**Legal links and Clerk's consent checkbox.**
+- A quiet line under the card on both pages, always visible, links from `LEGAL_DOCUMENTS` through
+  `siteHref()`: the public site's origin when the app has its own host
+  (https://amplychat.com/terms, /privacy), relative with one origin. They open in a new tab (a
+  half-filled form isn't lost), with "(opens in a new tab)" for screen readers.
+- Sign-in: "Terms · Privacy".
+- Sign-up: "By continuing, you agree to our Terms and Privacy Policy." while the Clerk setting is off.
+  When it is on, Clerk's checkbox already says "I agree to the Terms of Service and Privacy Policy",
+  so the sentence would say it twice: the line becomes "Terms · Privacy", as on sign-in. The swap is
+  CSS only: `main` is `group/auth`, and `group-has-[#legalAccepted-field]` (Clerk's checkbox input id)
+  hides one line and shows the other, on every step of the flow. No script.
+  - **Judgment call:** keep a short line even with the checkbox, so the links are on every step
+    (the checkbox is on the first step only) and the two pages match.
+- The **development** Clerk instance already has the setting on, with the amplychat.com URLs: the
+  "after" screenshots show the checkbox. F-01 (`e2e/f01-sign-up.spec.ts`) now ticks it when present,
+  or the sign-up journey would stop at Clerk's "must accept" error.
+
+**Skills.** impeccable `critique`, `audit` (13/20 before) and `polish` (inline: a subagent run, no
+nested assessment agents) and its detector (clean on `components/auth`); design-taste-frontend
+`inspect.mjs --app`: 3 FAIL before (gradient, gradient button, heavy shadow), 0 FAIL after. Its three
+remaining WARNs are defended: `unused-canvas` is the centred 400 px form column; `heavy-borders`
+reads Clerk's `& *` border recolour without its 14 % alpha; `panel-void` is the panel's
+logo-top/tagline-foot spread. Its "no indigo" and "no thin rules" rules give way to the owner's brand
+and to the inputs' and card's edges (form fields keep their lines). No motion was added, so
+transitions-dev had nothing to tune: the only transitions are Clerk's own and the legal links'
+colour (`duration-fast`).
+
+**Tests.** `components/auth/AuthLegal.test.tsx`: the hrefs come from `LEGAL_DOCUMENTS`, absolute on
+the site's origin with a separate app host and relative without, both wordings on sign-up with the
+CSS swap classes, "Terms · Privacy" on sign-in, the shell carries the line and adds no h1.
+`e2e/c158-auth-pages.spec.ts`: each page renders Clerk's h1 with no page errors, noindex, exactly one
+visible Terms and one Privacy link (to /terms and /privacy), on sign-up exactly one wording for
+whichever Clerk shows, no sideways scroll at 375 and 1440, the logo back to `/`. Its assertions were
+run against the local dev server with the development instance (2 passed); the suite itself is for
+the coordinator's e2e run.
+
+**For the owner (Clerk dashboard, development and production instances).**
+- Configure → Legal: turn on "Require express consent to legal documents" with Terms
+  `https://amplychat.com/terms` and Privacy `https://amplychat.com/privacy`. Development already has
+  it; production needs it (the pages read fine either way).
+- Optional, both instances: Customization → Branding still holds the old logo URL for Clerk's emails
+  and hosted pages; the card no longer shows a logo, so nothing on these pages depends on it.
+- "Secured by Clerk" stays (removing it is a paid Clerk plan option).
