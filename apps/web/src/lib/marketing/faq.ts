@@ -24,7 +24,7 @@ export const FAQ_BAN_RISK: FaqItem = {
 
 // platforms/instagram/oauth.py: Instagram's own login (OAuth); WhatsApp connects through Meta's
 // Embedded Signup. Tokens are stored encrypted (TRUST_POINTS).
-export const FAQ_PASSWORD: FaqItem = {
+export const FAQ_ACCOUNT_LOGIN: FaqItem = {
   question: "Do I have to share my Instagram password?",
   answer:
     "No. You connect with Instagram's own login, and WhatsApp with Meta's sign-up window, and choose what to allow there. Amplychat receives an access token, which it stores encrypted, never your password. You can disconnect an account at any time.",
@@ -133,7 +133,7 @@ export const FAQ: FaqItem[] = [
   FAQ_MADE_UP,
   FAQ_TAKEOVER,
   FAQ_BAN_RISK,
-  FAQ_PASSWORD,
+  FAQ_ACCOUNT_LOGIN,
   FAQ_PROFESSIONAL,
   FAQ_FOLLOW_GATE,
   FAQ_WHATSAPP_FEES,
@@ -145,7 +145,7 @@ export const FAQ_GROUPS: { id: string; title: string; items: FaqItem[] }[] = [
   {
     id: "instagram-and-whatsapp",
     title: "Instagram and WhatsApp",
-    items: [FAQ_PROFESSIONAL, FAQ_PASSWORD, FAQ_ACCOUNTS, FAQ_24_HOURS, FAQ_BAN_RISK, FAQ_FOLLOW_GATE, FAQ_POSTS],
+    items: [FAQ_PROFESSIONAL, FAQ_ACCOUNT_LOGIN, FAQ_ACCOUNTS, FAQ_24_HOURS, FAQ_BAN_RISK, FAQ_FOLLOW_GATE, FAQ_POSTS],
   },
   { id: "plans", title: "Plans and billing", items: [FAQ_FREE_LIMIT, FAQ_CREDITS, FAQ_WHATSAPP_FEES, FAQ_CANCEL] },
   { id: "the-app", title: "The app and support", items: [FAQ_MOBILE, FAQ_SUPPORT] },

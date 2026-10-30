@@ -36,7 +36,7 @@ import {
   FAQ_AUTO_REPLY,
   FAQ_FOLLOW_GATE,
   FAQ_MADE_UP,
-  FAQ_PASSWORD,
+  FAQ_ACCOUNT_LOGIN,
   FAQ_TAKEOVER,
   type FaqItem,
 } from "@/lib/marketing/faq";
@@ -212,7 +212,7 @@ export const STAGES: Stage[] = [
 ];
 
 /** The questions under the flow: a subset of the site's FAQ, in its words. */
-export const HOW_FAQ: FaqItem[] = [FAQ_PASSWORD, FAQ_AUTO_REPLY, FAQ_MADE_UP, FAQ_TAKEOVER, FAQ_FOLLOW_GATE, FAQ_24_HOURS];
+export const HOW_FAQ: FaqItem[] = [FAQ_ACCOUNT_LOGIN, FAQ_AUTO_REPLY, FAQ_MADE_UP, FAQ_TAKEOVER, FAQ_FOLLOW_GATE, FAQ_24_HOURS];
 
 export const HOW_RELATED = [
   { label: "Every feature", href: "/features" },

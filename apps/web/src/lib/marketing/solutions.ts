@@ -12,7 +12,7 @@ import {
   FAQ_BAN_RISK,
   FAQ_FREE_LIMIT,
   FAQ_MADE_UP,
-  FAQ_PASSWORD,
+  FAQ_ACCOUNT_LOGIN,
   FAQ_ROBOTIC,
   FAQ_TAKEOVER,
   FAQ_WHATSAPP_FEES,
@@ -156,7 +156,7 @@ export const FOR_CREATORS: SolutionPage = {
       body: `${E.accounts_per_platform.pro} accounts per platform, ${E.members.pro} team members, comment analysis on every post and your full message history.`,
     },
   ],
-  faq: [FAQ_BAN_RISK, FAQ_PASSWORD, FAQ_WHY_PROFESSIONAL, FAQ_ROBOTIC, FAQ_TAKEOVER, FAQ_FREE_LIMIT],
+  faq: [FAQ_BAN_RISK, FAQ_ACCOUNT_LOGIN, FAQ_WHY_PROFESSIONAL, FAQ_ROBOTIC, FAQ_TAKEOVER, FAQ_FREE_LIMIT],
   related: [
     { label: "Safety: Meta's limits and how we send", href: "/safety" },
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
@@ -273,7 +273,7 @@ export const FOR_BUSINESSES: SolutionPage = {
       answer:
         "Shopify sync arrives with our Shopify app listing. Until then, add products by hand or from a CSV file on Pro, and the AI answers price and stock from them.",
     },
-    FAQ_PASSWORD,
+    FAQ_ACCOUNT_LOGIN,
     FAQ_FREE_LIMIT,
   ],
   related: [
