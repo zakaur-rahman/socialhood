@@ -774,21 +774,56 @@ body:has(.site) {
     & .faq-all { display: flex; align-items: center; gap: var(--space-2); }
     & .faq-all .tlink { display: inline-flex; align-items: center; min-height: 44px; }
 
-    /* ---- closing */
+    /* ---- closing (C-159 final CTA): a centred finale. The channels' marks stream into the Amplychat
+       mark above the heading, the heading at the display size, one action, the facts as a quiet row. */
     & .close { padding-block: var(--space-section); }
-    & .close-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-16); align-items: center; }
-    /* LP-1.5: the closer at the story tier's size and 700, like every heading; two lines on a desktop. */
-    & .close h2 { font-weight: 700; font-size: var(--fs-h2); line-height: var(--lh-h2); letter-spacing: var(--tr-h2); margin: 0; max-width: 25ch; }
-    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: var(--space-5) 0 var(--space-8); max-width: 48ch; }
-    & .close .facts svg { color: var(--night-ink-2); }
-    & .close-mail { margin: var(--space-6) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-2); }
-    & .mini { position: relative; border-radius: var(--r-lg); background: var(--night-2); border: 1px solid var(--night-rule); overflow: hidden; }
-    & .mini-h { display: flex; justify-content: space-between; padding: var(--space-4) var(--space-5); font-size: var(--fs-caption); color: var(--night-ink-3); }
-    & .mini-h b { color: var(--night-ink); font-weight: 600; font-size: var(--fs-body-sm); }
-    & .mini-list { position: relative; padding: 0 var(--space-3) var(--space-3); margin: 0; list-style: none; display: grid; gap: var(--space-2); }
-    & .mrow2 { min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--r-md); background: var(--night-3); font-size: var(--fs-label); color: var(--night-ink-2); }
-    & .mrow2 b { color: var(--night-ink); font-weight: 600; }
-    & .mrow2 .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    & .close-in { display: flex; flex-direction: column; align-items: center; text-align: center; container-type: inline-size; }
+    /* The heading at the display size, capped by the column so it fits at any width; two lines from
+       1060 px (24ch balanced holds "Bring every customer / conversation into one inbox"). */
+    & .close .close-h { font-weight: 700; font-size: min(var(--fs-display), 11cqi); line-height: var(--lh-display); letter-spacing: var(--tr-display); margin: 0; max-width: 24ch; }
+    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: var(--space-6) 0 var(--space-10); max-width: 52ch; }
+    & .close .ctas { justify-content: center; }
+    & .close .facts { justify-content: center; margin-top: var(--space-8); }
+    & .close .facts svg { color: var(--s-text-2); }
+    & .close-mail { margin: var(--space-5) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-2); }
+
+    /* The convergence: a 560 × 160 field that scales with the column (the marks and the hub keep a
+       floor so they stay legible on a phone). The SVG and the tiles share the field's units: a tile
+       is centred on its stream's start with margins, so `transform` and `translate` stay free for
+       the motion. The streams are neutral (night line); the channel colours stay on the marks. */
+    & .converge {
+      --t: clamp(36px, 9cqi, 52px);
+      --hub: clamp(48px, 12.5cqi, 72px);
+      position: relative; container-type: inline-size; width: min(100%, 560px); aspect-ratio: 560 / 160;
+      margin: 0 0 var(--space-12);
+    }
+    & .cv-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    & .cv-line { stroke: var(--night-line); stroke-width: 1.5; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 0; }
+    & .converge .cv-mark {
+      position: absolute; left: calc(var(--x) / 560 * 100%); top: calc(var(--y) / 160 * 100%);
+      width: var(--t); height: var(--t); margin: calc(var(--t) / -2) 0 0 calc(var(--t) / -2); border-radius: var(--r-md);
+    }
+    & .converge .cv-mark svg { width: calc(var(--t) * 0.46); height: calc(var(--t) * 0.46); }
+    & .cv-hub {
+      position: absolute; left: 50%; top: 50%; width: var(--hub); height: var(--hub);
+      margin: calc(var(--hub) / -2) 0 0 calc(var(--hub) / -2); border-radius: var(--r-lg); overflow: clip; display: grid;
+    }
+    /* The motion: drawn once, by the scroll, as the field comes up the screen; it holds once drawn.
+       The sequence is the entrance token (1200 ms) laid over 36% of the field's `cover` range from
+       20%, so 1% is about 33 ms: each mark settles over the very-slow token (500 ms, 15%) with the
+       micro stagger (80 ms, 2.4%); each stream draws over 500 ms from the fast token's offset (250 ms,
+       7.5%), in the same order; the hub lands last over the medium token (350 ms) and ends at 1200 ms.
+       Smooth-out throughout, transforms, opacity and the stroke's dash only, nothing measured. Where
+       scroll timelines are missing, or motion is reduced, it is simply drawn (the rules above). */
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & .converge { view-timeline: --converge block; }
+        & .converge :is(.cv-line, .cv-mark, .cv-hub) { animation-timing-function: var(--ease); animation-fill-mode: both; animation-timeline: --converge; }
+        & .converge .cv-mark { animation-name: site-settle; animation-range: cover calc(20% + var(--n) * 2.4%) cover calc(35% + var(--n) * 2.4%); }
+        & .converge .cv-line { animation-name: site-draw; animation-range: cover calc(27.5% + var(--n) * 2.4%) cover calc(42.5% + var(--n) * 2.4%); }
+        & .converge .cv-hub { animation-name: site-settle; animation-range: cover 45.5% cover 56%; }
+      }
+    }
 
     /* ---- inner pages: a page head, then bands separated by space (no rules) */
     & .page-head { padding-block: var(--space-section-tight) var(--space-band); }
@@ -829,7 +864,7 @@ body:has(.site) {
       & .wires { display: none; }
       & .thread-b { min-height: 0; }
       & .dsteps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-6); }
-      & .split-head, & .close-grid, & .feat-lead { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+      & .split-head, & .feat-lead { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
       & .split-head { gap: var(--space-5); }
       /* One column: the heading blocks scroll with the page, and lead into their content at the head gap. */
       & .faq, & .spec { grid-template-columns: minmax(0, 1fr); gap: var(--space-head); }
@@ -849,8 +884,6 @@ body:has(.site) {
       & .steps li::before { left: 4px; right: auto; top: var(--space-2); bottom: 0; width: 1px; height: auto; }
       & .steps li:last-child::before { display: none; }
       & .steps li::after { top: var(--space-2); }
-      & .close-grid { gap: var(--space-12); }
-      & .mini { max-width: 460px; }
       & .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       /* Touch: every standalone link is 44 px tall. */
       & .foot ul a, & .price-foot .tlink { min-height: 44px; }
@@ -924,6 +957,9 @@ body:has(.site) {
 @keyframes site-fade { from { opacity: 0; } }
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
+/* The closer's convergence (C-159 final CTA): a mark settles into place, a stream draws toward the hub. */
+@keyframes site-settle { from { opacity: 0; transform: translateY(var(--dist-base, 8px)) scale(var(--scale-large, 0.96)); } }
+@keyframes site-draw { from { stroke-dashoffset: 1; } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
 
 /* ==== C-159 shared ==== */

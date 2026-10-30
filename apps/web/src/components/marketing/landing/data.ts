@@ -155,11 +155,3 @@ export const MODES: Record<ModeKey, { label: string; description: string; outcom
     ],
   },
 };
-
-/** The closing scene's inbox rows: a still inbox (C-157: no loop). */
-export const MINI_ROWS: { source: SourceKey; name: string; text: string; tag: string; tone: Tone }[] = [
-  { source: "web", name: "Visitor", text: "Do you take bulk orders?", tag: "Needs you", tone: "need" },
-  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", tag: "AI draft", tone: "draft" },
-  { source: "whatsapp", name: "Nina", text: "What time do you open on Sunday?", tag: "AI draft", tone: "draft" },
-  { source: "comment", name: "ana.wears", text: "LINK", tag: "Sent by DM", tone: "ok" },
-];

@@ -8413,3 +8413,58 @@ trust agents each wrote a `Callout` and a `TocSpy`; they are now one of each.
   product's own callout is now `.pp-callout`; the guides' rise motion on `.callout` is scoped to
   `.gprose`; `g-progress` and `site-read` (the same scaleX 0 to 1) are one `site-read`.
 - `/contact`'s "Frequently asked questions" now links to `/faq` (pinned in `lib/legal.test.tsx`).
+
+### C-159 (final CTA)
+
+The owner said the closing section "needs redesign". It repeated the hero (copy left, a small still inbox
+right), so it read as a weaker second hero. `FinalCta` is now a centred finale on the night band, used
+unchanged by the landing and every inner page that closes with it (same props: `trialDays`; same
+`section.night.close`, `#cta-title`, copy, single "Start free", trust row and email line).
+
+- **Layout:** the convergence, then the H2 at the display size (`min(--fs-display, 11cqi)`, 700,
+  display tracking, 24ch, balanced: two lines from 768 px up, four at 375), the lede (52ch), one light
+  "Start free" (the night CTA role), the trust points as a centred quiet row, the "Questions? Write to …"
+  line. The trial perk still shows only when `trialDays > 0` (Pro on sale).
+- **The convergence** (`.converge`, `aria-hidden`, server-rendered inline SVG): Instagram, WhatsApp,
+  website chat and Facebook in their night-colour glyphs (`PlatformGlyph` in `.ico.ico-mark` tiles; `.night`
+  already maps `--ig`/`--web` to their night variants) on the outside, each with a thin neutral stream
+  (night line, 1.5 px, non-scaling) that leaves level and arrives level at the Amplychat `LogoMark` in the
+  middle, so the two on each side join before they land. One 560 × 160 field scales with the column; the
+  tiles (36–52 px) and the hub (48–72 px) keep floors so the phone version is compact but legible.
+  Positions are margins, so `transform` stays free for the motion. No images, no new dependency, CLS 0
+  (the field's box is fixed by `aspect-ratio`).
+- **Motion:** drawn by the scroll, once, then held. A named `view-timeline` on the field inside
+  `@supports (animation-timeline: view())` and `prefers-reduced-motion: no-preference`; the rest state is
+  the drawn picture, so no scroll timeline or reduced motion simply shows it. The sequence is the
+  entrance token (1200 ms) laid over `cover` 20–56%: the marks settle (8 px, 0.96, opacity) over the
+  very-slow token with the micro stagger, the streams draw (`stroke-dashoffset` on `pathLength=1`) over
+  500 ms from the fast token's offset, the hub lands last over the medium token; smooth-out throughout.
+  No loop, so no pause control. No script, no layout reads.
+- **Removed:** the mini inbox (`MINI_ROWS` in data.ts, `.mini*`, `.mrow2`, `.close-grid` in site.css).
+- **Tests:** `FinalCta.test.tsx` (trial only when passed, two links, the hidden convergence with four
+  streams and the hub, no motion scope, no image); the landing test pins the convergence above the H2
+  and the mark colours; `landing.spec.ts` checks one Start free, the email line and the hidden marks.
+
+**Judgment calls.**
+- **Facebook is in the picture** although Facebook Pages waits for Meta's approval (the connections say so).
+  The coordinator's direction lists it; the picture is decorative and claims nothing in words, and the
+  lede still names the three live channels. Drop the fourth stream if the owner wants only live ones.
+- **The hub is the logo as it is**, its own tile gradient included: it is the brand mark, not decoration.
+- **Scroll-linked, not time-based:** CSS can't start a timed animation on entry without script, so the
+  draw follows the scroll and would undraw if the visitor scrolls back above it; once past 56% of its
+  cover range it holds. Accepted over adding an IntersectionObserver island.
+
+**Skill advice overridden.**
+- design-taste-frontend: "headlines two lines or fewer at every width" fails at 390 (four lines); the
+  wording is the owner's and fixed. "Left-aligned by default": this is the page's one centred moment.
+  "Buttons square or round": the site's 12 px radius stays (C-157).
+- impeccable: "one authored moment" — the hero's scrub stays the page's main moment; this is the
+  closing echo of it, quiet and one-shot.
+- transitions-dev ships time-based snippets; only its token scale was used, mapped onto the scroll range.
+
+**Checks.** typegen, `tsc --noEmit`, eslint on the touched folders clean; vitest for components/marketing,
+app/(marketing), components/site, styles and lib/marketing: 25 files, 472 tests pass. Impeccable detector: no
+findings on the changed files. Taste inspector on `/` (dev server): no new FAILs from the section beyond
+the copy-locked headline at 390 (the other FAILs and WARNs are the existing C-157 set). Screenshots on
+:3169 at 375, 768, 1440 and 1920, plus mid-draw and final at 1440, on `/` and
+`/guides/whatsapp-business-api-vs-app`; no sideways scroll at any width.
