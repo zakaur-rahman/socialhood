@@ -261,7 +261,8 @@ describe("the /compare hub (C-156)", () => {
     for (const page of GTM_PAGES.filter((item) => item.competitor)) expect(listed).toContain(page);
     expect(screen.getAllByText("Checked on 29 October 2026")).toHaveLength(listed.length);
     expect(screen.getByText(/Product names on these pages are trademarks of their owners/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);
+    const note = within(screen.getByRole("region", { name: "Something out of date?" }));
+    expect(note.getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);
   });
 });
 

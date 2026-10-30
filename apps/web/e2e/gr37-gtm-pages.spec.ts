@@ -84,6 +84,39 @@ test.describe("GR-37 go-to-market pages", () => {
     await expect(page.getByRole("row", { name: /WhatsApp broadcast recipients a month/ })).toContainText("Not included");
   });
 
+  test("C-159: the comparison table's header sticks on a wide screen, and a phone scrolls the table in its own box", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/compare/wati");
+    const table = page.getByRole("table", { name: "Amplychat and Wati feature by feature" });
+    await table.locator("tbody tr").nth(6).scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 300);
+    const head = table.locator("thead th").first();
+    await expect.poll(async () => Math.round((await head.boundingBox())?.y ?? -1)).toBeLessThanOrEqual(72);
+    // Each status is a chip with its words; our column is marked.
+    await expect(table.locator("thead th.ours")).toHaveText("Amplychat");
+    await expect(table.locator("[data-status='not-found']").first()).toHaveText("Not found");
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/compare/wati");
+    const box = page.getByRole("region", { name: "Amplychat and Wati feature by feature" });
+    const scrolls = await box.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(scrolls).toBe(true);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test("C-159: /faq has a group nav, and the hub's cards are links", async ({ page }) => {
+    await page.goto("/faq");
+    const nav = page.getByRole("navigation", { name: "Question groups" });
+    await nav.getByRole("link", { name: /^Plans and billing/ }).click();
+    await expect(page).toHaveURL(/#plans$/);
+    await expect(page.getByRole("heading", { level: 2, name: "Plans and billing" })).toBeInViewport();
+
+    await page.goto("/compare");
+    await page.locator(".hcard").filter({ hasText: "Amplychat vs Spur" }).click({ position: { x: 20, y: 80 } });
+    await expect(page).toHaveURL(/\/compare\/spur$/);
+  });
+
   test("the sitemap lists every page and the footer links to them", async ({ page, request }) => {
     const sitemap = await request.get("/sitemap.xml");
     expect(sitemap.ok()).toBe(true);

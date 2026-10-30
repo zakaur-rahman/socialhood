@@ -8225,3 +8225,61 @@ anchors), app/(marketing), styles (design lint), seo and public metadata. e2e (`
 the coordinator): two new tests, the two-column layout with contents, anchors, the active entry
 after a contents click, the side Start free in view, question cards matching the FAQPage, two related
 guide cards and the night close; and the phone disclosure.
+
+### C-159 (product)
+
+The product pages (feature pages, `/compare` and every comparison, `/switch-from-manychat`,
+`/for-creators`, `/for-businesses`, `/pricing`, `/faq`, `/developers/api`) brought up to the C-157
+landing's look. Restyle only: every competitor claim, source comment, status, date and trademark note
+is unchanged (gtm-pages.ts, solutions.ts, faq.ts and plan-matrix.ts are untouched).
+
+- **Heads use the width.** Copy beside a side column: the product shot where the page has one (now
+  `priority`, since it is in the first screen), otherwise an "On this page" card linking to the page's
+  sections, with the date the sources were read on a comparison. The audience pages show their feature
+  titles (with status chips) as an at-a-glance card.
+- **Cards.** Every block item is an icon card (the landing's icon-beside-title `.fcard` pattern,
+  lucide 20 px / 1.75 in `.ico`). The icons live in `components/marketing/page-icons.ts`, keyed by the
+  card's title, so the content files keep only words; a unit test fails if a new card has no icon.
+  Iris only on the AI cards (Ask Amplychat, "You choose how much the AI does").
+- **Comparisons.** "Which fits you" is two verdict cards of equal weight, the competitor's first; ours
+  has the control edge only. The table: fixed columns, a header row that sticks under the bar on a
+  wide screen (the box no longer clips there), our column on the paper tone with an ink top rule,
+  statuses as chips with icons (`components/site/StatusChip.tsx`; the words are `STATUS_LABEL`'s,
+  the icon is decoration). At 760 px and below the table scrolls in its own box with the feature
+  column held at the left. "What to know" is a callout card; the sources and the trademark note are
+  one dashed footnote card.
+- **Feature pages** get the site's own three setup steps (`SETUP_STEPS`, the landing's wording) on a
+  paper-deep band. *Judgment call:* no new steps text was written for each feature; the AI inbox's
+  "How it works" block stays as cards because its items aren't a sequence.
+- **Closing band:** every GTM page, the hub and the audience pages end on `FinalCta` (the landing's
+  night band). It replaces the lone "Start free" button under "Keep reading". On the hub this adds a
+  second mailto link to the support address, so the hub test now scopes it to the note.
+- **Keep reading** is a grid of linked cards with an arrow (`RelatedCards`, exported from GtmPageView
+  and reused by the audience pages).
+- **Hub:** "How we compare" as four icon cards (same four sentences), each group headed by its
+  channel's glyph in its colour (Instagram, WhatsApp), comparison cards with a hover lift and arrow,
+  the trademark note as a footnote card.
+- **Audience pages:** before/after as one card in two halves (Before on paper-deep, "With Amplychat"
+  with a check); features as icon cards with status chips; integrations as icon cards with the
+  landing's channel marks and status dots; tiers on the plan-card skin (sheet, r-xl, chip).
+- **Pricing:** the landing's `Pricing` component is untouched, so the landing looks exactly as it
+  did. `PlanMatrix` (pricing page only): one column grid for every group, so Free/Pro/Max line up from
+  table to table (they jumped before), a sticky header, Pro's column on the paper tone, Included /
+  Not included as chips, an icon in each caption. `WhatsAppCharges` (pricing page only) is one card:
+  the two rules with icons, "no markup" as a callout, Meta's page as the foot. Same words.
+- **/faq:** one band, a sticky group nav (plain anchors, no script; two columns on a tablet, one on a
+  phone) with each group's icon and question count, each group headed by its icon. The accordion is the
+  landing's `.qa` with FaqMotion, unchanged (C-157 animation kept). The shared `Faq` component is
+  untouched.
+- **Developers API:** a facts card in the head (version, base URL, the auth header), a sticky side nav
+  listing each area with its operations and method markers, endpoint cards with method chips (GET
+  ok, POST plain, PUT/PATCH wait, DELETE stop) and code on the night tokens in Geist Mono (code is the
+  one place mono is used). The app's `Card` and `Badge` are no longer used on this page.
+- **Motion:** the landing's card rise (`view()` timeline, CSS only) and hover lift on the new cards;
+  nothing new runs per frame; no new client JS; reduced motion drops the rise and lift.
+- **CSS:** all in the `/* ==== C-159 product ==== */` block at the end of site.css, scoped under
+  `.site .pp` (the class is on the page's main, or on the pricing page's two sections). Tokens only;
+  no new tokens needed.
+- **Skill advice overridden:** impeccable's "same-size icon cards as structure" and "no eyebrow":
+  the owner asked for icon cards, and the inner pages keep their existing kicker. Mitigated as C-157
+  did (icon beside the title, quiet ink-3 tiles).
