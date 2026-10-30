@@ -603,13 +603,26 @@
   --shadow-token: 0 8px 20px -8px color-mix(in srgb, var(--color-iris) 70%, transparent);
   /* The header once the page scrolls (C-157): a soft drop and no rule, no blur. */
   --shadow-nav: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--color-ink) 28%, transparent);
-  /* The closing's arc (C-161 v2, owner): a thin iris edge with a soft, low glow fading into the night.
-     Decorative only. The edge (iris-night at 55%) is a graphic line, about 3.3:1 on night; the haze
-     under the heading (iris at 12%) lifts the night to about #16162C, where night-ink stays 15:1,
-     night-ink-2 8.7:1 and iris-night 7.1:1, so no text loses AA. */
-  --arc-edge: color-mix(in srgb, var(--color-iris-night) 55%, transparent);
-  --arc-glow: color-mix(in srgb, var(--color-iris) 45%, transparent);
-  --arc-haze: color-mix(in srgb, var(--color-iris) 12%, transparent);
+  /* The closing's arc (C-161 v2, owner, after Voxly; brand purple, same look): a planet-like dome
+     rising behind the close. Decorative only (aria-hidden), so the rim and glows have no contrast
+     target; the text over the body is checked instead. The rim is white-hot at the apex (iris-soft,
+     near-white with a lavender cast) and lavender at the sides (edge: iris-night at 85%); a lavender
+     halo bleeds up into the night (glow: iris-night 42%; flare: iris-soft 60% at the apex). The body
+     is lit lavender just under the rim (lit: iris-night 55% into iris, about #7E75F1), saturated iris
+     below it (body: iris 85% over night) and fades through haze (iris 32% over night) into the
+     night. Measured on the rendered band, at the brightest pixel behind each text from 375 to 1920
+     px: the heading's night-ink 5.6:1 at worst (large text, needs 3:1), the accent 5.0:1, the
+     lede's night-ink-2 6.4:1, the facts 9.1:1 (CONFLICTS, C-161 v2). */
+  --arc-rim: var(--color-iris-soft);
+  --arc-edge: color-mix(in srgb, var(--color-iris-night) 85%, transparent);
+  --arc-glow: color-mix(in srgb, var(--color-iris-night) 42%, transparent);
+  --arc-flare: color-mix(in srgb, var(--color-iris-soft) 60%, transparent);
+  --arc-lit: color-mix(in srgb, var(--color-iris-night) 55%, var(--color-iris));
+  --arc-body: color-mix(in srgb, var(--color-iris) 85%, var(--color-night));
+  --arc-haze: color-mix(in srgb, var(--color-iris) 32%, var(--color-night));
+  /* The close's accent phrase on the glowing body: iris-night would sink into the purple, so it is a
+     near-white lavender (iris-night mixed half with iris-soft, about #CAC5FE). */
+  --close-accent: color-mix(in srgb, var(--color-iris-night) 50%, var(--color-iris-soft));
   /* The light night CTA on hover (C-161 v2): a short soft drop with an iris cast, offset, not a halo. */
   --shadow-cta-night: 0 10px 24px -12px color-mix(in srgb, var(--color-iris-night) 50%, transparent);
   /* The footer's closing name (C-161 v2): a fade from a step above night-high down into the night.

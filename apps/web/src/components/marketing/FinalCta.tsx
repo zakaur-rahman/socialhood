@@ -6,8 +6,8 @@ import { CtaLink } from "./primitives";
 
 /**
  * The last call to action, the first half of the page's closing composition (C-161 v2): it shares
- * the night ground with the footer below it, so the two read as one close. A quiet iris arc (pure
- * CSS, decorative) rises behind a centred heading with "every conversation" in the accent, as the
+ * the night ground with the footer below it, so the two read as one close. A glowing purple dome
+ * (pure CSS, decorative) rises behind a centred heading with "every conversation" in the accent, as the
  * hero sets "One inbox.", then the lede, two actions and one row of facts. `trialDays` is Pro's trial
  * when Pro is on sale, so the perk is only claimed when it can be taken (C-149). The second action
  * points to how it works, or to every feature on the how-it-works page itself (`from`).

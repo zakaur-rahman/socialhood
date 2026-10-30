@@ -814,22 +814,43 @@ body:has(.site) {
 
     /* ---- closing (C-161 v2): the CTA and the footer are one closing composition on one night ground.
        A quiet iris arc (owner, after Voxly) rises behind a centred close: the heading at the display
-       size with "every conversation" in the accent, the lede, two actions and one row of facts. The
-       arc is a large clipped ellipse: a 1 px iris edge on its top (the border tapers to nothing at
-       its sides), a soft low glow above it and a faint haze inside, all from tokens; no image, no
-       loop. */
-    & .close { position: relative; isolation: isolate; overflow: clip; padding-block: calc(var(--space-section) + var(--space-6)) var(--space-14); text-align: center; }
+       size with "every conversation" in the accent, the lede, two actions and one row of facts.
+       The arc is a planet-like dome in the brand purple (owner: "Brand purple, same look"): a circle
+       far wider than the band (235% of it at 1440, 160% on a phone, never shorter than 140% of the
+       band, so its ends always leave the sides and its foot never shows), clipped by the band so only
+       its top cap shows. The slope matches the reference: the ends drop about 22% of the half-width. Layers, all from tokens, no image, no
+       filter, no loop:
+       - the body: a saturated iris fill, brightest just under the rim, falling off into the night
+         (a radial gradient), with an inset shadow that keeps the fill bright along the whole curve;
+       - the rim: a 2 px lavender top border, and over it a white-hot 2 px highlight (::after) masked
+         so it is brightest at the apex and fades towards the sides;
+       - the halo: a soft lavender outer shadow that follows the curve, and a wide flare (::before, a
+         radial gradient) bleeding up from the apex into the dark. */
+    & .close { position: relative; isolation: isolate; overflow: clip; container-type: inline-size; padding-block: calc(var(--space-section) + var(--space-12)) var(--space-14); text-align: center; }
     & .close-arc {
-      position: absolute; z-index: -1; top: var(--space-12); left: 50%; width: max(140%, 760px); aspect-ratio: 2 / 1;
-      translate: -50% 0; border-radius: 50%; border-top: 1px solid var(--arc-edge); pointer-events: none;
-      background: radial-gradient(ellipse 46% 38% at 50% 0%, var(--arc-haze), transparent 100%);
-      box-shadow: 0 -8px 48px -14px var(--arc-glow), inset 0 16px 40px -20px var(--arc-glow);
+      --dome: max(160cqi, calc(272cqi - 529px));
+      position: absolute; z-index: -1; top: clamp(var(--space-8), 5cqi, calc(2 * var(--space-12))); left: 50%; width: var(--dome); height: max(var(--dome), 140%);
+      translate: -50% 0; border-radius: 50%; border-top: 2px solid var(--arc-edge); pointer-events: none;
+      background: radial-gradient(ellipse 70cqi clamp(260px, 28cqi, 460px) at 50% 0%, var(--arc-lit), var(--arc-body) 30%, var(--arc-haze) 62%, transparent 100%);
+      box-shadow:
+        0 0 clamp(24px, 2.4cqi, 48px) clamp(2px, 0.3cqi, 6px) var(--arc-glow),
+        0 0 clamp(70px, 8cqi, 160px) clamp(6px, 1.2cqi, 24px) var(--arc-glow),
+        inset 0 clamp(8px, 1cqi, 18px) clamp(20px, 2.4cqi, 44px) calc(-1 * clamp(4px, 0.4cqi, 8px)) var(--arc-lit),
+        inset 0 clamp(30px, 4cqi, 80px) clamp(70px, 9cqi, 180px) calc(-1 * clamp(12px, 1.6cqi, 32px)) var(--arc-body);
+    }
+    & .close-arc::before {
+      content: ""; position: absolute; top: 0; left: 50%; translate: -50% -50%; width: clamp(260px, 48cqi, 920px); height: clamp(64px, 6.5cqi, 130px);
+      background: radial-gradient(closest-side, var(--arc-flare), var(--arc-glow) 45%, transparent);
+    }
+    & .close-arc::after {
+      content: ""; position: absolute; inset: -2px 0 0; border-radius: 50%; border-top: 2px solid var(--arc-rim);
+      mask-image: radial-gradient(ellipse 40cqi 100% at 50% 0%, var(--arc-rim), transparent);
     }
     & .close-in { position: relative; container-type: inline-size; }
     /* Two lines from 768 px ("Ready to take control of / every conversation?"); the accent phrase
        never breaks. */
     & .close .close-h { font-weight: 700; font-size: min(var(--fs-display), 11cqi); line-height: var(--lh-display); letter-spacing: var(--tr-display); margin: 0 auto; max-width: 22ch; }
-    & .close-h em { font-style: normal; color: var(--s-link); white-space: nowrap; }
+    & .close-h em { font-style: normal; color: var(--close-accent); white-space: nowrap; }
     & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: var(--space-6) auto 0; max-width: 52ch; }
     & .close-ctas { justify-content: center; margin-top: var(--space-8); }
     & .close .btn { min-height: 52px; padding-inline: var(--space-6); transition: background-color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease), transform var(--dur-quick) var(--ease), box-shadow var(--dur-fast) var(--ease); }

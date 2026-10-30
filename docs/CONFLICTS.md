@@ -8754,3 +8754,39 @@ works" scoped to the hero), `explainers.test.tsx`, `product-pages.test.tsx`, `tr
 at 375, 430, 768, 1440 and 1920 on `/` and `/features`, no sideways scroll, the wordmark inside its box
 at every width; keyboard order Start free, See how it works, logo, Contact us, links, all with the
 iris-night ring; contrast on night: headings 17:1, links and body 9.6:1, fine print 6.0:1.
+
+**The arc, rebuilt (owner: "Brand purple, same look").** The first arc was a thin line with a weak
+haze; the owner's crop of Voxly is a planet-like dome, so the arc now copies its shape, slope,
+intensity and layering, in the brand purple. Pure CSS on `span.close-arc` and its two pseudo-elements,
+no image, no filter:
+- **Shape:** a circle 235% of the band wide at 1440 (`max(160cqi, 272cqi - 529px)`: 160% on a phone,
+  244% at 1920), never shorter than 140% of the band (so its foot never shows on a tall phone band),
+  apex `clamp(space-8, 5cqi, 2 × space-12)` down, clipped by the band (`overflow: clip`; the section is
+  now an inline-size container). The ends drop about 22% of the half-width, as in the reference
+  (125/560 there, 163/720 here); they leave the sides at about 40% of the band at 1440, 52% at 1920
+  and 20% on a phone (the phone band is twice as tall for its width, so the reference's 55–65% would
+  need a dome taller than wide). The section's top padding grew from `space-6` to `space-12` above
+  the section token so the heading sits under the apex, not on it.
+- **Rim:** a 2 px lavender top border (`--arc-edge`, iris-night 85%) and a 2 px white-hot highlight
+  (`::after`, `--arc-rim` = iris-soft) masked so it is brightest at the apex and gone towards the
+  sides.
+- **Halo:** two soft outer shadows that follow the curve (`--arc-glow`, iris-night 42%) and an apex
+  flare (`::before`, a closest-side radial gradient centred on the apex, `--arc-flare`, iris-soft 60%).
+- **Body:** a radial gradient from the apex, lit lavender (`--arc-lit`, iris-night 55% into iris) to
+  saturated iris (`--arc-body`, iris 85% over night) to `--arc-haze` (iris 32% over night) to clear,
+  plus two inset shadows that keep the fill bright just inside the rim along the whole curve. The
+  night around the dome stays near-black.
+- **Accent:** iris-night sank into the purple, so "every conversation" is now `--close-accent`
+  (iris-night mixed half with iris-soft, about #CAC5FE), a near-white lavender; the hero's accent is
+  unchanged.
+- **Contrast,** measured on the rendered band with the text hidden, at the brightest pixel behind
+  each text at 375, 768, 1440 and 1920: heading (night-ink) 5.6:1 at worst (1920 is 5.8, 375 is 5.6;
+  large text, needs 3:1), accent 5.0:1 (1920), lede (night-ink-2) 6.4:1 (1920), facts 9.1:1, the
+  outlined button's label 13.5:1; the light "Start free" keeps its own fill. The old iris-night accent
+  would have been about 3.9:1 on the 1920 body.
+- **Motion:** unchanged: the arc fades in once on view (`site-fade`, view timeline), static under
+  reduced motion; no loop. CLS 0 (the arc is absolute and decorative). No sideways scroll at 375, 768,
+  1440 or 1920.
+- **Gotcha:** `min()` mixing a percentage and `cqi` as a radial-gradient size computes to invalid in
+  Chromium (the whole background drops to `none`), so the gradient and mask sizes use `cqi` and
+  `clamp()` of lengths only.
