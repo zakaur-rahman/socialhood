@@ -7734,3 +7734,91 @@ The coordinator's measure after stage 2 read `/` mobile 94 → 87 (TBT 112 → 2
   - Trimming it is a site-wide change to the 404's shell, so it was left out of this task.
 - Medians on this laptop move by ±2 points from run to run (a single mobile run read 79). `/` mobile
   sits at 94, on the target and not above it.
+
+### C-157 (organize)
+
+The owner said Security, Integrations and Features "look scattered" (2026-10-30), then asked for the whole
+page to be checked for the same. Stage 2 had removed icons, rules and cards and these sections lost their
+structure with them; the fix is structure, not decoration. Checked at 375, 768, 1366, 1440 and 1920.
+
+**Security: a spec list.** Two columns: the H2 and lede on the left, sticky on a wide screen
+(`.spec-head`, `top: nav + 32px`); the five points on the right as rows, the title in a fixed 13rem
+column, the description beside it on the same baseline, a hairline (`--s-line`, the night line)
+between rows. One column at ≤900 (the head scrolls), title above description at ≤520. No icons.
+- **Sticky under the performance rule.** The bands after How it works keep `content-visibility: auto`,
+  `contain-intrinsic-size: auto 900px`. With `overflow: hidden` the band is the sticky element's scroll
+  container, so it never sticks; `#security` and `#faq` alone take `overflow: clip`, which clips the
+  same unpainted overflow without being a scroll container. Measured: the head holds at 96 px while the
+  rows scroll, and leaves with its band. No script, no `:has()`, no container query.
+- **Judgment call:** in a column the 52 px H2 "Your customers' messages, handled with care" runs three
+  lines at 1440 (two before). The brief asked for the heading in the left column; the story tier and
+  the wording were kept.
+
+**Integrations: equal cards.** 4 columns above 1060, 2 above 520, 1 below. Each card is a subgrid over
+four shared rows (mark and name, description, guide link, status), so names, descriptions and statuses
+line up across a row and the status sits at the card's foot. Surface, a 1 px `--s-line`, `--r-lg`, one
+padding (`--space-6`). The mark is a hanging column, so a two-line name (Zapier at 1060–1440) wraps
+under its text, not under the dot. The WhatsApp guide moved out of the description to the card's own
+link row. Payments is one full-width row on the same columns as the cards (its name on card 1's text
+edge, its line on card 2's).
+- **Wording:** "Live comments and ad replies" → "Live comments and ads" (fits one line; the description
+  still says what it answers). "Payments." → "Payments" (now a row name, not a run-in label).
+
+**Features: three outcomes.** Ask Amplychat stays the wide lead card. Below it each group is a row: its
+title (h3) on the left, its features as equal-height cards (h4) in two columns; one column below 1060
+(title above) and one card a row below 760. Every feature keeps its words; only the group titles are new.
+- "Manage every conversation": Team roles and assignment; Notifications, on your phone too.
+- "Automate the repetitive work": Scheduling, Reels and Stories; Sequences, and broadcasts soon.
+- "Understand and grow": Analytics and the weekly report; Comment intelligence; Product catalogue,
+  orders and payment links (Pro).
+- **Judgment call:** seven features can't fill two-column groups evenly. The brief's mapping was kept
+  (Comment intelligence reads as insight: sentiment, topics, summaries) and the odd group's last card,
+  the product catalogue (the longest, with its Shopify note), spans both columns, so no group has a hole.
+  Moving Comment intelligence to "Manage" would only move the odd count.
+- Linked features (Scheduling, Comment intelligence) are whole-card links: the title's `::after` covers
+  the card, the focus ring is drawn on it, a small arrow moves 4 px on hover (250 ms, smooth-out, the
+  buttons' timing), the edge darkens to `--s-line-control`. No underlined headings; unlinked cards are
+  the same minus the arrow.
+- **"Go deeper":** there was only ever one line in the code; the owner's two screenshots overlapped on
+  it. It now sits under the feature groups on the container's left edge (the 40 px inset is gone), at
+  the shared footer gap (`--space-8`, also the FAQ's "See all questions").
+
+**Elsewhere on the page.**
+- Automations: the three panels stretch to one height; the comments and the DM thread take the room
+  left (`flex: 1` with their old heights as minimums, so the motion script's geometry is unchanged), the
+  rule's counter sits at its foot and the DM thread is anchored to its foot, as a chat is. "Example
+  data" sits right under the scene on its left edge (12 px), like the hero's caption.
+- Split heads: one rule, `align-items: last baseline` (the lede's last line on the H2's last line). A
+  short lede sits under its heading instead: Modes and Features no longer use a split head.
+- Who it's for: the 34ch and 52ch caps inside the cards are gone (the card is the measure), so both
+  cards wrap the same way; the cards gained the 1 px line like the other landing cards.
+- Set up in three steps: three equal columns over a subgrid (titles on one row), one hairline
+  (`--s-line-control`) running under the step tops with a 9 px mark starting each step, left to right;
+  on a phone the line turns vertical down the left edge. No numbers.
+- Pricing (landing and /pricing): the plan cards are a subgrid over six rows (name, tagline, price, its
+  line, button, list), so they are one height and their buttons and lists start at one height, in the
+  on-sale state and the "Coming soon" one (no button row). Under the cards, one stack on the grid's
+  edges: "How AI credits work" as wide as the plan grid, then the Max line, the Dodo/Meta fees line and
+  "Compare every plan limit".
+- FAQ: the heading block is sticky beside the list on a wide screen (static at ≤900, where the column
+  gap becomes the head gap); "See all questions" keeps the list's left edge at the shared footer gap.
+- At ≤900 the FAQ and Security heads lead into their content at `--space-head`, like every section.
+
+**Skill advice overridden, and why.** The taste inspector (after: 5 FAIL, 5 WARN) flags `hairline`
+(the spec rows, the steps line) and `outlined-box` (the 1 px card edges): both are what the brief asked
+for (the owner's "organize"), and on paper the sheet is too small a tone step to hold a grid of cards
+alone. `headline-lines` adds the Security H2 at 1440 (above); the hero H1 and the 390 px H2s are stage
+2's. `eyebrow` (plan taglines) and the WARNs are unchanged from stage 2. Impeccable's layout detector:
+no findings on the changed files.
+
+**Performance.** CSS only plus markup; no script, no dependency, no `:has()` added, no container query,
+no extra `text-wrap`. Subgrid and sticky are plain layout. The `content-visibility` rule is unchanged;
+two bands swap `hidden` for `clip`.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest for `app/(marketing)`,
+`components/marketing`, `components/site`, `styles`, `lib/marketing`, `copy-lint`, `seo`,
+`public-metadata` and `layout` pass. `page.test.tsx` pins the groups, the card links, one "Go deeper",
+the guide's link row and the new name; `landing.spec.ts` adds a 1440 geometry test (equal panels,
+statuses per row, plan cards and lists, both sticky heads) for the coordinator's e2e run. Measured on
+the dev server at 375–1920: panel feet, statuses per row, plan feet and list tops each within 1 px; no
+sideways scroll.
