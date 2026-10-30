@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { SiteNotFoundActions } from "@/components/not-found/NotFoundActions";
-import { NotFoundPage } from "@/components/not-found/NotFoundPage";
+import { SiteNotFound } from "@/components/not-found/SiteNotFound";
 import { ThemePin } from "@/components/theme/ThemePin";
 
 // A 404 is never worth indexing; Next answers with status 404 for an unknown URL.
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Page not found", robots: { index: fa
 /**
  * An address that matches no route (and a `notFound()` outside the workspace): the public site's
  * frame and look (C-155: paper and night, its own palette and bold Geist headings), with the 404 page between the
- * header and footer.
+ * header and footer (C-159: SiteNotFound, the head beside link cards to the main pages).
  * A signed-in visitor sees "Open the app" in place of "Sign in". A missing page inside a
  * workspace is `w/[slug]/not-found.tsx`, which keeps the app shell instead.
  */
@@ -24,9 +24,9 @@ export default function RootNotFound() {
       <ThemePin />
       <SiteHeader />
       <main id="main" className="flex flex-1 flex-col">
-        <NotFoundPage>
+        <SiteNotFound>
           <SiteNotFoundActions />
-        </NotFoundPage>
+        </SiteNotFound>
       </main>
       <SiteFooter />
     </div>

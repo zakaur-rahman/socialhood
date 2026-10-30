@@ -12,7 +12,8 @@ test.describe("not found", () => {
     const response = await page.goto("/no-such-page-e2e");
     expect(response?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "We can't find that page" })).toBeVisible();
-    await expect(page.getByTestId("not-found-illustration")).toBeVisible();
+    // C-159: the public 404 shows link cards to the main pages (the illustration is the app 404's).
+    await expect(page.getByRole("navigation", { name: "Popular pages" }).getByRole("link")).toHaveCount(6);
     await expect(page.getByTestId("requested-path")).toHaveText("/no-such-page-e2e");
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
     await expect(page.getByRole("link", { name: "See pricing" })).toBeVisible();
