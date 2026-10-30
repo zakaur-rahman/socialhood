@@ -833,14 +833,17 @@ body:has(.site) {
       translate: -50% 0; border-radius: 50%; border-top: 2px solid var(--arc-edge); pointer-events: none;
       background: radial-gradient(ellipse 70cqi clamp(260px, 28cqi, 460px) at 50% 0%, var(--arc-lit), var(--arc-body) 30%, var(--arc-haze) 62%, transparent 100%);
       box-shadow:
-        0 0 clamp(24px, 2.4cqi, 48px) clamp(2px, 0.3cqi, 6px) var(--arc-glow),
-        0 0 clamp(70px, 8cqi, 160px) clamp(6px, 1.2cqi, 24px) var(--arc-glow),
+        0 0 clamp(20px, 2cqi, 40px) 0 var(--arc-glow),
+        0 0 clamp(90px, 10cqi, 200px) 0 var(--arc-glow-soft),
         inset 0 clamp(8px, 1cqi, 18px) clamp(20px, 2.4cqi, 44px) calc(-1 * clamp(4px, 0.4cqi, 8px)) var(--arc-lit),
         inset 0 clamp(30px, 4cqi, 80px) clamp(70px, 9cqi, 180px) calc(-1 * clamp(12px, 1.6cqi, 32px)) var(--arc-body);
     }
     & .close-arc::before {
-      content: ""; position: absolute; top: 0; left: 50%; translate: -50% -50%; width: clamp(260px, 48cqi, 920px); height: clamp(64px, 6.5cqi, 130px);
-      background: radial-gradient(closest-side, var(--arc-flare), var(--arc-glow) 45%, transparent);
+      /* A wide, soft wash of light over the apex, eased out in steps and added to the night (screen)
+         so it melts away with no edge. */
+      content: ""; position: absolute; top: 0; left: 50%; translate: -50% -58%; width: clamp(420px, 74cqi, 1400px); height: clamp(150px, 15cqi, 300px);
+      background: radial-gradient(closest-side, var(--arc-flare), var(--arc-flare-mid) 38%, var(--arc-flare-low) 68%, transparent);
+      mix-blend-mode: screen;
     }
     & .close-arc::after {
       content: ""; position: absolute; inset: -2px 0 0; border-radius: 50%; border-top: 2px solid var(--arc-rim);

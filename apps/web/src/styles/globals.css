@@ -616,7 +616,12 @@
   --arc-rim: var(--color-iris-soft);
   --arc-edge: color-mix(in srgb, var(--color-iris-night) 85%, transparent);
   --arc-glow: color-mix(in srgb, var(--color-iris-night) 42%, transparent);
-  --arc-flare: color-mix(in srgb, var(--color-iris-soft) 60%, transparent);
+  /* The light above the apex: lavender, not white, and stepped down gently so it melts into the
+     night instead of reading as a grey oval (owner, 2026-10-31). Decorative: no text sits on it. */
+  --arc-flare: color-mix(in srgb, var(--color-iris-soft) 34%, transparent);
+  --arc-flare-mid: color-mix(in srgb, var(--color-iris-night) 20%, transparent);
+  --arc-flare-low: color-mix(in srgb, var(--color-iris-night) 7%, transparent);
+  --arc-glow-soft: color-mix(in srgb, var(--color-iris-night) 22%, transparent);
   --arc-lit: color-mix(in srgb, var(--color-iris-night) 55%, var(--color-iris));
   --arc-body: color-mix(in srgb, var(--color-iris) 85%, var(--color-night));
   --arc-haze: color-mix(in srgb, var(--color-iris) 32%, var(--color-night));
