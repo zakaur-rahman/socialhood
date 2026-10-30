@@ -8468,3 +8468,112 @@ findings on the changed files. Taste inspector on `/` (dev server): no new FAILs
 the copy-locked headline at 390 (the other FAILs and WARNs are the existing C-157 set). Screenshots on
 :3169 at 375, 768, 1440 and 1920, plus mid-draw and final at 1440, on `/` and
 `/guides/whatsapp-business-api-vs-app`; no sideways scroll at any width.
+
+## C-160 · How it works and features pages
+
+The owner asked (2026-10-31) for "pages for how it works, features with detailed explanations … proper
+cards, with animation, flow, bento grid … premium feels". Two new public pages on
+`feature/explainer-pages`; the header's Features and How it works now lead to them instead of the
+landing's anchors.
+
+**`/how-it-works`: the product as a guided flow.**
+- Head: the "How it works" eyebrow, the h1 "From first message to reply", a lede, Start free and "See
+  every feature", and an at-a-glance card (the three channel marks joined into one inbox with the
+  "AI draft" and "Needs you" chips).
+- The eight stages as one `<ol>` of sections (connect, knowledge, one inbox, reads and tags, drafts or
+  replies, hand-off and gaps, automations, see what works), each with its number on a line down the
+  page, a heading ("Step N:" for screen readers), one or two paragraphs, three specifics and a scene.
+- **Sticky step tracker** from 1060 px: the shared `TocNav` (numbered), the current stage marked by
+  toc-spy. Hidden below 1060 px.
+- **The line draws as you scroll** (CSS `view-timeline` on the list, `@supports`): an ink fill up to the
+  middle of the screen, each number turning ink as it passes. Without scroll timelines, and with
+  reduced motion, it is a plain line. The last stage covers the line below its number.
+- **Landing scenes reused, not copied:** `HeroInbox` (stage 3), `ModeSwitch` (stage 5) and
+  `CommentMachine` (stage 7) are now exported from Hero.tsx, Modes.tsx and Comments.tsx; the landing
+  sections render them, with identical markup. The landing script (`startLandingMotion`) runs here too
+  for the switch and the machine (one round, with its pause control).
+- Card-built scenes elsewhere (`components/marketing/explainers/visuals.tsx`): the four connections
+  with their statuses, the knowledge sources and a test question, the tags on a message (intent,
+  sentiment, lead score), the hand-off thread on a night card (the landing's `.handoff`/`.gap` parts),
+  the Monday report beside an Ask Amplychat question.
+- Then six questions from `lib/marketing/faq.ts` (the shared `Faq`, with the /faq link, no extra
+  FAQPage JSON-LD), "Keep reading" (`RelatedCards`) and `FinalCta` (its trial line from the plans API).
+
+**`/features`: a bento grid, then the details.**
+- Head: eyebrow, the landing's features heading as the h1, its lede plus one new sentence, two CTAs.
+- **Bento grid** (12 columns; 2 below 1060 px; 1 below 760 px), 15 cells: two headline cells with a
+  scene (the AI inbox, AI replies from your own knowledge), two large (comment-to-DM, scheduling), three
+  medium with a hint of a scene (comment intelligence, analytics and the weekly report, Ask), eight
+  small. Every cell: an icon (a channel mark for Website chat and Facebook Pages), a title that is
+  the cell's one link, one or two lines, a status chip where it isn't live ("With Meta's approval",
+  "Coming soon", "Pro"). Links: the feature's own page or guide, else its detail below.
+- **"In detail"** on the deeper paper: a sticky side nav ("Feature groups", toc-spy) beside ten group
+  cards, each with a paragraph, the specifics and a Free/Pro/Max limits table read from
+  `plan-table.json`. A note above says which plans can be had today, from the plans API (when the API
+  can't be reached only Free's state is said).
+- A comparison teaser (the hub's description, four links) and `FinalCta`.
+
+**Navigation.** `NAV_LINKS` (bar and phone menu), the footer's Product column and the public 404's
+cards point at `/features` and `/how-it-works` (`FEATURES_PATH`, `HOW_IT_WORKS_PATH` in site.ts). The
+landing keeps `#features` and `#how-it-works` (the hero's "See how it works" still jumps in page).
+Both pages are in `PUBLIC_PATHS`, `PAGE_UPDATED` (2026-10-31), the sitemap and llms.txt (Product). The
+feature pages' breadcrumbs are now Home › Features › page (like the comparisons under /compare).
+`SiteHeader.test.tsx` and `seo.test.ts` updated; no e2e spec pinned the old anchors.
+
+**Motion.** One idle island (`ExplainerMotion`, the dynamic `explainer-motion.ts`): toc-spy for the
+tracker and the side nav; scenes that start off screen are armed and their parts arrive once in order
+(`[data-xv]`, 80 ms apart, 500 ms, transform and opacity); the hero inbox sorts once as it arrives (it
+stays sorted and still until armed, so no script means no pile); cards rise with the landing's
+`view()` rise and a 40 ms stagger (the script arms them where `view()` is missing); cells lift on
+hover. No loop of our own; reduced motion turns all of it off. No layout reads.
+
+**Claims checked against the code.**
+- Monday 9:00 AM local weekly email and its contents: `notify/digest.py`, `jobs/tasks/digests.py`.
+- Credit costs (message analysis 1, draft or auto reply 2, test question 1, caption 1):
+  `billing/plans.py` `CREDIT_COSTS`. *Found:* gtm-pages.ts's comment intelligence card says "analysing a
+  comment costs a credit", but `comment_analysis` charges 1 credit per 20 comments (`ai/metering.py`);
+  not my file, left for the owner.
+- Auto on Pro, limits per plan: `plan-table.json` (`ai_modes`, `crawl_pages`, `members` …).
+- Knowledge types (text, Q&A, links, files, website pages): `models/ai.py` `KnowledgeType`; products
+  through the catalogue on Pro (`commerce`); test question: `POST /knowledge/test`.
+- Intents and sentiments: `models/ai.py` `Intent`, `Sentiment`; lead score 0–100: `services/analysis.py`.
+- Drafts show their sources: `schemas/inbox.py` `Suggestion.sources`.
+- Follow nudge never a condition: `models/automations.py` `follow_nudge` (FR-AUT-22).
+- 750 private replies an hour: `platforms/buckets.py` (as FAQ_BAN_RISK).
+- Takeover pause 2 hours by default, 30 min / 24 h / until resumed: FAQ_TAKEOVER (`human_takeover`).
+- Sequences stop on a reply: `models/sequences.py` `stop_on_reply`; broadcasts off:
+  `settings.broadcasts_enabled = False`.
+- Roles owner, admin, agent: `models/identity.py` `Role`. Push: `notify/push_webpush.py`.
+- Widget "one line of code": `WidgetSettingsPage.tsx` (embed code before `</body>`).
+- Ask never acts by itself: the landing's FEATURES note and gtm-pages' Ask card (GR-36 proposals wait
+  for approval).
+
+**Judgment calls and skill advice overridden.**
+- *Numbered stages* (the brief) against C-157's "no step numbers" and both skills' ban on index
+  numbers: kept, because the sequence is the page's subject; the numbers are the `<ol>`'s order, in
+  Geist (no mono), quiet, and screen readers hear "Step N:" in the heading.
+- *Eyebrows* ("How it works", "Features") kept, as every inner page head (C-159).
+- Taste inspector, left FAILs: `eyebrow` (above); `icon-cards` and `outlined-box` (the owner's card
+  language, C-157/C-159); `hairline` (the toc rail, C-159 shared); `few-pictures`/`no-footage` (the
+  scenes are `data-ui` fragments, as C-157); `headline-lines` at 390 for the landing's features
+  heading (site copy) and `FinalCta`'s heading (not this branch's file); `off-centre` at 768 on
+  /features (the lede's measure, not the frame). Fixed from it: the features h1 now two lines at 1440
+  (wider head column), the shorter how-it-works h1, row rules as borders instead of shadows.
+- Impeccable detector on the new files: no findings. Its `animate` advice ("one authored moment")
+  is met by the drawing line; the per-scene arrivals are small and once only.
+- transitions-dev tokens used through the site's names (`--dur-*`, `--ease`, `--dist-*`), no `t-*`
+  snippets.
+- The stage headings carry no icon (the number is the marker); the content keeps an icon per stage
+  for later use.
+- Example numbers in the scenes (214 messages, 96%, 4 min, lead score 72 …) are captioned "Example
+  data", like the landing's.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest
+`app/(marketing)` (new `explainers.test.tsx`: navigation, the stages and tracker, the reused scenes,
+plan-table limits, one h1 and breadcrumbs on both pages, every bento cell's icon and link, statuses,
+the plans-API states), `app/seo`, `app/public-metadata`, `app/layout`, `lib/marketing`,
+`components/marketing`, `components/site`, `components/not-found`, `styles`, `lib/copy-lint`: 31 files,
+552 tests pass. E2E for the coordinator: `e2e/c160-explainers.spec.ts` (one h1, no errors, no sideways
+scroll at 375/768/1440/1920; the tracker sticky and marking the stage; hidden on a phone; a scene arms
+and plays; the switch; bento links to a detail and a page; header bar, phone menu and footer links;
+the landing's anchors).

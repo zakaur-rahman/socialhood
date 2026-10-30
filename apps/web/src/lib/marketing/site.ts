@@ -103,10 +103,17 @@ export const SECTION_IDS = {
   faq: "faq",
 } as const;
 
-/** The header's links; they point at the landing page's sections from every page. */
+/** The two explainer pages (C-160): the header, the footer and the 404 link here. */
+export const FEATURES_PATH = "/features";
+export const HOW_IT_WORKS_PATH = "/how-it-works";
+
+/**
+ * The header's links. Features and How it works have their own pages (C-160); Pricing and FAQ still
+ * point at the landing page's sections, whose anchors stay for in-page links.
+ */
 export const NAV_LINKS = [
-  { label: "Features", href: `/#${SECTION_IDS.features}` },
-  { label: "How it works", href: `/#${SECTION_IDS.howItWorks}` },
+  { label: "Features", href: FEATURES_PATH },
+  { label: "How it works", href: HOW_IT_WORKS_PATH },
   { label: "Pricing", href: `/#${SECTION_IDS.pricing}` },
   { label: "FAQ", href: `/#${SECTION_IDS.faq}` },
   { label: "Guides", href: "/guides" },
@@ -156,9 +163,9 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
       id: "product",
       title: "Product",
       links: [
-        { label: "Features", href: `/#${SECTION_IDS.features}` },
+        { label: "Features", href: FEATURES_PATH },
         { label: "Pricing", href: "/pricing" },
-        { label: "How it works", href: `/#${SECTION_IDS.howItWorks}` },
+        { label: "How it works", href: HOW_IT_WORKS_PATH },
         { label: "What's new", href: "/changelog" },
         ...(status ? [{ label: "Status", href: status, external: true }] : []),
         { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
@@ -255,6 +262,9 @@ export const PUBLIC_PATHS = [
   "/accessibility",
   // C-157: every question, out of the landing page
   "/faq",
+  // C-160: the explainer pages
+  "/how-it-works",
+  "/features",
 ] as const;
 
 /**
@@ -296,4 +306,6 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/safety": "2026-10-29",
   "/ai-info": "2026-10-29",
   "/faq": "2026-10-30",
+  "/how-it-works": "2026-10-31",
+  "/features": "2026-10-31",
 };

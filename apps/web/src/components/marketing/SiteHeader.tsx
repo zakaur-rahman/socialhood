@@ -19,8 +19,9 @@ const WIDE = `(width > ${tokenValues.breakpoints["site-nav"]})`;
  * The public header (C-155, C-157): the logo, the section links, the account actions, on a sticky
  * paper bar that gains a soft drop once the page scrolls (HeaderScrollState); the links show from
  * the tablet up, and a menu takes them below 760 px. All server-rendered; only the menu's open
- * state, the scrolled flag and the signed-in switch run in the browser. The section links aren't
- * prefetched: they all lead to the home page, which on the home page meant fetching it again (C-152).
+ * state, the scrolled flag and the signed-in switch run in the browser. The links aren't prefetched:
+ * Pricing and FAQ lead to the home page, which on the home page meant fetching it again (C-152), and
+ * Features and How it works (their own pages since C-160) keep the same rule.
  *
  * The two link lists are two landmarks with two names ("Main" in the bar, "Menu" in the phone
  * panel); only one is ever shown.

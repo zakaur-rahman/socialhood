@@ -8,7 +8,7 @@ import { legalDate } from "@/lib/legal";
 import { competitorNote, latestChecked } from "@/lib/marketing/competitor-note";
 import { COMPARE_PATH, PRICING_PATH, type Block, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
 import { breadcrumbTrailJsonLd } from "@/lib/marketing/seo";
-import { SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
+import { FEATURES_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
 
 import { FinalCta } from "./FinalCta";
 import { BreadcrumbJsonLd, JsonLd } from "./JsonLd";
@@ -168,11 +168,12 @@ export function GtmPageView({ page }: { page: GtmPage }) {
   const feature = page.path.startsWith("/features/");
   return (
     <main id="main" tabIndex={-1} className="pp flex-1 outline-none">
-      {/* A comparison sits under the /compare hub (C-156): Home, Compare, the page. */}
-      {page.path.startsWith(`${COMPARE_PATH}/`) ? (
+      {/* A comparison sits under the /compare hub (C-156): Home, Compare, the page; a feature page under
+          /features (C-160): Home, Features, the page. */}
+      {page.path.startsWith(`${COMPARE_PATH}/`) || feature ? (
         <JsonLd
           data={breadcrumbTrailJsonLd([
-            { name: "Compare", path: COMPARE_PATH },
+            feature ? { name: "Features", path: FEATURES_PATH } : { name: "Compare", path: COMPARE_PATH },
             { name: page.name, path: page.path },
           ])}
         />

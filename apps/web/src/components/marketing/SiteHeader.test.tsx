@@ -66,8 +66,8 @@ describe("the site header", () => {
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toHaveTextContent("Features");
     for (const [name, href] of [
-      ["Features", "/#features"],
-      ["How it works", "/#how-it-works"],
+      ["Features", "/features"],
+      ["How it works", "/how-it-works"],
       ["Pricing", "/#pricing"],
       ["FAQ", "/#faq"],
     ]) {
