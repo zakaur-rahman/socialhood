@@ -7822,3 +7822,171 @@ the guide's link row and the new name; `landing.spec.ts` adds a 1440 geometry te
 statuses per row, plan cards and lists, both sticky heads) for the coordinator's e2e run. Measured on
 the dev server at 375–1920: panel feet, statuses per row, plan feet and list tops each within 1 px; no
 sideways scroll.
+
+### C-157 (motion and icons)
+
+The owner reviewed the rebuilt landing page (2026-10-30) and asked for icons and animations in the
+cards, the hero animation back ("the whole inbox was scattered and on scroll it was getting
+organized"), a premium feel in the cards, and the FAQ animating open and closed. These are owner
+decisions and they override two earlier defaults:
+- **Stage 2's one-shot sort** (the hero opened sorted and played one 1.2 s sort after load) is replaced
+  by the scatter-to-sort scrub.
+- **Stage 2's "no icons"** (and both skills' advice against icon tiles) is replaced by icons on the cards.
+
+**Hero: the scattered inbox sorts with the scroll.**
+- The server draws the pile itself: each message carries its place (`--i`, `--sx`, `--sy`, `--sr` from
+  `HERO_PILE` in data.ts: x and y as percentages of the row's own box, a tilt in degrees), and site.css
+  holds every animation paused on its first keyframe. Nothing is measured and nothing jumps when the
+  script arrives. The rows lose their own surface; the card skin in the pile (sheet, edge, drop) and the
+  row rule are pseudo-elements, and the inbox's frame is its own layer, so the sort only moves and fades.
+- One set of animations, three drivers, and site.css names which applies (`--hero-mode`, so the
+  breakpoint lives once in CSS, as LP-4.6 asked for How it works):
+  - a wide screen with a mouse (`width > 900px` and `pointer: fine`) where the browser has scroll
+    timelines: a CSS `view-timeline` on the pinned box. **No script per frame**, the animations stay on
+    the compositor;
+  - the same screen without scroll timelines: landing-motion.ts sets the animations' `currentTime` from
+    `scrollY`. That is one rAF on scroll, only while an IntersectionObserver says the hero is in view.
+    The geometry is read on start and on resize; a frame reads `scrollY` only;
+  - phones and tablets (narrow, or touch): **no scrub**. It plays once, 1.2 s, when 35% of the inbox is on
+    screen and at least 1.5 s after the load event at an idle moment (C-157 performance's rule). It uses
+    the pause control (`MotionToggle` in the caption, `bindMotionControl`), which hides when the sort
+    ends. The caption keeps the toggle's 44 px, so showing it moves nothing.
+- **Scrub length: 170vh** for the pinned box, about 0.7 of a screen of scrolling past the pinned frame
+  (694 px at 1440×900). Each row moves over 64% of that range, 2.8% after the one above (920 ms of the
+  1.2 s with a 40 ms stagger, on the scroll). The frame fades in over the first 28%, the header over
+  56–84%, and the last 16% holds sorted before the strip arrives. 170vh sits in the brief's 150–180vh
+  band, toward its upper end, so eight staggered rows each get about 440 px of scroll. Only 170vh was
+  looked at; 150 and 180 were not tried side by side.
+- Eased with the smooth-out token. Transforms and opacity only. No `will-change`: the browser promotes
+  the animated layers itself, and only while they animate.
+- The H1 is pinned, not moved: measured at 0, 25, 50 and 100%, its top is 283 px each time. It is the LCP
+  element. CLS is 0 through the scrub.
+- No script, or `prefers-reduced-motion`: none of the pile CSS applies (`@media (scripting: enabled) and
+  (prefers-reduced-motion: no-preference)`). The inbox is sorted and still, and the hero isn't pinned.
+- The one-shot sort (`heroSort`, `data-arrives`, `HeroNote.arrives`) is gone.
+
+**Icons (lucide-react, already a dependency).**
+- How they look: server-rendered SVG, 20 px, stroke 1.75, `aria-hidden`, in a 40 px tile at `--r-sm`.
+  - The tile is on `--s-surface`, or one step lower (`--s-surface-2`) inside a card.
+  - The icon is ink-3 at rest and turns ink when its card is hovered.
+  - Iris only on Ask Amplychat (an AI moment).
+  - One component: `landing/Ico.tsx`.
+- **Features:**
+  - Ask Amplychat: MessageCircleQuestionMark.
+  - Team roles: UsersRound. Notifications: BellRing. Scheduling: CalendarClock. Sequences: Timer.
+  - Analytics: ChartLine. Comment intelligence: MessageSquareText. Product catalogue: ShoppingBag.
+  - Group titles: Manage every conversation: Inbox. Automate the repetitive work: Workflow. Understand
+    and grow: TrendingUp.
+- **Security:** No passwords asked: KeyRound. Encrypted tokens: LockKeyhole. Your workspace stays separate:
+  ShieldCheck. Delete anytime: Trash2. Official Meta APIs: BadgeCheck.
+- **Setup steps:** Connect your accounts: Link2. Add your knowledge: BookOpenText. Let the AI draft or reply:
+  MessageSquareReply.
+- **Who it's for:** creators: Clapperboard. Businesses: Store.
+- **Connections:**
+  - Instagram, WhatsApp, Website chat and Facebook Pages keep their channel-colour mark, now set inside
+    the same tile.
+  - Live comments and ads (it had a grey dot): Radio. Shopify: ShoppingCart. Google Sheets: Sheet.
+    Zapier and the public API: Webhook. Payments: Wallet.
+- **Judgment call:** the impeccable detector flagged "icon tile above the heading" on the feature cards. There
+  the icon now sits beside the title and the text hangs under the title, with the full width on a phone.
+  The lead card, the steps and the audience cards keep the tile above the title, where it's one per block.
+- Security's title column widened from 13rem to 16rem to make room for the tile. The tile hangs beside the
+  title and takes no part in the baseline, so the title and the description still share one.
+
+**Card motion** (`.feat-lead`, `.fcard`, `.crow`, `.pay`, `.aud-card`, plus a rise for `.spec-row` and the
+steps).
+- **Rise as a card scrolls in:**
+  - CSS `animation-timeline: view()` inside `@supports` and `prefers-reduced-motion: no-preference`:
+    12 px (`--dist-medium`) with a fade, over the card's own entry (0 to 75%).
+  - A 40 ms stagger along a row (the `--dur-stagger` token as 8% of the range; 120 ms at most).
+  - No script per frame.
+  - Where there's no `view()`, the idle-loaded motion script uses an IntersectionObserver. It hides only
+    cards that are off screen when first reported (`data-rv=""`), and they rise with the transitions
+    (500 ms, `--dur-very-slow`, smooth-out, the same stagger as a delay).
+  - Content starts visible. With no script every card shows, and a card that is on screen is never hidden.
+- **Hover** (`@media (hover: hover)`):
+  - A lift of 2 px (3 px on the linked cards, which also nudge their arrow).
+  - The edge goes to `--s-line-control`, with a new `--shadow-lift` drop.
+  - The tile rises 1 px and scales 1.06.
+  - Both ways at `--dur-fast` (250 ms) with `--ease`; the edge at `--dur-quick`.
+- **Press:** 1 px down (from the lift on a pointer that hovers).
+- The rise animates `translate` and the hover animates `transform`, so the two compose and the scroll
+  animation never blocks the hover.
+- **Reduced motion:** no rise, no lift, no tile move.
+- **Performance fix needed for this:** the bands after How it works had `overflow: hidden` (C-157
+  performance). That makes each band a scroll container, so `view()` measured the band, which never
+  scrolls, and the rise froze at its end. They now take `overflow: clip`, which clips the same unpainted
+  overflow without being a scroll container (as #security and #faq already did). `content-visibility`
+  and `contain-intrinsic-size` are unchanged.
+
+**FAQ open and close (landing and /faq).**
+- **Height, both ways:** 250 ms, smooth-out (an accordion is one reversible move, so both directions
+  share one timing).
+  - Where the browser supports `interpolate-size: allow-keywords` and `::details-content`, it's CSS
+    only: `block-size` 0 to `auto`, with `content-visibility` allow-discrete.
+  - Elsewhere, `FaqMotion` (a client island that renders nothing) feature-tests and, only there, fetches
+    `faq-motion.ts` (about 1.1 KB gzip of source). That runs the same move with the Web Animations API
+    on the `<details>`.
+  - Opening sets `open` first, so the answer is readable at once. Closing marks `data-closing` and drops
+    `open` when the move ends. A second click mid-move reverses it from where it is.
+  - The answer's bottom margin became padding, so the height ends without a jump.
+- **The plus is two bars:** opening turns both half a turn, so the upright one folds flat into a minus
+  (`--dur-fast`). The filled circle stays.
+- **The answer** fades in and rises 4 px (`--dist-micro`) via `@starting-style`, 40 ms after the height
+  starts. It fades out at `--dur-quick` on close.
+- Native details and summary, so keyboard and screen readers are unchanged. The FAQPage JSON-LD is unchanged.
+- Reduced motion: no height transition (the reduced-motion block also zeroes `::details-content`).
+- Measured in Chromium on /faq and /: the height runs 68 → 174 px over about 250 ms, and the answer's
+  opacity goes 0 → 1. Closing runs 174 → 68 px.
+
+**Also fixed.** The pause rule `[data-motion-paused] :is(*, *::before, *::after)` was invalid inside
+`:is()` for the pseudo-elements, so they never paused. It's now three selectors, and the hero's row skins
+pause too.
+
+**Skill advice overridden, and why.**
+- **Icons in tiles:** the taste skill's "no icon-topped feature cards" and impeccable's "same-size cards
+  of icon plus heading plus text" and `icon-tile-stack`. The owner asked for icons on the cards. Mitigated
+  by setting the feature cards' icon beside the title and keeping the tiles quiet (ink-3, no colour).
+- **"One authored moment, not one identical entrance on every section"** (impeccable craft floor). The
+  owner asked for card animations. Kept to cards only, not headings or sections, at 12 px, driven by the
+  scroll, and absent under reduced motion. The hero's scrub stays the authored moment.
+- **Hover lift on cards that aren't links** (impeccable affordance). The owner asked for card hover. Unlinked
+  cards lift 2 px with no arrow; linked ones lift 3 px and keep the arrow, so a link still reads as one.
+- **Accordion height animation** (gsap-performance, impeccable: "avoid animating height"). The owner
+  asked for it. It runs on one element at a click for 250 ms, not per scroll frame.
+- **transitions-polish "close faster than open":** it doesn't apply, because the accordion is in the
+  symmetric list. The answer's text alone fades out faster (150 ms) than in (250 ms).
+- **GSAP:** none added, and no dependency. Its principles are followed: transforms and opacity, reads
+  batched on start and on resize, IntersectionObserver gates, no `will-change` left on.
+
+**Taste inspector** (dev server, 1440, 768, 390):
+- 5 FAIL and 5 WARN, the same set as C-157 organize: headline-lines (the H1 and the copy-locked H2s),
+  eyebrow (plan taglines), hairline (the spec rows), outlined-box (the card edges) and the WARNs defended
+  there.
+- 104 elements move while it loads and scrolls (44 CSS animations, 49 transitions).
+- Not flagged as an icon-card fail.
+
+**Impeccable detector:**
+- `icon-tile-stack` on the six stacked feature cards: fixed by setting the icon beside the title.
+- `overused-font` (the owner's Geist).
+- `nested-cards` ×2: the tile inside a card, and the hero's frame. These are kept.
+
+**Checks.**
+- `next typegen`, `tsc --noEmit` and eslint on the touched folders are clean.
+- vitest: `app/(marketing)` (the landing test adds the pile, the scope, the icons on every named card,
+  the channel marks, iris only on the lead, and the two-bar plus), `components/marketing` (new
+  `faq-motion.test.ts`), `components/site`, `styles`, `lib/marketing`, seo, public-metadata, layout and
+  copy-lint all pass.
+- Screenshots on a dev server on :3160 at 375, 768, 1440 and 1920: the scrub at 0, 25, 50 and 100%, the
+  phone before and mid-play, the card reveal (mid-rise with the stagger) and hover, and the FAQ open,
+  mid-open, mid-close and closed.
+- No sideways scroll.
+- After a full scroll, no infinite animation runs outside a motion scope.
+- e2e (`landing.spec.ts`), for the coordinator:
+  - the scrub is back: the box exists, 8 rows are scattered at 0, 0 at 100%, the H1 doesn't move, CLS 0;
+  - the phone plays once and its toggle hides;
+  - reduced motion is sorted, still and not pinned;
+  - the landing FAQ toggles by click, Enter and Space, and closes to the summary's height;
+  - /faq opens and closes;
+  - the old "no `[data-hero-scrub]`" and "no hero animations" assertions are replaced, per width (play
+    at 900 px or less, native or scrub above).
