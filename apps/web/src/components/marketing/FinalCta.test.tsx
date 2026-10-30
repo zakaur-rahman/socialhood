@@ -39,4 +39,10 @@ describe("the closing call to action (C-159 final CTA, C-161 v2)", () => {
     expect(container.querySelector("[data-motion-scope]")).toBeNull();
     expect(container.querySelector("img")).toBeNull();
   });
+
+  it("never links the how-it-works page to itself: there the second action is every feature", () => {
+    render(<FinalCta from="how-it-works" />);
+    expect(screen.getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");
+    expect(screen.queryByRole("link", { name: "See how it works" })).toBeNull();
+  });
 });

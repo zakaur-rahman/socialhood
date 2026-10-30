@@ -1,6 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 
-import { HOW_IT_WORKS_PATH, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
+import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 
 import { CtaLink } from "./primitives";
 
@@ -9,9 +9,11 @@ import { CtaLink } from "./primitives";
  * the night ground with the footer below it, so the two read as one close. A quiet iris arc (pure
  * CSS, decorative) rises behind a centred heading with "every conversation" in the accent, as the
  * hero sets "One inbox.", then the lede, two actions and one row of facts. `trialDays` is Pro's trial
- * when Pro is on sale, so the perk is only claimed when it can be taken (C-149).
+ * when Pro is on sale, so the perk is only claimed when it can be taken (C-149). The second action
+ * points to how it works, or to every feature on the how-it-works page itself (`from`).
  */
-export function FinalCta({ trialDays = 0 }: { trialDays?: number }) {
+export function FinalCta({ trialDays = 0, from }: { trialDays?: number; from?: "how-it-works" }) {
+  const second = from === "how-it-works" ? { href: FEATURES_PATH, label: "See every feature" } : { href: HOW_IT_WORKS_PATH, label: "See how it works" };
   const perks = [
     "Free plan, no card required",
     ...(trialDays > 0 ? [`Try Pro free for ${trialDays} days`] : []),
@@ -31,8 +33,8 @@ export function FinalCta({ trialDays = 0 }: { trialDays?: number }) {
           <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>
             Start free <ArrowRight className="size-4" aria-hidden />
           </CtaLink>
-          <CtaLink href={HOW_IT_WORKS_PATH} variant="secondary">
-            See how it works
+          <CtaLink href={second.href} variant="secondary">
+            {second.label}
           </CtaLink>
         </div>
         <ul className="facts close-facts" aria-label="What you get">

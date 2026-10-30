@@ -93,7 +93,7 @@ export default async function HowItWorksPage() {
 
       <Faq items={HOW_FAQ} id="questions" allLink lede="Short answers about the AI, the accounts and the rules." />
       <RelatedCards links={HOW_RELATED} />
-      <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
+      <FinalCta trialDays={pro?.available ? pro.trialDays : 0} from="how-it-works" />
       <ExplainerMotion scenes />
     </main>
   );
