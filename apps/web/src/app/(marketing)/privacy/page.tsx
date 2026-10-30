@@ -1,3 +1,4 @@
+import { ScrollBox } from "@/components/site/ScrollBox";
 import Link from "next/link";
 
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
@@ -145,7 +146,7 @@ function sections(): LegalSection[] {
             6(1)). For your customers&apos; and followers&apos; data, the business or creator chooses the legal basis; we
             only process it to provide {N} to them.
           </p>
-          <div className="overflow-x-auto">
+          <ScrollBox label="Purposes and their legal basis">
             <table>
               <thead>
                 <tr>
@@ -190,7 +191,7 @@ function sections(): LegalSection[] {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </ScrollBox>
           <p>
             Where we rely on legitimate interests, we have weighed them against your rights, and you can object (see{" "}
             <a href="#your-rights">Your rights</a>). Under India&apos;s DPDP Act we process your account data for the
@@ -364,7 +365,7 @@ function sections(): LegalSection[] {
             <strong>Tools a business connects.</strong> A business can connect its own accounts with other services. We then
             send them what the business sets up, on its instructions, and their own terms and privacy policies apply:
           </p>
-          <div className="overflow-x-auto">
+          <ScrollBox label="Tools a business connects">
             <table>
               <thead>
                 <tr>
@@ -396,7 +397,7 @@ function sections(): LegalSection[] {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </ScrollBox>
           <p>
             <strong>When the law requires it.</strong> We may disclose data when the law requires it, or to protect the
             rights, safety or property of our users, the public or {N}.
@@ -438,7 +439,7 @@ function sections(): LegalSection[] {
       title: "How long we keep it",
       body: (
         <>
-          <div className="overflow-x-auto">
+          <ScrollBox label="How long we keep each kind of data">
             <table>
               <thead>
                 <tr>
@@ -516,7 +517,7 @@ function sections(): LegalSection[] {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </ScrollBox>
           <p>
             Deleted data can remain in our database backups until those backups expire, at most 30 days later. Daily jobs
             remove data when its period ends. Once paid plans open, Dodo Payments keeps payment records for as long as the

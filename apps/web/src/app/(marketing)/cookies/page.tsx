@@ -1,3 +1,4 @@
+import { ScrollBox } from "@/components/site/ScrollBox";
 import Link from "next/link";
 
 import { LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
@@ -111,7 +112,7 @@ const STORAGE: Row[] = [
 
 function Table({ rows, caption }: { rows: Row[]; caption: string }) {
   return (
-    <div className="overflow-x-auto">
+    <ScrollBox label={caption}>
       <table>
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -135,7 +136,7 @@ function Table({ rows, caption }: { rows: Row[]; caption: string }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollBox>
   );
 }
 

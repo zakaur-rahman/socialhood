@@ -1,3 +1,4 @@
+import { ScrollBox } from "@/components/site/ScrollBox";
 import { SUBPROCESSORS, type Subprocessor } from "@/lib/subprocessors";
 
 /**
@@ -6,7 +7,7 @@ import { SUBPROCESSORS, type Subprocessor } from "@/lib/subprocessors";
  */
 export function SubprocessorTable({ rows = SUBPROCESSORS }: { rows?: readonly Subprocessor[] }) {
   return (
-    <div className="overflow-x-auto">
+    <ScrollBox label="The service providers that process personal data for us">
       <table>
         <caption className="sr-only">The service providers that process personal data for us</caption>
         <thead>
@@ -39,6 +40,6 @@ export function SubprocessorTable({ rows = SUBPROCESSORS }: { rows?: readonly Su
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollBox>
   );
 }
