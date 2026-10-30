@@ -1,4 +1,8 @@
+import { Server, Smartphone } from "lucide-react";
 import Link from "next/link";
+
+import { GuideH2, Pair, PairCard } from "@/components/marketing/guides/blocks";
+import { Callout } from "@/components/site/Callout";
 
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
@@ -15,20 +19,28 @@ function Body() {
         to tell which one you need right now.
       </p>
 
-      <h2>Two products with similar names</h2>
-      <p>
-        <strong>The WhatsApp Business app</strong> is the green app with the “B” on your phone. It is free, it runs on your
-        phone (with a few linked devices such as WhatsApp Web), and it gives you a business profile, a catalogue, quick
-        replies, labels, and greeting and away messages.
-      </p>
-      <p>
-        <strong>The WhatsApp Business Platform</strong>, usually called the API, has no app of its own. Meta runs it, and you
-        use it through software built on it, such as a team inbox or a CRM. It is built for more than one person replying,
-        for automation, and for connecting WhatsApp to the rest of your tools.
-      </p>
-      <p>Neither is “better”. They suit different stages of a business.</p>
+      <GuideH2>Two products with similar names</GuideH2>
+      <Pair>
+        <PairCard icon={Smartphone} mark="var(--wa)">
+          <p>
+            <strong>The WhatsApp Business app</strong> is the green app with the “B” on your phone. It is free, it runs on your
+            phone (with a few linked devices such as WhatsApp Web), and it gives you a business profile, a catalogue, quick
+            replies, labels, and greeting and away messages.
+          </p>
+        </PairCard>
+        <PairCard icon={Server}>
+          <p>
+            <strong>The WhatsApp Business Platform</strong>, usually called the API, has no app of its own. Meta runs it, and you
+            use it through software built on it, such as a team inbox or a CRM. It is built for more than one person replying,
+            for automation, and for connecting WhatsApp to the rest of your tools.
+          </p>
+        </PairCard>
+      </Pair>
+      <Callout tone="means">
+        <p>Neither is “better”. They suit different stages of a business.</p>
+      </Callout>
 
-      <h2>What the app does well</h2>
+      <GuideH2>What the app does well</GuideH2>
       <ul>
         <li>
           <strong>It costs nothing.</strong> Meta doesn&apos;t charge for messages sent from the app.
@@ -58,7 +70,7 @@ function Body() {
         </li>
       </ul>
 
-      <h2>What changes with the API</h2>
+      <GuideH2>What changes with the API</GuideH2>
       <p>
         On the API, your WhatsApp number is connected to software instead of a phone. That opens up a team inbox, automatic
         replies, and links to the rest of your tools. It also brings rules the app doesn&apos;t have.
@@ -95,26 +107,34 @@ function Body() {
         provider exactly what happens to your chat history.
       </p>
 
-      <h2>How to choose</h2>
-      <p>The app is probably enough if:</p>
-      <ul>
-        <li>one or two people handle all the chats,</li>
-        <li>you can answer most messages within a few hours by hand,</li>
-        <li>you rarely message customers who haven&apos;t written to you first.</li>
-      </ul>
-      <p>The API starts to make sense when:</p>
-      <ul>
-        <li>several people reply and you need to know who handles which chat,</li>
-        <li>the same questions arrive all day and you want them answered in minutes, at night too,</li>
-        <li>you sell on Instagram as well and want one inbox instead of two phones,</li>
-        <li>you want order updates or reminders sent as proper templates rather than typed by hand.</li>
-      </ul>
-      <p>
-        A practical middle path: keep the app on your personal selling number while it works, and put the API on a number
-        you are happy to run through software. Watch which one your customers use.
-      </p>
+      <GuideH2>How to choose</GuideH2>
+      <Pair>
+        <PairCard icon={Smartphone} mark="var(--wa)">
+          <p>The app is probably enough if:</p>
+          <ul>
+            <li>one or two people handle all the chats,</li>
+            <li>you can answer most messages within a few hours by hand,</li>
+            <li>you rarely message customers who haven&apos;t written to you first.</li>
+          </ul>
+        </PairCard>
+        <PairCard icon={Server}>
+          <p>The API starts to make sense when:</p>
+          <ul>
+            <li>several people reply and you need to know who handles which chat,</li>
+            <li>the same questions arrive all day and you want them answered in minutes, at night too,</li>
+            <li>you sell on Instagram as well and want one inbox instead of two phones,</li>
+            <li>you want order updates or reminders sent as proper templates rather than typed by hand.</li>
+          </ul>
+        </PairCard>
+      </Pair>
+      <Callout tone="tip" title="A practical middle path">
+        <p>
+          Keep the app on your personal selling number while it works, and put the API on a number
+          you are happy to run through software. Watch which one your customers use.
+        </p>
+      </Callout>
 
-      <h2>Where {N} fits</h2>
+      <GuideH2>{`Where ${N} fits`}</GuideH2>
       <p>
         {N} is built on Meta&apos;s official APIs. You connect a WhatsApp number through Meta&apos;s own sign-up window, and
         its chats arrive in the same inbox as your Instagram DMs. What that gives you today:
@@ -137,20 +157,21 @@ function Body() {
           or your UPI ID marked paid by hand. The money goes to you, never through us.
         </li>
       </ul>
-      <p>And what to know before you decide:</p>
-      <ul>
-        <li>
-          Meta bills WhatsApp messaging fees to your business directly. {N}&apos;s plans don&apos;t include them and add
-          nothing on top.
-        </li>
-        <li>
-          Marketing broadcasts are built but not switched on yet: they open once our review of consent rules is done.
-        </li>
-        <li>
-          Product messages from your WhatsApp catalogue need your own Meta catalogue and Meta&apos;s approval.
-        </li>
-        <li>Connecting WhatsApp depends on Meta&apos;s approval of {N}&apos;s app.</li>
-      </ul>
+      <Callout tone="note" title="What to know before you decide">
+        <ul>
+          <li>
+            Meta bills WhatsApp messaging fees to your business directly. {N}&apos;s plans don&apos;t include them and add
+            nothing on top.
+          </li>
+          <li>
+            Marketing broadcasts are built but not switched on yet: they open once our review of consent rules is done.
+          </li>
+          <li>
+            Product messages from your WhatsApp catalogue need your own Meta catalogue and Meta&apos;s approval.
+          </li>
+          <li>Connecting WhatsApp depends on Meta&apos;s approval of {N}&apos;s app.</li>
+        </ul>
+      </Callout>
       <p>
         The <Link href="/features/ai-inbox">AI inbox page</Link> shows how replies work, the{" "}
         <Link href="/compare/interakt">comparison with Interakt</Link> sets {N} beside a popular WhatsApp-first tool,
@@ -171,6 +192,13 @@ export const WHATSAPP_API_VS_APP: Guide = {
   readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["WhatsApp"],
+  sections: [
+    "Two products with similar names",
+    "What the app does well",
+    "What changes with the API",
+    "How to choose",
+    `Where ${N} fits`,
+  ],
   faq: [
     {
       question: "Is the WhatsApp Business API free?",

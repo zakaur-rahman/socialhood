@@ -170,7 +170,7 @@ body:has(.site) {
     & .nav-links a {
       display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-body-sm); color: var(--s-text-2); text-decoration: none; white-space: nowrap;
       text-decoration-line: underline; text-decoration-color: transparent; text-decoration-thickness: 1.5px; text-underline-offset: 6px;
-      transition: color var(--dur-quick) var(--ease), text-decoration-color var(--dur-quick) var(--ease);
+      transition: color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
       & .nav-links a:hover { color: var(--s-text); text-decoration-color: var(--s-line-control); }
@@ -218,7 +218,7 @@ body:has(.site) {
     & .foot ul a {
       display: inline-flex; align-items: center; min-height: 32px; text-decoration: none; font-size: var(--fs-label); color: var(--s-text-2);
       text-decoration-line: underline; text-decoration-color: transparent; text-underline-offset: 4px;
-      transition: color var(--dur-quick) var(--ease), text-decoration-color var(--dur-quick) var(--ease);
+      transition: color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
       & .foot ul a:hover { color: var(--s-text); text-decoration-color: currentColor; }
@@ -925,3 +925,292 @@ body:has(.site) {
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
+
+/* ==== C-159 guides ==== */
+/* The guides index (`main.guides`) and a guide (`main.guide`): a page head, a reading column beside a
+   sticky side column (contents, facts, Start free) from site-wide (1060 px), body blocks in the guide's
+   own words (pairs, step cards, a checklist, callouts), question cards, related guides and the night
+   close. Cards rise and lift as the landing's do (C-157 motion). Tokens only. */
+@layer components {
+  .site {
+    /* ---- a guide: the head */
+    & .guide .g-head { padding-block: var(--space-10) var(--space-10); }
+    & .guide .g-back {
+      display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-bottom: var(--space-6);
+      font-size: var(--fs-label); font-weight: 500; color: var(--s-link); text-decoration: none;
+      transition: color var(--dur-quick) var(--ease);
+    }
+    & .guide .g-back svg { transition: transform var(--dur-fast) var(--ease); }
+    & .guide .g-h1 { max-width: 24ch; }
+    & .guide .g-lede { max-width: 60ch; }
+    & .guide .g-meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5);
+      margin-top: var(--space-8); padding-block: var(--space-4); border-block: 1px solid var(--s-line);
+    }
+    & .guide .g-meta .ico { width: 32px; height: 32px; }
+    & .guide .g-meta .ico svg { width: 18px; height: 18px; }
+    & :is(.guide, .guides) .g-byline { margin: 0; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); }
+    & :is(.guide, .guides) .g-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    & :is(.guide, .guides) .g-tags li {
+      display: inline-flex; align-items: center; height: 26px; padding: 0 var(--space-3); border-radius: 999px;
+      border: 1px solid var(--s-line); background: var(--s-surface); font-size: var(--fs-caption); font-weight: 500; color: var(--s-text-2);
+    }
+    & .guide .g-meta .g-tags { margin-left: auto; }
+
+    /* ---- a guide: the reading layout */
+    & .guide .g-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); padding-bottom: var(--space-section); }
+    & .guide .g-main { min-width: 0; }
+    & .guide .g-side { display: none; }
+
+    /* The reading-progress bar: a CSS scroll timeline over the article where the browser has one
+       (no script per frame); elsewhere TocSpy steps `--toc-p` by section. Transform only. */
+    & .guide .g-article { view-timeline: --guide block; }
+    & .guide .g-progress {
+      position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 51; pointer-events: none;
+      background: var(--s-text); transform-origin: 0 50%; transform: scaleX(var(--toc-p, 0));
+      transition: transform var(--dur-medium) var(--ease);
+    }
+    @supports (animation-timeline: view()) {
+      & .guide .g-progress {
+        transition: none; animation: g-progress linear both; animation-timeline: --guide; animation-range: contain 0% contain 100%;
+      }
+    }
+
+    /* The contents on a phone and tablet: a disclosure above the body. */
+    & .guide .g-toc-m { margin-bottom: var(--space-10); border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .guide .g-toc-m summary {
+      display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 var(--space-5);
+      font-size: var(--fs-body-sm); font-weight: 600; cursor: pointer; list-style: none;
+    }
+    & .guide .g-toc-m summary::-webkit-details-marker { display: none; }
+    & .guide .g-toc-m summary svg { color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease); }
+    & .guide .g-toc-m[open] summary svg { transform: rotate(180deg); }
+    & .guide .g-toc-m .toc { padding: 0 var(--space-5) var(--space-5); }
+    & .guide .g-toc-m .toc-t { display: none; }
+
+    /* The contents: a 1 px rail; the section being read (TocSpy) in ink, its rail segment in ink. */
+    & .toc-t { margin: 0 0 var(--space-3); font-size: var(--fs-label); font-weight: 600; color: var(--s-text); }
+    & .toc ol { margin: 0; padding: 0; list-style: none; border-left: 1px solid var(--s-line); }
+    & .toc a {
+      display: block; margin-left: -1px; padding: var(--space-2) 0 var(--space-2) var(--space-4);
+      border-left: 1px solid transparent; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); text-decoration: none;
+      transition: color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease);
+    }
+    & .toc a[aria-current] { color: var(--s-text); font-weight: 600; border-left-color: var(--s-text); }
+
+    /* The side column: sticky under the bar, scrolling on its own only if a short screen needs it. */
+    & .guide .g-side-in {
+      position: sticky; top: calc(var(--nav-h) + var(--space-8)); display: grid; gap: var(--space-5);
+      max-height: calc(100dvh - var(--nav-h) - var(--space-12)); overflow-y: auto; scrollbar-width: thin; padding: 2px;
+    }
+    & .guide .g-facts {
+      display: grid; gap: var(--space-3); margin: 0; padding: var(--space-5); border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface);
+    }
+    & .guide .g-facts > div { display: flex; justify-content: space-between; gap: var(--space-4); font-size: var(--fs-label); line-height: var(--lh-label); }
+    & .guide .g-facts dt { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--s-text-3); white-space: nowrap; }
+    & .guide .g-facts dd { margin: 0; text-align: right; font-weight: 500; color: var(--s-text); }
+    & .guide .g-try { padding: var(--space-5); border-radius: var(--r-lg); background: var(--s-surface-2); }
+    & .guide .g-try-t { margin: 0; font-size: var(--fs-body); font-weight: 700; color: var(--s-text); }
+    & .guide .g-try-p { margin: var(--space-1) 0 var(--space-4); font-size: var(--fs-label); color: var(--s-text-2); }
+    & .guide .g-try-btn { width: 100%; min-height: 44px; }
+
+    /* The product screenshot, framed on the deeper paper. */
+    & .guide .g-shot { margin: 0 0 var(--space-12); }
+    & .guide .g-shot-f { display: grid; place-items: center; padding: var(--space-8) var(--space-6); border-radius: var(--r-xl); background: var(--s-surface-2); }
+    & .guide .g-shot img { width: min(100%, 20rem); height: auto; border: 1px solid var(--s-line); border-radius: var(--r-lg); box-shadow: var(--shadow-lift); }
+    & .guide .g-shot figcaption { margin-top: var(--space-3); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
+
+    /* ---- the body: reading type at 17 to 19 px, 1.7 leading, a 68ch measure; blocks break out to the column */
+    & .gprose { font-size: var(--fs-lede); line-height: 1.7; color: var(--s-text); }
+    & .gprose > * { margin: 0; }
+    & .gprose > * + * { margin-top: var(--space-6); }
+    & .gprose > :is(p, ul, ol:not(.g-steps, .g-check), h2, h3, blockquote, table) { max-width: 68ch; }
+    & .gprose > :is(.g-pair, .g-steps, .g-check, .callout) { margin-block: var(--space-8); }
+    & .gprose h2 {
+      position: relative; margin-top: var(--space-16); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3);
+      font-weight: 700; scroll-margin-top: calc(var(--nav-h) + var(--space-8));
+    }
+    & .gprose > h2:first-child { margin-top: 0; }
+    & .gprose h3 { margin-top: var(--space-10); font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 700; }
+    & .gprose :is(h2, h3) + * { margin-top: var(--space-4); }
+    & .gprose .g-anchor {
+      display: inline-grid; place-items: center; width: 32px; height: 32px; margin-left: var(--space-2); vertical-align: middle;
+      border-radius: var(--r-sm); color: var(--s-text-3); opacity: 0; transition: opacity var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+    }
+    & .gprose .g-anchor:focus-visible { opacity: 1; }
+    & .gprose strong { font-weight: 600; color: var(--s-text); }
+    & .gprose a:not(.g-anchor) {
+      color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+      transition: color var(--dur-quick) var(--ease);
+    }
+    & .gprose ul { padding: 0; list-style: none; }
+    & .gprose ul > li { position: relative; padding-left: 1.5em; }
+    & .gprose ul > li::before {
+      content: ""; position: absolute; left: 0.35em; top: calc(0.85em - 3px); width: 6px; height: 6px; border-radius: 50%; background: var(--s-text-3);
+    }
+    & .gprose ol { padding-left: 1.5em; }
+    & .gprose ol > li::marker { color: var(--s-text-3); font-weight: 600; font-variant-numeric: tabular-nums; }
+    & .gprose li + li { margin-top: var(--space-2); }
+    & .gprose blockquote { padding-left: var(--space-6); border-left: 1px solid var(--s-line-control); font-size: var(--fs-h3); line-height: var(--lh-h3); font-weight: 600; color: var(--s-text); }
+    & .gprose code { font-family: var(--font-mono); font-size: 0.875em; padding: 0.1em 0.4em; border-radius: var(--r-xs); background: var(--s-surface-2); }
+    & .gprose table { width: 100%; border-collapse: collapse; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+    & .gprose :is(th, td) { padding: var(--space-3) var(--space-4) var(--space-3) 0; border-bottom: 1px solid var(--s-line); text-align: left; vertical-align: top; }
+    & .gprose th { font-weight: 600; color: var(--s-text); border-bottom-color: var(--s-line-control); }
+
+    /* Cards inside the body: the type steps down to the card size. */
+    & .gprose :is(.g-pcard, .g-step, .callout) { font-size: var(--fs-body); line-height: 1.65; }
+    & .gprose :is(.g-pcard-b, .callout-b, .g-step > div) > * { margin: 0; }
+    & .gprose :is(.g-pcard-b, .callout-b) > * + * { margin-top: var(--space-3); }
+    & .gprose .g-pcard-b > p:has(+ ul) { font-weight: 600; color: var(--s-text); }
+
+    /* Two cards side by side (a comparison), from site-sm (520 px). */
+    & .g-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+    & :is(.g-pcard, .g-step) {
+      display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6);
+      border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface);
+    }
+    & :is(.g-pcard, .g-step, .g-qa) .ico { background: var(--s-surface-2); }
+
+    /* Steps or parts as cards. */
+    & .gprose .g-steps { display: grid; gap: var(--space-4); padding: 0; list-style: none; grid-template-columns: minmax(0, 1fr); }
+    & .gprose .g-steps-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+    & .gprose .g-steps > li { padding-left: var(--space-6); }
+    & .gprose .g-steps > li::before { content: none; }
+    & .gprose .g-steps > li + li { margin-top: 0; }
+
+    /* A checklist: one card, each line with a drawn check. */
+    & .gprose .g-check { padding: var(--space-2) var(--space-6); list-style: none; border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .gprose .g-check > li { position: relative; margin: 0; padding: var(--space-4) 0 var(--space-4) var(--space-10); font-size: var(--fs-body); line-height: 1.6; }
+    & .gprose .g-check > li + li { border-top: 1px solid var(--s-line-2); }
+    & .gprose .g-check > li::before {
+      content: ""; position: absolute; left: 0; top: calc(var(--space-4) + 0.8em - 11px); width: 22px; height: 22px; border-radius: 50%; background: var(--ok-soft);
+    }
+    & .gprose .g-check > li::after {
+      content: ""; position: absolute; left: 8px; top: calc(var(--space-4) + 0.8em - 7px); width: 6px; height: 10px;
+      border: solid var(--ok); border-width: 0 2px 2px 0; transform: rotate(45deg);
+    }
+
+    /* Callouts: a quiet sheet, an icon and a short title. No coloured edge. */
+    & .callout {
+      display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5) var(--space-6);
+      border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface);
+    }
+    & .callout-ico { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--s-surface-2); color: var(--s-text-2); }
+    & .callout-tip .callout-ico { background: var(--ok-soft); color: var(--ok); }
+    & .callout-means { border-color: transparent; background: var(--s-surface-2); }
+    & .callout-means .callout-ico { background: var(--s-text); color: var(--s-bg); }
+    & .callout-t { font-size: var(--fs-body-sm); line-height: 32px; font-weight: 600; color: var(--s-text); }
+    & .callout-b > .callout-t + * { margin-top: var(--space-1); }
+
+    /* ---- the questions: one card each */
+    & .guide .g-faq { margin-top: var(--space-16); }
+    & .guide .g-faq-h { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; scroll-margin-top: calc(var(--nav-h) + var(--space-8)); }
+    & .guide .g-qas { display: grid; gap: var(--space-3); margin: var(--space-6) 0 0; }
+    & .guide .g-qa { padding: var(--space-5) var(--space-6); border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .guide .g-qa dt { display: flex; align-items: center; gap: var(--space-3); font-size: var(--fs-body); line-height: var(--lh-body); font-weight: 600; color: var(--s-text); }
+    & .guide .g-qa .ico { width: 32px; height: 32px; }
+    & .guide .g-qa .ico svg { width: 18px; height: 18px; }
+    & .guide .g-qa dd { margin: var(--space-2) 0 0; padding-left: calc(32px + var(--space-3)); max-width: 68ch; font-size: var(--fs-body); line-height: 1.65; color: var(--s-text-2); }
+
+    /* ---- after the article: other guides and related pages, on the deeper paper */
+    & .guide .g-next { padding-block: var(--space-section-tight); background: var(--s-surface-2); }
+    & .guide .g-next .g-card { background: var(--s-surface); }
+    & .guide .g-cards-next { margin-top: var(--space-head); }
+    & .guide .g-also { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-8) 0 0; padding: 0; list-style: none; }
+    & .guide .g-also .btn { min-height: 44px; }
+
+    /* ---- the index */
+    & .guides .gi-head .split-head { align-items: end; }
+    & .guides .gi-feed { margin: var(--space-4) 0 0; }
+    & .guides .gi-feed .tlink { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-size: var(--fs-label); }
+    & .guides .gi-list { padding-bottom: var(--space-section); }
+    & .guides .g-cards { margin-top: var(--space-4); }
+
+    /* ---- guide cards (the index and "Keep reading"): the title is the card's one link */
+    & :is(.guide, .guides) .g-cards { display: grid; gap: var(--space-4); padding: 0; list-style: none; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+    & :is(.guide, .guides) .g-cards > li { display: grid; }
+    & .g-card { position: relative; display: flex; border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .g-card-b { display: flex; flex: 1; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-6); }
+    & .g-card-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
+    & .g-card .ico { background: var(--s-surface-2); }
+    & .g-card-t { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 700; }
+    & .g-card-t a { color: inherit; text-decoration: none; outline: none; }
+    & .g-card-t a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    & .g-card:has(.g-card-t a:focus-visible) { outline: 2px solid var(--s-focus); outline-offset: 3px; }
+    & .g-card-p { flex: 1; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .g-card-m { display: flex; align-items: center; justify-content: space-between; margin: var(--space-2) 0 0; font-size: var(--fs-caption); color: var(--s-text-3); }
+    & .g-card-m > span:first-child { display: inline-flex; align-items: center; gap: var(--space-2); }
+    & .g-card-go {
+      display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--s-line); border-radius: 999px; color: var(--s-text);
+      transition: transform var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+    }
+    /* The featured guide: wide, its title at the band size, its screenshot on the deeper paper beside it. */
+    & .g-feat { overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); }
+    & .g-feat .g-card-b { padding: var(--space-8) var(--space-6); }
+    & .g-feat .g-card-t { font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); max-width: 22ch; }
+    & .g-feat .g-card-p { flex: 0 1 auto; max-width: 52ch; font-size: var(--fs-body); line-height: var(--lh-body); }
+    & .g-feat .g-card-m { margin-top: auto; padding-top: var(--space-4); }
+    & .g-feat-shot { display: none; }
+
+    /* ---- motion: the landing's rise and lift (C-157 motion) */
+    & :is(.g-card, .g-pcard, .g-step, .g-qa, .callout, .g-check) {
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease),
+        opacity var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger)), translate var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger));
+    }
+    @media (hover: hover) {
+      & .guide .g-back:hover { color: var(--s-link-hover); }
+      & .guide .g-back:hover svg { transform: translateX(calc(-1 * var(--dist-micro))); }
+      & .toc a:hover { color: var(--s-text); }
+      & .gprose h2:hover .g-anchor { opacity: 1; }
+      & .gprose .g-anchor:hover { color: var(--s-text); }
+      & .gprose a:not(.g-anchor):hover { color: var(--s-link-hover); }
+      & .g-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
+      & .g-card:hover .ico { transform: translateY(-1px) scale(1.06); }
+      & .g-card:hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
+      & .g-card:hover .g-card-go { transform: translateX(var(--dist-micro)); border-color: var(--s-line-control); background: var(--s-hover); }
+      & .g-card:hover:active { transform: translateY(-2px); }
+      & :is(.g-pcard, .g-step, .g-qa):hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
+    }
+    & .g-card:active { transform: translateY(1px); }
+    & :is(.g-cards > li:nth-child(2) > .g-card, .g-pair > :nth-child(2), .g-steps > :nth-child(2)) { --n: 1; }
+    & :is(.g-cards > li:nth-child(3) > .g-card, .g-steps > :nth-child(3)) { --n: 2; }
+    & .g-steps > :nth-child(4) { --n: 3; }
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & :is(.g-card, .g-pcard, .g-step, .g-qa, .callout, .g-check) {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      & :is(.g-card, .g-pcard, .g-step, .g-qa):is(:hover, :active) { transform: none !important; }
+      & .g-card .ico, & .g-card-go, & .guide .g-back svg { transform: none !important; }
+    }
+
+    /* ---- responsive */
+    @media (width > 520px) { /* site-sm */
+      & :is(.g-pair, .gprose .g-steps-2) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (width > 900px) { /* site-md */
+      & .g-feat { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+      & .g-feat .g-card-b { padding: var(--space-10); }
+      & .g-feat-shot { display: flex; align-items: flex-end; justify-content: center; padding: var(--space-10) var(--space-10) 0; background: var(--s-surface-2); }
+      & .g-feat-shot img { width: min(100%, 18rem); height: auto; border: 1px solid var(--s-line); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--shadow-lift); }
+    }
+    @media (width > 1060px) { /* site-wide */
+      & .guide .g-grid { grid-template-columns: minmax(0, 1fr) 18rem; column-gap: var(--space-16); }
+      & .guide .g-side { display: block; }
+      & .guide .g-toc-m { display: none; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .guide .g-meta .g-tags { margin-left: 0; }
+      & .guide .g-meta > .ico { display: none; }
+      & :is(.g-pcard, .g-step, .callout) { padding: var(--space-5); }
+      & .gprose .g-check { padding-inline: var(--space-5); }
+      & .guide .g-qa dd { padding-left: 0; }
+    }
+  }
+}
+@keyframes g-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* ==== end C-159 guides ==== */

@@ -1,4 +1,8 @@
+import { Asterisk, Ear, Equal, MapPin, MessagesSquare, Send, WholeWord } from "lucide-react";
 import Link from "next/link";
+
+import { Checklist, GuideH2, StepCards } from "@/components/marketing/guides/blocks";
+import { Callout } from "@/components/site/Callout";
 
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
@@ -19,34 +23,37 @@ function Body() {
         up so it feels helpful rather than spammy.
       </p>
 
-      <h2>How it works</h2>
+      <GuideH2>How it works</GuideH2>
       <p>Every comment-to-DM automation has the same four parts:</p>
-      <ol>
-        <li>
-          <strong>Where it listens</strong>: one post or Reel, a few chosen ones, or all of them.
-        </li>
-        <li>
-          <strong>What it listens for</strong>: a keyword such as LINK, PRICE or SIZE, or any comment at all.
-        </li>
-        <li>
-          <strong>A public reply</strong> under the comment, if you want one, such as “Sent you a DM!”, so other people can
-          see you answered.
-        </li>
-        <li>
-          <strong>The private message</strong>: the DM that carries what they asked for.
-        </li>
-      </ol>
+      <StepCards
+        items={[
+          { icon: MapPin, body: <><strong>Where it listens</strong>: one post or Reel, a few chosen ones, or all of them.</> },
+          { icon: Ear, body: <><strong>What it listens for</strong>: a keyword such as LINK, PRICE or SIZE, or any comment at all.</> },
+          {
+            icon: MessagesSquare,
+            body: (
+              <>
+                <strong>A public reply</strong> under the comment, if you want one, such as “Sent you a DM!”, so other people can see
+                you answered.
+              </>
+            ),
+          },
+          { icon: Send, body: <><strong>The private message</strong>: the DM that carries what they asked for.</> },
+        ]}
+      />
       <p>
         That is the whole idea. The details are where most automations go wrong, so the rest of this guide is about the
         details.
       </p>
 
-      <h2>The Instagram rules behind it</h2>
-      <p>
-        Instagram allows a business to answer a comment with a private message, but only one message per comment, and only
-        within 7 days of the comment. After that one message, you can send more only once the person replies, which
-        opens the usual 24-hour window for DMs.
-      </p>
+      <GuideH2>The Instagram rules behind it</GuideH2>
+      <Callout tone="note" title="Instagram's rule">
+        <p>
+          Instagram allows a business to answer a comment with a private message, but only one message per comment, and only
+          within 7 days of the comment. After that one message, you can send more only once the person replies, which
+          opens the usual 24-hour window for DMs.
+        </p>
+      </Callout>
       <p>This shapes good automations in two ways:</p>
       <ul>
         <li>
@@ -64,29 +71,26 @@ function Body() {
         a good tool queues the replies and sends them at a safe pace instead of firing them all at once.
       </p>
 
-      <h2>Choosing the keyword</h2>
+      <GuideH2>Choosing the keyword</GuideH2>
       <p>
         Pick a word that is short, easy to spell on a phone, and unlikely to appear by accident. “LINK” works. “Yes” does not:
         people write “yes” for all kinds of reasons. Then decide how strictly to match:
       </p>
-      <ul>
-        <li>
-          <strong>As a word</strong> in the comment, so “send the link” and “LINK 🙏” both count, but “linked” doesn&apos;t.
-        </li>
-        <li>
-          <strong>Exactly</strong>, when the comment must be the keyword and nothing else.
-        </li>
-        <li>
-          <strong>Anywhere</strong> in the comment, for words that people tend to join to others.
-        </li>
-      </ul>
+      <StepCards
+        columns={3}
+        items={[
+          { icon: WholeWord, body: <><strong>As a word</strong> in the comment, so “send the link” and “LINK 🙏” both count, but “linked” doesn&apos;t.</> },
+          { icon: Equal, body: <><strong>Exactly</strong>, when the comment must be the keyword and nothing else.</> },
+          { icon: Asterisk, body: <><strong>Anywhere</strong> in the comment, for words that people tend to join to others.</> },
+        ]}
+      />
       <p>
         People rarely type exactly what you asked for, so if you ask for “PRICE”, expect “price?” and “what&apos;s the
         price” too. Matching the keyword as a word catches both. Or listen for any comment on a post where every commenter wants the
         same thing.
       </p>
 
-      <h2>Writing the messages</h2>
+      <GuideH2>Writing the messages</GuideH2>
       <p>
         <strong>The public reply</strong> should be short and varied. If every comment gets the identical “Check your DMs!”,
         the thread looks automated. Write three or four versions and let the tool pick one at random each time.
@@ -99,13 +103,14 @@ function Body() {
         <strong>The message after the tap</strong> carries the link, and one useful extra: the price, the sizes in stock, or
         how long delivery takes. End with an easy next step, such as “Reply here if you have a question about sizing.”
       </p>
-      <p>Two mistakes to avoid:</p>
-      <ul>
-        <li>Promising something in the caption that the DM doesn&apos;t deliver, such as a discount that has expired.</li>
-        <li>Turning the DM into a long menu. One link, one next step.</li>
-      </ul>
+      <Callout tone="note" title="Two mistakes to avoid">
+        <ul>
+          <li>Promising something in the caption that the DM doesn&apos;t deliver, such as a discount that has expired.</li>
+          <li>Turning the DM into a long menu. One link, one next step.</li>
+        </ul>
+      </Callout>
 
-      <h2>After the DM: the conversation</h2>
+      <GuideH2>After the DM: the conversation</GuideH2>
       <p>
         The automation starts the conversation; it doesn&apos;t finish it. Some people will ask a follow-up question within a
         minute. If nobody answers, the link alone rarely closes the sale.
@@ -117,7 +122,7 @@ function Body() {
         for, or wait and send a reminder, all within Instagram&apos;s 24-hour window.
       </p>
 
-      <h2>Reading what the comments tell you</h2>
+      <GuideH2>Reading what the comments tell you</GuideH2>
       <p>
         A busy post brings more than keyword comments. Some people ask questions, some are ready to buy, some complain, and
         some are spam. {N} reads every comment on your posts for sentiment, questions, buying signals and spam, and
@@ -125,15 +130,15 @@ function Body() {
         <Link href="/features/comment-intelligence">comment intelligence</Link> for how that works.
       </p>
 
-      <h2>Setting one up in {N}</h2>
-      <ol>
+      <GuideH2>{`Setting one up in ${N}`}</GuideH2>
+      <Checklist>
         <li>Create an automation and pick the post or Reel, all posts, or your next post.</li>
         <li>Choose the keyword and how to match it, or any comment.</li>
         <li>Add a few public replies; one is picked at random each time.</li>
         <li>Write the first DM with a tap-first button, then the message with the link.</li>
         <li>Turn on the follow invitation if you want it. It never holds the link back.</li>
         <li>Preview it, then switch it on.</li>
-      </ol>
+      </Checklist>
       <p>
         Replies to your Stories and mentions of your account can start automations too. Story replies and mentions arrive as
         ordinary messages. Some other ways in, such as Live comments and chats that start from an ad, reach your account once
@@ -160,6 +165,15 @@ export const COMMENT_TO_DM: Guide = {
   readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["Instagram", "Automations"],
+  sections: [
+    "How it works",
+    "The Instagram rules behind it",
+    "Choosing the keyword",
+    "Writing the messages",
+    "After the DM: the conversation",
+    "Reading what the comments tell you",
+    `Setting one up in ${N}`,
+  ],
   hero: "automationPreview",
   faq: [
     {

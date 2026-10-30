@@ -39,6 +39,11 @@ export type Guide = {
   /** The byline: GUIDE_AUTHOR. */
   author: string;
   tags: GuideTag[];
+  /**
+   * The body's h2s in order, as written (each body heading is a `GuideH2` with this text). The table
+   * of contents reads them; guides.test.tsx checks they match the body.
+   */
+  sections: readonly string[];
   /** An optional product screenshot under the intro (components/marketing/shots). */
   hero?: keyof typeof SHOTS;
   /** Questions and answers shown at the end of the guide, and emitted as FAQPage. */
@@ -54,6 +59,15 @@ export const GUIDE_AUTHOR = `${SITE_NAME} team`;
 
 export const GUIDES_PATH = "/guides";
 export const GUIDES_FEED_PATH = "/guides/rss.xml";
+
+/** A section's anchor id from its heading: lowercase words joined by hyphens. */
+export function sectionId(heading: string): string {
+  return heading
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export function guidePath(slug: string): string {
   return `${GUIDES_PATH}/${slug}`;

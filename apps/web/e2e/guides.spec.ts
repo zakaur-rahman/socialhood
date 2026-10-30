@@ -47,6 +47,49 @@ test.describe("C-153 guides", () => {
     await expect(page).toHaveURL(/\/guides$/);
   });
 
+  test("a guide reads in two columns with its contents, anchors, question cards and related guides (C-159)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(GUIDE);
+    const toc = page.getByRole("navigation", { name: "On this page" });
+    await expect(toc).toBeVisible();
+    const links = toc.getByRole("link");
+    await expect(links).toHaveCount(8);
+    await expect(links.last()).toHaveText("Common questions");
+    // Every entry points at a heading on the page, and each body section links to itself.
+    for (const href of await links.evaluateAll((els) => els.map((el) => el.getAttribute("href")))) {
+      await expect(page.locator(`h2${href}`)).toHaveCount(1);
+    }
+    await expect(page.locator('[data-guide-body] h2 a[href^="#"]')).toHaveCount(7);
+    // The side column sits beside the article, and stays in view while reading.
+    const side = page.getByRole("complementary", { name: "About this guide" });
+    const [article, aside] = await Promise.all([page.locator("[data-guide-body]").boundingBox(), side.boundingBox()]);
+    expect(aside!.x).toBeGreaterThan(article!.x + article!.width);
+    await toc.getByRole("link", { name: "Writing the messages" }).click();
+    await expect(page).toHaveURL(/#writing-the-messages$/);
+    await expect(toc.getByRole("link", { name: "Writing the messages" })).toHaveAttribute("aria-current", "location");
+    await expect(side.getByRole("link", { name: /Start free/ })).toBeInViewport();
+    // The questions are on the page as the FAQPage says.
+    const data = await jsonLd(page);
+    const faq = data.flatMap((block) => (block["@graph"] as Record<string, unknown>[] | undefined) ?? [block]).find((node) => node["@type"] === "FAQPage");
+    for (const item of faq!.mainEntity as { name: string; acceptedAnswer: { text: string } }[]) {
+      await expect(page.locator("dt", { hasText: item.name })).toBeVisible();
+      await expect(page.locator("dd", { hasText: item.acceptedAnswer.text })).toHaveCount(1);
+    }
+    // Keep reading: the other guides as cards, then the night close.
+    await expect(page.getByRole("region", { name: "Keep reading" }).getByRole("article")).toHaveCount(2);
+    await expect(page.locator("section.night.close")).toHaveCount(1);
+  });
+
+  test("on a phone the contents fold into a disclosure above the body (C-159)", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto(GUIDE);
+    await expect(page.getByRole("complementary", { name: "About this guide" })).toBeHidden();
+    const contents = page.locator("details.g-toc-m");
+    await contents.locator("summary").click();
+    await contents.getByRole("link", { name: "Choosing the keyword" }).click();
+    await expect(page).toHaveURL(/#choosing-the-keyword$/);
+  });
+
   test("an unknown guide is a 404", async ({ page }) => {
     const response = await page.goto("/guides/not-a-guide");
     expect(response?.status()).toBe(404);
