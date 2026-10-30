@@ -227,17 +227,25 @@ describe("the contact page", () => {
     );
     expect(screen.queryByText("Phone")).not.toBeInTheDocument();
     expect(screen.queryByText("Registered address")).not.toBeInTheDocument();
-    expect(screen.getByText("Bihar, India")).toBeInTheDocument();
+    // C-159: the location is a contact card and a fact in "About us".
+    expect(screen.getAllByText("Bihar, India")).toHaveLength(2);
+    expect(screen.getByRole("heading", { level: 3, name: "Location" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Privacy grievances" })).toBeInTheDocument();
     expect(screen.getByText(/We answer within 30 days/)).toBeInTheDocument();
     expect(screen.queryByText(/We reply within/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Data deletion" })).toHaveAttribute("href", "/data-deletion");
+    // The page's text, without the breadcrumbs JSON-LD it now carries (C-159), whose arrays would read as a placeholder.
+    container.querySelectorAll('script[type="application/ld+json"]').forEach((script) => script.remove());
     expect(container.textContent).not.toMatch(PLACEHOLDER);
   });
 
   it("shows the phone, address and response times once they are set", () => {
     render(<ContactDetails config={FULL} />);
     expect(screen.getAllByRole("link", { name: "+91 98765 43210" })[0]).toHaveAttribute("href", "tel:+919876543210");
-    expect(screen.getByText("12 Example Road, Bengaluru 560001, India")).toBeInTheDocument();
+    // A full address replaces the location, on the card and in the facts.
+    expect(screen.getAllByText("12 Example Road, Bengaluru 560001, India")).toHaveLength(2);
+    expect(screen.getByRole("heading", { level: 3, name: "Registered address" })).toBeInTheDocument();
+    expect(screen.queryByText("Location")).not.toBeInTheDocument();
     expect(screen.getByText(/We reply within 2 working days/)).toBeInTheDocument();
     expect(screen.getByText(/We answer within 21 days/)).toBeInTheDocument();
     expect(screen.getByText(/a private limited company, owned by A. Owner/)).toBeInTheDocument();

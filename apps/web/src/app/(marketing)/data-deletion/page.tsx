@@ -1,3 +1,4 @@
+import { Building2, KeyRound, type LucideIcon, Mail, Unplug } from "lucide-react";
 import createClient from "openapi-fetch";
 import type { paths } from "@socialhood/api-client";
 import Link from "next/link";
@@ -5,6 +6,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { BreadcrumbJsonLd } from "@/components/marketing/JsonLd";
+import { Ico } from "@/components/marketing/landing/Ico";
 import { LegalFacts } from "@/components/marketing/legal/LegalPage";
 import { Container } from "@/components/marketing/primitives";
 import { Button } from "@/components/ui/button";
@@ -56,13 +58,12 @@ async function lookup(code: string): Promise<DataDeletionStatus | null> {
   }
 }
 
-/** One way to delete data: a card in the list, in the Reading role (15/24), its lead-in in `fg`. */
-function Option({ children }: { children: ReactNode }) {
+/** One way to delete data: an icon card in the list (C-159: the site's card), its lead-in in `fg`. */
+function Option({ icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
-    <li>
-      <Card padding="roomy">
-        <p className={cn(READING, "text-fg-secondary")}>{children}</p>
-      </Card>
+    <li className="fcard">
+      <Ico icon={icon} />
+      <p className={cn(READING, "text-fg-secondary")}>{children}</p>
     </li>
   );
 }
@@ -73,23 +74,23 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
       <Heading id="how-to-delete" className={Heading === "h1" ? "h-page" : "h-sec"}>
         {Heading === "h1" ? "Delete your data" : "How to delete your data"}
       </Heading>
-      <ol data-legal-prose="" className="mt-5 space-y-4">
-        <Option>
+      <ol data-legal-prose="" className="fgrid ddel-options mt-6">
+        <Option icon={Building2}>
           <strong className="text-fg">Workspace owners</strong>: delete the workspace in Settings → Workspace. Everything
           stops at once, and the workspace&apos;s data, including uploaded media, is permanently removed within 24 hours.
         </Option>
-        <Option>
+        <Option icon={Unplug}>
           <strong className="text-fg">Owners and admins, for one account</strong>: in Settings → Connections, use
           Delete account and data (in the account&apos;s ⋯ menu; it disconnects the account first if needed). The account&apos;s
           conversations, messages, comments, contacts, posts and automations are permanently deleted; the
           workspace&apos;s knowledge, settings and billing stay.
         </Option>
-        <Option>
+        <Option icon={KeyRound}>
           <strong className="text-fg">Removed {SITE_NAME} in Instagram or Facebook?</strong> If you asked Meta to delete
           your data, it gives you a confirmation code and a link to this page. Enter the code below to see how your request
           is going. Deletion finishes within 24 hours.
         </Option>
-        <Option>
+        <Option icon={Mail}>
           <strong className="text-fg">Anyone else</strong>, including people who messaged or commented on a business that
           uses {SITE_NAME}: email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline underline-offset-4">
@@ -158,9 +159,9 @@ export default async function DataDeletionPage({
   const copy = request ? STATUS_COPY[request.status] : null;
 
   return (
-    <main id="main" tabIndex={-1} className="flex-1 outline-none">
+    <main id="main" tabIndex={-1} className="ddel flex-1 outline-none">
       <BreadcrumbJsonLd name="Data deletion" path="/data-deletion" />
-      <Container className="max-w-3xl py-12 sm:py-16">
+      <Container className="max-w-5xl py-12 sm:py-16">
         {given ? (
           <div className="mb-12 flex flex-col items-start gap-3">
             {copy && request ? (

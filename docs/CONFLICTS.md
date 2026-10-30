@@ -8283,3 +8283,110 @@ is unchanged (gtm-pages.ts, solutions.ts, faq.ts and plan-matrix.ts are untouche
 - **Skill advice overridden:** impeccable's "same-size icon cards as structure" and "no eyebrow":
   the owner asked for icon cards, and the inner pages keep their existing kicker. Mitigated as C-157
   did (icon beside the title, quiet ink-3 tiles).
+
+### C-159 (trust)
+
+The owner asked (2026-10-30) to make every public page premium "use cards, animations and other things".
+This part covers the legal pages, /security, /safety, /changelog, /ai-info, /contact, /unsubscribe,
+/data-deletion, the public 404 and the `InfoPage` layout. Branch `feature/pages-trust`. Audit, before and
+after screenshots are in the session scratchpad (`pages/trust/`), not committed. **No legal or policy
+sentence was changed**: layout and styling only, checked against the previous text. Nothing here was
+reviewed by a lawyer.
+
+**What the audit found (top items).** At 1440 and 1920 a lone 3xl text column with an empty right side;
+tables squeezed into it (cells wrapping to five or six lines); no sense of place in long reads (privacy
+is about twelve screens) and a contents list with no current item; the 404's illustration in iris (iris
+is for links, focus, selection and AI); /changelog, /security, /safety and /ai-info as walls of bullets.
+
+**Legal pages (`LegalPage`).**
+- A page head with the dates on their own line ("Last updated … · Effective …", a calendar icon).
+- The summary first, as a sheet with a "Summary" label and icon (new label, one word), lede-sized text.
+- The contents sticky beside the text above 1060 px; the section being read is marked
+  (`aria-current="location"`, an ink bar on the list's rule). `TocSpy` (new, `components/site/TocSpy.tsx`):
+  a client island that renders nothing, starts at an idle moment after load, one IntersectionObserver over
+  the sections (a band from 25 % to 40 % of the viewport), no scroll handler, no layout reads per frame.
+  At 1060 px and below the contents are a closed disclosure under the summary; above, CSS keeps them open
+  (`::details-content`) and TocSpy opens the `<details>` where that selector isn't supported.
+- A reading bar: 2 px of ink along the top edge, CSS only (`animation-timeline: scroll(root)`); browsers
+  without scroll timelines show none. It is not motion the reader triggers, so reduced motion keeps it.
+- Sections keep their numbers in the heading text ("1. Title", so anchors and screen readers are
+  unchanged); the number is set apart in ink-3. Prose: 64ch measure (about 75 characters), line-height
+  1.7, more space above a heading than below, quiet round bullets, iris links.
+- Tables (subprocessors, cookies, retention, legal bases, transfers): a sheet with a tinted head row and
+  row rules; a table of three or more columns keeps a 42rem minimum and scrolls inside its box on a
+  phone; the page never scrolls sideways. Done in CSS on the existing `.overflow-x-auto` wrappers, so the
+  pages' markup is unchanged.
+- `LegalFacts` is now a facts callout: an icon per fact (Building2, Briefcase, UserRound, MapPin, Phone,
+  Mail, Scale), label over value, as many columns as fit. Same terms, values and links.
+- New `Callout` (`components/site/Callout.tsx`): an icon tile beside an optional title and the text, a tone
+  step on the paper, no coloured edge; iris only with `ai`. Used on /safety, /security and /ai-info; for
+  the other areas to reuse.
+
+**`InfoPage`** gains `head` (actions under the lede), `className`, and two exports: `InfoBand` (the
+heading block left and sticky, the content right, like the landing's security spec list; `wide` puts the
+heading above; `night` makes the closing night band) and `InfoCard` (the landing's `.fcard`: icon beside
+the title, the text under it; rise and hover lift come from site.css). `sections` still renders a single
+reading column for a page that wants one.
+
+**Pages.**
+- **/safety:** the pace as four figure cards (a `dl`: the pace large, what it paces under it), the queue
+  paragraph, the 7-day and 24-hour rules as cards; login and what we never do as icon cards (the bold
+  lead-ins became card titles, same words); restrictions as cards plus a "what to do" callout; "What we
+  can't promise" and the related links on a night band.
+- **/security:** the lede is the old summary card's sentence, with an ink button to the report email
+  (its label is the address); "Tell us" as four icon cards; in and out of scope side by side (check and
+  minus marks); testing rules as cards; "After you report" with security.txt on a night band. It now has
+  breadcrumbs JSON-LD (via InfoPage).
+- **/changelog:** a vertical timeline. Month headings are ink pills on the line that stay in view while
+  their month scrolls; each entry is a card hung off the line by a dot, with a date chip ("28 Oct"; the
+  full date is the `<time>`'s title and a screen-reader text), its area with an icon, and the "With Meta's
+  approval" tag; two columns from 900 px. Cards rise in (the landing's `view()` rise) and lift on hover.
+  `ChangelogEntry` gains a required `area` (inbox, ai, automations, publishing, commerce "Selling", team,
+  website, app); I assigned each of the 28 entries. Iris only on the AI area's icon.
+- **/ai-info:** fact cards: the lead fact (SITE_DESCRIPTION, then the paragraph), for / not for, channels
+  as the landing's connection cards with `PlatformGlyph` in each channel's colour and the honest status,
+  plan cards with each plan's state from the plans API as a chip, honest limits as icon cards, the
+  company, and claims to avoid (a cross per claim) on the night band with the llms.txt line. The
+  "name: status. body" sentences became name, status and body on a card: same words.
+- **/contact:** contact cards (Email with the response time when set, Phone when set, Privacy grievances
+  with the officer's role, Location or the registered address), "About us" beside the facts callout, and
+  "Find an answer" as icon link cards (arrow nudge, 3 px lift). The Email card's line now starts with a
+  capital ("For support, …") and the grievance line with "Email us …", as standalone sentences.
+- **/data-deletion:** the options as icon cards in two columns, the facts callout; the form unchanged.
+- **The 404** (`SiteNotFound`, new; the app's 404 keeps `NotFoundPage`): the head left (Error 404, the h1,
+  the line, the path asked for, the three buttons), and six link cards right (Features, How it works,
+  Guides, Common questions, What's new, Contact: the footer's labels and addresses, through `siteHref`).
+  The iris illustration is not shown on the public 404 any more. New label: the cards' nav is "Popular
+  pages" (for screen readers).
+- **/unsubscribe:** one sheet card centred between the header and the footer; the missing-link state
+  gets a MailX icon like the other states' icons.
+
+**Styles.** All in the `C-159 trust` block at the end of site.css, scoped to these pages' classes; tokens
+only; no existing rule edited. The rise and lift reuse `.fcard`, `.crow` and `.feat-lead`'s existing
+rules; the block adds the same rise for `.tl-card`, `.scope-card` and `.fact-lead`, and the lift for `.tl-card`. Reduced
+motion: no rise, no lift (as the landing).
+
+**Skills.** impeccable (context, craft floor, detector: no findings on the changed files);
+design-taste-frontend inspector on /privacy and /changelog. Its FAILs are defended or owner-overruled:
+`eyebrow` (the brief asks for an eyebrow in the page head; the other two were sentences above an h2, a
+false positive), `outlined-box` (the site's card language), `icon-cards` (owner's ask, C-157), `palette-
+purple` (the iris link colour), `few-pictures` and `focal-point` (a legal page and a changelog have no
+pictures; the h1 leads). WARNs: `side-scroll` at 390 is the tables scrolling in their own box (by
+design), `off-centre` at 768 on /changelog is the timeline's left rail, `small-text` is Next's dev
+indicator and the 404 path chip. The measure WARN was fixed (70ch to 64ch).
+
+**Checks.** `next typegen`, `tsc --noEmit` and eslint on the touched files clean; vitest `src/lib/legal`,
+`app/(marketing)`, `components/not-found`, `components/site`, `components/marketing`, `lib/marketing`,
+`styles`, `app/seo`: 26 files pass. New tests: `toc-spy.test.tsx` (the band, the first section wins,
+open on wide only), `LegalPage.test.tsx` (one h1, the summary region, contents linking every numbered
+section, the reading bar), `SiteNotFound.test.tsx`, and trust-pages tests for the timeline, /safety and
+/security. `legal.test.tsx`: the contact page shows the location twice now (card and facts), and its
+placeholder check ignores the new breadcrumbs JSON-LD. E2E for the coordinator: `c159-trust-pages.spec.ts`
+(one h1, no errors, no sideways scroll at 375/768/1440/1920 on fifteen pages; the contents open, sticky
+and marking "How long we keep it" on /privacy at 1440; the phone disclosure and a table scrolling in its
+box; CLS under 0.1 on /terms and /changelog; the 404's six links), and `not-found.spec.ts` now checks the
+404's link cards instead of the illustration.
+
+**For the coordinator.** Run the e2e above. Check the reading bar sits over the header's top edge in
+Safari (scroll timelines from Safari 26) and that Firefox shows the contents open on a wide screen once
+TocSpy loads. `TocSpy` and `Callout` are in `components/site/` for the guides agent's long reads.

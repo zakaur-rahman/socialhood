@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SiteFooter } from "@/components/marketing/SiteFooter";
-import { CHANGELOG, changelogByMonth, changelogUpdated } from "@/lib/marketing/changelog";
+import { CHANGELOG, CHANGELOG_AREAS, changelogByMonth, changelogUpdated } from "@/lib/marketing/changelog";
 import { FAQ } from "@/lib/marketing/faq";
 import { llmsText } from "@/lib/marketing/llms";
 import { statusUrl } from "@/lib/marketing/site";
@@ -15,6 +15,7 @@ import BusinessesPage from "./for-businesses/page";
 import CreatorsPage from "./for-creators/page";
 import PricingPage from "./pricing/page";
 import SafetyPage from "./safety/page";
+import SecurityPage from "./security/page";
 
 function jsonLds(container: HTMLElement): Record<string, unknown>[] {
   return [...container.querySelectorAll('script[type="application/ld+json"]')].map(
@@ -143,6 +144,39 @@ describe("safety, what's new and AI info (C-156)", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(CHANGELOG.length);
     for (const entry of CHANGELOG) expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(changelogUpdated()).toBe(CHANGELOG.map((entry) => entry.date).sort().at(-1));
+  });
+
+  it("/changelog (C-159): a timeline card per entry with its full date, its area and Meta's tag where it applies", () => {
+    const { container } = render(<ChangelogPage />);
+    const cards = container.querySelectorAll("article.tl-card");
+    expect(cards).toHaveLength(CHANGELOG.length);
+    for (const entry of CHANGELOG) expect(Object.keys(CHANGELOG_AREAS)).toContain(entry.area);
+    const first = cards[0];
+    expect(first.querySelector("time")).toHaveAttribute("datetime", CHANGELOG[0].date);
+    expect(first.textContent).toContain(CHANGELOG_AREAS[CHANGELOG[0].area]);
+    expect(container.querySelectorAll(".tl-card .tag")).toHaveLength(CHANGELOG.filter((entry) => entry.status).length);
+  });
+
+  it("/safety (C-159): the pace as a list of terms and figures, the practices as cards, a night band to close", () => {
+    const { container } = render(<SafetyPage />);
+    const pace = container.querySelector("dl.pace")!;
+    expect(within(pace as HTMLElement).getAllByRole("term")).toHaveLength(4);
+    expect(within(pace as HTMLElement).getByText("At most 750 in any hour").tagName).toBe("DD");
+    expect(screen.getByRole("heading", { level: 3, name: "No scraping." })).toBeInTheDocument();
+    expect(container.querySelector("section.night")).toHaveAttribute("id", "no-guarantees");
+    expect(jsonLds(container).some((data) => data["@type"] === "BreadcrumbList")).toBe(true);
+  });
+
+  it("/security (C-159): one h1, the email button, in and out of scope side by side, breadcrumbs", () => {
+    const { container } = render(<SecurityPage />);
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: "What is in scope" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "What is out of scope" })).toBeInTheDocument();
+    for (const link of screen.getAllByRole("link", { name: "support@amplychat.com" })) {
+      expect(link).toHaveAttribute("href", "mailto:support@amplychat.com?subject=Security%20report");
+    }
+    expect(screen.getByRole("link", { name: "security.txt" })).toHaveAttribute("href", "/.well-known/security.txt");
+    expect(jsonLds(container).some((data) => data["@type"] === "BreadcrumbList")).toBe(true);
   });
 
   it("/ai-info: the company, the honest limits and the claims to avoid; never a price while Pro isn't for sale", async () => {

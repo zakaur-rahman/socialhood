@@ -1,3 +1,4 @@
+import { MailX } from "lucide-react";
 import type { Metadata } from "next";
 
 import { unsubscribeCopy } from "@/lib/copy";
@@ -21,16 +22,20 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
   return (
     // Inside the marketing layout (header and footer): the page only fills the space between them.
     // `outline-none` on <main> only: the skip link focuses it, and a ring round the page says nothing.
-    <main id="main" tabIndex={-1} className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start justify-center gap-3 px-4 py-16 outline-none sm:px-6">
-      {TOKEN.test(value) ? (
-        <UnsubscribeResult token={value} />
-      ) : (
-        <div role="alert" className="space-y-3">
-          <h1 className={PAGE_TITLE}>{unsubscribeCopy.missingTitle}</h1>
-          <p className="text-sm text-fg-secondary">{unsubscribeCopy.missing}</p>
-          <NotificationSettingsLink />
-        </div>
-      )}
+    // C-159: one calm card on the paper, centred between the header and footer.
+    <main id="main" tabIndex={-1} className="unsub flex flex-1 flex-col items-center justify-center px-4 py-16 outline-none sm:px-6">
+      <div className="unsub-card">
+        {TOKEN.test(value) ? (
+          <UnsubscribeResult token={value} />
+        ) : (
+          <div role="alert" className="space-y-3">
+            <MailX className="size-8 text-fg-secondary" aria-hidden />
+            <h1 className={PAGE_TITLE}>{unsubscribeCopy.missingTitle}</h1>
+            <p className="text-sm text-fg-secondary">{unsubscribeCopy.missing}</p>
+            <NotificationSettingsLink />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
