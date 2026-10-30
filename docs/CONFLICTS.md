@@ -7990,3 +7990,72 @@ pause too.
   - /faq opens and closes;
   - the old "no `[data-hero-scrub]`" and "no hero animations" assertions are replaced, per width (play
     at 900 px or less, native or scrub above).
+
+### C-157 (hero spacing)
+
+The owner, on a 1920×890 screen: "too much y spacing for large screen". The pinned hero frame
+(`.hero-sticky`, scrub mode: `width > 900px` and `pointer: fine`) centred the copy and the inbox in a
+full-height frame, so about 170 px of paper sat above the eyebrow and 125 px under "Example data", and the
+strip only arrived after the 170vh scrub.
+
+**What changed.**
+- **One DOM:** `Hero` renders `<Strip />` as the hero section's last child (after `.hero-scrub`), and
+  `page.tsx` no longer renders it. Markup, `aria-label` ("The product in numbers") and the list are
+  unchanged. Where the hero doesn't pin (phones, tablets, reduced motion, no script) the hero's bottom
+  padding moved into the strip's top padding (`space-8 + space-6`, `space-6 + space-6` at ≤900), so those
+  modes measure the same as before (375×812 and 768×1024: strip list top and How it works top identical
+  to the pixel).
+- **The frame:** a fluid pad under the bar (`--hero-pad: clamp(space-8, 6vh, space-12)`), and the copy
+  and the inbox top-aligned with each other (`.hero-grid { align-items: start }` in scrub mode), so the
+  eyebrow and the inbox share one top line.
+- **The strip in the first screen** (scrub mode and `height >= 820px`): `.hero` becomes a one-cell grid;
+  the scrub box and the strip share the cell; the strip is `position: sticky; bottom: 0; align-self: end`.
+  It sits on the frame's foot while the frame is pinned, and its own place is the scrub box's last rows,
+  which reach the viewport bottom exactly when the pin ends, so after the pin they leave together.
+  Nothing is measured; the scrub box, its 170vh, its view timeline and the script's pinned range are
+  untouched. The frame reserves the strip's room (`--strip-room`: its figure line, two label lines, its
+  padding and `--hero-pad`, all tokens) and centres the grid in the rest, so a taller screen splits its
+  extra paper equally above and below the content instead of leaving one hole over the strip.
+- **Short wide screens** (`height < 820px`, e.g. 1366×768): the strip follows the scrub box as before
+  (top padding `space-6`, as when it was its own section after a zero-padding hero).
+- **A large screen** (`width >= 1600px` and `height >= 1000px`): the H1 takes its column's measure
+  (`min(max(fs-display, 7vh), 13cqi)`, 75.6 px at 1920×1080, 77.5 at 2560) and the figure zooms 1.12
+  (`--hero-zoom`; 528 → 591 px, the 596 px column's width).
+- `content-visibility`: the strip is no longer a `main > section`, so the `:not()` list drops `.strip`;
+  the rule still never reaches it.
+- The H1 is still the LCP element and never moves during the scrub (same top at 0, 40 % and 100 % at every
+  size checked); nothing changes after load, so no CLS. Scrub timing and reduced motion are unchanged.
+
+**Gaps at scroll 0** (above = bar to the eyebrow/inbox top line; below = content foot to the next thing
+on the first screen: the strip after, the viewport foot before).
+
+| Viewport | Before above / below | After above / content→strip / strip→foot |
+|---|---|---|
+| 1366×768 (short) | 111 / 63 | 46 / 80 to the foot (strip after the pin) |
+| 1440×900 | 174 / 129 | 76 / 52 / 48 |
+| 1536×864 | 156 / 111 | 58 / 34 / 48 |
+| 1920×1080 | 264 / 219 | 132 / 108 / 48 |
+| 1920×890 (owner) | 169 / 124 | 71 / 47 / 48 |
+| 2560×1440 | 444 / 399 | 312 / 288 / 48 |
+
+**Judgment calls.**
+- The brief said top-align; the frame now top-aligns the eyebrow with the inbox, but centres that block in
+  the room above the strip. On the owner's 1920×890 that is 71 px over the content and 47 px under it. Pure top
+  alignment with the strip at the foot (tried first) left one hole over the strip instead: 190 px at
+  1920×1080 and 550 px at 2560×1440.
+- **The 1240 px container stays** (owner decision). At 2560×1440 the content (column-capped at 596 px) can't
+  fill a 1376 px frame, so about 300 px of paper stays above and below it, balanced. Widening the hero alone
+  would put its copy off the bar's logo edge; widening the site is the owner's call. Many 2560×1440 screens
+  run at 125–150 % scaling (2048×1152 or 1707×960 CSS px), where the frame is smaller; not measured.
+- The 820 px threshold: the frame holds top pad + inbox (≈580) + strip (≈150) only from about 820 px of
+  viewport; 1536×864 (34 px between content and strip) is the tightest size that pins it.
+
+**Tests.** `page.test.tsx`: the section order drops "strip" and pins the strip as the hero's last child.
+`landing.spec.ts`: the order drops "The product in numbers"; new: at 1920×890 and 1440×900 the gap above is
+16–110 px, the strip clears the content and its foot is the viewport's, no sideways scroll; at 1366×768 the
+strip starts below the first screen. (For the coordinator's e2e run; checked the same values by hand.)
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `app/(marketing)`,
+`components/marketing`, `components/site`, `styles`: 16 files, 410 tests pass. Screenshots on :3162 at
+1366×768, 1440×900, 1536×864, 1920×1080, 1920×890, 2560×1440 (scroll 0, 40 %, end of pin, 200 px past),
+375×812 and 768×1024; no sideways scroll at any size.

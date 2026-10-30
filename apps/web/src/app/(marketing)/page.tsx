@@ -9,7 +9,6 @@ import { Hero } from "@/components/marketing/landing/Hero";
 import { LandingMotion } from "@/components/marketing/landing/LandingMotion";
 import { Modes } from "@/components/marketing/landing/Modes";
 import { Steps } from "@/components/marketing/landing/Steps";
-import { Strip } from "@/components/marketing/landing/Strip";
 import { Trust } from "@/components/marketing/landing/Trust";
 import { Pricing } from "@/components/marketing/Pricing";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
@@ -42,7 +41,6 @@ export default async function HomePage() {
     <main id="main" tabIndex={-1} data-landing="" className="flex-1 outline-none">
       <JsonLd data={landingJsonLd(pricing, FAQ)} />
       <Hero />
-      <Strip />
       <Decide />
       <Comments />
       <Modes />

@@ -68,7 +68,7 @@ body:has(.site) {
        which a clipping band would break. The clip is `clip`, not `hidden`: `hidden` would make each band a
        scroll container, which stops Security's and the FAQ's sticky heads (C-157 organize) and freezes
        the cards' `view()` rise (C-157 motion), whose timeline is the nearest scroll container. */
-    & [data-landing] > section:not(.hero, .strip, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: clip; }
+    & [data-landing] > section:not(.hero, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: clip; }
     /* A section that follows one of the same colour starts closer (the two paddings read as one gap). */
     & .sec-tight { padding-top: var(--space-section-tight); }
     /* The gap from a heading block to what it introduces: one value on every section. */
@@ -242,8 +242,10 @@ body:has(.site) {
     & .app-ring i { background: transparent; border: 2px solid var(--c); }
     & .cap, & .stage-cap { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
 
-    /* ---- hero: copy beside the sorted inbox; the strip below is its bottom edge */
-    & .hero { padding-block: var(--space-10) var(--space-8); }
+    /* ---- hero: copy beside the sorted inbox; the strip, the section's last part, is its bottom edge.
+       The hero's foot is the strip's top padding (the old hero bottom plus the old strip top), so the
+       modes that don't pin look as they did when the strip was a section of its own. */
+    & .hero { padding-block: var(--space-10) 0; }
     & .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12); align-items: center; }
     /* The copy is a size container, so the headline can never be wider than its column (LP-1.2). */
     & .hero-copy { position: relative; z-index: 1; container-type: inline-size; }
@@ -312,15 +314,17 @@ body:has(.site) {
       & .stage-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
 
       /* A wide screen with a mouse: the hero pins for one short scroll (170vh in all, so about 0.7 of a
-         screen of scrubbing past the pinned frame) and the scroll sorts the pile. */
+         screen of scrubbing past the pinned frame) and the scroll sorts the pile. The content sits at
+         the frame's top, a fluid step under the bar (C-157 hero spacing: centred, a tall screen showed
+         130-170 px of empty paper above and below it). */
       @media (width > 900px) and (pointer: fine) { /* site-md */
-        & .hero { --hero-mode: scrub; padding-block: 0; }
+        & .hero { --hero-mode: scrub; --hero-pad: clamp(var(--space-8), 6vh, var(--space-12)); padding-block: 0; }
         & .hero-scrub { height: 170vh; view-timeline: --hero-sort block; view-timeline-inset: var(--nav-h) 0; }
         & .hero-sticky {
           position: sticky; top: calc(var(--nav-h) + env(safe-area-inset-top, 0px)); height: calc(100svh - var(--nav-h) - env(safe-area-inset-top, 0px));
-          min-height: 40rem; display: flex; align-items: center;
+          min-height: 40rem; display: flex; align-items: flex-start; padding-top: var(--hero-pad);
         }
-        & .hero-grid { width: 100%; }
+        & .hero-grid { width: 100%; align-items: start; }
         & .stage-cap { min-height: 0; }
         /* The scroll timeline: the pinned range is contain 0% to 100%. Each row's 920 ms of 1.2 s becomes
            its share of the first 84% of that range (2.8% of stagger a row); the last 16% holds sorted. */
@@ -337,10 +341,41 @@ body:has(.site) {
     }
 
     /* ---- strip: four facts set large, the hero's bottom edge */
-    & .strip { padding-block: var(--space-6) var(--space-section-tight); }
+    & .strip { padding-block: calc(var(--space-8) + var(--space-6)) var(--space-section-tight); }
     & .strip-in { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-8); margin-block: 0; list-style: none; }
     & .strip-in li { font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); }
     & .strip-in b { display: block; margin-bottom: var(--space-1); font-size: var(--fs-stat-sm); line-height: var(--lh-stat-sm); font-weight: 700; letter-spacing: var(--tr-h3); color: var(--s-text); }
+    /* When the hero pins (C-157 hero spacing), the first screen is complete: copy and inbox at the top,
+       the strip at the foot of the pinned frame. The strip stays after the pinned box in the markup;
+       it shares the hero's one grid cell with that box and sticks to the viewport's bottom, so it sits
+       over the frame's foot while the frame is pinned and leaves with it (its own place is the box's
+       last rows, which reach the viewport's bottom exactly when the pin ends). The scroll timeline and
+       the pinned range are the box's, so nothing about the scrub changes. On a short screen (the
+       content and the strip don't both fit in the frame) it follows the pinned box instead. */
+    @media (scripting: enabled) and (prefers-reduced-motion: no-preference) and (width > 900px) and (pointer: fine) { /* site-md */
+      & .strip { padding-top: var(--space-6); }
+      @media (height >= 820px) { /* site-md: the frame holds the copy, the inbox and the strip */
+        & .hero { display: grid; grid-template-columns: minmax(0, 1fr); }
+        & .hero-scrub, & .hero .strip { grid-area: 1 / 1; }
+        & .hero .strip { position: sticky; bottom: 0; align-self: end; padding-block: var(--space-6) var(--hero-pad); }
+        /* The frame keeps the strip's room clear (its figure, its two-line label and its padding), and
+           the copy and the inbox sit centred in what is left, so the paper above the eyebrow and under
+           the inbox is one equal, small gap; a very tall screen splits its extra room the same way
+           instead of leaving one hole over the strip. */
+        & .hero-sticky {
+          --strip-room: calc(var(--fs-stat-sm) * var(--lh-stat-sm) + var(--space-1) + 2 * var(--fs-label) * var(--lh-label) + var(--space-6) + var(--hero-pad));
+          align-items: center; padding-bottom: var(--strip-room);
+        }
+      }
+      /* A large screen (wide and tall): the headline takes its column's full measure and the inbox
+         grows with it to the column's width (528 px x 1.12 = 591 of the 596 px column), so the
+         content fills the frame instead of floating in it. */
+      @media (width >= 1600px) and (height >= 1000px) { /* site-md: a large screen */
+        & .hero { --hero-zoom: 1.12; }
+        & .hero-copy .h1 { font-size: min(max(var(--fs-display), 7vh), 13cqi); }
+        & .stage { zoom: var(--hero-zoom); }
+      }
+    }
 
     /* ---- how it works: the peak. On a wide screen the frame pins (heading included) for about one
        screen of scroll; landing-motion.ts reads the pin from this CSS, so the breakpoint lives here. */
@@ -777,7 +812,8 @@ body:has(.site) {
     /* The tablet tier and the phone: one column, the copy then the scene on one left edge; the
        How it works frame no longer pins (landing-motion.ts reads that from here). */
     @media (width <= 900px) { /* site-md */
-      & .hero { padding-block: var(--space-10) var(--space-6); }
+      & .hero { padding-block: var(--space-10) 0; }
+      & .strip { padding-top: calc(var(--space-6) + var(--space-6)); }
       & .hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-10); }
       & .hero-sub { max-width: 52ch; }
       & .stage { align-items: flex-start; }

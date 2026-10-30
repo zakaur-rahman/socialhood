@@ -6,6 +6,7 @@ import { SECTION_IDS, SIGN_UP_PATH, SITE_TAGLINE, appUrl } from "@/lib/marketing
 
 import { CtaLink } from "../primitives";
 import { CHANNELS, HERO_NOTES, HERO_PILE, SOURCES } from "./data";
+import { Strip } from "./Strip";
 
 import { HERO_AUDIENCE, HERO_LINE, HERO_TITLE } from "./copy";
 
@@ -36,6 +37,9 @@ export const HERO_SCENE_LABEL = `Example: ${HERO_NOTES.length} messages from Ins
  * - A phone or a tablet: it sorts by itself once (1.2 s) when the inbox is on screen, with a pause
  *   control, then holds.
  * - No script, or `prefers-reduced-motion`: the sorted inbox, still.
+ * The strip (the product in numbers) closes the section, after the pinned box. On a wide screen tall
+ * enough to hold it, site.css lays it over the pinned frame's foot, so the first screen is complete;
+ * everywhere else it simply follows the hero, as it always has (C-157 hero spacing).
  */
 export function Hero() {
   return (
@@ -118,6 +122,7 @@ export function Hero() {
           </div>
         </div>
       </div>
+      <Strip />
     </section>
   );
 }

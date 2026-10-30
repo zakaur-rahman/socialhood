@@ -88,7 +88,6 @@ test.describe("landing page", () => {
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
-        "The product in numbers",
         "how-it-works",
         "automations",
         "modes",
@@ -187,6 +186,35 @@ test.describe("landing page", () => {
     expect(middle.h1).toBe(start.h1); // the headline is pinned, not moved
     expect(end.h1).toBe(start.h1);
     expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBe(0);
+  });
+
+  test("on a tall wide screen the first screen is complete: copy and inbox at the top, the strip at its foot (C-157 hero spacing)", async ({ page }) => {
+    for (const [width, height] of [
+      [1920, 890],
+      [1440, 900],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      const geo = await page.evaluate(() => {
+        const box = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        const nav = document.querySelector("header")!.getBoundingClientRect().bottom;
+        const top = Math.min(box(".hero-tag").top, box(".inbox").top);
+        const content = Math.max(box(".hero-copy").bottom, box(".stage-cap").bottom);
+        return { above: top - nav, below: box(".strip-in").top - content, stripBottom: box(".strip").bottom, vh: innerHeight, sideways: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(geo.above).toBeGreaterThan(16);
+      expect(geo.above).toBeLessThan(110); // was about 170 when the content sat centred in the frame
+      expect(geo.below).toBeGreaterThan(16); // the strip never runs into the inbox
+      expect(Math.round(geo.stripBottom)).toBe(geo.vh); // its foot is the first screen's foot
+      expect(geo.sideways).toBe(false);
+    }
+  });
+
+  test("on a short wide screen the strip follows the pinned frame (C-157 hero spacing)", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/");
+    const stripTop = await page.locator(".strip").evaluate((el) => el.getBoundingClientRect().top);
+    expect(stripTop).toBeGreaterThan(768);
   });
 
   test("on a phone the hero sorts by itself once, with a pause control that hides when it ends (C-157 motion)", async ({ page }) => {

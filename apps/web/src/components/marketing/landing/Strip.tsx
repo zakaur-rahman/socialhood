@@ -12,7 +12,7 @@ export const FREE = {
 
 /**
  * A few plain facts under the hero (C-138's numbers, in C-155's strip; C-157 sets them as the hero's
- * bottom edge). Only things that are true by construction: what is built, and what the Free plan
+ * bottom edge; Hero renders it as the section's last part, C-157 hero spacing). Only things that are true by construction: what is built, and what the Free plan
  * includes. No customer counts, no speed or setup-time claims we can't back.
  */
 export const STRIP: { value: string; label: string }[] = [

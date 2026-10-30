@@ -61,7 +61,6 @@ describe("the landing page", () => {
     // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
     expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
       "hero",
-      "strip",
       "how-it-works",
       "automations",
       "modes",
@@ -90,6 +89,8 @@ describe("the landing page", () => {
 
     // The strip's numbers come from the plan table, and no fact repeats the hero's (C-157).
     const strip = screen.getByRole("region", { name: "The product in numbers" });
+    // It is the hero's last part (C-157 hero spacing), so a wide screen can pin it with the first screen.
+    expect(container.querySelector("section.hero > section.strip:last-child")).toBe(strip);
     expect(strip).toHaveTextContent("200 AI credits");
     expect(strip).toHaveTextContent("50 website chats");
     expect(strip).not.toHaveTextContent("Official Meta APIs");
