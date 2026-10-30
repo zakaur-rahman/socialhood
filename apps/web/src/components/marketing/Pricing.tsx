@@ -137,26 +137,9 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
             <PlanCardView key={card.plan} card={card} pricing={pricing} main={proOnSale ? card.plan === "pro" : card.plan === "free"} />
           ))}
         </ul>
+        {/* Under the cards, one stack on the cards' edges (C-157 organize): the credits disclosure as wide as
+            the plan grid, then the fine print and the link to every limit. */}
         <div className="price-foot">
-          <div>
-            {max ? (
-              <p>
-                <b>{max.name}:</b> a larger plan for teams with multiple members is planned. It isn&apos;t available to buy yet.
-              </p>
-            ) : null}
-            <p>
-              Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees, which Meta
-              charges directly to your business.
-            </p>
-            {headingLevel === 2 ? (
-              <p>
-                <Link href="/pricing" className="tlink">
-                  Compare every plan limit
-                </Link>{" "}
-                <ArrowRight className="inline size-4" aria-hidden />
-              </p>
-            ) : null}
-          </div>
           <details className="credits">
             <summary>
               <h3>How AI credits work</h3>
@@ -180,6 +163,25 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
               ))}
             </dl>
           </details>
+          <div className="price-notes">
+            {max ? (
+              <p>
+                <b>{max.name}:</b> a larger plan for teams with multiple members is planned. It isn&apos;t available to buy yet.
+              </p>
+            ) : null}
+            <p>
+              Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees, which Meta
+              charges directly to your business.
+            </p>
+            {headingLevel === 2 ? (
+              <p>
+                <Link href="/pricing" className="tlink">
+                  Compare every plan limit
+                </Link>{" "}
+                <ArrowRight className="inline size-4" aria-hidden />
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

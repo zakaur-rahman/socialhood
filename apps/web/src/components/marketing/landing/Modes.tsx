@@ -18,12 +18,11 @@ export function Modes() {
   return (
     <section className="sec modes-sec" id="modes" aria-labelledby="modes-title" data-modes="">
       <div className="wrap">
-        <div className="split-head">
-          <h2 id="modes-title" className="h2">
-            Off, Suggest or Auto, for each account
-          </h2>
-          <p className="lede">Try the switch to see what each does with the same four messages.</p>
-        </div>
+        {/* A short lede sits under its heading, not in a far column (C-157 organize). */}
+        <h2 id="modes-title" className="h2">
+          Off, Suggest or Auto, for each account
+        </h2>
+        <p className="lede">Try the switch to see what each does with the same four messages.</p>
         <div className="switch" role="group" aria-label="AI reply mode">
           {ORDER.map((key) => (
             <button key={key} type="button" data-mode={key} aria-pressed={key === DEFAULT_MODE}>
@@ -65,7 +64,6 @@ export function Modes() {
             );
           })}
         </div>
-
       </div>
     </section>
   );

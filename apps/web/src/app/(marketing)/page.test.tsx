@@ -117,9 +117,26 @@ describe("the landing page", () => {
       "Let the AI draft or reply",
     ]);
 
-    // Features and product rules.
+    // Features and product rules: Ask Amplychat leads, the rest under three outcomes (C-157 organize).
     expect(screen.getByRole("heading", { name: "Ask Amplychat" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
+    const features = container.querySelector("section#features") as HTMLElement;
+    const groups = [...features.querySelectorAll(".fgroup")].map((group) => ({
+      title: group.querySelector("h3")?.textContent,
+      items: [...group.querySelectorAll("h4")].map((h) => h.textContent?.replace(/ · Pro$/, "")),
+    }));
+    expect(groups).toEqual([
+      { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
+      { title: "Automate the repetitive work", items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon"] },
+      {
+        title: "Understand and grow",
+        items: ["Analytics and the weekly report", "Comment intelligence", "Product catalogue, orders and payment links"],
+      },
+    ]);
+    // A feature with its own page is one whole-card link; one "Go deeper" line in the section.
+    expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
+    expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
+    expect(features.querySelectorAll(".more-links")).toHaveLength(1);
     // Who it's for: the two audience pages.
     const audience = within(container.querySelector("section#who-its-for") as HTMLElement);
     expect(audience.getByRole("link", { name: "For creators" })).toHaveAttribute("href", "/for-creators");
@@ -143,7 +160,7 @@ describe("the landing page", () => {
       "WhatsApp",
       "Website chat",
       "Facebook Pages",
-      "Live comments and ad replies",
+      "Live comments and ads",
       "Shopify",
       "Google Sheets",
       "Zapier and the public API",
@@ -154,6 +171,8 @@ describe("the landing page", () => {
     // Insights wait for a permission production doesn't ask for yet.
     expect(integrations.getByText(/Post insights follow Meta's approval/)).toBeInTheDocument();
     expect(integrations.getByText(/Razorpay payment links and UPI requests/)).toBeInTheDocument();
+    // The guide sits in its card's own link row, not inside the description.
+    expect(integrations.getByRole("link", { name: "The WhatsApp Business API, explained" }).closest(".crow-g")).not.toBeNull();
 
     // No language marketing (C-155).
     expect(container.textContent).not.toMatch(/Hindi|Hinglish/);

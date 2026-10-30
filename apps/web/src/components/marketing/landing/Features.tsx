@@ -1,4 +1,5 @@
 import type { Route } from "next";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { SECTION_IDS, SITE_NAME } from "@/lib/marketing/site";
@@ -51,23 +52,68 @@ export const FEATURES: Feature[] = [
 ];
 
 /** Ask Amplychat leads the list (C-157): the one feature that works across everything else. */
-const [LEAD, ...REST] = [FEATURES.find((f) => f.title === `Ask ${SITE_NAME}`)!, ...FEATURES.filter((f) => f.title !== `Ask ${SITE_NAME}`)];
+const LEAD = FEATURES.find((f) => f.title === `Ask ${SITE_NAME}`)!;
+
+const byTitle = (title: string) => FEATURES.find((f) => f.title === title)!;
+
+/**
+ * The rest, under three outcomes (C-157 organize; the group titles are the only new words). Each
+ * group's cards fill a two-column grid; the group of three ends on its widest card, which spans both
+ * columns, so no group leaves a hole.
+ */
+export const FEATURE_GROUPS: { title: string; items: Feature[] }[] = [
+  {
+    title: "Manage every conversation",
+    items: [byTitle("Team roles and assignment"), byTitle("Notifications, on your phone too")],
+  },
+  {
+    title: "Automate the repetitive work",
+    items: [byTitle("Scheduling, Reels and Stories"), byTitle("Sequences, and broadcasts soon")],
+  },
+  {
+    title: "Understand and grow",
+    items: [
+      byTitle("Analytics and the weekly report"),
+      byTitle("Comment intelligence"),
+      byTitle("Product catalogue, orders and payment links"),
+    ],
+  },
+];
+
+/** One feature as a card; a feature with its own page is a whole-card link with a small arrow. */
+function FeatureCard({ title, body, plan, note, href }: Feature) {
+  return (
+    <li className={href ? "fcard is-link" : "fcard"}>
+      <h4>
+        {href ? (
+          <Link href={href as Route} className="fcard-link">
+            {title}
+          </Link>
+        ) : (
+          title
+        )}
+        {plan ? <span className="pl"> · {plan}</span> : null}
+        {href ? <ArrowRight className="fcard-arrow size-4" aria-hidden /> : null}
+      </h4>
+      <p>{body}</p>
+      {note ? <p className="note-line">{note}</p> : null}
+    </li>
+  );
+}
 
 /**
  * Everything else in the product, and what it connects to (C-155; C-157 merges Integrations in): Ask
- * Amplychat first and larger, the rest as a list set large with no icons, then the connections with
- * their honest status.
+ * Amplychat first and larger, the rest grouped under three outcomes, one "Go deeper" line, then the
+ * connections with their honest status.
  */
 export function Features() {
   return (
     <section className="sec sec-tight" id={SECTION_IDS.features} aria-labelledby="features-title">
       <div className="wrap">
-        <div className="split-head">
-          <h2 id="features-title" className="h2-sm">
-            Everything your customer conversations need
-          </h2>
-          <p className="lede">From the first comment to the reply that closes the sale, in one place.</p>
-        </div>
+        <h2 id="features-title" className="h2-sm">
+          Everything your customer conversations need
+        </h2>
+        <p className="lede">From the first comment to the reply that closes the sale, in one place.</p>
         <div className="feat-lead after-head">
           <h3>{LEAD.title}</h3>
           <div>
@@ -75,18 +121,16 @@ export function Features() {
             {LEAD.note ? <p className="note-line">{LEAD.note}</p> : null}
           </div>
         </div>
-        <ul className="more">
-          {REST.map(({ title, body, plan, note, href }) => (
-            <li key={title} className="mi">
-              <h3>
-                {href ? <Link href={href as Route}>{title}</Link> : title}
-                {plan ? <span className="pl"> · {plan}</span> : null}
-              </h3>
-              <p>{body}</p>
-              {note ? <p className="note-line">{note}</p> : null}
-            </li>
-          ))}
-        </ul>
+        {FEATURE_GROUPS.map((group) => (
+          <div key={group.title} className="fgroup">
+            <h3>{group.title}</h3>
+            <ul className={group.items.length % 2 ? "fgrid odd" : "fgrid"}>
+              {group.items.map((feature) => (
+                <FeatureCard key={feature.title} {...feature} />
+              ))}
+            </ul>
+          </div>
+        ))}
         <p className="more-links">
           Go deeper: <Link href="/features/ai-inbox">the AI inbox</Link>,{" "}
           <Link href="/features/comment-intelligence">comment intelligence</Link>,{" "}

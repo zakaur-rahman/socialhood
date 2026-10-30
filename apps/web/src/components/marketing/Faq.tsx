@@ -35,7 +35,7 @@ export function Faq({
   return (
     <section className="sec faq-sec" id={id} aria-labelledby={`${id}-title`}>
       <div className="wrap faq">
-        <div>
+        <div className="faq-head">
           {eyebrow ? <p className={SECTION_EYEBROW}>{eyebrow}</p> : null}
           <h2 id={`${id}-title`} className={UTILITY_TITLE}>
             {title}

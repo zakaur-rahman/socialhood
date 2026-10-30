@@ -14,12 +14,16 @@ export const TRUST_POINTS: { title: string; body: string }[] = [
   { title: "Official Meta APIs", body: "Instagram and WhatsApp connect through Meta's official, approved APIs." },
 ];
 
-/** Security and privacy, on a night band (C-155): a list set large, no icons (C-157). */
+/**
+ * Security and privacy, on a night band (C-155): a spec list, no icons (C-157). The heading block on
+ * the left (it stays in view on a wide screen), the five points on the right as rows: the title in a
+ * fixed column, its description beside it, a hairline between rows.
+ */
 export function Trust() {
   return (
-    <section className="sec night" id="security" aria-labelledby="trust-title">
-      <div className="wrap">
-        <div className="split-head">
+    <section className="sec night spec-sec" id="security" aria-labelledby="trust-title">
+      <div className="wrap spec">
+        <div className="spec-head">
           <h2 id="trust-title" className="h2">
             Your customers&apos; messages, handled with care
           </h2>
@@ -28,9 +32,9 @@ export function Trust() {
             our <Link href="/security">security page</Link>.
           </p>
         </div>
-        <ul className="trust-list after-head">
+        <ul className="spec-list">
           {TRUST_POINTS.map(({ title, body }) => (
-            <li key={title} className="tr">
+            <li key={title} className="spec-row">
               <h3>{title}</h3>
               <p>{body}</p>
             </li>

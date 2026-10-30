@@ -67,11 +67,17 @@ body:has(.site) {
        next band (axe's contrast check in Lighthouse). How it works stays out: it pins with sticky,
        which a clipping band would break. */
     & [data-landing] > section:not(.hero, .strip, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: hidden; }
+    /* Security and the FAQ keep a heading block in view (sticky) within their own band. `hidden` would make
+       the band the sticky element's scroll container, so it would never stick; `clip` clips the same
+       unpainted overflow without being a scroll container (C-157 organize). */
+    & [data-landing] > section:is(#security, #faq) { overflow: clip; }
     /* A section that follows one of the same colour starts closer (the two paddings read as one gap). */
     & .sec-tight { padding-top: var(--space-section-tight); }
     /* The gap from a heading block to what it introduces: one value on every section. */
     & .after-head { margin-top: var(--space-head); }
-    & .split-head { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-14); align-items: end; }
+    /* One rule for every split head (C-157 organize): the lede's last line sits on the heading's last
+       baseline. A lede short enough to sit under its heading doesn't use a split head at all. */
+    & .split-head { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-14); align-items: last baseline; }
     & .split-head .lede { margin: 0; }
 
     /* ---- type: display, page H1, two H2 tiers (story, utility), H3; all at 700 */
@@ -85,12 +91,12 @@ body:has(.site) {
     & .lede { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 56ch; margin: var(--space-5) 0 0; }
 
     /* ---- links in running text: iris, underlined */
-    & :is(.lede, .about, .qa, .price-foot, .more-links, .crow p, .close-mail) a, & .tlink {
+    & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g, .close-mail) a, & .tlink {
       color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
       transition: color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
-      & :is(.lede, .about, .qa, .price-foot, .more-links, .crow p, .close-mail) a:hover, & .tlink:hover { color: var(--s-link-hover); }
+      & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g, .close-mail) a:hover, & .tlink:hover { color: var(--s-link-hover); }
     }
 
     /* ---- buttons: main (ink), line (outlined), ghost (a quiet link) */
@@ -354,8 +360,11 @@ body:has(.site) {
     & .dsteps li b { display: block; color: inherit; font-weight: 600; margin-bottom: 2px; }
 
     /* ---- comments to DMs */
-    & .machine { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.8fr) minmax(0, 1fr); gap: var(--space-6); margin-top: var(--space-head); align-items: start; }
-    & .post, & .rule, & .dm { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
+    /* The three panels share one height (C-157 organize): each is a column whose live part (the comments,
+       the DM thread) takes the room left, so their feet line up. The thread is anchored to its foot, as a
+       chat is. */
+    & .machine { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.8fr) minmax(0, 1fr); gap: var(--space-6); margin-top: var(--space-head); align-items: stretch; }
+    & .post, & .rule, & .dm { display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
     & .dm { border-radius: var(--r-xl); }
     /* The Reel's cover is type, not a placeholder icon (LP-2.13). */
     & .post-img { position: relative; height: 208px; padding: var(--space-5); background: var(--night); color: var(--night-ink); display: flex; align-items: flex-end; }
@@ -364,7 +373,7 @@ body:has(.site) {
     & .post-img .cover { font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; max-width: 9ch; }
     & .post-cap { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-label); color: var(--ink-2); margin: 0; }
     & .post-cap b { color: var(--ink); }
-    & .comments { height: 236px; overflow: hidden; padding: var(--space-1) 0; margin: 0; list-style: none; position: relative; }
+    & .comments { flex: 1 1 236px; min-height: 236px; overflow: hidden; padding: var(--space-1) 0; margin: 0; list-style: none; position: relative; }
     & .cmt { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-4); font-size: var(--fs-label); transition: background-color var(--dur-slow) var(--ease); }
     & .cmt .av { flex-basis: 28px; width: 28px; height: 28px; font-size: var(--fs-micro); }
     & .cmt .body { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -391,12 +400,12 @@ body:has(.site) {
       & .kwfield input:hover { border-color: var(--ink); }
     }
     & .kwfield input:focus-visible { outline: 2px solid var(--s-focus); outline-offset: 1px; border-color: transparent; }
-    & .rule-stat { display: flex; justify-content: space-between; align-items: baseline; padding-top: var(--space-3); border-top: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); margin: 0; }
+    & .rule-stat { display: flex; justify-content: space-between; align-items: baseline; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); margin: 0; }
     & .rule-stat b { font-size: var(--fs-stat-sm); font-weight: 700; color: var(--ink); letter-spacing: var(--tr-h3); }
     & .rule.pulse { animation: site-pulse var(--dur-very-slow) var(--ease); }
     & .dm-h { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); }
     & .dm-h b { display: block; color: var(--ink); font-size: var(--fs-label); font-weight: 600; line-height: 1.3; }
-    & .dm-b { height: 332px; padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); overflow: hidden; }
+    & .dm-b { flex: 1 1 332px; min-height: 332px; padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); overflow: hidden; }
     & .pb { max-width: 86%; padding: var(--space-2) var(--space-3); border-radius: var(--r-lg); font-size: var(--fs-label); line-height: 1.45; margin: 0; }
     & .pb.enter { animation: site-in var(--dur-slow) var(--ease) both; }
     & .pb.l { background: var(--paper-2); border-bottom-left-radius: var(--r-xs); align-self: flex-start; }
@@ -411,7 +420,8 @@ body:has(.site) {
     & .dm-typing i:nth-child(2) { animation-delay: .15s; }
     & .dm-typing i:nth-child(3) { animation-delay: .3s; }
     & .token { position: absolute; left: 0; top: 0; z-index: 5; height: 26px; padding: 0 var(--space-3); border-radius: 999px; background: var(--iris); color: var(--on-ink); font-size: var(--fs-micro); font-weight: 600; display: flex; align-items: center; gap: var(--space-2); pointer-events: none; opacity: 0; }
-    & .machine-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-4); min-height: 44px; }
+    /* One caption for the whole scene, on its left edge, right under it (as the hero's). */
+    & .machine-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-3); min-height: 44px; }
 
     /* ---- modes */
     & .modes-sec { background: var(--paper-2); }
@@ -440,22 +450,27 @@ body:has(.site) {
     & .out small { font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.4; }
     & .out.swap { animation: site-swap var(--dur-slow) var(--ease) both; }
 
-    /* ---- security: a list set large, no icons */
-    & .trust-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-12); margin-bottom: 0; padding: 0; list-style: none; }
-    & .tr h3 { margin: 0 0 var(--space-3); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
-    & .tr p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 40ch; }
+    /* ---- security: a spec list (C-157 organize). The heading block on the left stays in view on a wide
+       screen; the points are rows on the right, the title in a fixed column, a hairline between rows. */
+    & .spec { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-16); align-items: start; }
+    & .spec-head { position: sticky; top: calc(var(--nav-h) + var(--space-8)); }
+    & .spec-list { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--s-line); }
+    & .spec-row { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: var(--space-8); align-items: baseline; padding-block: var(--space-6); border-top: 1px solid var(--s-line); }
+    & .spec-row h3 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .spec-row p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 52ch; }
 
     /* ---- who it's for: two links to the audience pages */
     & .aud-sec { padding-bottom: var(--space-section-tight); }
     & .aud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin-bottom: 0; padding: 0; list-style: none; }
-    & .aud-card { position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-10) var(--space-8) var(--space-8); border-radius: var(--r-lg); background: var(--s-surface); overflow: hidden; transition: background-color var(--dur-quick) var(--ease); }
+    & .aud-card { position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-10) var(--space-8) var(--space-8); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); overflow: hidden; transition: background-color var(--dur-quick) var(--ease); }
     & .aud-card .chan-line { position: absolute; left: 0; right: 0; top: 0; }
     & .aud-card h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
     & .aud-link { display: inline-flex; align-items: center; gap: var(--space-3); color: inherit; text-decoration: none; }
     & .aud-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
     & .aud-link svg { transition: transform var(--dur-fast) var(--ease); }
-    & .aud-h { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); font-weight: 600; color: var(--s-text); max-width: 34ch; }
-    & .aud-p { margin: 0; color: var(--s-text-2); max-width: 52ch; }
+    /* The card is the measure: no narrower cap inside it, so both cards wrap the same way (C-157 organize). */
+    & .aud-h { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); font-weight: 600; color: var(--s-text); }
+    & .aud-p { margin: 0; color: var(--s-text-2); }
     @media (hover: hover) {
       & .aud-card:hover { background: var(--s-surface-2); }
       & .aud-card:hover .aud-link svg { transform: translateX(var(--dist-micro)); }
@@ -464,41 +479,85 @@ body:has(.site) {
     & .aud-link:focus-visible { outline: 0; }
 
     /* ---- features, with the connections */
-    & .feat-lead { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-12); padding: var(--space-10); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .feat-lead { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-12); padding: var(--space-10); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); }
     & .feat-lead h3 { margin: 0; font-size: var(--fs-h2-sm); line-height: var(--lh-h2-sm); letter-spacing: var(--tr-h2-sm); font-weight: 700; }
     & .feat-lead p { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 52ch; }
     & .feat-lead .note-line { margin-top: var(--space-4); font-size: var(--fs-body-sm); color: var(--s-text); font-weight: 500; }
-    & .more { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12) var(--space-16); margin: var(--space-14) 0 0; padding: 0 var(--space-10); list-style: none; }
-    & .mi h3 { margin: 0 0 var(--space-3); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
-    & .mi h3 a { color: inherit; text-decoration: underline; text-decoration-color: var(--s-line-control); text-decoration-thickness: 1.5px; text-underline-offset: 6px; transition: text-decoration-color var(--dur-quick) var(--ease); }
-    @media (hover: hover) {
-      & .mi h3 a:hover { text-decoration-color: currentColor; }
+    /* The rest under three outcomes (C-157 organize): each group is a row, its title on the left, its
+       features as equal-height cards in two columns; an odd group's last card spans both. */
+    & .fgroup { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 2.15fr); gap: var(--space-6) var(--space-12); margin-top: var(--space-12); }
+    & .fgroup > h3 { margin: 0; padding-top: var(--space-6); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+    & .fgrid.odd > :last-child { grid-column: 1 / -1; }
+    & .fcard {
+      position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6) var(--space-8) var(--space-8);
+      background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); transition: border-color var(--dur-quick) var(--ease);
     }
-    & .mi p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 52ch; }
-    & .mi .note-line { margin-top: var(--space-2); font-size: var(--fs-body-sm); color: var(--s-text-3); }
+    & .fcard h4 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .fcard p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 60ch; }
+    & .fcard .note-line { font-size: var(--fs-body-sm); color: var(--s-text-3); }
+    /* A linked card is one link (the title's ::after covers the card); its arrow nudges on hover. */
+    & .fcard-link { color: inherit; text-decoration: none; }
+    & .fcard-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    & .fcard-link:focus-visible { outline: 0; }
+    & .fcard-link:focus-visible::after { outline: 2px solid var(--s-focus); outline-offset: 3px; }
+    & .fcard-arrow { display: inline-block; margin-left: var(--space-2); vertical-align: -0.1em; color: var(--s-text-2); transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease); }
+    @media (hover: hover) {
+      & .fcard.is-link:hover { border-color: var(--s-line-control); }
+      & .fcard.is-link:hover .fcard-arrow { transform: translateX(var(--dist-micro)); color: var(--s-text); }
+    }
     & .pl { font-weight: 500; color: var(--s-text-3); white-space: nowrap; }
-    & .more-links { margin: var(--space-12) 0 0; padding: 0 var(--space-10); font-size: var(--fs-body); color: var(--s-text-2); }
+    /* Section footers share one gap from what they close (C-157 organize). */
+    & .more-links, & .faq-all { margin: var(--space-8) 0 0; font-size: var(--fs-body); color: var(--s-text-2); }
     & .conn { margin-top: var(--space-section-tight); }
     & .conn .h-sec { max-width: 20ch; }
-    & .chan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-10) var(--space-8); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
-    & .crow { display: flex; flex-direction: column; gap: var(--space-2); }
-    & .crow h4 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; display: flex; align-items: flex-start; gap: var(--space-2); }
-    & .crow h4 i { width: 10px; height: 10px; margin-top: 0.4em; border-radius: 3px; background: var(--c, var(--s-line-control)); flex: 0 0 10px; }
-    & .crow p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
-    & .st { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); font-size: var(--fs-label); font-weight: 500; color: var(--s-text); }
+    /* The connections: a strict grid of equal-height cards (4, 2, 1 columns). Each card is a subgrid over
+       four shared rows (name, line, guide, status), so names, lines and statuses line up across a row. */
+    & .conn { --chan-cols: 4; }
+    & .chan { display: grid; grid-template-columns: repeat(var(--chan-cols), minmax(0, 1fr)); gap: var(--space-6); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
+    & .crow {
+      display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: var(--space-3); padding: var(--space-6);
+      background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
+    }
+    & .crow h4 { grid-row: 1; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: baseline; column-gap: var(--space-3); }
+    & .crow h4 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c, var(--s-line-control)); }
+    & .crow-b { grid-row: 2; margin: 0; color: var(--s-text-2); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+    & .crow-g { grid-row: 3; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+    & .st { grid-row: 4; align-self: end; display: inline-flex; align-items: center; gap: var(--space-2); padding-top: var(--space-2); font-size: var(--fs-label); font-weight: 500; color: var(--s-text); }
     & .st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sc); flex: 0 0 8px; }
-    & .pay { margin: var(--space-10) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-2); max-width: 72ch; }
-    & .pay b { color: var(--s-text); font-weight: 600; }
+    /* Payments: one full-width row on the same columns as the cards above, so its name and its line start
+       on the cards' own text edges. */
+    & .pay {
+      display: grid; grid-template-columns: repeat(var(--chan-cols), minmax(0, 1fr)); column-gap: var(--space-6); align-items: baseline; margin: var(--space-6) 0 0;
+      padding-block: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2);
+    }
+    & .pay > * { padding-inline: var(--space-6); }
+    & .pay > span { grid-column: 2 / -1; max-width: 72ch; }
+    & .pay b { color: var(--s-text); font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
 
     /* ---- set up in three steps (night), the bridge into pricing */
-    & .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-12); padding: 0; list-style: none; margin-bottom: 0; }
-    & .steps h3 { margin: 0 0 var(--space-3); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
+    /* A clear left-to-right sequence without numbers (C-157 organize): one hairline runs under the step
+       tops, a mark on it starts each step, the three columns are equal and their titles share a row. */
+    & .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--space-12); padding: 0; list-style: none; margin-bottom: 0; }
+    & .steps li { position: relative; display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: var(--space-3); padding-top: var(--space-8); }
+    & .steps li::before { content: ""; position: absolute; left: 0; right: calc(-1 * var(--space-12)); top: 0; height: 1px; background: var(--s-line-control); }
+    & .steps li:last-child::before { right: 0; }
+    & .steps li::after { content: ""; position: absolute; left: 0; top: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--s-text); }
+    & .steps h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
     & .steps p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 44ch; }
 
     /* ---- pricing (the landing and /pricing) */
-    & .plans { display: grid; grid-template-columns: repeat(var(--plan-cols, 2), minmax(0, 1fr)); gap: var(--space-6); margin: var(--space-head) 0 0; padding: 0; list-style: none; align-items: start; }
+    /* Equal plan cards (C-157 organize): each is a subgrid over six shared rows (name, tagline, price,
+       its line, the button, the list), so prices, buttons and lists start at one height in every card. */
+    & .plans { display: grid; grid-template-columns: repeat(var(--plan-cols, 2), minmax(0, 1fr)); gap: var(--space-6); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
     /* A plan is a sheet on paper (a tone step, no outline); the plan to start on carries an ink edge. */
-    & .plan { background: var(--s-surface); border: 2px solid transparent; border-radius: var(--r-xl); padding: var(--space-8); }
+    & .plan { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; background: var(--s-surface); border: 2px solid transparent; border-radius: var(--r-xl); padding: var(--space-8); }
+    & .plan > .plan-top { grid-row: 1; }
+    & .plan > .for { grid-row: 2; }
+    & .plan > .price { grid-row: 3; align-self: end; }
+    & .plan > .sub { grid-row: 4; }
+    & .plan > .btn { grid-row: 5; align-self: start; }
+    & .plan > .limits { grid-row: 6; }
     & .plan.main { border-color: var(--s-text); }
     & .plan-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
     & .plan h3 { margin: 0; font-weight: 700; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); }
@@ -512,21 +571,25 @@ body:has(.site) {
     & .limits { list-style: none; margin: var(--space-8) 0 0; padding: 0; }
     & .limits li { display: flex; gap: var(--space-3); padding: var(--space-2) 0; font-size: var(--fs-body-sm); color: var(--s-text-2); }
     & .limits svg { flex: 0 0 16px; margin-top: var(--space-1); color: var(--ok); }
-    & .price-foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12); margin-top: var(--space-10); font-size: var(--fs-body-sm); color: var(--s-text-2); }
-    & .price-foot p { margin: 0 0 var(--space-3); line-height: 1.65; }
+    /* Under the cards, one stack on the plan grid's edges: the credits disclosure, then the fine print. */
+    & .price-foot { display: grid; gap: var(--space-8); margin-top: var(--space-6); font-size: var(--fs-body-sm); color: var(--s-text-2); }
+    & .price-foot p { margin: 0 0 var(--space-3); line-height: 1.65; max-width: 72ch; }
+    & .price-notes p:last-child { margin-bottom: 0; }
     & .price-foot .tlink { display: inline-flex; align-items: center; min-height: 24px; }
-    & details.credits { align-self: start; background: var(--s-surface); border-radius: var(--r-md); padding: 0 var(--space-5); }
-    & details.credits summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) 0; font-weight: 600; color: var(--s-text); min-height: 48px; }
+    & details.credits { background: var(--s-surface); border-radius: var(--r-xl); padding: 0 var(--space-8); }
+    & details.credits summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) 0; font-weight: 600; color: var(--s-text); min-height: 48px; }
     & details.credits summary::-webkit-details-marker { display: none; }
     & details.credits summary h3 { margin: 0; font: inherit; }
     & details.credits summary svg { transition: transform var(--dur-fast) var(--ease); }
     & details.credits[open] summary svg { transform: rotate(180deg); }
-    & details.credits dl { margin: 0 0 var(--space-4); }
+    & details.credits dl { margin: 0 0 var(--space-6); max-width: 72ch; }
     & .cr { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-1) 0; font-size: var(--fs-label); margin: 0; }
     & .cr dd { margin: 0; font-weight: 600; white-space: nowrap; }
 
     /* ---- faq (the landing, /for-*) */
-    & .faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--space-16); }
+    & .faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--space-16); align-items: start; }
+    /* The heading block stays in view beside the long list on a wide screen (C-157 organize). */
+    & .faq-head { position: sticky; top: calc(var(--nav-h) + var(--space-8)); }
     & .faq-sec { background: var(--paper-2); }
     /* Each question is a sheet on the band (a tone step), not a ruled row. */
     & .faq-list { display: grid; gap: var(--space-2); align-content: start; }
@@ -546,7 +609,7 @@ body:has(.site) {
     }
     & .qa[open] .pm { transform: rotate(45deg); background: var(--s-text); color: var(--s-bg); border-color: var(--s-text); }
     & .qa p { margin: 0 0 var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 62ch; }
-    & .faq-all { margin: var(--space-6) 0 0; display: flex; align-items: center; gap: var(--space-2); }
+    & .faq-all { display: flex; align-items: center; gap: var(--space-2); }
     & .faq-all .tlink { display: inline-flex; align-items: center; min-height: 44px; }
 
     /* ---- closing */
@@ -580,9 +643,9 @@ body:has(.site) {
       & .hero-grid { gap: var(--space-8); }
       & .machine { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
       & .machine .rule { grid-column: 1 / -1; grid-row: 2; }
-      & .trust-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      & .chan { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      & .more, & .more-links { padding-inline: 0; }
+      & .conn { --chan-cols: 2; }
+      & .fgroup { grid-template-columns: minmax(0, 1fr); }
+      & .fgroup > h3 { padding-top: 0; }
       & .foot-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       & .foot-about { grid-column: 1 / -1; }
     }
@@ -603,7 +666,11 @@ body:has(.site) {
       & .wires { display: none; }
       & .thread-b { min-height: 0; }
       & .dsteps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-6); }
-      & .split-head, & .faq, & .close-grid, & .price-foot, & .feat-lead { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+      & .split-head, & .close-grid, & .feat-lead { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+      & .split-head { gap: var(--space-5); }
+      /* One column: the heading blocks scroll with the page, and lead into their content at the head gap. */
+      & .faq, & .spec { grid-template-columns: minmax(0, 1fr); gap: var(--space-head); }
+      & .faq-head, & .spec-head { position: static; }
       & .feat-lead { padding: var(--space-8) var(--space-6); }
       & .machine { grid-template-columns: minmax(0, 1fr); }
       & .machine .rule { grid-row: auto; }
@@ -611,10 +678,14 @@ body:has(.site) {
       & .mrow.head { display: none; }
       & .switch { display: flex; width: 100%; }
       & .switch button { flex: 1; min-width: 0; padding: 0 var(--space-2); }
-      & .steps, & .plans { grid-template-columns: minmax(0, 1fr); }
-      & .steps { gap: var(--space-8); }
-      & .plans { gap: var(--space-5); }
-      & .chan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      & .plans { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+      /* The steps run down the left edge: the hairline turns vertical, a mark starts each step. */
+      & .steps { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
+      & .steps li { padding: 0 0 var(--space-10) var(--space-8); }
+      & .steps li:last-child { padding-bottom: 0; }
+      & .steps li::before { left: 4px; right: auto; top: var(--space-2); bottom: 0; width: 1px; height: auto; }
+      & .steps li:last-child::before { display: none; }
+      & .steps li::after { top: var(--space-2); }
       & .close-grid { gap: var(--space-12); }
       & .mini { max-width: 460px; }
       & .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -626,8 +697,8 @@ body:has(.site) {
       & .menu-btn { display: inline-flex; }
       & .nav-in { gap: var(--space-3); }
       & .nav .btn { min-height: 44px; }
-      & .more, & .aud { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
-      & .aud { gap: var(--space-4); }
+      & .aud { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+      & .fgrid { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
     }
     @media (width > 760px) { /* site-nav */
       & .menu-panel, & .menu-scrim { display: none; }
@@ -642,7 +713,13 @@ body:has(.site) {
       & .hero-tag { align-items: flex-start; }
       & .hero-tag .chan-dots { margin-top: var(--space-2); }
       & .note { padding-inline: var(--space-4); }
-      & .trust-list, & .chan { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
+      & .conn { --chan-cols: 1; }
+      & .chan { gap: var(--space-4); }
+      & .pay > span { grid-column: 1; }
+      & .spec-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+      & .pay { row-gap: var(--space-2); }
+      & .fcard { padding: var(--space-6); }
+      & details.credits { padding-inline: var(--space-6); }
       & .aud-card { padding: var(--space-8) var(--space-6) var(--space-6); }
       & .qa { padding-inline: var(--space-4); }
       & .panel-h .num { display: none; }

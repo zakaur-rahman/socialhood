@@ -139,6 +139,60 @@ test.describe("landing page", () => {
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("the organized sections line up: equal panels and cards, aligned statuses, sticky heads (C-157 organize)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    // The bands below How it works render as they near the viewport; bring each one in before measuring.
+    const bring = async (selector: string) => {
+      await page.locator(selector).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(150);
+    };
+    const bottoms = (selector: string) =>
+      page.$$eval(selector, (els) => els.map((el) => Math.round(el.getBoundingClientRect().bottom)));
+    const tops = (selector: string) => page.$$eval(selector, (els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    const same = (values: number[]) => Math.max(...values) - Math.min(...values) <= 1;
+
+    // Automations: the Reel, the automation and the DM end on one line.
+    await bring("section#automations .machine");
+    expect(same(await bottoms("section#automations .machine > :is(.post, .rule, .dm)"))).toBe(true);
+
+    // Security: a spec list of five rows; the heading block stays in view while the rows scroll.
+    await bring("section#security");
+    await expect(page.locator("section#security .spec-row")).toHaveCount(5);
+    await page.evaluate(() => window.scrollTo(0, document.querySelector("#security")!.getBoundingClientRect().top + window.scrollY + 160));
+    const headTop = await page.locator("section#security .spec-head").evaluate((el) => el.getBoundingClientRect().top);
+    expect(headTop).toBeGreaterThan(0);
+
+    // Features: three groups of cards, with no half-empty row.
+    await bring("section#features .fgroup");
+    await expect(page.locator("section#features .fgroup")).toHaveCount(3);
+    await expect(page.locator("section#features .more-links")).toHaveCount(1);
+
+    // Integrations: four cards a row, equal heights and every status on one line per row.
+    await bring("#integrations .chan");
+    const cards = await page.$$eval("#integrations .crow", (els) =>
+      els.map((el) => ({ top: Math.round(el.getBoundingClientRect().top), height: Math.round(el.getBoundingClientRect().height), status: Math.round(el.querySelector(".st")!.getBoundingClientRect().top) })),
+    );
+    expect(cards).toHaveLength(8);
+    for (const row of [cards.slice(0, 4), cards.slice(4)]) {
+      expect(same(row.map((c) => c.top))).toBe(true);
+      expect(same(row.map((c) => c.height))).toBe(true);
+      expect(same(row.map((c) => c.status))).toBe(true);
+    }
+
+    // Pricing: plan cards of one height, with their buttons and lists starting at one height.
+    await bring("section#pricing .plans");
+    expect(same(await bottoms("section#pricing .plan"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .btn"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .limits"))).toBe(true);
+
+    // FAQ: the heading block stays in view beside the long list.
+    await bring("section#faq");
+    await page.evaluate(() => window.scrollTo(0, document.querySelector("#faq")!.getBoundingClientRect().top + window.scrollY + 240));
+    const faqHead = await page.locator("section#faq .faq-head").evaluate((el) => el.getBoundingClientRect().top);
+    expect(faqHead).toBeGreaterThan(0);
+  });
+
   test("on a phone How it works plays once by itself, with a pause control", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto("/");

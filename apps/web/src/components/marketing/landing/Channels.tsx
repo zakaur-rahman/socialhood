@@ -51,7 +51,9 @@ export const INTEGRATIONS: Integration[] = [
     mark: "var(--fb)",
   },
   {
-    name: "Live comments and ad replies",
+    // C-157 (organize): shortened from "Live comments and ad replies" so it fits one line in a card; the
+    // line below still says what it answers.
+    name: "Live comments and ads",
     body: "Answer comments made during an Instagram Live, and chats that start from an ad.",
     status: "With Meta's approval",
     tone: "waiting",
@@ -85,8 +87,9 @@ export const PAYMENTS = "Razorpay payment links and UPI requests in the chat, fo
 const DOT = { live: "var(--ok)", waiting: "var(--wait-mark)", yours: "var(--iris)" } as const;
 
 /**
- * What Amplychat connects to (C-155), inside the Features section since C-157: a grid of each
- * connection with one line and an honest status, then the payments line.
+ * What Amplychat connects to (C-155), inside the Features section since C-157: a strict grid of
+ * equal-height cards (the mark and name, one line, a guide when there is one, and the honest status
+ * pinned to the card's foot so statuses line up across a row), then payments as one full-width row.
  */
 export function Connections() {
   return (
@@ -107,15 +110,12 @@ export function Connections() {
               <i aria-hidden />
               {item.name}
             </h4>
-            <p>
-              {item.body}
-              {item.guide ? (
-                <>
-                  {" "}
-                  <Link href={item.guide.href as Route}>{item.guide.label}</Link>
-                </>
-              ) : null}
-            </p>
+            <p className="crow-b">{item.body}</p>
+            {item.guide ? (
+              <p className="crow-g">
+                <Link href={item.guide.href as Route}>{item.guide.label}</Link>
+              </p>
+            ) : null}
             <span className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
               {item.status}
             </span>
@@ -123,7 +123,8 @@ export function Connections() {
         ))}
       </ul>
       <p className="pay">
-        <b>Payments.</b> {PAYMENTS}
+        <b>Payments</b>
+        <span>{PAYMENTS}</span>
       </p>
     </div>
   );
