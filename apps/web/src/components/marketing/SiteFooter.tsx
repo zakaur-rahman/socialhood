@@ -2,7 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
-import { LEGAL, operatorName, publicLocation } from "@/lib/legal";
+import { LEGAL, operatorName } from "@/lib/legal";
 import { SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
 import { Logo } from "./primitives";
@@ -24,10 +24,12 @@ function FooterItem({ link }: { link: FooterLink }) {
 }
 
 /**
- * The footer on a night band (C-155, columns C-156): product, solutions, comparisons, resources,
- * and legal and trust links; the support address; the business, its state and country, the
- * official-API line and the Meta trademark note. Status appears only when NEXT_PUBLIC_STATUS_URL is
- * set. No social links until the business has profiles.
+ * The footer on a night band (C-155, columns C-156), the second half of the page's closing
+ * composition (C-161): product, solutions, comparisons, resources, and legal and trust links (that
+ * group in two columns); the support address; the business, the official-API line and the Meta
+ * trademark note; then the name at full width, decorative. The location is not repeated here (owner,
+ * C-161); the legal pages, /contact and /ai-info still state it. Status appears only when
+ * NEXT_PUBLIC_STATUS_URL is set. No social links until the business has profiles.
  */
 export function SiteFooter({ year = new Date().getFullYear(), status }: { year?: number; status?: string | null }) {
   const columns = footerColumns(status);
@@ -43,7 +45,7 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
             </p>
           </div>
           {columns.map((column) => (
-            <nav key={column.id} aria-labelledby={`footer-${column.id}`}>
+            <nav key={column.id} aria-labelledby={`footer-${column.id}`} className={column.id === "legal" ? "foot-two" : undefined}>
               <h2 id={`footer-${column.id}`}>{column.title}</h2>
               <ul>
                 {column.links.map((link) => (
@@ -57,13 +59,18 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
         </div>
         <div className="foot-bot">
           <p>
-            © {year} {operatorName(LEGAL)} · {publicLocation()}
+            © {year} {operatorName(LEGAL)}
           </p>
-          <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
-          <p className="foot-fine">
-            {SITE_NAME} isn&apos;t affiliated with or endorsed by Meta. Instagram and WhatsApp are trademarks of Meta Platforms, Inc.
-          </p>
+          <div className="foot-legal">
+            <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>
+            <p className="foot-fine">
+              {SITE_NAME} isn&apos;t affiliated with or endorsed by Meta. Instagram and WhatsApp are trademarks of Meta Platforms, Inc.
+            </p>
+          </div>
         </div>
+        <p className="foot-word" aria-hidden>
+          {SITE_NAME}
+        </p>
       </div>
     </footer>
   );

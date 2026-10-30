@@ -208,26 +208,52 @@ body:has(.site) {
     & .skip { position: absolute; left: var(--space-3); top: -100px; z-index: 60; }
     & .skip:focus { top: var(--space-3); }
 
-    /* ---- footer: the night band's close. Space separates its parts; one rule only where the
-       closing night band meets it. */
-    & .foot { padding-block: var(--space-16) var(--space-10); border-top: 1px solid var(--s-line); }
-    /* C-156: the about column and five link columns; the about column takes its own row below 1060 px. */
-    & .foot-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(5, minmax(0, 1fr)); gap: var(--space-10) var(--space-6); }
+    /* ---- footer (C-161): the second half of the closing composition. After the closing CTA it
+       follows on the same night ground with space alone between them (no rule, no second band); on a
+       page without the CTA it starts the night band itself. The about column and five link groups
+       (Legal and trust, the longest, in two columns so the groups end together), the copyright and the
+       Meta lines as one quiet bar, then the name at the container's full width as the page's full stop
+       (research.md: Resend, Spur, Later). */
+    & .foot { padding-block: var(--space-16) 0; overflow: clip; }
+    & .foot .wrap { container-type: inline-size; }
+    & .foot-grid {
+      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.7fr);
+      gap: var(--space-10) var(--space-6); padding-top: var(--space-12);
+    }
     & .foot h2 { margin: 0 0 var(--space-3); font-family: var(--text); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; color: var(--s-text); }
     & .foot ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    & .foot .foot-two ul { display: block; columns: 2; column-gap: var(--space-6); }
+    & .foot .foot-two li { break-inside: avoid; }
     & .foot ul a {
-      display: inline-flex; align-items: center; min-height: 32px; text-decoration: none; font-size: var(--fs-label); color: var(--s-text-2);
-      text-decoration-line: underline; text-decoration-color: transparent; text-underline-offset: 4px;
-      transition: color var(--dur-quick) var(--ease);
+      display: inline-flex; align-items: center; min-height: 32px; font-size: var(--fs-label); color: var(--s-text-2);
+      text-decoration-line: underline; text-decoration-thickness: 1px; text-decoration-color: transparent; text-underline-offset: 4px;
+      transition: color var(--dur-quick) var(--ease), text-decoration-color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
       & .foot ul a:hover { color: var(--s-text); text-decoration-color: currentColor; }
     }
     & .foot .about { font-size: var(--fs-label); color: var(--s-text-2); line-height: 1.65; margin: var(--space-4) 0 0; max-width: 34ch; }
     & .foot .about a { color: var(--s-text); }
-    & .foot-bot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-6); margin-top: var(--space-16); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
+    & .foot-bot {
+      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.7fr); gap: var(--space-3) var(--space-6);
+      margin-top: var(--space-16); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3);
+    }
     & .foot-bot p { margin: 0; }
-    & .foot-bot .foot-fine { flex-basis: 100%; font-size: var(--fs-micro); }
+    /* The Meta lines start on the link groups' first edge (the bar shares the grid's tracks). */
+    & .foot-bot .foot-legal { grid-column: 2 / -1; display: grid; gap: var(--space-1); max-width: 72ch; }
+    & .foot-bot .foot-fine { font-size: var(--fs-micro); line-height: var(--lh-micro); }
+    /* The name, in the site's face at the container's width (nine letters of Geist 700 fill it at about
+       20.4cqi), one tone up from the night so it is felt more than read; decorative, so hidden from
+       assistive tech (the logo above is the link home). Its descenders run off the foot of the page. */
+    & .foot-word {
+      margin: var(--space-12) 0 -0.05em; font-family: var(--display); font-weight: 700; font-size: 20.4cqi; line-height: 0.9;
+      letter-spacing: var(--tr-display); color: var(--night-3); white-space: nowrap; user-select: none; text-align: center;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & .foot-word { animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view(); animation-range: entry 0% entry 60%; }
+      }
+    }
 
     /* ==== the landing (C-157). The scenes are product fragments (`data-ui`): they keep the app's own
        panels, rows and chips; the page around them separates with space and tone, not rules. The
@@ -774,54 +800,35 @@ body:has(.site) {
     & .faq-all { display: flex; align-items: center; gap: var(--space-2); }
     & .faq-all .tlink { display: inline-flex; align-items: center; min-height: 44px; }
 
-    /* ---- closing (C-159 final CTA): a centred finale. The channels' marks stream into the Amplychat
-       mark above the heading, the heading at the display size, one action, the facts as a quiet row. */
-    & .close { padding-block: var(--space-section); }
-    & .close-in { display: flex; flex-direction: column; align-items: center; text-align: center; container-type: inline-size; }
-    /* The heading at the display size, capped by the column so it fits at any width; two lines from
-       1060 px (24ch balanced holds "Bring every customer / conversation into one inbox"). */
+    /* ---- closing (C-161): the CTA and the footer are one closing composition on one night ground
+       (they meet on space alone, never a rule or a second band). The channel
+       line opens it at the container's width, the heading sits at the display size on the page's left
+       edge, and a row below holds the lede (left) and the one action with its facts and the email
+       (right). */
+    & .close { padding-block: var(--space-section) var(--space-8); }
+    & .close-in { container-type: inline-size; }
+    & .close-line { width: 100%; margin: 0 0 var(--space-12); transform-origin: left center; }
+    /* Two lines from 1060 px ("Bring every customer conversation / into one inbox", 24ch balanced). */
     & .close .close-h { font-weight: 700; font-size: min(var(--fs-display), 11cqi); line-height: var(--lh-display); letter-spacing: var(--tr-display); margin: 0; max-width: 24ch; }
-    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: var(--space-6) 0 var(--space-10); max-width: 52ch; }
-    & .close .ctas { justify-content: center; }
-    & .close .facts { justify-content: center; margin-top: var(--space-8); }
+    & .close-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-8) var(--space-14); margin-top: var(--space-10); align-items: start; }
+    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: 0; max-width: 46ch; }
+    & .close-act { display: flex; flex-direction: column; align-items: flex-start; }
+    & .close .facts { flex-direction: column; gap: var(--space-2); margin-top: var(--space-6); }
     & .close .facts svg { color: var(--s-text-2); }
     & .close-mail { margin: var(--space-5) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-2); }
-
-    /* The convergence: a 560 × 160 field that scales with the column (the marks and the hub keep a
-       floor so they stay legible on a phone). The SVG and the tiles share the field's units: a tile
-       is centred on its stream's start with margins, so `transform` and `translate` stay free for
-       the motion. The streams are neutral (night line); the channel colours stay on the marks. */
-    & .converge {
-      --t: clamp(36px, 9cqi, 52px);
-      --hub: clamp(48px, 12.5cqi, 72px);
-      position: relative; container-type: inline-size; width: min(100%, 560px); aspect-ratio: 560 / 160;
-      margin: 0 0 var(--space-12);
-    }
-    & .cv-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-    & .cv-line { stroke: var(--night-line); stroke-width: 1.5; stroke-linecap: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 0; }
-    & .converge .cv-mark {
-      position: absolute; left: calc(var(--x) / 560 * 100%); top: calc(var(--y) / 160 * 100%);
-      width: var(--t); height: var(--t); margin: calc(var(--t) / -2) 0 0 calc(var(--t) / -2); border-radius: var(--r-md);
-    }
-    & .converge .cv-mark svg { width: calc(var(--t) * 0.46); height: calc(var(--t) * 0.46); }
-    & .cv-hub {
-      position: absolute; left: 50%; top: 50%; width: var(--hub); height: var(--hub);
-      margin: calc(var(--hub) / -2) 0 0 calc(var(--hub) / -2); border-radius: var(--r-lg); overflow: clip; display: grid;
-    }
-    /* The motion: drawn once, by the scroll, as the field comes up the screen; it holds once drawn.
-       The sequence is the entrance token (1200 ms) laid over 36% of the field's `cover` range from
-       20%, so 1% is about 33 ms: each mark settles over the very-slow token (500 ms, 15%) with the
-       micro stagger (80 ms, 2.4%); each stream draws over 500 ms from the fast token's offset (250 ms,
-       7.5%), in the same order; the hub lands last over the medium token (350 ms) and ends at 1200 ms.
-       Smooth-out throughout, transforms, opacity and the stroke's dash only, nothing measured. Where
-       scroll timelines are missing, or motion is reduced, it is simply drawn (the rules above). */
+    /* The reveal, once, as the composition comes up the screen (the view() rise the cards use, so no
+       script): the channel line draws from the left, then the heading, the lede and the action rise
+       (12 px, transitions.dev's text reveal) one stagger step apart. It holds once played; without
+       scroll timelines, or with reduced motion, everything simply stands. */
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
-        & .converge { view-timeline: --converge block; }
-        & .converge :is(.cv-line, .cv-mark, .cv-hub) { animation-timing-function: var(--ease); animation-fill-mode: both; animation-timeline: --converge; }
-        & .converge .cv-mark { animation-name: site-settle; animation-range: cover calc(20% + var(--n) * 2.4%) cover calc(35% + var(--n) * 2.4%); }
-        & .converge .cv-line { animation-name: site-draw; animation-range: cover calc(27.5% + var(--n) * 2.4%) cover calc(42.5% + var(--n) * 2.4%); }
-        & .converge .cv-hub { animation-name: site-settle; animation-range: cover 45.5% cover 56%; }
+        & .close-line { animation: site-wipe linear both; animation-timing-function: var(--ease); animation-timeline: view(); animation-range: entry 10% entry 90%; }
+        & :is(.close-h, .close-p, .close-act) {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+        & .close-p { --n: 1; }
+        & .close-act { --n: 2; }
       }
     }
 
@@ -843,8 +850,10 @@ body:has(.site) {
       & .conn { --chan-cols: 2; }
       & .fgroup { grid-template-columns: minmax(0, 1fr); }
       & .fgroup > h3 { padding-top: 0; flex-direction: row; align-items: center; }
-      & .foot-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      & .foot-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); }
       & .foot-about { grid-column: 1 / -1; }
+      & .foot-bot { grid-template-columns: minmax(0, 1fr); }
+      & .foot-bot .foot-legal { grid-column: auto; }
     }
     /* The tablet tier and the phone: one column, the copy then the scene on one left edge; the
        How it works frame no longer pins (landing-motion.ts reads that from here). */
@@ -885,6 +894,8 @@ body:has(.site) {
       & .steps li:last-child::before { display: none; }
       & .steps li::after { top: var(--space-2); }
       & .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      & .foot-two { grid-column: span 2; }
+      & .close-row { grid-template-columns: minmax(0, 1fr); }
       /* Touch: every standalone link is 44 px tall. */
       & .foot ul a, & .price-foot .tlink { min-height: 44px; }
     }
@@ -902,6 +913,7 @@ body:has(.site) {
     @media (width <= 520px) { /* site-sm */
       & .plan { padding: var(--space-6); }
       & .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-5); }
+      & .foot .foot-two ul { column-gap: var(--space-5); }
       & .line .r { display: none; }
       /* The phone's calls to action: one full-width button, then a text link. */
       & .hero-ctas { flex-direction: column; align-items: stretch; gap: var(--space-1); }
@@ -957,9 +969,8 @@ body:has(.site) {
 @keyframes site-fade { from { opacity: 0; } }
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
-/* The closer's convergence (C-159 final CTA): a mark settles into place, a stream draws toward the hub. */
-@keyframes site-settle { from { opacity: 0; transform: translateY(var(--dist-base, 8px)) scale(var(--scale-large, 0.96)); } }
-@keyframes site-draw { from { stroke-dashoffset: 1; } }
+/* The closing's channel line (C-161): drawn from its left end. */
+@keyframes site-wipe { from { transform: scaleX(0); } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
 
 /* ==== C-159 shared ==== */

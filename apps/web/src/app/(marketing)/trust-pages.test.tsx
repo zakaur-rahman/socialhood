@@ -53,7 +53,13 @@ describe("the footer (C-156)", () => {
       expect(within(footer).getByRole("link", { name })).toHaveAttribute("href", href);
     }
     expect(within(footer).queryByRole("link", { name: "Status" })).not.toBeInTheDocument();
-    expect(footer).toHaveTextContent("© 2026 UNCHARTD · Bihar, India");
+    // C-161 (owner): the bar names the business without its location; the legal pages still state it.
+    expect(footer).toHaveTextContent("© 2026 UNCHARTD");
+    expect(footer).not.toHaveTextContent("Bihar");
+    expect(footer).not.toHaveTextContent("India");
+    // The name at full width closes the page, decorative.
+    expect(footer.querySelector(".foot-word")).toHaveAttribute("aria-hidden");
+    expect(footer.querySelector("nav.foot-two")).toHaveAttribute("aria-labelledby", "footer-legal");
     expect(footer).toHaveTextContent("Amplychat isn't affiliated with or endorsed by Meta. Instagram and WhatsApp are trademarks of Meta Platforms, Inc.");
   });
 

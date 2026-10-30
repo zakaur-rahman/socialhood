@@ -8577,3 +8577,77 @@ the plans-API states), `app/seo`, `app/public-metadata`, `app/layout`, `lib/mark
 scroll at 375/768/1440/1920; the tracker sticky and marking the stage; hidden on a phone; a scene arms
 and plays; the switch; bento links to a detail and a page; header bar, phone menu and footer links;
 the landing's anchors).
+
+## C-161 · Closing CTA and footer
+
+### C-161 · Closing CTA and footer
+
+The owner said (2026-10-31): "CTA design is not looking good also footer check some competitors web
+design for idea", and then: "also remove address from footer". On `feature/cta-footer`.
+
+**Research** (screenshots of the closing section and the footer at 1440 and 375, 2026-10-31): Spur,
+Inrō, CreatorFlow, LinkDM, InstantDM, Wati, respond.io, Later, Metricool, Hootsuite, Linear, Vercel,
+Resend, Cal.com. None blocked; Wati at 375 timed out, Cal.com and LinkDM have no `<footer>` element at
+375 (bottom of page taken instead), Manychat not attempted (known to block). What the best ones share:
+- **One closing composition.** Resend, Spur and Linear run the CTA into the footer on the same ground
+  with space between them, not a second band; the weak ones (Hootsuite, Wati, respond.io) stack a card
+  on one ground and a different footer below.
+- **Type-led CTAs.** Linear, Vercel and Resend close on a short statement at display size and one or
+  two buttons, nothing competing; illustrated CTAs (Inrō, CreatorFlow, Hootsuite) read as a second hero.
+- **Footer structure:** a brand column, link groups of four to seven in equal columns, a quiet bar for
+  © and legal; the long Meta trademark/API note as fine print beside the © (CreatorFlow).
+- **Brand moment:** Resend, Spur, Later and Metricool end on the name set at full width, after the
+  legal line: a full stop for the page.
+- Badges, seals, app-store buttons, glows and textures (Wati, Metricool, respond.io, Spur) add noise.
+
+**Diagnosis of C-159's version.** The convergence was small and wispy (1.5 px grey streams, dim
+tiles), so the closing looked like an icon diagram over a centred stack of five centred items; the
+facts row wrapped raggedly on a phone; the CTA and the footer were two night blocks split by a
+full-bleed rule; the footer was a plain sitemap whose ten-link Legal column left a hole beside four
+short ones; the bottom bar's © and Meta lines sat apart at both edges; nothing closed the page.
+
+**Direction: "One close".** The CTA and the footer are one night composition.
+- **CTA** (`FinalCta`): the channel line (the site's motif: Instagram, WhatsApp, website chat, from the
+  tokens) opens it at the container's width; the heading at the display size on the page's left edge
+  (two lines from 768 px, unchanged words); a row with the lede on the left and, on the right, the one
+  "Start free", the facts as a vertical list and the email line. One column below 900 px. Same props
+  and behaviour: `trialDays` (the trial perk only while Pro is on sale), `section.night.close`,
+  `#cta-title`, "What you get", two links. **The convergence is removed** (`Converge`, `.converge`,
+  `.cv-*`, the `site-settle`/`site-draw` keyframes): the research favours type alone, and the line
+  carries the channels.
+- **Footer** (`SiteFooter`): no rule after the CTA, space alone. The about column, the four short
+  groups, then Legal and trust in two columns (`nav.foot-two`) so every group ends together; the bar
+  shares the grid's tracks: © on the about column, the official-API line and the Meta trademark note
+  as fine print starting on the link groups' edge. Then **the name at the container's full width**
+  (`p.foot-word`, `aria-hidden`, Geist 700 at 20.4cqi, `--night-3` on night, descenders running off the
+  foot) as the brand moment. All links, the conditional Status link and both Meta lines are kept.
+- **Address removed (owner):** the bar now reads "© {year} UNCHARTD"; `publicLocation()` is no longer
+  used by the footer. The legal pages, /contact and /ai-info still state the location (C-156).
+- **Motion:** the view() rise the cards use, so no script: the channel line draws from the left
+  (`site-wipe`, scaleX), the heading, lede and action rise 12 px one stagger step apart, and the name
+  rises as it enters. Once, no loop, held when played; nothing moves with reduced motion or without
+  scroll timelines. Link hovers fade colour and underline over the quick token. No new dependency, no
+  image, CLS 0 (the name's box is set by its font size in container units).
+
+**Copy.** Unchanged. The owner's lines elsewhere (the hero's "Every DM. Every comment. One inbox.") are
+not clearly stronger for a close, so the C-159 wording stays.
+
+**Skill advice overridden.**
+- design-taste-frontend: "headlines two lines or fewer" fails at 390 (four lines; the owner's wording,
+  as C-159). `size-count` and the 253 px size: the full-width name is the brand moment. `small-text`:
+  the Meta fine print stays at the micro size (legal fine print). "Buttons square or round": the site's
+  12 px radius stays (C-157). "No thin rules": the 3 px channel line stays (the site's own motif, a
+  filled band, not a divider); the footer's own rule was removed for this reason.
+- impeccable: no PRODUCT.md, so the refinement ran on the incumbent system without the interview (a
+  subagent with no way to ask); its detector found nothing on the changed files.
+- transitions-dev: its tokens (very-slow, 12 px text reveal, stagger) through the site's names, mapped
+  onto the view() range; no `t-*` snippet.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint`: clean. vitest `components/marketing`,
+`app/(marketing)`, `components/site`, `styles`, `lib/marketing`, `lib/legal.test.tsx`: 28 files, 494
+tests pass. Tests updated: `FinalCta.test.tsx` (the channel line above the heading, the row, no
+convergence), `page.test.tsx` (the closer), `trust-pages.test.tsx` (the bar without the location, the
+hidden name, the two-column legal group), `e2e/landing.spec.ts` (the channel line instead of the
+marks), `e2e/gr37-gtm-pages.spec.ts` (the bar without the location, the hidden name); e2e not run here.
+Screenshots at 375, 768, 1440 and 1920 on `/`, `/features` and `/guides/whatsapp-business-api-vs-app`,
+before and after, no sideways scroll at any width.

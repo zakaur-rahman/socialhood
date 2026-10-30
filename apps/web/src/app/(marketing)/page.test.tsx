@@ -195,15 +195,13 @@ describe("the landing page", () => {
     const close = container.querySelector("section.close") as HTMLElement;
     expect(within(close).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/sign-up", "mailto:support@amplychat.com"]);
     expect(close.querySelector(".falling")).toBeNull();
-    // C-159 final CTA: a centred finale under the channels converging into the Amplychat mark, drawn
-    // on the server and hidden from assistive tech; one stream per channel mark, the colours on the marks.
-    const converge = close.querySelector(".converge") as HTMLElement;
-    expect(converge).toHaveAttribute("aria-hidden");
-    expect(converge.nextElementSibling).toBe(within(close).getByRole("heading", { level: 2, name: "Bring every customer conversation into one inbox" }));
-    expect(converge.querySelectorAll(".cv-mark.ico-mark svg")).toHaveLength(4);
-    expect(converge.querySelectorAll("path.cv-line")).toHaveLength(4);
-    expect(converge.querySelector(".cv-hub [data-logo-mark]")).not.toBeNull();
-    expect([...converge.querySelectorAll<HTMLElement>(".cv-mark")].map((mark) => mark.style.getPropertyValue("--c"))).toEqual(["var(--ig)", "var(--wa)", "var(--web)", "var(--fb)"]);
+    // C-161: the channel line opens the closing (the three live channels, colours from the tokens),
+    // hidden from assistive tech, straight above the heading; no convergence picture any more.
+    const line = close.querySelector(".close-line") as HTMLElement;
+    expect(line).toHaveAttribute("aria-hidden");
+    expect(line.nextElementSibling).toBe(within(close).getByRole("heading", { level: 2, name: "Bring every customer conversation into one inbox" }));
+    expect([...line.querySelectorAll<HTMLElement>("i")].map((part) => part.style.getPropertyValue("--c"))).toEqual(["var(--ig)", "var(--wa)", "var(--web)"]);
+    expect(close.querySelector(".converge")).toBeNull();
     expect(close.querySelector(".mini")).toBeNull();
 
     // Structured data with only true fields, and the FAQ exactly as written on the page.

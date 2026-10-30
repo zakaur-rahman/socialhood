@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { FinalCta } from "./FinalCta";
 
-describe("the closing call to action (C-159 final CTA)", () => {
+describe("the closing call to action (C-159 final CTA, C-161)", () => {
   it("claims Pro's trial only when one is passed, with one action and the email as a line", () => {
     const { container, rerender } = render(<FinalCta />);
     const section = container.querySelector("section.night.close") as HTMLElement;
@@ -17,14 +17,18 @@ describe("the closing call to action (C-159 final CTA)", () => {
     expect(screen.getByText("14-day trial of Pro")).toBeInTheDocument();
   });
 
-  it("draws the channels converging as a still, hidden picture with no loop", () => {
+  it("opens on the channel line, a still, hidden picture with no loop and no image (C-161)", () => {
     const { container } = render(<FinalCta />);
-    const converge = container.querySelector(".converge") as HTMLElement;
-    expect(converge).toHaveAttribute("aria-hidden");
-    expect(converge.querySelectorAll("path.cv-line")).toHaveLength(4);
-    converge.querySelectorAll("path.cv-line").forEach((path) => expect(path).toHaveAttribute("pathLength", "1"));
-    expect(converge.querySelectorAll(".cv-mark")).toHaveLength(4);
-    expect(converge.querySelector(".cv-hub [data-logo-mark]")).not.toBeNull();
+    const line = container.querySelector(".close-in > .chan-line.close-line") as HTMLElement;
+    expect(line).toHaveAttribute("aria-hidden");
+    expect([...line.querySelectorAll<HTMLElement>("i")].map((part) => part.style.getPropertyValue("--c"))).toEqual(["var(--ig)", "var(--wa)", "var(--web)"]);
+    expect(line.nextElementSibling).toBe(screen.getByRole("heading", { level: 2 }));
+    // The lede on one side, the action, the facts and the email on the other.
+    const row = container.querySelector(".close-row") as HTMLElement;
+    expect(row.querySelector(".close-p")).not.toBeNull();
+    expect(row.querySelector(".close-act .ctas a")).toHaveTextContent("Start free");
+    expect(row.querySelector(".close-act .close-mail")).not.toBeNull();
+    expect(container.querySelector(".converge")).toBeNull();
     expect(container.querySelector("[data-motion-scope]")).toBeNull();
     expect(container.querySelector("img")).toBeNull();
   });
