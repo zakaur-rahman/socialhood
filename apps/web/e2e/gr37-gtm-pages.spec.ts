@@ -127,7 +127,8 @@ test.describe("GR-37 go-to-market pages", () => {
     const footer = page.getByRole("contentinfo");
     await expect(footer.getByRole("link", { name: "Switch from Manychat" })).toHaveAttribute("href", "/switch-from-manychat");
     // C-161: the bar names the business without its location, and the name closes the page, hidden.
-    await expect(footer).toContainText(/© \d{4} UNCHARTD/);
+    await expect(footer).toContainText(/© \d{4} UNCHARTD\. Amplychat is a product of UNCHARTD\./);
+    await expect(footer.getByRole("link", { name: "Delivery" })).toHaveAttribute("href", "/shipping");
     await expect(footer).not.toContainText("Bihar");
     await expect(footer.locator(".foot-word[aria-hidden]")).toHaveCount(1);
     await footer.getByRole("link", { name: "Pricing", exact: true }).click();

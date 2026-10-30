@@ -109,14 +109,14 @@ test.describe("landing page", () => {
       // WCAG 2.2.2: nothing loops forever. The closer's inbox is still, and any infinite CSS animation
       // left on the page sits under a pause control.
       await expect(page.locator(".close .falling")).toHaveCount(0);
-      // The closer (C-159 final CTA, C-161): one action, the email as a line of text, and the channel
-      // line above the heading, hidden from assistive tech and drawn once (no loop).
+      // The closer (C-159 final CTA, C-161 v2): two actions, no email, and a still iris arc behind the
+      // heading, hidden from assistive tech (no loop).
       const closer = page.locator("section.close");
       await expect(closer.getByRole("link")).toHaveCount(2);
       await expect(closer.getByRole("link", { name: /Start free/ })).toHaveCount(1);
-      await expect(closer.getByText(/Questions\? Write to/)).toBeVisible();
-      await expect(closer.getByRole("link", { name: "support@amplychat.com" })).toHaveAttribute("href", "mailto:support@amplychat.com");
-      await expect(closer.locator(".close-line[aria-hidden] i")).toHaveCount(3);
+      await expect(closer.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/how-it-works");
+      await expect(closer.locator('a[href^="mailto:"]')).toHaveCount(0);
+      await expect(closer.locator(".close-arc[aria-hidden]")).toHaveCount(1);
       const loose = await page.evaluate(() =>
         document
           .getAnimations()

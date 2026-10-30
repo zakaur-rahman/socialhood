@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
   // for the upload (below) and deletes them from the output afterwards.
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  // C-161 v2: no floating "N" dev-tools button. It only ever shows under `next dev` (never in a
+  // production build), but it sat over the page in every local screenshot. Next's error overlay
+  // still appears for build and runtime errors.
+  devIndicators: false,
   async headers() {
     return [
       // SEC-11: CSP, HSTS, framing, referrer and permissions on every route.

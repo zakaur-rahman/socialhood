@@ -603,6 +603,19 @@
   --shadow-token: 0 8px 20px -8px color-mix(in srgb, var(--color-iris) 70%, transparent);
   /* The header once the page scrolls (C-157): a soft drop and no rule, no blur. */
   --shadow-nav: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--color-ink) 28%, transparent);
+  /* The closing's arc (C-161 v2, owner): a thin iris edge with a soft, low glow fading into the night.
+     Decorative only. The edge (iris-night at 55%) is a graphic line, about 3.3:1 on night; the haze
+     under the heading (iris at 12%) lifts the night to about #16162C, where night-ink stays 15:1,
+     night-ink-2 8.7:1 and iris-night 7.1:1, so no text loses AA. */
+  --arc-edge: color-mix(in srgb, var(--color-iris-night) 55%, transparent);
+  --arc-glow: color-mix(in srgb, var(--color-iris) 45%, transparent);
+  --arc-haze: color-mix(in srgb, var(--color-iris) 12%, transparent);
+  /* The light night CTA on hover (C-161 v2): a short soft drop with an iris cast, offset, not a halo. */
+  --shadow-cta-night: 0 10px 24px -12px color-mix(in srgb, var(--color-iris-night) 50%, transparent);
+  /* The footer's closing name (C-161 v2): a fade from a step above night-high down into the night.
+     aria-hidden and decorative, so no contrast target. */
+  --word-top: color-mix(in srgb, var(--color-night-ink) 16%, var(--color-night));
+  --word-bottom: var(--color-night-raised);
   --line-control: var(--color-site-line-control); --night-line-control: var(--color-night-line-control);
   --ig-night: var(--color-instagram-night); --web-night: var(--color-web-night);
 

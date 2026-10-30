@@ -55,7 +55,7 @@ describe("a comparison page (C-159)", () => {
     render(<GtmPageView page={FEATURE_PUBLISHING} />);
     const steps = within(screen.getByRole("region", { name: "Set up in three steps" }));
     expect(steps.getAllByRole("listitem")).toHaveLength(3);
-    expect(screen.getByRole("heading", { level: 2, name: "Bring every customer conversation into one inbox" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Ready to take control of every conversation?" })).toBeInTheDocument();
   });
 });
 

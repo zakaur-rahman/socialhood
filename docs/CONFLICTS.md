@@ -8651,3 +8651,106 @@ hidden name, the two-column legal group), `e2e/landing.spec.ts` (the channel lin
 marks), `e2e/gr37-gtm-pages.spec.ts` (the bar without the location, the hidden name); e2e not run here.
 Screenshots at 375, 768, 1440 and 1920 on `/`, `/features` and `/guides/whatsapp-business-api-vs-app`,
 before and after, no sideways scroll at any width.
+
+### C-161 (v2)
+
+The owner pasted a design review and two references (Voxly: a soft glowing arc behind a centred CTA
+and a simple footer with a legal bar; Nova: a centred CTA with one accent word and two buttons, a
+clean footer, a large faded wordmark at the bottom). The coordinator decided on the owner's behalf;
+the feel was taken, not the layouts. On `feature/close-v2`. Scope: `FinalCta`, `SiteFooter`,
+`footerColumns()`, their rules in `site.css`, new tokens in `globals.css`, and one dev-config line.
+
+**CTA** (`FinalCta`, same props and hooks: `trialDays`, `section.night.close`, `#cta-title`, used on
+the landing and every inner page that closed with it).
+- Centred. Heading "Ready to take control of *every conversation*?" at the display size, 700,
+  balanced, with "every conversation" in the iris accent (`em`, `--s-link`, never breaks), as the hero
+  sets "One inbox.". Two lines from 768 px, three on a phone.
+- Lede: "Connect Instagram, WhatsApp and your website chat, add what your business knows, and let the
+  AI draft or send the replies." (true: Auto sends on Pro, Suggest drafts on every plan).
+- Two actions: "Start free" (light on night; hover lifts 1 px with a soft offset iris-cast shadow,
+  active presses to 0.98 over the micro token, the shared iris-night focus ring) and "See how it works"
+  (outlined, `/how-it-works`). Stacked full width (max 360 px) below 520 px.
+- One row of facts with small checks: "Free plan, no card required", "Try Pro free for {n} days"
+  (only while Pro is on sale, from `trialDays`), "Official Meta APIs, no password needed". A column on
+  a phone.
+- **Removed:** the support email line, and the pink/green/cyan channel line (`.close-line`, its
+  `site-wipe` keyframes, `.close-row`, `.close-act`, `.close-mail`).
+- **The arc** (`span.close-arc`, `aria-hidden`): a large ellipse (140% of the band, 2:1, at least
+  760 px), clipped by the band, with a 1 px `--arc-edge` top border that tapers to nothing at its
+  sides, a soft low glow above it (`--arc-glow`, an offset box-shadow) and a faint haze inside
+  (`--arc-haze`, a radial gradient). Pure CSS, tokens only, no image, no loop; it fades in once on view.
+  **Owner override:** the owner asked for this premium glow, which overrides the "no gradients or
+  glows" default (C-157) for this one element only. No grid lines (Nova's): the arc is enough, and lines
+  would fight the footer's rule.
+- **Motion:** the view() rise the cards use: the arc fades, then the heading, lede, actions and facts
+  rise 12 px one stagger step apart; once, held; nothing moves with reduced motion or without scroll
+  timelines. Button states use the quick, fast and micro tokens.
+
+**Footer** (`SiteFooter`, `footerColumns()`).
+- **Space and seam:** the CTA-to-footer gap is about 35% shorter (the close's foot is `--space-14`, the
+  footer's own top padding is dropped after a close via `.site:has(.close) .foot`, the grid starts
+  `--space-10` under the rule); a 1 px `--night-line` rule inside the container opens the footer. On a
+  page without the CTA the footer keeps its `--space-16` top padding.
+- **Grid:** the brand column (logo and name, one sentence at 32ch, "Contact us" with an arrow to
+  `/contact`; the email is gone) and six equal link tracks: Product, Solutions, Compare, Resources, and
+  Legal and trust spanning two tracks, its list in two CSS columns whose gap equals the grid's, so each
+  sits on a track. Tablet (1060 px and below): the brand row, then the six tracks. 900 px and below:
+  three tracks (Product, Solutions, Compare / Resources, Legal across two). Phone (520 px and below):
+  two tracks (Product, Solutions / Compare, Resources / Legal across both). Links 32 px tall, 44 px on
+  touch. No sideways overflow from 375 to 1920.
+- **"Shipping" becomes "Delivery"** as the footer label; the page stays at `/shipping`, titled
+  "Shipping and Delivery Policy" (payment-provider reviews look for it). The other label for it
+  ("Shipping and delivery" in site.ts's legal list) is unchanged.
+- **Bottom bar** on the grid's tracks: "© {year} UNCHARTD." and "Amplychat is a product of UNCHARTD."
+  (from `operatorName(LEGAL)` and `SITE_NAME`; the second sentence is dropped if the operator name is
+  unset and falls back to the product name), one per line over the brand column and the first link
+  track; the official-APIs line and the Meta trademark note, unchanged, as fine print from the second
+  link track. No location. No "Privacy · Terms" on the right: they are already links in the grid, and a
+  second copy would duplicate them. The conditional Status link stays in Product.
+- **The wordmark:** centred, 18.5cqi (was 20.4cqi, edge to edge), a top-to-bottom fade from
+  `--word-top` (night-ink 16% over night, a step above night-high) to `--word-bottom` (night-raised)
+  painted on the text; `padding-bottom: 0.14em` keeps the descenders inside its box, and the footer has
+  `--space-8` under it, so it is never cut and never overflows. Still `aria-hidden`.
+
+**Tokens** (globals.css, `.site`): `--arc-edge` (iris-night 55%, a graphic line about 3.3:1),
+`--arc-glow` (iris 45%), `--arc-haze` (iris 12%: the worst case under the heading is about #16162C,
+where night-ink is 15.9:1, the accent 7.8:1, night-ink-2 9.0:1), `--shadow-cta-night`, `--word-top`,
+`--word-bottom`.
+
+**Dev indicator:** `devIndicators: false` in `next.config.ts`, with a comment: the "N" button only shows
+under `next dev`, never in production, but sat in every local screenshot; the error overlay still shows.
+
+**Copy, old to new.**
+- Heading: "Bring every customer conversation into one inbox" to "Ready to take control of every
+  conversation?"
+- Lede: "… and let the AI draft the replies." to "… and let the AI draft or send the replies."
+- Facts: "Free plan, no card needed" to "Free plan, no card required"; "{n}-day trial of Pro" to "Try Pro
+  free for {n} days"; "Official Meta APIs, no password asked" to "Official Meta APIs, no password needed".
+- New secondary action "See how it works"; removed "Questions? Write to support@amplychat.com".
+- Footer: "Questions? support@amplychat.com" to "Contact us"; "Shipping" to "Delivery"; "© {year}
+  UNCHARTD" to "© {year} UNCHARTD. Amplychat is a product of UNCHARTD."
+
+**Skill advice overridden.**
+- design-taste-frontend inspector FAILs from this work, all owner decisions: `gradient` and `shadow`
+  (the arc's haze and glow), `gradient-text` (the wordmark's fade), "no styled accent word" (the iris
+  phrase), "no thin rules" (the footer's divider), `headline-lines` at 390 (three lines; the owner's
+  wording). "Left-aligned by default": the close is the page's one centred moment. "Buttons square or
+  round": the site's 12 px radius stays (C-157). The inspector's other FAILs and WARNs are the existing
+  C-157 set on other sections.
+- impeccable: no PRODUCT.md and no way to ask from a subagent, so the refinement ran on the incumbent
+  system; its detector flagged only the wordmark's gradient text (the owner's fade, above).
+- transitions-dev: its token scale (quick, fast, micro, 12 px text reveal, 0.98 press) through the
+  site's names; no `t-*` snippet.
+
+**Note:** on `/how-it-works` the closer's "See how it works" links to the page itself (the closer is
+shared); harmless, but a per-page secondary could replace it later.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `components/marketing`,
+`app/(marketing)`, `components/site`, `styles`, `lib/marketing`, `lib/legal.test.tsx`: 28 files, 494
+tests pass. Tests updated: `FinalCta.test.tsx`, `page.test.tsx` (the closer; the hero's "See how it
+works" scoped to the hero), `explainers.test.tsx`, `product-pages.test.tsx`, `trust-pages.test.tsx`
+(the bar, Contact us, Delivery, no email), `e2e/landing.spec.ts`, `e2e/gr37-gtm-pages.spec.ts`,
+`e2e/c160-explainers.spec.ts` (scoped to the hero); e2e not run here. Dev server on :3172: screenshots
+at 375, 430, 768, 1440 and 1920 on `/` and `/features`, no sideways scroll, the wordmark inside its box
+at every width; keyboard order Start free, See how it works, logo, Contact us, links, all with the
+iris-night ring; contrast on night: headings 17:1, links and body 9.6:1, fine print 6.0:1.

@@ -1,7 +1,7 @@
+import { ArrowRight } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, operatorName } from "@/lib/legal";
 import { SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
@@ -25,14 +25,16 @@ function FooterItem({ link }: { link: FooterLink }) {
 
 /**
  * The footer on a night band (C-155, columns C-156), the second half of the page's closing
- * composition (C-161): product, solutions, comparisons, resources, and legal and trust links (that
- * group in two columns); the support address; the business, the official-API line and the Meta
- * trademark note; then the name at full width, decorative. The location is not repeated here (owner,
- * C-161); the legal pages, /contact and /ai-info still state it. Status appears only when
- * NEXT_PUBLIC_STATUS_URL is set. No social links until the business has profiles.
+ * composition (C-161 v2): a night-line rule opens it, then the brand column (the name, one sentence,
+ * "Contact us"), product, solutions, comparisons, resources, and legal and trust (that group across
+ * two columns); a quiet bar with the business and the Meta fine print; then the name at full width,
+ * decorative. No email and no location here (owner, C-161); /contact and the legal pages carry them.
+ * Status appears only when NEXT_PUBLIC_STATUS_URL is set. No social links until the business has
+ * profiles.
  */
 export function SiteFooter({ year = new Date().getFullYear(), status }: { year?: number; status?: string | null }) {
   const columns = footerColumns(status);
+  const operator = operatorName(LEGAL);
   return (
     <footer className="night foot">
       <div className="wrap">
@@ -40,9 +42,9 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
           <div className="foot-about">
             <Logo />
             <p className="about">One inbox for Instagram, WhatsApp and website chat, with AI that answers from your business knowledge.</p>
-            <p className="about">
-              Questions? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-            </p>
+            <Link href="/contact" prefetch={false} className="foot-contact">
+              Contact us <ArrowRight className="size-4" aria-hidden />
+            </Link>
           </div>
           {columns.map((column) => (
             <nav key={column.id} aria-labelledby={`footer-${column.id}`} className={column.id === "legal" ? "foot-two" : undefined}>
@@ -58,8 +60,18 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
           ))}
         </div>
         <div className="foot-bot">
-          <p>
-            © {year} {operatorName(LEGAL)}
+          <p className="foot-copy">
+            <span>
+              © {year} {operator}.
+            </span>
+            {operator !== SITE_NAME && (
+              <>
+                {" "}
+                <span>
+                  {SITE_NAME} is a product of {operator}.
+                </span>
+              </>
+            )}
           </p>
           <div className="foot-legal">
             <p>Connects through Meta&apos;s official APIs. We never ask for your Instagram or Facebook password.</p>

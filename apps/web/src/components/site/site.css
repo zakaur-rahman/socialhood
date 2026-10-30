@@ -89,12 +89,12 @@ body:has(.site) {
     & .lede { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 56ch; margin: var(--space-5) 0 0; }
 
     /* ---- links in running text: iris, underlined */
-    & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g, .close-mail) a, & .tlink {
+    & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g) a, & .tlink {
       color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
       transition: color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
-      & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g, .close-mail) a:hover, & .tlink:hover { color: var(--s-link-hover); }
+      & :is(.lede, .about, .qa, .price-foot, .more-links, .crow-g) a:hover, & .tlink:hover { color: var(--s-link-hover); }
     }
 
     /* ---- buttons: main (ink), line (outlined), ghost (a quiet link) */
@@ -208,46 +208,58 @@ body:has(.site) {
     & .skip { position: absolute; left: var(--space-3); top: -100px; z-index: 60; }
     & .skip:focus { top: var(--space-3); }
 
-    /* ---- footer (C-161): the second half of the closing composition. After the closing CTA it
-       follows on the same night ground with space alone between them (no rule, no second band); on a
-       page without the CTA it starts the night band itself. The about column and five link groups
-       (Legal and trust, the longest, in two columns so the groups end together), the copyright and the
-       Meta lines as one quiet bar, then the name at the container's full width as the page's full stop
-       (research.md: Resend, Spur, Later). */
-    & .foot { padding-block: var(--space-16) 0; overflow: clip; }
+    /* ---- footer (C-161 v2): the second half of the closing composition. After the closing CTA it
+       follows on the same night ground; a 1 px night-line rule inside the container opens it, so the
+       two read as one system with a seam (on a page without the CTA it starts the night band itself).
+       One grid: the brand column, then six equal link tracks (Legal and trust spans two, its list in
+       two columns on those tracks); the bar shares the tracks; then the name, centred, as the page's
+       full stop. */
+    & .foot { padding-block: var(--space-16) var(--space-8); overflow: clip; }
+    &:has(.close) .foot { padding-top: 0; }
     & .foot .wrap { container-type: inline-size; }
     & .foot-grid {
-      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.7fr);
-      gap: var(--space-10) var(--space-6); padding-top: var(--space-12);
+      display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(6, minmax(0, 1fr));
+      gap: var(--space-10) var(--space-6); padding-top: var(--space-10); border-top: 1px solid var(--night-line);
     }
     & .foot h2 { margin: 0 0 var(--space-3); font-family: var(--text); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; color: var(--s-text); }
     & .foot ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    /* The column gap equals the grid's, so the two lists sit exactly on the two tracks the group spans. */
+    & .foot .foot-two { grid-column: span 2; }
     & .foot .foot-two ul { display: block; columns: 2; column-gap: var(--space-6); }
     & .foot .foot-two li { break-inside: avoid; }
-    & .foot ul a {
+    & .foot ul a, & .foot .foot-contact {
       display: inline-flex; align-items: center; min-height: 32px; font-size: var(--fs-label); color: var(--s-text-2);
       text-decoration-line: underline; text-decoration-thickness: 1px; text-decoration-color: transparent; text-underline-offset: 4px;
       transition: color var(--dur-quick) var(--ease), text-decoration-color var(--dur-quick) var(--ease);
     }
+    & .foot .foot-contact { gap: var(--space-2); margin-top: var(--space-4); min-height: 44px; color: var(--s-text); font-weight: 500; }
+    & .foot .foot-contact svg { flex: none; transition: transform var(--dur-fast) var(--ease); }
     @media (hover: hover) {
-      & .foot ul a:hover { color: var(--s-text); text-decoration-color: currentColor; }
+      & .foot ul a:hover, & .foot .foot-contact:hover { color: var(--s-text); text-decoration-color: currentColor; }
+      & .foot .foot-contact:hover svg { transform: translateX(var(--dist-micro)); }
     }
-    & .foot .about { font-size: var(--fs-label); color: var(--s-text-2); line-height: 1.65; margin: var(--space-4) 0 0; max-width: 34ch; }
-    & .foot .about a { color: var(--s-text); }
+    & .foot .about { font-size: var(--fs-label); color: var(--s-text-2); line-height: 1.65; margin: var(--space-4) 0 0; max-width: 32ch; }
     & .foot-bot {
-      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.7fr); gap: var(--space-3) var(--space-6);
-      margin-top: var(--space-16); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3);
+      display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(6, minmax(0, 1fr)); gap: var(--space-3) var(--space-6);
+      margin-top: var(--space-14); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3);
     }
     & .foot-bot p { margin: 0; }
-    /* The Meta lines start on the link groups' first edge (the bar shares the grid's tracks). */
-    & .foot-bot .foot-legal { grid-column: 2 / -1; display: grid; gap: var(--space-1); max-width: 72ch; }
+    /* The bar shares the grid's tracks: the business over the brand column and the first link track
+       (its two sentences, one per line), the Meta lines from the second link track's edge. */
+    & .foot-bot .foot-copy { grid-column: 1 / 3; color: var(--s-text-2); }
+    & .foot-bot .foot-copy span { display: block; }
+    & .foot-bot .foot-legal { grid-column: 3 / -1; display: grid; gap: var(--space-1); max-width: 76ch; }
     & .foot-bot .foot-fine { font-size: var(--fs-micro); line-height: var(--lh-micro); }
-    /* The name, in the site's face at the container's width (nine letters of Geist 700 fill it at about
-       20.4cqi), one tone up from the night so it is felt more than read; decorative, so hidden from
-       assistive tech (the logo above is the link home). Its descenders run off the foot of the page. */
+    /* The name, in the site's face, centred at about nine tenths of the container (nine letters of
+       Geist 700 fill it at about 20.4cqi), fading from a step above night-high into the night (owner,
+       after Nova); decorative, so hidden from assistive tech (the logo above is the link home). The
+       fade is painted on the text, so the box keeps room below the baseline for the descenders: the
+       whole word is always drawn, never cut by the foot of the page. */
     & .foot-word {
-      margin: var(--space-12) 0 -0.05em; font-family: var(--display); font-weight: 700; font-size: 20.4cqi; line-height: 0.9;
-      letter-spacing: var(--tr-display); color: var(--night-3); white-space: nowrap; user-select: none; text-align: center;
+      margin: var(--space-12) 0 0; padding-bottom: 0.14em; font-family: var(--display); font-weight: 700; font-size: 18.5cqi; line-height: 1;
+      letter-spacing: var(--tr-display); white-space: nowrap; user-select: none; text-align: center;
+      color: var(--word-top); background: linear-gradient(to bottom, var(--word-top) 20%, var(--word-bottom) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
@@ -800,35 +812,48 @@ body:has(.site) {
     & .faq-all { display: flex; align-items: center; gap: var(--space-2); }
     & .faq-all .tlink { display: inline-flex; align-items: center; min-height: 44px; }
 
-    /* ---- closing (C-161): the CTA and the footer are one closing composition on one night ground
-       (they meet on space alone, never a rule or a second band). The channel
-       line opens it at the container's width, the heading sits at the display size on the page's left
-       edge, and a row below holds the lede (left) and the one action with its facts and the email
-       (right). */
-    & .close { padding-block: var(--space-section) var(--space-8); }
-    & .close-in { container-type: inline-size; }
-    & .close-line { width: 100%; margin: 0 0 var(--space-12); transform-origin: left center; }
-    /* Two lines from 1060 px ("Bring every customer conversation / into one inbox", 24ch balanced). */
-    & .close .close-h { font-weight: 700; font-size: min(var(--fs-display), 11cqi); line-height: var(--lh-display); letter-spacing: var(--tr-display); margin: 0; max-width: 24ch; }
-    & .close-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-8) var(--space-14); margin-top: var(--space-10); align-items: start; }
-    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: 0; max-width: 46ch; }
-    & .close-act { display: flex; flex-direction: column; align-items: flex-start; }
-    & .close .facts { flex-direction: column; gap: var(--space-2); margin-top: var(--space-6); }
-    & .close .facts svg { color: var(--s-text-2); }
-    & .close-mail { margin: var(--space-5) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-2); }
-    /* The reveal, once, as the composition comes up the screen (the view() rise the cards use, so no
-       script): the channel line draws from the left, then the heading, the lede and the action rise
-       (12 px, transitions.dev's text reveal) one stagger step apart. It holds once played; without
-       scroll timelines, or with reduced motion, everything simply stands. */
+    /* ---- closing (C-161 v2): the CTA and the footer are one closing composition on one night ground.
+       A quiet iris arc (owner, after Voxly) rises behind a centred close: the heading at the display
+       size with "every conversation" in the accent, the lede, two actions and one row of facts. The
+       arc is a large clipped ellipse: a 1 px iris edge on its top (the border tapers to nothing at
+       its sides), a soft low glow above it and a faint haze inside, all from tokens; no image, no
+       loop. */
+    & .close { position: relative; isolation: isolate; overflow: clip; padding-block: calc(var(--space-section) + var(--space-6)) var(--space-14); text-align: center; }
+    & .close-arc {
+      position: absolute; z-index: -1; top: var(--space-12); left: 50%; width: max(140%, 760px); aspect-ratio: 2 / 1;
+      translate: -50% 0; border-radius: 50%; border-top: 1px solid var(--arc-edge); pointer-events: none;
+      background: radial-gradient(ellipse 46% 38% at 50% 0%, var(--arc-haze), transparent 100%);
+      box-shadow: 0 -8px 48px -14px var(--arc-glow), inset 0 16px 40px -20px var(--arc-glow);
+    }
+    & .close-in { position: relative; container-type: inline-size; }
+    /* Two lines from 768 px ("Ready to take control of / every conversation?"); the accent phrase
+       never breaks. */
+    & .close .close-h { font-weight: 700; font-size: min(var(--fs-display), 11cqi); line-height: var(--lh-display); letter-spacing: var(--tr-display); margin: 0 auto; max-width: 22ch; }
+    & .close-h em { font-style: normal; color: var(--s-link); white-space: nowrap; }
+    & .close .close-p { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); margin: var(--space-6) auto 0; max-width: 52ch; }
+    & .close-ctas { justify-content: center; margin-top: var(--space-8); }
+    & .close .btn { min-height: 52px; padding-inline: var(--space-6); transition: background-color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease), transform var(--dur-quick) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+    @media (hover: hover) {
+      & .close .btn:hover { transform: translateY(-1px); }
+      & .close .btn-main:hover { box-shadow: var(--shadow-cta-night); }
+    }
+    & .close .btn:active { transform: translateY(0) scale(var(--scale-small)); box-shadow: none; transition-duration: var(--dur-micro); }
+    & .close .facts.close-facts { justify-content: center; gap: var(--space-2) var(--space-6); margin-top: var(--space-6); font-size: var(--fs-label); color: var(--s-text-2); }
+    & .close .close-facts svg { color: var(--s-text-3); }
+    /* The reveal, once, as the close comes up the screen (the view() rise the cards use, so no
+       script): the arc fades up, then the heading, the lede, the actions and the facts rise (12 px,
+       transitions.dev's text reveal) one stagger step apart. It holds once played; without scroll
+       timelines, or with reduced motion, everything simply stands. */
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
-        & .close-line { animation: site-wipe linear both; animation-timing-function: var(--ease); animation-timeline: view(); animation-range: entry 10% entry 90%; }
-        & :is(.close-h, .close-p, .close-act) {
+        & .close-arc { animation: site-fade linear both; animation-timing-function: var(--ease); animation-timeline: view(); animation-range: entry 0% entry 80%; }
+        & :is(.close-h, .close-p, .close-ctas, .close-facts) {
           animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
           animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
         }
         & .close-p { --n: 1; }
-        & .close-act { --n: 2; }
+        & .close-ctas { --n: 2; }
+        & .close-facts { --n: 3; }
       }
     }
 
@@ -850,10 +875,10 @@ body:has(.site) {
       & .conn { --chan-cols: 2; }
       & .fgroup { grid-template-columns: minmax(0, 1fr); }
       & .fgroup > h3 { padding-top: 0; flex-direction: row; align-items: center; }
-      & .foot-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.6fr); }
+      & .foot-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
       & .foot-about { grid-column: 1 / -1; }
       & .foot-bot { grid-template-columns: minmax(0, 1fr); }
-      & .foot-bot .foot-legal { grid-column: auto; }
+      & .foot-bot :is(.foot-copy, .foot-legal) { grid-column: auto; }
     }
     /* The tablet tier and the phone: one column, the copy then the scene on one left edge; the
        How it works frame no longer pins (landing-motion.ts reads that from here). */
@@ -894,8 +919,6 @@ body:has(.site) {
       & .steps li:last-child::before { display: none; }
       & .steps li::after { top: var(--space-2); }
       & .foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      & .foot-two { grid-column: span 2; }
-      & .close-row { grid-template-columns: minmax(0, 1fr); }
       /* Touch: every standalone link is 44 px tall. */
       & .foot ul a, & .price-foot .tlink { min-height: 44px; }
     }
@@ -914,6 +937,10 @@ body:has(.site) {
       & .plan { padding: var(--space-6); }
       & .foot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-5); }
       & .foot .foot-two ul { column-gap: var(--space-5); }
+      & .foot .foot-two { grid-column: 1 / -1; }
+      /* The phone's close: the two actions stacked at full width, the facts one under another. */
+      & .close-ctas { flex-direction: column; align-items: stretch; max-width: 360px; margin-inline: auto; }
+      & .close .facts.close-facts { flex-direction: column; align-items: center; gap: var(--space-2); }
       & .line .r { display: none; }
       /* The phone's calls to action: one full-width button, then a text link. */
       & .hero-ctas { flex-direction: column; align-items: stretch; gap: var(--space-1); }
@@ -969,8 +996,6 @@ body:has(.site) {
 @keyframes site-fade { from { opacity: 0; } }
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
-/* The closing's channel line (C-161): drawn from its left end. */
-@keyframes site-wipe { from { transform: scaleX(0); } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
 
 /* ==== C-159 shared ==== */

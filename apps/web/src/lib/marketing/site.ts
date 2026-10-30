@@ -155,7 +155,9 @@ export type FooterColumn = { id: string; title: string; links: FooterLink[] };
 
 /**
  * The footer's columns (C-156). Status shows only when the status page is configured. No social
- * links: the business has no profiles yet (SOCIAL_PROFILES).
+ * links: the business has no profiles yet (SOCIAL_PROFILES). The /shipping page is labelled
+ * "Delivery" here (C-161 v2): the business ships nothing physical; the page keeps its URL and its
+ * "Shipping and Delivery Policy" title, which payment-provider reviews look for.
  */
 export function footerColumns(status: string | null = statusUrl()): FooterColumn[] {
   return [
@@ -210,7 +212,7 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "Security", href: "/security" },
         { label: "Data deletion", href: "/data-deletion" },
         { label: "Refunds", href: "/refunds" },
-        { label: "Shipping", href: "/shipping" },
+        { label: "Delivery", href: "/shipping" },
         { label: "Subprocessors", href: "/subprocessors" },
         { label: "Cookies", href: "/cookies" },
         { label: "DPA", href: "/dpa" },

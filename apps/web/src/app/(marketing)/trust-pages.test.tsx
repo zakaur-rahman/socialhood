@@ -54,9 +54,15 @@ describe("the footer (C-156)", () => {
     }
     expect(within(footer).queryByRole("link", { name: "Status" })).not.toBeInTheDocument();
     // C-161 (owner): the bar names the business without its location; the legal pages still state it.
-    expect(footer).toHaveTextContent("© 2026 UNCHARTD");
+    expect(footer).toHaveTextContent("© 2026 UNCHARTD. Amplychat is a product of UNCHARTD.");
     expect(footer).not.toHaveTextContent("Bihar");
     expect(footer).not.toHaveTextContent("India");
+    // C-161 v2: no email in the footer; "Contact us" goes to the contact page. /shipping is labelled
+    // "Delivery" (the page keeps its URL and its title).
+    expect(footer.querySelector('a[href^="mailto:"]')).toBeNull();
+    expect(within(footer).getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "/contact");
+    expect(within(footer).getByRole("link", { name: "Delivery" })).toHaveAttribute("href", "/shipping");
+    expect(within(footer).queryByRole("link", { name: "Shipping" })).not.toBeInTheDocument();
     // The name at full width closes the page, decorative.
     expect(footer.querySelector(".foot-word")).toHaveAttribute("aria-hidden");
     expect(footer.querySelector("nav.foot-two")).toHaveAttribute("aria-labelledby", "footer-legal");

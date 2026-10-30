@@ -97,7 +97,7 @@ describe("/how-it-works (C-160)", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Common questions" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Keep reading" })).toBeInTheDocument();
     // Pro isn't on sale, so the closing band claims no trial.
-    expect(container.querySelector(".close")).not.toHaveTextContent("trial of Pro");
+    expect(container.querySelector(".close")).not.toHaveTextContent("Try Pro free");
   });
 });
 

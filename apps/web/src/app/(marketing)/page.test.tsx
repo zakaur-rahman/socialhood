@@ -56,7 +56,7 @@ describe("the landing page", () => {
       "Set up in three steps",
       "Start free, upgrade when you grow",
       "Common questions",
-      "Bring every customer conversation into one inbox",
+      "Ready to take control of every conversation?",
     ]);
     // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
     expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
@@ -78,7 +78,7 @@ describe("the landing page", () => {
 
     // Hero: the two ways in, the facts, and the scene as one labelled picture of example data.
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
-    expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
+    expect(within(container.querySelector("section.hero") as HTMLElement).getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
     expect(screen.getByText("For small businesses and creators:")).toBeInTheDocument();
     expect(screen.getByText(/AI inbox and automations for Instagram, WhatsApp and website chat/)).toBeInTheDocument();
@@ -190,17 +190,16 @@ describe("the landing page", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Will the AI make things up?" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See all questions" })).toHaveAttribute("href", "/faq");
 
-    // The closing claims Pro's trial only while Pro is on sale; one action, and the email as a line of text.
-    expect(screen.getByText("7-day trial of Pro")).toBeInTheDocument();
+    // The closing claims Pro's trial only while Pro is on sale; two actions, no email (C-161 v2).
+    expect(screen.getByText("Try Pro free for 7 days")).toBeInTheDocument();
     const close = container.querySelector("section.close") as HTMLElement;
-    expect(within(close).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/sign-up", "mailto:support@amplychat.com"]);
+    expect(within(close).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/sign-up", "/how-it-works"]);
     expect(close.querySelector(".falling")).toBeNull();
-    // C-161: the channel line opens the closing (the three live channels, colours from the tokens),
-    // hidden from assistive tech, straight above the heading; no convergence picture any more.
-    const line = close.querySelector(".close-line") as HTMLElement;
-    expect(line).toHaveAttribute("aria-hidden");
-    expect(line.nextElementSibling).toBe(within(close).getByRole("heading", { level: 2, name: "Bring every customer conversation into one inbox" }));
-    expect([...line.querySelectorAll<HTMLElement>("i")].map((part) => part.style.getPropertyValue("--c"))).toEqual(["var(--ig)", "var(--wa)", "var(--web)"]);
+    // C-161 v2: a still iris arc behind the heading, hidden from assistive tech; no channel line and
+    // no convergence picture any more.
+    expect(close.querySelector(".close-arc")).toHaveAttribute("aria-hidden");
+    expect(within(close).getByRole("heading", { level: 2, name: "Ready to take control of every conversation?" })).toBeInTheDocument();
+    expect(close.querySelector(".close-line")).toBeNull();
     expect(close.querySelector(".converge")).toBeNull();
     expect(close.querySelector(".mini")).toBeNull();
 
@@ -285,7 +284,7 @@ describe("the landing page", () => {
     const items = plansFixture().items.map((offer) => (offer.plan === "pro" ? { ...offer, available: false, price: null } : offer));
     vi.stubGlobal("fetch", vi.fn(plansFetch({ items })));
     const { container } = render(await HomePage());
-    expect(screen.queryByText(/trial of Pro/)).toBeNull();
+    expect(screen.queryByText(/Try Pro free/)).toBeNull();
     expect(container.querySelector("section#pricing .plan.main h3")?.textContent).toBe("Free");
   });
 

@@ -81,7 +81,7 @@ test.describe("C-160 explainer pages", () => {
     await expect(main.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/how-it-works");
     await expect(page.locator("section#features")).toHaveCount(1);
     await expect(page.locator("section#how-it-works")).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
+    await expect(page.locator("section.hero").getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
     const footer = page.getByRole("contentinfo");
     await expect(footer.getByRole("link", { name: "Features" })).toHaveAttribute("href", "/features");
     await expect(footer.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/how-it-works");
