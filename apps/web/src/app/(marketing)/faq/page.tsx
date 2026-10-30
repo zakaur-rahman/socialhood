@@ -1,5 +1,4 @@
-import { Plus } from "lucide-react";
-
+import { FaqMotion } from "@/components/marketing/FaqMotion";
 import { BreadcrumbJsonLd, JsonLd } from "@/components/marketing/JsonLd";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { FAQ_ALL, FAQ_GROUPS, FAQ_PATH } from "@/lib/marketing/faq";
@@ -44,7 +43,8 @@ export default function FaqPage() {
                   <summary>
                     <h3>{item.question}</h3>
                     <span className="pm" aria-hidden>
-                      <Plus className="size-3.5" />
+                      <i />
+                      <i />
                     </span>
                   </summary>
                   <p>{item.answer}</p>
@@ -54,6 +54,7 @@ export default function FaqPage() {
           </div>
         </section>
       ))}
+      <FaqMotion />
     </main>
   );
 }

@@ -1,8 +1,11 @@
 import type { Route } from "next";
+import { type LucideIcon, Radio, Sheet, ShoppingCart, Wallet, Webhook } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { SECTION_IDS } from "@/lib/marketing/site";
+
+import { Ico } from "./Ico";
 
 type Integration = {
   name: string;
@@ -10,8 +13,9 @@ type Integration = {
   /** What is true today, in a few words (C-122, C-138). */
   status: string;
   tone: "live" | "waiting" | "yours";
-  /** The mark beside the name: a platform colour, or none. */
+  /** The mark beside the name: a channel's colour (the page's motif), or else an icon (C-157 motion). */
   mark?: string;
+  icon?: LucideIcon;
   /** A guide that explains it (LP-4.10). */
   guide?: { label: string; href: string };
 };
@@ -54,24 +58,28 @@ export const INTEGRATIONS: Integration[] = [
     // C-157 (organize): shortened from "Live comments and ad replies" so it fits one line in a card; the
     // line below still says what it answers.
     name: "Live comments and ads",
+    icon: Radio,
     body: "Answer comments made during an Instagram Live, and chats that start from an ad.",
     status: "With Meta's approval",
     tone: "waiting",
   },
   {
     name: "Shopify",
+    icon: ShoppingCart,
     body: "Bring your products in and keep prices and stock in step.",
     status: "With our Shopify app listing",
     tone: "waiting",
   },
   {
     name: "Google Sheets",
+    icon: Sheet,
     body: "Send leads to a spreadsheet you own, as they arrive.",
     status: "Pro and Max",
     tone: "yours",
   },
   {
     name: "Zapier and the public API",
+    icon: Webhook,
     body: "Connect to other tools with Zapier, webhooks and API keys.",
     status: "Pro and Max",
     tone: "yours",
@@ -106,9 +114,15 @@ export function Connections() {
       <ul className="chan">
         {INTEGRATIONS.map((item) => (
           <li key={item.name} className="crow">
-            <h4 style={item.mark ? ({ "--c": item.mark } as CSSProperties) : undefined}>
-              <i aria-hidden />
-              {item.name}
+            <h4>
+              {item.mark ? (
+                <Ico className="ico-mark">
+                  <i style={{ "--c": item.mark } as CSSProperties} />
+                </Ico>
+              ) : (
+                <Ico icon={item.icon} />
+              )}
+              <span>{item.name}</span>
             </h4>
             <p className="crow-b">{item.body}</p>
             {item.guide ? (
@@ -123,7 +137,10 @@ export function Connections() {
         ))}
       </ul>
       <p className="pay">
-        <b>Payments</b>
+        <b>
+          <Ico icon={Wallet} />
+          Payments
+        </b>
         <span>{PAYMENTS}</span>
       </p>
     </div>

@@ -598,6 +598,8 @@
   --on-ink: var(--color-sheet);
   --shadow-panel: 0 1px 2px color-mix(in srgb, var(--color-ink) 4%, transparent), 0 40px 80px -40px color-mix(in srgb, var(--color-ink) 35%, transparent);
   --shadow-note: 0 22px 40px -18px color-mix(in srgb, var(--color-ink) 42%, transparent), 0 2px 6px color-mix(in srgb, var(--color-ink) 6%, transparent);
+  /* A card lifted on hover (C-157 motion): a short contact shadow and a soft drop. */
+  --shadow-lift: 0 1px 2px color-mix(in srgb, var(--color-ink) 5%, transparent), 0 18px 36px -18px color-mix(in srgb, var(--color-ink) 30%, transparent);
   --shadow-token: 0 8px 20px -8px color-mix(in srgb, var(--color-iris) 70%, transparent);
   /* The header once the page scrolls (C-157): a soft drop and no rule, no blur. */
   --shadow-nav: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--color-ink) 28%, transparent);

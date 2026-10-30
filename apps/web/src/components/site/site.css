@@ -62,15 +62,13 @@ body:has(.site) {
     /* Below the first screen the browser skips style, layout and paint until a band nears the
        viewport (C-157 performance): the landing's bands after How it works. `auto` remembers each
        band's real height once it has rendered. While a band is skipped its content can be taller than
-       the placeholder; `overflow: hidden` (inert once it renders: a band always grows to its content,
+       the placeholder; clipping the band (inert once it renders: a band always grows to its content,
        and .site already clips sideways) keeps that unpainted overflow from being read as sitting on the
        next band (axe's contrast check in Lighthouse). How it works stays out: it pins with sticky,
-       which a clipping band would break. */
-    & [data-landing] > section:not(.hero, .strip, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: hidden; }
-    /* Security and the FAQ keep a heading block in view (sticky) within their own band. `hidden` would make
-       the band the sticky element's scroll container, so it would never stick; `clip` clips the same
-       unpainted overflow without being a scroll container (C-157 organize). */
-    & [data-landing] > section:is(#security, #faq) { overflow: clip; }
+       which a clipping band would break. The clip is `clip`, not `hidden`: `hidden` would make each band a
+       scroll container, which stops Security's and the FAQ's sticky heads (C-157 organize) and freezes
+       the cards' `view()` rise (C-157 motion), whose timeline is the nearest scroll container. */
+    & [data-landing] > section:not(.hero, .strip, .decide) { content-visibility: auto; contain-intrinsic-size: auto 900px; overflow: clip; }
     /* A section that follows one of the same colour starts closer (the two paddings read as one gap). */
     & .sec-tight { padding-top: var(--space-section-tight); }
     /* The gap from a heading block to what it introduces: one value on every section. */
@@ -139,7 +137,7 @@ body:has(.site) {
     }
     & .motion-toggle:active { transform: translateY(1px); }
     /* Paused: every CSS animation inside the scope holds its frame; the scripts read the same flag. */
-    & [data-motion-paused] :is(*, *::before, *::after) { animation-play-state: paused !important; }
+    & [data-motion-paused] *, & [data-motion-paused] *::before, & [data-motion-paused] *::after { animation-play-state: paused !important; }
 
     /* ---- chips */
     & .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--r-xs); font-size: var(--fs-micro); font-weight: 600; white-space: nowrap; }
@@ -263,20 +261,27 @@ body:has(.site) {
     & .facts svg { color: var(--ok); }
 
     & .stage { margin: 0; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); }
-    & .inbox {
-      position: relative; width: clamp(380px, 38vw, 528px); background: var(--sheet); border: 1px solid var(--rule);
-      border-radius: var(--r-lg); box-shadow: var(--shadow-panel); overflow: hidden; isolation: isolate;
-    }
+    /* The inbox's frame (sheet, edge, drop, channel line) is a layer of its own under the messages, so
+       it can fade in while they sort (C-157 motion); the 3 px top is the channel line's room. */
+    & .inbox { position: relative; width: clamp(380px, 38vw, 528px); padding-top: 3px; isolation: isolate; }
+    & .inbox-frame { position: absolute; inset: 0; z-index: -1; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-panel); overflow: hidden; }
+    & .inbox-frame .chan-line { position: absolute; inset: 0 0 auto; }
     & .panel-h { display: flex; align-items: center; gap: var(--space-3); height: 56px; padding: 0 var(--space-5); font-size: var(--fs-caption); color: var(--ink-3); }
     & .panel-h b { font-size: var(--fs-body); font-weight: 600; color: var(--ink); letter-spacing: var(--tr-title); }
     & .panel-h .num { white-space: nowrap; }
     & .panel-h .chips { margin-left: auto; display: flex; gap: var(--space-2); }
     & .notes { position: relative; list-style: none; margin: 0; padding: 0 0 var(--space-2); }
+    /* A row has no surface of its own at rest: the frame's sheet shows through. Its rule (::before) and
+       its card skin in the pile (::after: sheet, edge, drop) are pseudo-elements, so the sort only fades
+       them. --sx/--sy/--sr/--i (Hero.tsx, HERO_PILE) place it in the pile. */
     & .note {
-      position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "app time" "main tag";
+      --spread: 1;
+      position: relative; z-index: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "app time" "main tag";
       align-items: center; column-gap: var(--space-3); row-gap: 2px; height: 60px; padding: 0 var(--space-5);
-      background: var(--sheet); border-top: 1px solid var(--rule-2); font-size: var(--fs-label);
+      border-radius: var(--r-md); font-size: var(--fs-label);
     }
+    & .note::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--rule-2); }
+    & .note::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--sheet); border: 1px solid var(--rule); box-shadow: var(--shadow-note); opacity: 0; }
     & .note .app { grid-area: app; font-size: var(--fs-micro); color: var(--ink-3); }
     & .note .time { grid-area: time; justify-self: end; font-size: var(--fs-micro); color: var(--ink-3); }
     & .note-main { grid-area: main; display: flex; gap: var(--space-2); min-width: 0; }
@@ -284,6 +289,52 @@ body:has(.site) {
     & .note-main span { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     & .note .tag { grid-area: tag; justify-self: end; }
     & .stage-cap { width: clamp(380px, 38vw, 528px); }
+
+    /* The scatter-to-sort (C-157 motion, the owner's scene). Only with script and motion allowed: then
+       the server's first frame is the pile (every animation below sits paused on its first keyframe),
+       so nothing jumps when the script arrives. Without script, or with reduced motion, none of this
+       applies and the inbox is sorted and still. One set of animations, three drivers:
+       - a wide screen with a mouse and scroll timelines: the scroll itself (CSS only, no script per frame);
+       - a wide screen with a mouse, no scroll timelines: landing-motion.ts sets their time from the scroll;
+       - phones and tablets: landing-motion.ts plays them once (`data-play`), 1.2 s in all, pausable.
+       --hero-mode tells the script which one applies, so the breakpoint lives only here. Transforms and
+       opacity only. Each row moves for 920 ms, 40 ms after the one above (the stagger token), so the
+       last lands at the entrance ceiling (1.2 s); the frame fades in first, the header last. */
+    @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+      & .hero { --hero-mode: play; --hero-row: calc(var(--dur-entrance) - 7 * var(--dur-stagger)); }
+      & .note { animation: site-pile var(--hero-row) var(--ease) calc(var(--i) * var(--dur-stagger)) both paused; }
+      & .note::after { animation: site-skin var(--hero-row) var(--ease) calc(var(--i) * var(--dur-stagger)) both paused; }
+      & .note::before { animation: site-rule var(--hero-row) var(--ease) calc(var(--i) * var(--dur-stagger)) both paused; }
+      & .inbox-frame { animation: site-frame var(--dur-slow) var(--ease) both paused; }
+      & .panel-h { animation: site-fade var(--dur-slow) var(--ease) calc(var(--dur-entrance) - var(--dur-slow)) both paused; }
+      & [data-play] :is(.note, .inbox-frame, .panel-h), & [data-play] .note::before, & [data-play] .note::after { animation-play-state: running; }
+      /* The pause control sits on the caption's line; its room is kept, so showing it moves nothing. */
+      & .stage-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; }
+
+      /* A wide screen with a mouse: the hero pins for one short scroll (170vh in all, so about 0.7 of a
+         screen of scrubbing past the pinned frame) and the scroll sorts the pile. */
+      @media (width > 900px) and (pointer: fine) { /* site-md */
+        & .hero { --hero-mode: scrub; padding-block: 0; }
+        & .hero-scrub { height: 170vh; view-timeline: --hero-sort block; view-timeline-inset: var(--nav-h) 0; }
+        & .hero-sticky {
+          position: sticky; top: calc(var(--nav-h) + env(safe-area-inset-top, 0px)); height: calc(100svh - var(--nav-h) - env(safe-area-inset-top, 0px));
+          min-height: 40rem; display: flex; align-items: center;
+        }
+        & .hero-grid { width: 100%; }
+        & .stage-cap { min-height: 0; }
+        /* The scroll timeline: the pinned range is contain 0% to 100%. Each row's 920 ms of 1.2 s becomes
+           its share of the first 84% of that range (2.8% of stagger a row); the last 16% holds sorted. */
+        @supports (animation-timeline: view()) {
+          & .hero { --hero-mode: native; }
+          & .note, & .note::before, & .note::after {
+            animation-timeline: --hero-sort; animation-play-state: running; animation-duration: auto; animation-delay: 0s;
+            animation-range: contain calc(var(--i) * 2.8%) contain calc(var(--i) * 2.8% + 64.4%);
+          }
+          & .inbox-frame { animation-timeline: --hero-sort; animation-play-state: running; animation-duration: auto; animation-range: contain 0% contain 28%; }
+          & .panel-h { animation-timeline: --hero-sort; animation-play-state: running; animation-duration: auto; animation-delay: 0s; animation-range: contain 56% contain 84%; }
+        }
+      }
+    }
 
     /* ---- strip: four facts set large, the hero's bottom edge */
     & .strip { padding-block: var(--space-6) var(--space-section-tight); }
@@ -455,8 +506,12 @@ body:has(.site) {
     & .spec { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-16); align-items: start; }
     & .spec-head { position: sticky; top: calc(var(--nav-h) + var(--space-8)); }
     & .spec-list { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--s-line); }
-    & .spec-row { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); gap: var(--space-8); align-items: baseline; padding-block: var(--space-6); border-top: 1px solid var(--s-line); }
+    & .spec-row { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: var(--space-8); align-items: baseline; padding-block: var(--space-6); border-top: 1px solid var(--s-line); }
     & .spec-row h3 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    /* The tile hangs beside the title; centred on its own, it takes no part in the row's baseline, so the
+       title's text and the description still share one. */
+    & .spec-row h3 { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: var(--space-4); align-items: baseline; }
+    & .spec-row h3 .ico { align-self: center; }
     & .spec-row p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 52ch; }
 
     /* ---- who it's for: two links to the audience pages */
@@ -480,20 +535,24 @@ body:has(.site) {
 
     /* ---- features, with the connections */
     & .feat-lead { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-12); padding: var(--space-10); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); }
+    & .feat-lead-h { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5); }
     & .feat-lead h3 { margin: 0; font-size: var(--fs-h2-sm); line-height: var(--lh-h2-sm); letter-spacing: var(--tr-h2-sm); font-weight: 700; }
     & .feat-lead p { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 52ch; }
     & .feat-lead .note-line { margin-top: var(--space-4); font-size: var(--fs-body-sm); color: var(--s-text); font-weight: 500; }
     /* The rest under three outcomes (C-157 organize): each group is a row, its title on the left, its
        features as equal-height cards in two columns; an odd group's last card spans both. */
     & .fgroup { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 2.15fr); gap: var(--space-6) var(--space-12); margin-top: var(--space-12); }
-    & .fgroup > h3 { margin: 0; padding-top: var(--space-6); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .fgroup > h3 { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); margin: 0; padding-top: var(--space-6); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
     & .fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
     & .fgrid.odd > :last-child { grid-column: 1 / -1; }
     & .fcard {
-      position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6) var(--space-8) var(--space-8);
+      position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); align-content: start; gap: var(--space-3) var(--space-4); padding: var(--space-6) var(--space-8) var(--space-8);
       background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); transition: border-color var(--dur-quick) var(--ease);
     }
-    & .fcard h4 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    /* The icon sits beside the title (not stacked above it), and the text hangs under the title. */
+    & .fcard > .ico { grid-column: 1; align-self: center; }
+    & .fcard > :not(.ico) { grid-column: 2; }
+    & .fcard h4 { align-self: center; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
     & .fcard p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 60ch; }
     & .fcard .note-line { font-size: var(--fs-body-sm); color: var(--s-text-3); }
     /* A linked card is one link (the title's ::after covers the card); its arrow nudges on hover. */
@@ -519,7 +578,7 @@ body:has(.site) {
       display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: var(--space-3); padding: var(--space-6);
       background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
     }
-    & .crow h4 { grid-row: 1; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: baseline; column-gap: var(--space-3); }
+    & .crow h4 { grid-row: 1; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: var(--space-3); }
     & .crow h4 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c, var(--s-line-control)); }
     & .crow-b { grid-row: 2; margin: 0; color: var(--s-text-2); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
     & .crow-g { grid-row: 3; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
@@ -533,7 +592,7 @@ body:has(.site) {
     }
     & .pay > * { padding-inline: var(--space-6); }
     & .pay > span { grid-column: 2 / -1; max-width: 72ch; }
-    & .pay b { color: var(--s-text); font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .pay b { display: flex; align-items: center; gap: var(--space-3); color: var(--s-text); font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
 
     /* ---- set up in three steps (night), the bridge into pricing */
     /* A clear left-to-right sequence without numbers (C-157 organize): one hairline runs under the step
@@ -543,8 +602,52 @@ body:has(.site) {
     & .steps li::before { content: ""; position: absolute; left: 0; right: calc(-1 * var(--space-12)); top: 0; height: 1px; background: var(--s-line-control); }
     & .steps li:last-child::before { right: 0; }
     & .steps li::after { content: ""; position: absolute; left: 0; top: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--s-text); }
-    & .steps h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
+    & .steps h3 { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 600; }
     & .steps p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 44ch; }
+
+    /* ---- icons and card motion (C-157 motion, the owner's ask) */
+    /* An icon sits in a small tile on the surface token (a tone step lower inside a card), 20 px, one
+       stroke. Ink-3 at rest, ink when its card is hovered; iris only for the AI (Ask Amplychat). */
+    & .ico {
+      display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--r-sm);
+      background: var(--s-surface); color: var(--s-text-3);
+      transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease);
+    }
+    & .ico svg { width: 20px; height: 20px; }
+    & :is(.feat-lead, .fcard, .crow, .pay, .aud-card) .ico { background: var(--s-surface-2); }
+    & .ico-ai { color: var(--s-link); }
+    /* Cards: they rise into place as they scroll in, lift on hover, press by 1 px. The rise is a
+       `translate` and the lift a `transform`, so the two compose instead of fighting. Hover in and out
+       at the fast token (250 ms, smooth-out); the edge and the drop strengthen with it. */
+    & :is(.feat-lead, .fcard, .crow, .pay, .aud-card, .spec-row, .steps > li) {
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease),
+        opacity var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger)), translate var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger));
+    }
+    @media (hover: hover) {
+      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
+      & :is(.fcard.is-link, .aud-card):hover { transform: translateY(-3px); }
+      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico { transform: translateY(-1px) scale(1.06); }
+      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
+      & :is(.fcard.is-link, .aud-card):hover:active { transform: translateY(-2px); }
+    }
+    & :is(.fcard.is-link, .aud-card):active { transform: translateY(1px); }
+    /* The rise's stagger along a row: 40 ms a card (the stagger token), 120 ms at most. */
+    & :is(.fgrid, .aud, .steps) > :nth-child(2), & .chan > :nth-child(4n + 2) { --n: 1; }
+    & .steps > :nth-child(3), & .chan > :nth-child(4n + 3) { --n: 2; }
+    & .chan > :nth-child(4n + 4) { --n: 3; }
+    /* The rise: content starts visible, and moves only where it is allowed and the browser has scroll
+       timelines (no script per frame): a 12 px rise (--dist-medium) with a fade, over the card's own
+       entry into the viewport. Elsewhere landing-motion.ts sets `data-rv` on cards that start off
+       screen (an IntersectionObserver, no scroll handler) and the transitions above play the rise. */
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & :is(.feat-lead, .fcard, .crow, .pay, .aud-card, .spec-row, .steps > li) {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+      & [data-rv=""] { opacity: 0; translate: 0 var(--dist-medium); }
+    }
 
     /* ---- pricing (the landing and /pricing) */
     /* Equal plan cards (C-157 organize): each is a subgrid over six shared rows (name, tagline, price,
@@ -601,14 +704,36 @@ body:has(.site) {
     }
     & .qa summary::-webkit-details-marker { display: none; }
     & .qa .pm {
-      flex: 0 0 28px; height: 28px; border-radius: 50%; border: 1px solid var(--s-line-control); display: flex; align-items: center; justify-content: center;
-      transition: transform var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease);
+      position: relative; flex: 0 0 28px; height: 28px; border-radius: 50%; border: 1px solid var(--s-line-control);
+      transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease);
     }
+    /* The plus is two bars; opening turns both half a turn, so the upright one folds flat: a minus. */
+    & .qa .pm i { position: absolute; left: 50%; top: 50%; width: 12px; height: 1.5px; margin: -0.75px 0 0 -6px; border-radius: 1px; background: currentColor; transition: transform var(--dur-fast) var(--ease); }
+    & .qa .pm i + i { transform: rotate(90deg); }
     @media (hover: hover) {
       & .qa summary:hover .pm { border-color: var(--s-text); }
     }
-    & .qa[open] .pm { transform: rotate(45deg); background: var(--s-text); color: var(--s-bg); border-color: var(--s-text); }
-    & .qa p { margin: 0 0 var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 62ch; }
+    & .qa[open]:not([data-closing]) .pm { background: var(--s-text); color: var(--s-bg); border-color: var(--s-text); }
+    & .qa[open]:not([data-closing]) .pm i { transform: rotate(180deg); }
+    /* The answer fades in and rises 4 px as it opens (after the height has started), and fades out
+       quietly on close. */
+    & .qa p {
+      margin: 0; padding-bottom: var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 62ch;
+      transition: opacity var(--dur-quick) var(--ease), translate var(--dur-quick) var(--ease);
+    }
+    & .qa[open]:not([data-closing]) p {
+      transition-duration: var(--dur-fast); transition-delay: var(--dur-stagger);
+      @starting-style { opacity: 0; translate: 0 var(--dist-micro); }
+    }
+    & .qa:is(:not([open]), [data-closing]) p { opacity: 0; }
+    /* The height, open and close alike (250 ms, smooth-out: an accordion is one reversible move). Where
+       the browser can animate to `auto` this is all CSS; elsewhere FaqMotion runs the same move with
+       the Web Animations API. Keyboard and screen readers keep the native details and summary. */
+    @supports (interpolate-size: allow-keywords) and selector(::details-content) {
+      & .qa { interpolate-size: allow-keywords; }
+      & .qa::details-content { block-size: 0; overflow: clip; transition: block-size var(--dur-fast) var(--ease), content-visibility var(--dur-fast) allow-discrete; }
+      & .qa[open]::details-content { block-size: auto; }
+    }
     & .faq-all { display: flex; align-items: center; gap: var(--space-2); }
     & .faq-all .tlink { display: inline-flex; align-items: center; min-height: 44px; }
 
@@ -645,7 +770,7 @@ body:has(.site) {
       & .machine .rule { grid-column: 1 / -1; grid-row: 2; }
       & .conn { --chan-cols: 2; }
       & .fgroup { grid-template-columns: minmax(0, 1fr); }
-      & .fgroup > h3 { padding-top: 0; }
+      & .fgroup > h3 { padding-top: 0; flex-direction: row; align-items: center; }
       & .foot-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       & .foot-about { grid-column: 1 / -1; }
     }
@@ -712,13 +837,14 @@ body:has(.site) {
       & .hero-ctas .btn-line { border-color: transparent; background: transparent; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--s-line-control); }
       & .hero-tag { align-items: flex-start; }
       & .hero-tag .chan-dots { margin-top: var(--space-2); }
-      & .note { padding-inline: var(--space-4); }
+      & .note { padding-inline: var(--space-4); --spread: 0.5; }
       & .conn { --chan-cols: 1; }
       & .chan { gap: var(--space-4); }
       & .pay > span { grid-column: 1; }
       & .spec-row { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
       & .pay { row-gap: var(--space-2); }
       & .fcard { padding: var(--space-6); }
+      & .fcard > p:not(.ico) { grid-column: 1 / -1; }
       & details.credits { padding-inline: var(--space-6); }
       & .aud-card { padding: var(--space-8) var(--space-6) var(--space-6); }
       & .qa { padding-inline: var(--space-4); }
@@ -741,6 +867,9 @@ body:has(.site) {
       & .decide-scrub { height: auto; }
       & .decide-sticky { position: relative; top: 0; height: auto; min-height: 0; padding-block: var(--space-section); }
       & *, & *::before, & *::after { transition-duration: .001ms !important; }
+      & .qa::details-content { transition: none; }
+      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card, .fcard.is-link, .aud-card):is(:hover, :active) { transform: none !important; }
+      & .ico { transform: none !important; }
     }
   }
 }
@@ -748,4 +877,13 @@ body:has(.site) {
 @keyframes site-in { from { opacity: 0; transform: translateY(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
 @keyframes site-pulse { 40% { box-shadow: 0 0 0 6px var(--iris-soft); border-color: var(--iris); } }
 @keyframes site-dot { 0%, 60%, 100% { opacity: .35; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+/* The hero's pile (C-157 motion): each row starts where HERO_PILE puts it and settles into its slot;
+   its card skin fades as it lands, its rule fades in, the frame grows in from the modal scale. */
+@keyframes site-pile { from { transform: translate(calc(var(--sx, 0) * var(--spread, 1) * 1%), calc(var(--sy, 0) * 1%)) rotate(calc(var(--sr, 0) * 1deg)); } }
+@keyframes site-skin { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes site-rule { 0%, 70% { opacity: 0; } }
+@keyframes site-frame { from { opacity: 0; transform: scale(var(--scale-large, 0.96)); } }
+@keyframes site-fade { from { opacity: 0; } }
+/* A card rising into place as it scrolls in (C-157 motion). */
+@keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }

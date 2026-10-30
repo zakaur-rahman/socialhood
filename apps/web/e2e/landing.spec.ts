@@ -2,7 +2,8 @@ import { expect, test } from "./support/fixtures";
 
 /**
  * The landing page (C-155, C-157), signed out: the scenes have content before any script, they come
- * to life once it loads (the hero sorts once and holds, How it works is live, the mode switch works,
+ * to life once it loads (the hero's scattered inbox sorts with the scroll on a wide screen and plays once
+ * on a phone, How it works is live, the mode switch works,
  * the keyword field changes the automation), the sections come in the planned order, nothing scrolls
  * sideways, nothing loops without a pause control, and the page's layout shift stays under 0.1
  * (Google's "good") while it loads and is scrolled through.
@@ -38,14 +39,23 @@ test.describe("landing page", () => {
       await expect(page.locator("[data-stage] .note .tag").first()).toHaveText("Needs you");
       await expect(page.locator("[data-kb] .line")).not.toHaveCount(0);
       await expect(page.locator("[data-comments] .cmt")).not.toHaveCount(0);
-      // C-157: no scroll-scrubbed hero; it is one screen, and the next section starts right under it.
-      await expect(page.locator("[data-hero-scrub]")).toHaveCount(0);
-      // The motion script arrives after load and takes the scenes over; the hero's one sort ends within
-      // about a second and leaves nothing running there.
+      // C-157 motion (the owner's call): the scroll-scrubbed hero is back. CSS says which driver applies.
+      await expect(page.locator("[data-hero-scrub]")).toHaveCount(1);
       await expect(page.locator("[data-decide][data-live]")).toHaveCount(1, { timeout: 15_000 });
-      await expect
-        .poll(() => page.evaluate(() => document.getAnimations().filter((a) => (a.effect as KeyframeEffect | null)?.target?.closest?.("[data-notes]")).length), { timeout: 5_000 })
-        .toBe(0);
+      const heroMode = await page.locator("section.hero").evaluate((el) => getComputedStyle(el).getPropertyValue("--hero-mode").trim());
+      if (size.width <= 900) {
+        // Phones and tablets: it plays once when the inbox is on screen, then nothing runs there.
+        expect(heroMode).toBe("play");
+        await page.locator("[data-inbox]").scrollIntoViewIfNeeded();
+        await expect(page.locator("[data-stage][data-play]")).toHaveCount(1, { timeout: 10_000 });
+        await expect
+          .poll(() => page.evaluate(() => document.querySelector("[data-stage]")!.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length), { timeout: 5_000 })
+          .toBe(0);
+        await page.evaluate(() => window.scrollTo(0, 0));
+      } else {
+        // A wide screen with a mouse: the scroll drives it (CSS scroll timeline, or the script without one).
+        expect(["native", "scrub"]).toContain(heroMode);
+      }
 
       // The mode switch and the keyword field work.
       const modes = page.locator("section#modes");
@@ -139,6 +149,99 @@ test.describe("landing page", () => {
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("the hero's scattered inbox sorts as the page scrolls, and the headline never moves (C-157 motion)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.addInitScript(() => {
+      const w = window as unknown as { __cls: number };
+      w.__cls = 0;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as unknown as Array<{ value: number; hadRecentInput: boolean }>) if (!entry.hadRecentInput) w.__cls += entry.value;
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    await page.goto("/");
+    await expect(page.locator("[data-decide][data-live]")).toHaveCount(1, { timeout: 15_000 });
+    const scrub = page.locator("[data-hero-scrub]");
+    const { range } = await scrub.evaluate((el: HTMLElement) => ({ range: el.offsetHeight - el.querySelector<HTMLElement>(".hero-sticky")!.offsetHeight }));
+    // 170vh in all: a short scrub.
+    expect(range).toBeGreaterThan(400);
+    expect(range).toBeLessThan(900);
+    const state = () =>
+      page.evaluate(() => {
+        const notes = [...document.querySelectorAll<HTMLElement>("[data-notes] .note")];
+        const moved = notes.filter((n) => {
+          const t = getComputedStyle(n).transform;
+          return t !== "none" && t !== "matrix(1, 0, 0, 1, 0, 0)";
+        }).length;
+        return { moved, h1: Math.round(document.querySelector("h1")!.getBoundingClientRect().top) };
+      });
+    const at = async (fraction: number) => {
+      await page.evaluate((y) => window.scrollTo(0, y), Math.round(fraction * range));
+      await page.waitForTimeout(250);
+      return state();
+    };
+    const start = await at(0);
+    expect(start.moved).toBe(8); // scattered: every message out of its row
+    const middle = await at(0.4);
+    const end = await at(1);
+    expect(end.moved).toBe(0); // sorted
+    expect(middle.h1).toBe(start.h1); // the headline is pinned, not moved
+    expect(end.h1).toBe(start.h1);
+    expect(await page.evaluate(() => (window as unknown as { __cls: number }).__cls)).toBe(0);
+  });
+
+  test("on a phone the hero sorts by itself once, with a pause control that hides when it ends (C-157 motion)", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/");
+    await page.locator("[data-inbox]").scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-stage][data-play]")).toHaveCount(1, { timeout: 15_000 });
+    // It ends sorted (about 1.2 s), and its pause control goes away with it.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () =>
+              [...document.querySelectorAll<HTMLElement>("[data-notes] .note")].filter((n) => {
+                const t = getComputedStyle(n).transform;
+                return t !== "none" && t !== "matrix(1, 0, 0, 1, 0, 0)";
+              }).length,
+          ),
+        { timeout: 5_000 },
+      )
+      .toBe(0);
+    await expect(page.locator(".hero [data-motion-toggle]")).toBeHidden();
+  });
+
+  test("with reduced motion the hero is the sorted inbox, still, and the FAQ toggles at once (C-157 motion)", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    expect(await page.locator(".hero-sticky").evaluate((el) => getComputedStyle(el).position)).not.toBe("sticky");
+    expect(await page.locator("[data-notes] .note").first().evaluate((el) => getComputedStyle(el).transform)).toBe("none");
+    const item = page.locator("section#faq details.qa").nth(1);
+    await item.scrollIntoViewIfNeeded();
+    await item.locator("summary").click();
+    await expect(item).toHaveAttribute("open", "");
+  });
+
+  test("the landing's FAQ opens and closes on click and from the keyboard (C-157 motion)", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const item = page.locator("section#faq details.qa").nth(1);
+    await item.scrollIntoViewIfNeeded();
+    const summary = item.locator("summary");
+    await summary.click();
+    await expect(item).toHaveAttribute("open", "");
+    await expect(item.locator("p")).toBeVisible();
+    await summary.click();
+    await expect(item).not.toHaveAttribute("open", "");
+    await expect.poll(() => item.evaluate((el) => Math.round(el.getBoundingClientRect().height - el.querySelector("summary")!.getBoundingClientRect().height))).toBeLessThanOrEqual(1);
+    await summary.focus();
+    await page.keyboard.press("Enter");
+    await expect(item).toHaveAttribute("open", "");
+    await page.keyboard.press("Space");
+    await expect(item).not.toHaveAttribute("open", "");
+  });
+
   test("the organized sections line up: equal panels and cards, aligned statuses, sticky heads (C-157 organize)", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
@@ -216,9 +319,11 @@ test.describe("all questions page", () => {
     const faq = data.find((node) => node["@type"] === "FAQPage");
     expect(faq.mainEntity.map((entity: { name: string }) => entity.name)).toEqual(questions);
     expect(data.some((node) => node["@type"] === "BreadcrumbList")).toBe(true);
-    // The first question opens.
+    // The first question opens, and closes again (the height animates both ways, C-157 motion).
     await page.locator("main details summary").first().click();
     await expect(page.locator("main details").first()).toHaveAttribute("open", "");
+    await page.locator("main details summary").first().click();
+    await expect(page.locator("main details").first()).not.toHaveAttribute("open", "");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });

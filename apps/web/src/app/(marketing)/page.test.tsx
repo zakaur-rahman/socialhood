@@ -225,6 +225,51 @@ describe("the landing page", () => {
     expect(data).not.toHaveProperty("review");
   });
 
+  it("C-157 motion: the hero draws its scattered pile on the server, and the cards carry hidden icons", async () => {
+    vi.stubGlobal("fetch", vi.fn(plansFetch(plansFixture())));
+    const { container } = render(await HomePage());
+
+    // The scroll-scrubbed hero is back: the pin's box, and every message placed in the pile by the server
+    // (site.css draws the pile from these, so nothing jumps when the script arrives).
+    const hero = container.querySelector("section.hero")!;
+    expect(hero.querySelector("[data-hero-scrub] .hero-sticky h1")).not.toBeNull();
+    const notes = [...hero.querySelectorAll<HTMLElement>("[data-notes] .note")];
+    expect(notes).toHaveLength(8);
+    for (const [i, note] of notes.entries()) {
+      expect(note.style.getPropertyValue("--i")).toBe(String(i));
+      for (const prop of ["--sx", "--sy", "--sr"]) expect(note.style.getPropertyValue(prop)).not.toBe("");
+    }
+    // Its pause control (phones) lives in the scene's own motion scope, hidden until a script binds it.
+    const scope = hero.querySelector("[data-stage][data-motion-scope]")!;
+    const toggle = scope.querySelector("[data-motion-toggle]");
+    expect(toggle).toHaveAttribute("aria-label", "Pause the inbox animation");
+    expect(toggle).toHaveAttribute("hidden");
+
+    // Icons: server-rendered SVG in a tile, hidden from assistive tech, on every card the brief names.
+    for (const selector of [".feat-lead", "#features .fgroup > h3", ".fcard", ".spec-row", ".steps > li", ".aud-card", ".crow", ".pay"]) {
+      const cards = [...container.querySelectorAll(selector)];
+      expect(cards.length, selector).toBeGreaterThan(0);
+      for (const card of cards) {
+        const tile = card.querySelector(".ico");
+        expect(tile, selector).not.toBeNull();
+        expect(tile).toHaveAttribute("aria-hidden");
+      }
+    }
+    // A channel keeps its colour mark (in the tile) instead of an icon; the others get an icon.
+    const instagram = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === "Instagram")!;
+    expect(instagram.querySelector(".ico-mark i")).not.toBeNull();
+    expect(instagram.querySelector(".ico svg")).toBeNull();
+    const shopify = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === "Shopify")!;
+    expect(shopify.querySelector(".ico svg")).not.toBeNull();
+    // Only the AI's card wears iris.
+    expect([...container.querySelectorAll(".ico-ai")].map((tile) => tile.closest(".feat-lead") !== null)).toEqual([true]);
+
+    // The FAQ's plus is two bars (it folds into a minus as it opens); the questions stay native details.
+    const faq = container.querySelector("section#faq")!;
+    for (const pm of faq.querySelectorAll(".qa .pm")) expect(pm.querySelectorAll("i")).toHaveLength(2);
+    expect(faq.querySelectorAll("details.qa > summary")).toHaveLength(faq.querySelectorAll("details.qa").length);
+  });
+
   it("C-149: with Pro not on sale, the closing makes no trial claim and Free is the plan to start on", async () => {
     const items = plansFixture().items.map((offer) => (offer.plan === "pro" ? { ...offer, available: false, price: null } : offer));
     vi.stubGlobal("fetch", vi.fn(plansFetch({ items })));

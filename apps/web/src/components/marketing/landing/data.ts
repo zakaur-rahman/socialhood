@@ -25,19 +25,35 @@ export const CHANNELS = ["dm", "whatsapp", "web"] as const satisfies readonly So
 /** A chip's tone: the site's tag classes. */
 export type Tone = "need" | "draft" | "ok" | "stop" | "plain";
 
-/** `arrives`: the newest message, which the one-shot sort lands on top and moves to its place. */
-export type HeroNote = { source: SourceKey; name: string; text: string; ago: string; tag: string; tone: Tone; arrives?: boolean };
+export type HeroNote = { source: SourceKey; name: string; text: string; ago: string; tag: string; tone: Tone };
 
 /** The hero's inbox, sorted as the inbox sorts it: what needs a person first. */
 export const HERO_NOTES: HeroNote[] = [
   { source: "dm", name: "Sam K.", text: "Can I talk to a person, please?", ago: "9m", tag: "Needs you", tone: "need" },
   { source: "whatsapp", name: "Leo M.", text: "My order arrived damaged", ago: "31m", tag: "Needs you", tone: "need" },
-  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", ago: "2m", tag: "AI draft", tone: "draft", arrives: true },
+  { source: "dm", name: "Maya R.", text: "Is the linen shirt in M?", ago: "2m", tag: "AI draft", tone: "draft" },
   { source: "whatsapp", name: "Nina", text: "What time do you open on Sunday?", ago: "26m", tag: "AI draft", tone: "draft" },
   { source: "dm", name: "Theo", text: "Do you deliver to Toronto?", ago: "12m", tag: "AI draft", tone: "draft" },
   { source: "web", name: "Visitor", text: "Do you take bulk orders?", ago: "5m", tag: "Lead", tone: "ok" },
   { source: "comment", name: "ana.wears", text: "LINK", ago: "6m", tag: "Sent by DM", tone: "ok" },
   { source: "comment", name: "k.promo", text: "Follow my page for free followers", ago: "21m", tag: "Spam", tone: "stop" },
+];
+
+/**
+ * Where each hero message lies in the scattered pile before the inbox sorts it (C-157 motion), by
+ * row: x and y as percentages of the message's own box (so the pile scales with the inbox at every
+ * width, and the server can draw it with no measuring), and a tilt in degrees. The rows land in a
+ * loose heap over the inbox's own area, out of order.
+ */
+export const HERO_PILE: { x: number; y: number; r: number }[] = [
+  { x: -9, y: 320, r: -6 },
+  { x: 11, y: -40, r: 4 },
+  { x: 6, y: 340, r: 7 },
+  { x: -13, y: -120, r: -3 },
+  { x: 12, y: 30, r: -5 },
+  { x: 3, y: -260, r: 3 },
+  { x: -7, y: 20, r: 5 },
+  { x: 9, y: -590, r: -7 },
 ];
 
 /** The shop's knowledge in the "how it works" scene; `cite` marks the lines the draft uses. */

@@ -4,8 +4,12 @@
  * is a transform, an opacity or a class, so no layout box moves (CLS stays 0). Layout is read once
  * (when a scene nears the viewport, on a debounced resize, when fonts arrive) and frames only write.
  *
- * - Hero: one short sort (1.2 s), about 1.5 s after load at an idle moment: the newest message lands
- *   on top, then moves to its place in the sorted inbox the server rendered, and the scene holds.
+ * - Hero (C-157 motion): the server drew the scattered pile and site.css holds the animations that sort
+ *   it. Where the browser has scroll timelines, CSS alone ties them to the scroll; on a wide screen
+ *   without, this sets their time from the scroll (one rAF while the hero is on screen); on phones
+ *   and tablets it plays them once (1.2 s) when the inbox is on screen, with a pause control.
+ * - Cards: where the browser has no scroll timelines, the cards that start off screen rise in as they
+ *   arrive (an IntersectionObserver; site.css does it with `view()` elsewhere).
  * - How it works: where its CSS pins the frame (wide screens), the scroll plays it: a scan over the
  *   knowledge, wires to the cited words, the draft writing itself, the hand-off and the gap. Where it
  *   doesn't pin (phones, tablets), it plays once when on screen, with a pause control.
@@ -22,10 +26,11 @@ import { COMMENT_STREAM, DEFAULT_KEYWORD, DM_SCRIPT, MODES, type ModeKey } from 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const seg = (p: number, a: number, b: number) => clamp((p - a) / (b - a), 0, 1);
 
-/** The site's motion tokens (globals.css): the one-shot ceiling and the smooth-out curve. */
+/** The site's one-shot ceiling (globals.css, --motion-site-entrance): the hero's whole sort. */
 const ENTRANCE_MS = 1200;
-const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
-/** The hero's sort starts this long after the load event (and then at an idle moment). */
+/** The share of the pinned scroll the sort takes (site.css: the last row lands at 84%, then it holds). */
+const SCRUB_SPAN = 0.84;
+/** The hero's play on a phone waits this long after the load event (and then for an idle moment). */
 const SORT_AFTER_LOAD_MS = 1500;
 /** How long How it works plays by itself where it doesn't pin. */
 const DECIDE_PLAY_MS = 9000;
@@ -39,8 +44,9 @@ export function startLandingMotion(root: ParentNode = document): Cleanup {
   cleanups.push(modes(root, reduce));
   cleanups.push(comments(root, reduce));
   if (!reduce) {
-    cleanups.push(heroSort(root));
+    cleanups.push(hero(root));
     cleanups.push(decide(root));
+    cleanups.push(reveals(root));
   }
   return () => cleanups.forEach((stop) => stop());
 }
@@ -60,100 +66,166 @@ function perFrame(fn: () => void) {
 
 // ---------------------------------------------------------------- hero
 
-/**
- * The hero's one sort (at most 1.2 s, the entrance token). The server rendered the sorted inbox; the
- * newest message (`data-arrives`) fades out of its slot and lands on top while the rows above make
- * room, then it moves back down to its place as they close up. The end state is the server's.
- */
-function heroSort(root: ParentNode): Cleanup {
-  const list = root.querySelector<HTMLElement>("[data-notes]");
-  const arriving = list?.querySelector<HTMLElement>("[data-arrives]");
-  if (!list || !arriving) return () => {};
-  const rows = [...list.children] as HTMLElement[];
-  const index = rows.indexOf(arriving);
-  if (index <= 0) return () => {};
-  const above = rows.slice(0, index);
-  const tag = arriving.querySelector<HTMLElement>(".tag");
-  const animations: Animation[] = [];
-
-  const play = () => {
-    // One read: the row pitch.
-    const pitch = arriving.offsetTop - rows[index - 1].offsetTop;
-    const top = -index * pitch;
-    const options: KeyframeAnimationOptions = { duration: ENTRANCE_MS, easing: "linear" };
-    arriving.style.zIndex = "1";
-    animations.push(
-      arriving.animate(
-        [
-          { offset: 0, transform: "translateY(0)", opacity: 1 },
-          { offset: 0.12, transform: "translateY(0)", opacity: 0, easing: "steps(1, end)" },
-          { offset: 0.13, transform: `translateY(${top - 8}px)`, opacity: 0, easing: EASE_OUT },
-          { offset: 0.36, transform: `translateY(${top}px)`, opacity: 1 },
-          { offset: 0.44, transform: `translateY(${top}px)`, opacity: 1, easing: EASE_OUT },
-          { offset: 1, transform: "translateY(0)", opacity: 1 },
-        ],
-        options,
-      ),
-    );
-    if (tag)
-      animations.push(
-        tag.animate(
-          [
-            { offset: 0, opacity: 1, transform: "scale(1)" },
-            { offset: 0.12, opacity: 0, transform: "scale(0.96)" },
-            { offset: 0.8, opacity: 0, transform: "scale(0.96)", easing: EASE_OUT },
-            { offset: 1, opacity: 1, transform: "scale(1)" },
-          ],
-          options,
-        ),
-      );
-    for (const row of above)
-      animations.push(
-        row.animate(
-          [
-            { offset: 0, transform: "translateY(0)" },
-            { offset: 0.12, transform: "translateY(0)", easing: EASE_OUT },
-            { offset: 0.36, transform: `translateY(${pitch}px)` },
-            { offset: 0.44, transform: `translateY(${pitch}px)`, easing: EASE_OUT },
-            { offset: 1, transform: "translateY(0)" },
-          ],
-          options,
-        ),
-      );
-    animations[0].finished.then(() => arriving.style.removeProperty("z-index")).catch(() => {});
-  };
-
-  // Once, and only while the hero is on screen (a reload further down the page skips it). It waits
-  // until about 1.5 s after load and an idle moment (C-157 performance), so it never competes with
-  // the page's own start-up work (hydration finishing on a slow phone) and its frames don't land in
-  // the first screen's paint.
-  let observer: IntersectionObserver | null = null;
+/** Resolves about 1.5 s after the load event, at an idle moment (C-157 performance). */
+function afterLoad(then: () => void): Cleanup {
   let idle = 0;
-  const watch = () => {
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer?.disconnect();
-        observer = null;
-        play();
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(list);
-  };
   const loadEnd = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   const wait = Math.max(0, (loadEnd?.loadEventEnd || performance.now()) + SORT_AFTER_LOAD_MS - performance.now());
   const timer = window.setTimeout(() => {
-    if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(watch, { timeout: 500 });
-    else watch();
+    if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(then, { timeout: 500 });
+    else then();
   }, wait);
-
   return () => {
     window.clearTimeout(timer);
     if (idle) window.cancelIdleCallback(idle);
-    observer?.disconnect();
-    animations.forEach((animation) => animation.cancel());
-    arriving.style.removeProperty("z-index");
+  };
+}
+
+/**
+ * The hero's scatter-to-sort. site.css owns the animations and says which driver applies
+ * (`--hero-mode` on .hero): `native` (CSS scroll timeline, nothing to do here), `scrub` (set the
+ * animations' time from the scroll), `play` (run them once), or nothing (no motion: sorted, still).
+ */
+function hero(root: ParentNode): Cleanup {
+  const section = root.querySelector<HTMLElement>(".hero");
+  const scrub = section?.querySelector<HTMLElement>("[data-hero-scrub]");
+  const sticky = section?.querySelector<HTMLElement>(".hero-sticky");
+  const stage = section?.querySelector<HTMLElement>("[data-stage]");
+  const inbox = stage?.querySelector<HTMLElement>("[data-inbox]");
+  if (!section || !scrub || !sticky || !stage || !inbox) return () => {};
+  const heroEl = section;
+  const box = scrub;
+  const pin = sticky;
+  const scene = stage;
+
+  let mode = "";
+  let disposed = false;
+  let played = false;
+  let animations: Animation[] = [];
+  const cleanups: Cleanup[] = [];
+
+  // ---- scrub (no scroll timelines): geometry is read on start and on resize; a frame reads scrollY only.
+  const geo = { start: 0, length: 1 };
+  let visible = false;
+  let frame = 0;
+  const measure = () => {
+    const rect = box.getBoundingClientRect();
+    const top = parseFloat(getComputedStyle(pin).top) || 0;
+    geo.start = rect.top + window.scrollY - top;
+    geo.length = Math.max(1, box.offsetHeight - pin.offsetHeight);
+    animations = scene.getAnimations({ subtree: true });
+  };
+  const draw = () => {
+    frame = 0;
+    if (disposed || mode !== "scrub") return;
+    const p = clamp((window.scrollY - geo.start) / geo.length, 0, 1);
+    const time = Math.min(1, p / SCRUB_SPAN) * ENTRANCE_MS;
+    for (const animation of animations) animation.currentTime = time;
+  };
+  const tick = () => {
+    if (!frame && visible) frame = requestAnimationFrame(draw);
+  };
+  const seen = new IntersectionObserver(
+    (entries) => {
+      visible = entries.some((entry) => entry.isIntersecting);
+      tick();
+    },
+    { rootMargin: "100px" },
+  );
+  window.addEventListener("scroll", tick, { passive: true });
+
+  // ---- play (phones, tablets): once, when the inbox is on screen, after the page has settled.
+  let control: MotionControl | null = null;
+  let armed = false;
+  const play = () => {
+    if (played || disposed) return;
+    played = true;
+    control = bindMotionControl(scene);
+    scene.dataset.play = "";
+    const running = scene.getAnimations({ subtree: true });
+    void Promise.all(running.map((animation) => animation.finished))
+      .then(() => {
+        control?.destroy();
+        control = null;
+      })
+      .catch(() => {});
+  };
+  const arm = () => {
+    if (armed || played) return;
+    armed = true;
+    cleanups.push(
+      afterLoad(() => {
+        if (disposed) return;
+        const onScreen = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting) || mode !== "play") return;
+            onScreen.disconnect();
+            play();
+          },
+          { threshold: 0.35 },
+        );
+        onScreen.observe(inbox);
+        cleanups.push(() => onScreen.disconnect());
+      }),
+    );
+  };
+
+  // ---- which driver: CSS's call, read again after a resize.
+  const setMode = () => {
+    mode = getComputedStyle(heroEl).getPropertyValue("--hero-mode").trim();
+    seen.disconnect();
+    if (mode === "scrub") {
+      measure();
+      seen.observe(box);
+    } else if (mode === "play") arm();
+  };
+  const relayout = perFrame(setMode);
+  window.addEventListener("resize", relayout);
+  void document.fonts?.ready.then(() => !disposed && relayout());
+  setMode();
+
+  return () => {
+    disposed = true;
+    if (frame) cancelAnimationFrame(frame);
+    relayout.cancel();
+    seen.disconnect();
+    window.removeEventListener("scroll", tick);
+    window.removeEventListener("resize", relayout);
+    cleanups.forEach((stop) => stop());
+    control?.destroy();
+  };
+}
+
+// ---------------------------------------------------------------- cards rising in (no scroll timelines)
+
+const REVEAL = ".feat-lead, .fcard, .crow, .pay, .aud-card, .spec-row, .steps > li";
+
+/**
+ * Where CSS has no `view()` timeline: a card that starts off screen is hidden (`data-rv=""`) when the
+ * observer first reports it, and rises in (`data-rv="in"`, site.css's transitions) as it arrives. A
+ * card already on screen is never touched, so nothing on screen blinks, and with no script every card
+ * simply shows.
+ */
+function reveals(root: ParentNode): Cleanup {
+  if (typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()")) return () => {};
+  const cards = [...root.querySelectorAll<HTMLElement>(REVEAL)];
+  if (!cards.length) return () => {};
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const card = entry.target as HTMLElement;
+        if (entry.isIntersecting) {
+          if (card.dataset.rv === "") card.dataset.rv = "in";
+          observer.unobserve(card);
+        } else if (card.dataset.rv === undefined) card.dataset.rv = "";
+      }
+    },
+    { rootMargin: "0px" },
+  );
+  cards.forEach((card) => observer.observe(card));
+  return () => {
+    observer.disconnect();
+    cards.forEach((card) => delete card.dataset.rv);
   };
 }
 

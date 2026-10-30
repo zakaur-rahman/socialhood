@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -7,6 +7,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { FAQ, FAQ_PATH, type FaqItem } from "@/lib/marketing/faq";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
+import { FaqMotion } from "./FaqMotion";
 import { SECTION_EYEBROW, UTILITY_TITLE } from "./primitives";
 
 /**
@@ -51,7 +52,8 @@ export function Faq({
               <summary>
                 <h3>{item.question}</h3>
                 <span className="pm" aria-hidden>
-                  <Plus className="size-3.5" />
+                  <i />
+                  <i />
                 </span>
               </summary>
               <p>{item.answer}</p>
@@ -67,6 +69,7 @@ export function Faq({
           ) : null}
         </div>
       </div>
+      <FaqMotion />
     </section>
   );
 }
