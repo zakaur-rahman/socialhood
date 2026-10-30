@@ -1428,7 +1428,7 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
       title: "How it is limited",
       items: [
         { title: "Free analyses your latest posts", body: "Free reads the comments on your latest posts for each account. Pro reads every post." },
-        { title: "It uses AI credits", body: "Analysing a comment costs a credit and summarising a post's comments costs two. The pricing page lists the allowance for each plan." },
+        { title: "It uses AI credits", body: "Analysing comments costs a credit for every 20 comments, and summarising a post's comments costs two. The pricing page lists the allowance for each plan." },
         { title: "You stay in charge", body: "Amplychat hides spam only when you turn that on. Nothing is deleted without you." },
       ],
     },

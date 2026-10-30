@@ -62,7 +62,7 @@ export const LEGAL: LegalConfig = {
   governingLaw: "the laws of India",
   jurisdiction: undefined, // C-156: left unset by the owner
   // C-156: a placeholder; the coordinator moves it to the release date.
-  effectiveDate: "2026-10-30",
+  effectiveDate: "2026-10-31",
   grievanceOfficer: { role: "Grievance Officer, UNCHARTD", email: SUPPORT_EMAIL },
   grievanceResponseDays: undefined,
   supportResponseTime: undefined,

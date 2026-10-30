@@ -147,7 +147,7 @@ describe("the legal pages", () => {
       const { container, unmount } = render(<Page />);
       expect(screen.getByRole("heading", { level: 1, name: LEGAL_DOCUMENTS[document].title })).toBeInTheDocument();
       expect(screen.getByText(new RegExp(`Last updated ${legalDate(LEGAL_DOCUMENTS[document].lastUpdated)}`))).toBeInTheDocument();
-      expect(screen.getByText(/Effective 30 October 2026/)).toBeInTheDocument();
+      expect(screen.getByText(/Effective 31 October 2026/)).toBeInTheDocument();
       expect(container.textContent).not.toMatch(PLACEHOLDER);
       // C-156: governing law is set, so only Terms has the section; no courts are named.
       const law = screen.queryByRole("heading", { name: /Governing law/ });
