@@ -42,7 +42,7 @@ export function WhatsAppCharges() {
               </p>
             </div>
           </div>
-          <div className="callout wa-pay">
+          <div className="pp-callout wa-pay">
             <Ico icon={BadgeCheck} />
             <div>
               <p className="wa-strong">You pay Meta directly through your own WhatsApp Business account. {SITE_NAME} adds no markup.</p>

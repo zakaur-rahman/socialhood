@@ -181,7 +181,7 @@ export default async function AiInfoPage() {
             </li>
           ))}
         </ul>
-        <Callout icon={Wallet}>
+        <Callout tone="info" icon={Wallet}>
           <p>
             Meta&apos;s WhatsApp message charges are not part of any plan: businesses pay Meta directly through their own
             WhatsApp Business account, and {SITE_NAME} adds no markup. Full limits: <Link href="/pricing">pricing</Link>.

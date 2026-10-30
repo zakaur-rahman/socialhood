@@ -5,6 +5,7 @@ import Link from "next/link";
 import { InfoBand, InfoPage } from "@/components/marketing/InfoPage";
 import { Ico } from "@/components/marketing/landing/Ico";
 import { ContactDetails } from "@/components/marketing/legal/ContactDetails";
+import { FAQ_PATH } from "@/lib/marketing/faq";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
@@ -17,7 +18,7 @@ export const metadata = pageMetadata({
 const N = SITE_NAME;
 
 const HELP_LINKS: { label: string; href: string; note: string; icon: LucideIcon }[] = [
-  { label: "Frequently asked questions", href: "/#faq", note: `Common questions about ${SITE_NAME}`, icon: CircleHelp },
+  { label: "Frequently asked questions", href: FAQ_PATH, note: `Common questions about ${SITE_NAME}`, icon: CircleHelp },
   { label: "Plans and limits", href: "/pricing", note: "What each plan includes and costs", icon: Tag },
   { label: "Data deletion", href: "/data-deletion", note: "Delete your data, or check a request from Instagram", icon: Trash2 },
   { label: "Developers", href: "/developers", note: "The public API, webhooks and Zapier", icon: Code },

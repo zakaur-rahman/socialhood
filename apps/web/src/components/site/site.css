@@ -926,6 +926,88 @@ body:has(.site) {
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
 @keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
 
+/* ==== C-159 shared ==== */
+/* What the guides and the legal and information pages share (C-159): the callout (site/Callout.tsx),
+   the contents (site/TocNav.tsx, the current section marked by TocSpy) and the reading bar's keyframes.
+   Defined once here; a page's own block only places them (margins, stickiness). Tokens only. */
+@layer components {
+  .site {
+    /* ---- callouts: an icon tile beside a short title and the text, no coloured edge.
+       note and tip: a sheet on the surface with a hairline; means: a tone step, the tile in ink;
+       info: a tone step with a larger quiet tile and the text beside it (no title unless given). */
+    & .callout {
+      display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5) var(--space-6);
+      border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface);
+    }
+    & .callout-ico { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--s-surface-2); color: var(--s-text-2); }
+    & .callout-tip .callout-ico { background: var(--ok-soft); color: var(--ok); }
+    & .callout-means { border-color: transparent; background: var(--s-surface-2); }
+    & .callout-means .callout-ico { background: var(--s-text); color: var(--s-bg); }
+    & .callout-info { grid-template-columns: 40px minmax(0, 1fr); border-color: transparent; background: var(--s-surface-2); color: var(--s-text-2); }
+    & .callout-info .callout-ico { width: 40px; height: 40px; background: var(--s-surface); color: var(--s-text-3); }
+    & .callout-info .callout-ico svg { width: 20px; height: 20px; }
+    & .callout-info .callout-b { align-self: center; }
+    & .callout-ai .callout-ico { color: var(--s-link); }
+    & .callout-b { min-width: 0; }
+    & .callout-b > :first-child { margin-top: 0; }
+    & .callout-t { margin: 0; font-size: var(--fs-body-sm); line-height: 32px; font-weight: 600; color: var(--s-text); }
+    & .callout-b > .callout-t + * { margin-top: var(--space-1); }
+    & .callout a {
+      color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+      transition: color var(--dur-quick) var(--ease);
+    }
+
+    /* ---- the contents: a 1 px rail down the left; the section being read (aria-current) in ink. */
+    & .toc-t { margin: 0 0 var(--space-3); font-size: var(--fs-label); font-weight: 600; color: var(--s-text); }
+    & .toc ol { margin: 0; padding: 0; list-style: none; border-left: 1px solid var(--s-line); }
+    & .toc a {
+      display: block; margin-left: -1px; padding: var(--space-2) 0 var(--space-2) var(--space-4);
+      border-left: 1px solid transparent; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); text-decoration: none;
+      transition: color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease);
+    }
+    & .toc a[aria-current] { color: var(--s-text); font-weight: 600; border-left-color: var(--s-text); }
+    /* Numbered (the legal pages): each entry a row with its number; the current row on a tint, a 2 px
+       ink bar over its stretch of the rail. */
+    & .toc-num ol { position: relative; margin: var(--space-2) 0 0; display: grid; gap: 1px; border-left: 0; }
+    & .toc-num ol::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--s-line); }
+    & .toc-num a {
+      position: relative; display: grid; grid-template-columns: 2ch minmax(0, 1fr); gap: var(--space-3); align-items: baseline;
+      margin-left: 0; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); border-left: 0; border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      font-size: var(--fs-body-sm); line-height: var(--lh-body-sm);
+      transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+    }
+    & .toc-num a::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--s-text); transform: scaleY(0); transition: transform var(--dur-fast) var(--ease); }
+    & .toc-n { font-variant-numeric: tabular-nums; color: var(--s-text-3); font-size: var(--fs-label); }
+    & .toc-num a[aria-current] { font-weight: 500; background: var(--s-hover); }
+    & .toc-num a[aria-current]::before { transform: none; }
+    /* Collapsible (the legal pages): a disclosure on a narrower screen, open beside the text from
+       site-wide (TocSpy opens it; where the browser can style the disclosure's content, CSS shows it
+       before the script). */
+    & .toc-d summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); list-style: none; cursor: pointer; min-height: 44px; }
+    & .toc-d summary::-webkit-details-marker { display: none; }
+    & .toc-d .toc-t { margin: 0; line-height: var(--lh-label); }
+    & .toc-chev { color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease); }
+    & .toc-d[open] .toc-chev { transform: rotate(180deg); }
+
+    @media (hover: hover) {
+      & .callout a:hover { color: var(--s-link-hover); }
+      & .toc a:hover { color: var(--s-text); }
+      & .toc-num a:hover { background: var(--s-hover); }
+    }
+    @media (width > 1060px) { /* site-wide */
+      & .toc-d summary { cursor: default; pointer-events: none; min-height: 0; padding-bottom: var(--space-2); }
+      & .toc-chev { display: none; }
+      & .toc-d::details-content { content-visibility: visible; display: block; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .callout { padding: var(--space-5); }
+    }
+  }
+}
+/* A reading bar filling with the scroll (the guides' `.g-progress`, the legal pages' `.read-bar`). */
+@keyframes site-read { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* ==== end C-159 shared ==== */
+
 /* ==== C-159 guides ==== */
 /* The guides index (`main.guides`) and a guide (`main.guide`): a page head, a reading column beside a
    sticky side column (contents, facts, Start free) from site-wide (1060 px), body blocks in the guide's
@@ -972,7 +1054,7 @@ body:has(.site) {
     }
     @supports (animation-timeline: view()) {
       & .guide .g-progress {
-        transition: none; animation: g-progress linear both; animation-timeline: --guide; animation-range: contain 0% contain 100%;
+        transition: none; animation: site-read linear both; animation-timeline: --guide; animation-range: contain 0% contain 100%;
       }
     }
 
@@ -987,16 +1069,6 @@ body:has(.site) {
     & .guide .g-toc-m[open] summary svg { transform: rotate(180deg); }
     & .guide .g-toc-m .toc { padding: 0 var(--space-5) var(--space-5); }
     & .guide .g-toc-m .toc-t { display: none; }
-
-    /* The contents: a 1 px rail; the section being read (TocSpy) in ink, its rail segment in ink. */
-    & .toc-t { margin: 0 0 var(--space-3); font-size: var(--fs-label); font-weight: 600; color: var(--s-text); }
-    & .toc ol { margin: 0; padding: 0; list-style: none; border-left: 1px solid var(--s-line); }
-    & .toc a {
-      display: block; margin-left: -1px; padding: var(--space-2) 0 var(--space-2) var(--space-4);
-      border-left: 1px solid transparent; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); text-decoration: none;
-      transition: color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease);
-    }
-    & .toc a[aria-current] { color: var(--s-text); font-weight: 600; border-left-color: var(--s-text); }
 
     /* The side column: sticky under the bar, scrolling on its own only if a short screen needs it. */
     & .guide .g-side-in {
@@ -1090,18 +1162,6 @@ body:has(.site) {
       border: solid var(--ok); border-width: 0 2px 2px 0; transform: rotate(45deg);
     }
 
-    /* Callouts: a quiet sheet, an icon and a short title. No coloured edge. */
-    & .callout {
-      display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5) var(--space-6);
-      border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface);
-    }
-    & .callout-ico { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--s-surface-2); color: var(--s-text-2); }
-    & .callout-tip .callout-ico { background: var(--ok-soft); color: var(--ok); }
-    & .callout-means { border-color: transparent; background: var(--s-surface-2); }
-    & .callout-means .callout-ico { background: var(--s-text); color: var(--s-bg); }
-    & .callout-t { font-size: var(--fs-body-sm); line-height: 32px; font-weight: 600; color: var(--s-text); }
-    & .callout-b > .callout-t + * { margin-top: var(--space-1); }
-
     /* ---- the questions: one card each */
     & .guide .g-faq { margin-top: var(--space-16); }
     & .guide .g-faq-h { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; scroll-margin-top: calc(var(--nav-h) + var(--space-8)); }
@@ -1153,14 +1213,13 @@ body:has(.site) {
     & .g-feat-shot { display: none; }
 
     /* ---- motion: the landing's rise and lift (C-157 motion) */
-    & :is(.g-card, .g-pcard, .g-step, .g-qa, .callout, .g-check) {
+    & :is(.g-card, .g-pcard, .g-step, .g-qa, .gprose .callout, .g-check) {
       transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease),
         opacity var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger)), translate var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger));
     }
     @media (hover: hover) {
       & .guide .g-back:hover { color: var(--s-link-hover); }
       & .guide .g-back:hover svg { transform: translateX(calc(-1 * var(--dist-micro))); }
-      & .toc a:hover { color: var(--s-text); }
       & .gprose h2:hover .g-anchor { opacity: 1; }
       & .gprose .g-anchor:hover { color: var(--s-text); }
       & .gprose a:not(.g-anchor):hover { color: var(--s-link-hover); }
@@ -1177,7 +1236,7 @@ body:has(.site) {
     & .g-steps > :nth-child(4) { --n: 3; }
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
-        & :is(.g-card, .g-pcard, .g-step, .g-qa, .callout, .g-check) {
+        & :is(.g-card, .g-pcard, .g-step, .g-qa, .gprose .callout, .g-check) {
           animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
           animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
         }
@@ -1206,13 +1265,12 @@ body:has(.site) {
     @media (width <= 520px) { /* site-sm */
       & .guide .g-meta .g-tags { margin-left: 0; }
       & .guide .g-meta > .ico { display: none; }
-      & :is(.g-pcard, .g-step, .callout) { padding: var(--space-5); }
+      & :is(.g-pcard, .g-step) { padding: var(--space-5); }
       & .gprose .g-check { padding-inline: var(--space-5); }
       & .guide .g-qa dd { padding-left: 0; }
     }
   }
 }
-@keyframes g-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 /* ==== end C-159 guides ==== */
 
 /* ==== C-159 product ==== */
@@ -1311,12 +1369,12 @@ body:has(.site) {
     /* ---- what to know: a callout (the caveats) beside a quiet footnote card (sources, trademark) */
     & .know { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
     & .know.is-single { grid-template-columns: minmax(0, 46rem); }
-    & .callout { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-4); padding: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
-    & .callout .ico { background: var(--s-surface-2); }
-    & .callout > :only-child { grid-column: 1 / -1; }
-    & .callout ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
-    & .callout :is(li, p) { margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--s-text-2); }
-    & .callout ul li + li { padding-top: var(--space-3); border-top: 1px solid var(--s-line-2); }
+    & .pp-callout { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-4); padding: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
+    & .pp-callout .ico { background: var(--s-surface-2); }
+    & .pp-callout > :only-child { grid-column: 1 / -1; }
+    & .pp-callout ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
+    & .pp-callout :is(li, p) { margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--s-text-2); }
+    & .pp-callout ul li + li { padding-top: var(--space-3); border-top: 1px solid var(--s-line-2); }
     & .fnote { padding: var(--space-6); background: var(--s-bg); border: 1px dashed var(--s-line-control); border-radius: var(--r-lg); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
     & .fnote.is-wide { max-width: 52rem; }
     & .fnote h3 { margin: 0 0 var(--space-3); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; color: var(--s-text); }
@@ -1464,7 +1522,7 @@ body:has(.site) {
     & :is(.rcard, .hcard):active { transform: translateY(1px); }
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
-        & :is(.gcard, .vcard, .hcard, .ba-card, .tier, .callout, .wa-card) {
+        & :is(.gcard, .vcard, .hcard, .ba-card, .tier, .pp-callout, .wa-card) {
           animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
           animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
         }
@@ -1504,7 +1562,7 @@ body:has(.site) {
       & .vcard, & .tier { padding: var(--space-6); }
       & .ep { padding: var(--space-5); }
       & .faqp-nav ul { grid-template-columns: minmax(0, 1fr); }
-      & .callout { grid-template-columns: minmax(0, 1fr); }
+      & .pp-callout { grid-template-columns: minmax(0, 1fr); }
     }
     @media (prefers-reduced-motion: reduce) {
       & :is(.gcard, .vcard, .rcard, .hcard, .ba-card, .tier):is(:hover, :active) { transform: none !important; }
@@ -1516,7 +1574,7 @@ body:has(.site) {
 /* ==== C-159 trust ==== */
 /* The legal pages, /security, /safety, /changelog, /ai-info, /contact, /unsubscribe, /data-deletion and
    the public 404 (C-159). Every selector sits under one of their wrappers (.legal, .info, .contact,
-   .nf, .unsub, .ddel) or is one of their own classes (.lprose, .lfacts, .callout, .toc, .read-bar), so
+   .nf, .unsub, .ddel) or is one of their own classes (.lprose, .lfacts, .read-bar; the callout and the contents are in the C-159 shared block), so
    nothing reaches the landing. Tokens only. Motion: the landing's card rise and hover lift, nothing
    else; a reading bar on a scroll timeline. */
 @layer components {
@@ -1560,36 +1618,8 @@ body:has(.site) {
     & .legal-sum-b strong { font-weight: 600; }
     & .legal-sum-b a, & .lfacts a { color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
-    /* ---- the contents: sticky under the bar, its own scroll when it is taller than the screen */
-    & .toc { position: sticky; top: calc(var(--nav-h) + var(--space-8)); max-height: calc(100dvh - var(--nav-h) - var(--space-12)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-    & .toc summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); list-style: none; cursor: pointer; min-height: 44px; }
-    & .toc summary::-webkit-details-marker { display: none; }
-    & .toc-t { font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; color: var(--s-text); }
-    & .toc-chev { color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease); }
-    & .toc details[open] .toc-chev { transform: rotate(180deg); }
-    & .toc ol { position: relative; margin: var(--space-2) 0 0; padding: 0; list-style: none; display: grid; gap: 1px; }
-    /* One rule down the left of the list; the current item darkens its own stretch of it. */
-    & .toc ol::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--s-line); }
-    & .toc a {
-      position: relative; display: grid; grid-template-columns: 2ch minmax(0, 1fr); gap: var(--space-3); align-items: baseline;
-      padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); border-radius: 0 var(--r-sm) var(--r-sm) 0;
-      font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); text-decoration: none;
-      transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
-    }
-    & .toc a::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--s-text); transform: scaleY(0); transition: transform var(--dur-fast) var(--ease); }
-    & .toc-n { font-variant-numeric: tabular-nums; color: var(--s-text-3); font-size: var(--fs-label); }
-    & .toc a[aria-current] { color: var(--s-text); font-weight: 500; background: var(--s-hover); }
-    & .toc a[aria-current]::before { transform: none; }
-    @media (hover: hover) {
-      & .toc a:hover { color: var(--s-text); background: var(--s-hover); }
-    }
-    /* Wide: the contents stay open beside the text (TocSpy opens the disclosure; where the browser can
-       style the disclosure's content, CSS shows it before the script). */
-    @media (width > 1060px) { /* site-wide */
-      & .toc summary { cursor: default; pointer-events: none; min-height: 0; padding-bottom: var(--space-2); }
-      & .toc-chev { display: none; }
-      & .toc details::details-content { content-visibility: visible; display: block; }
-    }
+    /* ---- the contents (TocNav, C-159 shared): sticky beside the text, its own scroll when it is taller than the screen */
+    & .legal-side .toc { position: sticky; top: calc(var(--nav-h) + var(--space-8)); max-height: calc(100dvh - var(--nav-h) - var(--space-12)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 
     /* ---- the reading column: measure 64ch for text (about 75 characters); tables and callouts take the column's width */
     & .lprose { color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; }
@@ -1642,20 +1672,13 @@ body:has(.site) {
     & .lfact dt span { grid-column: 2; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-3); }
     & .lfact dd { grid-column: 2; margin: 0; font-size: var(--fs-body); line-height: var(--lh-body-sm); color: var(--s-text); font-weight: 500; overflow-wrap: anywhere; }
 
-    /* ---- callouts: an icon tile beside a title and the text, a tone step on the paper */
-    & .callout { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-4); margin-top: var(--space-6); padding: var(--space-5) var(--space-6); background: var(--s-surface-2); border-radius: var(--r-lg); color: var(--s-text-2); }
-    & .callout .ico { background: var(--s-surface); }
-    & .callout-b { align-self: center; min-width: 0; }
-    & .callout-b > :first-child { margin-top: 0; }
-    & .callout-t { margin: 0; font-size: var(--fs-body); font-weight: 600; color: var(--s-text); }
-    & .callout-t + p { margin-top: var(--space-1); }
     & .lprose .callout { max-width: 72ch; }
 
     @media (width <= 1060px) { /* site-wide: one column; the summary, then the contents, then the text */
       & .legal-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "sum" "side" "prose"; }
       & .legal-side { align-self: auto; margin-top: var(--space-6); }
-      & .toc { position: static; max-height: none; overflow: visible; padding: var(--space-2) var(--space-5); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
-      & .toc ol { margin-bottom: var(--space-3); }
+      & .legal-side .toc { position: static; max-height: none; overflow: visible; padding: var(--space-2) var(--space-5); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
+      & .legal-side .toc ol { margin-bottom: var(--space-3); }
       & .legal-prose { margin-top: var(--space-12); }
     }
     @media (width <= 520px) { /* site-sm */
@@ -1666,17 +1689,16 @@ body:has(.site) {
       & .lfacts { padding: var(--space-5); }
       & .lprose h2 { font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); }
       & .lprose :is(thead th, tbody td, tbody th) { padding-inline: var(--space-4); }
-      & .callout { padding: var(--space-5); }
     }
 
     /* ---- information pages (InfoPage, InfoBand): the head, then bands of cards; a night band closes */
     & .info-head-x { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
-    & .info .lede a, & .ib-intro a, & .info-related a, & .info-foot a, & .fcard p a:not(.fcard-link), & .scope a, & .callout a, & .avoid-list a {
+    & .info .lede a, & .ib-intro a, & .info-related a, & .info-foot a, & .fcard p a:not(.fcard-link), & .scope a, & .avoid-list a {
       color: var(--s-link); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
       transition: color var(--dur-quick) var(--ease);
     }
     @media (hover: hover) {
-      & :is(.info .lede, .ib-intro, .info-related, .info-foot, .fcard p, .scope, .callout, .avoid-list) a:not(.fcard-link):hover { color: var(--s-link-hover); }
+      & :is(.info .lede, .ib-intro, .info-related, .info-foot, .fcard p, .scope, .avoid-list) a:not(.fcard-link):hover { color: var(--s-link-hover); }
     }
     & .info-prose { padding-bottom: var(--space-section); }
     & .info-foot { padding-block: var(--space-6) var(--space-section); color: var(--s-text-2); font-size: var(--fs-body); }
@@ -1858,5 +1880,4 @@ body:has(.site) {
   }
 }
 
-@keyframes site-read { to { transform: scaleX(1); } }
 /* ==== end C-159 trust ==== */

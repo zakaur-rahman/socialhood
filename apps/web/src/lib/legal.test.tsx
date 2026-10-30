@@ -234,6 +234,8 @@ describe("the contact page", () => {
     expect(screen.getByText(/We answer within 30 days/)).toBeInTheDocument();
     expect(screen.queryByText(/We reply within/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Data deletion" })).toHaveAttribute("href", "/data-deletion");
+    // C-159: the full FAQ page, not the landing's FAQ band.
+    expect(screen.getByRole("link", { name: /Frequently asked questions/ })).toHaveAttribute("href", "/faq");
     // The page's text, without the breadcrumbs JSON-LD it now carries (C-159), whose arrays would read as a placeholder.
     container.querySelectorAll('script[type="application/ld+json"]').forEach((script) => script.remove());
     expect(container.textContent).not.toMatch(PLACEHOLDER);

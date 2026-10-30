@@ -241,7 +241,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
             What to know before you decide
           </h2>
           <div className={page.sources.length > 0 ? "know after-head" : "know is-single after-head"}>
-            <div className="callout">
+            <div className="pp-callout">
               <Ico icon={Info} />
               <ul>
                 {page.honesty.map((line) => (

@@ -83,7 +83,7 @@ export default function SecurityPage() {
             <p>how to reach you, and the name you&apos;d like us to use.</p>
           </InfoCard>
         </ul>
-        <Callout icon={Info}>
+        <Callout tone="info" icon={Info}>
           <p>Write in English. Don&apos;t include other people&apos;s personal data in the report.</p>
         </Callout>
       </InfoBand>

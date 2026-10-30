@@ -8390,3 +8390,26 @@ box; CLS under 0.1 on /terms and /changelog; the 404's six links), and `not-foun
 **For the coordinator.** Run the e2e above. Check the reading bar sits over the header's top edge in
 Safari (scroll timelines from Safari 26) and that Firefox shows the contents open on a wide screen once
 TocSpy loads. `TocSpy` and `Callout` are in `components/site/` for the guides agent's long reads.
+
+### C-159 (integration)
+
+The three branches merged into `feature/site-redesign` (guides, then product, then trust). The guides and
+trust agents each wrote a `Callout` and a `TocSpy`; they are now one of each.
+- **Callout** (`components/site/Callout.tsx`): `tone` = `note` | `tip` | `means` | `info`, plus optional
+  `icon`, `title`, `ai` and `className`. Always an `aside` named by its title or kind. `info` is the
+  trust look (tinted, 40 px quiet tile, no title unless given); the legal and info pages now pass
+  `tone="info"`.
+- **Contents**: `TocNav` (`items`, `label`, `numbered`, `collapsible`) renders both the guides' rail and
+  the legal pages' numbered disclosure; `LegalContents` is a thin wrapper. `startTocSpy` (`toc-spy.ts`)
+  reads every `[data-toc]` nav's `a[href="#id"]`, marks the last heading past 35% of the viewport (the
+  guides' algorithm: no gaps, robust to jumps; trust's "band" observer is dropped), opens a `details`
+  inside the nav on a wide screen (trust), and steps `[data-toc-progress]` only where scroll timelines
+  are missing (guides). The island waits for load and an idle moment (trust).
+- **CSS**: `.callout`, `.toc` and the reading bar's keyframe live once in a new `C-159 shared` block
+  before the three area blocks. Each area block keeps only placement (`.gprose .callout`,
+  `.ib-body > .callout`, `.legal-side .toc` sticky/boxed). Collisions removed: `.callout`, `.callout-b`,
+  `.callout-t`, `.toc`, `.toc-t`, `.toc ol/a` defined in two or three blocks (trust's later rules were
+  restyling the guides' callouts and contents, and trust's `.callout` margin leaked onto product);
+  product's own callout is now `.pp-callout`; the guides' rise motion on `.callout` is scoped to
+  `.gprose`; `g-progress` and `site-read` (the same scaleX 0 to 1) are one `site-read`.
+- `/contact`'s "Frequently asked questions" now links to `/faq` (pinned in `lib/legal.test.tsx`).

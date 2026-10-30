@@ -178,7 +178,7 @@ export default function SafetyPage() {
             <p>Queued comment replies still expire after Instagram&apos;s 7 days.</p>
           </InfoCard>
         </ul>
-        <Callout icon={LifeBuoy}>
+        <Callout tone="info" icon={LifeBuoy}>
           <p>
             What to do: check the account&apos;s status in the Instagram app and follow Meta&apos;s steps there. Once the account
             is in good standing again, reconnect it in {SITE_NAME}. If you&apos;re unsure what happened, write to {mail} and

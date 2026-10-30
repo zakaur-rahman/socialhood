@@ -233,7 +233,7 @@ export function ApiReferenceUnavailable() {
         <div className="wrap">
           <p className={SECTION_EYEBROW}>Developers</p>
           <h1 className="h-page">Amplychat public API</h1>
-          <div className="callout api-down" role="status">
+          <div className="pp-callout api-down" role="status">
             <p>The API reference isn&rsquo;t available right now. Try again in a moment.</p>
           </div>
         </div>

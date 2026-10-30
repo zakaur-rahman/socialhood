@@ -2,7 +2,6 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
-  ChevronDown,
   Info,
   ListChecks,
   type LucideIcon,
@@ -15,6 +14,7 @@ import {
 import type { ReactNode } from "react";
 
 import { Ico } from "@/components/marketing/landing/Ico";
+import { TocNav } from "@/components/site/TocNav";
 import { TocSpy } from "@/components/site/TocSpy";
 import { LEGAL, LEGAL_DOCUMENTS, legalDate, legalFacts, type LegalConfig, type LegalDocumentKey } from "@/lib/legal";
 
@@ -74,30 +74,9 @@ export function LegalDates({ document, config = LEGAL }: { document: LegalDocume
 }
 
 /** The contents: a list of the numbered sections, open beside the text on a wide screen and a
- *  disclosure above it on a narrower one. TocSpy marks the section being read. */
+ *  disclosure above it on a narrower one (the shared TocNav). TocSpy marks the section being read. */
 export function LegalContents({ sections }: { sections: readonly { id: string; title: string }[] }) {
-  return (
-    <nav aria-labelledby="contents-title" className="toc" data-toc="">
-      <details className="toc-d">
-        <summary>
-          <span id="contents-title" className="toc-t">
-            Contents
-          </span>
-          <ChevronDown size={18} strokeWidth={1.75} aria-hidden focusable="false" className="toc-chev" />
-        </summary>
-        <ol>
-          {sections.map((section, index) => (
-            <li key={section.id}>
-              <a href={`#${section.id}`}>
-                <span className="toc-n">{index + 1}</span>
-                <span>{section.title}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </details>
-    </nav>
-  );
+  return <TocNav items={sections.map(({ id, title }) => ({ id, label: title }))} label="Contents" numbered collapsible />;
 }
 
 /**
