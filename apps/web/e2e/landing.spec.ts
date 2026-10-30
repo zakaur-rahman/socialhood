@@ -144,7 +144,7 @@ test.describe("landing page", () => {
     await page.goto("/");
     // The bands below How it works render as they near the viewport; bring each one in before measuring.
     const bring = async (selector: string) => {
-      await page.locator(selector).scrollIntoViewIfNeeded();
+      await page.locator(selector).first().scrollIntoViewIfNeeded();
       await page.waitForTimeout(150);
     };
     const bottoms = (selector: string) =>

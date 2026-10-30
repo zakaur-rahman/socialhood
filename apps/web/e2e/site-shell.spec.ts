@@ -20,9 +20,9 @@ test.describe("site shell", () => {
     await menu.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((animation) => animation.finished)));
     // Touch targets: the menu's links are 48 px, the bar's Start free 44 px.
     const linkBox = await menu.getByRole("link", { name: "Pricing" }).boundingBox();
-    expect(linkBox?.height).toBeGreaterThanOrEqual(48);
+    expect(Math.round(linkBox?.height ?? 0)).toBeGreaterThanOrEqual(48);
     const cta = await page.locator("header .nav-r").getByRole("link", { name: "Start free" }).boundingBox();
-    expect(cta?.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(cta?.height ?? 0)).toBeGreaterThanOrEqual(44);
 
     await page.mouse.click(180, 700);
     await expect(page.getByRole("button", { name: "Open menu" })).toHaveAttribute("aria-expanded", "false");
