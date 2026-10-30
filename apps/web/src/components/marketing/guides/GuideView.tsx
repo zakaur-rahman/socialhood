@@ -98,9 +98,9 @@ export function GuideCard({ guide, featured = false, headingLevel = 3 }: { guide
         </p>
       </div>
       {shot ? (
-        <div className="g-feat-shot" aria-hidden>
-          {/* Eager: on a wide screen the featured card is in the first view. */}
-          <Image src={shot.src} width={shot.width} height={shot.height} alt="" sizes="18rem" loading="eager" />
+        <div className="g-feat-shot">
+          {/* Eager: on a wide screen the featured card is in the first view. A real product screenshot, so it keeps its description. */}
+          <Image src={shot.src} width={shot.width} height={shot.height} alt={shot.alt} sizes="18rem" loading="eager" />
         </div>
       ) : null}
     </article>

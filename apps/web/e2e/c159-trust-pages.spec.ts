@@ -68,9 +68,13 @@ test.describe("C-159 trust pages", () => {
     await link.click();
     await expect(page).toHaveURL(/#retention$/);
 
-    const box = page.locator("#retention").locator("xpath=ancestor::section[1]").locator(".overflow-x-auto").first();
-    const overflow = await box.evaluate((el) => el.scrollWidth - el.clientWidth);
-    expect(overflow).toBeGreaterThan(0);
+    // Two-column tables fit a phone; tables of three or more columns keep a readable width and
+    // scroll inside their own box.
+    const overflows = await page.$$eval(".overflow-x-auto", (boxes) =>
+      boxes.filter((el) => (el.querySelector("tr")?.children.length ?? 0) >= 3).map((el) => el.scrollWidth - el.clientWidth),
+    );
+    expect(overflows.length).toBeGreaterThan(0);
+    for (const overflow of overflows) expect(overflow).toBeGreaterThan(0);
     const sideways = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(sideways).toBeLessThanOrEqual(0);
   });
