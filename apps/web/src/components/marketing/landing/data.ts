@@ -42,18 +42,19 @@ export const HERO_NOTES: HeroNote[] = [
 /**
  * Where each hero message lies in the scattered pile before the inbox sorts it (C-157 motion), by
  * row: x and y as percentages of the message's own box (so the pile scales with the inbox at every
- * width, and the server can draw it with no measuring), and a tilt in degrees. The rows land in a
- * loose heap over the inbox's own area, out of order.
+ * width, and the server can draw it with no measuring), and a tilt in degrees. The rows land out of
+ * order and spread over the same height as the sorted inbox, its header included (rows -0.9 to 6.8,
+ * one slot each), so the pile fills the space the inbox will take (owner, 2026-10-31).
  */
 export const HERO_PILE: { x: number; y: number; r: number }[] = [
-  { x: -9, y: 320, r: -6 },
-  { x: 11, y: -40, r: 4 },
-  { x: 6, y: 340, r: 7 },
-  { x: -13, y: -120, r: -3 },
-  { x: 12, y: 30, r: -5 },
-  { x: 3, y: -260, r: 3 },
-  { x: -7, y: 20, r: 5 },
-  { x: 9, y: -590, r: -7 },
+  { x: -14, y: 240, r: -6 },
+  { x: 12, y: -190, r: 5 },
+  { x: 9, y: 480, r: 7 },
+  { x: -16, y: -170, r: -4 },
+  { x: 14, y: 60, r: -5 },
+  { x: -6, y: -480, r: 4 },
+  { x: -11, y: -30, r: 6 },
+  { x: 10, y: -350, r: -7 },
 ];
 
 /** The shop's knowledge in the "how it works" scene; `cite` marks the lines the draft uses. */
