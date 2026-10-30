@@ -8146,3 +8146,82 @@ the coordinator's e2e run.
 - Optional, both instances: Customization → Branding still holds the old logo URL for Clerk's emails
   and hosted pages; the card no longer shows a logo, so nothing on these pages depends on it.
 - "Secured by Clerk" stays (removing it is a paid Clerk plan option).
+
+## C-159 · Premium inner pages
+
+### C-159 (guides)
+
+The owner's screenshot of `/guides/whatsapp-business-api-vs-app` at 1920: one text column and an
+empty right half. `/guides` and every guide now read as part of the premium site (C-157).
+
+**A guide.**
+- **Head:** the back link, the "Guide" eyebrow, the h1 (24ch), the guide's own description as the
+  lede (existing text, already the meta description), then one ruled meta row: the guide's icon, the
+  byline, the topic chips.
+- **Two columns from 1060 px (site-wide):** the article column with the body at a 68ch measure
+  (17 → 19 px, the lede step; 1.7 leading; body ink, not the secondary ink), and an 18rem sticky side
+  column: "On this page", a facts card (reading time, updated date, topics), and a quiet Start free
+  card ("Try it on your own messages / The Free plan needs no card.", wording from the old end card).
+  Below 1060 px the side column is hidden and the contents fold into an "In this guide" disclosure
+  above the body.
+- **Contents:** each body h2 is a `GuideH2` (its id from its text, `sectionId`, plus a link to itself
+  shown on hover or focus). `Guide.sections` lists the h2s; guides.test.tsx holds them equal to the
+  body. "Common questions" is the last entry. `TocSpy` (an idle-loaded client island, no render)
+  marks the current section with `aria-current="location"`: one IntersectionObserver whose root
+  runs from far above the page to 35% down the viewport, so a heading counts once it has passed that
+  line even when the page jumps (an anchor, a scrollbar drag). No scroll handler, no layout reads.
+- **Reading progress:** a 3 px ink bar fixed at the top, a CSS `view-timeline` over the article
+  (`contain` range, transform only). Without scroll timelines TocSpy steps it by section.
+- **Body blocks, in the guides' own words** (`components/marketing/guides/blocks.tsx`):
+  - WhatsApp: app vs Platform as two cards; "enough if" vs "makes sense when" as two cards; "Neither
+    is better" as a "what this means for you" callout; the middle path as a tip; "what to know before
+    you decide" as a note.
+  - Instagram DMs: the policy wording vs your wording as two cards; the Suggest-first advice as a
+    tip; the short checklist as a checklist card.
+  - Comment-to-DM: the four parts as step cards; Instagram's one-message rule as a note; the three
+    match modes as three cards; the two mistakes as a note; the set-up steps as a checklist.
+  - New words: only the callout titles ("Tip", "Note", "What this means for you", "A practical
+    middle path", "What to know before you decide", "Instagram's rule", "Two mistakes to avoid").
+    "A practical middle path:" and "And what to know before you decide:" moved from the text into
+    titles. Every guide still holds 900–1,500 words with its reading time.
+- **Questions** as cards (dl kept). The FAQPage JSON-LD is unchanged and matches them; e2e checks it.
+- **After the article:** "Keep reading" on the deeper paper: the other guides as cards, then the
+  related pages that aren't one of them as outlined buttons. Then the landing's night `FinalCta`
+  (without a trial line: the guides are static and don't read plans).
+- **Typography:** styled lists (ink-3 dots), ordered-list markers, inline links (iris, 1 px
+  underline), tables, blockquotes and code for future guides.
+
+**The index:** a split head (h1 left; the lede and RSS link right, bottom-aligned), the newest guide
+as a wide featured card with its screenshot on the deeper paper (from 900 px), the rest in an
+auto-fit grid, then the night close. Each card: the guide's icon, topics, title (the card's one link
+covering the card, focus ring on the card), excerpt, reading time and an arrow. Three `article`s,
+as before.
+
+**Icons:** the channel glyph in its colour for a WhatsApp or plain Instagram guide; Workflow in the
+comment colour for automations; MessageSquareReply in iris for AI replies (an AI moment).
+
+**Motion:** the landing's rise (`site-rise` on `view()`, 40 ms stagger along a row) on guide cards,
+body cards, callouts, the checklist and question cards; hover lift (3 px for linked guide cards with
+the arrow nudging, 2 px for body cards). No IntersectionObserver fallback for the rise: content
+starts visible, as on the landing without script. All of it off under reduced motion.
+
+**Judgment calls.**
+- Impeccable's craft floor bans the eyebrow; the owner's brief asks for one. Kept, as everywhere else.
+- Body cards lift on hover though they aren't links (as the landing's unlinked cards, C-157 motion).
+- The featured screenshot loads eagerly (it is the index's largest paint at 1440), so phones fetch
+  one 18rem image they don't show.
+- `PROSE` is no longer used by the guides (legal and info pages keep it); the guide body has its own
+  `.gprose` in the C-159 guides block of site.css.
+
+**Shared components for the others:** `components/site/Callout.tsx` (tip, note, means; optional
+title), `components/site/TocNav.tsx` + `TocSpy.tsx` (`toc-spy.ts`; any page with `[data-toc]` links
+and matching ids, and `[data-toc-progress]` for the fallback progress). Their styles (`.callout`,
+`.toc`) sit in the C-159 guides block, scoped under `.site` but not under `.guide`, so other pages can
+use them.
+
+**Checks:** typegen, tsc, eslint on the touched folders; vitest for components/site (new
+toc-spy.test.tsx), components/marketing, lib/marketing (guides: contents match the body, ids unique,
+anchors), app/(marketing), styles (design lint), seo and public metadata. e2e (`guides.spec.ts`, for
+the coordinator): two new tests, the two-column layout with contents, anchors, the active entry
+after a contents click, the side Start free in view, question cards matching the FAQPage, two related
+guide cards and the night close; and the phone disclosure.
