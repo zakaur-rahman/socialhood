@@ -1,8 +1,8 @@
-import { ArrowRight } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
+import { ArrowRight, Check, Clock } from "lucide-react";
+import type { CSSProperties } from "react";
 
-import { STATUS_LABEL } from "@/lib/marketing/gtm-pages";
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { StatusChip } from "@/components/site/StatusChip";
 import type { PlanCard, Pricing } from "@/lib/marketing/plans";
 import { faqPageJsonLd } from "@/lib/marketing/seo";
 import { SIGN_UP_PATH, SITE_NAME, absoluteUrl, appUrl, siteUrl } from "@/lib/marketing/site";
@@ -10,11 +10,14 @@ import type { SolutionPage, Tier } from "@/lib/marketing/solutions";
 import { cn } from "@/lib/utils";
 
 import { Faq } from "./Faq";
+import { FinalCta } from "./FinalCta";
+import { RelatedCards } from "./GtmPageView";
 import { BreadcrumbJsonLd, JsonLd } from "./JsonLd";
 import { INTEGRATIONS } from "./landing/Channels";
-import { Container, CtaLink, SECTION_EYEBROW } from "./primitives";
+import { Ico } from "./landing/Ico";
+import { AI_TITLES, cardIcon } from "./page-icons";
+import { CtaLink, SECTION_EYEBROW } from "./primitives";
 
-const LINK = "font-medium text-brand-fg underline-offset-4 hover:underline";
 const DOT = { live: "var(--ok)", waiting: "var(--wait-mark)", yours: "var(--iris)" } as const;
 
 /** What a plan says today: Free is available; Pro's state and price come only from the plans API. */
@@ -25,165 +28,171 @@ function planState(card: PlanCard | undefined): { label: string; tone: "t-ok" | 
   return { label: card.price ? `${card.price} a month` : "Price shown at sign-up", tone: "t-draft" };
 }
 
+/** A tier on the landing's plan-card skin (C-159): a sheet, the name, who it's for, the plan and its state. */
 function TierCard({ tier, pricing }: { tier: Tier; pricing: Pricing }) {
   const card = pricing.plans.find((plan) => plan.plan === tier.plan);
   const state = planState(card);
   const id = `tier-${tier.name.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <li className="card flex flex-col p-6" aria-labelledby={id}>
-      <h3 id={id} className="text-lg font-semibold">
-        {tier.name}
-      </h3>
-      <p className="mt-1 text-sm text-fg-secondary">{tier.who}</p>
-      <p className="mt-5 flex flex-wrap items-center gap-2 text-sm font-semibold">
+    <li className="tier" aria-labelledby={id}>
+      <h3 id={id}>{tier.name}</h3>
+      <p className="for">{tier.who}</p>
+      <p className="tier-plan">
         {card?.name ?? tier.plan}
         <span className={cn("tag", state.tone)}>{state.label}</span>
       </p>
-      <p className="mt-2 text-sm leading-relaxed text-fg-secondary">{tier.body}</p>
+      <p className="tier-b">{tier.body}</p>
     </li>
   );
 }
 
 /**
- * /for-creators and /for-businesses (C-156): the hero with one h1, "Sounds familiar?" before and
- * after, the features with their status, the integrations (businesses), plans by audience size
- * (no testimonials: there are none to show), the FAQ with its FAQPage JSON-LD, and related pages.
+ * /for-creators and /for-businesses (C-156; C-159 look): the head beside an "at a glance" card,
+ * "Sounds familiar?" as before and after cards, the features as icon cards with their status, the
+ * integrations (businesses), plans by audience size on the plan-card skin (no testimonials: there
+ * are none to show), the FAQ with its FAQPage JSON-LD, related pages and the night closing band.
  * The content is lib/marketing/solutions.ts; Pro's state comes from the plans API.
  */
 export function SolutionPageView({ page, pricing }: { page: SolutionPage; pricing: Pricing }) {
   const origin = siteUrl();
+  const pro = pricing.plans.find((card) => card.plan === "pro");
   return (
-    <main id="main" tabIndex={-1} className="flex-1 outline-none">
+    <main id="main" tabIndex={-1} className="pp flex-1 outline-none">
       <BreadcrumbJsonLd name={page.name} path={page.path} />
       <JsonLd data={{ "@context": "https://schema.org", ...faqPageJsonLd(page.faq, origin, `${absoluteUrl(page.path, origin)}#faq`) }} />
-      <section className="page-head">
-        <Container className="max-w-3xl">
-          <p className={SECTION_EYEBROW}>{page.eyebrow}</p>
-          <h1 className="h-page">{page.h1}</h1>
-          <p className="lede">{page.intro}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-6 sm:w-auto">
-              Start free <ArrowRight className="size-4" aria-hidden />
-            </CtaLink>
-            <CtaLink href="/pricing" variant="secondary" className="w-full px-6 sm:w-auto">
-              See plans and limits
-            </CtaLink>
+      <section className="page-head pp-head">
+        <div className="wrap pp-head-grid">
+          <div>
+            <p className={SECTION_EYEBROW}>{page.eyebrow}</p>
+            <h1 className="h-page">{page.h1}</h1>
+            <p className="lede">{page.intro}</p>
+            <div className="ctas pp-ctas">
+              <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>
+                Start free <ArrowRight className="size-4" aria-hidden />
+              </CtaLink>
+              <CtaLink href="/pricing" variant="secondary">
+                See plans and limits
+              </CtaLink>
+            </div>
           </div>
-        </Container>
+          <div className="pp-toc glance">
+            <p className="pp-toc-h">{page.featuresTitle}</p>
+            <ul>
+              {page.features.map((feature) => (
+                <li key={feature.title}>
+                  <span>{feature.title}</span>
+                  {feature.status && feature.status !== "yes" ? <StatusChip status={feature.status} /> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </section>
 
       <section aria-labelledby="familiar-title" className="band">
-        <Container>
+        <div className="wrap">
           <h2 id="familiar-title" className="h-sec">
             Sounds familiar?
           </h2>
-          <ul className="mt-8 grid gap-4 md:grid-cols-2">
+          <ul className="ba after-head">
             {page.familiar.map((item) => (
-              <li key={item.before} className="card p-5">
-                <p className="text-sm leading-relaxed text-fg-secondary">
-                  <span className="mb-1 block text-xs font-semibold text-fg">Before</span>
-                  {item.before}
-                </p>
-                <p className="mt-4 text-sm leading-relaxed text-fg">
-                  <span className="mb-1 block text-xs font-semibold text-brand-fg">With {SITE_NAME}</span>
-                  {item.after}
-                </p>
+              <li key={item.before} className="ba-card">
+                <div className="ba-before">
+                  <p className="ba-h">
+                    <Clock size={16} strokeWidth={1.75} aria-hidden />
+                    Before
+                  </p>
+                  <p>{item.before}</p>
+                </div>
+                <div className="ba-after">
+                  <p className="ba-h">
+                    <Check size={16} strokeWidth={2.25} aria-hidden />
+                    With {SITE_NAME}
+                  </p>
+                  <p>{item.after}</p>
+                </div>
               </li>
             ))}
           </ul>
-        </Container>
+        </div>
       </section>
 
       <section aria-labelledby="features-title" className="band">
-        <Container>
-          <h2 id="features-title" className="h-sec">
-            {page.featuresTitle}
-          </h2>
-          <p className="mt-3 max-w-2xl text-base text-fg-secondary">{page.featuresIntro}</p>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+        <div className="wrap">
+          <div className="split-head">
+            <h2 id="features-title" className="h-sec">
+              {page.featuresTitle}
+            </h2>
+            <p className="lede">{page.featuresIntro}</p>
+          </div>
+          <ul className="gcards after-head">
             {page.features.map((feature) => (
-              <li key={feature.title} className="card p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-semibold">{feature.title}</h3>
-                  {feature.status && feature.status !== "yes" ? (
-                    <span className="tag t-need">{STATUS_LABEL[feature.status]}</span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-fg-secondary">{feature.body}</p>
+              <li key={feature.title} className="gcard">
+                <Ico icon={cardIcon(feature.title)} className={AI_TITLES.has(feature.title) ? "ico-ai" : undefined} />
+                <h3>
+                  {feature.title}
+                  {feature.status && feature.status !== "yes" ? <StatusChip status={feature.status} /> : null}
+                </h3>
+                <p>{feature.body}</p>
               </li>
             ))}
           </ul>
-        </Container>
+        </div>
       </section>
 
       {page.integrations ? (
         <section aria-labelledby="integrations-title" className="band">
-          <Container>
-            <h2 id="integrations-title" className="h-sec">
-              Integrations, and what runs today
-            </h2>
-            <p className="mt-3 max-w-2xl text-base text-fg-secondary">
-              Instagram and WhatsApp connect only through Meta&apos;s official APIs, and we never ask for your password.
-            </p>
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="wrap">
+            <div className="split-head">
+              <h2 id="integrations-title" className="h-sec">
+                Integrations, and what runs today
+              </h2>
+              <p className="lede">
+                Instagram and WhatsApp connect only through Meta&apos;s official APIs, and we never ask for your password.
+              </p>
+            </div>
+            <ul className="gcards is-3 after-head">
               {INTEGRATIONS.map((item) => (
-                <li key={item.name} className="card p-5">
-                  <h3 className="text-base font-semibold">{item.name}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-fg-secondary">{item.body}</p>
-                  <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold">
-                    <i aria-hidden className="inline-block size-2 rounded-full" style={{ background: DOT[item.tone] }} />
+                <li key={item.name} className="gcard">
+                  {item.platform ? (
+                    <Ico className="ico-mark" style={{ "--c": item.mark } as CSSProperties}>
+                      <PlatformGlyph platform={item.platform} />
+                    </Ico>
+                  ) : (
+                    <Ico icon={item.icon} />
+                  )}
+                  <h3>{item.name}</h3>
+                  <p>{item.body}</p>
+                  <span className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
                     {item.status}
-                  </p>
+                  </span>
                 </li>
               ))}
             </ul>
-          </Container>
+          </div>
         </section>
       ) : null}
 
       <section aria-labelledby="tiers-title" className="band">
-        <Container>
-          <h2 id="tiers-title" className="h-sec">
-            Which plan fits
-          </h2>
-          <p className="mt-3 max-w-2xl text-base text-fg-secondary">{page.tiersIntro}</p>
-          <ul className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="wrap">
+          <div className="split-head">
+            <h2 id="tiers-title" className="h-sec">
+              Which plan fits
+            </h2>
+            <p className="lede">{page.tiersIntro}</p>
+          </div>
+          <ul className="tiers after-head">
             {page.tiers.map((tier) => (
               <TierCard key={tier.name} tier={tier} pricing={pricing} />
             ))}
           </ul>
-        </Container>
+        </div>
       </section>
 
       <Faq items={page.faq} eyebrow="FAQ" lede="Short answers about safety, the AI and the plans." />
 
-      <section aria-labelledby="related-title" className="band">
-        <Container className="max-w-3xl">
-          <h2 id="related-title" className="h-sec">
-            Keep reading
-          </h2>
-          <ul className="mt-5 grid gap-1 text-sm">
-            {page.related.map((link) => (
-              <li key={link.href}>
-                {link.href.startsWith("mailto:") ? (
-                  <a href={link.href} className={cn(LINK, "inline-flex min-h-10 items-center")}>
-                    {link.label}
-                  </a>
-                ) : (
-                  <Link href={link.href as Route} className={cn(LINK, "inline-flex min-h-10 items-center")}>
-                    {link.label}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8">
-            <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-6 sm:w-auto">
-              Start free
-            </CtaLink>
-          </div>
-        </Container>
-      </section>
+      <RelatedCards links={page.related} />
+      <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
     </main>
   );
 }
