@@ -212,6 +212,7 @@ export const WHATSAPP_API_VS_APP: Guide = {
     },
   ],
   related: [
+    { label: "WhatsApp auto-reply in Amplychat", href: "/whatsapp/auto-reply" },
     { label: "The AI inbox", href: "/features/ai-inbox" },
     { label: `${N} vs Interakt`, href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },

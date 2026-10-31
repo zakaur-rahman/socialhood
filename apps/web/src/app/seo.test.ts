@@ -124,6 +124,14 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/faq",
       "https://socialhood.example/how-it-works",
       "https://socialhood.example/features",
+      // C-163 (auto)
+      "https://socialhood.example/automations",
+      "https://socialhood.example/instagram/comment-to-dm",
+      "https://socialhood.example/instagram/story-replies",
+      "https://socialhood.example/instagram/dm-keywords",
+      "https://socialhood.example/instagram/conversation-starters",
+      "https://socialhood.example/whatsapp/auto-reply",
+      "https://socialhood.example/website-chat",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.

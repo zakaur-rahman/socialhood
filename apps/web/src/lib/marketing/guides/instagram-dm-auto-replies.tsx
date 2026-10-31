@@ -202,6 +202,7 @@ export const INSTAGRAM_DM_AUTO_REPLIES: Guide = {
   ],
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
+    { label: "Instagram DM keyword auto-reply", href: "/instagram/dm-keywords" },
     { label: "Comment-to-DM automations", href: "/guides/comment-to-dm-automations" },
     { label: "Plans and limits", href: "/pricing" },
   ],

@@ -188,6 +188,7 @@ export const COMMENT_TO_DM: Guide = {
     },
   ],
   related: [
+    { label: "Instagram comment to DM in Amplychat", href: "/instagram/comment-to-dm" },
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
     { label: "Plans and limits", href: "/pricing" },
