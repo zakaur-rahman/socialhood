@@ -153,5 +153,31 @@ test.describe("C-165 AI app connections", () => {
     }
     await expect(page.getByRole("table", { name: "What each plan includes for AI apps" })).toBeVisible();
     await expect(page.locator('script[type="application/ld+json"]').filter({ hasText: "FAQPage" })).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Using an API key instead" }).first()).toHaveAttribute("href", "/developers/mcp/api-key");
+  });
+
+  test("the MCP product page and the API-key page", async ({ page }) => {
+    await page.goto("/mcp");
+    await expect(page.getByRole("heading", { level: 1, name: "Use Amplychat from Claude, ChatGPT and Codex" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 3, name: "Other MCP apps" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "What each plan includes for AI apps" })).toBeVisible();
+    await page.getByRole("link", { name: "Set it up" }).first().click();
+    await expect(page).toHaveURL(/\/developers\/mcp$/);
+
+    await page.goto("/developers/mcp/api-key");
+    await expect(page.getByRole("heading", { level: 1, name: "Connect an AI app with an API key" })).toBeVisible();
+    await expect(page.getByText("bearer_token_env_var", { exact: false }).first()).toBeVisible();
+    await expect(page.locator('script[type="application/ld+json"]').filter({ hasText: "FAQPage" })).toHaveCount(1);
+  });
+
+  test("API keys are their own Settings section, not under Integrations", async ({ page, workspace }) => {
+    await page.goto(`/w/${workspace.slug}/settings/api-keys`);
+    await expect(page.getByRole("heading", { level: 1, name: "API keys" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "API keys" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Connect an AI app with a key" })).toHaveAttribute("href", /\/developers\/mcp\/api-key$/);
+    await page.goto(`/w/${workspace.slug}/settings/integrations`);
+    await expect(page.getByRole("heading", { level: 1, name: "Integrations" })).toBeVisible();
+    await expect(page.getByTestId("api-key")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Create API key" })).toHaveCount(0);
   });
 });

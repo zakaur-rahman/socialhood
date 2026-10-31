@@ -57,7 +57,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
         { text: "Add the server:", code: `claude mcp add --transport http amplychat ${url}` },
         { text: "In Claude Code, run /mcp, pick amplychat and authenticate. Your browser opens Amplychat to choose the workspace and allow it." },
         {
-          text: "Or, with an API key from Settings › Integrations (pick the AI app scopes you want):",
+          text: "Or, with an API key from Settings › API keys (pick the AI app scopes you want):",
           code: `claude mcp add --transport http amplychat ${url} \\\n  --header "Authorization: Bearer $AMPLYCHAT_API_KEY"`,
         },
       ],

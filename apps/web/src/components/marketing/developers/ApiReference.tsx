@@ -177,8 +177,8 @@ export function ApiReference({ reference, baseUrl }: { reference: Reference; bas
                 Authentication
               </h2>
               <p className="ep-p">
-                Make a key in Settings, Integrations, API keys. Send it on every request. A key belongs to one workspace and carries
-                scopes; a request that needs a scope the key lacks is refused with 403.
+                Make a key in Settings, API keys. Send it on every request. A key belongs to one workspace and carries
+                scopes; a request that needs a scope the key lacks is refused with 403. To use a key with an AI app, see <a href="/developers/mcp/api-key">connect an AI app with an API key</a>.
               </p>
               <pre className="code">
                 <code>{`curl "${base}/public/v1/contacts" \\\n  -H "Authorization: Bearer $SOCIALHOOD_API_KEY"`}</code>

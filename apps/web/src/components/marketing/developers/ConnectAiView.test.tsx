@@ -21,6 +21,15 @@ describe("/developers/mcp (C-165)", () => {
     expect(within(table).getByRole("columnheader", { name: "Free" })).toBeInTheDocument();
   });
 
+  it("points the key-based guides to the API-key page and names Settings > API keys", () => {
+    render(<ConnectAiView apiBase="https://api.amplychat.com" />);
+    const links = screen.getAllByRole("link", { name: "Using an API key instead" });
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link).toHaveAttribute("href", "/developers/mcp/api-key");
+    expect(screen.getByText(/API key from Settings › API keys/)).toBeInTheDocument();
+    expect(screen.queryByText(/Settings › Integrations/)).toBeNull();
+  });
+
   it("builds the address from the API's base URL", () => {
     expect(mcpUrl("https://api.example.com/")).toBe("https://api.example.com/mcp");
     expect(mcpUrl(undefined)).toMatch(/\/mcp$/);

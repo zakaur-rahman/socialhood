@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
@@ -17,6 +19,8 @@ import {
 } from "lucide-react";
 
 import { CONNECT_AI_FAQ, CONNECT_AI_META, CONNECT_AI_PATH, CAPABILITIES, PLAN_ROWS, SAFETY, clientGuides, mcpUrl, type ClientGuide } from "@/lib/marketing/connect-ai";
+import { API_KEY_PAGE_PATH } from "@/lib/marketing/mcp-api-key";
+import { MCP_PAGE_PATH } from "@/lib/marketing/mcp-page";
 import { PRICING_PATH } from "@/lib/marketing/gtm-pages";
 import { faqPageJsonLd } from "@/lib/marketing/seo";
 import { SIGN_UP_PATH, absoluteUrl, appUrl, siteUrl } from "@/lib/marketing/site";
@@ -39,6 +43,9 @@ const CAPABILITY_ICONS: Record<string, LucideIcon> = {
 
 const SAFETY_ICONS: LucideIcon[] = [Hand, Timer, ShieldCheck, Eye, ScrollText, ListChecks];
 
+/** The guides that offer a key as the other way in. */
+const KEY_GUIDES: ReadonlySet<string> = new Set(["claude-code", "codex"]);
+
 const SECTIONS = [
   { id: "what-you-can-do", label: "What you can do" },
   { id: "set-up", label: "Set it up" },
@@ -47,7 +54,7 @@ const SECTIONS = [
   { id: "faq", label: "Common questions" },
 ] as const;
 
-function Code({ children }: { children: string }) {
+export function Code({ children }: { children: string }) {
   return (
     <pre className="cx-code" tabIndex={0}>
       <code>{children}</code>
@@ -72,6 +79,11 @@ function Guide({ guide }: { guide: ClientGuide }) {
         ))}
       </ol>
       {guide.note ? <p className="cx-note">{guide.note}</p> : null}
+      {KEY_GUIDES.has(guide.id) ? (
+        <p className="cx-note">
+          <Link href={API_KEY_PAGE_PATH as Route}>Using an API key instead</Link>
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -223,6 +235,8 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
 
       <RelatedCards
         links={[
+          { label: "What Amplychat does in your AI app", href: MCP_PAGE_PATH },
+          { label: "Connect with an API key", href: API_KEY_PAGE_PATH },
           { label: "Public API", href: "/developers/api" },
           { label: "Publishing", href: "/features/publishing" },
           { label: "Pricing", href: PRICING_PATH },

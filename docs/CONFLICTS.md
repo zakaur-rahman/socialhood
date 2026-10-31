@@ -9340,3 +9340,19 @@ Phase B built the 12 write, media and Ask tools, the two prompts, the upload pag
   - `security/ratelimit.py`, `jobs/tasks/purge.py`, `repositories/retention.py`;
   - `tests/support/db.py` (`clean_db` also truncates `oauth_clients`), `tests/tenancy/test_isolation.py`, `tests/unit/test_permission_routes.py`.
 - **Settings groups:** a new `ai-apps` segment in `components/settings/sections.ts` and `groups.ts`.
+
+### C-165 (MCP pages and API keys settings)
+
+Owner asked for a public MCP product page, a separate API-key connection page, and API keys out of Settings › Integrations.
+
+- **New routes:** `/mcp` (product page, content `lib/marketing/mcp-page.ts`, view `McpProductView`) and `/developers/mcp/api-key` (`lib/marketing/mcp-api-key.ts`, `McpApiKeyView`). Both are in `PUBLIC_PATHS`, `PAGE_UPDATED` (2026-11-01), the sitemap (via those lists), llms.txt and the SEO tests. The footer's Solutions column gets "MCP" (`/mcp`) beside "Connect AI apps"; the key page is reached from the guide, the product page, Settings and the API reference, not the footer.
+- **Plans, safety and limits are imported** from `connect-ai.ts` (`PLAN_ROWS`, `SAFETY`, `mcpUrl`), not copied. `Code` is now exported from `ConnectAiView.tsx` and reused. The key page's limits table is `PLAN_ROWS` filtered to the daily rows and the "API key" row.
+- **Other MCP apps (Cursor, VS Code, ...)** are described as expected to work over Streamable HTTP with OAuth or a bearer header, and said plainly to be untested by us.
+- **Audit wording:** the key page says a change a key makes shows in Settings › Audit log as "member via the app's name". `mcp/audit.py` writes `"{who} via {client name, else API key “name”}"`, so the line says the app's name (Claude Code), not "via API key". Reads are only in `mcp_tool_calls`, which the page says without claiming a screen for it.
+- **API keys left Integrations.** New segment `api-keys` ("API keys", owners and admins) in `sections.ts`, in the Admin group after Integrations, route `settings/api-keys`, page `ApiKeysPage` around the unchanged `ApiKeysSection`. The Pro upsell (`public_api`, Free sees "part of Pro") stays in `ApiKeysSection`. Old copy changed: Connected AI apps' empty state (now links to the new page), the API reference's Authentication paragraph, the guide's Claude Code step.
+- **Old links left on the API side (not changed here):**
+  - `apps/api/src/socialhood/api/public_openapi.py` lines 24 and 79 say "Make a key in Settings, Integrations". They are in the OpenAPI document's description, which `/developers/api` renders; it still says Integrations until the API is changed.
+  - Comments only: `api/v1/ai_connections.py:156`, `agent/tools/integrations.py`, `api/v1/activity.py` (these name Integrations for webhooks and are still right) and `docs/architecture/mcp/03-phase-a.md:75` (setup text).
+  - `api/v1/oauth.py:90` and `services/activity/feed.py:93` point at `/settings/integrations` for the Google Sheets and webhook cases, which stay there.
+- **CSS:** a block at the end of `components/site/site.css` (`/* ==== C-165 mcp page ==== */`), tokens only. The brief named `app/site.css`; the C-165 connect block lives in `components/site/site.css`, so it went there.
+- **e2e:** `gr25-public-api.spec.ts` now opens `/settings/api-keys`; `c165-ai-connections.spec.ts` gained the two public pages and the settings page. Not run.
