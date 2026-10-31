@@ -31,6 +31,7 @@ dependencies = [
     "pywebpush>=2.5",
     "sentry-sdk[fastapi]>=2.40",
     "segno>=1.6",
+    "mcp>=2.3.0,<3",
 ]
 
 [dependency-groups]
