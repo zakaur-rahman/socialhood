@@ -15,10 +15,18 @@ from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
 from socialhood.mcp.tools.common import moment
 from socialhood.models.connections import AccountStatus
 from socialhood.models.identity import User
+from socialhood.models.mcp import AiConnectionsMode
 from socialhood.repositories import social_accounts
 from socialhood.services.scheduled_posts import calendar, views
 
 # ---------------------------------------------------------------- get_workspace
+
+MODE_SUMMARY = {
+    AiConnectionsMode.OFF: "do nothing (AI connections are off)",
+    AiConnectionsMode.READ_ONLY: "read",
+    AiConnectionsMode.READ_DRAFTS: "read and prepare drafts",
+    AiConnectionsMode.FULL: "read, prepare drafts and make changes",
+}
 
 
 class GetWorkspaceInput(ToolInput):
@@ -85,14 +93,14 @@ async def get_workspace(call: ToolCall, args: GetWorkspaceInput) -> WorkspaceRes
     except Exception:
         used = 0
     caveats = []
-    if call.mode.value == "off":
+    if call.mode is AiConnectionsMode.OFF:
         caveats.append(
             "AI connections are turned off for this workspace, so no other tool can be used "
             "until an owner or admin turns them on in Amplychat, under Settings."
         )
     return WorkspaceResult(
         summary=f"Connected to {workspace.name} ({call.plan.capitalize()} plan) as "
-        f"{principal.role.value}; AI apps may: {call.mode.value.replace('_', ' ')}",
+        f"{principal.role.value}; AI apps may {MODE_SUMMARY[call.mode]}",
         workspace=WorkspaceInfo(
             id=workspace.id, name=workspace.name, timezone=call.timezone.key, plan=call.plan
         ),
