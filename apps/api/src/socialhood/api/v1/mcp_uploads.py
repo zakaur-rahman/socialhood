@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request
+from pydantic import Field
 
 from socialhood.auth.deps import CanManagePublishing, Session
 from socialhood.billing.plans import current_plan
@@ -54,7 +55,7 @@ class McpUploadTicket(ResponseModel):
 
 
 class McpUploadComplete(RequestModel):
-    public_id: str
+    public_id: str = Field(max_length=255)  # Cloudinary allows 255
 
 
 def _cloudinary(request: Request) -> Cloudinary:

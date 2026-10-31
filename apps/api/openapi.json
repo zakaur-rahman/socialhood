@@ -7762,6 +7762,7 @@
         "properties": {
           "scopes": {
             "items": {
+              "maxLength": 64,
               "type": "string"
             },
             "maxItems": 30,
@@ -13959,6 +13960,7 @@
         "additionalProperties": false,
         "properties": {
           "public_id": {
+            "maxLength": 255,
             "title": "Public Id",
             "type": "string"
           }
@@ -27350,6 +27352,7 @@
             "name": "request_id",
             "required": true,
             "schema": {
+              "maxLength": 64,
               "title": "Request Id",
               "type": "string"
             }
@@ -27402,6 +27405,7 @@
             "name": "request_id",
             "required": true,
             "schema": {
+              "maxLength": 64,
               "title": "Request Id",
               "type": "string"
             }
@@ -27464,6 +27468,7 @@
             "name": "request_id",
             "required": true,
             "schema": {
+              "maxLength": 64,
               "title": "Request Id",
               "type": "string"
             }
@@ -28957,7 +28962,7 @@
     },
     "/v1/w/{wid}/ai-connections/revoke-all": {
       "post": {
-        "description": "\"Disconnect all\": every AI app connection in the workspace, at once (\u00a76.7). API keys\nare separate (Settings, Integrations).",
+        "description": "\"Disconnect all\": every AI app connection in the workspace, at once (\u00a76.7). API keys\nare separate (Settings, API keys).",
         "operationId": "revoke_all_ai_connections",
         "parameters": [
           {

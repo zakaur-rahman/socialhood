@@ -15,8 +15,9 @@ may connect, and the connection then does only what the role allows (§3.5).
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 
 from socialhood.auth.deps import CurrentUser, Session
 from socialhood.errors import ApiError
@@ -38,6 +39,9 @@ from socialhood.services.ai_connections import verified_host
 
 router = APIRouter(prefix="/v1/connect", tags=["ai-connections"])
 
+# A pending request's id is secrets.token_urlsafe(24), 32 characters (oauth/service.py).
+RequestId = Annotated[str, Path(max_length=64)]
+
 
 def _refused(error: ConsentError) -> ApiError:
     return ApiError(error.code, error.message)
@@ -45,7 +49,7 @@ def _refused(error: ConsentError) -> ApiError:
 
 @router.get("/requests/{request_id}", operation_id="get_connect_request")
 async def get_request(
-    request_id: str, request: Request, user: CurrentUser, session: Session
+    request_id: RequestId, request: Request, user: CurrentUser, session: Session
 ) -> ConnectRequest:
     try:
         waiting = await oauth.pending(request.app.state.redis, request_id)
@@ -86,7 +90,7 @@ def _client(client: OAuthClient, redirect_uri: str) -> ConnectClient:
 
 @router.post("/requests/{request_id}/approve", operation_id="approve_connect_request")
 async def approve(
-    request_id: str,
+    request_id: RequestId,
     body: ConnectApproval,
     request: Request,
     user: CurrentUser,
@@ -109,7 +113,7 @@ async def approve(
 
 
 @router.post("/requests/{request_id}/deny", operation_id="deny_connect_request")
-async def deny(request_id: str, request: Request, user: CurrentUser) -> ConnectRedirect:
+async def deny(request_id: RequestId, request: Request, user: CurrentUser) -> ConnectRedirect:
     try:
         location = await oauth.deny(request.app.state.redis, request.app.state.settings, request_id)
     except ConsentError as error:

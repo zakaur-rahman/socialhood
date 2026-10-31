@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -64,7 +64,7 @@ class ConnectRequest(ResponseModel):
 
 class ConnectApproval(RequestModel):
     workspace_id: uuid.UUID
-    scopes: list[str] = Field(default_factory=list, max_length=30)
+    scopes: list[Annotated[str, Field(max_length=64)]] = Field(default_factory=list, max_length=30)
 
 
 class ConnectRedirect(ResponseModel):
