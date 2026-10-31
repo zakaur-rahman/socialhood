@@ -196,7 +196,8 @@ describe("structured data (C-142)", () => {
     // The owner keeps the location out of the site-wide data (2026-10-31): no postal address at all.
     expect(org).not.toHaveProperty("address");
     expect(JSON.stringify(org)).not.toMatch(/Bihar/);
-    expect(org).not.toHaveProperty("sameAs");
+    // sameAs lists the business's own live profiles, and nothing else (owner, 2026-10-31).
+    expect(org.sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470"]);
     expect(org).not.toHaveProperty("aggregateRating");
   });
 

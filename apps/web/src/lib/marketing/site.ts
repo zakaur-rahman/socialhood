@@ -78,10 +78,14 @@ export const LOGO_PATH = "/icons/icon-512.png";
 export const LOGO_SIZE = 512;
 
 /**
- * The business's own social profiles, for Organization.sameAs. Empty until real ones exist: a
- * profile is listed here only once it is live and run by the business.
+ * The business's own social profiles: Organization.sameAs and the footer's links. A profile is
+ * listed here only once it is live and run by the business (Instagram and the Facebook Page, owner
+ * 2026-10-31).
  */
-export const SOCIAL_PROFILES: readonly string[] = [];
+export const SOCIAL_PROFILES: readonly { network: "instagram" | "facebook"; label: string; url: string }[] = [
+  { network: "instagram", label: "Instagram", url: "https://www.instagram.com/amplychat_67/" },
+  { network: "facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61595928331470" },
+];
 
 /** The share image every public page names, drawn by app/(marketing)/og.png/route.tsx (next/og). */
 export const OG_IMAGE = {
@@ -156,8 +160,8 @@ export type FooterLink = { label: string; href: string; external?: boolean };
 export type FooterColumn = { id: string; title: string; links: FooterLink[] };
 
 /**
- * The footer's columns (C-156). Status shows only when the status page is configured. No social
- * links: the business has no profiles yet (SOCIAL_PROFILES). The /shipping page is labelled
+ * The footer's columns (C-156). Status shows only when the status page is configured. The social
+ * profiles (SOCIAL_PROFILES) sit under the brand, not in a column. The /shipping page is labelled
  * "Delivery" here (C-161 v2): the business ships nothing physical; the page keeps its URL and its
  * "Shipping and Delivery Policy" title, which payment-provider reviews look for.
  */

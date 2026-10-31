@@ -234,6 +234,10 @@ body:has(.site) {
     }
     & .foot .foot-contact { gap: var(--space-2); margin-top: var(--space-4); min-height: 44px; color: var(--s-text); font-weight: 500; }
     & .foot .foot-contact svg { flex: none; transition: transform var(--dur-fast) var(--ease); }
+    /* The business's own profiles under the brand (SOCIAL_PROFILES): quiet 44 px icon links. */
+    & .foot .foot-social { display: flex; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+    & .foot .foot-social a { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--s-text-2); transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease); }
+    @media (hover: hover) { & .foot .foot-social a:hover { color: var(--s-text); background: var(--s-hover); } }
     @media (hover: hover) {
       & .foot ul a:hover, & .foot .foot-contact:hover { color: var(--s-text); text-decoration-color: currentColor; }
       & .foot .foot-contact:hover svg { transform: translateX(var(--dist-micro)); }

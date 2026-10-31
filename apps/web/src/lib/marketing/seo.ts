@@ -108,7 +108,7 @@ export function organizationJsonLd(origin: string = siteUrl()): Record<string, u
     logo: { "@type": "ImageObject", url: absoluteUrl(LOGO_PATH, origin), width: LOGO_SIZE, height: LOGO_SIZE },
     email: SUPPORT_EMAIL,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: SUPPORT_EMAIL },
-    ...(SOCIAL_PROFILES.length ? { sameAs: [...SOCIAL_PROFILES] } : {}),
+    ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES.map((profile) => profile.url) } : {}),
   };
 }
 
