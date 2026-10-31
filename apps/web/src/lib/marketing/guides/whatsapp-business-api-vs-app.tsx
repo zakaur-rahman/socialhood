@@ -214,6 +214,8 @@ export const WHATSAPP_API_VS_APP: Guide = {
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
     { label: `${N} vs Interakt`, href: "/compare/interakt" },
+    // C-163 (gloss)
+    { label: "WhatsApp terms explained", href: "/glossary" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

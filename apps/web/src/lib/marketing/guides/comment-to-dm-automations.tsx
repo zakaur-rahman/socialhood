@@ -190,6 +190,8 @@ export const COMMENT_TO_DM: Guide = {
   related: [
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
+    // C-163 (gloss)
+    { label: "What private replies are", href: "/glossary/private-replies" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

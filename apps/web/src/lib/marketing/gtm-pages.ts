@@ -182,6 +182,8 @@ export const SWITCH_PAGE: GtmPage = {
   ],
   related: [
     { label: "Amplychat vs Manychat", href: "/compare/manychat" },
+    // C-163 (gloss)
+    { label: "Manychat alternatives", href: "/compare/manychat-alternatives" },
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "Plans and limits", href: "/pricing" },
   ],
@@ -414,6 +416,8 @@ export const COMPARE_MANYCHAT: GtmPage = {
   ],
   related: [
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
+    // C-163 (gloss)
+    { label: "Manychat alternatives", href: "/compare/manychat-alternatives" },
     { label: "Amplychat vs Interakt", href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },
   ],

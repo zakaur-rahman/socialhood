@@ -8841,3 +8841,85 @@ proposals with their data source and thin-content risk.
 `next typegen`, `tsc --noEmit`, eslint on the touched folders; vitest for `app`, `lib/marketing`,
 `components/marketing` and `styles` (all pass). `caddy adapt` on the Caddyfile. The e2e title for
 `/features/ai-inbox` in `gr37-gtm-pages.spec.ts` follows the new title; CI runs e2e.
+
+## C-163 · SEO content
+
+### C-163 (gloss)
+
+The audit's programmatic sets 2 and 3: a glossary of Meta messaging terms and a "Manychat
+alternatives" list page. Web only.
+
+**Glossary (`/glossary`, `/glossary/{slug}`).**
+- 24 terms as typed data (`lib/marketing/glossary.ts`), the same no-CMS model as the guides (C-153):
+  a one-sentence definition (also the meta description, at most 155 characters), the detail, "How
+  Amplychat handles it" as status cards (the comparison statuses), related terms, a guide or feature
+  to read next, and Meta's sources with the date read. `dynamicParams = false`, so any other slug is a
+  404. A test holds every term to 200–450 words, Meta-only source hosts, links that resolve and no
+  "best", "#1" or "please".
+- **Dropped (no Meta source):** knowledge base, keyword trigger and lead scoring. **Kept with a
+  Meta source for the mechanism:** comment-to-DM (private replies) and human hand-off (Meta's
+  policy example, Conversation Routing, the human agent tag). BSP is defined as Meta's older name
+  for what its docs now call Solution Partners, with Tech Providers beside it.
+- **Sources** (all read 2026-10-31): developers.facebook.com pages read directly; Meta's help
+  centres (quality rating, business verification, Instagram professional account) and two pages
+  that only came through a search engine (message tags, the Instagram Messaging changelog) are
+  marked `via: "search"` and the page says "read through a search engine's copy".
+- **Our side, checked in the code:** reply window (`services/reply_window.py`, `sending.py`), human
+  agent tag built and off until Meta approves it (`ig_human_agent_enabled`), templates listed but not
+  created (`platforms/whatsapp/adapter.py`, `TemplatePicker`), consent records and STOP
+  (`ContactConsent`, `broadcasts/stop.py`), Embedded Signup (`lib/whatsapp/embedded-signup.ts`), Cloud
+  API (`platforms/whatsapp/graph.py`), the send queue (`platforms/buckets.py`), private-reply rules
+  (`services/comments/actions.py`), ice breakers (`services/ice_breakers.py`), quick replies
+  (`schemas/flows.py`), story triggers (GR-06/07), Instagram Login scopes
+  (`platforms/instagram/oauth.py`), professional accounts only (`PROFESSIONAL_TYPES`), escalation and
+  takeover (`ai/policy.py`, `services/takeover.py`). Broadcast-side handling (tiers, quality pauses,
+  cost estimates) is "Coming soon" (O-11). Coexistence is "Not offered" (only the Embedded Signup
+  finish event is accepted; no sync).
+- **Look:** a split head, a sticky bar with A–Z links and the filter island, the terms as dictionary
+  rows by letter, "How we write these", the night close. A term: back link, eyebrow with the
+  channel, the h1, the definition as the lede with an ink rule, then the detail, status cards and
+  related-term cards beside a sticky side column (channel, date, sources, the page to read next, a
+  quiet Start free). The landing's rise and lift; nothing moves under reduced motion.
+- **The filter** (`GlossaryFilter`, a client island) fills a slot whose height CSS reserves, renders
+  nothing until hydrated (`useSyncExternalStore`), and only toggles `hidden` on the server-rendered
+  list. Without script the full list and the letter links work. No layout reads.
+- **JSON-LD:** `DefinedTermSet` with every `DefinedTerm` on the index, `DefinedTerm` with
+  `inDefinedTermSet` on each term, breadcrumbs Home › Glossary › term (`lib/marketing/glossary-seo.ts`,
+  kept out of `seo.ts` to avoid merge conflicts).
+- *The slug `app-review` was renamed `meta-app-review`: the sitemap test rejects any URL with
+  `/app` followed by a word boundary.*
+
+**Manychat alternatives (`/compare/manychat-alternatives`).**
+- Built only from what the comparison pages already say (`lib/marketing/alternatives.ts`; every line
+  names the row it restates; prices are read from the "How it is priced"/"Starting price" cells). Why
+  people look (billing by active contacts, AI in beta, comments and publishing not found) from
+  `COMPARE_MANYCHAT`, and "Where Manychat stays strong" from its "Which fits you" line.
+- Nine tools in **alphabetical order**, Amplychat second by the alphabet, with its own limits (no
+  canvas, no share or follow triggers, broadcasts soon, Facebook waiting on Meta, no TikTok,
+  Telegram, SMS or email). The page says the order isn't a ranking; the ItemList is
+  `ItemListUnordered`. No "best", no scores.
+- An at-a-glance table, then a card per tool (suits, strengths, limits, starting price with "Checked
+  on 29 October 2026", a link to the full comparison). The plural trademark note
+  (`competitorsNote` in `competitor-note.ts`) names every competitor.
+
+**Links in:** footer Compare ("Manychat alternatives") and Resources ("Glossary"); the `/compare`
+hub (a card after the groups); `related` on `/compare/manychat` and `/switch-from-manychat`; the
+WhatsApp guide ("WhatsApp terms explained") and the comment-to-DM guide ("What private replies
+are"); llms.txt (the list page and a Glossary section with every term). `PUBLIC_PATHS` and
+`PAGE_UPDATED` gain `/glossary` and the list page; the sitemap adds each term with its date.
+
+**For the coordinator and the owner.**
+- **Meta's pricing changed on 1 October 2026:** service messages (free-form replies in the window)
+  are charged again after 1,000 free a month per number (developers.facebook.com/docs/whatsapp/pricing,
+  read 2026-10-31). `WhatsAppCharges.tsx` and the WhatsApp guide still say replies inside the window
+  aren't charged. The glossary states the new rule; those pages need the same fix.
+- **Meta's messaging-limit tiers are now 250, 2,000, 10,000, 100,000 and unlimited**, set per
+  business portfolio. `services/broadcasts/throttle.py` `TIER_LIMITS` still has 50/250/1K/10K/100K.
+  Broadcasts are off, so nothing is claimed, but the table needs updating before they open.
+
+**Checks:** typegen, `tsc --noEmit`, eslint on the touched folders and the e2e spec; vitest for
+`lib/marketing`, `components/marketing`, `components/site`, `app/(marketing)`, `app/seo`,
+`app/public-metadata` and `styles` (633 tests pass). New: `glossary.test.ts`,
+`glossary-filter.test.ts`, `app/(marketing)/seo-content.test.tsx`. New e2e
+`e2e/c163-gloss.spec.ts` (not run here). Screenshots at 375 and 1440 in
+`scratchpad/seo-content/gloss/`.

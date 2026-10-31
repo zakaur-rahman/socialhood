@@ -13,6 +13,7 @@ import { SECTION_EYEBROW } from "@/components/marketing/primitives";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { legalDate } from "@/lib/legal";
 import { latestChecked } from "@/lib/marketing/competitor-note";
+import { ALTERNATIVES_PATH } from "@/lib/marketing/alternatives";
 import { COMPARE_GROUPS, COMPARE_PATH } from "@/lib/marketing/gtm-pages";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME } from "@/lib/marketing/site";
@@ -115,6 +116,21 @@ export default function ComparePage() {
           </section>
         );
       })}
+
+      {/* C-163 (gloss): the list page, linked from the hub. */}
+      <section aria-labelledby="alts-title" className="band">
+        <div className="wrap">
+          <article className="hcard is-wide">
+            <h2 id="alts-title" className="h-sec">
+              <Link href={ALTERNATIVES_PATH as Route} className="hcard-link">
+                Manychat alternatives
+              </Link>
+              <ArrowRight className="hcard-arrow size-4" aria-hidden />
+            </h2>
+            <p>Nine tools side by side on one page, {SITE_NAME} among them: who each suits, strengths, limits and starting prices.</p>
+          </article>
+        </div>
+      </section>
 
       <section aria-labelledby="note-title" className="band">
         <div className="wrap">
