@@ -111,6 +111,7 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/data-deletion",
       "https://socialhood.example/contact",
       "https://socialhood.example/developers/api",
+      "https://socialhood.example/developers/mcp",
       "https://socialhood.example/security",
       "https://socialhood.example/guides",
       "https://socialhood.example/for-creators",

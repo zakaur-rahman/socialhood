@@ -34,6 +34,11 @@ class McpPrincipal:
     credential_id: uuid.UUID  # the API key's id, or (phase C) the connection's
     # What the audit and get_workspace call the credential, e.g. "API key “Codex laptop”".
     credential_label: str
+    # OAuth only (phase C): how a missing scope is challenged. "http": a 403 with
+    # WWW-Authenticate: Bearer error="insufficient_scope" (the MCP spec); "tool_result": a tool
+    # error carrying _meta["mcp/www_authenticate"] (ChatGPT's linking UI). None for API keys,
+    # which have nothing to step up to.
+    scope_challenge: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)

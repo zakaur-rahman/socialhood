@@ -27,6 +27,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/connect/requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Request */
+        get: operations["get_connect_request"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connect/requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_connect_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connect/requests/{request_id}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deny */
+        post: operations["deny_connect_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/data-deletion/{code}": {
         parameters: {
             query?: never;
@@ -369,6 +420,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/ai-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Connections
+         * @description Live OAuth connections, newest first, with each one's tool calls in the last 7 days and
+         *     its 5 latest. Owners and admins see everyone's; other members see their own.
+         */
+        get: operations["list_ai_connections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke All
+         * @description "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
+         *     are separate (Settings, Integrations).
+         */
+        post: operations["revoke_all_ai_connections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/ai-connections/settings": {
         parameters: {
             query?: never;
@@ -384,6 +477,47 @@ export interface paths {
          *     beyond the plan (``full`` on Free).
          */
         put: operations["update_ai_connections_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Connection
+         * @description Disconnect: every token of it stops on its next request. Revoking again is a no-op.
+         *     Every member may disconnect their own (``self.preferences``); owners and admins anyone's.
+         */
+        delete: operations["revoke_ai_connection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/{connection_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Activity
+         * @description The connection's latest 50 tool calls (the MCP audit keeps 90 days).
+         */
+        get: operations["get_ai_connection_activity"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -5360,6 +5494,92 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** AiConnection */
+        AiConnection: {
+            /** Calls 7D */
+            calls_7d: number;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Yours */
+            is_yours: boolean;
+            /** Last Used At */
+            last_used_at?: string | null;
+            member: components["schemas"]["AiConnectionMember"];
+            /** Recent Calls */
+            recent_calls: components["schemas"]["AiConnectionCall"][];
+            /** Redirect Host */
+            redirect_host: string;
+            /** Scopes */
+            scopes: string[];
+            /** Verified Host */
+            verified_host?: string | null;
+        };
+        /** AiConnectionActivity */
+        AiConnectionActivity: {
+            /** Items */
+            items: components["schemas"]["AiConnectionCall"][];
+        };
+        /** AiConnectionCall */
+        AiConnectionCall: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "ok" | "error" | "refused";
+            /** Tool */
+            tool: string;
+        };
+        /** AiConnectionList */
+        AiConnectionList: {
+            /** Can Manage All */
+            can_manage_all: boolean;
+            /** Items */
+            items: components["schemas"]["AiConnection"][];
+        };
+        /** AiConnectionMember */
+        AiConnectionMember: {
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** AiConnectionsRevoked */
+        AiConnectionsRevoked: {
+            /** Revoked */
+            revoked: number;
+        };
         /** AiConnectionsSettings */
         AiConnectionsSettings: {
             /**
@@ -7355,10 +7575,98 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ConnectApproval */
+        ConnectApproval: {
+            /** Scopes */
+            scopes?: string[];
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
+        };
+        /** ConnectClient */
+        ConnectClient: {
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Loopback */
+            loopback: boolean;
+            /** Name */
+            name: string;
+            /** Redirect Host */
+            redirect_host: string;
+            /** Verified Host */
+            verified_host?: string | null;
+        };
+        /** ConnectMember */
+        ConnectMember: {
+            /** Email */
+            email: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** ConnectRedirect */
+        ConnectRedirect: {
+            /** Redirect To */
+            redirect_to: string;
+        };
+        /** ConnectRequest */
+        ConnectRequest: {
+            /** Always */
+            always: string;
+            client: components["schemas"]["ConnectClient"];
+            /** Groups */
+            groups: components["schemas"]["ConnectScopeGroup"][];
+            member: components["schemas"]["ConnectMember"];
+            /** Workspaces */
+            workspaces: components["schemas"]["ConnectWorkspace"][];
+        };
+        /** ConnectScope */
+        ConnectScope: {
+            /** Description */
+            description: string;
+            /** Scope */
+            scope: string;
+        };
+        /** ConnectScopeGroup */
+        ConnectScopeGroup: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Scopes */
+            scopes: components["schemas"]["ConnectScope"][];
+        };
         /** ConnectStart */
         ConnectStart: {
             /** Authorize Url */
             authorize_url: string;
+        };
+        /** ConnectWorkspace */
+        ConnectWorkspace: {
+            /** Can Connect */
+            can_connect: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+            /** Name */
+            name: string;
+            /** Plan */
+            plan: string;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
         };
         /**
          * Consent
@@ -14088,6 +14396,130 @@ export interface operations {
             };
         };
     };
+    get_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRequest"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRedirect"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deny_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRedirect"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_data_deletion_status: {
         parameters: {
             query?: never;
@@ -14909,6 +15341,86 @@ export interface operations {
             };
         };
     };
+    list_ai_connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_all_ai_connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsRevoked"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_ai_connections_settings: {
         parameters: {
             query?: never;
@@ -14971,6 +15483,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiConnectionsSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_ai_connection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_ai_connection_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionActivity"];
                 };
             };
             /** @description Validation error */

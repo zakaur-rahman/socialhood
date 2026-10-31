@@ -39,6 +39,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Audit log",
       "Activity",
       "Ask Amplychat",
+      "Connected AI apps",
     ]);
   });
 });

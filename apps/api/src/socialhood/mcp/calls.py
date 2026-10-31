@@ -30,13 +30,13 @@ from socialhood.billing.entitlements import entitlement_error, quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError, FieldError
-from socialhood.mcp import audit, results
+from socialhood.mcp import audit, http, results
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.idempotency import WriteGuard
 from socialhood.mcp.principal import McpPrincipal, McpRequest
 from socialhood.mcp.registry import MODE_ADMITS, MODE_ORDER, McpRegistry, McpTool, WriteOutput
 from socialhood.models.identity import Workspace
-from socialhood.models.mcp import AiConnectionsMode, CallOutcome
+from socialhood.models.mcp import AiConnectionsMode, CallOutcome, CredentialKind
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.realtime import events
@@ -124,18 +124,39 @@ async def list_tools(
 
 
 class _Refused(Exception):
-    def __init__(self, error: ApiError) -> None:
+    def __init__(self, error: ApiError, *, challenge: str | None = None) -> None:
         super().__init__(error.code)
         self.error = error
+        # OAuth step-up: a WWW-Authenticate value for the result's _meta (ChatGPT, §3.1).
+        self.challenge = challenge
+
+
+# The tool result's key ChatGPT reads to show its "connect again with more access" UI.
+WWW_AUTHENTICATE_META = "mcp/www_authenticate"
 
 
 def _gate(
-    tool: McpTool[Any, Any], principal: McpPrincipal, workspace: Workspace, plan: str
+    tool: McpTool[Any, Any],
+    principal: McpPrincipal,
+    workspace: Workspace,
+    plan: str,
+    settings: Settings | None = None,
 ) -> None:
-    """Mode, scope, role and plan, in that order (the first refusal is the one reported)."""
+    """Mode, scope, role and plan, in that order (the first refusal is the one reported).
+
+    A missing scope on an OAuth connection is a step-up (§3.4): the member can allow more by
+    connecting again. Spec-following clients got an HTTP 403 before the call reached here
+    (mcp/http.py); for the rest the tool error carries the same challenge in
+    ``_meta["mcp/www_authenticate"]``, which ChatGPT turns into its linking UI."""
     mode = effective_mode(workspace.ai_connections_mode, plan)
     if mode is AiConnectionsMode.OFF and not tool.always_listed:
         raise _Refused(ApiError("forbidden", OFF))
+    if tool.scope not in principal.scopes and principal.credential is CredentialKind.OAUTH:
+        text = http.insufficient_scope_text(tool.scope)
+        challenge = (
+            http.scope_challenge(settings, principal, tool.scope, text) if settings else None
+        )
+        raise _Refused(ApiError("forbidden", text), challenge=challenge)
     if tool.scope not in principal.scopes:
         raise _Refused(
             ApiError(
@@ -245,6 +266,8 @@ async def call_tool(
     except _Refused as refused:
         outcome, code = CallOutcome.REFUSED, refused.error.code
         result = results.failure(refused.error, plans_url=env.plans_url)
+        if refused.challenge is not None:
+            result.meta = {WWW_AUTHENTICATE_META: [refused.challenge]}
     except ApiError as error:
         outcome, code = CallOutcome.ERROR, error.code
         result = results.failure(error, plans_url=env.plans_url)
@@ -280,7 +303,7 @@ async def _run(
     with workspace_scope(principal.workspace_id):
         async with env.sessionmaker() as session:
             workspace, plan, mode = await workspace_state(session, principal)
-            _gate(tool, principal, workspace, plan)
+            _gate(tool, principal, workspace, plan, env.settings)
             await _limit(env, "mcp", str(principal.credential_id))
             await _limit(env, "mcp_workspace", str(principal.workspace_id))
             await _daily_cap(env, principal, plan, now)

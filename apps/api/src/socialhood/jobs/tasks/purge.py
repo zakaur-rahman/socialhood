@@ -58,6 +58,12 @@ WEBHOOK_DELIVERIES_KEPT = timedelta(days=30)  # GR-04: the outbound delivery log
 NOTIFICATIONS_KEPT = timedelta(days=90)
 AGENT_RUNS_KEPT = timedelta(days=180)
 MCP_TOOL_CALLS_KEPT = timedelta(days=90)  # C-165: the MCP audit
+# C-165 phase C, OAuth: used codes a day (a second use is still caught), expired tokens a day,
+# ended connections 90 days (the Settings list's history is the audit's), unused DCR clients 30.
+OAUTH_CODES_KEPT = timedelta(days=1)
+OAUTH_TOKENS_KEPT = timedelta(days=1)
+MCP_CONNECTIONS_KEPT = timedelta(days=90)
+DCR_CLIENTS_UNUSED = timedelta(days=30)
 AI_USAGE_KEPT_MONTHS = 13
 FINISHED_JOBS_KEPT_HOURS = 30 * 24
 
@@ -234,6 +240,26 @@ async def purge_expired_rows(
         (
             "mcp_tool_calls",
             lambda s: retention.mcp_tool_calls_before(s, mcp_cutoff, limit=batch),
+        ),
+        (
+            "oauth_codes",
+            lambda s: retention.oauth_codes_before(s, now - OAUTH_CODES_KEPT, limit=batch),
+        ),
+        (
+            "oauth_tokens",
+            lambda s: retention.oauth_tokens_expired_before(
+                s, now - OAUTH_TOKENS_KEPT, limit=batch
+            ),
+        ),
+        (
+            "mcp_connections",
+            lambda s: retention.mcp_connections_ended_before(
+                s, now - MCP_CONNECTIONS_KEPT, limit=batch
+            ),
+        ),
+        (
+            "oauth_clients",
+            lambda s: retention.unused_dcr_clients_before(s, now - DCR_CLIENTS_UNUSED, limit=batch),
         ),
     ]
     for rule, delete in rules:

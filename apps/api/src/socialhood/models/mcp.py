@@ -41,7 +41,7 @@ class AiConnectionsMode(StrEnum):
 
 class CredentialKind(StrEnum):
     API_KEY = "api_key"
-    OAUTH = "oauth"  # Phase C
+    OAUTH = "oauth"  # an OAuth access token (phase C)
 
 
 class CallOutcome(StrEnum):
@@ -58,8 +58,10 @@ class McpToolCall(IdMixin, CreatedAtMixin, TenantScoped, Base):
     api_key_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("api_keys.id", ondelete="SET NULL")
     )
-    # Phase C's OAuth grant (mcp_connections); no foreign key until that table exists.
-    connection_id: Mapped[uuid.UUID | None] = mapped_column()
+    # The OAuth grant (phase C, models/oauth.py) when the credential is an OAuth token.
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("mcp_connections.id", ondelete="SET NULL")
+    )
     # "API key “Codex laptop”", kept as it read then, so the row reads right after a revoke.
     credential_label: Mapped[str] = mapped_column(Text)
     client_name: Mapped[str | None] = mapped_column(Text)
@@ -78,6 +80,7 @@ class McpToolCall(IdMixin, CreatedAtMixin, TenantScoped, Base):
         CheckConstraint("char_length(tool) BETWEEN 1 AND 64", name="tool_length"),
         Index("ix_mcp_tool_calls_workspace_id_created_at", "workspace_id", "created_at"),
         Index("ix_mcp_tool_calls_api_key_id", "api_key_id"),
+        Index("ix_mcp_tool_calls_connection_id_created_at", "connection_id", "created_at"),
     )
 
 

@@ -32,6 +32,7 @@ export * from "./orders";
 export * from "./waCatalogue";
 export * from "./apiKeys";
 export * from "./mcpUploads";
+export * from "./aiConnections";
 export * from "./activity";
 export * from "./contacts";
 export * from "./leads";

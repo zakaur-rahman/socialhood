@@ -24,6 +24,7 @@ from socialhood.models.inbox import Conversation, Message
 from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
 from socialhood.models.mcp import McpToolCall
 from socialhood.models.notifications import Notification
+from socialhood.models.oauth import ClientKind, McpConnection, OAuthClient, OAuthCode, OAuthToken
 from socialhood.models.platform import WebhookEvent
 
 
@@ -97,6 +98,42 @@ async def ai_usage_events_before(session: AsyncSession, cutoff: datetime, *, lim
 async def mcp_tool_calls_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
     """C-165: the MCP audit is kept 90 days."""
     return await _delete(session, McpToolCall.id, limit, McpToolCall.created_at < cutoff)
+
+
+async def oauth_codes_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    """C-165 phase C: authorization codes live 60 seconds; a used one is kept a day so a second
+    use is still recognised (and revokes what the first made)."""
+    return await _delete(session, OAuthCode.id, limit, OAuthCode.created_at < cutoff)
+
+
+async def oauth_tokens_expired_before(
+    session: AsyncSession, cutoff: datetime, *, limit: int
+) -> int:
+    """C-165 phase C: tokens past their expiry (a rotated refresh token stays until its
+    connection's own end, so its reuse is still caught)."""
+    return await _delete(session, OAuthToken.id, limit, OAuthToken.expires_at < cutoff)
+
+
+async def mcp_connections_ended_before(
+    session: AsyncSession, cutoff: datetime, *, limit: int
+) -> int:
+    """C-165 phase C: connections revoked or expired before ``cutoff``, with their tokens."""
+    ended = (McpConnection.revoked_at < cutoff) | (McpConnection.expires_at < cutoff)
+    return await _delete(session, McpConnection.id, limit, ended)
+
+
+async def unused_dcr_clients_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    """C-165 phase C: clients registered with DCR and unused since ``cutoff`` (30 days) that no
+    connection holds. DCR makes a client per fresh connection, so these pile up otherwise."""
+    held = exists().where(McpConnection.oauth_client_id == OAuthClient.id)
+    return await _delete(
+        session,
+        OAuthClient.id,
+        limit,
+        OAuthClient.kind == ClientKind.DCR.value,
+        func.coalesce(OAuthClient.last_used_at, OAuthClient.created_at) < cutoff,
+        ~held,
+    )
 
 
 async def agent_runs_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:

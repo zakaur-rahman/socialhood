@@ -1,9 +1,8 @@
 """Bearer credentials on /mcp (C-165; 01-design.md §3): one resolver per kind of token.
 
 ``resolve_bearer`` picks the resolver whose ``prefix`` the token starts with and returns the
-``McpPrincipal`` it acts as, or raises ``CredentialRefused``. Phase A has one resolver, API keys
-(``shk_``). Phase C adds OAuth access tokens (``sho_``) by appending an ``OAuthResolver`` to
-``RESOLVERS``; nothing else changes, because tools only ever see the principal.
+``McpPrincipal`` it acts as, or raises ``CredentialRefused``. Two resolvers: API keys (``shk_``,
+phase A) and OAuth access tokens (``sho_``, phase C). Tools only ever see the principal.
 
 Why not the SDK's ``BearerAuthBackend``/``TokenVerifier``: the resolver needs the request (the
 caller's IP for the guessing limit) and the app's database and Valkey, and the 401 must follow
@@ -21,7 +20,9 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.auth.mcp_credentials import INVALID, CredentialRefused, principal_for_api_key
+from socialhood.auth.mcp_oauth import OAuthRefused, principal_for_access_token
 from socialhood.mcp.principal import McpPrincipal
+from socialhood.oauth.tokens import ACCESS_PREFIX
 from socialhood.services.api_keys import KEY_PREFIX
 
 __all__ = [
@@ -30,16 +31,19 @@ __all__ = [
     "AuthEnv",
     "CredentialRefused",
     "CredentialResolver",
+    "OAuthResolver",
     "resolve_bearer",
 ]
 
 
 @dataclass(frozen=True)
 class AuthEnv:
-    """What a resolver may use: the app's database and Valkey."""
+    """What a resolver may use: the app's database and Valkey, and this server's canonical
+    URL (the audience an OAuth token must have been issued for, RFC 8707)."""
 
     sessionmaker: async_sessionmaker[AsyncSession]
     redis: Redis
+    resource: str = "http://localhost:8000/mcp"
 
 
 class CredentialResolver(Protocol):
@@ -65,7 +69,24 @@ class ApiKeyResolver:
             return principal
 
 
-RESOLVERS: tuple[CredentialResolver, ...] = (ApiKeyResolver(),)
+class OAuthResolver:
+    """OAuth access tokens from our authorization server (socialhood/oauth), for claude.ai,
+    ChatGPT and any client that signs in (§3.2). The principal's ``credential_id`` is the
+    connection's id."""
+
+    prefix = ACCESS_PREFIX
+
+    async def resolve(self, token: str, env: AuthEnv) -> McpPrincipal:
+        async with env.sessionmaker() as session:
+            try:
+                return await principal_for_access_token(
+                    session, env.redis, token, resource=env.resource
+                )
+            except OAuthRefused as refused:
+                raise CredentialRefused(refused.message, unknown=refused.unknown) from refused
+
+
+RESOLVERS: tuple[CredentialResolver, ...] = (ApiKeyResolver(), OAuthResolver())
 
 
 async def resolve_bearer(

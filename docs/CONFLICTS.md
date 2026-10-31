@@ -9252,3 +9252,91 @@ Phase B built the 12 write, media and Ask tools, the two prompts, the upload pag
 - **The audit mirror's actor line** is "Member via <client>". The client is the request's `clientInfo`, else the User-Agent (phase A's rule); the handshake-era SDK client sends neither per request, so tests only check the shape.
 - **Contract files regenerated:** `apps/api/openapi.json`, `packages/api-client/schema.d.ts` (the two upload ticket routes) and `apps/web/src/lib/marketing/plan-table.json` (three entitlements: `mcp_posts_daily`, `mcp_uploads_daily`, `mcp_upload_mb_daily`). The coordinator re-generates after merging phase C.
 - **Web:** the upload page and its hooks; `lib/media/upload.ts`'s `sendToStorage` now also sends a signed `tags` field when the signature has one. An e2e spec (`e2e/c165-mcp-upload-page.spec.ts`) is written and not run.
+### C-165 (phase C)
+
+**What it is.** OAuth for AI app connections (decision D1: our own small authorization server in the API, login through the member's Clerk session), the dashboard's consent page, `sho_` access tokens on `/mcp`, Settings › Connected AI apps, and the public setup guide `/developers/mcp`. Branch `feature/mcp-c`. Endpoints, the token model and owner steps: `docs/architecture/mcp/05-phase-c.md`.
+
+**Calls I made, and where I left the design:**
+
+- **Hand-written on the standard library, not Authlib** (§3.2 named Authlib's OAuth 2 server pieces).
+  - *Why:* Authlib's server integrations are for Flask and Django. On Starlette we'd write the grant, storage and endpoint glue anyway, and its generic grants don't know CIMD, RFC 8707 audiences or RFC 9207 `iss`.
+  - *How it's kept safe:* the parts that need care are small and tested one by one: constant-time PKCE and secret checks, single-use codes under a row lock, rotation with reuse detection.
+- **Opaque hashed tokens, as designed.** `sho_` (1 h), `shr_` (rotated), `shc_` codes (60 s), SHA-256 only, like API keys. Connections end after 30 days unused or 180 days after consent.
+- **Codes are rows, not Valkey keys** (§10 allowed either): a used code must still be recognised so its second use revokes what the first made, and a row lock stops two exchanges racing. The waiting authorization request (10 minutes) is in Valkey.
+- **A refresh token is always issued**, whether or not the client asked for `offline_access` (the spec leaves it to the server; Claude and ChatGPT both want one). It expires with its connection.
+- **Reuse of a rotated refresh token revokes the whole connection**, not just the token family. A connection has one family (one code), so they're the same thing, and the Settings list then shows it gone. There's no grace window for a lost refresh response: the client asks the member to connect again.
+- **Revoking (RFC 7009):** an access token alone; a refresh token revokes its connection (so `claude mcp logout` disconnects). Unknown tokens and another client's tokens get 200 and change nothing.
+- **`resource` may be left out** of the authorize and token requests. It then means `/mcp`, the only resource we serve.
+  - When given it must be `/mcp` (scheme and host compared case-insensitively, a trailing slash ignored), or it's `invalid_target`.
+  - Every connection stores its audience, and `/mcp` refuses a token whose audience isn't its own URL.
+- **Scopes:** the MCP catalogue only (`workspace:read` always).
+  - `messages:send` isn't offered (R2).
+  - `offline_access`, ChatGPT's default `openid email profile`, and unknown scopes are dropped, not refused (RFC 6749 §3.3 lets the server grant less).
+  - No `scope` asks for the protected resource metadata's set (reads plus `posts:write` and `media:write`).
+  - A refresh can't add scopes (`invalid_scope`).
+- **Step-up has two forms, chosen by the client's redirect URIs:**
+  - a client whose redirect URIs are on chatgpt.com or openai.com gets a tool error carrying `_meta["mcp/www_authenticate"]` (ChatGPT's linking UI reads it; an HTTP 403 would hide the result from it);
+  - every other OAuth client gets the spec's HTTP 403 `insufficient_scope` before the transport (`mcp/http.py` reads the JSON-RPC body; `/mcp` bodies are capped at 1 MB already). The challenged `scope` is the connection's scopes plus the missing one, so a client that doesn't add them up keeps what it had;
+  - API keys are unchanged (a tool error: make a new key).
+  - *Known edge:* the HTTP pre-check looks only at scopes, so a tool refused for both a scope and the workspace mode gets the 403 first. Rare: `tools/list` hides tools a connection can't use.
+- **A step-up makes a new connection;** the old one idles out after 30 days. Replacing it was rejected: Claude Code on two computers shares one CIMD client id, one member and one workspace, and the second sign-in would kill the first.
+- **Who may connect:** every role (§3.5). A workspace whose effective mode is `off` is listed on the consent page with the reason and can't be picked. The connection does only what the role allows, read on each request.
+- **The consent page names the app safely.**
+  - A CIMD client shows "Details from <host>" (the host that serves its document). A DCR client says it registered itself and Amplychat hasn't checked its name.
+  - Logos only for CIMD clients, and only when served from the document's own host. A plain `<img>` with `referrerPolicy="no-referrer"`, a fixed size, hidden if it fails. DCR clients never show one: anyone can register any picture.
+  - The redirect host is always shown. A loopback redirect adds the spec's warning ("only allow it if you started the connection on this computer").
+- **Redirect URIs:** https (no fragment, no user info), or http on `localhost`, `127.0.0.1` or `[::1]`. Matching is exact except a loopback port. Custom schemes (`myapp://`) are refused. The design's list of known callbacks isn't hard-coded: each must be in the client's own CIMD or DCR record, as the design's last sentence on it says.
+- **DCR:**
+  - `token_endpoint_auth_method` defaults to `client_secret_basic` (RFC 7591's default); `none`, `client_secret_post` and `client_secret_basic` are accepted (`shs_` secrets, hashed). A confidential client may send its secret either way;
+  - `grant_types` only `authorization_code` and `refresh_token`; `response_types` only `code`;
+  - at most 10 redirect URIs, a 10 KB body, 10 registrations an hour per IP;
+  - a DCR client's `logo_uri` isn't kept.
+- **CIMD fetches** go through `security/ssrf.py`'s `fetch_document` (`application/json`, 5 s, 5 KB, no redirects).
+  - The client id URL is refused before any network when it isn't https, has no path, has dot segments, user info or a fragment, or names an IP literal, `localhost`, a `.localhost` name or a dotless host.
+  - A copy is kept a day. If a re-read fails, a copy up to a week old is used.
+- **Cleanup** in `purge_expired`: DCR clients unused for 30 days that no connection holds; codes after a day; expired tokens after a day; ended connections after 90 days (their audit rows' `connection_id` is then set null).
+- **Rate limits:** `oauth_authorize` 30 a minute per IP, `oauth_register` 10 an hour per IP, `oauth_token` 60 a minute per client (token and revoke). Over: 429 `slow_down`.
+- **The consent routes are outside a workspace** (`/v1/connect/requests/{id}`, keyed by the waiting request). They're in the isolation walk's `PUBLIC_ROUTES` and the permission walk's `NO_WORKSPACE`, each with the reason. Disconnecting one connection uses the `self.preferences` permission (every role, for their own); owners and admins may disconnect anyone's.
+- **Settings › Connected AI apps** is `/w/{slug}/settings/ai-apps`, in the "Automation and AI" group, for every role. Members see their own connections. Owners and admins also see the mode (with what each allows; Full is marked Pro and Max on Free) and "Disconnect all". API keys stay under Integrations.
+- **The setup guide is `/developers/mcp`**, beside `/developers/api` (design §7.3 and the protected resource metadata's `resource_documentation` already named it).
+  - It's in the sitemap, the footer's Solutions column ("Connect AI apps") and llms.txt's Developers section, with `pageMetadata`, BreadcrumbList and FAQPage JSON-LD.
+  - Claims follow §7.4: Instagram only, no TikTok or Facebook, no sending from the AI, and ChatGPT qualified as developer mode on Business, Enterprise and Edu until listed.
+  - Phase B's write tools are described as they'll be at release (the coordinator merges B and C together). The per-day post and upload caps aren't on the page: they're phase B's to confirm.
+  - The page doesn't list every tool from the registry (§7.3's generated list). Its cards describe the R1 groups.
+- **The pricing table leaves out `ai_connections` and `mcp_calls_daily` on purpose** (`NOT_SHOWN`); `/developers/mcp` has their plans table. Phase A's regeneration had made the plan-matrix test fail.
+- **No Clerk change.** The consent page is on the dashboard host, which Clerk already protects. `/connect` joined the app's paths in `lib/hosts.ts` and the proxy's protected routes.
+- **Not built:**
+  - the in-app "How to connect" panel with copy buttons (§7.3); the Settings page links to the guide instead;
+  - the privacy policy's AI connections section (the owner's, before the directory submissions);
+  - an operator UI for `oauth_clients.blocked_at` (set it in the database).
+
+**Tests:**
+
+- `tests/unit/test_oauth_rules.py`: redirect URI rules and loopback matching, client id URLs, metadata documents, the bounded fetch, PKCE, scopes, resource normalisation.
+- `tests/integration/test_mcp_oauth.py`, in-process, consenting as the Clerk test user:
+  - discovery, and the full flow to a tool call, the audit row and the Settings list;
+  - PKCE required and the wrong verifier; exact redirect URIs and any loopback port; unknown clients shown, not redirected;
+  - single-use codes and reuse revoking; another client's and expired codes;
+  - refresh rotation and reuse revoking the connection; no scope widening or other resource on refresh; idle connections;
+  - audience binding (authorize, token, and a connection for another resource refused at `/mcp`); expired access tokens;
+  - Settings revoke and Disconnect all stopping tokens at once; RFC 7009;
+  - one workspace per connection; a member leaving; a workspace that's off; deny and decide-once; allowing less;
+  - the HTTP 403 step-up, ChatGPT's `_meta` form, and API keys unchanged;
+  - CIMD clients (limits, caching, logos), bad documents, unsafe client id URLs never fetched, a name resolving to a private address refused by the real fetcher;
+  - DCR input validation, size, secrets and the per-IP limit; the token endpoint's input; retention.
+- Phase A's `test_a_bad_token_is_401_invalid_token` now expects "That access token isn't valid." for an `sho_` token.
+- Web: `ConsentPage.test.tsx`, `AiConnectionsPage.test.tsx`, `ConnectAiView.test.tsx` (claims, sitemap, footer, llms.txt); the settings rail and SEO lists updated. e2e, written and not run: `apps/web/e2e/c165-ai-connections.spec.ts`.
+
+**For the coordinator:**
+
+- **Migration 0055 is chained on 0054.** It adds `oauth_clients`, `mcp_connections`, `oauth_codes`, `oauth_tokens`, plus a foreign key and an index on `mcp_tool_calls.connection_id`. Phase B, if it needs a migration, chains 0056 on 0055. `alembic check` is clean.
+- **Regenerated:** `apps/api/openapi.json` and `packages/api-client/schema.d.ts` (the consent and connections routes). `plan-table.json` unchanged. Regenerate after merging B.
+- **Shared files touched:** merge by hand where phase B touched them too.
+  - `mcp/principal.py`: a `scope_challenge` field, with a default;
+  - `mcp/auth.py`: `AuthEnv.resource`, with a default; `OAuthResolver` appended;
+  - `mcp/http.py`: `McpEndpoint(registry=…)` and the 403 pre-check;
+  - `mcp/calls.py`: `_gate` takes the settings; `_Refused.challenge`; the `_meta` in `call_tool`;
+  - `mcp/server.py`: mounts `oauth/routes.py`;
+  - `security/ratelimit.py`, `jobs/tasks/purge.py`, `repositories/retention.py`;
+  - `tests/support/db.py` (`clean_db` also truncates `oauth_clients`), `tests/tenancy/test_isolation.py`, `tests/unit/test_permission_routes.py`.
+- **Settings groups:** a new `ai-apps` segment in `components/settings/sections.ts` and `groups.ts`.

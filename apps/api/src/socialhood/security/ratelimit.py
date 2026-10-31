@@ -61,6 +61,11 @@ LIMITS: dict[str, Limit] = {
         # and per workspace across all its connections.
         Limit("mcp", 120, 60),
         Limit("mcp_workspace", 300, 60),
+        # C-165 phase C, the OAuth endpoints (§6.1): authorize per IP, registration per IP (DCR
+        # makes a client each time), token and revoke per client.
+        Limit("oauth_authorize", 30, 60),
+        Limit("oauth_register", 10, 3600),
+        Limit("oauth_token", 60, 60),
         # GR-28, the website chat widget (no sign-in): per IP, then per visitor.
         Limit("widget_frame", 120, 60),
         Limit("widget_session", 20, 60),
