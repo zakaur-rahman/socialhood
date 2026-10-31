@@ -312,6 +312,60 @@ function sections(): LegalSection[] {
       ),
     },
     {
+      id: "ai-connections",
+      title: "Connecting AI apps (MCP)",
+      body: (
+        <>
+          <p>
+            A member can connect {N} to an AI app they use, such as Claude, ChatGPT or Codex, through our MCP server (
+            <Link href="/mcp">how it works</Link>). The member signs in to {N}, picks one workspace and chooses what the app
+            may do, or uses an API key they made. The AI app then asks {N} for data, or asks it to do something, when the
+            member asks the AI.
+          </p>
+          <ul>
+            <li>
+              <strong>What the AI app receives.</strong> Only what a tool returns for the member&apos;s request, and only
+              what that member&apos;s role can see in that workspace: for example scheduled posts, analytics, comment
+              summaries, or the recent messages of a conversation they asked about. Messages and comments written by
+              customers are marked as third-party content.
+            </li>
+            <li>
+              <strong>The AI provider is the member&apos;s choice.</strong> What the AI app receives is processed by that
+              app&apos;s provider (for example Anthropic or OpenAI) under the member&apos;s own agreement with them, not on{" "}
+              {N}&apos;s behalf. That provider is not one of our subprocessors. A business decides whether its members may
+              connect AI apps at all: Settings → Connected AI apps can turn this off, or limit it to reading and drafts.
+            </li>
+            <li>
+              <strong>What we never receive.</strong> Your conversation with the AI app. We only see the tool calls it makes
+              to {N}.
+            </li>
+            <li>
+              <strong>What we keep.</strong> For each connection: the app&apos;s name and the address it returns to after
+              sign-in, the workspace, the member, the access it was given and when it was last used. Access tokens are
+              stored only as one-way hashes. For each tool call: which tool, a shortened copy of what it was asked (long
+              text cut, keys and tokens removed), the outcome and how long it took, but not what {N} returned. Changes
+              an AI app makes, such as a scheduled post, also appear in the workspace&apos;s audit log as made by the
+              member through that app.
+            </li>
+            <li>
+              <strong>Files.</strong> A file an AI app uploads, or imports from a public link, goes to the media library like
+              any other upload. For a link, we first check the address and its file type, then our media storage provider
+              fetches the file.
+            </li>
+            <li>
+              <strong>Sending.</strong> An AI app can&apos;t send a direct message or a comment reply. It can prepare a
+              draft, which a person sends from {N}.
+            </li>
+          </ul>
+          <p>
+            A member can disconnect an AI app at any time in Settings → Connected AI apps; owners and admins can disconnect
+            anyone&apos;s, or all of them at once. It stops working on its next request. A connection also ends after 30
+            days without use, and after 180 days in any case. Revoking an API key in Settings → API keys stops it at once.
+          </p>
+        </>
+      ),
+    },
+    {
       id: "google-user-data",
       title: "Google user data",
       body: (
@@ -498,6 +552,16 @@ function sections(): LegalSection[] {
                 <tr>
                   <td>Ask {N} conversations</td>
                   <td>180 days after they finish</td>
+                </tr>
+                <tr>
+                  <td>Records of AI app tool calls (MCP)</td>
+                  <td>90 days</td>
+                </tr>
+                <tr>
+                  <td>AI app connections (MCP)</td>
+                  <td>
+                    Until disconnected or ended, then 90 days. Sign-in codes and expired tokens are deleted within a day.
+                  </td>
                 </tr>
                 <tr>
                   <td>Records of AI credit use</td>
