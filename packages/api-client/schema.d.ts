@@ -369,6 +369,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/ai-connections/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_ai_connections_settings"];
+        /**
+         * Update Settings
+         * @description Takes effect on the next call of every connection. 402 entitlement_required for a mode
+         *     beyond the plan (``full`` on Free).
+         */
+        put: operations["update_ai_connections_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
         parameters: {
             query?: never;
@@ -5294,6 +5316,29 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** AiConnectionsSettings */
+        AiConnectionsSettings: {
+            /**
+             * Effective Mode
+             * @enum {string}
+             */
+            effective_mode: "off" | "read_only" | "read_drafts" | "full";
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+            /** Plan Allows */
+            plan_allows: ("off" | "read_only" | "read_drafts" | "full")[];
+        };
+        /** AiConnectionsUpdate */
+        AiConnectionsUpdate: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+        };
         /**
          * AiDecision
          * @description Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the
@@ -5501,14 +5546,14 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
             /** Name */
             name: string;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiKeyList */
         ApiKeyList: {
@@ -5545,7 +5590,7 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiScope */
         ApiScope: {
@@ -5555,7 +5600,7 @@ export interface components {
              * Scope
              * @enum {string}
              */
-            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe";
+            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask";
         };
         /**
          * ApprovalApprove
@@ -14762,6 +14807,90 @@ export interface operations {
             };
         };
     };
+    get_ai_connections_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_ai_connections_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiConnectionsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     give_ai_decision_feedback: {
         parameters: {
             query?: never;
@@ -17751,7 +17880,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -17852,7 +17981,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -17907,7 +18036,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -18267,7 +18396,7 @@ export interface operations {
         parameters: {
             query?: {
                 view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;
                 q?: string | null;

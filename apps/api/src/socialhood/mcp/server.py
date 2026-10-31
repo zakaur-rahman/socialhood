@@ -37,7 +37,6 @@ from socialhood.mcp.auth import RESOLVERS, AuthEnv, CredentialResolver
 from socialhood.mcp.http import PRM_PATH, McpEndpoint, prm_endpoint
 from socialhood.mcp.principal import current_request
 from socialhood.mcp.registry import McpRegistry
-from socialhood.platforms.deps import deps_from
 from socialhood.settings import Settings
 
 NAME = "Amplychat"
@@ -117,12 +116,11 @@ def install(
         from socialhood.mcp.tools import load_tools
 
         registry = load_tools()
-    no_visuals = settings.model_copy(update={"agent_visuals_enabled": False})
     env = calls.CallEnv(
         sessionmaker=app.state.sessionmaker,
         redis=app.state.redis,
         settings=settings,
-        deps=deps_from(app.state.http, no_visuals),
+        http=app.state.http,
     )
     server = build_server(registry, env)
     manager = StreamableHTTPSessionManager(

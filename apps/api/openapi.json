@@ -1984,6 +1984,70 @@
         "title": "AgentThreadList",
         "type": "object"
       },
+      "AiConnectionsSettings": {
+        "properties": {
+          "effective_mode": {
+            "enum": [
+              "off",
+              "read_only",
+              "read_drafts",
+              "full"
+            ],
+            "title": "Effective Mode",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "off",
+              "read_only",
+              "read_drafts",
+              "full"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "plan_allows": {
+            "items": {
+              "enum": [
+                "off",
+                "read_only",
+                "read_drafts",
+                "full"
+              ],
+              "type": "string"
+            },
+            "title": "Plan Allows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "effective_mode",
+          "plan_allows"
+        ],
+        "title": "AiConnectionsSettings",
+        "type": "object"
+      },
+      "AiConnectionsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "off",
+              "read_only",
+              "read_drafts",
+              "full"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AiConnectionsUpdate",
+        "type": "object"
+      },
       "AiDecision": {
         "description": "Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the\nescalation banner.",
         "properties": {
@@ -2575,7 +2639,17 @@
                 "conversations:read",
                 "messages:send",
                 "automations:read",
-                "webhooks:subscribe"
+                "webhooks:subscribe",
+                "posts:read",
+                "posts:write",
+                "media:write",
+                "replies:draft",
+                "comments:read",
+                "analytics:read",
+                "knowledge:read",
+                "knowledge:write",
+                "automations:write",
+                "ask"
               ],
               "type": "string"
             },
@@ -2612,7 +2686,17 @@
                 "conversations:read",
                 "messages:send",
                 "automations:read",
-                "webhooks:subscribe"
+                "webhooks:subscribe",
+                "posts:read",
+                "posts:write",
+                "media:write",
+                "replies:draft",
+                "comments:read",
+                "analytics:read",
+                "knowledge:read",
+                "knowledge:write",
+                "automations:write",
+                "ask"
               ],
               "type": "string"
             },
@@ -2717,7 +2801,17 @@
                 "conversations:read",
                 "messages:send",
                 "automations:read",
-                "webhooks:subscribe"
+                "webhooks:subscribe",
+                "posts:read",
+                "posts:write",
+                "media:write",
+                "replies:draft",
+                "comments:read",
+                "analytics:read",
+                "knowledge:read",
+                "knowledge:write",
+                "automations:write",
+                "ask"
               ],
               "type": "string"
             },
@@ -2751,7 +2845,17 @@
               "conversations:read",
               "messages:send",
               "automations:read",
-              "webhooks:subscribe"
+              "webhooks:subscribe",
+              "posts:read",
+              "posts:write",
+              "media:write",
+              "replies:draft",
+              "comments:read",
+              "analytics:read",
+              "knowledge:read",
+              "knowledge:write",
+              "automations:write",
+              "ask"
             ],
             "title": "Scope",
             "type": "string"
@@ -28032,6 +28136,121 @@
         ]
       }
     },
+    "/v1/w/{wid}/ai-connections/settings": {
+      "get": {
+        "operationId": "get_ai_connections_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionsSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Settings",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Takes effect on the next call of every connection. 402 entitlement_required for a mode\nbeyond the plan (``full`` on Free).",
+        "operationId": "update_ai_connections_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiConnectionsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionsSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Settings",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
       "post": {
         "description": "Mark an auto reply \"should not have sent\" (\"bad\"), or clear the mark (null). Only a\ndecision that sent a reply takes feedback (409 otherwise).",
@@ -33240,8 +33459,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp",
                     "facebook",
+                    "whatsapp",
                     "web"
                   ],
                   "type": "string"
@@ -33654,8 +33873,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp",
                     "facebook",
+                    "whatsapp",
                     "web"
                   ],
                   "type": "string"
@@ -33975,8 +34194,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp",
                     "facebook",
+                    "whatsapp",
                     "web"
                   ],
                   "type": "string"
@@ -34788,8 +35007,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp",
                     "facebook",
+                    "whatsapp",
                     "web"
                   ],
                   "type": "string"

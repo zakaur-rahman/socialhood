@@ -22,6 +22,7 @@ from socialhood.models.billing import AiUsageEvent, Subscription
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
 from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
+from socialhood.models.mcp import McpToolCall
 from socialhood.models.notifications import Notification
 from socialhood.models.platform import WebhookEvent
 
@@ -91,6 +92,11 @@ async def notifications_before(session: AsyncSession, cutoff: datetime, *, limit
 
 async def ai_usage_events_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
     return await _delete(session, AiUsageEvent.id, limit, AiUsageEvent.created_at < cutoff)
+
+
+async def mcp_tool_calls_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    """C-165: the MCP audit is kept 90 days."""
+    return await _delete(session, McpToolCall.id, limit, McpToolCall.created_at < cutoff)
 
 
 async def agent_runs_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:

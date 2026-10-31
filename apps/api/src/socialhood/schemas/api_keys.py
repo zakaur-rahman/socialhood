@@ -33,6 +33,20 @@ ApiScopeName = Literal[
     "ask",
 ]
 
+# The scopes only the MCP server's tools use (no /public/v1 route needs them).
+MCP_ONLY_SCOPES: tuple[str, ...] = (
+    "posts:read",
+    "posts:write",
+    "media:write",
+    "replies:draft",
+    "comments:read",
+    "analytics:read",
+    "knowledge:read",
+    "knowledge:write",
+    "automations:write",
+    "ask",
+)
+
 # What each scope allows, in the words the key form and the docs page show.
 SCOPE_DESCRIPTIONS: dict[str, str] = {
     "contacts:read": "Read contacts and their custom fields.",

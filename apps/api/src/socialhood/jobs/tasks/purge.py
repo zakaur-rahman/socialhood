@@ -57,6 +57,7 @@ WEBHOOK_EVENTS_KEPT = timedelta(days=30)
 WEBHOOK_DELIVERIES_KEPT = timedelta(days=30)  # GR-04: the outbound delivery log
 NOTIFICATIONS_KEPT = timedelta(days=90)
 AGENT_RUNS_KEPT = timedelta(days=180)
+MCP_TOOL_CALLS_KEPT = timedelta(days=90)  # C-165: the MCP audit
 AI_USAGE_KEPT_MONTHS = 13
 FINISHED_JOBS_KEPT_HOURS = 30 * 24
 
@@ -203,6 +204,7 @@ async def purge_expired_rows(
     notification_cutoff = now - NOTIFICATIONS_KEPT
     usage_cutoff = months_before(now, AI_USAGE_KEPT_MONTHS)
     runs_cutoff = now - AGENT_RUNS_KEPT
+    mcp_cutoff = now - MCP_TOOL_CALLS_KEPT
     rules: list[tuple[str, Batch]] = [
         (
             "webhook_events",
@@ -229,6 +231,10 @@ async def purge_expired_rows(
             lambda s: retention.ai_usage_events_before(s, usage_cutoff, limit=batch),
         ),
         ("agent_runs", lambda s: retention.agent_runs_before(s, runs_cutoff, limit=batch)),
+        (
+            "mcp_tool_calls",
+            lambda s: retention.mcp_tool_calls_before(s, mcp_cutoff, limit=batch),
+        ),
     ]
     for rule, delete in rules:
         if not await drain(rule, delete):

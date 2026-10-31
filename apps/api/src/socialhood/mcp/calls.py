@@ -15,9 +15,11 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import cached_property
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import httpx
 import mcp_types as types
 from mcp.shared.exceptions import MCPError
 from pydantic import ValidationError
@@ -36,7 +38,7 @@ from socialhood.mcp.registry import MODE_ADMITS, MODE_ORDER, McpRegistry, McpToo
 from socialhood.models.identity import Workspace
 from socialhood.models.mcp import AiConnectionsMode, CallOutcome
 from socialhood.observability.logging import get_logger
-from socialhood.platforms.deps import PlatformDeps
+from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.security import ratelimit
 from socialhood.services.analytics.common import zone
 from socialhood.settings import Settings
@@ -63,7 +65,14 @@ class CallEnv:
     sessionmaker: async_sessionmaker[AsyncSession]
     redis: Redis
     settings: Settings
-    deps: PlatformDeps  # with the agent's visuals off
+    http: httpx.AsyncClient
+
+    @cached_property
+    def deps(self) -> PlatformDeps:
+        """The platform deps tools take, with the agent's visuals off (they're the web's Ask
+        panel's). Built on first use: an app that never serves a call needs no token keys."""
+        no_visuals = self.settings.model_copy(update={"agent_visuals_enabled": False})
+        return deps_from(self.http, no_visuals)
 
     @property
     def plans_url(self) -> str | None:

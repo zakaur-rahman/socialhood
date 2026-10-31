@@ -96,6 +96,30 @@
       "pro": true,
       "max": true
     },
+    "ai_connections": {
+      "free": [
+        "off",
+        "read_only",
+        "read_drafts"
+      ],
+      "pro": [
+        "off",
+        "read_only",
+        "read_drafts",
+        "full"
+      ],
+      "max": [
+        "off",
+        "read_only",
+        "read_drafts",
+        "full"
+      ]
+    },
+    "mcp_calls_daily": {
+      "free": 100,
+      "pro": 2000,
+      "max": 10000
+    },
     "flow_steps": {
       "free": 5,
       "pro": 50,
