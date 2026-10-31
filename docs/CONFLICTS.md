@@ -9230,3 +9230,25 @@ Branch `feature/mcp-core`.
 - **Migration 0054 is chained on 0053.** Re-chain it if another lands first. `alembic check` is clean.
 - **New settings:** `MCP_ENABLED`, `MCP_ALLOWED_HOSTS`. Production needs `API_BASE_URL=https://api.amplychat.com`, already required, so the `Host` check and the resource URL are right.
 - **The web's API key form** now lists the ten MCP scopes too, from the API's catalogue. Phase C may want to group them.
+
+### C-165 (phase B)
+
+Phase B built the 12 write, media and Ask tools, the two prompts, the upload page and the plumbing. Design: `docs/architecture/mcp/04-phase-b.md`. Deviations and small calls:
+
+- **Confirmation is a `confirmed` argument.**
+  - The design leaves the confirm step to the client (the destructive hint, MRTR in R2).
+  - The brief asked for explicit confirmation semantics, so `create_post` (to schedule), `update_post` and `cancel_post` return a preview until called with `confirmed: true`.
+  - A preview is the real flow in a savepoint, rolled back; it is never stored for idempotency.
+- **`create_post` and `update_post` are `Access.DRAFT`, not `WRITE`,** so Free (mode capped at `read_drafts`) can save drafts. The handler refuses scheduling unless the effective mode is `full`: `entitlement_required` when the plan holds it back, a plain `forbidden` when the workspace is set to drafts. `cancel_post` is `WRITE`.
+- **`add_knowledge` is `WRITE` (Pro and Max),** although §4.1's plan column says "all". §3.7 and §6.7 give Free reads and drafts only, so the stricter reading wins. Free-plan knowledge writes would be one line (`access=Access.DRAFT`).
+- **`add_knowledge` supports `text` and `faq`.** The design also lists `url` (a page or site crawl); it is left for later because it needs the crawler's SSRF and plan rules in the tool's tests.
+- **`draft_reply` saves a draft; the design said a deep link.** It is stored as the conversation's pending reply suggestion (`services/suggestions/service.save_draft`), so the inbox's existing suggestion card shows it. It is `Access.DRAFT` (not read-only, because it writes), needs the `replies:draft` scope, and never sends.
+- **`ask_amplychat` and `get_ask_answer` are read tools,** though they create a run and spend credits. `ask_amplychat` commits its own run before it waits. Retries of the same question inside two minutes reuse the run.
+- **The drop page is at `/w/{slug}/upload/{ticket}`,** not `/upload/{ticket}`, so it fits the dashboard's workspace routing and the existing `dashboard_url`. Owners and admins only.
+- **Owner notification is in-app only.** No email: the email types are a fixed set with templates. New notification type `ai_post_change`; it needs no migration (no database check on the type).
+- **Link import checks the address here and storage fetches the file.** The design had Cloudinary alone fetch the URL. `security/ssrf.probe` now checks every redirect hop and the headers first (the brief asked for SSRF protection in the API), then Cloudinary fetches the final address. No file bytes pass through the API.
+- **Not built:** the daily job that deletes unregistered `mcp_upload_*` files from storage (§5.3). A rejected file is deleted at once, but one that was uploaded and never finished is not yet. A follow-up for the jobs area.
+- **No migration.** Nothing in phase B changes the schema; 0055 stays phase C's.
+- **The audit mirror's actor line** is "Member via <client>". The client is the request's `clientInfo`, else the User-Agent (phase A's rule); the handshake-era SDK client sends neither per request, so tests only check the shape.
+- **Contract files regenerated:** `apps/api/openapi.json`, `packages/api-client/schema.d.ts` (the two upload ticket routes) and `apps/web/src/lib/marketing/plan-table.json` (three entitlements: `mcp_posts_daily`, `mcp_uploads_daily`, `mcp_upload_mb_daily`). The coordinator re-generates after merging phase C.
+- **Web:** the upload page and its hooks; `lib/media/upload.ts`'s `sendToStorage` now also sends a signed `tags` field when the signature has one. An e2e spec (`e2e/c165-mcp-upload-page.spec.ts`) is written and not run.
