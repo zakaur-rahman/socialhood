@@ -92,6 +92,9 @@ class Workspace(IdMixin, TimestampMixin, Base):
     # the next turn starts from the first.
     assignment_round_robin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     assignment_cursor_user_id: Mapped[uuid.UUID | None] = mapped_column()
+    # C-165: what AI clients connected over MCP may do here (models/mcp.AiConnectionsMode): off,
+    # read_only, read_drafts or full. The plan caps it (billing/plans.py ai_connections).
+    ai_connections_mode: Mapped[str] = mapped_column(Text, server_default=text("'full'"))
 
     __table_args__ = (
         CheckConstraint("lead_cold_days BETWEEN 1 AND 90", name="lead_cold_days"),
@@ -102,6 +105,10 @@ class Workspace(IdMixin, TimestampMixin, Base):
         CheckConstraint(
             "automation_disclosure IS NULL OR char_length(automation_disclosure) <= 60",
             name="automation_disclosure",
+        ),
+        CheckConstraint(
+            "ai_connections_mode IN ('off', 'read_only', 'read_drafts', 'full')",
+            name="ai_connections_mode",
         ),
     )
 

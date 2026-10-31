@@ -12,6 +12,7 @@ from socialhood.api.v1 import (
     activity,
     agent,
     ai,
+    ai_connections,
     analytics,
     api_keys,
     assignment,
@@ -22,6 +23,7 @@ from socialhood.api.v1 import (
     captions,
     catalogue,
     comments,
+    connect,
     contacts,
     conversations,
     entry_links,
@@ -32,6 +34,7 @@ from socialhood.api.v1 import (
     integrations,
     knowledge,
     leads,
+    mcp_uploads,
     me,
     media,
     messages,
@@ -94,6 +97,9 @@ ROUTERS: tuple[APIRouter, ...] = (
     integrations.router,
     google_sheets.router,
     api_keys.router,  # GR-25
+    ai_connections.router,  # C-165
+    mcp_uploads.router,  # C-165 phase B: the upload page for AI apps
+    connect.router,  # C-165 phase C: the AI app consent page
     analytics.router,
     reports.router,
     publishing.router,

@@ -62,7 +62,10 @@ async def clean_db(engine: AsyncEngine) -> AsyncIterator[None]:
     async def wipe() -> None:
         async with engine.begin() as conn:
             await conn.execute(
-                text("TRUNCATE users, workspaces, webhook_events, data_deletion_requests CASCADE")
+                text(
+                    "TRUNCATE users, workspaces, webhook_events, data_deletion_requests, "
+                    "oauth_clients CASCADE"
+                )
             )
 
     await wipe()

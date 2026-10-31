@@ -177,7 +177,7 @@ export function chunkRanges(size: number, chunk = CHUNK_BYTES): { start: number;
 
 /** POST the file to Cloudinary with the signed parameters; resolves with its public_id. */
 export async function sendToStorage(
-  signature: UploadSignature,
+  signature: UploadSignature & { tags?: string },
   file: File,
   options: UploadOptions = {},
 ): Promise<{ public_id: string }> {
@@ -197,7 +197,7 @@ export async function sendToStorage(
 }
 
 function sendPart(
-  signature: UploadSignature,
+  signature: UploadSignature & { tags?: string },
   file: Blob,
   { onProgress, signal, headers, name }: UploadOptions & { headers?: Record<string, string>; name?: string } = {},
 ): Promise<{ public_id: string }> {
@@ -208,6 +208,8 @@ function sendPart(
     form.append("api_key", signature.api_key);
     form.append("timestamp", String(signature.timestamp));
     form.append("folder", signature.folder);
+    // An AI app's upload ticket (C-165) is signed with a tag.
+    if (signature.tags) form.append("tags", signature.tags);
     form.append("signature", signature.signature);
 
     const xhr = new XMLHttpRequest();

@@ -40,6 +40,17 @@ ALL_SCOPES = [
     "messages:send",
     "automations:read",
     "webhooks:subscribe",
+    # C-165: the MCP server's scopes.
+    "posts:read",
+    "posts:write",
+    "media:write",
+    "replies:draft",
+    "comments:read",
+    "analytics:read",
+    "knowledge:read",
+    "knowledge:write",
+    "automations:write",
+    "ask",
 ]
 
 

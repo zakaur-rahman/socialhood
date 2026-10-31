@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from socialhood.api.public_openapi import public_openapi
 from socialhood.main import create_app
-from socialhood.schemas.api_keys import SCOPE_DESCRIPTIONS
+from socialhood.schemas.api_keys import MCP_ONLY_SCOPES, SCOPE_DESCRIPTIONS
 from socialhood.schemas.public_hooks import HookSubscribe
 from socialhood.services import api_hooks
 from socialhood.services.webhooks import events
@@ -50,11 +50,11 @@ def test_the_hook_routes_need_the_subscribe_scope(api_settings: Any) -> None:
     schemas = document["components"]["schemas"]
     assert "signing_secret" in schemas["HookSubscribed"]["properties"]
     assert "signing_secret" not in schemas["Hook"]["properties"]
-    # Every scope a key can carry now opens something.
+    # Every scope a key can carry now opens something here, or (C-165) on the MCP server.
     used = {
         op["x-required-scope"]
         for ops in document["paths"].values()
         for op in ops.values()
         if "x-required-scope" in op
     }
-    assert used == set(SCOPE_DESCRIPTIONS)
+    assert used == set(SCOPE_DESCRIPTIONS) - set(MCP_ONLY_SCOPES)

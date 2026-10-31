@@ -53,7 +53,7 @@ beforeEach(() => {
   toast.error.mockReset();
 });
 
-describe("Settings > Integrations > API keys (GR-25)", () => {
+describe("Settings > API keys (GR-25)", () => {
   it("lists keys by prefix with their scopes and when they were last used, never the key", async () => {
     setup({
       items: [

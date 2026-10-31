@@ -85,18 +85,31 @@ PARAM_TO_SEED: dict[str, str] = {
     "user_id": "user_id",  # GR-19
     "invitation_id": "invitation_id",
     "key_id": "api_key_id",  # GR-25
+    "upload_id": "mcp_upload_id",  # C-165 phase B
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
     "broadcast_id": "broadcast_id",  # GR-23
     "product_id": "product_id",  # GR-31
     "order_id": "order_id",  # GR-32
     "sequence_id": "sequence_id",  # GR-24
     "enrolment_id": "enrolment_id",
+    "connection_id": "connection_id",  # C-165 phase C: an AI app connection (OAuth grant)
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
 # "/l/{code}" (GR-15, the tracked link redirect) is public and not in the OpenAPI schema, so the
 # walk never sees it; it is tested in tests/integration/test_link_clicks.py.
-PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}", "/l/{code}"})
+# C-165 phase C: the consent page's routes are keyed by a waiting OAuth request (a Valkey id), not
+# a workspace; the workspace is chosen in the body and checked against the caller's memberships
+# (tests/integration/test_mcp_oauth.py, test_one_connection_one_workspace).
+PUBLIC_ROUTES = frozenset(
+    {
+        "/v1/data-deletion/{code}",
+        "/l/{code}",
+        "/v1/connect/requests/{request_id}",
+        "/v1/connect/requests/{request_id}/approve",
+        "/v1/connect/requests/{request_id}/deny",
+    }
+)
 
 # A valid body for each write route, so the call fails on tenancy, not validation.
 # A string "{param}" in a body is replaced by B's id for that parameter.
@@ -139,6 +152,9 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
+    ("POST", "/v1/w/{wid}/mcp-uploads/{upload_id}/complete"): {
+        "public_id": "ws/00000000-0000-4000-8000-000000000000/post/x1"
+    },
     # GR-29: Facebook Pages connect (the nonce is bound to the member and workspace) and a
     # sandbox Facebook Page.
     ("POST", "/v1/w/{wid}/social-accounts/facebook/pages"): {"nonce": "not-yours"},
@@ -169,6 +185,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
     ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
     ("POST", "/v1/w/{wid}/api-keys"): {"name": "Not yours", "scopes": ["contacts:read"]},  # GR-25
+    ("PUT", "/v1/w/{wid}/ai-connections/settings"): {"mode": "off"},  # C-165
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -533,6 +550,11 @@ B_TABLES = (
     "weekly_digests",
     "workspace_invitations",  # GR-19
     "audit_events",
+    "mcp_tool_calls",  # C-165
+    "mcp_uploads",
+    "mcp_connections",  # C-165 phase C
+    "oauth_codes",
+    "oauth_tokens",
 )
 
 
@@ -569,12 +591,14 @@ class Seed:
     user_id: str = ""
     invitation_id: str = ""
     api_key_id: str = ""  # GR-25
+    mcp_upload_id: str = ""  # C-165 phase B: an AI app's upload ticket
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
     broadcast_id: str = ""
     product_id: str = ""  # GR-31
     order_id: str = ""  # GR-32
     sequence_id: str = ""  # GR-24
     enrolment_id: str = ""
+    connection_id: str = ""  # C-165 phase C
 
 
 @dataclass(frozen=True)
@@ -733,6 +757,37 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                     " RETURNING id"
                 ),
                 {"w": wid, "h": "b" * 64},
+            )
+        ).scalar_one()
+        mcp_upload = (
+            await conn.execute(
+                text(
+                    "INSERT INTO mcp_uploads (workspace_id, kind, status, expires_at)"
+                    " VALUES (:w, 'video', 'waiting', now() + interval '30 minutes')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
+            )
+        ).scalar_one()
+        oauth_client = (
+            await conn.execute(
+                text(
+                    "INSERT INTO oauth_clients (client_id, kind, client_name, redirect_uris,"
+                    " token_endpoint_auth_method) VALUES ('dcr_isolation_b', 'dcr', 'B app',"
+                    " ARRAY['http://127.0.0.1/cb'], 'none') RETURNING id"
+                )
+            )
+        ).scalar_one()
+        connection = (
+            await conn.execute(
+                text(
+                    "INSERT INTO mcp_connections (workspace_id, user_id, oauth_client_id,"
+                    " client_name, redirect_uri, scopes, resource, expires_at)"
+                    " SELECT :w, owner_user_id, :c, 'B app', 'http://127.0.0.1/cb',"
+                    " ARRAY['posts:read'], 'http://localhost:8000/mcp', now() + interval '1 day'"
+                    " FROM workspaces WHERE id = :w RETURNING id"
+                ),
+                {"w": wid, "c": oauth_client},
             )
         ).scalar_one()
         rest_hook = (
@@ -1021,12 +1076,14 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         user_id=b["id"],
         invitation_id=str(invitation),
         api_key_id=str(api_key),
+        mcp_upload_id=str(mcp_upload),
         hook_id=str(rest_hook),
         broadcast_id=broadcast,
         product_id=str(product),
         order_id=str(order),
         sequence_id=sequence,
         enrolment_id=enrolment,
+        connection_id=str(connection),
     )
 
 

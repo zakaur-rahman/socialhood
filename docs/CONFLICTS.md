@@ -9104,3 +9104,255 @@ are"); llms.txt (the list page and a Glossary section with every term). `PUBLIC_
   inode the container started with, so even `caddy reload` read the old file. Fixed live by recreating
   the Caddy container (a few seconds' blip). `deploy.sh` now compares the Caddyfile on disk with
   Caddy's copy after `compose up` and recreates Caddy only when they differ (`sync_caddy`).
+
+## C-165 · MCP server
+
+Design and the owner's decisions: `docs/architecture/mcp/01-design.md`, `02-decisions.md` (all eight approved with the recommended options, 2026-10-31). What phase A built, how to run it and how to connect: `03-phase-a.md`.
+
+### C-165 (phase A)
+
+**What it is.** The MCP server at `/mcp`, inside the API:
+
+- the official `mcp` SDK 2.3, stateless Streamable HTTP, JSON responses, both protocol eras (`initialize` up to 2025-11-25, and 2026-07-28);
+- `shk_` API keys as the credential;
+- one registry and one call path for every tool;
+- the 13 read tools of the design's R1 list.
+
+Branch `feature/mcp-core`.
+
+**Calls I made, and where I left the design:**
+
+- **The low-level `Server`, not `MCPServer`.**
+  - *Why:* `tools/list` depends on who asks (scopes, role, workspace mode), which the spec allows, and every call must run our gate and audit. `MCPServer`'s list is global.
+  - *How:* tool schemas still come from Pydantic models, as `MCPServer` would derive them. `tools/list` results carry `cacheScope: "private"`, `ttlMs: 0`.
+- **Our own auth in front of the transport, not the SDK's `BearerAuthBackend` and `AuthSettings`.**
+  - *Why:* a resolver needs the request (the caller's IP, for the guessing limit) and the app's database and Valkey. And with no credential, RFC 6750 §3.1 says no `error` in the challenge, while the SDK always sends `invalid_token`.
+  - *How:* `mcp/http.py` sends `WWW-Authenticate: Bearer resource_metadata="…"` with no credential, and adds `error="invalid_token"` plus the reason for a bad one. It serves the RFC 9728 document at both well-known paths itself.
+  - *The interface:* `mcp/auth.CredentialResolver` has the same shape as the SDK's `TokenVerifier`. Phase C adds an `sho_` resolver.
+- **A key acts as its maker, with their current role** (§3.3).
+  - A key with no maker (deleted user), or whose maker left, is `401` "This key's owner is no longer in the workspace".
+  - A demoted maker's key shrinks on the next call: admin tools disappear from the list.
+- **`workspace:read` is granted to every principal**, not put in the key catalogue (§3.4 "always granted"). A key made before today still gets `get_workspace` and `list_accounts`.
+- **The ten MCP scopes are in the key catalogue now**, write scopes included: `posts:read`, `posts:write`, `media:write`, `replies:draft`, `comments:read`, `analytics:read`, `knowledge:read`, `knowledge:write`, `automations:write`, `ask`.
+  - *Why:* the catalogue and the generated client change once rather than again in phase B.
+  - Until phase B, a write scope opens no tool.
+  - `schemas/api_keys.MCP_ONLY_SCOPES` marks them, so the public API's "every scope opens a route" test leaves them out.
+- **Plans (D2) are a new entitlement**, `ai_connections`: the modes a plan may choose. Free gets `off`, `read_only` and `read_drafts`. Pro and Max add `full`.
+  - **API keys on Free:** a key can't be made on Free (PD-6), so only a key made on Pro reaches a Free workspace. *Decided:* on `/mcp` such a key keeps Free's MCP tier (reads and drafts), while on `/public/v1` it stops (402), as PD-6 says. MCP's entitlement is separate from `public_api` precisely so the two can differ.
+  - A write refused by the plan is a tool error `entitlement_required` with `entitlement: "ai_connections"` and an informational `plans_url` (`SITE_BASE_URL/pricing`), never a checkout link.
+- **The daily cap.** `mcp_calls_daily` (Free 100, Pro 2,000, Max 10,000) is a Valkey counter per workspace per UTC day.
+  - It counts calls that pass the mode, scope, role and plan gates.
+  - Over the cap is `quota_exceeded` with `entitlement: "mcp_calls_daily"`.
+  - Valkey down lets calls through, like every limit.
+- **Rate limits.** `mcp` (120 a minute per credential) and `mcp_workspace` (300 a minute per workspace) are refused as a tool error `rate_limited` with `retry_after_s`, not an HTTP 429 (§6.1). Unknown keys count against the caller's IP (`public`, 60 a minute) and get a 429 past it, as on the public API.
+- **The kill switch.** `workspaces.ai_connections_mode` is `off`, `read_only`, `read_drafts` or `full`, default `full`; the plan caps it (D3).
+  - **Routes:** `GET/PUT /v1/w/{wid}/ai-connections/settings`, with the integrations permission, like API keys.
+  - **Plan check:** a mode beyond the plan is 402.
+  - **Audit:** a change is an `audit_events` row (`ai_connections.mode_changed`).
+  - **When off:** only `get_workspace` is listed and callable, so the AI can tell the member why nothing works. Every other tool is `forbidden` with the reason.
+  - **Operators:** `MCP_ENABLED=false` removes `/mcp` entirely.
+- **A missing scope is a tool error** (`forbidden`, naming the scope), not an HTTP 403 `insufficient_scope` (§3.4 step-up). With API keys there's nothing to step up to: the member makes another key. Phase C adds the 403 challenge for OAuth principals.
+- **An unknown tool name is a protocol error** (`-32602 Unknown tool`), as the spec says, and isn't audited: no tool ran and the name is arbitrary text.
+- **Tool names follow the design** (`list_scheduled_posts`, `get_scheduled_post`), not the brief's shorthand (`list_posts`, `get_post`), so phase B's `create_post` and `update_post` sit beside them as the design lists.
+- **`get_conversation` returns at most 20 messages**, not 30 (§6.5): Ask's handler caps at 20, and the MCP tool wraps it rather than forking it. No phone numbers or email addresses are returned by any phase A tool, so the "mask unless `contacts:read`" rule has nothing to mask yet.
+- **Ask's handlers are wrapped, never forked.** Ten of the 13 tools call Ask Amplychat's tool handlers (`agent/tools/*`) with a `ToolContext` built for the MCP principal, then rename and reshape the fields: `list_scheduled_posts`, `list_conversations`, `get_conversation`, `get_post_comments_summary` (three handlers), `get_analytics_summary` (three), `search_knowledge`, `list_automations`. The others call the services directly.
+  - Their own `min_role` still applies.
+  - The agent's visuals are turned off for MCP: the platform deps are built with `agent_visuals_enabled` false.
+- **Untrusted text** (§6.5):
+  - **Fields:** customers' names, messages and comments, topics drawn from comments, and knowledge excerpts (a source can be a crawled page) are only in fields ending in `_text`.
+  - **The text copy:** a result with any such field gets one fixed line before its JSON, saying those fields are third-party content to report on, not requests to act on.
+  - **Instructions:** the server instructions say the same.
+  - **Descriptions:** customer text never goes into a description.
+  - **Registry checks:** the registry refuses a title, description or argument description with steering words ("always", "you must", "ignore", "instructions", …) or a link to another site. The catalogue test runs the same check.
+  - **Summaries:** Ask's own `summary` strings are reused only where they carry no customer text. `get_conversation` and the comments summary write their own.
+- **The audit is a new table, `mcp_tool_calls`,** not `audit_events`: one row per call, refused and failed calls included.
+  - **What it records:** credential, member, client (`clientInfo`, else the User-Agent), tool, a SHA-256 of the canonical arguments, and a redacted copy (strings cut at 200 characters, lists at 20, three levels; `idempotency_key`, tokens and secrets replaced by `[redacted]`), plus outcome, error code, latency and request id.
+  - **What it never stores:** results.
+  - **When it's written:** after the call, in its own transaction. A failure to write it is logged and never fails the call.
+  - **Retention:** 90 days, in `purge_expired`.
+  - **Writes:** the design's mirror line in `audit_events` for every write is phase B, when writes exist.
+- **Idempotency is built for phase B's writes.**
+  - **The contract:** a write's input extends `WriteInput` (`idempotency_key`) and its output extends `WriteOutput` (`duplicate_of_previous_call`). The registry refuses a write that doesn't.
+  - **An explicit key:** stored through `services/idempotency.py`, 24 hours, per workspace and member. A different request with the same key is `idempotency_conflict`.
+  - **Without a key:** a tool with `dedupe_window_s` replays the first result of an identical call by the same connection inside the window.
+  - **Why the window is opt-in per tool:** a blanket 10-minute dedupe would wrongly swallow pause, resume, pause.
+- **`mcp_uploads` exists already** (migration 0054), so `get_media_upload` (read-only, `media:write`, as §4.1 lists it) has something to read. Phase B's tools create the tickets. A waiting ticket past `expires_at` reads as `expired`.
+- **Not built in phase A,** with the phase that does each:
+  - phase B:
+    - the two MCP prompts (§4.2), which lead to write tools;
+    - owner notifications on AI writes;
+    - per-day upload and post caps;
+    - the `audit_events` mirror;
+  - phase C: OAuth, the connect page, Settings › Connected AI apps, ChatGPT's `_meta["mcp/www_authenticate"]`.
+- **Caddy:** no change in behaviour.
+  - The `api.amplychat.com` block already streams (`flush_interval -1`), has no write timeout, never compresses `text/event-stream`, and Caddy redacts `Authorization` from its log. A comment now says so for `/mcp`.
+  - `X-Robots-Tag: noindex, nofollow` covers `/mcp` from Caddy, and the API now also sends it on `/mcp` responses itself.
+- **The OpenAPI document:**
+  - `/mcp` and the well-known routes are plain Starlette routes, not in the app's document (the design doesn't ask for them there).
+  - The document changes for the scope enum and the settings route. `apps/api/openapi.json` and `packages/api-client/schema.d.ts` are regenerated.
+  - `plan-table.json` is regenerated for the two new entitlements. The pricing page shows only the rows it lists, so its copy doesn't change.
+
+**Tests:**
+
+- `tests/unit/test_mcp_registry.py`:
+  - the catalogue: names, titles, explicit hints, one scope each, deterministic order, no steering words or foreign links, `_text` fields;
+  - the registry's refusals;
+  - the plan cap;
+  - redaction;
+  - the untrusted label;
+  - the time echo.
+- `tests/integration/test_mcp_server.py`, with the SDK's client against the mounted app in-process:
+  - the handshake, 2026-07-28 and auto modes;
+  - two requests with no session;
+  - an unknown tool;
+  - `Origin` 403 and unknown `Host` 421;
+  - the 401s and the resource metadata;
+  - revoked and orphaned keys;
+  - the IP guessing limit;
+  - scope, role, Free and the daily cap, the kill switch and its route;
+  - the per-connection rate limit;
+  - the audit row;
+  - tenancy across two workspaces;
+  - `MCP_ENABLED` off.
+- `tests/integration/test_mcp_tools.py`: each tool's happy and error path, with results validated against the advertised `outputSchema`.
+- `tests/integration/test_mcp_calls.py`, with test write and draft tools:
+  - Free gets drafts, not writes;
+  - modes;
+  - idempotency keys;
+  - the dedupe window;
+  - errors in plain words, internals never leaked;
+  - the audit's redaction.
+- Purge: `test_the_mcp_audit_is_kept_90_days`.
+- Tenancy: both tables in `test_isolation.py`'s snapshot list.
+
+**For the coordinator:**
+
+- **Migration 0054 is chained on 0053.** Re-chain it if another lands first. `alembic check` is clean.
+- **New settings:** `MCP_ENABLED`, `MCP_ALLOWED_HOSTS`. Production needs `API_BASE_URL=https://api.amplychat.com`, already required, so the `Host` check and the resource URL are right.
+- **The web's API key form** now lists the ten MCP scopes too, from the API's catalogue. Phase C may want to group them.
+
+### C-165 (phase B)
+
+Phase B built the 12 write, media and Ask tools, the two prompts, the upload page and the plumbing. Design: `docs/architecture/mcp/04-phase-b.md`. Deviations and small calls:
+
+- **Confirmation is a `confirmed` argument.**
+  - The design leaves the confirm step to the client (the destructive hint, MRTR in R2).
+  - The brief asked for explicit confirmation semantics, so `create_post` (to schedule), `update_post` and `cancel_post` return a preview until called with `confirmed: true`.
+  - A preview is the real flow in a savepoint, rolled back; it is never stored for idempotency.
+- **`create_post` and `update_post` are `Access.DRAFT`, not `WRITE`,** so Free (mode capped at `read_drafts`) can save drafts. The handler refuses scheduling unless the effective mode is `full`: `entitlement_required` when the plan holds it back, a plain `forbidden` when the workspace is set to drafts. `cancel_post` is `WRITE`.
+- **`add_knowledge` is `WRITE` (Pro and Max),** although §4.1's plan column says "all". §3.7 and §6.7 give Free reads and drafts only, so the stricter reading wins. Free-plan knowledge writes would be one line (`access=Access.DRAFT`).
+- **`add_knowledge` supports `text` and `faq`.** The design also lists `url` (a page or site crawl); it is left for later because it needs the crawler's SSRF and plan rules in the tool's tests.
+- **`draft_reply` saves a draft; the design said a deep link.** It is stored as the conversation's pending reply suggestion (`services/suggestions/service.save_draft`), so the inbox's existing suggestion card shows it. It is `Access.DRAFT` (not read-only, because it writes), needs the `replies:draft` scope, and never sends.
+- **`ask_amplychat` and `get_ask_answer` are read tools,** though they create a run and spend credits. `ask_amplychat` commits its own run before it waits. Retries of the same question inside two minutes reuse the run.
+- **The drop page is at `/w/{slug}/upload/{ticket}`,** not `/upload/{ticket}`, so it fits the dashboard's workspace routing and the existing `dashboard_url`. Owners and admins only.
+- **Owner notification is in-app only.** No email: the email types are a fixed set with templates. New notification type `ai_post_change`; it needs no migration (no database check on the type).
+- **Link import checks the address here and storage fetches the file.** The design had Cloudinary alone fetch the URL. `security/ssrf.probe` now checks every redirect hop and the headers first (the brief asked for SSRF protection in the API), then Cloudinary fetches the final address. No file bytes pass through the API.
+- **Not built:** the daily job that deletes unregistered `mcp_upload_*` files from storage (§5.3). A rejected file is deleted at once, but one that was uploaded and never finished is not yet. A follow-up for the jobs area.
+- **No migration.** Nothing in phase B changes the schema; 0055 stays phase C's.
+- **The audit mirror's actor line** is "Member via <client>". The client is the request's `clientInfo`, else the User-Agent (phase A's rule); the handshake-era SDK client sends neither per request, so tests only check the shape.
+- **Contract files regenerated:** `apps/api/openapi.json`, `packages/api-client/schema.d.ts` (the two upload ticket routes) and `apps/web/src/lib/marketing/plan-table.json` (three entitlements: `mcp_posts_daily`, `mcp_uploads_daily`, `mcp_upload_mb_daily`). The coordinator re-generates after merging phase C.
+- **Web:** the upload page and its hooks; `lib/media/upload.ts`'s `sendToStorage` now also sends a signed `tags` field when the signature has one. An e2e spec (`e2e/c165-mcp-upload-page.spec.ts`) is written and not run.
+### C-165 (phase C)
+
+**What it is.** OAuth for AI app connections (decision D1: our own small authorization server in the API, login through the member's Clerk session), the dashboard's consent page, `sho_` access tokens on `/mcp`, Settings › Connected AI apps, and the public setup guide `/developers/mcp`. Branch `feature/mcp-c`. Endpoints, the token model and owner steps: `docs/architecture/mcp/05-phase-c.md`.
+
+**Calls I made, and where I left the design:**
+
+- **Hand-written on the standard library, not Authlib** (§3.2 named Authlib's OAuth 2 server pieces).
+  - *Why:* Authlib's server integrations are for Flask and Django. On Starlette we'd write the grant, storage and endpoint glue anyway, and its generic grants don't know CIMD, RFC 8707 audiences or RFC 9207 `iss`.
+  - *How it's kept safe:* the parts that need care are small and tested one by one: constant-time PKCE and secret checks, single-use codes under a row lock, rotation with reuse detection.
+- **Opaque hashed tokens, as designed.** `sho_` (1 h), `shr_` (rotated), `shc_` codes (60 s), SHA-256 only, like API keys. Connections end after 30 days unused or 180 days after consent.
+- **Codes are rows, not Valkey keys** (§10 allowed either): a used code must still be recognised so its second use revokes what the first made, and a row lock stops two exchanges racing. The waiting authorization request (10 minutes) is in Valkey.
+- **A refresh token is always issued**, whether or not the client asked for `offline_access` (the spec leaves it to the server; Claude and ChatGPT both want one). It expires with its connection.
+- **Reuse of a rotated refresh token revokes the whole connection**, not just the token family. A connection has one family (one code), so they're the same thing, and the Settings list then shows it gone. There's no grace window for a lost refresh response: the client asks the member to connect again.
+- **Revoking (RFC 7009):** an access token alone; a refresh token revokes its connection (so `claude mcp logout` disconnects). Unknown tokens and another client's tokens get 200 and change nothing.
+- **`resource` may be left out** of the authorize and token requests. It then means `/mcp`, the only resource we serve.
+  - When given it must be `/mcp` (scheme and host compared case-insensitively, a trailing slash ignored), or it's `invalid_target`.
+  - Every connection stores its audience, and `/mcp` refuses a token whose audience isn't its own URL.
+- **Scopes:** the MCP catalogue only (`workspace:read` always).
+  - `messages:send` isn't offered (R2).
+  - `offline_access`, ChatGPT's default `openid email profile`, and unknown scopes are dropped, not refused (RFC 6749 §3.3 lets the server grant less).
+  - No `scope` asks for the protected resource metadata's set (reads plus `posts:write` and `media:write`).
+  - A refresh can't add scopes (`invalid_scope`).
+- **Step-up has two forms, chosen by the client's redirect URIs:**
+  - a client whose redirect URIs are on chatgpt.com or openai.com gets a tool error carrying `_meta["mcp/www_authenticate"]` (ChatGPT's linking UI reads it; an HTTP 403 would hide the result from it);
+  - every other OAuth client gets the spec's HTTP 403 `insufficient_scope` before the transport (`mcp/http.py` reads the JSON-RPC body; `/mcp` bodies are capped at 1 MB already). The challenged `scope` is the connection's scopes plus the missing one, so a client that doesn't add them up keeps what it had;
+  - API keys are unchanged (a tool error: make a new key).
+  - *Known edge:* the HTTP pre-check looks only at scopes, so a tool refused for both a scope and the workspace mode gets the 403 first. Rare: `tools/list` hides tools a connection can't use.
+- **A step-up makes a new connection;** the old one idles out after 30 days. Replacing it was rejected: Claude Code on two computers shares one CIMD client id, one member and one workspace, and the second sign-in would kill the first.
+- **Who may connect:** every role (§3.5). A workspace whose effective mode is `off` is listed on the consent page with the reason and can't be picked. The connection does only what the role allows, read on each request.
+- **The consent page names the app safely.**
+  - A CIMD client shows "Details from <host>" (the host that serves its document). A DCR client says it registered itself and Amplychat hasn't checked its name.
+  - Logos only for CIMD clients, and only when served from the document's own host. A plain `<img>` with `referrerPolicy="no-referrer"`, a fixed size, hidden if it fails. DCR clients never show one: anyone can register any picture.
+  - The redirect host is always shown. A loopback redirect adds the spec's warning ("only allow it if you started the connection on this computer").
+- **Redirect URIs:** https (no fragment, no user info), or http on `localhost`, `127.0.0.1` or `[::1]`. Matching is exact except a loopback port. Custom schemes (`myapp://`) are refused. The design's list of known callbacks isn't hard-coded: each must be in the client's own CIMD or DCR record, as the design's last sentence on it says.
+- **DCR:**
+  - `token_endpoint_auth_method` defaults to `client_secret_basic` (RFC 7591's default); `none`, `client_secret_post` and `client_secret_basic` are accepted (`shs_` secrets, hashed). A confidential client may send its secret either way;
+  - `grant_types` only `authorization_code` and `refresh_token`; `response_types` only `code`;
+  - at most 10 redirect URIs, a 10 KB body, 10 registrations an hour per IP;
+  - a DCR client's `logo_uri` isn't kept.
+- **CIMD fetches** go through `security/ssrf.py`'s `fetch_document` (`application/json`, 5 s, 5 KB, no redirects).
+  - The client id URL is refused before any network when it isn't https, has no path, has dot segments, user info or a fragment, or names an IP literal, `localhost`, a `.localhost` name or a dotless host.
+  - A copy is kept a day. If a re-read fails, a copy up to a week old is used.
+- **Cleanup** in `purge_expired`: DCR clients unused for 30 days that no connection holds; codes after a day; expired tokens after a day; ended connections after 90 days (their audit rows' `connection_id` is then set null).
+- **Rate limits:** `oauth_authorize` 30 a minute per IP, `oauth_register` 10 an hour per IP, `oauth_token` 60 a minute per client (token and revoke). Over: 429 `slow_down`.
+- **The consent routes are outside a workspace** (`/v1/connect/requests/{id}`, keyed by the waiting request). They're in the isolation walk's `PUBLIC_ROUTES` and the permission walk's `NO_WORKSPACE`, each with the reason. Disconnecting one connection uses the `self.preferences` permission (every role, for their own); owners and admins may disconnect anyone's.
+- **Settings › Connected AI apps** is `/w/{slug}/settings/ai-apps`, in the "Automation and AI" group, for every role. Members see their own connections. Owners and admins also see the mode (with what each allows; Full is marked Pro and Max on Free) and "Disconnect all". API keys stay under Integrations.
+- **The setup guide is `/developers/mcp`**, beside `/developers/api` (design §7.3 and the protected resource metadata's `resource_documentation` already named it).
+  - It's in the sitemap, the footer's Solutions column ("Connect AI apps") and llms.txt's Developers section, with `pageMetadata`, BreadcrumbList and FAQPage JSON-LD.
+  - Claims follow §7.4: Instagram only, no TikTok or Facebook, no sending from the AI, and ChatGPT qualified as developer mode on Business, Enterprise and Edu until listed.
+  - Phase B's write tools are described as they'll be at release (the coordinator merges B and C together). The per-day post and upload caps aren't on the page: they're phase B's to confirm.
+  - The page doesn't list every tool from the registry (§7.3's generated list). Its cards describe the R1 groups.
+- **The pricing table leaves out `ai_connections` and `mcp_calls_daily` on purpose** (`NOT_SHOWN`); `/developers/mcp` has their plans table. Phase A's regeneration had made the plan-matrix test fail.
+- **No Clerk change.** The consent page is on the dashboard host, which Clerk already protects. `/connect` joined the app's paths in `lib/hosts.ts` and the proxy's protected routes.
+- **Not built:**
+  - the in-app "How to connect" panel with copy buttons (§7.3); the Settings page links to the guide instead;
+  - the privacy policy's AI connections section (the owner's, before the directory submissions);
+  - an operator UI for `oauth_clients.blocked_at` (set it in the database).
+
+**Tests:**
+
+- `tests/unit/test_oauth_rules.py`: redirect URI rules and loopback matching, client id URLs, metadata documents, the bounded fetch, PKCE, scopes, resource normalisation.
+- `tests/integration/test_mcp_oauth.py`, in-process, consenting as the Clerk test user:
+  - discovery, and the full flow to a tool call, the audit row and the Settings list;
+  - PKCE required and the wrong verifier; exact redirect URIs and any loopback port; unknown clients shown, not redirected;
+  - single-use codes and reuse revoking; another client's and expired codes;
+  - refresh rotation and reuse revoking the connection; no scope widening or other resource on refresh; idle connections;
+  - audience binding (authorize, token, and a connection for another resource refused at `/mcp`); expired access tokens;
+  - Settings revoke and Disconnect all stopping tokens at once; RFC 7009;
+  - one workspace per connection; a member leaving; a workspace that's off; deny and decide-once; allowing less;
+  - the HTTP 403 step-up, ChatGPT's `_meta` form, and API keys unchanged;
+  - CIMD clients (limits, caching, logos), bad documents, unsafe client id URLs never fetched, a name resolving to a private address refused by the real fetcher;
+  - DCR input validation, size, secrets and the per-IP limit; the token endpoint's input; retention.
+- Phase A's `test_a_bad_token_is_401_invalid_token` now expects "That access token isn't valid." for an `sho_` token.
+- Web: `ConsentPage.test.tsx`, `AiConnectionsPage.test.tsx`, `ConnectAiView.test.tsx` (claims, sitemap, footer, llms.txt); the settings rail and SEO lists updated. e2e, written and not run: `apps/web/e2e/c165-ai-connections.spec.ts`.
+
+**For the coordinator:**
+
+- **Migration 0055 is chained on 0054.** It adds `oauth_clients`, `mcp_connections`, `oauth_codes`, `oauth_tokens`, plus a foreign key and an index on `mcp_tool_calls.connection_id`. Phase B, if it needs a migration, chains 0056 on 0055. `alembic check` is clean.
+- **Regenerated:** `apps/api/openapi.json` and `packages/api-client/schema.d.ts` (the consent and connections routes). `plan-table.json` unchanged. Regenerate after merging B.
+- **Shared files touched:** merge by hand where phase B touched them too.
+  - `mcp/principal.py`: a `scope_challenge` field, with a default;
+  - `mcp/auth.py`: `AuthEnv.resource`, with a default; `OAuthResolver` appended;
+  - `mcp/http.py`: `McpEndpoint(registry=…)` and the 403 pre-check;
+  - `mcp/calls.py`: `_gate` takes the settings; `_Refused.challenge`; the `_meta` in `call_tool`;
+  - `mcp/server.py`: mounts `oauth/routes.py`;
+  - `security/ratelimit.py`, `jobs/tasks/purge.py`, `repositories/retention.py`;
+  - `tests/support/db.py` (`clean_db` also truncates `oauth_clients`), `tests/tenancy/test_isolation.py`, `tests/unit/test_permission_routes.py`.
+- **Settings groups:** a new `ai-apps` segment in `components/settings/sections.ts` and `groups.ts`.
+
+### C-165 (MCP pages and API keys settings)
+
+Owner asked for a public MCP product page, a separate API-key connection page, and API keys out of Settings › Integrations.
+
+- **New routes:** `/mcp` (product page, content `lib/marketing/mcp-page.ts`, view `McpProductView`) and `/developers/mcp/api-key` (`lib/marketing/mcp-api-key.ts`, `McpApiKeyView`). Both are in `PUBLIC_PATHS`, `PAGE_UPDATED` (2026-11-01), the sitemap (via those lists), llms.txt and the SEO tests. The footer's Solutions column gets "MCP" (`/mcp`) beside "Connect AI apps"; the key page is reached from the guide, the product page, Settings and the API reference, not the footer.
+- **Plans, safety and limits are imported** from `connect-ai.ts` (`PLAN_ROWS`, `SAFETY`, `mcpUrl`), not copied. `Code` is now exported from `ConnectAiView.tsx` and reused. The key page's limits table is `PLAN_ROWS` filtered to the daily rows and the "API key" row.
+- **Other MCP apps (Cursor, VS Code, ...)** are described as expected to work over Streamable HTTP with OAuth or a bearer header, and said plainly to be untested by us.
+- **Audit wording:** the key page says a change a key makes shows in Settings › Audit log as "member via the app's name". `mcp/audit.py` writes `"{who} via {client name, else API key “name”}"`, so the line says the app's name (Claude Code), not "via API key". Reads are only in `mcp_tool_calls`, which the page says without claiming a screen for it.
+- **API keys left Integrations.** New segment `api-keys` ("API keys", owners and admins) in `sections.ts`, in the Admin group after Integrations, route `settings/api-keys`, page `ApiKeysPage` around the unchanged `ApiKeysSection`. The Pro upsell (`public_api`, Free sees "part of Pro") stays in `ApiKeysSection`. Old copy changed: Connected AI apps' empty state (now links to the new page), the API reference's Authentication paragraph, the guide's Claude Code step.
+- **Old links left on the API side (not changed here):**
+  - `apps/api/src/socialhood/api/public_openapi.py` lines 24 and 79 say "Make a key in Settings, Integrations". They are in the OpenAPI document's description, which `/developers/api` renders; it still says Integrations until the API is changed.
+  - Comments only: `api/v1/ai_connections.py:156`, `agent/tools/integrations.py`, `api/v1/activity.py` (these name Integrations for webhooks and are still right) and `docs/architecture/mcp/03-phase-a.md:75` (setup text).
+  - `api/v1/oauth.py:90` and `services/activity/feed.py:93` point at `/settings/integrations` for the Google Sheets and webhook cases, which stay there.
+- **CSS:** a block at the end of `components/site/site.css` (`/* ==== C-165 mcp page ==== */`), tokens only. The brief named `app/site.css`; the C-165 connect block lives in `components/site/site.css`, so it went there.
+- **e2e:** `gr25-public-api.spec.ts` now opens `/settings/api-keys`; `c165-ai-connections.spec.ts` gained the two public pages and the settings page. Not run.

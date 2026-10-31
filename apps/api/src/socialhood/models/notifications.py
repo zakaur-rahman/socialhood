@@ -81,6 +81,7 @@ class NotificationType(StrEnum):
     SHEETS_FAILING = "sheets_failing"  # Google Sheets lost access or its sheet (GR-27), in app only
     PAYMENT_PROBLEM = "payment_problem"  # subscription on hold or a failed payment (FR-BIL-06)
     PLAN_ACTIVATED = "plan_activated"  # "We'll email you when Pro is active" (F-15)
+    AI_POST_CHANGE = "ai_post_change"  # an AI app scheduled, changed or cancelled a post (C-165)
     PLAN_DOWNGRADED = "plan_downgraded"  # expired: what the downgrade changed (FR-BIL-07)
 
 

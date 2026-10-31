@@ -189,6 +189,8 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "For creators", href: "/for-creators" },
         { label: "For businesses", href: "/for-businesses" },
         { label: "Developers", href: "/developers/api" },
+        { label: "MCP", href: "/mcp" },
+        { label: "Connect AI apps", href: "/developers/mcp" },
       ],
     },
     {
@@ -263,6 +265,9 @@ export const PUBLIC_PATHS = [
   "/data-deletion",
   "/contact",
   "/developers/api",
+  "/developers/mcp",
+  "/developers/mcp/api-key",
+  "/mcp",
   "/security",
   "/guides",
   // C-156 (pages)
@@ -326,6 +331,9 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
+  "/developers/mcp": "2026-11-01",
+  "/developers/mcp/api-key": "2026-11-01",
+  "/mcp": "2026-11-01",
   "/security": "2026-10-26",
   "/for-creators": "2026-10-29",
   "/for-businesses": "2026-10-29",

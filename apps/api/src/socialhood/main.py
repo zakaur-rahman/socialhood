@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +18,7 @@ from socialhood.db.engine import make_engine, make_sessionmaker
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.runtime import make_http_client
 from socialhood.kv import make_redis
+from socialhood.mcp import server as mcp_server
 from socialhood.observability import http as observability_http
 from socialhood.observability.logging import configure_logging, get_logger
 from socialhood.observability.metrics import Flusher
@@ -52,7 +53,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         flusher = Flusher(app.state.redis)  # metrics buffer → Valkey (observability/metrics.py)
         flusher.start()
         # The API only defers jobs; workers run them (TR-ARC-02).
-        async with jobs_app.open_async():
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(jobs_app.open_async())
+            if app.state.mcp is not None:  # C-165: the MCP transport's task group
+                await stack.enter_async_context(app.state.mcp.session_manager.run())
             yield
         await flusher.stop()
         await app.state.http.aclose()
@@ -92,6 +96,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(whatsapp_webhook.router)
     app.include_router(links_redirect.router)  # GR-15: /l/<code>, the tracked link redirect
     app.include_router(widget_files.router)  # GR-28: /widget.js and the chat frame
+    # C-165: the MCP server at /mcp (an API key or, from phase C, an OAuth token).
+    app.state.mcp = mcp_server.install(app, settings)
 
     # SEC-05: exact origins only, no credentials (bearer tokens, not cookies).
     app.add_middleware(

@@ -27,6 +27,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/connect/requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Request */
+        get: operations["get_connect_request"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connect/requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_connect_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connect/requests/{request_id}/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deny */
+        post: operations["deny_connect_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/data-deletion/{code}": {
         parameters: {
             query?: never;
@@ -361,6 +412,111 @@ export interface paths {
          *     are personal; other members' runs are in the run history).
          */
         get: operations["list_agent_threads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Connections
+         * @description Live OAuth connections, newest first, with each one's tool calls in the last 7 days and
+         *     its 5 latest. Owners and admins see everyone's; other members see their own.
+         */
+        get: operations["list_ai_connections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke All
+         * @description "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
+         *     are separate (Settings, API keys).
+         */
+        post: operations["revoke_all_ai_connections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_ai_connections_settings"];
+        /**
+         * Update Settings
+         * @description Takes effect on the next call of every connection. 402 entitlement_required for a mode
+         *     beyond the plan (``full`` on Free).
+         */
+        put: operations["update_ai_connections_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Connection
+         * @description Disconnect: every token of it stops on its next request. Revoking again is a no-op.
+         *     Every member may disconnect their own (``self.preferences``); owners and admins anyone's.
+         */
+        delete: operations["revoke_ai_connection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-connections/{connection_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Activity
+         * @description The connection's latest 50 tool calls (the MCP audit keeps 90 days).
+         */
+        get: operations["get_ai_connection_activity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2836,6 +2992,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/mcp-uploads/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Mcp Upload
+         * @description The upload an AI app asked for, with the signed fields to send the file to storage while it
+         *     waits. 404 for a ticket that isn't this workspace's.
+         */
+        get: operations["get_mcp_upload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Mcp Upload
+         * @description After the browser uploaded the file: check it came in with this ticket and add it to the
+         *     media library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file
+         *     over a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402
+         *     quota_exceeded past the plan's daily upload caps.
+         */
+        post: operations["complete_mcp_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/media-assets": {
         parameters: {
             query?: never;
@@ -5294,6 +5494,115 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** AiConnection */
+        AiConnection: {
+            /** Calls 7D */
+            calls_7d: number;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Yours */
+            is_yours: boolean;
+            /** Last Used At */
+            last_used_at?: string | null;
+            member: components["schemas"]["AiConnectionMember"];
+            /** Recent Calls */
+            recent_calls: components["schemas"]["AiConnectionCall"][];
+            /** Redirect Host */
+            redirect_host: string;
+            /** Scopes */
+            scopes: string[];
+            /** Verified Host */
+            verified_host?: string | null;
+        };
+        /** AiConnectionActivity */
+        AiConnectionActivity: {
+            /** Items */
+            items: components["schemas"]["AiConnectionCall"][];
+        };
+        /** AiConnectionCall */
+        AiConnectionCall: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "ok" | "error" | "refused";
+            /** Tool */
+            tool: string;
+        };
+        /** AiConnectionList */
+        AiConnectionList: {
+            /** Can Manage All */
+            can_manage_all: boolean;
+            /** Items */
+            items: components["schemas"]["AiConnection"][];
+        };
+        /** AiConnectionMember */
+        AiConnectionMember: {
+            /** Email */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** AiConnectionsRevoked */
+        AiConnectionsRevoked: {
+            /** Revoked */
+            revoked: number;
+        };
+        /** AiConnectionsSettings */
+        AiConnectionsSettings: {
+            /**
+             * Effective Mode
+             * @enum {string}
+             */
+            effective_mode: "off" | "read_only" | "read_drafts" | "full";
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+            /** Plan Allows */
+            plan_allows: ("off" | "read_only" | "read_drafts" | "full")[];
+        };
+        /** AiConnectionsUpdate */
+        AiConnectionsUpdate: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+        };
         /**
          * AiDecision
          * @description Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the
@@ -5501,14 +5810,14 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
             /** Name */
             name: string;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiKeyList */
         ApiKeyList: {
@@ -5545,7 +5854,7 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
         };
         /** ApiScope */
         ApiScope: {
@@ -5555,7 +5864,7 @@ export interface components {
              * Scope
              * @enum {string}
              */
-            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe";
+            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask";
         };
         /**
          * ApprovalApprove
@@ -7266,10 +7575,98 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ConnectApproval */
+        ConnectApproval: {
+            /** Scopes */
+            scopes?: string[];
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
+        };
+        /** ConnectClient */
+        ConnectClient: {
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Loopback */
+            loopback: boolean;
+            /** Name */
+            name: string;
+            /** Redirect Host */
+            redirect_host: string;
+            /** Verified Host */
+            verified_host?: string | null;
+        };
+        /** ConnectMember */
+        ConnectMember: {
+            /** Email */
+            email: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** ConnectRedirect */
+        ConnectRedirect: {
+            /** Redirect To */
+            redirect_to: string;
+        };
+        /** ConnectRequest */
+        ConnectRequest: {
+            /** Always */
+            always: string;
+            client: components["schemas"]["ConnectClient"];
+            /** Groups */
+            groups: components["schemas"]["ConnectScopeGroup"][];
+            member: components["schemas"]["ConnectMember"];
+            /** Workspaces */
+            workspaces: components["schemas"]["ConnectWorkspace"][];
+        };
+        /** ConnectScope */
+        ConnectScope: {
+            /** Description */
+            description: string;
+            /** Scope */
+            scope: string;
+        };
+        /** ConnectScopeGroup */
+        ConnectScopeGroup: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Scopes */
+            scopes: components["schemas"]["ConnectScope"][];
+        };
         /** ConnectStart */
         ConnectStart: {
             /** Authorize Url */
             authorize_url: string;
+        };
+        /** ConnectWorkspace */
+        ConnectWorkspace: {
+            /** Can Connect */
+            can_connect: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "off" | "read_only" | "read_drafts" | "full";
+            /** Name */
+            name: string;
+            /** Plan */
+            plan: string;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
         };
         /**
          * Consent
@@ -7989,6 +8386,27 @@ export interface components {
             email_digest: boolean;
             /** Workspace Name */
             workspace_name: string;
+        };
+        /**
+         * DropSignature
+         * @description The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,
+         *     signature) and where to send them.
+         */
+        DropSignature: {
+            /** Api Key */
+            api_key: string;
+            /** Cloud Name */
+            cloud_name: string;
+            /** Folder */
+            folder: string;
+            /** Signature */
+            signature: string;
+            /** Tags */
+            tags: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Upload Url */
+            upload_url: string;
         };
         /**
          * EmbeddedSignup
@@ -9263,6 +9681,43 @@ export interface components {
             all: boolean;
             /** Ids */
             ids?: string[] | null;
+        };
+        /** McpUploadComplete */
+        McpUploadComplete: {
+            /** Public Id */
+            public_id: string;
+        };
+        /** McpUploadTicket */
+        McpUploadTicket: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "video";
+            /** Limits */
+            limits: {
+                [key: string]: unknown;
+            };
+            /** Media Asset Id */
+            media_asset_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "waiting" | "uploaded" | "expired" | "rejected";
+            upload?: components["schemas"]["DropSignature"] | null;
         };
         /** Me */
         Me: {
@@ -13941,6 +14396,130 @@ export interface operations {
             };
         };
     };
+    get_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRequest"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRedirect"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deny_connect_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectRedirect"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_data_deletion_status: {
         parameters: {
             query?: never;
@@ -14740,6 +15319,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentThreadList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_ai_connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_all_ai_connections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsRevoked"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_ai_connections_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_ai_connections_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiConnectionsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionsSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_ai_connection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_ai_connection_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionActivity"];
                 };
             };
             /** @description Validation error */
@@ -17751,7 +18574,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -17852,7 +18675,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -17907,7 +18730,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -18267,7 +19090,7 @@ export interface operations {
         parameters: {
             query?: {
                 view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
-                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
+                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;
                 q?: string | null;
@@ -21145,6 +21968,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadSummary"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_mcp_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpUploadTicket"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_mcp_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpUploadComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpUploadTicket"];
                 };
             };
             /** @description Validation error */

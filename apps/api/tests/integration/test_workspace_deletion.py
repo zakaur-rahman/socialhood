@@ -354,7 +354,7 @@ async def _owner_clerk_id(engine: AsyncEngine, wid: str) -> str:
 
 async def _extra_rows(engine: AsyncEngine, wid: str, message_id: str) -> None:
     """Rows the isolation seed doesn't make: a triggered automation run, a post an automation is
-    limited to, a usage counter and an AI usage event."""
+    limited to, a usage counter, an AI usage event and C-165's MCP call and OAuth rows."""
     async with engine.begin() as conn:
         automation = (
             await conn.execute(
@@ -395,6 +395,28 @@ async def _extra_rows(engine: AsyncEngine, wid: str, message_id: str) -> None:
             text(
                 "INSERT INTO ai_usage_events (workspace_id, feature, model, credits, outcome)"
                 " VALUES (:w, 'message_analysis', 'fake', 1, 'ok')"
+            ),
+            {"w": wid},
+        )
+        await conn.execute(  # C-165: an AI app's tool call, and its OAuth code and token
+            text(
+                "INSERT INTO mcp_tool_calls (workspace_id, credential_kind, credential_label, tool,"
+                " arguments_digest, outcome, latency_ms)"
+                " VALUES (:w, 'api_key', 'Claude Code', 'get_workspace', 'x', 'ok', 5)"
+            ),
+            {"w": wid},
+        )
+        await conn.execute(  # from the isolation seed's connection; none in the kept workspace
+            text(
+                "WITH c AS (SELECT * FROM mcp_connections WHERE workspace_id = :w LIMIT 1),"
+                " code AS (INSERT INTO oauth_codes (workspace_id, code_hash, oauth_client_id,"
+                " user_id, client_name, redirect_uri, code_challenge, resource, scopes,"
+                " expires_at, connection_id) SELECT workspace_id, md5(random()::text),"
+                " oauth_client_id, user_id, client_name, redirect_uri, 'challenge', resource,"
+                " scopes, now() + interval '1 minute', id FROM c)"
+                " INSERT INTO oauth_tokens (workspace_id, token_hash, kind, connection_id,"
+                " family_id, expires_at) SELECT workspace_id, md5(random()::text), 'access', id,"
+                " gen_random_uuid(), now() + interval '1 hour' FROM c"
             ),
             {"w": wid},
         )
