@@ -1,6 +1,9 @@
 """AI connections settings (C-165; 01-design.md §6.7): the workspace's switch for what AI apps
 connected over MCP (/mcp) may do. Owners and admins, with the integrations permission like API
-keys. Settings, Connected AI apps (phase C) shows it.
+keys. Settings, Connected AI apps shows it.
+
+Phase C adds the OAuth connections themselves: the list (with recent activity from the MCP
+audit), one connection's activity, Disconnect, and Disconnect all.
 
 - ``off``: no tool runs (get_workspace still answers, to say so);
 - ``read_only``: reads; ``read_drafts``: reads and drafts; ``full``: writes too.
@@ -12,16 +15,25 @@ back on Pro, the setting applies again.
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter
 
-from socialhood.auth.deps import CanManageIntegrations, Session
+from socialhood.auth.deps import AnyMember, CanManageIntegrations, Session, WorkspaceContext
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.billing.entitlements import entitlement_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.mcp.calls import effective_mode
 from socialhood.models.identity import Workspace
+from socialhood.schemas.ai_connections import (
+    AiConnectionActivity,
+    AiConnectionList,
+    AiConnectionsRevoked,
+)
 from socialhood.schemas.common import RequestModel, ResponseModel
+from socialhood.services import ai_connections as connections
 from socialhood.services import audit
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["integrations"])
@@ -78,3 +90,67 @@ async def update_settings(
         )
         await session.commit()
     return await _out(session, body.mode)
+
+
+# ---------------------------------------------------------------- connections (phase C)
+
+
+def _manages_all(ctx: WorkspaceContext) -> bool:
+    return has_permission(ctx.role, Permission.INTEGRATIONS_MANAGE)
+
+
+@router.get("/ai-connections", operation_id="list_ai_connections")
+async def list_connections(ctx: AnyMember, session: Session) -> AiConnectionList:
+    """Live OAuth connections, newest first, with each one's tool calls in the last 7 days and
+    its 5 latest. Owners and admins see everyone's; other members see their own."""
+    manages = _manages_all(ctx)
+    items = await connections.list_connections(
+        session, datetime.now(UTC), ctx.user.id, all_members=manages
+    )
+    return AiConnectionList(items=items, can_manage_all=manages)
+
+
+@router.get("/ai-connections/{connection_id}/activity", operation_id="get_ai_connection_activity")
+async def get_activity(
+    connection_id: uuid.UUID, ctx: AnyMember, session: Session
+) -> AiConnectionActivity:
+    """The connection's latest 50 tool calls (the MCP audit keeps 90 days)."""
+    await connections.get_visible(
+        session, connection_id, ctx.user.id, all_members=_manages_all(ctx)
+    )
+    return AiConnectionActivity(items=await connections.activity(session, connection_id))
+
+
+@router.delete(
+    "/ai-connections/{connection_id}",
+    operation_id="revoke_ai_connection",
+    status_code=204,
+)
+async def revoke_connection(connection_id: uuid.UUID, ctx: AnyMember, session: Session) -> None:
+    """Disconnect: every token of it stops on its next request. Revoking again is a no-op."""
+    connection = await connections.get_visible(
+        session, connection_id, ctx.user.id, all_members=_manages_all(ctx)
+    )
+    if await connections.revoke_one(session, connection, datetime.now(UTC), ctx.user.id):
+        await audit.record(
+            session,
+            ctx,
+            "ai_connections.revoked",
+            "ai_connection",
+            connection.id,
+            client=connection.client_name,
+        )
+        await session.commit()
+
+
+@router.post("/ai-connections/revoke-all", operation_id="revoke_all_ai_connections")
+async def revoke_all(ctx: CanManageIntegrations, session: Session) -> AiConnectionsRevoked:
+    """ "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
+    are separate (Settings, Integrations)."""
+    count = await connections.revoke_all(session, datetime.now(UTC), ctx.user.id)
+    if count:
+        await audit.record(
+            session, ctx, "ai_connections.revoked_all", "workspace", ctx.workspace_id, count=count
+        )
+        await session.commit()
+    return AiConnectionsRevoked(revoked=count)

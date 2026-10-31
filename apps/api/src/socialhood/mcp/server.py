@@ -37,6 +37,7 @@ from socialhood.mcp.auth import RESOLVERS, AuthEnv, CredentialResolver
 from socialhood.mcp.http import PRM_PATH, McpEndpoint, prm_endpoint
 from socialhood.mcp.principal import current_request
 from socialhood.mcp.registry import McpRegistry
+from socialhood.oauth import routes as oauth_routes
 from socialhood.settings import Settings
 
 NAME = "Amplychat"
@@ -109,7 +110,8 @@ def install(
     registry: McpRegistry | None = None,
     resolvers: Sequence[CredentialResolver] = RESOLVERS,
 ) -> McpMount | None:
-    """Add /mcp and the protected resource metadata to ``app``; None when MCP_ENABLED is off."""
+    """Add /mcp, the protected resource metadata and the OAuth authorization server to ``app``;
+    None when MCP_ENABLED is off."""
     if not settings.mcp_enabled:
         return None
     if registry is None:
@@ -133,10 +135,17 @@ def install(
     endpoint = McpEndpoint(
         StreamableHTTPASGIApp(manager),
         settings=settings,
-        auth=AuthEnv(sessionmaker=app.state.sessionmaker, redis=app.state.redis),
+        auth=AuthEnv(
+            sessionmaker=app.state.sessionmaker,
+            redis=app.state.redis,
+            resource=settings.mcp_resource_url,
+        ),
         resolvers=resolvers,
+        registry=registry,
     )
     app.router.routes.append(Route(PATH, endpoint=endpoint, methods=["GET", "POST", "DELETE"]))
+    # Phase C: the authorization server those tokens come from, on the same origin.
+    app.include_router(oauth_routes.router)
     for path in (f"{PRM_PATH}{PATH}", PRM_PATH):
         app.router.routes.append(Route(path, endpoint=prm_endpoint, methods=["GET"]))
     return McpMount(server=server, session_manager=manager, endpoint=endpoint)
