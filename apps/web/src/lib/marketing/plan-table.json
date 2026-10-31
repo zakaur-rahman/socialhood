@@ -120,6 +120,21 @@
       "pro": 2000,
       "max": 10000
     },
+    "mcp_posts_daily": {
+      "free": 0,
+      "pro": 25,
+      "max": 100
+    },
+    "mcp_uploads_daily": {
+      "free": 20,
+      "pro": 200,
+      "max": 1000
+    },
+    "mcp_upload_mb_daily": {
+      "free": 500,
+      "pro": 10000,
+      "max": 50000
+    },
     "flow_steps": {
       "free": 5,
       "pro": 50,

@@ -2858,6 +2858,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/mcp-uploads/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Mcp Upload
+         * @description The upload an AI app asked for, with the signed fields to send the file to storage while it
+         *     waits. 404 for a ticket that isn't this workspace's.
+         */
+        get: operations["get_mcp_upload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Mcp Upload
+         * @description After the browser uploaded the file: check it came in with this ticket and add it to the
+         *     media library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file
+         *     over a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402
+         *     quota_exceeded past the plan's daily upload caps.
+         */
+        post: operations["complete_mcp_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/media-assets": {
         parameters: {
             query?: never;
@@ -8036,6 +8080,27 @@ export interface components {
             workspace_name: string;
         };
         /**
+         * DropSignature
+         * @description The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,
+         *     signature) and where to send them.
+         */
+        DropSignature: {
+            /** Api Key */
+            api_key: string;
+            /** Cloud Name */
+            cloud_name: string;
+            /** Folder */
+            folder: string;
+            /** Signature */
+            signature: string;
+            /** Tags */
+            tags: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
          * EmbeddedSignup
          * @description What the page receives from Meta's Embedded Signup v4: the FB.login code, and the ids from
          *     the session-info message when it arrived. A missing id is looked up with the business token
@@ -9308,6 +9373,43 @@ export interface components {
             all: boolean;
             /** Ids */
             ids?: string[] | null;
+        };
+        /** McpUploadComplete */
+        McpUploadComplete: {
+            /** Public Id */
+            public_id: string;
+        };
+        /** McpUploadTicket */
+        McpUploadTicket: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "video";
+            /** Limits */
+            limits: {
+                [key: string]: unknown;
+            };
+            /** Media Asset Id */
+            media_asset_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "waiting" | "uploaded" | "expired" | "rejected";
+            upload?: components["schemas"]["DropSignature"] | null;
         };
         /** Me */
         Me: {
@@ -21274,6 +21376,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadSummary"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_mcp_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpUploadTicket"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_mcp_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                upload_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpUploadComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpUploadTicket"];
                 };
             };
             /** @description Validation error */

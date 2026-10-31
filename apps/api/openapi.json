@@ -9906,6 +9906,50 @@
         "title": "DigestUnsubscribed",
         "type": "object"
       },
+      "DropSignature": {
+        "description": "The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,\nsignature) and where to send them.",
+        "properties": {
+          "api_key": {
+            "title": "Api Key",
+            "type": "string"
+          },
+          "cloud_name": {
+            "title": "Cloud Name",
+            "type": "string"
+          },
+          "folder": {
+            "title": "Folder",
+            "type": "string"
+          },
+          "signature": {
+            "title": "Signature",
+            "type": "string"
+          },
+          "tags": {
+            "title": "Tags",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "integer"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cloud_name",
+          "api_key",
+          "timestamp",
+          "folder",
+          "tags",
+          "signature",
+          "upload_url"
+        ],
+        "title": "DropSignature",
+        "type": "object"
+      },
       "EmbeddedSignup": {
         "additionalProperties": false,
         "description": "What the page receives from Meta's Embedded Signup v4: the FB.login code, and the ids from\nthe session-info message when it arrived. A missing id is looked up with the business token\n(the shared WhatsApp Business Account from debug_token, its number from phone_numbers).",
@@ -13447,6 +13491,99 @@
           }
         },
         "title": "MarkRead",
+        "type": "object"
+      },
+      "McpUploadComplete": {
+        "additionalProperties": false,
+        "properties": {
+          "public_id": {
+            "title": "Public Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_id"
+        ],
+        "title": "McpUploadComplete",
+        "type": "object"
+      },
+      "McpUploadTicket": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "image",
+              "video"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "title": "Limits",
+            "type": "object"
+          },
+          "media_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Asset Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "waiting",
+              "uploaded",
+              "expired",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "upload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DropSignature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "expires_at",
+          "limits"
+        ],
+        "title": "McpUploadTicket",
         "type": "object"
       },
       "Me": {
@@ -39407,6 +39544,144 @@
         "summary": "Get Lead Summary",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/v1/w/{wid}/mcp-uploads/{upload_id}": {
+      "get": {
+        "description": "The upload an AI app asked for, with the signed fields to send the file to storage while it\nwaits. 404 for a ticket that isn't this workspace's.",
+        "operationId": "get_mcp_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpUploadTicket"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Mcp Upload",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
+      "post": {
+        "description": "After the browser uploaded the file: check it came in with this ticket and add it to the\nmedia library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file\nover a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402\nquota_exceeded past the plan's daily upload caps.",
+        "operationId": "complete_mcp_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpUploadComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpUploadTicket"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Mcp Upload",
+        "tags": [
+          "media"
         ]
       }
     },
