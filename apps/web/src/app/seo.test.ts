@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LEGAL } from "@/lib/legal";
+import { GLOSSARY } from "@/lib/marketing/glossary";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
 import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
@@ -132,7 +133,11 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/instagram/conversation-starters",
       "https://socialhood.example/whatsapp/auto-reply",
       "https://socialhood.example/website-chat",
+      // C-163 (gloss)
+      "https://socialhood.example/glossary",
+      "https://socialhood.example/compare/manychat-alternatives",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
+      ...GLOSSARY.map((term) => `https://socialhood.example/glossary/${term.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.
     expect(entries.find((entry) => entry.url.endsWith("/guides"))?.lastModified).toBe(guidesUpdated());
@@ -251,6 +256,7 @@ describe("/llms.txt", () => {
     expect(text.startsWith("# Amplychat\n")).toBe(true);
     for (const path of PUBLIC_PATHS) expect(text, path).toContain(`(https://socialhood.example${path === "/" ? "/" : path})`);
     for (const guide of GUIDES) expect(text, guide.slug).toContain(`(https://socialhood.example/guides/${guide.slug})`);
+    for (const term of GLOSSARY) expect(text, term.slug).toContain(`(https://socialhood.example/glossary/${term.slug})`);
     expect(text).not.toMatch(/undefined|null/);
   });
 });

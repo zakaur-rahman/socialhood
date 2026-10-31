@@ -217,6 +217,8 @@ export const WHATSAPP_API_VS_APP: Guide = {
     // C-163: the matching audience page beside the comparison (the SEO audit's internal-linking finding).
     { label: `${N} for businesses`, href: "/for-businesses" },
     { label: `${N} vs Interakt`, href: "/compare/interakt" },
+    // C-163 (gloss)
+    { label: "WhatsApp terms explained", href: "/glossary" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

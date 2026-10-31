@@ -2582,3 +2582,218 @@ body:has(.site) {
   }
 }
 /* ==== end C-163 auto ==== */
+
+/* ==== C-163 gloss ==== */
+/* The glossary (`main.gloss`: /glossary and /glossary/{term}) and Manychat alternatives (`main.alts`),
+   both inside `.pp` so they share the product pages' cards, chips, footnotes and motion. Here: the
+   glossary's A–Z bar, filter slot and term cards, a term's reading layout, and the alternatives'
+   tool cards. Tokens only; motion is the landing's rise and lift, off under reduced motion. */
+@layer components {
+  .site .pp {
+    /* ---- the glossary index: head, the A–Z bar with the filter slot, the term cards */
+    & .gl-head .lede { max-width: 56ch; }
+    & .gl-meta { display: inline-flex; align-items: center; gap: var(--space-2); margin: var(--space-4) 0 0; font-size: var(--fs-label); color: var(--s-text-3); }
+    & .gl-bar { position: sticky; top: var(--nav-h); z-index: 5; border-block: 1px solid var(--s-line); background: var(--s-bg); }
+    & .gl-bar-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-8); padding-block: var(--space-3); }
+    & .gl-az ul { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+    & .gl-az :is(a, span) {
+      display: inline-grid; place-items: center; min-width: 32px; height: 32px; border-radius: var(--r-sm);
+      font-size: var(--fs-label); font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    & .gl-az a { color: var(--s-text); text-decoration: none; transition: background-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease); }
+    & .gl-az a[data-empty] { color: var(--s-text-3); }
+    & .gl-az span { color: var(--s-line-control); }
+    /* The island's slot keeps its height before and after the script, so nothing moves (CLS 0). */
+    & .gl-filter { min-height: 44px; flex: 1 1 26rem; max-width: 40rem; }
+    & .gl-filter-in { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+    & .gl-search {
+      position: relative; flex: 1 1 12rem; display: flex; align-items: center; min-height: 44px;
+      border: 1px solid var(--s-line-control); border-radius: var(--r-md); background: var(--s-surface);
+      transition: border-color var(--dur-quick) var(--ease), box-shadow var(--dur-quick) var(--ease);
+    }
+    & .gl-search svg { position: absolute; left: var(--space-3); color: var(--s-text-3); pointer-events: none; }
+    & .gl-search input {
+      width: 100%; min-height: 42px; padding: 0 var(--space-3) 0 calc(var(--space-3) * 2 + 18px); border: 0; border-radius: inherit;
+      background: transparent; font-size: var(--fs-body-sm); color: var(--s-text); outline: 0;
+    }
+    & .gl-search:focus-within { border-color: var(--s-focus); box-shadow: 0 0 0 1px var(--s-focus); }
+    & .gl-chan { display: inline-flex; padding: 2px; border: 1px solid var(--s-line); border-radius: var(--r-md); background: var(--s-surface-2); }
+    & .gl-chan button {
+      min-height: 38px; padding: 0 var(--space-3); border: 0; border-radius: var(--r-sm); background: transparent;
+      font-size: var(--fs-label); font-weight: 500; color: var(--s-text-2); cursor: pointer;
+      transition: background-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease), box-shadow var(--dur-quick) var(--ease);
+    }
+    & .gl-chan button[aria-pressed="true"] { background: var(--s-surface); color: var(--s-text); box-shadow: var(--shadow-lift); }
+    & .gl-chan button:focus-visible { outline: 2px solid var(--s-focus); outline-offset: 1px; }
+    & .gl-count { margin: 0; font-size: var(--fs-caption); color: var(--s-text-3); white-space: nowrap; }
+
+    & .gl-list { padding-top: var(--space-12); }
+    /* The list reads as a dictionary: a letter beside its terms, each term a row (mark, term and
+       channel, the definition, an arrow), hairlines between. */
+    & .gl-group {
+      display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: var(--space-6); padding-block: var(--space-8);
+      border-top: 1px solid var(--s-line); scroll-margin-top: calc(var(--nav-h) + var(--space-16) + var(--space-3));
+    }
+    & .gl-group:first-child { border-top: 0; padding-top: 0; }
+    & .gl-letter { margin: 0; padding-top: var(--space-3); font-size: var(--fs-h2); line-height: 1; letter-spacing: var(--tr-h2); font-weight: 700; color: var(--s-text); white-space: nowrap; }
+    & .gl-cards { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    & .gl-card {
+      position: relative; display: grid; grid-template-columns: 32px minmax(12rem, 19rem) minmax(0, 1fr) 16px; align-items: center;
+      gap: var(--space-2) var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid transparent; border-radius: var(--r-lg);
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+    }
+    & .gl-card > .ico { width: 32px; height: 32px; }
+    & .gl-card > .ico svg { width: 18px; height: 18px; }
+    & .gl-card-h { display: grid; gap: var(--space-1); min-width: 0; }
+    & .gl-chan-t { font-size: var(--fs-caption); font-weight: 500; color: var(--s-text-3); }
+    & .gl-card-t { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .gl-card-t a { color: inherit; text-decoration: none; }
+    & .gl-card-t a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    & .gl-card-t a:focus-visible { outline: 0; }
+    & .gl-card:has(a:focus-visible) { outline: 2px solid var(--s-focus); outline-offset: 3px; }
+    & .gl-card p { margin: 0; max-width: 68ch; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .gl-card-go { color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease); }
+
+    /* ---- a term: the head, then the reading column beside a sticky side column from site-wide */
+    & .gl-thead { padding-bottom: var(--space-10); }
+    & .gl-back {
+      display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-bottom: var(--space-6);
+      font-size: var(--fs-label); font-weight: 500; color: var(--s-link); text-decoration: none;
+    }
+    & .gl-back svg { transition: transform var(--dur-fast) var(--ease); }
+    & .gl-h1 { max-width: 22ch; }
+    /* The definition: the quotable sentence, set as the lede with an ink rule beside it. */
+    & .gl-def { max-width: 60ch; margin-top: var(--space-5); padding-left: var(--space-5); border-left: 2px solid var(--s-text); color: var(--s-text); }
+    & .gl-aka { margin: var(--space-4) 0 0; font-size: var(--fs-label); color: var(--s-text-2); }
+    & .gl-aka span { margin-right: var(--space-2); font-weight: 600; color: var(--s-text-3); }
+    & .gl-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); padding-block: var(--space-4) var(--space-section); }
+    & .gl-main { min-width: 0; display: grid; gap: var(--space-14); }
+    & .gl-h2 { margin: 0 0 var(--space-6); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .gl-prose { display: grid; gap: var(--space-5); max-width: 68ch; font-size: var(--fs-lede); line-height: 1.7; color: var(--s-text); }
+    & .gl-prose p { margin: 0; }
+    & .gl-handle { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: var(--space-5); margin: 0; padding: 0; list-style: none; }
+    & .gl-hcard {
+      display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); padding: var(--space-6);
+      background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease);
+    }
+    & .gl-hcard h3 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .gl-hcard p { margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .gl-related { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    & .gl-side { min-width: 0; }
+    & .gl-side-in { display: grid; gap: var(--space-5); }
+    & .gl-facts { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-5); border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .gl-facts > div { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); font-size: var(--fs-label); line-height: var(--lh-label); }
+    & .gl-facts dt { color: var(--s-text-3); }
+    & .gl-facts dd { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; font-weight: 500; color: var(--s-text); text-align: right; }
+    & .gl-facts .ico { width: 24px; height: 24px; }
+    & .gl-facts .ico svg { width: 14px; height: 14px; }
+    & .gl-sources ul { gap: var(--space-3); }
+    & .gl-sources a svg { display: inline; margin-left: var(--space-1); vertical-align: -1px; }
+    & .gl-learn { font-weight: 600; }
+    & .gl-try { padding: var(--space-5); border-radius: var(--r-lg); background: var(--s-surface-2); }
+    & .gl-try-t { font-size: var(--fs-body); font-weight: 700; color: var(--s-text); }
+    & .gl-try p { margin: 0; font-size: var(--fs-label); color: var(--s-text-2); }
+    & .gl-try .gl-try-t { color: var(--s-text); }
+    & .gl-try-btn { width: 100%; min-height: 44px; margin-top: var(--space-4); }
+
+    /* ---- the compare hub's link to the list page */
+    & .hcard.is-wide { max-width: 52rem; }
+    & .hcard.is-wide .h-sec { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin: 0; }
+
+    /* ---- Manychat alternatives: the fair note, the table, the tool cards */
+    & .alt-fair { max-width: 52rem; margin-top: var(--space-8); }
+    & .alt-fair p { margin: 0; }
+    & .alt-table thead th:nth-child(1) { width: 10rem; }
+    & .alt-table thead th:nth-child(3) { width: 30%; }
+    & .alt-table tbody th a { color: inherit; text-decoration: underline; text-decoration-color: var(--s-line-control); text-underline-offset: 4px; }
+    & .alt-table .ours-row > * { background: var(--s-surface-2); }
+    & .alt-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+    & .alt-cards > li { display: flex; }
+    & .alt-card {
+      display: flex; flex-direction: column; gap: var(--space-5); width: 100%; padding: var(--space-8);
+      background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
+      transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-quick) var(--ease);
+    }
+    & .alt-card.is-ours { border-color: var(--s-line-control); }
+    & .alt-card-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+    & .alt-card-h h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .alt-chans { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    & .alt-chans li {
+      display: inline-flex; align-items: center; gap: var(--space-1); height: 26px; padding: 0 var(--space-3) 0 var(--space-2);
+      border: 1px solid var(--s-line); border-radius: 999px; font-size: var(--fs-caption); font-weight: 500; color: var(--s-text-2);
+    }
+    & .alt-chans svg { width: 14px; height: 14px; color: var(--c); }
+    & .alt-best { margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--s-text); }
+    & .alt-best span { display: block; margin-bottom: var(--space-1); font-size: var(--fs-caption); font-weight: 600; color: var(--s-text-3); }
+    & .alt-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--s-line-2); }
+    & .alt-cols h4 { margin: 0 0 var(--space-3); font-size: var(--fs-label); font-weight: 600; color: var(--s-text); }
+    & .alt-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+    & .alt-list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-2); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .alt-list svg { margin-top: 3px; }
+    & .alt-list.is-plus svg { color: var(--ok); }
+    & .alt-list.is-minus svg { color: var(--s-text-3); }
+    & .alt-card-f {
+      display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4);
+      margin-top: auto; padding-top: var(--space-5); border-top: 1px solid var(--s-line-2);
+    }
+    & .alt-price { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-2); flex: 1 1 16rem; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text); }
+    & .alt-price svg { margin-top: 3px; color: var(--s-text-3); }
+    & .alt-date { color: var(--s-text-3); }
+    & .alt-go { flex: none; }
+    & .alt-how { display: grid; gap: var(--space-2); margin: 0; padding-left: var(--space-5); }
+    & .alt-tm { margin-top: 0; padding-top: 0; border-top: 0; }
+
+    /* ---- motion: the landing's rise and hover lift */
+    & .gl-cards > :nth-child(2), & .gl-handle > :nth-child(2), & .alt-cards > :nth-child(2n) { --n: 1; }
+    & .gl-cards > :nth-child(3), & .gl-handle > :nth-child(3) { --n: 2; }
+    @media (hover: hover) {
+      & .gl-az a:hover { background: var(--s-hover); }
+      & .gl-chan button:hover { color: var(--s-text); }
+      & .gl-card:hover { background: var(--s-surface); box-shadow: var(--shadow-lift); border-color: var(--s-line); }
+      & .gl-card:hover .gl-card-go { transform: translateX(var(--dist-micro)); color: var(--s-text); }
+      & :is(.gl-hcard, .alt-card):hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
+      & .gl-back:hover svg { transform: translateX(calc(var(--dist-micro) * -1)); }
+    }
+    & .gl-card:active { transform: translateY(1px); }
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & :is(.gl-card, .gl-hcard, .alt-card) {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      & :is(.gl-card, .gl-hcard, .alt-card, .gl-back svg, .gl-card-go) { transform: none !important; }
+    }
+
+    /* ---- responsive */
+    @media (width > 1060px) { /* site-wide */
+      & .gl-grid { grid-template-columns: minmax(0, 1fr) 20rem; column-gap: var(--space-16); }
+      & .gl-side-in { position: sticky; top: calc(var(--nav-h) + var(--space-8)); }
+    }
+    @media (width <= 1060px) { /* site-wide */
+      & .gl-card { grid-template-columns: 32px minmax(10rem, 15rem) minmax(0, 1fr) 16px; }
+      & .gl-related { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      & .alt-cards { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (width <= 760px) { /* site-nav */
+      & .gl-bar { position: static; }
+      & .gl-group { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); scroll-margin-top: calc(var(--nav-h) + var(--space-4)); }
+      & .gl-letter { padding-top: 0; }
+      & .gl-cards { gap: var(--space-3); }
+      & .gl-card { grid-template-columns: 32px minmax(0, 1fr); padding: var(--space-5); background: var(--s-surface); border-color: var(--s-line); }
+      & .gl-card p { grid-column: 1 / -1; }
+      & .gl-card-go { display: none; }
+      & .gl-related { grid-template-columns: minmax(0, 1fr); }
+      & .alt-table { min-width: 36rem; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .gl-filter { flex-basis: 100%; min-height: 96px; }
+      & .alt-card { padding: var(--space-6); }
+      & .alt-cols { grid-template-columns: minmax(0, 1fr); }
+    }
+  }
+}
+/* ==== end C-163 gloss ==== */

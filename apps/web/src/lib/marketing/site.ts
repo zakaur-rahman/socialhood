@@ -198,6 +198,8 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "vs Manychat", href: "/compare/manychat" },
         { label: "vs Interakt", href: "/compare/interakt" },
         { label: "Switch from Manychat", href: "/switch-from-manychat" },
+        // C-163 (gloss)
+        { label: "Manychat alternatives", href: "/compare/manychat-alternatives" },
         { label: "All comparisons", href: "/compare" },
       ],
     },
@@ -206,6 +208,8 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
       title: "Resources",
       links: [
         { label: "Guides", href: "/guides" },
+        // C-163 (gloss)
+        { label: "Glossary", href: "/glossary" },
         { label: "Common questions", href: "/faq" },
         { label: "AI info", href: "/ai-info" },
         { label: "Safety", href: "/safety" },
@@ -284,6 +288,9 @@ export const PUBLIC_PATHS = [
   "/instagram/conversation-starters",
   "/whatsapp/auto-reply",
   "/website-chat",
+  // C-163 (gloss): each term (/glossary/{slug}) is added by the sitemap itself
+  "/glossary",
+  "/compare/manychat-alternatives",
 ] as const;
 
 /**
@@ -335,4 +342,7 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/instagram/conversation-starters": "2026-10-31",
   "/whatsapp/auto-reply": "2026-10-31",
   "/website-chat": "2026-10-31",
+  // C-163 (gloss)
+  "/glossary": "2026-10-31",
+  "/compare/manychat-alternatives": "2026-10-31",
 };
