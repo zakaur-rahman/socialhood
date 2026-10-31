@@ -19,7 +19,14 @@ from importlib import import_module
 
 from socialhood.mcp.registry import McpRegistry, registry
 
-TOOL_MODULES: tuple[str, ...] = ()
+TOOL_MODULES = (
+    "socialhood.mcp.tools.workspace",
+    "socialhood.mcp.tools.posts",
+    "socialhood.mcp.tools.media",
+    "socialhood.mcp.tools.inbox",
+    "socialhood.mcp.tools.insights",
+    "socialhood.mcp.tools.knowledge",
+)
 
 
 def load_tools() -> McpRegistry:
