@@ -212,6 +212,7 @@ export const WHATSAPP_API_VS_APP: Guide = {
     },
   ],
   related: [
+    { label: "WhatsApp auto-reply in Amplychat", href: "/whatsapp/auto-reply" },
     { label: "The AI inbox", href: "/features/ai-inbox" },
     // C-163: the matching audience page beside the comparison (the SEO audit's internal-linking finding).
     { label: `${N} for businesses`, href: "/for-businesses" },

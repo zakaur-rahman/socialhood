@@ -8914,3 +8914,98 @@ language and C-160 motion tokens; no new tokens.
 plan and credit values, statuses, audience links, links resolve, no ranking words, source comments).
 API: `test_marketing_plan_table.py` passes. E2E for the coordinator: `e2e/c163-feature-pages.spec.ts`.
 Screenshots at 375 and 1440 in the session scratchpad (`seo-content/feat/`), no sideways scroll.
+
+### C-163 (auto)
+
+The SEO audit's programmatic set 1: six automation and channel pages and their hub, on
+`feature/seo-auto`. Web only; no API change.
+
+**Pages and searches.**
+- `/automations` (hub): "Instagram automations", "WhatsApp automation", the set as a whole.
+- `/instagram/comment-to-dm`: "how to auto-reply to Instagram comments with a DM", "Instagram comment to DM".
+- `/instagram/story-replies`: "Instagram story reply automation", "auto DM when someone mentions you in their story".
+- `/instagram/dm-keywords`: "Instagram DM keyword auto reply".
+- `/instagram/conversation-starters`: "Instagram conversation starters", "Instagram ice breakers". Built (GR-11:
+  `services/ice_breakers.py`, the Conversation starters page under Automations), so the page exists.
+- `/whatsapp/auto-reply`: "WhatsApp auto reply", "WhatsApp Business API auto reply".
+- `/website-chat`: "AI chat for website", "AI chatbot widget for small business website".
+
+**Decided.**
+- **The hub is `/automations`:** no top-level app route uses it (the app's automations are
+  `/w/{slug}/automations`; `proxy.ts`/`lib/hosts.ts` APP_PREFIXES are `/app`, `/w`, `/sign-in`, `/sign-up`,
+  `/dev`), and robots.txt doesn't block it.
+- **One data file and one view**: `lib/marketing/automation-pages.tsx` (every page's words, limits, credits,
+  questions and Meta sources, plus `META`, the dated source list) and
+  `components/marketing/automations/AutomationPageView.tsx`. Each route is a three-line `page.tsx` with a
+  static `metadata` export, not a dynamic segment, because `public-metadata.test.ts` maps every
+  `PUBLIC_PATHS` entry to a page module with `metadata`.
+- **The guides' reading layout** (C-159 `main.guide`: head, sticky contents and facts, progress bar,
+  question cards, "Keep reading", night close) plus the C-160 scene parts (`.xp`), so the pages need little
+  CSS of their own (the `C-163 auto` block). A full-width product scene sits between the head and the
+  article: the landing's `CommentMachine` (comment to DM), `ModeSwitch` (WhatsApp) and `HeroInbox` (the hub),
+  imported; small card scenes for story replies, keywords, starters and the widget, all captioned "Example
+  data".
+- **Template sections** after each body: "Plan limits and AI credits" (from plan-table.json), "Common
+  questions" (3–4 per page, none on `/faq` or in a guide; a test holds this, so the FAQPage markup is the
+  page's own, C-162), and "Meta's sources" (each link with the date read).
+- **Structured data:** Article + FAQPage in one graph, Home › Automations › page breadcrumbs; the hub has an
+  ItemList and breadcrumbs, no FAQPage.
+- **Links in:** the footer's Product column ("Automations"); `/features` (the comment-to-DM cell now opens
+  `/instagram/comment-to-dm`, the website chat cell `/website-chat`; the inbox details link WhatsApp
+  auto-reply, the automations details link the hub); `/how-it-works` (the automations stage gets a "read
+  more" link, a new optional `Stage.link`); and each of the three guides' related links.
+- **Copy:** the app's own labels for triggers and match modes ("Instagram DM keyword", "Whole word", "Exact
+  message", "Contains"); examples are made-up shops and creators, labelled "Example data".
+
+**Claims and their sources.**
+- Triggers, match modes, scopes, cooldown 0–72 h (default 24), up to 50 keywords, up to five public replies,
+  up to three link buttons, tap first, follow nudge never a condition, priority order, business-hours
+  condition: `models/automations.py`, `schemas/automations.py`, `services/automations/{matching,runtime,validation}.py`.
+- Private replies: text and buttons only, 7-day skip, queue at 750 an hour: `validation.py`, `queue.py`,
+  `platforms/buckets.py`.
+- Story replies (keywords optional, up to 20 chosen Stories, the heart, a heart-only reply starts nothing),
+  mentions (Mentions page under Comments): `runtime.py`, `schemas/automations.py`, `components/comments/MentionsPage.tsx`.
+- Conversation starters: up to 4, 80 characters, unique, mapped to an automation or the AI, pushed to
+  Instagram with a kept list and Sync again on failure: `services/ice_breakers.py`.
+- Disclosure line on automated messages: `models/identity.py` `automation_disclosure`.
+- Figures and funnel: `services/automations/stats.py`, `funnel.py`; Activity page (changelog 2026-10-23).
+- WhatsApp: automations run on Instagram and Facebook only (`AUTOMATION_PLATFORMS`); AI modes, Auto on
+  Pro; Auto always or out of hours, the away message once per closed window and not on top of Auto
+  (`services/business_hours.py`); takeover 2 h; templates read from Meta and cached 5 min
+  (`services/whatsapp_templates.py`); sequences send text inside the window, templates wait on broadcasts
+  (`services/sequences/runner.py`, `broadcasts_enabled = False`); round-robin assignment (`services/assignment.py`).
+- Website chat: one line of code, up to 20 domains, title, greeting, colour, side, email off / optional /
+  required, consent evidence, branding off on Pro and Max, daily chat cap, no window, signed visitor
+  token and rate limits, history on return: `models/widget.py`, `services/widget/chat.py`,
+  `services/reply_window.py`.
+- Limits: `plan-table.json` (active_automations, flow_steps, ai_reply_automations, ai_modes,
+  ai_credits_monthly, accounts_per_platform, widget_conversations_daily, crawl_pages,
+  widget_remove_branding). Credits: `billing/plans.py` CREDIT_COSTS (message_analysis 1, reply_suggestion /
+  auto_reply 2, automation_ai_reply 2, knowledge_test 1).
+- Meta (all read 2026-10-31; URLs and quotes in `META`): private replies (one message, 7 days, follow-ups
+  within 24 h of their reply); Instagram messaging window (24 h, 7-day Human Agent); Instagram rate limits
+  (750 private replies an hour, 100 text messages a second; confirmed by a web search and a second fetch);
+  ice breakers (4 max, not on desktop); the Messenger/IG messaging policy (disclose automation); WhatsApp
+  customer service window (24 h, resets, templates only after); WhatsApp pricing (templates per message;
+  1,000 free service messages per number a month from 1 October 2026, charged after).
+
+**For the owner.**
+- **Meta's WhatsApp pricing changed on 1 October 2026:** service messages are free only up to 1,000 a month
+  per number, then charged. The WhatsApp guide's "Is the WhatsApp Business API free?" answer and any "free
+  service replies" wording elsewhere predate this; not my files, left for review. The new page states the
+  current rule.
+- Human Agent (7 days) is off until Meta approves it (`ig_human_agent_enabled = False`); the DM keywords page
+  says so.
+
+**Skill advice.** The owner's site language (eyebrows, icon cards, step cards) is kept as on the guides
+(C-159). No new tokens; no new dependency; server-rendered with the existing idle island
+(`ExplainerMotion`), CLS 0, motion off with reduced motion.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest `app/(marketing)`,
+`app/seo`, `app/public-metadata`, `lib/marketing`, `components/marketing`, `components/site`,
+`components/not-found`, `styles`, `lib/copy-lint`: 33 files, 594 tests pass (new `automations.test.tsx`:
+listing in sitemap, PAGE_UPDATED and llms.txt; unique titles, descriptions and questions; one h1; contents
+match the body; 800–1,200 words; no claim words or "please"; links resolve; Article/FAQPage/breadcrumb;
+the hub's ItemList; the links in). `seo.test.ts`'s sitemap list gains the seven paths. E2E for the
+coordinator: `e2e/c163-automations.spec.ts` (not run here). Screenshots at 375 and 1440 on the dev server
+(:3191), no sideways scroll and no page errors.

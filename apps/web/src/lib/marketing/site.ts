@@ -176,6 +176,7 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "Features", href: FEATURES_PATH },
         { label: "Pricing", href: "/pricing" },
         { label: "How it works", href: HOW_IT_WORKS_PATH },
+        { label: "Automations", href: "/automations" },
         { label: "What's new", href: "/changelog" },
         ...(status ? [{ label: "Status", href: status, external: true }] : []),
         { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
@@ -275,6 +276,14 @@ export const PUBLIC_PATHS = [
   // C-160: the explainer pages
   "/how-it-works",
   "/features",
+  // C-163 (auto): the automation and channel pages and their hub
+  "/automations",
+  "/instagram/comment-to-dm",
+  "/instagram/story-replies",
+  "/instagram/dm-keywords",
+  "/instagram/conversation-starters",
+  "/whatsapp/auto-reply",
+  "/website-chat",
 ] as const;
 
 /**
@@ -318,4 +327,12 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/faq": "2026-10-30",
   "/how-it-works": "2026-10-31",
   "/features": "2026-10-31",
+  // C-163 (auto)
+  "/automations": "2026-10-31",
+  "/instagram/comment-to-dm": "2026-10-31",
+  "/instagram/story-replies": "2026-10-31",
+  "/instagram/dm-keywords": "2026-10-31",
+  "/instagram/conversation-starters": "2026-10-31",
+  "/whatsapp/auto-reply": "2026-10-31",
+  "/website-chat": "2026-10-31",
 };

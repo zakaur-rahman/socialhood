@@ -2388,6 +2388,138 @@ body:has(.site) {
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
         & :is(.fp-steps, .fp-notyet, .fp-aud) > li {
+
+/* ==== C-163 auto ==== */
+/* The automation and channel pages (`main.guide.xp.ap`) and their hub (`main.guides.xp.ap.ap-hub`): the
+   guides' reading layout (C-159) and the explainers' scene parts (C-160) do most of the work. Here: the
+   scene band under the head, the small card scenes (story, keywords, starters, widget), the labelled
+   example thread, the limits table, Meta's sources, the hub's channel groups, inbox band and rule cards.
+   Tokens only. Motion: the scenes' parts arrive once (`[data-xv]`, explainer-motion.ts); the example,
+   the rule cards and the sources rise with the cards (`view()`); all of it off with reduced motion. */
+@layer components {
+  .site .ap {
+    /* ---- the scene band */
+    & .ap-scene { padding-bottom: var(--space-12); }
+    & .ap-scene .xs-machine .machine { margin-top: 0; }
+    & .ap-sc { gap: var(--space-3); }
+    & .ap-sc-box { display: grid; gap: var(--space-5); align-items: start; padding: var(--space-6); border-radius: var(--r-xl); background: var(--s-surface-2); min-width: 0; }
+    & .ap-thread { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+    & .ap-thread .xs-msg { margin-bottom: var(--space-2); }
+    & :is(.ap-thread, .ap-phone, .ap-widget) .xs-bub { margin: 0; }
+    & .ap-in { align-self: flex-start; }
+    & .ap-out {
+      align-self: flex-end; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); max-width: 86%; margin: 0;
+      padding: var(--space-3) var(--space-4); border-radius: var(--r-lg); border-bottom-right-radius: var(--r-xs);
+      background: var(--ink); color: var(--on-ink); font-size: var(--fs-body-sm); line-height: 1.45;
+    }
+    & .ap-btn {
+      display: inline-flex; align-items: center; gap: var(--space-1); min-height: 32px; padding: 0 var(--space-3); border-radius: var(--r-sm);
+      background: var(--sheet); color: var(--ink); font-size: var(--fs-label); font-weight: 600;
+    }
+    & .ap-ctx { margin: 0; font-size: var(--fs-caption); color: var(--ink-3); }
+    & .ap-heart { display: inline-flex; align-items: center; gap: var(--space-1); align-self: flex-start; margin: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--ig); }
+    & .ap-heart svg { fill: currentColor; }
+    & .ap-hit { padding: 0 2px; border-radius: var(--r-xs); background: var(--iris-soft); color: var(--iris-ink); }
+
+    /* A Story beside its DM thread. */
+    & .ap-story {
+      display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-4); aspect-ratio: 9 / 14; max-width: 15rem; width: 100%;
+      padding: var(--space-4); border-radius: var(--r-lg); background: var(--ink); color: var(--on-ink);
+    }
+    & .ap-story-top { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-caption); font-weight: 600; }
+    & .ap-story-top .ico { width: 32px; height: 32px; background: var(--sheet); }
+    & .ap-story-t { font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .ap-story-ask { align-self: flex-start; padding: var(--space-2) var(--space-3); border-radius: var(--r-sm); background: var(--sheet); color: var(--ink); font-size: var(--fs-label); font-weight: 600; }
+
+    /* The keyword automation's card. */
+    & .ap-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); padding: 0; list-style: none; }
+    & .ap-chips li { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3); border-radius: var(--r-sm); background: var(--paper); font-size: var(--fs-label); font-weight: 600; }
+    & .ap-chips li.is-hit { background: var(--iris-soft); color: var(--iris-ink); }
+    & .ap-kv { display: grid; margin: 0; }
+    & .ap-kv > div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; font-size: var(--fs-label); }
+    & .ap-kv > div + div { border-top: 1px solid var(--rule-2); }
+    & .ap-kv dt { color: var(--ink-2); }
+    & .ap-kv dd { margin: 0; font-weight: 600; }
+
+    /* A new chat with its four starters. */
+    & .ap-phone { display: flex; flex-direction: column; gap: var(--space-2); max-width: 26rem; width: 100%; }
+    & .ap-phone-h { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); margin-bottom: var(--space-2); border-bottom: 1px solid var(--rule-2); }
+    & .ap-phone-h b { display: block; font-size: var(--fs-body-sm); }
+    & .ap-phone-h small { font-size: var(--fs-caption); color: var(--ink-3); }
+    & .ap-starters { display: grid; gap: var(--space-2); margin: 0 0 var(--space-3); padding: 0; list-style: none; }
+    & .ap-starters li { padding: var(--space-3) var(--space-4); border-radius: var(--r-md); border: 1px solid var(--rule); font-size: var(--fs-label); font-weight: 600; text-align: center; }
+    & .ap-starters li.is-tap { border-color: var(--ink); }
+
+    /* A product page with the widget open over it. */
+    & .ap-site { display: grid; align-content: start; min-height: 16rem; border-radius: var(--r-lg); border: 1px solid var(--rule); background: var(--sheet); overflow: hidden; }
+    & .ap-site-bar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); }
+    & .ap-site-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+    & .ap-site-bar span { margin-left: var(--space-2); }
+    & .ap-site-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); padding: var(--space-4); }
+    & .ap-site-img { aspect-ratio: 4 / 3; border-radius: var(--r-md); background: var(--paper-2); }
+    & .ap-site-lines { display: grid; align-content: start; gap: var(--space-2); }
+    & .ap-site-lines b { font-size: var(--fs-body); }
+    & .ap-site-lines i { display: block; height: 8px; border-radius: var(--r-xs); background: var(--paper-2); }
+    & .ap-site-lines i:last-child { width: 60%; }
+    & .ap-widget { display: flex; flex-direction: column; gap: var(--space-3); box-shadow: var(--shadow-lift); }
+    & .ap-widget-h { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-1); font-size: var(--fs-body-sm); }
+    & .ap-widget-h .ico { width: 32px; height: 32px; background: var(--paper-2); }
+    & .ap-widget .xs-a { margin: 0; }
+
+    /* ---- the labelled example */
+    & .ap-ex { margin: var(--space-6) 0; padding: var(--space-6); border-radius: var(--r-lg); border: 1px solid var(--s-line); background: var(--s-surface); }
+    & .ap-ex-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+    & .ap-ex-h b { font-size: var(--fs-body); font-weight: 600; color: var(--s-text); }
+    & .ap-ex-tag { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--space-2); border-radius: var(--r-xs); background: var(--s-surface-2); font-size: var(--fs-caption); color: var(--s-text-2); }
+    & .gprose .ap-ex-set { margin: var(--space-3) 0 var(--space-5); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .gprose .ap-ex-thread { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+    & .gprose .ap-ex-thread li { margin: 0; padding: var(--space-3) var(--space-4); max-width: 86%; border-radius: var(--r-lg); font-size: var(--fs-body-sm); line-height: 1.5; }
+    & .gprose .ap-ex-thread li::before { content: none; }
+    & .gprose .ap-ex-them { align-self: flex-start; background: var(--s-surface-2); color: var(--s-text); border-bottom-left-radius: var(--r-xs); }
+    & .gprose .ap-ex-you { align-self: flex-end; background: var(--ink); color: var(--on-ink); border-bottom-right-radius: var(--r-xs); }
+    & .gprose .ap-ex-tap { align-self: flex-end; border: 1px solid var(--s-line-control); background: var(--s-surface); font-weight: 600; color: var(--s-text); }
+    & .gprose .ap-ex-note { align-self: center; max-width: 100%; padding-block: var(--space-1); text-align: center; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
+
+    /* ---- limits and sources */
+    & .gprose .ap-lim td { font-variant-numeric: tabular-nums; }
+    & .gprose .ap-lim-box { overflow-x: auto; }
+    & .ap-src { margin-top: var(--space-16); padding: var(--space-6); border: 1px dashed var(--s-line-control); border-radius: var(--r-lg); scroll-margin-top: calc(var(--nav-h) + var(--space-8)); }
+    & .ap-src-h { margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); font-weight: 700; }
+    & .ap-src-p { margin: var(--space-2) 0 var(--space-4); max-width: 64ch; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    & .ap-src ul { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+    & .ap-src li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); min-height: 44px; border-top: 1px solid var(--s-line-2); font-size: var(--fs-label); }
+    & .ap-src a { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--s-link); text-underline-offset: 3px; }
+    & .ap-src li > span { color: var(--s-text-3); font-size: var(--fs-caption); }
+
+    /* ---- after the article */
+    & .ap-next-h { margin: var(--space-12) 0 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .ap-cards { margin-top: var(--space-5); }
+    & .ap-card-ch { font-size: var(--fs-caption); font-weight: 500; color: var(--s-text-2); }
+
+    /* ---- the hub */
+    &.ap-hub .ap-group + :is(.ap-group, .ap-pair), &.ap-hub .ap-pair .ap-group + .ap-group { margin-top: var(--space-12); }
+    &.ap-hub .ap-card-ch { display: none; }
+    &.ap-hub .ap-group-h { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-5); font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    &.ap-hub .ap-band { padding-block: var(--space-section-tight); background: var(--s-surface-2); }
+    &.ap-hub .ap-inbox { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-10); align-items: center; }
+    &.ap-hub .ap-inbox .lede { max-width: 52ch; }
+    &.ap-hub .xs-inbox .stage { align-items: flex-start; }
+    &.ap-hub .xs-inbox :is(.inbox, .stage-cap) { width: min(100%, 528px); }
+    &.ap-hub .ap-rules-sec { padding-block: var(--space-section-tight); }
+    &.ap-hub .ap-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-4); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
+    &.ap-hub .ap-rule-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    &.ap-hub .ap-rule-card .ico { background: var(--s-surface-2); }
+    &.ap-hub .ap-rule-card h3 { margin: var(--space-2) 0 0; font-size: var(--fs-body); line-height: var(--lh-body); font-weight: 600; }
+    &.ap-hub .ap-rule-card p { margin: 0; flex: 1; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+    &.ap-hub .ap-rule-card .tlink { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-label); }
+
+    /* ---- motion: rise with the cards (C-157), once, transform and opacity only */
+    & .ap-rules > :nth-child(2) { --n: 1; }
+    & .ap-rules > :nth-child(3) { --n: 2; }
+    & .ap-rules > :nth-child(4) { --n: 3; }
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & :is(.ap-ex, .ap-rule-card, .ap-src) {
           animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
           animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
         }
@@ -2421,3 +2553,29 @@ body:has(.site) {
   }
 }
 /* ==== end C-163 feat ==== */
+
+    }
+
+    /* ---- responsive */
+    @media (width > 760px) {
+      & .ap-sc-story .ap-sc-box { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); }
+      & .ap-sc-kw .ap-sc-box { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+      & .ap-sc-widget .ap-sc-box { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: end; }
+      & .ap-sc-widget .ap-widget { margin-left: calc(-1 * var(--space-12)); }
+    }
+    @media (width > 1060px) {
+      & .ap-sc-box { padding: var(--space-8); }
+      &.ap-hub .ap-inbox { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-14); }
+    }
+    @media (width > 900px) {
+      &.ap-hub .ap-types .wrap > .ap-group .g-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      &.ap-hub .ap-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+      &.ap-hub .ap-pair .ap-group + .ap-group { margin-top: 0; }
+    }
+    @media (width <= 520px) {
+      & .ap-sc-box, & .ap-ex { padding: var(--space-4); }
+      & .ap-out, & .gprose .ap-ex-thread li { max-width: 92%; }
+    }
+  }
+}
+/* ==== end C-163 auto ==== */
