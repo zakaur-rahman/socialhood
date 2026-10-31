@@ -112,7 +112,7 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     title: "Knowledge and automations",
-    body: "Search what your knowledge base says, add a note or a website, and see automations and pause or resume them.",
+    body: "Search what your knowledge base says, add a note or a question and answer, and see automations and pause or resume them.",
   },
   {
     title: "Ask Amplychat",
@@ -128,8 +128,11 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Schedule, change and cancel posts", free: "No", pro: "Yes", max: "Yes" },
+  { label: "Add knowledge, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
   { label: "Connect with an API key", free: "No", pro: "Yes", max: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "10,000" },
+  { label: "Posts scheduled from AI apps a day", free: "None", pro: "25", max: "100" },
+  { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "200 (10,000 MB)", max: "1,000 (50,000 MB)" },
 ];
 
 export const SAFETY: readonly Capability[] = [
@@ -162,7 +165,7 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts from an AI app is part of Pro and Max. API keys are Pro and Max.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and pausing automations from an AI app are part of Pro and Max. API keys are Pro and Max.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",

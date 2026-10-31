@@ -135,9 +135,15 @@ export function rowCell(row: MatrixRow, plan: PlanKey): string {
   return cellText(row, plan);
 }
 
-/** Entitlements the table leaves out on purpose. C-165: what AI apps may do and their daily tool
- * calls are explained on /developers/mcp (its plans table), not in the pricing table. */
-export const NOT_SHOWN: EntitlementKey[] = ["ai_connections", "mcp_calls_daily"];
+/** Entitlements the table leaves out on purpose. C-165: what AI apps may do, their daily tool
+ * calls and their daily post and upload caps are for /developers/mcp, not the pricing table. */
+export const NOT_SHOWN: EntitlementKey[] = [
+  "ai_connections",
+  "mcp_calls_daily",
+  "mcp_posts_daily",
+  "mcp_uploads_daily",
+  "mcp_upload_mb_daily",
+];
 
 export const PLAN_TABLE_KEYS = Object.keys(table.entitlements) as EntitlementKey[];
 export const TRIAL_DAYS = table.trial_days;
