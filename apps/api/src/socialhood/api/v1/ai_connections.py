@@ -153,7 +153,7 @@ async def revoke_connection(connection_id: uuid.UUID, ctx: CanSelf, session: Ses
 @router.post("/ai-connections/revoke-all", operation_id="revoke_all_ai_connections")
 async def revoke_all(ctx: CanManageIntegrations, session: Session) -> AiConnectionsRevoked:
     """ "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
-    are separate (Settings, Integrations)."""
+    are separate (Settings, API keys)."""
     count = await connections.revoke_all(session, datetime.now(UTC), ctx.user.id)
     if count:
         await audit.record(

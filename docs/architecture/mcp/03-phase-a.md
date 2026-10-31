@@ -72,7 +72,7 @@ migrations/versions/0054_mcp_server.py
 ## Run it locally
 
 1. Start the API as usual (`uv run uvicorn socialhood.main:app --port 8000`, no `--reload`). `/mcp` is on by default.
-2. In the app, make an API key in Settings › Integrations with the scopes you want. The workspace must be on Pro or Max to make a key (PD-6).
+2. In the app, make an API key in Settings › API keys with the scopes you want. The workspace must be on Pro or Max to make a key (PD-6).
 3. Check it:
 
    ```bash
