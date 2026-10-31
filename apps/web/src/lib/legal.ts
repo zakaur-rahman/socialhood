@@ -81,7 +81,7 @@ export type LegalDocumentKey =
 
 /** Each document's page and the date its text last changed (shown as "Last updated"). */
 export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, { title: string; path: string; lastUpdated: string }> = {
-  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-10-29" },
+  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-11-01" },
   terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-10-29" },
   // OWNER REVIEW: the refund terms are a default for a monthly SaaS, not a decision yet.
   refunds: { title: "Refund and Cancellation Policy", path: "/refunds", lastUpdated: "2026-10-26" },

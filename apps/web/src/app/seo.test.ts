@@ -147,7 +147,7 @@ describe("/sitemap.xml", () => {
     for (const guide of GUIDES) {
       expect(entries.find((entry) => entry.url.endsWith(`/guides/${guide.slug}`))?.lastModified).toBe(guide.updated);
     }
-    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-29");
+    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-11-01");
     // Every page has an ISO date, never a build time.
     for (const entry of entries) expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(entries.some((entry) => /\/(app|w|sign-in|unsubscribe)\b/.test(entry.url))).toBe(false);
