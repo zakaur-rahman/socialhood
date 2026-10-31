@@ -8841,3 +8841,76 @@ proposals with their data source and thin-content risk.
 `next typegen`, `tsc --noEmit`, eslint on the touched folders; vitest for `app`, `lib/marketing`,
 `components/marketing` and `styles` (all pass). `caddy adapt` on the Caddyfile. The e2e title for
 `/features/ai-inbox` in `gr37-gtm-pages.spec.ts` follows the new title; CI runs e2e.
+
+## C-163 · SEO content
+
+### C-163 (feat)
+
+The SEO audit's content and link-equity proposals for the feature pages (`feature/seo-feat`).
+
+**The three feature pages go deep.** `/features/ai-inbox`, `/features/comment-intelligence` and
+`/features/publishing` were 305 to 376 words; now about 1,050 to 1,320 words each (measured on the
+rendered page, head to questions). Titles, descriptions and h1s are unchanged (the e2e pins them and
+they already fit the audit's rules). `GtmPage` gets an optional `feature` (`FeatureDepth` in
+gtm-pages.ts); `GtmPageView` renders it through `FeatureDepthView.tsx`, so the comparisons are
+untouched. Each page, in order:
+- an "On this page" bar (the shared `TocNav`), sticky under the header, scrolling sideways on a phone,
+  the current section marked by toc-spy (the explainer island, `ExplainerMotion`, now runs on these
+  pages; it also plays the scenes once);
+- "What it does": a short concrete scenario beside a product scene (`feature-scenes.tsx`: the inbox
+  reuses /how-it-works' hand-off scene; new card scenes for a post's comment summary and filters, the
+  composer's checklist and a week on the calendar), captioned "Example data";
+- the existing cards, rewritten and extended (every title has an icon in page-icons.ts);
+- "How it works": 5 or 6 steps of the real behaviour, a line with a dot each (no numbers, C-157). It
+  replaces the generic "Set up in three steps" on these pages (the product-pages test follows);
+- "Plans and credits": a Free/Pro/Max table read from plan-table.json and the AI credit costs;
+- "What it doesn't do yet": cards with the site's status chips (approval / soon / not offered);
+- "Who it's for": creators and businesses, linking `/for-creators` and `/for-businesses`;
+- 4 or 5 questions of its own (the shared `Faq`), marked up as FAQPage through `uniqueFaq` (none is on
+  /faq, so C-162's one-markup rule holds; a unit test checks it).
+`PAGE_UPDATED` for the three pages is 2026-10-31.
+
+**Credit costs are exported, not typed.** `plan-table.json` gains `credit_costs`, written from
+`billing/plans.py` `CREDIT_COSTS` by `tests/unit/test_marketing_plan_table.py` (the same export and
+check as the entitlements). Ran it locally: passes. The per-20-comments rule (`COMMENTS_PER_CREDIT`,
+services/comments/analysis.py) isn't in the table and is named in a comment.
+
+**Corrections found on the way** (the old copy was wrong or stale):
+- comment analysis costs 1 credit per 20 comments (C-160 found it; the card is now gone and the
+  credits table says it);
+- "A Story is a single photo": a Story is one image or one video (3 to 60 s), `rules.py` STORY_ONE_FILE;
+- Facebook Pages on publishing was titled "coming soon" with no chip; now "With Meta's approval", as
+  everywhere else (the gtm-pages test follows).
+
+**Meta rules quoted**, each from Meta's own developer docs, read 2026-10-31 with an automated read
+(listed as the page's sources): Instagram messaging's 24-hour window and the 7-day Human Agent window
+(instagram-api-with-instagram-login/messaging-api); WhatsApp's 24-hour customer service window, then
+templates only (whatsapp/cloud-api/guides/send-messages); one private reply per comment within 7 days
+(instagram-platform/private-replies). Meta's content-publishing page now says carousels hold up to 20
+items while our checklist allows 10 (`CAROUSEL_MAX_ASSETS`); the page states ours ("2 to 10 files")
+and no Meta number. *For the owner:* raising the cap is a product call.
+
+**Internal links (audit section 5).**
+- Header: Pricing and FAQ go to `/pricing` and `/faq` (`NAV_LINKS`, bar and phone menu);
+  `SiteHeader.test.tsx` updated. The landing's `#pricing` and `#faq` anchors stay.
+- Landing: "See every feature" to `/features` at the start of the features section's "Go deeper" line.
+- Guides: comment-to-DM → `/for-creators` and Amplychat vs Manychat; Instagram DM auto-replies →
+  `/for-businesses` and Amplychat vs InstantDM; WhatsApp API vs app → `/for-businesses` (beside the
+  existing vs Interakt). `updated` dates not bumped (links only).
+- Feature pages: both audience pages from "Who it's for"; related now includes the matching guides,
+  so the gtm-pages test accepts guide paths as related links.
+
+**Judgment calls.** Copy-lint wants "AI polish" (lower case). "Best posting times" is the feature's
+name, so the no-ranking test ignores that phrase. Ask Amplychat's card left the AI inbox page (it has
+its own detail on /features) to keep the page near the length asked. The bar on a wide screen holds
+the page's 7 sections; the publishing head (no screenshot) shows the calendar scene instead of its
+old "On this page" card, which the bar replaces. Skill advice: the scenes use the existing `.xs`
+language and C-160 motion tokens; no new tokens.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest for
+`app/(marketing)`, `app/seo`, `app/public-metadata`, `app/layout`, `lib/marketing`,
+`components/marketing`, `components/site`, `styles`, `lib/copy-lint`: 32 files, 581 tests pass (new
+`feature-pages.test.tsx`: sections and bar, word count, metadata uniqueness, FAQPage and breadcrumbs,
+plan and credit values, statuses, audience links, links resolve, no ranking words, source comments).
+API: `test_marketing_plan_table.py` passes. E2E for the coordinator: `e2e/c163-feature-pages.spec.ts`.
+Screenshots at 375 and 1440 in the session scratchpad (`seo-content/feat/`), no sideways scroll.

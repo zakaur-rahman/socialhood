@@ -27,6 +27,7 @@ import {
   SWITCH_PAGE,
   type GtmPage,
 } from "@/lib/marketing/gtm-pages";
+import { GUIDES, guidePath } from "@/lib/marketing/guides";
 import { PUBLIC_PATHS } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
 
@@ -101,7 +102,9 @@ describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
     expect(screen.getByRole("link", { name: "See plans and limits" })).toHaveAttribute("href", PRICING_PATH);
     const keepReading = within(screen.getByRole("region", { name: "Keep reading" }));
     for (const link of page.related) expect(keepReading.getByRole("link", { name: link.label })).toHaveAttribute("href", link.href);
-    expect(page.related.every((link) => (PUBLIC_PATHS as readonly string[]).includes(link.href))).toBe(true);
+    // A related link is a public page or a guide (C-163: the feature pages link their guides).
+    const routes = [...PUBLIC_PATHS, ...GUIDES.map((guide) => guidePath(guide.slug))] as readonly string[];
+    expect(page.related.every((link) => routes.includes(link.href))).toBe(true);
   });
 });
 
@@ -272,7 +275,9 @@ describe("the feature pages", () => {
   it("comment intelligence names what is analysed and its limits", () => {
     render(<FeatureComments />);
     expect(screen.getByRole("heading", { level: 3, name: "Reads every comment" })).toBeInTheDocument();
-    expect(screen.getByText(/Free reads the comments on your latest posts/)).toBeInTheDocument();
+    // C-163: the limit is a row of the plans table, read from plan-table.json.
+    const limits = screen.getByRole("table", { name: "Comment intelligence: limits on each plan" });
+    expect(within(limits).getByRole("row", { name: /^Posts with comment intelligence/ })).toHaveTextContent(/Latest 5.*Every post.*Every post/);
   });
 
   it("the AI inbox explains the three modes and escalation", () => {
@@ -281,9 +286,11 @@ describe("the feature pages", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Escalation you can rely on" })).toBeInTheDocument();
   });
 
-  it("publishing says Facebook is coming soon", () => {
-    render(<FeaturePublishing />);
-    expect(screen.getByRole("heading", { level: 3, name: "Facebook Pages are coming soon" })).toBeInTheDocument();
+  it("publishing says Facebook Pages wait on Meta's approval", () => {
+    const { container } = render(<FeaturePublishing />);
+    // C-163: in "What it doesn't do yet", with the approval chip (the status the rest of the site uses).
+    const card = within(container.querySelector("#not-yet") as HTMLElement).getByRole("heading", { level: 3, name: "Facebook Pages" }).closest("li") as HTMLElement;
+    expect(within(card).getByText("With Meta's approval")).toBeInTheDocument();
   });
 });
 

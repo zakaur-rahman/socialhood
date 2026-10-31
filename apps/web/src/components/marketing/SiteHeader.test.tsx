@@ -68,8 +68,8 @@ describe("the site header", () => {
     for (const [name, href] of [
       ["Features", "/features"],
       ["How it works", "/how-it-works"],
-      ["Pricing", "/#pricing"],
-      ["FAQ", "/#faq"],
+      ["Pricing", "/pricing"],
+      ["FAQ", "/faq"],
     ]) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
     }
