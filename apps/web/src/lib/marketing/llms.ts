@@ -1,5 +1,8 @@
 import { SUPPORT_EMAIL } from "@/lib/copy";
 
+import { AUTOMATIONS_PATH, AUTOMATION_PAGES } from "./automation-pages";
+import { ALTERNATIVES_PATH } from "./alternatives";
+import { GLOSSARY, GLOSSARY_PATH, glossaryPath } from "./glossary";
 import { COMPARE_PATH, GTM_PAGES } from "./gtm-pages";
 import { GUIDES, GUIDES_PATH, guidePath } from "./guides";
 import { LEGAL_LINKS, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, siteUrl } from "./site";
@@ -35,12 +38,26 @@ export function llmsText(origin: string = siteUrl()): string {
     link("For creators", "/for-creators", "comment-to-DM, scheduling, AI replies from your notes, comment analysis"),
     link("For businesses", "/for-businesses", "one inbox for Instagram, WhatsApp and website chat, AI from your knowledge, leads"),
     link("All comparisons", COMPARE_PATH, "how Amplychat compares with other tools"),
+    // C-163 (gloss)
+    link("Manychat alternatives", ALTERNATIVES_PATH, "nine tools side by side, alphabetical and not a ranking, from each vendor's own dated pages"),
     ...GTM_PAGES.filter((page) => page.path !== "/pricing").map((page) => link(page.name, page.path, page.description)),
+    "",
+    // C-163 (auto)
+    "## Automations",
+    "",
+    link("All automations", AUTOMATIONS_PATH, "every automation type by channel, and the Meta rules each one keeps"),
+    ...AUTOMATION_PAGES.map((page) => link(page.h1, page.path, page.description)),
     "",
     "## Guides",
     "",
     link("All guides", GUIDES_PATH, "practical guides on Instagram DM auto-replies, comment-to-DM automations and the WhatsApp Business API"),
     ...GUIDES.map((guide) => link(guide.h1, guidePath(guide.slug), guide.description)),
+    "",
+    // C-163 (gloss)
+    "## Glossary",
+    "",
+    link("Meta messaging glossary", GLOSSARY_PATH, "WhatsApp, Instagram and Messenger terms, each with Meta's sources and how Amplychat handles it"),
+    ...GLOSSARY.map((term) => link(term.term, glossaryPath(term.slug), term.definition)),
     "",
     "## Developers",
     "",

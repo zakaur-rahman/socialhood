@@ -85,7 +85,8 @@ function Body() {
       <h3>Meta&apos;s charges</h3>
       <p>
         Meta charges for template messages, per message, at a rate that depends on the category and the customer&apos;s
-        country. Under Meta&apos;s current pricing, replies inside the 24-hour window are not charged. Rates change, so
+        country. Your replies inside the 24-hour window are service messages: since 1 October 2026 each business number
+        gets 1,000 free a month, and Meta charges for them after that. Rates change, so
         check{" "}
         <a href="https://developers.facebook.com/docs/whatsapp/pricing" rel="noopener noreferrer">
           Meta&apos;s WhatsApp pricing page
@@ -188,7 +189,7 @@ export const WHATSAPP_API_VS_APP: Guide = {
     "The WhatsApp Business app and the API compared for small businesses and creators: costs, templates, the 24-hour window, teams, and when to switch.",
   h1: "WhatsApp Business API vs the WhatsApp Business app: what small businesses need",
   published: "2026-10-28",
-  updated: "2026-10-29",
+  updated: "2026-10-31",
   readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["WhatsApp"],
@@ -203,7 +204,7 @@ export const WHATSAPP_API_VS_APP: Guide = {
     {
       question: "Is the WhatsApp Business API free?",
       answer:
-        "Meta charges for template messages, per message, by category and country. Under Meta's current pricing, replies inside the 24-hour customer service window are not charged. The software you use the API through usually has its own fee.",
+        "Not entirely. Meta charges for template messages, per message, by category and country. Since 1 October 2026 your replies inside the 24-hour customer service window are charged too, after 1,000 free service messages a month for each business number. The software you use the API through usually has its own fee.",
     },
     {
       question: "Can I message customers who haven't written to me on the API?",
@@ -212,8 +213,13 @@ export const WHATSAPP_API_VS_APP: Guide = {
     },
   ],
   related: [
+    { label: "WhatsApp auto-reply in Amplychat", href: "/whatsapp/auto-reply" },
     { label: "The AI inbox", href: "/features/ai-inbox" },
+    // C-163: the matching audience page beside the comparison (the SEO audit's internal-linking finding).
+    { label: `${N} for businesses`, href: "/for-businesses" },
     { label: `${N} vs Interakt`, href: "/compare/interakt" },
+    // C-163 (gloss)
+    { label: "WhatsApp terms explained", href: "/glossary" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

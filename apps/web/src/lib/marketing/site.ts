@@ -74,12 +74,19 @@ export const SITE_DESCRIPTION =
 
 /** The logo for structured data (Organization.logo): the 512 px app icon, a square PNG. */
 export const LOGO_PATH = "/icons/icon-512.png";
+/** Its width and height in pixels. */
+export const LOGO_SIZE = 512;
 
 /**
- * The business's own social profiles, for Organization.sameAs. Empty until real ones exist: a
- * profile is listed here only once it is live and run by the business.
+ * The business's own social profiles: Organization.sameAs and the footer's links. A profile is
+ * listed here only once it is live and run by the business (Instagram and the Facebook Page, owner
+ * 2026-10-31). LinkedIn (linkedin.com/company/amplychat) is held back for now at the owner's request;
+ * the network and its glyph stay supported, so adding it back is one line here.
  */
-export const SOCIAL_PROFILES: readonly string[] = [];
+export const SOCIAL_PROFILES: readonly { network: "instagram" | "facebook" | "linkedin"; label: string; url: string }[] = [
+  { network: "instagram", label: "Instagram", url: "https://www.instagram.com/amplychat_67/" },
+  { network: "facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61595928331470" },
+];
 
 /** The share image every public page names, drawn by app/(marketing)/og.png/route.tsx (next/og). */
 export const OG_IMAGE = {
@@ -108,14 +115,15 @@ export const FEATURES_PATH = "/features";
 export const HOW_IT_WORKS_PATH = "/how-it-works";
 
 /**
- * The header's links. Features and How it works have their own pages (C-160); Pricing and FAQ still
- * point at the landing page's sections, whose anchors stay for in-page links.
+ * The header's links (bar and phone menu). Features and How it works have their own pages (C-160);
+ * Pricing and FAQ lead to /pricing and /faq (C-163, the SEO audit's link-equity finding), not the
+ * landing's sections, whose anchors stay for in-page links.
  */
 export const NAV_LINKS = [
   { label: "Features", href: FEATURES_PATH },
   { label: "How it works", href: HOW_IT_WORKS_PATH },
-  { label: "Pricing", href: `/#${SECTION_IDS.pricing}` },
-  { label: "FAQ", href: `/#${SECTION_IDS.faq}` },
+  { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/faq" },
   { label: "Guides", href: "/guides" },
 ] as const;
 
@@ -154,8 +162,8 @@ export type FooterLink = { label: string; href: string; external?: boolean };
 export type FooterColumn = { id: string; title: string; links: FooterLink[] };
 
 /**
- * The footer's columns (C-156). Status shows only when the status page is configured. No social
- * links: the business has no profiles yet (SOCIAL_PROFILES). The /shipping page is labelled
+ * The footer's columns (C-156). Status shows only when the status page is configured. The social
+ * profiles (SOCIAL_PROFILES) sit under the brand, not in a column. The /shipping page is labelled
  * "Delivery" here (C-161 v2): the business ships nothing physical; the page keeps its URL and its
  * "Shipping and Delivery Policy" title, which payment-provider reviews look for.
  */
@@ -168,6 +176,7 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "Features", href: FEATURES_PATH },
         { label: "Pricing", href: "/pricing" },
         { label: "How it works", href: HOW_IT_WORKS_PATH },
+        { label: "Automations", href: "/automations" },
         { label: "What's new", href: "/changelog" },
         ...(status ? [{ label: "Status", href: status, external: true }] : []),
         { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
@@ -189,6 +198,8 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
         { label: "vs Manychat", href: "/compare/manychat" },
         { label: "vs Interakt", href: "/compare/interakt" },
         { label: "Switch from Manychat", href: "/switch-from-manychat" },
+        // C-163 (gloss)
+        { label: "Manychat alternatives", href: "/compare/manychat-alternatives" },
         { label: "All comparisons", href: "/compare" },
       ],
     },
@@ -197,6 +208,8 @@ export function footerColumns(status: string | null = statusUrl()): FooterColumn
       title: "Resources",
       links: [
         { label: "Guides", href: "/guides" },
+        // C-163 (gloss)
+        { label: "Glossary", href: "/glossary" },
         { label: "Common questions", href: "/faq" },
         { label: "AI info", href: "/ai-info" },
         { label: "Safety", href: "/safety" },
@@ -267,6 +280,17 @@ export const PUBLIC_PATHS = [
   // C-160: the explainer pages
   "/how-it-works",
   "/features",
+  // C-163 (auto): the automation and channel pages and their hub
+  "/automations",
+  "/instagram/comment-to-dm",
+  "/instagram/story-replies",
+  "/instagram/dm-keywords",
+  "/instagram/conversation-starters",
+  "/whatsapp/auto-reply",
+  "/website-chat",
+  // C-163 (gloss): each term (/glossary/{slug}) is added by the sitemap itself
+  "/glossary",
+  "/compare/manychat-alternatives",
 ] as const;
 
 /**
@@ -296,9 +320,9 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/compare/wati": "2026-10-29",
   "/compare/aisensy": "2026-10-29",
   "/compare/spur": "2026-10-29",
-  "/features/comment-intelligence": "2026-10-26",
-  "/features/ai-inbox": "2026-10-29",
-  "/features/publishing": "2026-10-26",
+  "/features/comment-intelligence": "2026-10-31",
+  "/features/ai-inbox": "2026-10-31",
+  "/features/publishing": "2026-10-31",
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
@@ -310,4 +334,15 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/faq": "2026-10-30",
   "/how-it-works": "2026-10-31",
   "/features": "2026-10-31",
+  // C-163 (auto)
+  "/automations": "2026-10-31",
+  "/instagram/comment-to-dm": "2026-10-31",
+  "/instagram/story-replies": "2026-10-31",
+  "/instagram/dm-keywords": "2026-10-31",
+  "/instagram/conversation-starters": "2026-10-31",
+  "/whatsapp/auto-reply": "2026-10-31",
+  "/website-chat": "2026-10-31",
+  // C-163 (gloss)
+  "/glossary": "2026-10-31",
+  "/compare/manychat-alternatives": "2026-10-31",
 };

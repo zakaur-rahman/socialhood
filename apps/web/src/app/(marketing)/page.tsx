@@ -12,7 +12,6 @@ import { Steps } from "@/components/marketing/landing/Steps";
 import { Trust } from "@/components/marketing/landing/Trust";
 import { Pricing } from "@/components/marketing/Pricing";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
-import { FAQ } from "@/lib/marketing/faq";
 import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
 
@@ -39,7 +38,7 @@ export default async function HomePage() {
   const pro = pricing.plans.find((card) => card.plan === "pro");
   return (
     <main id="main" tabIndex={-1} data-landing="" className="flex-1 outline-none">
-      <JsonLd data={landingJsonLd(pricing, FAQ)} />
+      <JsonLd data={landingJsonLd(pricing)} />
       <Hero />
       <Decide />
       <Comments />

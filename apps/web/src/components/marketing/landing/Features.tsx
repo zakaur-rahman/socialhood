@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { SECTION_IDS, SITE_NAME } from "@/lib/marketing/site";
+import { FEATURES_PATH, SECTION_IDS, SITE_NAME } from "@/lib/marketing/site";
 
 import { Connections } from "./Channels";
 import { Ico } from "./Ico";
@@ -164,8 +164,9 @@ export function Features() {
             </ul>
           </div>
         ))}
+        {/* "See every feature" leads to the /features hub (C-163, the SEO audit's link-equity finding). */}
         <p className="more-links">
-          Go deeper: <Link href="/features/ai-inbox">the AI inbox</Link>,{" "}
+          <Link href={FEATURES_PATH}>See every feature</Link>. Go deeper: <Link href="/features/ai-inbox">the AI inbox</Link>,{" "}
           <Link href="/features/comment-intelligence">comment intelligence</Link>,{" "}
           <Link href="/features/publishing">publishing</Link>, or <Link href="/compare">how {SITE_NAME} compares</Link>.
         </p>

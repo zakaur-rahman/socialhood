@@ -5,10 +5,15 @@ import Link from "next/link";
 
 import { StatusChip } from "@/components/site/StatusChip";
 import { legalDate } from "@/lib/legal";
+import { FAQ_ALL } from "@/lib/marketing/faq";
 import { competitorNote, latestChecked } from "@/lib/marketing/competitor-note";
 import { COMPARE_PATH, PRICING_PATH, type Block, type Cell, type GtmPage } from "@/lib/marketing/gtm-pages";
-import { breadcrumbTrailJsonLd } from "@/lib/marketing/seo";
-import { FEATURES_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
+import { breadcrumbTrailJsonLd, faqPageJsonLd, uniqueFaq } from "@/lib/marketing/seo";
+import { FEATURES_PATH, SIGN_UP_PATH, SITE_NAME, absoluteUrl, appUrl, siteUrl } from "@/lib/marketing/site";
+
+import { ExplainerMotion } from "./explainers/ExplainerMotion";
+import { FEATURE_IDS, FeatureDetail, FeatureIntro } from "./FeatureDepthView";
+import { FeatureSceneView } from "./feature-scenes";
 
 import { FinalCta } from "./FinalCta";
 import { BreadcrumbJsonLd, JsonLd } from "./JsonLd";
@@ -120,6 +125,8 @@ function Cards({ block }: { block: Block }) {
 /** The head's side column: the product shot where the page has one, else what's on the page. */
 function HeadAside({ page }: { page: GtmPage }) {
   const shot = page.shot ? SHOTS[page.shot] : null;
+  // A deeper feature page with no screenshot shows its scene; its sections are in the bar below (C-163).
+  if (!shot && page.feature?.headScene) return <FeatureSceneView scene={page.feature.headScene} />;
   if (shot) {
     return (
       <figure className={`pp-shot pp-shot-${page.shot}`}>
@@ -162,12 +169,23 @@ function HeadAside({ page }: { page: GtmPage }) {
  * you" as two verdict cards), the site's three setup steps on a feature page, the side-by-side table,
  * what to know with the sources and the trademark note as a footnote card, related pages as linked
  * cards, and the closing call to action on a night band. The content is lib/marketing/gtm-pages.ts.
+ * A feature page with `feature` (C-163) goes deeper: the "On this page" bar and "What it does" before
+ * its cards, then its own steps (in place of the site's three), plans and credits, what it doesn't do
+ * yet, who it's for and its own questions (FeatureDepthView.tsx), marked up as FAQPage.
  */
 export function GtmPageView({ page }: { page: GtmPage }) {
   const note = competitorNote(page);
   const feature = page.path.startsWith("/features/");
+  const depth = page.feature;
+  // C-162: only questions /faq doesn't already mark up (a feature page's own are unique to it).
+  const ownFaq = depth ? uniqueFaq(depth.faq, FAQ_ALL) : [];
   return (
-    <main id="main" tabIndex={-1} className="pp flex-1 outline-none">
+    <main id="main" tabIndex={-1} className={depth ? "pp xp fp flex-1 outline-none" : "pp flex-1 outline-none"}>
+      {ownFaq.length ? (
+        <JsonLd
+          data={{ "@context": "https://schema.org", ...faqPageJsonLd(ownFaq, siteUrl(), `${absoluteUrl(page.path, siteUrl())}#${FEATURE_IDS.faq}`) }}
+        />
+      ) : null}
       {/* A comparison sits under the /compare hub (C-156): Home, Compare, the page; a feature page under
           /features (C-160): Home, Features, the page. */}
       {page.path.startsWith(`${COMPARE_PATH}/`) || feature ? (
@@ -199,6 +217,8 @@ export function GtmPageView({ page }: { page: GtmPage }) {
         </div>
       </section>
 
+      {depth ? <FeatureIntro page={page} feature={depth} /> : null}
+
       {page.blocks.map((block) => (
         <section key={block.id} id={block.id} aria-labelledby={`${block.id}-title`} className="band scroll-mt-24">
           <div className="wrap">
@@ -213,7 +233,9 @@ export function GtmPageView({ page }: { page: GtmPage }) {
         </section>
       ))}
 
-      {feature ? (
+      {depth ? <FeatureDetail page={page} feature={depth} /> : null}
+
+      {feature && !depth ? (
         <section aria-labelledby="setup-title" className="band pp-steps">
           <div className="wrap">
             <h2 id="setup-title" className="h-sec">
@@ -280,6 +302,8 @@ export function GtmPageView({ page }: { page: GtmPage }) {
 
       <RelatedCards links={page.related} />
       <FinalCta />
+      {/* The scenes arrive once and the bar marks the section being read (C-163); the page is whole without it. */}
+      {depth ? <ExplainerMotion /> : null}
     </main>
   );
 }

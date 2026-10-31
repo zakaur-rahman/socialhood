@@ -51,10 +51,11 @@ describe("a comparison page (C-159)", () => {
     expect(toc.getByRole("link", { name: "Side by side" })).toHaveAttribute("href", "#side-by-side");
   });
 
-  it("a feature page shows the site's three setup steps and the closing band", () => {
+  it("a feature page shows its own steps (C-163, in place of the site's three) and the closing band", () => {
     render(<GtmPageView page={FEATURE_PUBLISHING} />);
-    const steps = within(screen.getByRole("region", { name: "Set up in three steps" }));
-    expect(steps.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("region", { name: "Set up in three steps" })).not.toBeInTheDocument();
+    const steps = within(screen.getByRole("region", { name: "How it works" }));
+    expect(steps.getAllByRole("listitem")).toHaveLength(FEATURE_PUBLISHING.feature!.steps.length);
     expect(screen.getByRole("heading", { level: 2, name: "Ready to take control of every conversation?" })).toBeInTheDocument();
   });
 });

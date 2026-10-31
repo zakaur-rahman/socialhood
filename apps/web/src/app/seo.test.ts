@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LEGAL } from "@/lib/legal";
+import { GLOSSARY } from "@/lib/marketing/glossary";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
-import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
+import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
+import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, uniqueFaq, verificationMetadata } from "@/lib/marketing/seo";
+import { FOR_BUSINESSES, FOR_CREATORS } from "@/lib/marketing/solutions";
 import {
   DEFAULT_SITE_URL,
   OG_IMAGE,
@@ -44,6 +47,13 @@ describe("page metadata", () => {
       expect(metadata.openGraph).toMatchObject({ url: path, title: `${title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] });
       expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [expect.objectContaining({ url: "/og.png" })] });
     }
+  });
+
+  it("a title that already names the product isn't suffixed with it again (C-162)", () => {
+    const metadata = pageMetadata({ title: "Amplychat vs Manychat", description: "d", path: "/compare/manychat" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat vs Manychat" });
+    expect(metadata.openGraph).toMatchObject({ title: "Amplychat vs Manychat" });
+    expect(pageMetadata({ title: "Pricing", description: "d", path: "/pricing" }).title).toBe("Pricing");
   });
 
   it("the landing page names itself in full", () => {
@@ -115,7 +125,19 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/faq",
       "https://socialhood.example/how-it-works",
       "https://socialhood.example/features",
+      // C-163 (auto)
+      "https://socialhood.example/automations",
+      "https://socialhood.example/instagram/comment-to-dm",
+      "https://socialhood.example/instagram/story-replies",
+      "https://socialhood.example/instagram/dm-keywords",
+      "https://socialhood.example/instagram/conversation-starters",
+      "https://socialhood.example/whatsapp/auto-reply",
+      "https://socialhood.example/website-chat",
+      // C-163 (gloss)
+      "https://socialhood.example/glossary",
+      "https://socialhood.example/compare/manychat-alternatives",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
+      ...GLOSSARY.map((term) => `https://socialhood.example/glossary/${term.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.
     expect(entries.find((entry) => entry.url.endsWith("/guides"))?.lastModified).toBe(guidesUpdated());
@@ -179,12 +201,23 @@ describe("structured data (C-142)", () => {
       "@id": "https://socialhood.example/#organization",
       name: "Amplychat",
       url: "https://socialhood.example/",
-      logo: "https://socialhood.example/icons/icon-512.png",
+      logo: { "@type": "ImageObject", url: "https://socialhood.example/icons/icon-512.png", width: 512, height: 512 },
       email: "support@amplychat.com",
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "support@amplychat.com" },
     });
     if (LEGAL.entityName) expect(org.legalName).toBe(LEGAL.entityName.trim());
-    expect(org).not.toHaveProperty("sameAs");
+    // The owner keeps the location out of the site-wide data (2026-10-31): no postal address at all.
+    expect(org).not.toHaveProperty("address");
+    expect(JSON.stringify(org)).not.toMatch(/Bihar/);
+    // sameAs lists the business's own live profiles, and nothing else (owner, 2026-10-31).
+    expect(org.sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470"]);
     expect(org).not.toHaveProperty("aggregateRating");
+  });
+
+  it("a question is marked up as FAQPage on one page only: /faq has the shared ones (C-162)", () => {
+    expect(uniqueFaq(FAQ, FAQ_ALL)).toEqual([]);
+    const marked = [...FAQ_ALL, ...uniqueFaq(FOR_CREATORS.faq, FAQ_ALL), ...uniqueFaq(FOR_BUSINESSES.faq, FAQ_ALL)].map((item) => item.question);
+    expect(new Set(marked).size).toBe(marked.length);
   });
 
   it("a guide's breadcrumb goes Home, Guides, then the guide (C-153)", () => {
@@ -223,6 +256,7 @@ describe("/llms.txt", () => {
     expect(text.startsWith("# Amplychat\n")).toBe(true);
     for (const path of PUBLIC_PATHS) expect(text, path).toContain(`(https://socialhood.example${path === "/" ? "/" : path})`);
     for (const guide of GUIDES) expect(text, guide.slug).toContain(`(https://socialhood.example/guides/${guide.slug})`);
+    for (const term of GLOSSARY) expect(text, term.slug).toContain(`(https://socialhood.example/glossary/${term.slug})`);
     expect(text).not.toMatch(/undefined|null/);
   });
 });

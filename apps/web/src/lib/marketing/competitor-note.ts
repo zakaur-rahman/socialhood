@@ -31,3 +31,24 @@ export function competitorNote(page: GtmPage): { text: string; email: string } |
     email: SUPPORT_EMAIL,
   };
 }
+
+/**
+ * The same note for a page about several competitors (C-163, /compare/manychat-alternatives): the
+ * names are their owners' trademarks, we aren't affiliated with or endorsed by any of them, the date
+ * the details were checked, and where to tell us.
+ */
+export function competitorsNote(names: readonly string[], checkedIso: string | null): { text: string; email: string } {
+  const checked = legalDate(checkedIso);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : (names[0] ?? "");
+  return {
+    text: [
+      `${list} are trademarks of their owners.`,
+      `${SITE_NAME} isn't affiliated with or endorsed by any of them.`,
+      checked ? `Details checked on ${checked}.` : null,
+      "If something has changed, tell us at",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    email: SUPPORT_EMAIL,
+  };
+}
