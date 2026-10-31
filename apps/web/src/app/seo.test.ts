@@ -193,9 +193,9 @@ describe("structured data (C-142)", () => {
       contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "support@amplychat.com" },
     });
     if (LEGAL.entityName) expect(org.legalName).toBe(LEGAL.entityName.trim());
-    // C-162: the state and country the legal pages already show, never a street address.
-    if (LEGAL.publicLocation) expect(org.address).toEqual({ "@type": "PostalAddress", addressRegion: "Bihar", addressCountry: "India" });
-    expect(org.address).not.toHaveProperty("streetAddress");
+    // The owner keeps the location out of the site-wide data (2026-10-31): no postal address at all.
+    expect(org).not.toHaveProperty("address");
+    expect(JSON.stringify(org)).not.toMatch(/Bihar/);
     expect(org).not.toHaveProperty("sameAs");
     expect(org).not.toHaveProperty("aggregateRating");
   });

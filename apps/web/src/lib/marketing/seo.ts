@@ -92,18 +92,11 @@ function websiteId(origin: string): string {
   return `${origin}/#website`;
 }
 
-/** "Bihar, India" as a PostalAddress (region, country): the state and country the site already shows (C-156). */
-function publicAddress(location: string | undefined): Record<string, unknown> | undefined {
-  if (!isSet(location)) return undefined;
-  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 2) return { "@type": "PostalAddress", addressCountry: parts[0] };
-  return { "@type": "PostalAddress", addressRegion: parts.slice(0, -1).join(", "), addressCountry: parts[parts.length - 1] };
-}
-
 /**
  * The business: the product's name, the registered entity as legalName when the legal config has
- * it, the site, the logo (an ImageObject with its size, C-162), the state and country the legal
- * pages show, and the support address. sameAs only once real profiles exist.
+ * it, the site, the logo (an ImageObject with its size, C-162) and the support address. No postal
+ * address: the owner keeps the location out of the site-wide data, as out of the footer
+ * (2026-10-31). sameAs only once real profiles exist.
  */
 export function organizationJsonLd(origin: string = siteUrl()): Record<string, unknown> {
   return {
@@ -113,7 +106,6 @@ export function organizationJsonLd(origin: string = siteUrl()): Record<string, u
     ...(isSet(LEGAL.entityName) ? { legalName: LEGAL.entityName.trim() } : {}),
     url: `${origin}/`,
     logo: { "@type": "ImageObject", url: absoluteUrl(LOGO_PATH, origin), width: LOGO_SIZE, height: LOGO_SIZE },
-    ...(publicAddress(LEGAL.publicLocation) ? { address: publicAddress(LEGAL.publicLocation) } : {}),
     email: SUPPORT_EMAIL,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: SUPPORT_EMAIL },
     ...(SOCIAL_PROFILES.length ? { sameAs: [...SOCIAL_PROFILES] } : {}),
