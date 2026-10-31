@@ -12,10 +12,12 @@ import { AUTOMATIONS_PATH, AUTOMATION_PAGES, CHANNEL_NAME, META, type Automation
 import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME, absoluteUrl } from "@/lib/marketing/site";
 
+// The searches it answers (C-164): "instagram dm automation", "… tool" and "… free". Free is true:
+// 3 active automations on the Free plan (plan-table.json active_automations.free), no card.
 export const metadata = pageMetadata({
-  title: "Automations for Instagram, WhatsApp and web chat",
+  title: "Instagram DM automation, free to start",
   description:
-    "Every automation type: Instagram comment to DM, story replies, DM keywords and conversation starters, WhatsApp auto-reply and AI website chat.",
+    "Instagram DM automation: comment to DM, story replies, DM keywords and conversation starters, plus WhatsApp and web chat. Free plan, 3 automations.",
   path: AUTOMATIONS_PATH,
 });
 
@@ -94,13 +96,13 @@ export default function AutomationsHub() {
         <div className="wrap split-head">
           <div>
             <p className={SECTION_EYEBROW}>Automations</p>
-            <h1 className="h-page">Automations for Instagram, WhatsApp and website chat</h1>
+            <h1 className="h-page">Instagram DM automation that answers from your business</h1>
           </div>
           <div>
             <p className="lede">
               Answer comments, Story replies and keywords on Instagram, reply on WhatsApp inside its 24-hour window, and chat with
               visitors on your own site. Each page explains how one automation works, the rules Meta sets for it and what each
-              plan includes.
+              plan includes. The Free plan runs 3 automations at once, with no card needed.
             </p>
           </div>
         </div>

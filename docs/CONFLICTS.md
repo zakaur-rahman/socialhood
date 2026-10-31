@@ -9089,3 +9089,18 @@ are"); llms.txt (the list page and a Glossary section with every term). `PUBLIC_
 `glossary-filter.test.ts`, `app/(marketing)/seo-content.test.tsx`. New e2e
 `e2e/c163-gloss.spec.ts` (not run here). Screenshots at 375 and 1440 in
 `scratchpad/seo-content/gloss/`.
+
+## C-164 · Ranking for "Instagram DM automation", and Caddy after a deploy
+
+- **The hub targets the search.** A third-party SEO tool (owner, 2026-10-31) showed amplychat.com
+  isn't on page one for "instagram dm automation", "… tool" or "… free"; no page used the phrase.
+  Rather than add a thin page, `/automations` becomes the page for it: the title is "Instagram DM
+  automation, free to start", the h1 "Instagram DM automation that answers from your business", and
+  the lede and description name the Free plan's 3 active automations, with no card needed
+  (`plan-table.json` `active_automations.free`). The URL is unchanged. The bigger lever is getting
+  indexed at all: the owner submits the sitemap in Search Console and Bing.
+- **Caddy picks up a new Caddyfile.** The deploy copied the C-162 Caddyfile (www in one hop,
+  `X-Robots-Tag` on the API) but Caddy kept serving the old rules. A single-file bind mount keeps the
+  inode the container started with, so even `caddy reload` read the old file. Fixed live by recreating
+  the Caddy container (a few seconds' blip). `deploy.sh` now compares the Caddyfile on disk with
+  Caddy's copy after `compose up` and recreates Caddy only when they differ (`sync_caddy`).
