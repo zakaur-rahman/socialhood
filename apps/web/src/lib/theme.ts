@@ -59,17 +59,30 @@ export function applyThemeColor(theme: Theme, doc: Document = document): void {
 
 /**
  * The routes that follow the member's theme: the app, sign-in and sign-up, and the dev pages.
- * Every other page (the public site and its 404) is always dark (C-129). app/layout.test.ts keeps
- * this in step with the (app), (auth), (dev) and (marketing) route folders.
+ * Every other page (the public site and its 404) has its own paper-and-night look (C-155, which
+ * replaces C-129's always-dark site): <html> is pinned to SITE_THEME there, so the browser's own
+ * parts (scrollbars, form controls) are light. app/layout.test.ts keeps this in step with the
+ * (app), (auth), (dev) and (marketing) route folders.
  */
 export const THEMED_ROUTE = /^\/(app|w|sign-in|sign-up|dev)(\/|$)/;
 
+/** The scheme the public pages pin on <html> (C-155): their paper palette is light, with night bands. */
+export const SITE_THEME = "light" satisfies ThemeChoice;
+
+/** Points the browser chrome at the public site's paper (C-155), whatever the member's theme. */
+export function applySiteThemeColor(doc: Document = document): void {
+  for (const meta of doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+    meta.content = colorValue("paper");
+    meta.removeAttribute("media");
+  }
+}
+
 /**
  * Runs in <head> before first paint: on a themed route, copies the cookie to `data-theme`; on any
- * other page, pins it dark. It must not import anything, so it is a string, built from the cookie
+ * other page, pins it to SITE_THEME (C-155). It must not import anything, so it is a string, built from the cookie
  * name and THEMED_ROUTE. lib/theme.test.ts runs it. (It replaces an inline script in the marketing
  * layout, which React refused to render on a client navigation; ThemePin covers those.)
  * The regex's `\\s` is doubled: in a template literal `\s` becomes a bare "s", and the script then
  * found the cookie only when it came first (C-150; Clerk's cookies come first in production).
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement;if(!${THEMED_ROUTE}.test(location.pathname)){d.setAttribute("data-theme","dark");return}var m=document.cookie.match(/(?:^|;\\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)d.setAttribute("data-theme",m[1])}catch(e){}})()`;
+export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement;if(!${THEMED_ROUTE}.test(location.pathname)){d.setAttribute("data-theme","${SITE_THEME}");return}var m=document.cookie.match(/(?:^|;\\s*)${THEME_COOKIE}=(dark|light|system)/);if(m)d.setAttribute("data-theme",m[1])}catch(e){}})()`;

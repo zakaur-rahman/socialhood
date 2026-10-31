@@ -188,3 +188,94 @@ export function clerkAppearanceFor(theme: Theme) {
  * appearance over it.
  */
 export const clerkAppearance = appearanceWithoutBase("dark");
+
+/**
+ * The sign-in and sign-up card (C-158), merged over the provider's appearance by ThemedClerk: layout,
+ * type and the states the card needs on top of the app-wide recipe above. It lives here, not in the
+ * page shell, so the client bundle that renders Clerk doesn't pull in the server shell's imports.
+ *
+ * - **One logo per page:** Clerk's in-card logo is off; the shell shows the mark (the night panel on
+ *   wide screens, the bar above the card below `lg`). The card's title stays the page's only h1.
+ * - **The public site's language:** the title in Geist 700 with tight tracking, left-aligned like the
+ *   site's headings; a flat ink button (the site's primary: `fg` on `canvas`, so a near-white button
+ *   in Dark and a near-black one in Light) instead of the brand gradient; no arrow; no shadow at rest
+ *   (the card sits on the canvas with its `line` edge).
+ * - **Accessibility:** Clerk sets `outline: 0` on its controls, so the app's focus outline (2px
+ *   `brand`, 2px offset, as globals.css) is restated on every link, button and checkbox in the card.
+ *   Controls are 44 px tall. The legal-consent checkbox (Clerk's "Require express consent", rendered
+ *   as `formFieldCheckboxInput` and `formFieldCheckboxLabel` in @clerk/ui 1.38) gets a 16 px box with
+ *   the 3:1 control edge, and its links are `brand-fg` with an underline (Clerk's primary was 2.9:1
+ *   on the dark panel). Field errors are `danger-fg`.
+ */
+const FOCUS_RING = {
+  outline: "2px solid var(--color-brand) !important",
+  outlineOffset: "2px",
+};
+
+export const authCardAppearance = {
+  options: {
+    logoPlacement: "none",
+    socialButtonsVariant: "blockButton",
+  },
+  elements: {
+    rootBox: { width: "100%" },
+    cardBox: {
+      width: "100%",
+      maxWidth: "100%",
+      boxShadow: "none !important",
+      "& :is(a, button, input[type=checkbox]):focus-visible": FOCUS_RING,
+    },
+    // A phone keeps 24 px inside the card, not Clerk's 40, so the fields stay wide at 375.
+    card: { "@media (max-width: 30rem)": { paddingInline: "1.5rem" } },
+    header: { alignItems: "flex-start", textAlign: "left" },
+    headerTitle: {
+      fontSize: "1.25rem",
+      lineHeight: "1.2",
+      fontWeight: 700,
+      letterSpacing: "-0.02em",
+      textAlign: "left",
+    },
+    headerSubtitle: { fontSize: "0.9375rem", color: "var(--color-fg-secondary)", textAlign: "left" },
+    socialButtonsBlockButton: { minHeight: "2.75rem" },
+    socialButtonsBlockButtonText: { color: "var(--color-fg)", fontSize: "0.9375rem", fontWeight: 500 },
+    dividerText: { color: "var(--color-fg-secondary)" },
+    formFieldLabel: { fontWeight: 500 },
+    formFieldInput: { minHeight: "2.75rem", fontSize: "0.9375rem" },
+    formFieldErrorText: { color: "var(--color-danger-fg)" },
+    formButtonPrimary: {
+      width: "100%",
+      minHeight: "2.75rem",
+      fontSize: "0.9375rem",
+      fontWeight: 600,
+      backgroundImage: "none !important",
+      backgroundColor: "var(--color-fg) !important",
+      color: "var(--color-canvas) !important",
+      // Hover lifts the ink a step toward the canvas (the site's .btn-main does the same with a mix).
+      "&:hover": { opacity: 0.88, filter: "none !important" },
+      "&:active": { filter: "none !important" },
+    },
+    buttonArrowIcon: { display: "none" },
+    formFieldCheckboxInput: {
+      width: "1rem",
+      height: "1rem",
+      marginTop: "0.125rem",
+      borderRadius: "var(--radius-sm)",
+      accentColor: "var(--color-brand-strong)",
+      // The 3:1 control edge, drawn as an outline so the focus outline above replaces it.
+      boxShadow: "none !important",
+      outline: "1px solid var(--color-line-control)",
+    },
+    formFieldCheckboxLabel: {
+      color: "var(--color-fg-secondary)",
+      fontSize: "0.875rem",
+      lineHeight: "1.45",
+      "& a": {
+        color: "var(--color-brand-fg) !important",
+        textDecoration: "underline",
+        textUnderlineOffset: "3px",
+      },
+      "& a:hover": { color: "var(--color-fg) !important" },
+    },
+    footerActionText: { color: "var(--color-fg-secondary)" },
+  },
+} as const;

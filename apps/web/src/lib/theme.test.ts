@@ -113,11 +113,11 @@ describe("the head script (runs before first paint)", () => {
   });
 
   it.each(["/", "/pricing", "/compare/manychat", "/an-unknown-page"])(
-    "pins %s dark whatever the cookie says (the public site and its 404)",
+    "pins %s to the site's light scheme whatever the cookie says (the public site and its 404, C-155)",
     (path) => {
-      document.cookie = `${THEME_COOKIE}=light; path=/`;
+      document.cookie = `${THEME_COOKIE}=dark; path=/`;
       run(THEME_INIT_SCRIPT, path);
-      expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+      expect(document.documentElement).toHaveAttribute("data-theme", "light");
     },
   );
 

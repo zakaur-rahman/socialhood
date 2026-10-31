@@ -3,14 +3,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEGAL } from "@/lib/legal";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
-import { LANDING_LANGUAGES, breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
-import { DEFAULT_SITE_URL, PUBLIC_PATHS, siteUrl } from "@/lib/marketing/site";
+import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
+import {
+  DEFAULT_SITE_URL,
+  OG_IMAGE,
+  PUBLIC_PATHS,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_TITLE_LINE,
+  siteUrl,
+} from "@/lib/marketing/site";
 
-import { metadata as hinglish } from "./(marketing)/hi/page";
-import { metadata as landing } from "./(marketing)/page";
+import { metadata as accessibility } from "./(marketing)/accessibility/page";
+import { metadata as cookies } from "./(marketing)/cookies/page";
+import { metadata as dpa } from "./(marketing)/dpa/page";
 import { metadata as privacy } from "./(marketing)/privacy/page";
 import { metadata as refunds } from "./(marketing)/refunds/page";
 import { metadata as shipping } from "./(marketing)/shipping/page";
+import { metadata as subprocessors } from "./(marketing)/subprocessors/page";
 import { metadata as terms } from "./(marketing)/terms/page";
 import robots from "./robots";
 import sitemap from "./sitemap";
@@ -22,6 +33,10 @@ describe("page metadata", () => {
       [terms, "Terms of Service", "/terms"],
       [refunds, "Refund and Cancellation Policy", "/refunds"],
       [shipping, "Shipping and Delivery Policy", "/shipping"],
+      [subprocessors, "Subprocessors", "/subprocessors"],
+      [cookies, "Cookies and Storage", "/cookies"],
+      [dpa, "Data Processing Agreement", "/dpa"],
+      [accessibility, "Accessibility Statement", "/accessibility"],
     ] as const) {
       expect(metadata.title).toBe(title);
       expect(metadata.description).toBeTruthy();
@@ -68,6 +83,14 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/switch-from-manychat",
       "https://socialhood.example/compare/manychat",
       "https://socialhood.example/compare/interakt",
+      "https://socialhood.example/compare",
+      "https://socialhood.example/compare/linkdm",
+      "https://socialhood.example/compare/instantdm",
+      "https://socialhood.example/compare/inro",
+      "https://socialhood.example/compare/creatorflow",
+      "https://socialhood.example/compare/wati",
+      "https://socialhood.example/compare/aisensy",
+      "https://socialhood.example/compare/spur",
       "https://socialhood.example/features/comment-intelligence",
       "https://socialhood.example/features/ai-inbox",
       "https://socialhood.example/features/publishing",
@@ -80,7 +103,18 @@ describe("/sitemap.xml", () => {
       "https://socialhood.example/developers/api",
       "https://socialhood.example/security",
       "https://socialhood.example/guides",
-      "https://socialhood.example/hi",
+      "https://socialhood.example/for-creators",
+      "https://socialhood.example/for-businesses",
+      "https://socialhood.example/safety",
+      "https://socialhood.example/changelog",
+      "https://socialhood.example/ai-info",
+      "https://socialhood.example/subprocessors",
+      "https://socialhood.example/cookies",
+      "https://socialhood.example/dpa",
+      "https://socialhood.example/accessibility",
+      "https://socialhood.example/faq",
+      "https://socialhood.example/how-it-works",
+      "https://socialhood.example/features",
       ...GUIDES.map((guide) => `https://socialhood.example/guides/${guide.slug}`),
     ]);
     // C-153: the index takes the newest guide's date, each guide its own updated date.
@@ -88,7 +122,7 @@ describe("/sitemap.xml", () => {
     for (const guide of GUIDES) {
       expect(entries.find((entry) => entry.url.endsWith(`/guides/${guide.slug}`))?.lastModified).toBe(guide.updated);
     }
-    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-26");
+    expect(entries.find((entry) => entry.url.endsWith("/privacy"))?.lastModified).toBe("2026-10-29");
     // Every page has an ISO date, never a build time.
     for (const entry of entries) expect(entry.lastModified, entry.url).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(entries.some((entry) => /\/(app|w|sign-in|unsubscribe)\b/.test(entry.url))).toBe(false);
@@ -193,20 +227,36 @@ describe("/llms.txt", () => {
   });
 });
 
-describe("hreflang between the landing page and its Hinglish version (C-153)", () => {
-  it("each names the other and itself, with x-default on English", () => {
-    expect(LANDING_LANGUAGES).toEqual({ en: "/", hi: "/hi", "x-default": "/" });
-    expect(landing.alternates).toMatchObject({ canonical: "/", languages: LANDING_LANGUAGES });
-    expect(hinglish.alternates).toMatchObject({ canonical: "/hi", languages: LANDING_LANGUAGES });
-    expect(hinglish.openGraph).toMatchObject({ locale: "hi_IN", url: "/hi" });
+describe("one English site, no Hinglish page (C-155)", () => {
+  it("page metadata names only the canonical path, with no hreflang alternates or other locale", () => {
+    const metadata = pageMetadata({ title: "Amplychat · X", description: "d", path: "/", absoluteTitle: true });
+    expect(metadata.alternates).toEqual({ canonical: "/" });
+    expect(metadata.openGraph).not.toHaveProperty("locale");
   });
 
-  it("the sitemap lists the pair as alternates of each other, and no other page", () => {
+  it("the sitemap, llms.txt and the guides leave out /hi and the Hinglish guide", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://socialhood.example");
     const entries = sitemap();
-    const languages = { en: "https://socialhood.example/", hi: "https://socialhood.example/hi", "x-default": "https://socialhood.example/" };
-    expect(entries.find((entry) => entry.url === "https://socialhood.example/")?.alternates).toEqual({ languages });
-    expect(entries.find((entry) => entry.url === "https://socialhood.example/hi")?.alternates).toEqual({ languages });
-    expect(entries.filter((entry) => entry.alternates).length).toBe(2);
+    expect(entries.filter((entry) => entry.alternates)).toEqual([]);
+    expect(entries.some((entry) => /\/hi$|hinglish/.test(entry.url))).toBe(false);
+    expect(llmsText("https://socialhood.example")).not.toMatch(/\/hi\b|hinglish|hindi|india/i);
+    expect(GUIDES.some((guide) => guide.slug === "replying-in-hinglish")).toBe(false);
+  });
+});
+
+describe("the positioning line (C-157)", () => {
+  it("names Instagram, WhatsApp and website chat in the title, description, tagline, share alt, JSON-LD and llms.txt", () => {
+    expect(SITE_TAGLINE).toMatch(/Instagram, WhatsApp and website chat/);
+    expect(SITE_TITLE_LINE).toMatch(/Instagram, WhatsApp and web chat/);
+    expect(`${SITE_NAME} · ${SITE_TITLE_LINE}`.length).toBeLessThanOrEqual(60);
+    expect(SITE_DESCRIPTION).toMatch(/Instagram DMs and comments, WhatsApp and your website chat/);
+    expect(SITE_DESCRIPTION).toMatch(/comment-to-DM/);
+    expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(160);
+    expect(OG_IMAGE.alt).toMatch(/Every DM\. Every comment\. One inbox\./);
+    expect(OG_IMAGE.alt).toMatch(/website chat/);
+    expect(OG_IMAGE).toMatchObject({ url: "/og.png", width: 1200, height: 630 });
+    const llms = llmsText("https://socialhood.example");
+    expect(llms).toContain(SITE_DESCRIPTION);
+    expect(llms).toMatch(/website chat/);
   });
 });

@@ -186,6 +186,7 @@ definition and end up in the JavaScript:
 | `NEXT_PUBLIC_META_APP_ID` · `NEXT_PUBLIC_WHATSAPP_CONFIG_ID` | the same values as the API's `META_APP_ID` and `WHATSAPP_CONFIG_ID` | full stack |
 | `NEXT_PUBLIC_SENTRY_DSN` | the `socialhood-web` project DSN | optional |
 | `NEXT_PUBLIC_SITE_URL` | leave unset (defaults to `https://amplychat.com`) | |
+| `NEXT_PUBLIC_STATUS_URL` | the hosted status page, e.g. `https://status.amplychat.com` (C-156) | optional: set, the site footer shows a Status link; unset, it's hidden |
 | `NEXT_PUBLIC_APP_URL` | `https://dashboard.amplychat.com` (C-146) | website-only and full stack: app pages, sign-in and sign-up move to the dashboard host; unset, everything stays on the apex |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` · `_SIGN_UP_URL` · `NEXT_PUBLIC_SENTRY_ENVIRONMENT` · `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | leave unset (defaults: `/sign-in`, `/sign-up`, `production`, `0.1`) | |
 | `SENTRY_ORG` · `SENTRY_PROJECT` (+ secret `SENTRY_AUTH_TOKEN`) | for source-map upload | optional |
@@ -538,6 +539,7 @@ Razorpay has no app-wide key: each business enters its own in the app.
 - `NEXT_PUBLIC_SENTRY_DSN`
 - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION`,
   `NEXT_PUBLIC_FACEBOOK_DOMAIN_VERIFICATION`
+- optional: `NEXT_PUBLIC_STATUS_URL` (the footer's Status link, C-156)
 - optional: `SENTRY_ORG`, `SENTRY_PROJECT` and the secret `SENTRY_AUTH_TOKEN`
 
 **GitHub `production` secrets:** `VM_HOST`, `VM_USER`, `VM_SSH_KEY`, `VM_KNOWN_HOSTS`.

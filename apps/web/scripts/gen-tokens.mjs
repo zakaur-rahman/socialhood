@@ -4,7 +4,7 @@
 //   node scripts/gen-tokens.mjs          (pnpm tokens; also runs before `pnpm dev` and `pnpm build`)
 //
 // It reads: the `@theme` block (colours, shadows, font sizes, tracking, leading, radii, easings,
-// breakpoints; a colour or shadow that differs between themes is written `light-dark(LIGHT, DARK)`
+// breakpoints, spacing and containers; a colour or shadow that differs between themes is written `light-dark(LIGHT, DARK)`
 // and split into a dark set and a light set, C-129), the `:root` variables (motion durations, gradients, shadcn aliases), `@custom-variant`
 // lines and the one-line `@utility` rules. tokens.test.ts runs `generate()` again and fails when
 // the committed files differ, so an edit to globals.css without `pnpm tokens` can't land.
@@ -90,6 +90,8 @@ export function generate(source) {
   const radius = {};
   const easings = {};
   const breakpoints = {};
+  const spacing = {};
+  const containers = {};
   for (const [name, value] of theme) {
     if (name === "color-*") continue; // the palette lock, `--color-*: initial`
     const alias = value.match(/^var\(--color-([a-z0-9-]+)\)$/);
@@ -105,6 +107,8 @@ export function generate(source) {
     else if (name.startsWith("radius-")) radius[name.slice(7)] = value;
     else if (name.startsWith("ease-")) easings[name.slice(5)] = value;
     else if (name.startsWith("breakpoint-")) breakpoints[name.slice(11)] = value;
+    else if (name.startsWith("spacing-")) spacing[name.slice(8)] = value; // the public site's rhythm (C-157)
+    else if (name.startsWith("container-")) containers[name.slice(10)] = value;
   }
 
   const colorsLight = {};
@@ -136,7 +140,7 @@ export function generate(source) {
     utilities[match[1]] = match[2];
   }
 
-  return { colors, colorsLight, themed, colorAliases, shadows, shadowsLight, fontSizes, tracking, leading, radius, easings, breakpoints, motion, gradients, shadcn, variants, utilities };
+  return { colors, colorsLight, themed, colorAliases, shadows, shadowsLight, fontSizes, tracking, leading, radius, easings, breakpoints, spacing, containers, motion, gradients, shadcn, variants, utilities };
 }
 
 /** The two files' text, from the generated values. */

@@ -1,53 +1,75 @@
-import { ChevronDown } from "lucide-react";
+import type { Route } from "next";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { SUPPORT_EMAIL } from "@/lib/copy";
-import { FAQ } from "@/lib/marketing/faq";
-import { cn } from "@/lib/utils";
+import { FAQ, FAQ_PATH, type FaqItem } from "@/lib/marketing/faq";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
-import { MARKETING_HEADING } from "@/styles/tokens";
-
-import { Container, MARKETING_CARD_GLASS, SECTION_EYEBROW } from "./primitives";
+import { FaqMotion } from "./FaqMotion";
+import { SECTION_EYEBROW, UTILITY_TITLE } from "./primitives";
 
 /**
- * The product guide's common questions as an accordion. Native <details>: keyboard and screen
- * reader support come from the browser, with no JavaScript.
+ * Common questions (C-155 layout): the heading on the left, native <details> on the right, so
+ * keyboard and screen reader support come from the browser with no JavaScript. The text comes from
+ * lib/marketing/faq.ts, which the FAQPage JSON-LD reads too, so they always match. The landing page
+ * uses the defaults, with no label over the heading and a link to every question on /faq (C-157);
+ * /for-creators and /for-businesses pass their own questions and keep their "FAQ" label (C-156).
  */
-export function Faq() {
+export function Faq({
+  items = FAQ,
+  id = SECTION_IDS.faq,
+  title = "Common questions",
+  lede,
+  eyebrow,
+  allLink = items === FAQ,
+}: {
+  items?: readonly FaqItem[];
+  id?: string;
+  title?: string;
+  lede?: ReactNode;
+  eyebrow?: string;
+  /** A "See all questions" link to /faq under the list. */
+  allLink?: boolean;
+}) {
   return (
-    <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="scroll-mt-24 border-t border-line-subtle py-16 sm:py-20">
-      <Container className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-14">
-        <div className="text-center lg:sticky lg:top-28 lg:self-start lg:text-left">
-          <p className={SECTION_EYEBROW}>FAQ</p>
-          <h2 id="faq-title" className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
-            Common questions
+    <section className="sec faq-sec" id={id} aria-labelledby={`${id}-title`}>
+      <div className="wrap faq">
+        <div className="faq-head">
+          {eyebrow ? <p className={SECTION_EYEBROW}>{eyebrow}</p> : null}
+          <h2 id={`${id}-title`} className={UTILITY_TITLE}>
+            {title}
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-pretty text-fg-secondary">
-            Short answers about the AI, the platforms and the plans. Something missing? Write to{" "}
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline underline-offset-4">
-              {SUPPORT_EMAIL}
-            </a>
-            .
+          <p className="lede">
+            {lede ?? "Short answers about the AI, the platforms and the plans."} Something missing? Write to{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
           </p>
         </div>
-        <div data-reveal className={cn(MARKETING_CARD_GLASS, "divide-y divide-line overflow-hidden")}>
-          {FAQ.map((item) => (
-            <div key={item.question}>
-            <h3 className="sr-only">{item.question}</h3>
-            <details className="group">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium transition-colors duration-normal hover:bg-hover focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
-                <span className="flex-1 text-base font-medium">{item.question}</span>
-                <ChevronDown
-                  className="size-5 shrink-0 text-fg-secondary transition-transform duration-normal group-open:rotate-180 motion-reduce:transition-none"
-                  aria-hidden
-                />
+        <div className="faq-list">
+          {items.map((item, index) => (
+            <details key={item.question} className="qa" open={index === 0}>
+              <summary>
+                <h3>{item.question}</h3>
+                <span className="pm" aria-hidden>
+                  <i />
+                  <i />
+                </span>
               </summary>
-              <p className="px-5 pb-5 text-sm leading-relaxed text-fg-secondary">{item.answer}</p>
+              <p>{item.answer}</p>
             </details>
-            </div>
           ))}
+          {allLink ? (
+            <p className="faq-all">
+              <Link href={FAQ_PATH as Route} className="tlink">
+                See all questions
+              </Link>{" "}
+              <ArrowRight className="inline size-4" aria-hidden />
+            </p>
+          ) : null}
         </div>
-      </Container>
+      </div>
+      <FaqMotion />
     </section>
   );
 }

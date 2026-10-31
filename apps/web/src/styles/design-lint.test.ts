@@ -25,7 +25,8 @@ const COLOUR_NAMES = new Set([...css.matchAll(/--color-([a-z0-9-]+):/g)].map((m)
 const DEFINED_UTILITIES = new Set([
   ...[...css.matchAll(/@utility ([a-z0-9-]+)/g)].map((m) => m[1]),
   ...[...css.matchAll(/--shadow-([a-z0-9-]+):/g)].map((m) => `shadow-${m[1]}`),
-  ...[...css.matchAll(/--text-([a-z0-9]+):/g)].map((m) => `text-${m[1]}`),
+  // The type roles, the site's (`text-site-caption`, C-155) included; a `--text-*--line-height` companion is harmless here.
+  ...[...css.matchAll(/--text-([a-z0-9-]+):/g)].map((m) => `text-${m[1]}`),
 ]);
 
 const PALETTE =

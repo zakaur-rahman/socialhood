@@ -1,176 +1,124 @@
-import { BadgeCheck, Inbox, ListChecks, Sparkles, Zap, type LucideIcon } from "lucide-react";
-import type { Route } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { HERO_TITLE } from "@/components/marketing/Hero";
-import { LogoMark, MARKETING_CARD } from "@/components/marketing/primitives";
-import { SHOTS } from "@/components/marketing/shots";
-import { siteHref } from "@/lib/marketing/site";
-import { cn } from "@/lib/utils";
+import { AuthLegal, type AuthMode } from "@/components/auth/AuthLegal";
+import { HERO_AUDIENCE, HERO_LINE, HERO_TITLE } from "@/components/marketing/landing/copy";
+import { LogoMark } from "@/components/marketing/primitives";
+import { SITE_NAME, SITE_TAGLINE, siteHref } from "@/lib/marketing/site";
+import { cx } from "@/lib/cx";
 
-type AuthMode = "sign-in" | "sign-up";
+type Benefit = { title: string; body: string };
 
-type Benefit = { icon: LucideIcon; title: string; body: string };
-
-// Every line is the landing page's own copy (Features, HowItWorks, the Hero's trust row); nothing is invented.
+// Every line is the public site's own copy (the landing's features, setup steps and trust row); nothing is invented.
 const BENEFITS: Record<AuthMode, Benefit[]> = {
   "sign-in": [
     {
-      icon: Sparkles,
       title: "AI replies from your own knowledge",
-      body: "It drafts or sends replies using only what's in your knowledge base, in English, Hindi and Hinglish.",
+      body: "It drafts or sends replies using only what's in your knowledge base.",
     },
     {
-      icon: Inbox,
       title: "One inbox, with a hand-off",
       body: "Instagram DMs and WhatsApp chats arrive in real time. Unsure or upset? It goes to Needs you.",
     },
     {
-      icon: Zap,
       title: "Comment and DM automations",
       body: "A comment with your keyword gets the link in a private DM, with an optional public reply.",
     },
   ],
   "sign-up": [
-    { icon: Sparkles, title: "Free plan, no card needed", body: "Start free, upgrade when you grow." },
+    { title: "Free plan, no card needed", body: "Start free, upgrade when you grow." },
     {
-      icon: ListChecks,
       title: "Set up in three steps",
       body: "Connect your accounts, add your knowledge, then let the AI draft or reply.",
     },
     {
-      icon: BadgeCheck,
       title: "Official Meta APIs",
       body: "Connect with Instagram's own login and Meta's official setup. Amplychat never asks for your password.",
     },
   ],
 };
 
-function BenefitList({ mode, className, itemClass }: { mode: AuthMode; className?: string; itemClass?: string }) {
+/** The landing's headline in its phrases ("Every DM.", "Every comment.", "One inbox."). */
+const TITLE_PHRASES = HERO_TITLE.split(/(?<=\.)\s+/);
+
+/** The three channels in the site's motif order (Instagram, WhatsApp, website chat), in their marks on night. */
+const CHANNEL_MARKS = ["bg-instagram-night", "bg-whatsapp", "bg-web-night"] as const;
+
+/** The logo, linking to the public site's home (on its own host when the app has one, C-146). */
+function HomeLink({ className }: { className?: string }) {
   return (
-    <ul className={className}>
-      {BENEFITS[mode].map(({ icon: Icon, title, body }) => (
-        <li key={title} className={cn("flex gap-3", itemClass)}>
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-fg">
-            <Icon className="size-4" aria-hidden />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-fg">{title}</span>
-            <span className="block text-sm text-fg-secondary">{body}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <a href={siteHref("/")} className={cx("inline-flex min-h-11 items-center gap-2.5 rounded-lg", className)}>
+      <LogoMark className="size-8" />
+      <span className="text-base font-semibold tracking-tight">{SITE_NAME}</span>
+    </a>
   );
 }
 
 /**
- * The sign-in and sign-up page (UI-079): a brand panel in the landing page's language (promise,
- * benefits, the real inbox screen) beside Clerk's card. From `lg` the page is exactly one viewport
- * tall and the screenshot fades out at the panel's bottom and right. Below `lg` the panel shrinks to
- * a header (logo and promise), the card follows, and from `md` the benefits and an untilted inbox
- * shot fill the space below it. The card is Clerk's own, styled by `authAppearance`: the logo,
- * its title (the page's h1) and subtitle, the Google button, the fields and the "Sign in" / "Sign
- * up" switch in its footer, so every step (verify your email, second factor) has one h1.
+ * The sign-in and sign-up page (UI-079, redrawn for C-158 in the public site's language).
+ *
+ * - From `lg`: the site's **night** band on the left (the same colours in Dark and Light, as on the
+ *   site), with the logo back to the site, the landing's headline and line, three plain lines of the
+ *   site's own copy and the channel motif; Clerk's card on the right on the app's canvas, in the
+ *   member's theme (C-129). The panel stays put while the form column scrolls.
+ * - Below `lg`: a bar with the logo, the card, and the legal line: the page is the task.
+ * - The legal line (AuthLegal) sits at the column's foot on every width.
+ *
+ * No screenshot, glow, grain or gradient (C-157's rules for the site). The card is Clerk's own, styled
+ * by `authCardAppearance` (lib/clerk-appearance.ts): its title is the page's one h1, for every step.
  */
 export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactNode }) {
   return (
-    <main id="main" className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
+    <main
+      id="main"
+      data-auth-shell={mode}
+      className="group/auth min-h-dvh bg-canvas text-fg lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+    >
       <section
-        aria-label="About Amplychat"
-        className="relative overflow-hidden px-4 pt-6 pb-2 sm:px-8 lg:flex lg:min-h-0 lg:flex-col lg:border-r lg:border-line lg:px-12 lg:pt-10 lg:pb-0 xl:px-16 2xl:px-24"
+        aria-label={`About ${SITE_NAME}`}
+        className="hidden bg-night text-night-ink lg:sticky lg:border-r lg:border-line lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:gap-10 lg:overflow-y-auto lg:px-12 lg:py-8 xl:px-16 2xl:px-24"
       >
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-glow-brand" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-repeat opacity-(--grain-opacity)"
-          style={{ backgroundImage: "url(/grain.jpg)" }}
-        />
-        <div className="relative max-w-xl">
-          {/* The public site's home page, on its own host when the app has one (C-146). */}
-          <Link href={siteHref("/") as Route} className="inline-flex min-h-10 items-center gap-2.5 rounded-lg">
-            <LogoMark className="size-9" />
-            <span className="text-base font-semibold tracking-tight">Amplychat</span>
-          </Link>
-          <p className="mt-3 text-sm text-pretty text-fg-secondary lg:mt-6 lg:text-2xl lg:leading-tight lg:font-semibold lg:tracking-tight lg:text-fg xl:text-3xl 2xl:text-4xl">
-            {HERO_TITLE}
+        <HomeLink className="self-start text-night-ink" />
+        <div className="max-w-xl">
+          {/* Broken only between its phrases, as the landing's H1 is. */}
+          <p className="text-site-h2-sm font-bold tracking-site-h2-sm">
+            {TITLE_PHRASES.map((phrase, i) => (
+              <span key={phrase}>
+                {i > 0 && " "}
+                <span className="inline-block">{phrase}</span>
+              </span>
+            ))}
           </p>
-          <BenefitList
-            mode={mode}
-            className="mt-6 hidden space-y-3 lg:block"
-            itemClass="[@media(max-height:860px)]:last:hidden"
-          />
+          <p className="mt-6 max-w-prose text-site-lede text-night-ink-secondary">
+            <b className="font-semibold text-night-ink">{HERO_AUDIENCE}</b> {HERO_LINE}
+          </p>
+          <ul className="mt-12 space-y-6 [@media(max-height:760px)]:hidden">
+            {BENEFITS[mode].map(({ title, body }) => (
+              <li key={title}>
+                <span className="block text-site-body font-semibold text-night-ink">{title}</span>
+                <span className="mt-1 block max-w-prose text-site-label text-night-ink-secondary">{body}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        {/* The screenshot bleeds off the panel's bottom and right, fading into the panel colour. */}
-        <div className="relative mt-6 hidden min-h-0 flex-1 lg:block">
-          <div className="absolute top-0 left-0 w-[118%] [mask-composite:intersect] [mask-image:linear-gradient(to_bottom,black_55%,transparent_96%),linear-gradient(to_right,black_45%,transparent_82%)]">
-            <div className="w-[92%] [transform-origin:left_center] [transform:perspective(1600px)_rotateY(-9deg)_rotateX(3deg)]">
-              <div className={cn(MARKETING_CARD, "p-1.5 shadow-glow xl:p-2")}>
-                <div className="overflow-hidden rounded-xl border border-line bg-canvas">
-                  <Image
-                    src={SHOTS.inbox.src}
-                    width={SHOTS.inbox.width}
-                    height={SHOTS.inbox.height}
-                    alt={SHOTS.inbox.alt}
-                    sizes="(min-width: 1024px) 65vw, 1px"
-                    className="h-auto w-full"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p className="flex items-center gap-3 text-site-label text-night-ink-tertiary">
+          <span aria-hidden className="inline-flex gap-1">
+            {CHANNEL_MARKS.map((mark) => (
+              <i key={mark} className={cx("size-2 rounded-sm", mark)} />
+            ))}
+          </span>
+          {SITE_TAGLINE}
+        </p>
       </section>
 
-      <section className="relative flex flex-col items-center justify-center gap-5 px-4 py-6 sm:px-8 lg:justify-start lg:overflow-y-auto lg:px-10 lg:py-12 lg:before:flex-1 lg:before:content-[''] lg:after:flex-1 lg:after:content-['']">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-glow-brand opacity-50" />
-        <div className="relative w-full max-w-sm">{children}</div>
-      </section>
-
-      {/* Tablet: the space below the card, with the same benefits and the inbox shot (untilted). */}
-      <section aria-label="What Amplychat does" className="hidden px-8 pt-4 pb-12 md:block lg:hidden">
-        <div className="mx-auto max-w-3xl">
-          <BenefitList mode={mode} className="grid grid-cols-3 gap-6" />
-          <div className={cn(MARKETING_CARD, "mt-10 p-2 shadow-glow")}>
-            <div className="overflow-hidden rounded-xl border border-line bg-canvas">
-              <Image
-                src={SHOTS.inbox.src}
-                width={SHOTS.inbox.width}
-                height={SHOTS.inbox.height}
-                alt={SHOTS.inbox.alt}
-                sizes="(min-width: 768px) 704px, 1px"
-                className="h-auto w-full"
-              />
-            </div>
-          </div>
+      <div className="flex min-h-dvh flex-col px-4 sm:px-8 lg:px-12">
+        <header className="flex h-16 shrink-0 items-center lg:hidden">
+          <HomeLink />
+        </header>
+        <div className="flex flex-1 items-start justify-center pt-4 pb-8 sm:items-center sm:py-10">
+          <div className="w-full max-w-100">{children}</div>
         </div>
-      </section>
+        <AuthLegal mode={mode} className="mx-auto w-full max-w-100 shrink-0 pb-6 text-center" />
+      </div>
     </main>
   );
 }
-
-/**
- * The sign-in and sign-up card, as the owner asked (2026-10-17): the Amplychat logo inside the
- * card, Clerk's title and subtitle, one bordered Google button, the "or" divider, bordered fields,
- * a full-width Continue, and the switch link plus "Secured by Clerk" in the footer. The colours
- * come from the app-wide `clerkAppearance` (root layout); these are layout and shape only, on the
- * app's tokens.
- */
-export const authAppearance = {
-  options: {
-    logoPlacement: "inside",
-    logoImageUrl: "/icons/icon-192.png",
-    logoLinkUrl: "/",
-    socialButtonsVariant: "blockButton",
-  },
-  // The card's surfaces, fields and the gradient Continue come from the app-wide `clerkAppearance`
-  // (lib/clerk-appearance.ts), so the user menu and the account page match too.
-  elements: {
-    cardBox: { width: "100%" },
-    logoBox: { justifyContent: "center", height: "2.5rem" },
-    logoImage: { borderRadius: "0.625rem" },
-    formButtonPrimary: { width: "100%" },
-  },
-} as const;

@@ -65,12 +65,12 @@ export function siteHref(path: string, origin: string | null = appOrigin()): str
 }
 
 export const SITE_NAME = "Amplychat";
-export const SITE_TAGLINE = "AI inbox and automations for Instagram and WhatsApp";
+export const SITE_TAGLINE = "AI inbox and automations for Instagram, WhatsApp and website chat";
 /** The landing page's title after the name: "Amplychat · …" stays within 60 characters. */
-export const SITE_TITLE_LINE = "AI inbox for Instagram and WhatsApp";
+export const SITE_TITLE_LINE = "AI inbox for Instagram, WhatsApp and web chat";
 /** The landing page's description (and the default): at most 160 characters, for search results. */
 export const SITE_DESCRIPTION =
-  "Instagram DMs, comments and WhatsApp in one inbox. AI replies from your business knowledge in English, Hindi and Hinglish, plus comment and DM automations.";
+  "One AI inbox for Instagram DMs and comments, WhatsApp and your website chat. Replies from your own knowledge, plus comment-to-DM automations.";
 
 /** The logo for structured data (Organization.logo): the 512 px app icon, a square PNG. */
 export const LOGO_PATH = "/icons/icon-512.png";
@@ -86,7 +86,7 @@ export const OG_IMAGE = {
   url: "/og.png",
   width: 1200,
   height: 630,
-  alt: "Amplychat: the AI inbox for businesses that sell on Instagram and WhatsApp",
+  alt: "Amplychat: Every DM. Every comment. One inbox. For Instagram, WhatsApp and website chat.",
   type: "image/png",
 };
 
@@ -103,10 +103,17 @@ export const SECTION_IDS = {
   faq: "faq",
 } as const;
 
-/** The header's links; they point at the landing page's sections from every page. */
+/** The two explainer pages (C-160): the header, the footer and the 404 link here. */
+export const FEATURES_PATH = "/features";
+export const HOW_IT_WORKS_PATH = "/how-it-works";
+
+/**
+ * The header's links. Features and How it works have their own pages (C-160); Pricing and FAQ still
+ * point at the landing page's sections, whose anchors stay for in-page links.
+ */
 export const NAV_LINKS = [
-  { label: "Features", href: `/#${SECTION_IDS.features}` },
-  { label: "How it works", href: `/#${SECTION_IDS.howItWorks}` },
+  { label: "Features", href: FEATURES_PATH },
+  { label: "How it works", href: HOW_IT_WORKS_PATH },
   { label: "Pricing", href: `/#${SECTION_IDS.pricing}` },
   { label: "FAQ", href: `/#${SECTION_IDS.faq}` },
   { label: "Guides", href: "/guides" },
@@ -115,13 +122,105 @@ export const NAV_LINKS = [
 export const LEGAL_LINKS = [
   { label: "Privacy policy", href: "/privacy" },
   { label: "Terms of service", href: "/terms" },
+  { label: "Security", href: "/security" },
+  { label: "Data deletion", href: "/data-deletion" },
   { label: "Refund and cancellation", href: "/refunds" },
   { label: "Shipping and delivery", href: "/shipping" },
-  { label: "Data deletion", href: "/data-deletion" },
+  // C-156: the legal agent's pages; they exist once the C-156 branches combine.
+  { label: "Subprocessors", href: "/subprocessors" },
+  { label: "Cookies", href: "/cookies" },
+  { label: "Data processing agreement", href: "/dpa" },
+  { label: "Accessibility", href: "/accessibility" },
   { label: "Contact us", href: "/contact" },
-  // The security track's responsible-disclosure page (C-143); it exists once the branches combine.
-  { label: "Security", href: "/security" },
 ] as const;
+
+
+/**
+ * The hosted status page (C-156), from NEXT_PUBLIC_STATUS_URL: an http(s) URL, or null when it is
+ * unset or not a URL, and then the footer has no Status link. Read at build time like every
+ * NEXT_PUBLIC_* value.
+ */
+export function statusUrl(value: string | undefined = process.env.NEXT_PUBLIC_STATUS_URL): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+export type FooterLink = { label: string; href: string; external?: boolean };
+export type FooterColumn = { id: string; title: string; links: FooterLink[] };
+
+/**
+ * The footer's columns (C-156). Status shows only when the status page is configured. No social
+ * links: the business has no profiles yet (SOCIAL_PROFILES). The /shipping page is labelled
+ * "Delivery" here (C-161 v2): the business ships nothing physical; the page keeps its URL and its
+ * "Shipping and Delivery Policy" title, which payment-provider reviews look for.
+ */
+export function footerColumns(status: string | null = statusUrl()): FooterColumn[] {
+  return [
+    {
+      id: "product",
+      title: "Product",
+      links: [
+        { label: "Features", href: FEATURES_PATH },
+        { label: "Pricing", href: "/pricing" },
+        { label: "How it works", href: HOW_IT_WORKS_PATH },
+        { label: "What's new", href: "/changelog" },
+        ...(status ? [{ label: "Status", href: status, external: true }] : []),
+        { label: "Sign in", href: appUrl(SIGN_IN_PATH) },
+      ],
+    },
+    {
+      id: "solutions",
+      title: "Solutions",
+      links: [
+        { label: "For creators", href: "/for-creators" },
+        { label: "For businesses", href: "/for-businesses" },
+        { label: "Developers", href: "/developers/api" },
+      ],
+    },
+    {
+      id: "compare",
+      title: "Compare",
+      links: [
+        { label: "vs Manychat", href: "/compare/manychat" },
+        { label: "vs Interakt", href: "/compare/interakt" },
+        { label: "Switch from Manychat", href: "/switch-from-manychat" },
+        { label: "All comparisons", href: "/compare" },
+      ],
+    },
+    {
+      id: "resources",
+      title: "Resources",
+      links: [
+        { label: "Guides", href: "/guides" },
+        { label: "Common questions", href: "/faq" },
+        { label: "AI info", href: "/ai-info" },
+        { label: "Safety", href: "/safety" },
+        { label: "Contact", href: "/contact" },
+      ],
+    },
+    {
+      id: "legal",
+      title: "Legal and trust",
+      links: [
+        { label: "Privacy", href: "/privacy" },
+        { label: "Terms", href: "/terms" },
+        { label: "Security", href: "/security" },
+        { label: "Data deletion", href: "/data-deletion" },
+        { label: "Refunds", href: "/refunds" },
+        { label: "Delivery", href: "/shipping" },
+        { label: "Subprocessors", href: "/subprocessors" },
+        { label: "Cookies", href: "/cookies" },
+        { label: "DPA", href: "/dpa" },
+        { label: "Accessibility", href: "/accessibility" },
+      ],
+    },
+  ];
+}
 
 /**
  * The public pages the sitemap lists. Each guide (/guides/{slug}, lib/marketing/guides) is added by
@@ -133,6 +232,14 @@ export const PUBLIC_PATHS = [
   "/switch-from-manychat",
   "/compare/manychat",
   "/compare/interakt",
+  "/compare",
+  "/compare/linkdm",
+  "/compare/instantdm",
+  "/compare/inro",
+  "/compare/creatorflow",
+  "/compare/wati",
+  "/compare/aisensy",
+  "/compare/spur",
   "/features/comment-intelligence",
   "/features/ai-inbox",
   "/features/publishing",
@@ -145,7 +252,21 @@ export const PUBLIC_PATHS = [
   "/developers/api",
   "/security",
   "/guides",
-  "/hi",
+  // C-156 (pages)
+  "/for-creators",
+  "/for-businesses",
+  "/safety",
+  "/changelog",
+  "/ai-info",
+  "/subprocessors",
+  "/cookies",
+  "/dpa",
+  "/accessibility",
+  // C-157: every question, out of the landing page
+  "/faq",
+  // C-160: the explainer pages
+  "/how-it-works",
+  "/features",
 ] as const;
 
 /**
@@ -162,33 +283,31 @@ export const ROBOTS_DISALLOW = ["/app$", "/app/", "/w/", "/sign-in", "/sign-up",
  * A build date would tell crawlers every page changed on every deploy, which isn't true.
  */
 export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>> = {
-  "/": "2026-10-26",
-  "/pricing": "2026-10-26",
-  "/switch-from-manychat": "2026-10-26",
-  "/compare/manychat": "2026-10-26",
-  "/compare/interakt": "2026-10-26",
+  "/": "2026-10-30",
+  "/pricing": "2026-10-29",
+  "/switch-from-manychat": "2026-10-29",
+  "/compare/manychat": "2026-10-29",
+  "/compare/interakt": "2026-10-29",
+  "/compare": "2026-10-29",
+  "/compare/linkdm": "2026-10-29",
+  "/compare/instantdm": "2026-10-29",
+  "/compare/inro": "2026-10-29",
+  "/compare/creatorflow": "2026-10-29",
+  "/compare/wati": "2026-10-29",
+  "/compare/aisensy": "2026-10-29",
+  "/compare/spur": "2026-10-29",
   "/features/comment-intelligence": "2026-10-26",
-  "/features/ai-inbox": "2026-10-26",
+  "/features/ai-inbox": "2026-10-29",
   "/features/publishing": "2026-10-26",
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/security": "2026-10-26",
-  "/hi": "2026-10-28",
+  "/for-creators": "2026-10-29",
+  "/for-businesses": "2026-10-29",
+  "/safety": "2026-10-29",
+  "/ai-info": "2026-10-29",
+  "/faq": "2026-10-30",
+  "/how-it-works": "2026-10-31",
+  "/features": "2026-10-31",
 };
-
-/**
- * The footer's "Compare and learn" links to the go-to-market pages (GR-37) and the Hinglish page
- * (C-153); `lang` marks a label that isn't English. The guides are in NAV_LINKS (header and footer).
- */
-export const LEARN_LINKS: readonly { label: string; href: string; lang?: string }[] = [
-  { label: "Plans and limits", href: "/pricing" },
-  { label: "Switch from Manychat", href: "/switch-from-manychat" },
-  { label: "Amplychat vs Manychat", href: "/compare/manychat" },
-  { label: "Amplychat vs Interakt", href: "/compare/interakt" },
-  { label: "Comment intelligence", href: "/features/comment-intelligence" },
-  { label: "The AI inbox", href: "/features/ai-inbox" },
-  { label: "Publishing", href: "/features/publishing" },
-  { label: "Public API", href: "/developers/api" },
-  { label: `${SITE_NAME} Hinglish mein`, href: "/hi", lang: "hi-Latn" },
-];

@@ -1,54 +1,51 @@
-import { ArrowRight, BadgeCheck, Gift, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 
-import { SUPPORT_EMAIL } from "@/lib/copy";
-import table from "@/lib/marketing/plan-table.json";
-import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
+import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 
-import { LampGlow } from "./effects/lamp";
-import { Container, CtaLink } from "./primitives";
+import { CtaLink } from "./primitives";
 
-const PERKS = [
-  { icon: Gift, text: "Free plan, no card needed" },
-  { icon: Sparkles, text: `${table.trial_days.pro}-day trial of Pro` },
-  { icon: BadgeCheck, text: "Official Meta APIs, no password asked" },
-];
-
-/** The last call to action, under the Lamp's light (C-068). The text sits below the glow, on the canvas. */
-export function FinalCta() {
+/**
+ * The last call to action, the first half of the page's closing composition (C-161 v2): it shares
+ * the night ground with the footer below it, so the two read as one close. A glowing purple dome
+ * (pure CSS, decorative) rises behind a centred heading with "every conversation" in the accent, as the
+ * hero sets "One inbox.", then the lede, two actions and one row of facts. `trialDays` is Pro's trial
+ * when Pro is on sale, so the perk is only claimed when it can be taken (C-149). The second action
+ * points to how it works, or to every feature on the how-it-works page itself (`from`).
+ */
+export function FinalCta({ trialDays = 0, from }: { trialDays?: number; from?: "how-it-works" }) {
+  const second = from === "how-it-works" ? { href: FEATURES_PATH, label: "See every feature" } : { href: HOW_IT_WORKS_PATH, label: "See how it works" };
+  const perks = [
+    "Free plan, no card required",
+    ...(trialDays > 0 ? [`Try Pro free for ${trialDays} days`] : []),
+    "Official Meta APIs, no password needed",
+  ];
   return (
-    <section aria-labelledby="cta-title" className="relative isolate overflow-hidden border-t border-line-subtle bg-canvas">
-      <LampGlow />
-      <Container className="relative z-10 pt-52 pb-20 text-center sm:pt-56">
-        <h2 id="cta-title" className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Bring every customer conversation into one inbox
+    <section className="night close" aria-labelledby="cta-title">
+      <span className="close-arc" aria-hidden />
+      <div className="wrap close-in">
+        <h2 id="cta-title" className="close-h">
+          Ready to take control of <em>every conversation</em>?
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-base text-pretty text-fg-secondary">
-          Connect Instagram and WhatsApp, add what your business knows, and let the AI draft the replies.
+        <p className="close-p">
+          Connect Instagram, WhatsApp and your website chat, add what your business knows, and let the AI draft or send the replies.
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false} className="w-full px-8 sm:w-auto">
+        <div className="ctas close-ctas">
+          <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>
             Start free <ArrowRight className="size-4" aria-hidden />
           </CtaLink>
-          <CtaLink href={`#${SECTION_IDS.pricing}`} variant="secondary" className="w-full px-6 sm:w-auto">
-            See pricing
+          <CtaLink href={second.href} variant="secondary">
+            {second.label}
           </CtaLink>
-          {/* A text link, not a button: it may wrap at 320 px. */}
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className="inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium text-fg-secondary underline-offset-4 transition-colors duration-normal hover:text-fg hover:underline"
-          >
-            Questions? {SUPPORT_EMAIL}
-          </a>
         </div>
-        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-fg-secondary" aria-label="What you get">
-          {PERKS.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-1.5">
-              <Icon className="size-3.5 text-brand-fg" aria-hidden />
-              {text}
+        <ul className="facts close-facts" aria-label="What you get">
+          {perks.map((perk) => (
+            <li key={perk}>
+              <Check className="size-4" strokeWidth={2.4} aria-hidden />
+              {perk}
             </li>
           ))}
         </ul>
-      </Container>
+      </div>
     </section>
   );
 }

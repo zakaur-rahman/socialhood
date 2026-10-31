@@ -2,7 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const auth = vi.hoisted(() => ({ state: { isLoaded: true, isSignedIn: false as boolean | undefined } }));
+const auth = vi.hoisted(() => ({
+  state: { isLoaded: true, isSignedIn: false as boolean | undefined },
+}));
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => auth.state }));
 
 import { ClerkSignedIn } from "@/components/auth/ClerkSignedIn";
@@ -64,8 +66,8 @@ describe("the site header", () => {
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(nav).toHaveTextContent("Features");
     for (const [name, href] of [
-      ["Features", "/#features"],
-      ["How it works", "/#how-it-works"],
+      ["Features", "/features"],
+      ["How it works", "/how-it-works"],
       ["Pricing", "/#pricing"],
       ["FAQ", "/#faq"],
     ]) {
@@ -85,18 +87,50 @@ describe("the site header", () => {
     expect(screen.getByRole("button", { name: "Close menu" })).toHaveAttribute("aria-expanded", "true");
     expect(panel).toBeVisible();
     expect(panel.querySelector('a[href="/sign-in"]')).not.toBeNull();
+    // One "Start free" with the menu open: the bar's (C-157, LP-1.4).
+    expect(panel.querySelector('a[href="/sign-up"]')).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Menu" })).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(screen.getByRole("button", { name: "Open menu" })).toHaveFocus();
     expect(panel).not.toBeVisible();
   });
 
-  it("the phone menu shows Open app to a signed-in visitor", async () => {
+  it("the phone menu closes on a tap outside it", async () => {
+    const user = userEvent.setup();
+    withClerk(
+      <>
+        <SiteHeader />
+        <p>The page</p>
+      </>,
+    );
+    await user.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(screen.getByRole("button", { name: "Close menu" })).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByText("The page"));
+    expect(screen.getByRole("button", { name: "Open menu" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps focus inside the open menu: Tab from the last item returns to the button", async () => {
+    const user = userEvent.setup();
+    withClerk(<SiteHeader />);
+    await user.click(screen.getByRole("button", { name: "Open menu" }));
+    const toggle = screen.getByRole("button", { name: "Close menu" });
+    const panel = document.getElementById(toggle.getAttribute("aria-controls") as string) as HTMLElement;
+    const last = [...panel.querySelectorAll("a")].at(-1) as HTMLElement;
+    expect(last).toHaveAttribute("href", "/sign-in");
+    last.focus();
+    await user.tab();
+    expect(toggle).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(last).toHaveFocus();
+  });
+
+  it("the phone menu adds nothing for a signed-in visitor: Open app stays in the bar", async () => {
     auth.state = { isLoaded: true, isSignedIn: true };
     const user = userEvent.setup();
     withClerk(<SiteHeader />);
     await user.click(screen.getByRole("button", { name: "Open menu" }));
-    expect(screen.getAllByRole("link", { name: "Open app" }).length).toBe(2);
+    expect(screen.getAllByRole("link", { name: "Open app" }).length).toBe(1);
     expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
   });
 });

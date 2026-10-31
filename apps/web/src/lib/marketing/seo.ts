@@ -17,8 +17,8 @@ export type ArticleMeta = { publishedTime: string; modifiedTime: string; authors
  * A public page's metadata: title, description, canonical URL, Open Graph and Twitter card with
  * the share image (/og.png). Named on every page because a page's openGraph replaces the
  * layout's whole openGraph. Relative URLs resolve against the marketing layout's metadataBase
- * (NEXT_PUBLIC_SITE_URL). A guide passes `article` (C-153); the English landing page and its
- * Hinglish version pass `languages`, the hreflang alternates, and the Hinglish page its `locale`.
+ * (NEXT_PUBLIC_SITE_URL). A guide passes `article` (C-153). The site is in English only: the
+ * Hinglish page and its hreflang alternates were taken down in C-155.
  */
 export function pageMetadata({
   title,
@@ -26,8 +26,6 @@ export function pageMetadata({
   path,
   absoluteTitle = false,
   article,
-  languages,
-  locale,
   feeds,
 }: {
   title: string;
@@ -36,10 +34,6 @@ export function pageMetadata({
   /** The landing page names itself in full instead of "{title} · Amplychat". */
   absoluteTitle?: boolean;
   article?: ArticleMeta;
-  /** hreflang alternates: language code to path, both directions (C-153). */
-  languages?: Record<string, string>;
-  /** Open Graph locale, e.g. "hi_IN"; the site default (en) when unset. */
-  locale?: string;
   /** Feeds to advertise: title to path (`<link rel="alternate" type="application/rss+xml">`). */
   feeds?: Record<string, string>;
 }): Metadata {
@@ -49,7 +43,6 @@ export function pageMetadata({
     description,
     alternates: {
       canonical: path,
-      ...(languages ? { languages } : {}),
       ...(feeds ? { types: { "application/rss+xml": Object.entries(feeds).map(([feedTitle, url]) => ({ title: feedTitle, url })) } } : {}),
     },
     openGraph: {
@@ -59,18 +52,10 @@ export function pageMetadata({
       title: shareTitle,
       description,
       images: [OG_IMAGE],
-      ...(locale ? { locale } : {}),
     },
     twitter: { card: "summary_large_image", title: shareTitle, description, images: [OG_IMAGE] },
   };
 }
-
-/**
- * hreflang for the landing page and its Hinglish version (C-153): each names both, and x-default is
- * the English page. "hi" rather than "hi-Latn": search engines document language and region codes
- * for hreflang, not scripts; the page's own lang attribute says hi-Latn.
- */
-export const LANDING_LANGUAGES = { en: "/", hi: "/hi", "x-default": "/" } as const;
 
 /** For pages that must never be indexed: sign-in and sign-up, the app, unsubscribe links, the 404. */
 export const NO_INDEX: Metadata["robots"] = { index: false, follow: false };

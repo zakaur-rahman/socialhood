@@ -1,4 +1,8 @@
+import { FileText, MessageCircle } from "lucide-react";
 import Link from "next/link";
+
+import { Checklist, GuideH2, Pair, PairCard } from "@/components/marketing/guides/blocks";
+import { Callout } from "@/components/site/Callout";
 
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
@@ -9,8 +13,8 @@ function Body() {
   return (
     <>
       <p>
-        If you sell on Instagram, your DMs are your shop counter. Someone asks the price of a kurta at 11 at night, someone
-        else wants to know if you deliver to Guwahati, a third person just sends “details?” under a Reel. Answering all of it
+        If you sell on Instagram, your DMs are your shop counter. Someone asks the price of a denim jacket at 11 at night, someone
+        else wants to know if you deliver to their city, a third person just sends “details?” under a Reel. Answering all of it
         by hand works until the day a post takes off. Then the questions pile up, replies go out hours late, and some people
         buy from whoever answered first.
       </p>
@@ -20,7 +24,7 @@ function Body() {
         guide is about getting the speed without that feeling.
       </p>
 
-      <h2>Why most auto-replies feel robotic</h2>
+      <GuideH2>Why most auto-replies feel robotic</GuideH2>
       <p>Most automatic DMs sound like a bot for a handful of reasons, and each one has a fix:</p>
       <ul>
         <li>
@@ -36,19 +40,15 @@ function Body() {
           with “Dear valued customer” sounds like someone else.
         </li>
         <li>
-          <strong>They ignore the language.</strong> A customer who writes “price kya hai?” and gets a formal English reply
-          notices the switch.
-        </li>
-        <li>
           <strong>They guess.</strong> The fastest way to lose trust is a confident reply with the wrong price or a delivery
           promise you can&apos;t keep.
         </li>
       </ul>
 
-      <h2>Start with the questions you actually get</h2>
+      <GuideH2>Start with the questions you actually get</GuideH2>
       <p>
         Before you automate anything, scroll back through your last few weeks of DMs and note the questions that come up
-        again and again. For most small sellers the list is short: price, sizes and colours, stock, delivery areas and time,
+        again and again. For most small businesses the list is short: price, sizes and colours, stock, delivery areas and time,
         cash on delivery, returns and exchanges, and how to order. Write each one down with the answer you would give.
       </p>
       <p>
@@ -56,15 +56,19 @@ function Body() {
         your return policy lives only in your head, no tool can answer a return question well.
       </p>
 
-      <h2>Write answers the way you&apos;d say them</h2>
+      <GuideH2>{"Write answers the way you'd say them"}</GuideH2>
       <p>
         When you write the answers, write them the way you would type them to a customer, not the way a policy document
         reads. Compare:
       </p>
-      <ul>
-        <li>“Returns are accepted within seven (7) days of delivery subject to the conditions mentioned.”</li>
-        <li>“Yes, you can return or exchange it within 7 days of delivery, as long as the tags are on.”</li>
-      </ul>
+      <Pair>
+        <PairCard icon={FileText}>
+          <p>“Returns are accepted within seven (7) days of delivery subject to the conditions mentioned.”</p>
+        </PairCard>
+        <PairCard icon={MessageCircle} mark="var(--ig)">
+          <p>“Yes, you can return or exchange it within 7 days of delivery, as long as the tags are on.”</p>
+        </PairCard>
+      </Pair>
       <p>
         The second one is the same fact in your voice. It also answers the real question (“can I return it?”) in the first
         word. Keep that pattern: answer first, detail second, and an easy next step at the end, such as offering the order
@@ -76,10 +80,10 @@ function Body() {
         follows them.
       </p>
 
-      <h2>Answer from your facts, never from a guess</h2>
+      <GuideH2>Answer from your facts, never from a guess</GuideH2>
       <p>
         The difference between a useful AI reply and a dangerous one is where the facts come from. A general chatbot will
-        happily invent a delivery time that sounds right. For a shop, that is a problem you pay for later in refunds and
+        happily invent a delivery time that sounds right. For a business, that is a problem you pay for later in refunds and
         angry comments.
       </p>
       <p>
@@ -89,16 +93,7 @@ function Body() {
         covered next time. Over a few weeks, the gaps list turns into a map of what your customers really want to know.
       </p>
 
-      <h2>Reply in the customer&apos;s language</h2>
-      <p>
-        Indian customers switch languages freely: English, Hindi in Devanagari, and Hinglish, which is Hindi typed in
-        English letters with English words mixed in. A reply that follows the customer&apos;s choice feels like a person
-        wrote it. {N} reads the language of each message and drafts the reply in English, Hindi or Hinglish to match, even
-        when your knowledge is written in English. There is more on this in our guide to{" "}
-        <Link href="/guides/replying-in-hinglish">replying in Hinglish</Link>.
-      </p>
-
-      <h2>Decide what never gets an automatic answer</h2>
+      <GuideH2>Decide what never gets an automatic answer</GuideH2>
       <p>
         Some messages should always reach a person, however good the AI is. Make that list before you turn anything on:
       </p>
@@ -115,7 +110,7 @@ function Body() {
         never gets a human message followed by a bot one.
       </p>
 
-      <h2>Stay inside Instagram&apos;s rules</h2>
+      <GuideH2>{"Stay inside Instagram's rules"}</GuideH2>
       <p>A few Instagram rules shape every DM tool, and knowing them saves confusion:</p>
       <ul>
         <li>
@@ -133,28 +128,30 @@ function Body() {
         </li>
       </ul>
 
-      <h2>Start with suggestions, then let it send</h2>
+      <GuideH2>Start with suggestions, then let it send</GuideH2>
       <p>
         You don&apos;t have to trust the AI on day one. {N} has three modes for each connected account. <strong>Off</strong>{" "}
         means no AI replies. <strong>Suggest</strong> writes a draft above the reply box for you to send, edit or redo.{" "}
         <strong>Auto</strong> sends a reply by itself when it is confident and still hands the rest to you; Auto is part of
         the Pro plan.
       </p>
-      <p>
-        A sensible path is a week or two on Suggest. Read every draft before it goes. Each time you edit one, ask why: a
-        missing fact means a knowledge gap to fill, a wrong tone means a voice rule to change. Once you find yourself sending
-        most drafts unchanged, Auto is a small step rather than a leap. Even then, look through the conversations it handled
-        now and then.
-      </p>
+      <Callout tone="tip">
+        <p>
+          A sensible path is a week or two on Suggest. Read every draft before it goes. Each time you edit one, ask why: a
+          missing fact means a knowledge gap to fill, a wrong tone means a voice rule to change. Once you find yourself sending
+          most drafts unchanged, Auto is a small step rather than a leap. Even then, look through the conversations it handled
+          now and then.
+        </p>
+      </Callout>
 
-      <h2>A short checklist</h2>
-      <ol>
+      <GuideH2>A short checklist</GuideH2>
+      <Checklist>
         <li>List the ten questions you get most, with the answers you would type.</li>
         <li>Add them to your knowledge, along with your products, prices and policies.</li>
         <li>Set your voice: tone, emoji, words to use and avoid.</li>
         <li>Decide what always goes to a person.</li>
         <li>Run on Suggest, fix the gaps it finds, then consider Auto.</li>
-      </ol>
+      </Checklist>
       <p>
         If you want to see how the inbox, the drafts and the hand-off fit together, the{" "}
         <Link href="/features/ai-inbox">AI inbox page</Link> walks through it, and the{" "}
@@ -169,13 +166,23 @@ export const INSTAGRAM_DM_AUTO_REPLIES: Guide = {
   slug: "instagram-dm-auto-replies",
   title: "Instagram DM auto-replies without the bot feel",
   description:
-    "Auto-reply to Instagram DMs in your own voice: answer from your facts, match the customer's language, and hand the hard messages to a person.",
+    "Auto-reply to Instagram DMs in your own voice: answer from your facts, never guess, and hand the hard messages to a person.",
   h1: "How to auto-reply to Instagram DMs without sounding like a bot",
   published: "2026-10-28",
-  updated: "2026-10-28",
-  readingMinutes: 6,
+  updated: "2026-10-29",
+  readingMinutes: 5,
   author: GUIDE_AUTHOR,
   tags: ["Instagram", "AI replies"],
+  sections: [
+    "Why most auto-replies feel robotic",
+    "Start with the questions you actually get",
+    "Write answers the way you'd say them",
+    "Answer from your facts, never from a guess",
+    "Decide what never gets an automatic answer",
+    "Stay inside Instagram's rules",
+    "Start with suggestions, then let it send",
+    "A short checklist",
+  ],
   hero: "aiDraft",
   faq: [
     {

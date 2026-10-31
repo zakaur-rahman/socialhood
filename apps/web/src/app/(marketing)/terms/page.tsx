@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Terms of Service",
-  description: `The terms for using ${SITE_NAME}: plans and the Pro trial, billing through Dodo Payments, cancellation, delivery, acceptable use, AI output and liability.`,
+  description: `The terms for using ${SITE_NAME}: plans and the Pro trial, billing, cancellation, delivery, acceptable use, AI features, data processing and liability.`,
   path: "/terms",
 });
 
@@ -18,8 +18,10 @@ const mail = <a href={`mailto:${email}`}>{email}</a>;
 // Grounded in what is built: plans and entitlements (billing/plans.py), the trial and billing rules
 // (FR-BIL-01…07, C-050), the no-follow-gate rule (C-031), Ask Amplychat (read-only in R1), the
 // integrations' statuses (C-138). C-144 added the operator, Dodo as merchant of record, delivery,
-// connected services and grievances. LAWYER REVIEW before launch (launch checklist §6.4); the
-// governing-law clause appears only once lib/legal.ts sets it.
+// connected services and grievances. C-156 added the AI features section (modelled on Wati's §11),
+// the DPA incorporation, the subprocessors link, the WhatsApp no-markup line and, with
+// LEGAL.governingLaw set, the governing-law section (no courts named: the owner left jurisdiction
+// unset). NOT reviewed by a lawyer (no lawyer budget, C-156).
 function sections(): LegalSection[] {
   const law = governingLawClause(LEGAL);
   const operator = operatorName(LEGAL);
@@ -40,8 +42,9 @@ function sections(): LegalSection[] {
           <p>
             Our <Link href="/privacy">Privacy Policy</Link> explains how we handle personal data, our{" "}
             <Link href="/refunds">Refund and Cancellation Policy</Link> explains refunds and cancelling, and our{" "}
-            <Link href="/shipping">Shipping and Delivery Policy</Link> explains how {N} is delivered. All three are part of
-            these terms.
+            <Link href="/shipping">Shipping and Delivery Policy</Link> explains how {N} is delivered, and our{" "}
+            <Link href="/dpa">Data Processing Agreement</Link> covers the personal data we process for you. All four are
+            part of these terms.
           </p>
         </>
       ),
@@ -91,7 +94,8 @@ function sections(): LegalSection[] {
             <li>
               <strong>Free</strong> costs nothing and needs no card. <strong>Pro</strong> is a monthly subscription.{" "}
               <strong>Max</strong> is coming soon. What each plan includes and costs is shown on our{" "}
-              <Link href="/pricing">pricing page</Link> and in the app.
+              <Link href="/pricing">pricing page</Link> and in the app. Pro isn&apos;t on sale yet; the trial and billing
+              terms below apply once it is.
             </li>
             <li>
               <strong>Trial.</strong> Pro starts with a 7-day free trial, once per workspace. A card is needed to start it.
@@ -123,8 +127,8 @@ function sections(): LegalSection[] {
               you upgrade.
             </li>
             <li>
-              <strong>WhatsApp fees.</strong> Our plans don&apos;t include Meta&apos;s WhatsApp messaging fees. Meta charges
-              them directly to your business.
+              <strong>WhatsApp fees.</strong> Our plans don&apos;t include Meta&apos;s WhatsApp messaging fees. You pay
+              them to Meta directly, through your own WhatsApp Business account, and we add no markup.
             </li>
             <li>
               <strong>Price changes.</strong> If we change the price of your plan, we&apos;ll tell you before the change
@@ -192,35 +196,56 @@ function sections(): LegalSection[] {
             store, process and transmit it only as needed to provide {N} to you.
           </p>
           <p>
-            You are the Data Fiduciary for your customers&apos; data that you bring into {N}, and you are responsible for
-            having a lawful basis to process it and for answering your customers&apos; requests about it. We process it on
-            your behalf and on your instructions, as our <Link href="/privacy">Privacy Policy</Link> describes, and we help
-            you answer those requests.
+            You are the controller (under India&apos;s DPDP Act, the Data Fiduciary) for your customers&apos; and
+            followers&apos; data that you bring into {N}, and you are responsible for having a lawful basis to process it
+            and for answering their requests about it. We process it on your behalf and on your instructions, as our
+            processor terms describe, and we help you answer those requests.
+          </p>
+          <p>
+            Our <Link href="/dpa">Data Processing Agreement</Link>, including the EU Standard Contractual Clauses and the UK
+            Addendum it incorporates, is part of these terms and applies as soon as you accept them. The service providers
+            we use are listed on our <Link href="/subprocessors">subprocessors page</Link>.
           </p>
         </>
       ),
     },
     {
-      id: "ai-output",
-      title: "AI output",
+      id: "ai-features",
+      title: "AI features",
       body: (
         <>
           <p>
-            {N}&apos;s AI features, including suggested and automatic replies, analysis, summaries, captions and Ask {N},
-            generate content automatically. The AI is instructed to answer only from your knowledge base and the
-            conversation, and to hand a conversation to you when it isn&apos;t sure, but it can still be wrong, incomplete
-            or out of date.
+            {N}&apos;s AI features, including suggested and automatic replies, analysis, lead scores, spam flags, summaries,
+            captions and Ask {N}, generate content automatically. The AI is instructed to answer only from your knowledge
+            base and the conversation, and to hand a conversation to you when it isn&apos;t sure, but it can still be wrong,
+            incomplete, out of date or inappropriate.
           </p>
           <ul>
             <li>
-              You choose each account&apos;s AI mode. In Auto mode, replies are sent without a person reviewing them first.
+              <strong>No promise of accuracy.</strong> AI output is provided &quot;as is&quot;. We don&apos;t warrant that it
+              is accurate, complete or fit for any purpose.
             </li>
             <li>
-              You are responsible for the messages sent from your accounts, including AI and automated ones, and for keeping
-              your knowledge base accurate.
+              <strong>You review it.</strong> Check AI output before you rely on it or send it. In Suggest mode a person
+              sends each reply; in Auto mode replies are sent without a person reviewing them first, and only if you turn it
+              on. You can switch Auto off at any time.
             </li>
-            <li>Don&apos;t rely on AI output for legal, medical, financial or other professional advice.</li>
+            <li>
+              <strong>You are responsible for what is sent.</strong> You are responsible for the messages sent from your
+              accounts, including the replies Auto mode and your automations send, and for keeping your knowledge base
+              accurate.
+            </li>
+            <li>
+              <strong>No decisions about people.</strong> Don&apos;t use {N}&apos;s AI to make decisions that have legal or
+              similarly significant effects on people, such as about credit, employment, housing, insurance, education or
+              access to essential services, and don&apos;t rely on it for legal, medical, financial or other professional
+              advice.
+            </li>
             <li>Ask {N} only reads your data and prepares drafts for you to review. It never acts by itself.</li>
+            <li>
+              The AI runs on Google&apos;s Gemini API. Our <Link href="/privacy#ai">Privacy Policy</Link> explains what we
+              send to Google and how Google may use it.
+            </li>
           </ul>
         </>
       ),

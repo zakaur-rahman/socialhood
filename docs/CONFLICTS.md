@@ -6873,3 +6873,1920 @@ Two were product bugs, the rest specs that drifted or raced the sandbox's backgr
   the list shows only the searched contact.
 - **GR-23 New broadcast.** Spec. With no broadcasts the empty state offers "New broadcast" as well
   as the header; the spec waits for the empty list and takes the header's.
+
+## C-155 · The public site in the owner's paper-and-night design, global and for creators too (feature/site-redesign)
+
+The owner supplied a landing-page design and decided (2026-10-29): use its layout and look for the
+whole public site; the design file is for layout and visual style only, every word comes from our
+own site; go global (no Hindi/Hinglish marketing, `/hi` and the Hinglish guide taken down, neutral
+demo data in dollars); speak to creators and influencers as well as businesses. The signed-in app
+(the `(clerk)` group, sign-in and sign-up) keeps its own theme.
+
+**C-155 supersedes C-127 to C-129 for the public site.** The public pages are no longer pinned
+dark: they render their own palette whatever theme the member chose for the app.
+
+### Theme and tokens
+- `globals.css` gains the site palette as `@theme` tokens (`paper`, `paper-deep`, `sheet`, `ink*`,
+  `rule*`, `night*`, `iris*`, `site-ok/wait/stop*`, `handoff*`, `comment`, `avatar-1..6`), each the
+  same in both app themes (listed in `themeInvariant`, described in `tokens.ts`).
+- A `.site` block in `globals.css` names them for the stylesheet (`--paper`, `--ink`, `--night` …,
+  plus the alpha shades and the site's shadows, all `color-mix` of a token) and re-points the app
+  tokens a public page uses (`canvas`, `panel`, `fg`, `fg-secondary`, `line*`, `brand*`, `success`,
+  `warning` …) at paper, and at night inside `.night`. So shared pieces (cards, prose, badges,
+  tables, the 404 illustration) wear the site's colours with no per-page change.
+- `components/site/site.css` holds the layout and components (header, footer, hero, scenes, plan
+  cards, FAQ, bands), every colour a variable, all in the components layer under `.site`, so
+  utilities still win and nothing reaches the app. Imported by the marketing layout and the 404.
+- The head script and `ThemePin` pin `<html>` to `light` on public routes (`SITE_THEME`), for the
+  browser's own parts; `theme-color` is the paper (`applySiteThemeColor`, the marketing layout's
+  viewport, and `ThemeSync` on public paths). Dark/Light/System in the app are unchanged.
+- Fonts: Geist, the app's font, with headings at 700 and tight tracking (h1 -0.05em). The design's
+  Funnel Display and Funnel Sans were tried first; the owner found them off, compared sixteen
+  families on our own hero (2026-10-29) and asked for "more modern, minimal and bold", and I chose
+  Geist Bold: clean at headline sizes, the most readable body of the set, and one type across the
+  site and the app. One `next/font` Geist in the root layout, preloaded again (every first view
+  shows it); `components/site/fonts.ts` is gone.
+
+### Pages
+- **Landing** rebuilt in the design's order: hero (scroll-scrubbed pile of messages sorting into one
+  inbox; plays by itself on phones), the facts strip, "How it works" on a night band (knowledge
+  scan, wires to the cited words, the draft writing itself, a hand-off and a knowledge gap),
+  comment-to-DM automation (a creator's Reel, live comments, the DM, an editable keyword), Off,
+  Suggest and Auto switch over four messages plus the three setup steps, features, integrations
+  with their status, security and privacy (night), pricing, FAQ, closing (night) and footer (night).
+- Every scene is **server-rendered in a meaningful still state** (the sorted inbox, the finished
+  draft, a few comments and a sent DM, Suggest). One client island, `LandingMotion`, loads
+  `landing-motion.ts` after load and animates with transforms, opacity and classes only (CLS 0);
+  with reduced motion only the switch and the keyword field work. On wide screens the hero's notes
+  wait for the script (with a 3 s CSS fallback) because that scene starts scattered.
+- **framer-motion is gone** from the app (only the old landing effects used it), with the old
+  sections, effects, illustrations and the routing diagram.
+- **Every other public page** (pricing, features/*, compare/*, switch-from-manychat, developers/api,
+  guides, legal pages, contact, security, data deletion, unsubscribe, the 404) uses the new header,
+  footer, type, buttons (`CtaLink` is now the site's button), kickers and bands. Narrow columns
+  start at the same left edge as the page.
+- **Pricing** in the design's plan cards, still from the plans API: a plan that can't be bought
+  says "Coming soon" (`available: false`), Max is a line under the cards until it can be bought, and
+  the outlined plan is Pro when it is on sale, Free otherwise. Free's big number is zero in Pro's
+  currency, or "Free" when there is no price. The closing's "7-day trial of Pro" perk shows only
+  while Pro is on sale (it was always shown).
+
+### Wording (owner's correction: our words, the design's layout)
+Everything on the public site is our existing copy placed into the design's sections. Where it
+differs from today's site, and why:
+- **Languages removed** (owner): the hero trust row's "English, Hindi and Hinglish", the Languages
+  section, the strip's "3 languages", the FAQ "Which languages does the AI support?", the feature
+  card's "in English, Hindi and Hinglish", SITE_DESCRIPTION, the share image, llms.txt, the
+  sign-in panel's benefit line, the guides (one section and two bullets) and the AI inbox page.
+- **Global and creators** (owner): SITE_DESCRIPTION, the share image and its alt, llms.txt, the RSS
+  description and the guides index say "businesses and creators"; "small sellers in India" and
+  similar became "small businesses"; "India's consent rules" became "consent rules" (feature card,
+  GTM pages, plan matrix, guides); guide examples use a denim jacket, "their city" and "what's the
+  price"; the WhatsApp guide's title is now "WhatsApp Business API vs app for small business".
+- **Truth fixes:** Instagram's integration row no longer lists insights as included ("Post insights
+  follow Meta's approval": `IG_REQUEST_INSIGHTS_SCOPE` is off in production); the closing's
+  "7-day trial of Pro" shows only while Pro is on sale; the Interakt row no longer says Pro is
+  "priced in rupees".
+- **Rearranged, same words:** the knowledge section uses the "AI replies from your own knowledge"
+  card title and the "Will the AI make things up?" answer; the modes section uses "Set up in three
+  steps" as its kicker and "Let the AI draft or reply" as its heading, and the mode descriptions are
+  the FAQ's answers; the strip is C-138's numbers ("1 inbox", "200 AI credits", "3 automations")
+  plus "Official Meta APIs" with the footer's no-password line; the catalogue card's "Part of Pro."
+  is a "Pro" chip; Max's note sits under the plan cards as "Max: …"; the automation steps keep their
+  titles with shorter bodies (the keyword line became the field label "The keyword is yours"); the
+  integrations intro says "Each row" for "Each card"; the hero eyebrow is SITE_TAGLINE.
+- **New microcopy, kept minimal, for the scenes the design adds:** the hero captions ("Every DM.
+  Every comment." / "One inbox. Example data."), the scroll hint, the inbox chips; the knowledge
+  scene's four step labels (from the feature cards), the draft's states, its citations, the
+  hand-off line and "Knowledge gap: bulk orders / Add an answer"; "Automation on this Reel", "DMs
+  sent from this Reel", the creator's Reel caption, the DM's link and follow lines, the comment
+  summary legend; the mode table's labels and outcomes and the Off description ("No drafts.
+  Messages still arrive tagged with intent, sentiment and a lead score, and you reply yourself.");
+  the switch's sentence "Try the switch to see what each does with the same four messages."; the
+  Free card's "Available now", and "Cancel anytime." under a priced Pro without a trial.
+- **Demo data:** neutral names (Maya R., Sam K., Leo M., Nina, Theo), Toronto, a linen shirt at $39,
+  a denim jacket at $79 and a cotton scarf at $19, the made-up shop "Indigo Lane" and a made-up
+  creator "mia.makes" whose Reel uses our own LINK keyword example. Real plan prices still come from
+  the plans API.
+- **Removed with the old landing:** the inbox screenshot section, the screenshot timeline and the
+  footer's oversized wordmark. The "Is there a mobile app?" answer is our existing one (install
+  from the browser, push notifications; on iPhone from the Home Screen, iOS 16.4 or later).
+
+- **Comparison pages** (owner approved, 2026-10-29): to keep comparative claims truthful and not
+  misleading, /switch-from-manychat, /compare/manychat and /compare/interakt now (1) show a
+  trademark and no-affiliation note under the sources ("Manychat is a trademark of its owner.
+  Amplychat isn't affiliated with or endorsed by Manychat. Details checked on {date}. If something
+  has changed, tell us at {support email}."), built from a `competitor` field on the page data
+  with the latest `checked` date of its sources (lib/marketing/competitor-note.ts); and (2) cite the
+  vendor's own pages first: Manychat's help centre and product updates, Interakt's pricing page,
+  all checked 2026-10-29. Claims the official pages contradicted were corrected (Manychat AI is
+  in beta and answers from your knowledge, not "a paid add-on"; TikTok is unavailable in the UK
+  and EU, not "open beta"; Interakt's AI is its own WhatsApp AI agents add-on, not "early, through
+  a partner"), claims they didn't fully confirm were softened (comment-to-DM "the same set", Make,
+  QR codes), and the third-party blogs were dropped except Kanal, kept only for Meta's rule
+  against requiring a follow. Manychat's help centre blocks automated reading, so it was read
+  through a search engine's copy; the pages say so. Source dates now read "29 October 2026".
+
+### Measured
+Local production build made the way the VM makes it (standalone, split hosts), Lighthouse 12.8.2,
+three runs each, medians; same machine and method as C-152. Before: develop 5b246b2b.
+
+| | before | after |
+|---|---|---|
+| Mobile performance | 72 | 90 |
+| Mobile LCP | 3.88 s | 3.11 s |
+| Mobile TBT | 501 ms | 198 ms |
+| Mobile Speed Index | 4.0 s | 1.7 s |
+| Mobile accessibility | 100 | 100 |
+| Desktop performance | 99 | 100 |
+| Desktop LCP | 0.83 s | 0.67 s |
+| Accessibility, SEO, best practices (both) | 100 | 100 |
+| CLS | 0 | 0 |
+
+*C-152's `content-visibility: auto` on the lower landing sections was tried again and dropped: it
+gave 93 on mobile but 96 accessibility (axe hit-tested the pricing notes against the night band
+behind a skipped section). Accessibility 100 wins.*
+
+### Checks
+`next typegen`, `tsc --noEmit` and `pnpm lint` clean; the whole web vitest suite passes (275 files,
+2,983 tests), including the design lint, the token tests (generated files refreshed), theme,
+public metadata, SEO, guides and the rewritten landing and pricing tests (one h1, the FAQ JSON-LD
+equal to the FAQ on the page, no Hindi or Hinglish, honest statuses, the C-149 states). E2E
+`landing|GR-37|not-found|C-153|guides` on the e2e stack: 33 passed. The landing spec now checks the
+still scenes, the script taking over, the mode switch and the keyword field, the section order, no
+sideways scroll and CLS under 0.1 at 375, 768, 1280 and 1536; the guides spec checks the 308s for
+/hi and the Hinglish guide. `vitest.setup.ts` stands in for the Google fonts. framer-motion is
+removed from package.json and the lockfile.
+
+### For the owner
+- Read the new microcopy listed above, the creator example and the demo data.
+- Still seller-only and left for you: the guides index title "Guides for Instagram and WhatsApp
+  sellers" and its h1 "Sell better in the DMs"; the hero line "AI that knows your business …".
+- Razorpay and UPI are the only payment rails; the page states them as facts, which reads Indian.
+- The plan matrix still says "Pro has a 7-day free trial" while Pro isn't on sale (the plan's
+  rule, not an offer today).
+- The share image stays dark (one picture for every theme).
+
+## C-156 · Site trust pass
+
+The competitor review's "do now" list plus the legal items (owner, 2026-10-29), built by three
+parallel agents on `feature/site-trust-legal`, `…-pages` and `…-compare`. Each adds its own
+sub-section below; the coordinator merges them with a union.
+
+### C-156 (legal)
+
+**No lawyer has reviewed any of this.** The owner has no lawyer budget; the text follows standard
+practice and was checked against the code, not against legal advice. Every page carries a "NOT
+reviewed by a lawyer" code comment.
+
+**Owner decisions applied (2026-10-29)**
+- One email, `SUPPORT_EMAIL`, for support, privacy, the grievance officer and DPA requests.
+- `LEGAL.grievanceOfficer` is `{ role: "Grievance Officer, UNCHARTD", email: SUPPORT_EMAIL }`: a role,
+  no personal name. The type gained `role`; `legalFacts` shows "Grievance Officer, UNCHARTD
+  (support@amplychat.com)".
+- The full address is never published. New `LEGAL.publicLocation: "Bihar, India"`, shown as
+  "Location" in the facts card (a set `registeredAddress` would replace it), and used in the
+  privacy policy and the DPA. `registeredAddress` stays unset.
+- `governingLaw: "the laws of India"`, so Terms now has a Governing law section; `jurisdiction`
+  stays unset (no courts named).
+- `effectiveDate: "2026-10-30"`, a placeholder: **the coordinator moves it to the release date.**
+  Every legal page shows "Last updated …" (from `LEGAL_DOCUMENTS`) and "Effective …".
+- WhatsApp fees: Terms says customers pay Meta directly through their own WhatsApp Business account
+  and we add no markup.
+
+**What changed**
+- `lib/legal.ts`: the fields above; `LEGAL_DOCUMENTS` gained `subprocessors`, `cookies`, `dpa` and
+  `accessibility` (all 2026-10-29); privacy and terms moved to 2026-10-29. The sitemap reads these
+  dates, so the pages agent only has to add the four paths to `PUBLIC_PATHS`.
+- `lib/subprocessors.ts` + `components/marketing/legal/SubprocessorTable.tsx`: **one list**
+  (provider, purpose, data, location, link to its DPA or privacy page) rendered by `/subprocessors`,
+  the privacy policy ("Who we share it with") and the DPA's Annex 3.
+- **Privacy policy:** controller for account data, processor for the messages, contacts and profiles
+  a business or creator brings (including a creator's followers), with the DPA linked; a GDPR Art. 6
+  legal-basis table; "Data from Instagram, Facebook and WhatsApp" itemised per platform (from the
+  parsers: story replies and mentions, stickers, reactions, referrals; WhatsApp documents,
+  locations, button replies and orders) and matched to `/data-deletion`; international transfers
+  (India, GCP Singapore, subprocessors mainly in the US, Gemini wherever Google has facilities; SCCs
+  and the UK Addendum for EEA/UK); a retention table from the code (`jobs/tasks/purge.py`,
+  `message_history_days`, `infra/vm/backup.sh`: nightly dumps, 7 daily + 4 weekly, never over 30
+  days; the old "7 days of recovery history" was Render's PITR and is gone); automated decisions;
+  rights split into Everyone / EEA and UK (GDPR) / California (CCPA/CPRA, no sale or sharing, GPC
+  honoured) / India (DPDP Act, the existing text) / Grievances; children; the cookie section now
+  points to `/cookies`; insights say "we don't ask for it today" (the scope flag is off).
+- **`/subprocessors`**: the table, "Others who receive data" (Meta, Dodo once billing opens, tools a
+  business connects, push services, Grafana Cloud), "Last updated" and "To be told about changes,
+  email support@amplychat.com".
+- **`/cookies`**: two tables read from the code (Clerk's `__client`, `__session`, `__client_uat` and
+  their suffixed forms, Cloudflare's `__cf_bm`/`_cfuvid` on Clerk's domains, `sh_theme`; every
+  `socialhood:*` local/session storage key, the widget's `sh_visitor_<widget>` and the service
+  worker), "No tracking, so no banner", and Meta's SDK on Connect WhatsApp.
+- **`/dpa`**: incorporated into the Terms on acceptance; roles; Art. 28(3) duties (instructions,
+  confidentiality, security, subprocessors, assistance, breach notice within 72 hours, deletion or
+  return, audits); SCCs 2021/914 Modules 2 and 3 by reference (Clause 7 docking on, Clause 9(a)
+  Option 2, Clause 11 option off, Clauses 17/18: the exporter's member state, else Ireland); the UK
+  Addendum B1.0 (Table 4: neither party may end it); DPDP and CCPA service-provider terms; Annexes
+  1 (processing details), 2 (security measures, true to infra/vm, `security/crypto.py`, HSTS in
+  `lib/security/headers.ts`, Meta signature checks, CI's pip-audit / pnpm audit / gitleaks) and 3
+  (the shared list).
+- **Terms**: "AI features" (modelled on Wati §11: no warranty of accuracy, the user reviews, the
+  business is responsible for what Auto sends, no decisions with legal or similarly significant
+  effects), the DPA incorporated with a subprocessors link, "Pro isn't on sale yet" in Plans, the
+  no-markup line, Governing law.
+- **`/accessibility`**: WCAG 2.2 AA as an aim, not a claim; axe and keyboard testing; known limits;
+  report to `SUPPORT_EMAIL`, reply within 5 working days.
+- Tests: `legal.test.tsx` (today's config, Location vs address, grievance role, all eight documents
+  with dates and no placeholders, one subprocessor list on three pages, rights headings, Terms' AI
+  section and DPA link, cookies) and `seo.test.ts` (metadata for the four new routes).
+
+**Judgment calls**
+- **Gemini and training.** `ai/gemini.py` and `agent/planner.py` use `genai.Client(api_key=…)` and
+  `GoogleProvider(api_key=…)`: the Gemini Developer API, not Vertex AI. Google's Gemini API
+  Additional Terms (effective 2026-03-23, read 2026-10-29) say Paid Services don't use prompts or
+  responses to improve Google's products, log them "for a limited period" for abuse detection, and
+  may store or cache them in any country with Google facilities; Unpaid Services do use them and may
+  have human review. The API is "paid" only when the key's Cloud project has an active billing
+  account. `infra/vm/api.env.example` asks for "a paid, billing-enabled Gemini key", so the policy
+  says we use the paid service. **Owner: confirm the production key's project has billing on;
+  otherwise the AI paragraph is false.** "We don't train AI models on your data" is about us and is
+  true (we train none).
+- **Disconnect does not delete stored data.** The brief asked for "deleted when the account is
+  disconnected or a deletion is requested". The code deletes the token on disconnect but keeps
+  stored data until "Disconnect and delete data", workspace deletion or a Meta deletion request, so
+  the policy says exactly that, matching `/data-deletion`.
+- **Dodo is not listed as a subprocessor.** As merchant of record it is a controller of payment data
+  under its own policy, and billing is off (C-149). It is under "Others who receive data".
+- **Subprocessor notice: 30 days by email to each workspace owner**, with an urgent-replacement
+  exception, objection, and a pro-rata refund of prepaid fees if unresolved. A common market term;
+  the owner must actually send those emails.
+- **Audits:** written answers first; an on-site or auditor audit on 30 days' notice, once a year
+  unless a breach or an authority requires it, at the customer's cost.
+- **SCC options** chosen as the usual SaaS defaults (above). No Swiss addendum (not asked for).
+- **CCPA section** is written though we are very likely under the CCPA's thresholds; it promises
+  only what is true (no sale or sharing, GPC honoured trivially).
+- **No EU/UK representative (GDPR Art. 27) is named.** We may need one if we target EU/UK users at
+  scale; not claimed, not done.
+- **Locations** in the subprocessor table are each provider's default region, not read from our
+  dashboards (as C-144 noted). Cloudinary has no public DPA URL that resolves (two tried, both 404),
+  so its privacy policy is linked.
+- **Cloudflare cookie names and lifetimes** on `/cookies` come from Clerk's and Cloudflare's docs,
+  not from inspecting production. Clerk can change them.
+- The **proprietor's personal name** (Zakaur Rahman, C-144) is still shown in the facts card; the
+  owner's "no personal name" decision was for the grievance officer only.
+- The `sh_theme` cookie is set only by the app's theme switch; the public site sets no cookie of
+  its own.
+
+**For the coordinator / owner**
+- Move `LEGAL.effectiveDate` to the release date.
+- Pages agent: add `/subprocessors`, `/cookies`, `/dpa`, `/accessibility` to `PUBLIC_PATHS`, the
+  footer and llms.txt.
+- Owner: confirm Gemini billing; check each provider's region in its dashboard; if an off-site
+  backup bucket is enabled, create it in asia-southeast1 so "backups in Singapore" stays true.
+- `lib/whatsapp/embedded-signup.ts` initialises Meta's SDK with `autoLogAppEvents: true`, which
+  lets Meta log SDK events from the Connect WhatsApp click. The cookies page says Meta's SDK "may
+  tell Meta that it was used". Consider setting it to false (not changed here: not a legal file).
+
+**Checks:** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `src/lib`, `src/app`,
+`src/components/marketing`, `src/styles`: 99 files, 1,189 tests pass. Builds, e2e and screenshots
+are left to the coordinator.
+
+### C-156 (pages)
+The owner approved the competitor review's "do now" list (2026-10-29). This part builds the footer,
+the audience pages, safety, what's new, the AI fact sheet, the creator FAQ, WhatsApp charges on
+pricing and the status link. Nothing here was reviewed by a lawyer.
+
+- **Footer** (`SiteFooter`, data in `lib/marketing/site.ts` `footerColumns`): Product, Solutions,
+  Compare, Resources, and Legal and trust, on the night band; the bottom bar reads "© {year} UNCHARTD
+  · Bihar, India", the official-API line and "Amplychat isn't affiliated with or endorsed by Meta.
+  Instagram and WhatsApp are trademarks of Meta Platforms, Inc." No social links. "Start free" and
+  the old "Compare and learn" list (`LEARN_LINKS`) are gone from the footer; the feature pages are
+  still linked from the audience pages and llms.txt. The grid is the about column plus five
+  columns at 1280, five columns under the about row below 1060 px, three below 900 px and two
+  below 520 px.
+- **"Bihar, India"** is `COMPANY_LOCATION` in `lib/marketing/site.ts`, because `lib/legal.ts` had no
+  location field on this branch. *To reconcile:* if the legal agent adds one to `LEGAL`, the footer
+  and /ai-info read it from there and the constant goes.
+- **Status link:** `NEXT_PUBLIC_STATUS_URL` (build time; the Dockerfile, the production workflow,
+  `.env.example` and `docs/ops/deploy-vm.md` carry it). Only an http(s) URL shows "Status" in the
+  footer's Product column; unset, it's hidden.
+- **/for-creators and /for-businesses** (`lib/marketing/solutions.ts`, `SolutionPageView`): the hero,
+  "Sounds familiar?" before and after, the features with their status (Live comments "With Meta's
+  approval"), the integrations with their honest statuses (businesses; the landing page's
+  `INTEGRATIONS`), plans by audience size ("Just starting", "Growing", "Established") mapped to
+  Free and Pro, Pro's state and price only from the plans API ("Coming soon" while billing is off),
+  the FAQ with its FAQPage JSON-LD (the same objects the page renders), related pages. No
+  testimonials. Story replies and mentions are listed as built (C-082, C-083), as the comparison
+  pages already say. Collaborators are on posts and Reels, not Stories (C-134).
+- **Answers checked against the code:** ban risk (the 750-an-hour private-reply bucket in
+  `platforms/buckets.py`, the 7-day limit); password (Instagram login, Meta's sign-up window,
+  encrypted tokens); robotic replies (tone, emoji level, do's and don'ts, sign-off in
+  `AiSettings`); take-over (`human_takeover`: 2 hours by default, 30 minutes, 24 hours or until
+  resumed; Instagram app replies count); the Free limit (3 active automations, 10 scheduled posts
+  a month, 200 credits with in-app notices at 80% and 100%, and **Free deletes messages older than
+  90 days**, `jobs/tasks/purge.py`, so the answer doesn't say "nothing is deleted").
+- **/safety:** our per-account pacing from `platforms/buckets.py` (750 private replies an hour,
+  100 a second for Instagram text, 10 for media, 80 for WhatsApp), the queue and its order,
+  nothing sent twice, the 7-day and 24-hour rules, official login, what we never do (scraping,
+  follow-gating, selling engagement, cold Instagram DMs, posting behind your back), what happens if
+  Meta restricts an account (reconnect-needed, sends held, the owners' email, the Activity page,
+  only temporary errors retried) and that no one can promise no restrictions. *Follow-gating:* flow
+  branches can test "follows you" (C-031's nudge became a branch, GR-03), so the page says our
+  invite and templates never gate and asks members not to build a flow that does, rather than
+  claiming the product makes it impossible.
+- **/changelog ("What's new"):** `lib/marketing/changelog.ts`, from develop's merged PRs #13 to
+  #176 (September's pre-PR merges have no number): user-facing features only, with "With Meta's
+  approval" where it applies. Left out: infrastructure, tests, the design system, dependency bumps,
+  billing (off in production, C-149), broadcasts (off, `BROADCASTS_ENABLED`), Ask's charts
+  (`AGENT_VISUALS_ENABLED` off) and #178 (not merged yet). The sitemap date is the newest entry's.
+- **/ai-info:** what it is, who it's for and not for, channels (the integrations' statuses), plans
+  from `plan-table.json` with each plan's state from the plans API, honest limits (new, App Review
+  pending, insights permission not requested, Shopify listing, broadcasts soon, no certification or
+  partner badge, no uptime figure), the company (UNCHARTD, Bihar, India, the support email), and
+  claims to avoid. llms.txt points at it first, with /safety and /changelog. llms.txt never says
+  "India" (the C-155 test), so the location stays on the page.
+- **Landing FAQ:** adds "Do I have to share my Instagram password?", "Can I take over a
+  conversation from the AI?" and "Can automations get my Instagram account banned?"; the WhatsApp
+  fees answer now says Meta charges by message type and country, paid directly, no markup.
+  Shared objects in `lib/marketing/faq.ts`, so the landing and audience pages say the same words.
+- **Pricing:** a "WhatsApp message charges" band after the limits: per template message by category
+  and country, the 24-hour window in plain words, "You pay Meta directly through your own
+  WhatsApp Business account. Amplychat adds no markup.", separate from the plan, and a link to
+  Meta's pricing page. No rates are copied (they change).
+- **Header:** no "Solutions" entry. The header already holds five links and two buttons between
+  901 and 1060 px, and a menu would need a client dropdown the C-155 header avoids; the footer,
+  llms.txt and the sitemap link both pages.
+- **Sitemap and llms.txt** list /for-creators, /for-businesses, /safety, /changelog, /ai-info and the
+  other agents' /compare, /subprocessors, /cookies, /dpa and /accessibility. On this branch alone
+  the public-metadata test fails for those five (no page yet); it passes once the branches combine.
+
+**For the owner:** read the audience pages' copy and the tier descriptions; the "claims to avoid"
+list; the safety page's sentence on follow branches; whether Meta's "free replies inside the
+24-hour window" wording should be checked against Meta's pricing page on the day you publish.
+
+### C-156 (compare)
+
+Seven new comparison pages and a `/compare` hub, from the owner-approved competitor review
+(2026-10-29), following the GR-37 and C-155 rules in `lib/marketing/gtm-pages.ts`: the vendor's own
+pages only, each read on 2026-10-29, a source comment above every competitor cell, the `competitor`
+field so the trademark and no-affiliation note renders, a balanced "Which fits you" block, no
+logos and no "best". Not reviewed by a lawyer.
+
+- **Pages:** `/compare/linkdm`, `/compare/instantdm`, `/compare/inro`, `/compare/creatorflow`
+  (Instagram DM tools) and `/compare/wati`, `/compare/aisensy`, `/compare/spur` (WhatsApp
+  platforms). None skipped: each vendor's own pricing and feature pages could be read with a
+  plain fetch. No site was read around a block; where a read failed (see AiSensy) that page wasn't
+  used for the claim.
+- **Hub `/compare`:** an intro, "How we compare" (vendor sources, dates, our side checked against
+  our code, "not found" ≠ lacks), cards in two groups (`COMPARE_GROUPS`: Manychat, Switch from
+  Manychat, LinkDM, InstantDM, Inrō, CreatorFlow; Interakt, Wati, AiSensy, Spur) with each page's
+  latest source date, and a general trademark note with the support address. Breadcrumbs JSON-LD.
+  *No CollectionPage/ItemList JSON-LD: the codebase has no pattern for one, so none was invented.*
+- **Breadcrumbs:** a `/compare/*` page is now Home, Compare, the page (it was Home, the page).
+- **Our column** shares cells defined once at the top of the block: Instagram, WhatsApp and website
+  chat in one inbox (C-111, on every plan), Facebook "built and waits on Meta's approval" (C-077),
+  broadcasts "soon" (O-11), the catalogue "with Meta's approval" and Shopify "coming soon" (O-10),
+  the AI answering only from documents, Q&A, products and website pages (knowledge types
+  `faq/text/url/file` and the site crawl, migrations 0009 and 0030), the follow nudge that never
+  gates, and Meta's WhatsApp fees paid by the business to Meta with no markup (owner, 2026-10-29).
+  "Analytics" on the CreatorFlow page names only what is built: the weekly report (GR-34) and lead
+  scores; link-click tracking was not claimed.
+- **Sitemap and llms.txt:** the eight paths are added to `PUBLIC_PATHS` and `PAGE_UPDATED`
+  (2026-10-29) so the sitemap lists them; llms.txt lists the comparisons automatically from
+  `GTM_PAGES` and gets one "Compare" line for the hub. `GTM_PATHS` includes `/compare`. The footer
+  (`LEARN_LINKS`) is left to the pages agent.
+
+Sources and what was softened, per competitor (all read 2026-10-29):
+- **LinkDM** — linkdm.com/pricing, linkdm.com home (features, FAQ). Prices USD: Free (1,000 DMs a
+  month), Pro $19 a month or $182 a year, Platinum+ $99 a month. Broadcasts come only from a home
+  banner ("Broadcasts let you send timely DMs to active contacts!"), so the cell says "Instagram DMs
+  to active contacts" and no more. AI replies, a team inbox, comment analysis and post scheduling:
+  not found (the DM Planner drafts DMs for posts, which isn't publishing).
+- **InstantDM** — instantdm.com/pricing, instantdm.com home. Prices USD, billed yearly: Legend Pro
+  $9.99, Trendsetter $24.99, Trendsetter Pro $49.99 a month; Free 500 DM automations. The AI is
+  described as the pricing page does (an agent step on your own OpenAI, Claude, Gemini or DeepSeek
+  key, with human takeover); "answers from a knowledge base" was not claimed. WhatsApp is listed only
+  as a support channel. The per-plan marks in its table were hard to read, so plan placement is
+  kept to what the plan lists name.
+- **Inrō** — inro.social/pricing, inro.social home. Prices EUR: Free (100 activated contacts),
+  Pro "starting at €12.99 per month", annual €1,249, Managed from €299. Live comments are marked
+  differently in two places on its pricing page, so Live is left out of its cell. "Instagram content
+  management" on Pro is reported as is; scheduling posts stays "not found".
+- **CreatorFlow** — creatorflow.so/pricing, creatorflow.so home (first read timed out; the
+  second read worked). Prices in "$" without a currency code (said on the page): Pro $15 a month or
+  $12 billed yearly, Growth $30 or $24. AI replies: "not found", with its own line that you write
+  every message. Its comparison table's checkmarks didn't come through, so per-plan claims follow
+  the plan lists only.
+- **Wati** — wati.io/pricing, wati.io home, Astra help "How to train your AI agent" (updated
+  2026-06-02), Wati help "Set up an Astra AI agent for Instagram" (updated 2026-10-22). Prices INR,
+  billed quarterly: Growth ₹2,699, Pro ₹5,799, Business ₹16,799 a month. The trust centre
+  (trust.wati.io) returned 403 in the review and wasn't used. Whether Wati marks up Meta's fees isn't
+  stated; the cell says only that template messages are charged on top from its rate card.
+  "No free plan was shown" was drafted and removed (it would read as "lacks").
+- **AiSensy** — aisensy.com/pricing (add-ons, billing, Meta fees) and AiSensy's own
+  aisensy.com/aisensy-vs-interakt (plan prices, agents). The pricing page's plan cards didn't come
+  through in two reads (the page renders them late), so the plan prices (from ₹1,500 a month; Pro
+  ₹3,200 a month) come from the vendor's comparison page, which has no date; the page says so.
+  Third-party price lists that disagree (₹999, ₹2,399, ₹4,999) were not used. Instagram messaging
+  and comment-to-DM: not found on AiSensy's pages or by a site search. A fetch of AiSensy's `m.`
+  subdomain was refused by the session's safety check as a way round the main site and was not
+  retried.
+- **Spur** — spurnow.com/en/pricing, spurnow.com/en/llm-info (its page for AI assistants, last
+  reviewed 2026-10-07), spurnow.com home. Prices USD: AI Acquire $15 a month or $12 billed yearly
+  ($144), AI Max $399 a month billed yearly; 14-day trial; llm-info says there is no free plan (the
+  cell quotes that rather than marking a status). The home page FAQ still lists "AI Powered Question
+  Answering (Coming Soon)" while llm-info and pricing describe AI agents on knowledge; the cell
+  follows llm-info and pricing. The review notes say a Spur help article admits a markup on Meta's
+  rates; that article wasn't re-read, so no markup is claimed.
+
+Checks: `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest for `app/(marketing)`, `app/seo`,
+`app/public-metadata`, `lib/marketing`, `components/marketing` and `styles` (design lint) pass.
+E2E (`gr37-gtm-pages.spec.ts`, now with the new pages, the hub and each trademark note) is left to
+the coordinator.
+
+## C-157 · Premium landing build
+
+The owner approved the landing page audit (`docs/landing-page-audit/`, 01–07) on 2026-10-30 and asked
+for a premium page using the installed design skills. The work is in two stages on
+`feature/site-redesign`: stage 1 builds the design system, the shell and the Phase 1 fixes; stage 2
+rebuilds the landing sections on top of it.
+
+### C-157 (stage 1)
+
+**Phase 1 fixes (05, LP-1.x).**
+- LP-1.1, the invisible AI draft: the draft's "words appear" state is now `.ddraft-t.is-typing`, and
+  the DM's typing dots are `.dm-typing`. The two had shared `.typing`, so the dots' pill background
+  and inline-flex landed on the draft (1.1:1). `landing.spec.ts` now asserts that the draft's text box
+  stays transparent and block-level after the scroll.
+- LP-1.2, the H1: the display step (44 → 68 px) is capped by its column. `.hero-copy` is a size
+  container and the hero H1 is `min(var(--fs-display), 13cqi)`; "Every comment." is about 7.3em wide.
+  The hero grid is 1fr/1fr and the copy sits above the scene (z-index). Measured at 375, 768, 1280
+  and 1440: each phrase's right edge is at or inside the copy column.
+- LP-1.4, the phone menu: a tap outside the button and the panel closes it (one `pointerdown`
+  listener, the scrim included). Tab and Shift+Tab stay inside the button and the panel while it is
+  open, and Escape returns focus to the button. The menu's links are 48 px tall, and the bar's CTA is
+  44 px tall below 760 px. The menu adds only Sign in, so one "Start free" shows with it open. A
+  signed-in visitor gets nothing extra in it, because "Open app" is already in the bar.
+  - **Judgment call:** the brief said "focus is contained", while 05 said "Tab past the last item
+    closes it". Containment was built, because the open menu now has a scrim over the page.
+- LP-1.3, the secondary CTA borders: `.btn-line` uses `--s-line-control`. That is #82848B on paper
+  (3.42:1, 3.18 on paper-deep, 3.74 on sheet) and #6A6C76 on night (3.63, 3.34 on night-raised).
+- LP-1.5, the closer: its H2 is 700 at the story tier. The max-width is 20ch, not 14ch: at 14ch the
+  heading ran to four lines at 1440, and 20ch gives three.
+- LP-1.6, the dimmed knowledge lines: these are now dimmed by colour (night-ink-3, 5.52:1) instead of
+  opacity .5/.35.
+- The hidden hero time labels have `aria-hidden` (the T7 finding in 07).
+- The two nav landmarks are now named "Main" (the bar) and "Menu" (the phone panel).
+- The logo's svg has `aria-hidden` and `focusable="false"`.
+- Body text in `.site` (p, li, dd, blockquote, figcaption) has `text-wrap: pretty`. Every heading,
+  the FAQ's h3s included, has `balance`.
+
+**Tokens (06, LP-2.1).** The raw values are in `@theme`, and the short names on `.site` are in
+`globals.css`. That reference also keeps Tailwind 4 from dropping theme variables that only `site.css`
+reads; a check with Tailwind's compiler confirmed that it removes unreferenced ones. `pnpm tokens` now
+also generates `spacing` and `containers`.
+- Type: `--text-site-{display,h1,h2,h2-sm,h3,stat,stat-sm,title,lede,body,body-sm,label,caption,micro}`,
+  each with its line height, and `--tracking-site-*`. On `.site` they are `--fs-*`, `--lh-*` and
+  `--tr-*`.
+- Space: the 4 px steps are `--space-1…16` on `.site`, from Tailwind's own `--spacing`. The rhythm
+  tokens are `--spacing-site-{section,section-tight,head,band,gutter}` (on `.site`: `--space-section`,
+  `--space-section-tight`, `--space-head`, `--space-band`, `--gutter`). The container is
+  `--container-site` (1240), or `--wrap-max` on `.site`.
+- Radii: `--radius-site-{xs,sm,md,lg,xl}` (6, 10, 12, 18, 22), `--r-*` on `.site`.
+- Breakpoints: `--breakpoint-site-{sm,nav,md,wide}` (520, 760, 900, 1060). `SiteHeader` reads
+  `site-nav` from the generated file. `site.css` has to write the numbers, because a media query can't
+  read a variable, so each query names its token.
+- Motion (transitions-dev's scale):
+  - durations `--motion-site-{stagger,micro,quick,fast,medium,slow,very-slow,entrance}` (40, 80, 150,
+    250, 350, 400, 500, 1200 ms), `--dur-*` on `.site`;
+  - easings `--ease-site-out` (smooth-out) and `--ease-site-in-out`, which are `--ease` and
+    `--ease-swap` on `.site`;
+  - travel, scale and blur steps `--dist-*`, `--scale-*` and `--blur-*`.
+- Colour:
+  - ink-tertiary #686B74 → #5E616A;
+  - new `site-line-control` #82848B and `night-line-control` #6A6C76;
+  - the 06 §1 mark fixes: `iris-mist` #8A82EB, `site-wait-mark` #B06A00, and new `instagram-night`
+    #E0559A and `web-night` #2AA597;
+  - `.site` now maps the app's `line-control` to the new control edge, and `brand-strong` to
+    iris-night inside `.night`;
+  - `--gradient-brand` in `.site` is flat ink, so the app's primary button looks like the site's;
+  - `contrast.test.ts` asserts 21 of the site's pairs (LP-4.7).
+- Semantic roles: `--s-{bg,surface,surface-2,text,text-2,text-3,line,line-2,line-control,hover,link,link-hover,focus,selection,selection-fg,cta-bg,cta-fg,cta-hover}`
+  are defined on `.site` and re-pointed in `.site .night` (LP-5.2 for the shared parts). The `.night`
+  overrides for buttons, the kicker, the lede, links, focus and cards are gone.
+- Iris now has four roles only: links, focus, selection and AI moments.
+  - The primary button's hover is a lighter ink (`--s-cta-hover`), not iris.
+  - The kicker, the feature icons, the step numbers and the trust icons are in ink-3 or night-ink-2.
+  - The FAQ summary no longer turns iris on hover.
+- `globals.css` notes that `.site` uses 700 for its headings (LP-5.5).
+
+**System in `site.css`.** These shared parts are now on the tokens: base, the container and section
+rhythm, headings, lede, links, buttons, chips, cards, header, footer, pricing, FAQ, the closer's
+heading, and inner-page heads and bands.
+- Two H2 tiers: `.h2` is the story tier, 32 → 52 px, 18ch. `.h2-sm` is the utility tier, 28 → 40 px,
+  20ch. `UTILITY_TITLE` in `primitives.tsx` names the utility tier, and `Faq` and `Pricing` use it
+  (`/pricing` keeps its H1 at the page tier).
+- `.h-page` is 26ch.
+- All headings are 700. Card and item titles (`--fs-title`, 20 px) stay 600, because they are a text
+  role and not a heading tier (06 §2).
+- `.split-head` is 1.25fr/.75fr.
+- `.after-head` and the head-to-content margins use `--space-head`. `.sec-tight` is new.
+- Each component writes its states once:
+  - hover only under `@media (hover: hover)`;
+  - active is a 1 px press;
+  - one focus ring from `--s-focus`;
+  - disabled for `:disabled` and `[aria-disabled="true"]`.
+- `::selection` uses the palette.
+- Inner-page bands are now separated by space alone: the top rule is gone, and a band that follows
+  another has a 24 px top padding.
+- The scene CSS (hero, strip, decide, machine, modes, features, channels, trust) is left for stage 2.
+  Only the Phase 1 fixes, the accent changes and the head gaps touched it.
+
+**Shell.**
+- Header:
+  - It is a plain paper bar with no blur and no rule. Once the page scrolls, `HeaderScrollState`
+    (one IntersectionObserver on a sentinel) adds a soft drop (`--shadow-nav`) through
+    `data-scrolled`.
+  - From 760 px the links show (the tablet tier, LP-3.2). At 761–1060 px the gaps are 20 px. At 768
+    px the logo, the five links, Sign in and Start free fit on one line.
+  - The links are 44 px tall, with an underline on hover.
+  - The phone menu has a scrim and opens like a dropdown (250 ms from 0.97, `@starting-style`). It
+    closes at once.
+- Footer: the hairline above the bottom row is replaced by space. The links are 44 px tall at 900 px
+  or narrower and underline on hover. Everything is on the `--s-*` roles. One rule is kept where the
+  closer's night band meets it.
+- Pause control (WCAG 2.2.2): `components/site/MotionToggle.tsx` (server) and `motion-control.ts`
+  (plain DOM, `bindMotionControl(scope)`). It is a round 44 px button with a fixed name, and
+  `aria-pressed` shows the paused state. The pause and play icons swap with transitions-dev's icon
+  swap. Pausing sets `data-motion-paused` on the `[data-motion-scope]` element, and `site.css` then
+  pauses every CSS animation inside it. The button stays hidden with no script and with reduced
+  motion. It has unit tests. Stage 2 wires it to the looping scenes.
+
+**Other public pages.** Every public page picks up the new system through the shared classes, with no
+content changed. That covers the H1 at the page tier, the bands, the cards, the buttons, the 3:1
+control edges, the darker ink-3 and the footer.
+- Checked at 375 and 1280: /pricing, /features/ai-inbox, /compare, /compare/interakt, /for-creators,
+  /safety, /changelog, /ai-info, /guides, /privacy, /contact and a 404.
+- Also at 768 and 1440: /pricing, /for-creators and /privacy.
+- No page scrolls sideways.
+
+**Skill advice I overrode or did not apply.**
+- Taste (design-taste-frontend): "buttons square or fully round, not the 9–16 px soft radius". Kept
+  12 px, because the owner's design file and 06 set it.
+- Taste: "no violet". Iris stays (an owner decision), limited to four roles.
+- Taste: "no thin rules". The footer keeps one rule between the two night bands, and the scenes and
+  real tables keep theirs (`data-ui` territory).
+- Impeccable craft floor: "tracking floor -0.04em". Display and page H1 use -0.04em, not 06's
+  -0.045em; the H2 and H3 tracking follows 06.
+- Impeccable and Taste ban kickers (eyebrows). The landing's kickers are stage 2's to delete. On the
+  inner pages, `SECTION_EYEBROW` is restyled to a quiet ink-3 label and not removed, because deleting
+  it would change those pages' content, which this stage doesn't own.
+- transitions-dev's snippets ship their own `t-*` classes and `:root` blocks. Only its token scale and
+  the icon-swap and dropdown timings were taken, under `.site` names, to keep the stylesheet small
+  and avoid a global `:root` that the app would share.
+- Taste wants the footer to end on the name at full width. Not done: the owner asked to subtract
+  clutter.
+
+**Left for stage 2 or later.**
+- `landing-motion.ts` still writes 901 and reads `--nav-h` from `<html>` (LP-4.6).
+- The closer's `.falling` loop and the hero bob.
+- The footer's about line, which still names only Instagram and WhatsApp (LP-4.8).
+- `MARKETING_CARD` (shared with the app's auth shell, so not re-pointed).
+
+Checks:
+- `next typegen`, `tsc --noEmit` and `pnpm lint` are clean.
+- vitest passes for `components/marketing`, `components/site`, `styles` (tokens, design lint,
+  contrast), `app/(marketing)`, `lib/marketing` and not-found: 418 + 98 tests.
+- Screenshots were taken on a dev server on :3160 at 375, 768, 1280 and 1440.
+- e2e is left to the coordinator: the updated `landing.spec.ts` and the new `site-shell.spec.ts`
+  (menu, tablet links, scrolled bar).
+
+### C-157 (og and metadata)
+- **Share image redrawn on paper** (`components/marketing/og.tsx`): `paper` canvas, `ink` text, the `iris` accent only on "One inbox.", the logo tile, the H1 "Every DM. Every comment. One inbox." in Geist 700 with tight tracking, and the line "For Instagram, WhatsApp and website chat." The colours come from `styles/tokens.ts`; no hex literals.
+- **Font:** Satori reads static TTF, not the variable woff2 `next/font` ships, so the Geist 700 static TTF (SIL OFL, from Google Fonts, 32 KB) is committed at `components/marketing/fonts/Geist-Bold.ttf` and read with `readFile(join(process.cwd(), ...))`. The route stays `force-static`: drawn once at build and cached. No new dependency.
+- **C-129 "stays dark" exception removed:** the `og.tsx` runtime reason now says it is drawn on the site's paper (C-157); the glow's `rgba(0,0,0,0)` code exception is deleted (the gradient is gone); the stale static-asset note for `og.png` is corrected.
+- **Positioning line:** one line everywhere, naming website chat and comment-to-DM. Title uses "web chat" (the title is capped at 60 characters; "website chat" gives 61). Everything else says "website chat". Judgment call, for the owner to confirm.
+- **Not touched** (other agent's scope): the footer "about" line (`SiteFooter.tsx`) still says "Instagram and WhatsApp"; change it to match `app/layout.tsx`'s default description. `gtm-pages.ts` page titles (`/features/ai-inbox` is pinned by `gr37-gtm-pages.spec.ts`) were left as they are.
+- **Canonical slash:** `canonical: "/"` is resolved by Next against `metadataBase`; it renders without the trailing slash and the JSON-LD ids use `/`. Left alone: both forms resolve to one page, and the metadata tests pin `"/"`.
+- JSON-LD: `WebSite` and `SoftwareApplication` both take `SITE_DESCRIPTION`, so they follow the new line; a test pins it.
+
+### C-157 (stage 2)
+
+The landing rebuilt on stage 1's system (05 phases 2–3 and the 4.x items for the landing).
+
+**Order.** Hero → Strip (the hero's bottom edge) → How it works (night) → Automations → Modes
+(paper-deep) → Security (night) → Who it's for → Features with the connections → Set up in three
+steps (night) → Pricing → FAQ (paper-deep) → Closer (night). A night band every two or three
+sections; Security moved up from eighth to sixth.
+- **Judgment call:** 04 left the setup steps on paper before Pricing, which made four light bands in
+  a row after Security. The steps became a short night band instead, the "night every 2–3 sections"
+  rule winning over 04's band colour.
+
+**Hero (LP-2.3, LP-3.1, LP-3.3).**
+- No scroll-scrub and no bob. The server renders the sorted inbox, which is the first frame with or
+  without script.
+- After idle (the motion script is still idle-loaded), one sort of 1.2 s (the entrance token,
+  smooth-out, WAAPI, transforms and opacity only): the newest message (Maya R.) fades out of its slot
+  and lands on top while the two rows above make room, then moves back to its place. The end state is
+  the server's. Measured locally at 1440: it starts about 0.4 s after load, CLS 0, LCP is the H1.
+  - **Judgment call:** a sort needs an unsorted start, and the owner wants the first frame sorted.
+    The "new message arrives and is sorted" reading keeps both.
+- The inbox is a `data-ui` product fragment, 380–528 px (`clamp(380px, 38vw, 528px)`), with rows in
+  the app's density (source, time, name, message, tag) and the three-part channel line on top.
+- Copy column: the tagline (`SITE_TAGLINE`, now with website chat) with the three channel dots, the
+  H1 (untouched), the sub-line led by "For small businesses and creators:", "Start free" (ink) and
+  "See how it works" (outlined; a text link below 520 px, under a full-width "Start free"), and the
+  trust row ("Official Meta APIs", "Free plan, no card needed"; both true, unchanged).
+- Tablet tier (≤900): one column, the H1 at the display token (52.6 px at 768, the phrases flow on two
+  lines), the inbox 460 px on the copy's left edge. Phones hide the "8 conversations" count so the
+  chips fit.
+- "Scroll to sort the inbox" and the caption swap are gone; "Example data" sits under the scene.
+
+**Strip (LP-2.12).** Values at `--fs-stat-sm`, tabular, no rules, as the hero's base. "Official Meta
+APIs" (said in the hero row, Security and the closer) is replaced by **"50 website chats: New chats a
+day on your site, on the Free plan."**, read from plan-table.json `widget_conversations_daily.free`
+(billing/plans.py; services/widget/chat.py counts each new chat against it).
+
+**How it works (LP-2.4, LP-4.3, LP-4.6): the peak.**
+- The heading and lede are inside the pinned frame; the scrub is 200vh (from 340vh). The frame fits
+  1440×900 and 1366×768 (a `height ≤ 820px` tier tightens it).
+- p = 0 is never empty: the question, "Tagged: product question" (MODES wording), and the AI draft
+  frame starting to write. Then the scan, the wires, the draft word by word, "Sent by you", the second
+  question, the hand-off and the gap. The draft fix (LP-1.1) is kept; `.ddraft-t` stays transparent.
+- The scan moves with a transform on a flat tint (no gradient, 07 T8). The stage bar fills by
+  `scaleX`.
+- LP-4.6: the 901 literal and the `--nav-h` read from `<html>` are gone. The script asks the frame
+  itself: `getComputedStyle(sticky).position === "sticky"` decides scrub or play, and the frame's
+  `top` is the offset. The breakpoint lives once, in site.css (and reduced motion unpins it there
+  too).
+- LP-4.3: every layout read (the knowledge's height, each line's top, the wire geometry, the path
+  lengths) happens in `layout()`, batched reads-then-writes, on start, on a rAF-debounced resize and
+  when fonts arrive. A frame only writes. rAF runs only while the section is visible (scrub) or while
+  it plays.
+- Where it doesn't pin (≤900), it plays once over 9 s when on screen, then holds, with a pause control
+  in the thread header (the toggle hides when it ends). The old 16 s loop and the 9 s hero loop are
+  gone.
+- The knowledge cards lost their icons; their titles are `<p>`, not h3 (LP-4.9).
+
+**Automations.** The kicker is gone. The Reel has a typographic cover ("My studio tour" on night)
+instead of the grey video icon (LP-2.13). The keyword field has a 1.5 px ink edge at rest (LP-3.6).
+The stream now plays one round (8 comments) while on screen and then holds, with a pause control
+(WCAG 2.2.2). The summary bar is removed (its claim is Comment intelligence in Features). A link to
+the comment-to-DM guide is in the lede.
+
+**Modes.** Modes only: the setup steps moved to their own band. "Pro" beside Auto is plain text, not
+a pill. The table is `data-ui`.
+
+**Security.** No icons, no rules: five points set large in three columns, the points not said
+elsewhere first, "Official Meta APIs" last. A link to /security joins the Privacy Policy link.
+
+**Who it's for (LP-2.8, new).** Two cards to /for-creators and /for-businesses, with each page's own
+name, h1 and intro (lib/marketing/solutions.ts); the channel line on top (Instagram; all three).
+No new claims.
+
+**Features + connections (LP-2.6).** One section (`#features`, utility tier). Ask Amplychat leads as
+a wide card; the other seven are a two-column list set at the h3 size, no icons, no tiles, no rules.
+Scheduling and Comment intelligence link to their pages, and a line under the list links the AI
+inbox, comment intelligence, publishing and /compare (LP-4.10). "A chat widget for your website" is
+dropped from the list (Website chat is a connection). The connections are a sub-block
+(`#integrations`, so every nav and footer anchor still lands): a four-column grid of name, one line
+and a status dot, with the WhatsApp guide linked from the WhatsApp line. Razorpay and UPI are one
+"Payments." line under the grid.
+
+**Set up in three steps.** A night band, three columns, the `<ol>` with no visible numbers.
+
+**Pricing.** On the landing only, the "Pricing" kicker is gone (/pricing keeps it above its H1). The
+plan cards are sheets with no outline (the plan to start on keeps a 2 px ink edge), the limit rows
+and the credits table lost their rules, and "How AI credits work" is a sheet that no longer stretches.
+
+**FAQ.** Eight questions on the landing: auto-replies, making things up, taking over, ban risk,
+password, personal accounts, the follow gate, WhatsApp fees (the creator questions included; the
+C-156 test still finds ban risk, password and takeover). Each is a sheet on the paper-deep band.
+"See all questions" links /faq. The landing's FAQPage JSON-LD is built from the same list, so it
+matches exactly.
+- **New page /faq:** all 17 questions the site answers (the 15 that were on the landing plus
+  "robotic replies" and "Free plan limits", already used by /for-*), in four groups, with FAQPage
+  JSON-LD in the same order and words (`/faq#faq`), BreadcrumbList, metadata, the sitemap
+  (PUBLIC_PATHS, PAGE_UPDATED 2026-10-30), llms.txt (Product) and the footer (Resources, "Common
+  questions").
+
+**Closer.** One action ("Start free"), the email as a text line ("Questions? Write to …"), the perks
+row. The heading is two lines at 1440 (25ch). The mini inbox is still: no `.falling` loop.
+
+**Motif and colour (LP-2.10, LP-2.11).** The channel colours are the one motif: the source marks
+(a comment is Instagram's colour drawn as a ring, so `--cm` is no longer used on the landing), the
+three dots by the tagline, and a 3 px channel line on the hero inbox, the closer's inbox and the
+audience cards. On night, `--ig` and `--web` point at their night variants. Iris is left on links,
+focus, selection and the AI (the draft, the wires, the scan, "One inbox.", the DM's AI parts).
+
+**Elsewhere.**
+- Footer about line: "One inbox for Instagram, WhatsApp and website chat, with AI that answers from
+  your business knowledge." (LP-4.8).
+- /features/ai-inbox title: "AI inbox for Instagram, WhatsApp and web chat". Website chat is true (it
+  lands in the same inbox). "web chat" because "website chat" made the shown title 61 characters
+  (the cap is 60), the same call the og stage made. `gr37-gtm-pages.spec.ts` updated.
+- `Faq` takes `eyebrow` (the /for-* pages pass "FAQ", so they're unchanged) and shows the /faq link
+  only for the landing list.
+
+**Tokens.** The landing's scene CSS is rewritten on the tokens: `--space-*`, `--fs-*`/`--lh-*`/
+`--tr-*`, `--r-*`, `--dur-*`, `--ease`/`--ease-swap`, `--dist-*`, `--scale-*`. Literal px remain only
+for the marks and scene geometry with no token (8–10 px marks, 2–3 px lines, 22–60 px row and avatar
+sizes, 380 px and 528 px scene widths). The old hero, scroll-hint, `.falling`, `site-bob`,
+`site-fall` and `site-show` CSS is deleted. transitions-polish pass: the mode swap's stagger 60 → 40
+ms (the stagger token); the comment entrance 500 → 400 ms (content arriving, not an emphasis); the
+stage bar's colour 350 → 250 ms.
+
+**Skill verdicts.**
+- Impeccable critique (degraded, single-context: a subagent under the owner's cap on parallel agents;
+  detector run on the URL; no overlay injection, no snapshot written to the repo): before 22/32, after
+  25/32 (heuristics 7 and 9 n/a). The detector: before 1 finding (overused-font, the owner's Geist);
+  after 2 (overused-font; nested-cards on `.ddraft` in the thread, a draft message inside a chat
+  window in a `data-ui` fragment, kept).
+- Taste inspector: before 10 FAIL and 4 WARN; after 3 FAIL entries and 6 WARN. The FAILs left:
+  - headline-lines: the hero H1 is three phrases on three lines (the owner's headline and sizes, 44 →
+    68 px); at 390 px "Your customers' messages, handled with care" and "Bring every customer
+    conversation into one inbox" run three lines at the 32 px floor. The wording rule (C-155, current
+    site words) wins over cutting them.
+  - eyebrow: the plan taglines ("To get started.") above the price. A false positive: a price is not
+    a heading, and the tagline belongs to the plan name above it.
+  - WARNs defended: the footer's one rule (stage 1), no photographs or footage (software shows its
+    own interface; the scenes are `data-ui` fragments), 3 short texts under 13 px (pricing chips),
+    "off-centre" (the measure from the widest text block, not the frame; the wrap is symmetric).
+
+**Skill advice overridden, and why.**
+- Taste "no eyebrow": the hero tagline line stays (the owner asked for an eyebrow that names website
+  chat); it is a sentence-case line with the channel dots, not a label or a pill. Every section
+  kicker is deleted.
+- Taste "no styled accent word": "One inbox." stays iris (the owner's headline, also on the share
+  image).
+- Taste "≤2 lines at every width": see above (the H1, two copy-locked H2s at 390).
+- Taste "≥4 real pictures, one clip": none. No honest photograph of this product's world exists, and
+  stock would be filler; the five scenes are marked `data-ui` and count as the pictures.
+- Taste "no thin rules": the product scenes keep their rows and edges (`data-ui`), and the footer
+  keeps stage 1's one rule.
+- Taste "no violet": iris stays (owner), limited to links, focus, selection and AI.
+- Impeccable craft floor "no colored border-left over 1 px on list items": 05 LP-2.11 proposed a 3 px
+  left bar per row. Not done; the motif is the source marks and a top channel line instead.
+- 04's "a What's new liveness line in the closer" and 05 LP-3.9 (pricing compaction) were not done:
+  the brief asked for one CTA and the email only, and the pricing cards are shared with /pricing.
+
+**Checks.** `next typegen`, `tsc --noEmit` and `pnpm lint` clean. vitest for `app/(marketing)`
+(with the new `faq/page.test.tsx`), `lib/marketing`, `components/marketing`, `components/site`,
+`styles`, `app/seo.test.ts`, `app/public-metadata.test.ts`, `app/layout.test.tsx` and
+`lib/copy-lint.test.ts`: 23 files, 508 tests pass. Screenshots on a dev server on :3160 at 375, 430,
+768, 1366, 1440 and 1920; full pages at 375 and 1440 (1440: 15,428 → 12,175 px; 375: 19,410 →
+18,634 px). e2e and Lighthouse are left to the coordinator: `landing.spec.ts` (new order, no scrub,
+the hero sort ends, FAQ 6–8 + link, no unpaused infinite animation, the comment and phone pause
+controls, the pinned frame) and the new "/faq" test in the same file.
+
+### C-157 (performance)
+
+The coordinator's measure after stage 2 read `/` mobile 94 → 87 (TBT 112 → 255 ms, Speed Index 1.56 →
+2.53 s) and accessibility 100 → 97. Profiled before changing anything.
+
+**Cause.**
+- **Most of the drop was the machine, not the page.** Rebuilt the pre-C-157 commit (9f3aae04) and
+  measured it in the same session as HEAD (3e598bfa), same method: pre-C-157 mobile median 92 (91 / 92 /
+  93; LCP 3031, TBT 162, SI 1754), HEAD 90 (90 / 93 / 79; LCP 3050, TBT 224, SI 1779). The recorded
+  94 and 87 came from two other sessions; this laptop had about 1.6 GB of free memory during this one.
+- **The CSS suspects are not the cost.** With the scripts off, a forced full style and layout of `/`
+  takes 15.8 ms; without `text-wrap: pretty` 15.5, without `balance` 14.2, without `:has(.site)` no
+  less, and without the `13cqi` size container the same total (it moves about 7 ms from style to
+  layout). Traced page loads (4× CPU, A/B by rewriting the stylesheet) put every variant inside the
+  noise. `@starting-style` only applies to the phone menu, which is hidden at load.
+- **JS did not grow.** CPU profile of a load (4× CPU, 4 runs): 661 ms of JS self time before C-157,
+  594 ms after; the motion chunk fell from 178 to 46 ms. The first style + layout task is about the
+  same (84–177 ms before, 104–171 ms after, unthrottled), on fewer elements.
+- **What decides the score on this page (before and after C-157).** Lighthouse simulates LCP from all
+  main-thread work before the first observed paint: the first style, layout and paint of the whole page
+  (about 1,000 elements, below the fold included) and the react-dom bootstrap. TBT is mostly that
+  react-dom task (36–50 ms unthrottled, 165–205 ms simulated). Speed Index is 1.4 × the observed index
+  plus 0.4 × a layout-weighted one, so any post-load task that lays out (the motion script reading
+  geometry at start, the hero sort starting about 0.4 s after load) pulls it up.
+- **Accessibility.** The "Pro" tag was the button's ink at 72% opacity on the sheet (4.16:1). The two
+  target-size failures at 375 were footer links ("All comparisons", "Safety") partly under the sticky
+  bar's logo and Start free at the end of the scroll; axe counts a target overlapped by another as
+  obscured.
+
+**Fix** (commits 5bd22871 and 79294f8c).
+- `content-visibility: auto` (`contain-intrinsic-size: auto 900px`) on the landing's bands after How
+  it works: the first frame styles, lays out and paints only the hero, the strip and How it works.
+  Traced A/B (4× CPU, medians of 5): style 274 → 176 ms, layout 336 → 195 ms, paint 90 → 63 ms, longest
+  task 287 → 183 ms.
+  - Those bands also get `overflow: hidden`. A skipped band is only 900 px tall, and its forced
+    layout spills past it, so axe (Lighthouse doesn't scroll) read the features links and the pricing
+    link as iris on the next night band (2.78:1, a11y 96). Clipped to the band, the unpainted overflow
+    is skipped; once a band renders it grows to its content, and `.site` already clips sideways, so the
+    rule changes nothing visible.
+  - How it works stays out: its frame pins with `position: sticky`, which a clipping band would break.
+    The footer stays out too: an axe pass that stops above the true bottom read unrendered footer
+    links as sitting on paper.
+- How it works reads its geometry (knowledge lines, wires, path lengths) when it nears the viewport and
+  after a resize there, not at start-up, so the motion script's first task forces no layout.
+- The hero's one sort (still 1.2 s, still only while the inbox is half on screen) starts about 1.5 s
+  after the load event at an idle moment (`requestIdleCallback`, 500 ms timeout), not about 0.4 s after.
+  The brief named this option. It keeps the sort clear of hydration finishing on a slow phone and of
+  the first screen's paint.
+- "Pro" is ink-3 (about 6:1 on the sheet); on the pressed (ink) button it keeps on-ink at 72%.
+- The sticky bar's containing block is the header plus the page (a wrapper in the marketing layout),
+  not the footer: the bar scrolls away as the footer arrives, so it never sits over the footer's links.
+  `layout.test.tsx` pins the structure.
+- Not changed: `text-wrap`, the `13cqi` H1 (no cost found, so no reason to touch the fit at every
+  width), the tokens, the `--s-*` roles, `HeaderScrollState`, the order and the copy.
+
+**Before / after** (local standalone build, split hosts, port 3155, Lighthouse 12.8.2, medians of 3).
+"Recorded" is the coordinator's measure; "re-measured" is HEAD in this session, then the fix.
+
+| `/` mobile | Recorded before C-157 | Recorded HEAD | Re-measured pre-C-157 | Re-measured HEAD | **After** |
+|---|---|---|---|---|---|
+| Performance | 94 | 87 | 92 | 90 | **94** (92 / 94 / 94) |
+| LCP (the H1) | 2953 ms | 3282 ms | 3031 ms | 3050 ms | **2949 ms** |
+| TBT | 112 ms | 255 ms | 162 ms | 224 ms | **116 ms** |
+| Speed Index | 1555 ms | 2534 ms | 1754 ms | 1779 ms | **1402 ms** |
+| CLS | 0 | 0 | 0 | 0 | **0** |
+| Accessibility | 100 | 97 | 100 | 97 | **100** |
+
+| | Recorded HEAD | Re-measured HEAD | **After** |
+|---|---|---|---|
+| `/` desktop performance | 100 | 100 | **100** ×3 |
+| `/` desktop TBT / SI | 44 / 925 ms | 0 / 590 ms | **0 / 498 ms** |
+| `/` desktop LCP / CLS / a11y | 687 ms / 0 / 97 | 648 ms / 0 / 97 | **641 ms / 0 / 100** |
+| `/pricing` mobile performance | 89 (1 run) | 94 | **95** ×3 |
+| `/pricing` mobile LCP / TBT / SI | 2916 / 277 / 1611 ms | 2857 / 126 / 1407 ms | **2804 / 112 / 1399 ms** |
+
+`/pricing` accessibility stays 98: the `heading-order` finding (A-2), outside this task.
+
+**axe-core 4.13** (wcag2a/aa, 21a/aa, 22aa, best-practice).
+- At load with no scroll, as Lighthouse does it: 0 violations at 375, 412, 768 and 1350, provided the
+  hero's sort isn't playing.
+- Scrolled to the true bottom: 0 violations at 375 and 1280.
+- The coordinator's `premium/axe.cjs` (stops at 25/50/75 % and the end): no `.pro` and no target-size
+  failure. Two violations come and go from run to run, both elements caught mid-animation by an axe
+  snapshot: the Automations token while it flies, and the hero's "AI draft" tag while it fades during
+  the sort. Neither is a colour problem at rest. An axe step should wait until `document.getAnimations()`
+  is empty.
+- With bands that grow as they render, a scroll loop that reads `scrollHeight` once now stops above
+  the bottom. Re-read it inside the loop.
+
+**Left, with evidence.**
+- TBT is now mostly the react-dom bootstrap task (165–205 ms simulated), which includes reading about
+  113 KB of RSC payload.
+  - The root `not-found.tsx` (the site header and footer around the 404) is in every public page's
+    payload, three times (rows of about 5 KB per footer, plus the header): about a fifth of the payload.
+  - Trimming it is a site-wide change to the 404's shell, so it was left out of this task.
+- Medians on this laptop move by ±2 points from run to run (a single mobile run read 79). `/` mobile
+  sits at 94, on the target and not above it.
+
+### C-157 (organize)
+
+The owner said Security, Integrations and Features "look scattered" (2026-10-30), then asked for the whole
+page to be checked for the same. Stage 2 had removed icons, rules and cards and these sections lost their
+structure with them; the fix is structure, not decoration. Checked at 375, 768, 1366, 1440 and 1920.
+
+**Security: a spec list.** Two columns: the H2 and lede on the left, sticky on a wide screen
+(`.spec-head`, `top: nav + 32px`); the five points on the right as rows, the title in a fixed 13rem
+column, the description beside it on the same baseline, a hairline (`--s-line`, the night line)
+between rows. One column at ≤900 (the head scrolls), title above description at ≤520. No icons.
+- **Sticky under the performance rule.** The bands after How it works keep `content-visibility: auto`,
+  `contain-intrinsic-size: auto 900px`. With `overflow: hidden` the band is the sticky element's scroll
+  container, so it never sticks; `#security` and `#faq` alone take `overflow: clip`, which clips the
+  same unpainted overflow without being a scroll container. Measured: the head holds at 96 px while the
+  rows scroll, and leaves with its band. No script, no `:has()`, no container query.
+- **Judgment call:** in a column the 52 px H2 "Your customers' messages, handled with care" runs three
+  lines at 1440 (two before). The brief asked for the heading in the left column; the story tier and
+  the wording were kept.
+
+**Integrations: equal cards.** 4 columns above 1060, 2 above 520, 1 below. Each card is a subgrid over
+four shared rows (mark and name, description, guide link, status), so names, descriptions and statuses
+line up across a row and the status sits at the card's foot. Surface, a 1 px `--s-line`, `--r-lg`, one
+padding (`--space-6`). The mark is a hanging column, so a two-line name (Zapier at 1060–1440) wraps
+under its text, not under the dot. The WhatsApp guide moved out of the description to the card's own
+link row. Payments is one full-width row on the same columns as the cards (its name on card 1's text
+edge, its line on card 2's).
+- **Wording:** "Live comments and ad replies" → "Live comments and ads" (fits one line; the description
+  still says what it answers). "Payments." → "Payments" (now a row name, not a run-in label).
+
+**Features: three outcomes.** Ask Amplychat stays the wide lead card. Below it each group is a row: its
+title (h3) on the left, its features as equal-height cards (h4) in two columns; one column below 1060
+(title above) and one card a row below 760. Every feature keeps its words; only the group titles are new.
+- "Manage every conversation": Team roles and assignment; Notifications, on your phone too.
+- "Automate the repetitive work": Scheduling, Reels and Stories; Sequences, and broadcasts soon.
+- "Understand and grow": Analytics and the weekly report; Comment intelligence; Product catalogue,
+  orders and payment links (Pro).
+- **Judgment call:** seven features can't fill two-column groups evenly. The brief's mapping was kept
+  (Comment intelligence reads as insight: sentiment, topics, summaries) and the odd group's last card,
+  the product catalogue (the longest, with its Shopify note), spans both columns, so no group has a hole.
+  Moving Comment intelligence to "Manage" would only move the odd count.
+- Linked features (Scheduling, Comment intelligence) are whole-card links: the title's `::after` covers
+  the card, the focus ring is drawn on it, a small arrow moves 4 px on hover (250 ms, smooth-out, the
+  buttons' timing), the edge darkens to `--s-line-control`. No underlined headings; unlinked cards are
+  the same minus the arrow.
+- **"Go deeper":** there was only ever one line in the code; the owner's two screenshots overlapped on
+  it. It now sits under the feature groups on the container's left edge (the 40 px inset is gone), at
+  the shared footer gap (`--space-8`, also the FAQ's "See all questions").
+
+**Elsewhere on the page.**
+- Automations: the three panels stretch to one height; the comments and the DM thread take the room
+  left (`flex: 1` with their old heights as minimums, so the motion script's geometry is unchanged), the
+  rule's counter sits at its foot and the DM thread is anchored to its foot, as a chat is. "Example
+  data" sits right under the scene on its left edge (12 px), like the hero's caption.
+- Split heads: one rule, `align-items: last baseline` (the lede's last line on the H2's last line). A
+  short lede sits under its heading instead: Modes and Features no longer use a split head.
+- Who it's for: the 34ch and 52ch caps inside the cards are gone (the card is the measure), so both
+  cards wrap the same way; the cards gained the 1 px line like the other landing cards.
+- Set up in three steps: three equal columns over a subgrid (titles on one row), one hairline
+  (`--s-line-control`) running under the step tops with a 9 px mark starting each step, left to right;
+  on a phone the line turns vertical down the left edge. No numbers.
+- Pricing (landing and /pricing): the plan cards are a subgrid over six rows (name, tagline, price, its
+  line, button, list), so they are one height and their buttons and lists start at one height, in the
+  on-sale state and the "Coming soon" one (no button row). Under the cards, one stack on the grid's
+  edges: "How AI credits work" as wide as the plan grid, then the Max line, the Dodo/Meta fees line and
+  "Compare every plan limit".
+- FAQ: the heading block is sticky beside the list on a wide screen (static at ≤900, where the column
+  gap becomes the head gap); "See all questions" keeps the list's left edge at the shared footer gap.
+- At ≤900 the FAQ and Security heads lead into their content at `--space-head`, like every section.
+
+**Skill advice overridden, and why.** The taste inspector (after: 5 FAIL, 5 WARN) flags `hairline`
+(the spec rows, the steps line) and `outlined-box` (the 1 px card edges): both are what the brief asked
+for (the owner's "organize"), and on paper the sheet is too small a tone step to hold a grid of cards
+alone. `headline-lines` adds the Security H2 at 1440 (above); the hero H1 and the 390 px H2s are stage
+2's. `eyebrow` (plan taglines) and the WARNs are unchanged from stage 2. Impeccable's layout detector:
+no findings on the changed files.
+
+**Performance.** CSS only plus markup; no script, no dependency, no `:has()` added, no container query,
+no extra `text-wrap`. Subgrid and sticky are plain layout. The `content-visibility` rule is unchanged;
+two bands swap `hidden` for `clip`.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest for `app/(marketing)`,
+`components/marketing`, `components/site`, `styles`, `lib/marketing`, `copy-lint`, `seo`,
+`public-metadata` and `layout` pass. `page.test.tsx` pins the groups, the card links, one "Go deeper",
+the guide's link row and the new name; `landing.spec.ts` adds a 1440 geometry test (equal panels,
+statuses per row, plan cards and lists, both sticky heads) for the coordinator's e2e run. Measured on
+the dev server at 375–1920: panel feet, statuses per row, plan feet and list tops each within 1 px; no
+sideways scroll.
+
+### C-157 (motion and icons)
+
+The owner reviewed the rebuilt landing page (2026-10-30) and asked for icons and animations in the
+cards, the hero animation back ("the whole inbox was scattered and on scroll it was getting
+organized"), a premium feel in the cards, and the FAQ animating open and closed. These are owner
+decisions and they override two earlier defaults:
+- **Stage 2's one-shot sort** (the hero opened sorted and played one 1.2 s sort after load) is replaced
+  by the scatter-to-sort scrub.
+- **Stage 2's "no icons"** (and both skills' advice against icon tiles) is replaced by icons on the cards.
+
+**Hero: the scattered inbox sorts with the scroll.**
+- The server draws the pile itself: each message carries its place (`--i`, `--sx`, `--sy`, `--sr` from
+  `HERO_PILE` in data.ts: x and y as percentages of the row's own box, a tilt in degrees), and site.css
+  holds every animation paused on its first keyframe. Nothing is measured and nothing jumps when the
+  script arrives. The rows lose their own surface; the card skin in the pile (sheet, edge, drop) and the
+  row rule are pseudo-elements, and the inbox's frame is its own layer, so the sort only moves and fades.
+- One set of animations, three drivers, and site.css names which applies (`--hero-mode`, so the
+  breakpoint lives once in CSS, as LP-4.6 asked for How it works):
+  - a wide screen with a mouse (`width > 900px` and `pointer: fine`) where the browser has scroll
+    timelines: a CSS `view-timeline` on the pinned box. **No script per frame**, the animations stay on
+    the compositor;
+  - the same screen without scroll timelines: landing-motion.ts sets the animations' `currentTime` from
+    `scrollY`. That is one rAF on scroll, only while an IntersectionObserver says the hero is in view.
+    The geometry is read on start and on resize; a frame reads `scrollY` only;
+  - phones and tablets (narrow, or touch): **no scrub**. It plays once, 1.2 s, when 35% of the inbox is on
+    screen and at least 1.5 s after the load event at an idle moment (C-157 performance's rule). It uses
+    the pause control (`MotionToggle` in the caption, `bindMotionControl`), which hides when the sort
+    ends. The caption keeps the toggle's 44 px, so showing it moves nothing.
+- **Scrub length: 170vh** for the pinned box, about 0.7 of a screen of scrolling past the pinned frame
+  (694 px at 1440×900). Each row moves over 64% of that range, 2.8% after the one above (920 ms of the
+  1.2 s with a 40 ms stagger, on the scroll). The frame fades in over the first 28%, the header over
+  56–84%, and the last 16% holds sorted before the strip arrives. 170vh sits in the brief's 150–180vh
+  band, toward its upper end, so eight staggered rows each get about 440 px of scroll. Only 170vh was
+  looked at; 150 and 180 were not tried side by side.
+- Eased with the smooth-out token. Transforms and opacity only. No `will-change`: the browser promotes
+  the animated layers itself, and only while they animate.
+- The H1 is pinned, not moved: measured at 0, 25, 50 and 100%, its top is 283 px each time. It is the LCP
+  element. CLS is 0 through the scrub.
+- No script, or `prefers-reduced-motion`: none of the pile CSS applies (`@media (scripting: enabled) and
+  (prefers-reduced-motion: no-preference)`). The inbox is sorted and still, and the hero isn't pinned.
+- The one-shot sort (`heroSort`, `data-arrives`, `HeroNote.arrives`) is gone.
+
+**Icons (lucide-react, already a dependency).**
+- How they look: server-rendered SVG, 20 px, stroke 1.75, `aria-hidden`, in a 40 px tile at `--r-sm`.
+  - The tile is on `--s-surface`, or one step lower (`--s-surface-2`) inside a card.
+  - The icon is ink-3 at rest and turns ink when its card is hovered.
+  - Iris only on Ask Amplychat (an AI moment).
+  - One component: `landing/Ico.tsx`.
+- **Features:**
+  - Ask Amplychat: MessageCircleQuestionMark.
+  - Team roles: UsersRound. Notifications: BellRing. Scheduling: CalendarClock. Sequences: Timer.
+  - Analytics: ChartLine. Comment intelligence: MessageSquareText. Product catalogue: ShoppingBag.
+  - Group titles: Manage every conversation: Inbox. Automate the repetitive work: Workflow. Understand
+    and grow: TrendingUp.
+- **Security:** No passwords asked: KeyRound. Encrypted tokens: LockKeyhole. Your workspace stays separate:
+  ShieldCheck. Delete anytime: Trash2. Official Meta APIs: BadgeCheck.
+- **Setup steps:** Connect your accounts: Link2. Add your knowledge: BookOpenText. Let the AI draft or reply:
+  MessageSquareReply.
+- **Who it's for:** creators: Clapperboard. Businesses: Store.
+- **Connections:**
+  - Instagram, WhatsApp, Website chat and Facebook Pages keep their channel-colour mark, now set inside
+    the same tile.
+  - Live comments and ads (it had a grey dot): Radio. Shopify: ShoppingCart. Google Sheets: Sheet.
+    Zapier and the public API: Webhook. Payments: Wallet.
+- **Judgment call:** the impeccable detector flagged "icon tile above the heading" on the feature cards. There
+  the icon now sits beside the title and the text hangs under the title, with the full width on a phone.
+  The lead card, the steps and the audience cards keep the tile above the title, where it's one per block.
+- Security's title column widened from 13rem to 16rem to make room for the tile. The tile hangs beside the
+  title and takes no part in the baseline, so the title and the description still share one.
+
+**Card motion** (`.feat-lead`, `.fcard`, `.crow`, `.pay`, `.aud-card`, plus a rise for `.spec-row` and the
+steps).
+- **Rise as a card scrolls in:**
+  - CSS `animation-timeline: view()` inside `@supports` and `prefers-reduced-motion: no-preference`:
+    12 px (`--dist-medium`) with a fade, over the card's own entry (0 to 75%).
+  - A 40 ms stagger along a row (the `--dur-stagger` token as 8% of the range; 120 ms at most).
+  - No script per frame.
+  - Where there's no `view()`, the idle-loaded motion script uses an IntersectionObserver. It hides only
+    cards that are off screen when first reported (`data-rv=""`), and they rise with the transitions
+    (500 ms, `--dur-very-slow`, smooth-out, the same stagger as a delay).
+  - Content starts visible. With no script every card shows, and a card that is on screen is never hidden.
+- **Hover** (`@media (hover: hover)`):
+  - A lift of 2 px (3 px on the linked cards, which also nudge their arrow).
+  - The edge goes to `--s-line-control`, with a new `--shadow-lift` drop.
+  - The tile rises 1 px and scales 1.06.
+  - Both ways at `--dur-fast` (250 ms) with `--ease`; the edge at `--dur-quick`.
+- **Press:** 1 px down (from the lift on a pointer that hovers).
+- The rise animates `translate` and the hover animates `transform`, so the two compose and the scroll
+  animation never blocks the hover.
+- **Reduced motion:** no rise, no lift, no tile move.
+- **Performance fix needed for this:** the bands after How it works had `overflow: hidden` (C-157
+  performance). That makes each band a scroll container, so `view()` measured the band, which never
+  scrolls, and the rise froze at its end. They now take `overflow: clip`, which clips the same unpainted
+  overflow without being a scroll container (as #security and #faq already did). `content-visibility`
+  and `contain-intrinsic-size` are unchanged.
+
+**FAQ open and close (landing and /faq).**
+- **Height, both ways:** 250 ms, smooth-out (an accordion is one reversible move, so both directions
+  share one timing).
+  - Where the browser supports `interpolate-size: allow-keywords` and `::details-content`, it's CSS
+    only: `block-size` 0 to `auto`, with `content-visibility` allow-discrete.
+  - Elsewhere, `FaqMotion` (a client island that renders nothing) feature-tests and, only there, fetches
+    `faq-motion.ts` (about 1.1 KB gzip of source). That runs the same move with the Web Animations API
+    on the `<details>`.
+  - Opening sets `open` first, so the answer is readable at once. Closing marks `data-closing` and drops
+    `open` when the move ends. A second click mid-move reverses it from where it is.
+  - The answer's bottom margin became padding, so the height ends without a jump.
+- **The plus is two bars:** opening turns both half a turn, so the upright one folds flat into a minus
+  (`--dur-fast`). The filled circle stays.
+- **The answer** fades in and rises 4 px (`--dist-micro`) via `@starting-style`, 40 ms after the height
+  starts. It fades out at `--dur-quick` on close.
+- Native details and summary, so keyboard and screen readers are unchanged. The FAQPage JSON-LD is unchanged.
+- Reduced motion: no height transition (the reduced-motion block also zeroes `::details-content`).
+- Measured in Chromium on /faq and /: the height runs 68 → 174 px over about 250 ms, and the answer's
+  opacity goes 0 → 1. Closing runs 174 → 68 px.
+
+**Also fixed.** The pause rule `[data-motion-paused] :is(*, *::before, *::after)` was invalid inside
+`:is()` for the pseudo-elements, so they never paused. It's now three selectors, and the hero's row skins
+pause too.
+
+**Skill advice overridden, and why.**
+- **Icons in tiles:** the taste skill's "no icon-topped feature cards" and impeccable's "same-size cards
+  of icon plus heading plus text" and `icon-tile-stack`. The owner asked for icons on the cards. Mitigated
+  by setting the feature cards' icon beside the title and keeping the tiles quiet (ink-3, no colour).
+- **"One authored moment, not one identical entrance on every section"** (impeccable craft floor). The
+  owner asked for card animations. Kept to cards only, not headings or sections, at 12 px, driven by the
+  scroll, and absent under reduced motion. The hero's scrub stays the authored moment.
+- **Hover lift on cards that aren't links** (impeccable affordance). The owner asked for card hover. Unlinked
+  cards lift 2 px with no arrow; linked ones lift 3 px and keep the arrow, so a link still reads as one.
+- **Accordion height animation** (gsap-performance, impeccable: "avoid animating height"). The owner
+  asked for it. It runs on one element at a click for 250 ms, not per scroll frame.
+- **transitions-polish "close faster than open":** it doesn't apply, because the accordion is in the
+  symmetric list. The answer's text alone fades out faster (150 ms) than in (250 ms).
+- **GSAP:** none added, and no dependency. Its principles are followed: transforms and opacity, reads
+  batched on start and on resize, IntersectionObserver gates, no `will-change` left on.
+
+**Taste inspector** (dev server, 1440, 768, 390):
+- 5 FAIL and 5 WARN, the same set as C-157 organize: headline-lines (the H1 and the copy-locked H2s),
+  eyebrow (plan taglines), hairline (the spec rows), outlined-box (the card edges) and the WARNs defended
+  there.
+- 104 elements move while it loads and scrolls (44 CSS animations, 49 transitions).
+- Not flagged as an icon-card fail.
+
+**Impeccable detector:**
+- `icon-tile-stack` on the six stacked feature cards: fixed by setting the icon beside the title.
+- `overused-font` (the owner's Geist).
+- `nested-cards` ×2: the tile inside a card, and the hero's frame. These are kept.
+
+**Checks.**
+- `next typegen`, `tsc --noEmit` and eslint on the touched folders are clean.
+- vitest: `app/(marketing)` (the landing test adds the pile, the scope, the icons on every named card,
+  the channel marks, iris only on the lead, and the two-bar plus), `components/marketing` (new
+  `faq-motion.test.ts`), `components/site`, `styles`, `lib/marketing`, seo, public-metadata, layout and
+  copy-lint all pass.
+- Screenshots on a dev server on :3160 at 375, 768, 1440 and 1920: the scrub at 0, 25, 50 and 100%, the
+  phone before and mid-play, the card reveal (mid-rise with the stagger) and hover, and the FAQ open,
+  mid-open, mid-close and closed.
+- No sideways scroll.
+- After a full scroll, no infinite animation runs outside a motion scope.
+- e2e (`landing.spec.ts`), for the coordinator:
+  - the scrub is back: the box exists, 8 rows are scattered at 0, 0 at 100%, the H1 doesn't move, CLS 0;
+  - the phone plays once and its toggle hides;
+  - reduced motion is sorted, still and not pinned;
+  - the landing FAQ toggles by click, Enter and Space, and closes to the summary's height;
+  - /faq opens and closes;
+  - the old "no `[data-hero-scrub]`" and "no hero animations" assertions are replaced, per width (play
+    at 900 px or less, native or scrub above).
+
+### C-157 (hero spacing)
+
+The owner, on a 1920×890 screen: "too much y spacing for large screen". The pinned hero frame
+(`.hero-sticky`, scrub mode: `width > 900px` and `pointer: fine`) centred the copy and the inbox in a
+full-height frame, so about 170 px of paper sat above the eyebrow and 125 px under "Example data", and the
+strip only arrived after the 170vh scrub.
+
+**What changed.**
+- **One DOM:** `Hero` renders `<Strip />` as the hero section's last child (after `.hero-scrub`), and
+  `page.tsx` no longer renders it. Markup, `aria-label` ("The product in numbers") and the list are
+  unchanged. Where the hero doesn't pin (phones, tablets, reduced motion, no script) the hero's bottom
+  padding moved into the strip's top padding (`space-8 + space-6`, `space-6 + space-6` at ≤900), so those
+  modes measure the same as before (375×812 and 768×1024: strip list top and How it works top identical
+  to the pixel).
+- **The frame:** a fluid pad under the bar (`--hero-pad: clamp(space-8, 6vh, space-12)`), and the copy
+  and the inbox top-aligned with each other (`.hero-grid { align-items: start }` in scrub mode), so the
+  eyebrow and the inbox share one top line.
+- **The strip in the first screen** (scrub mode and `height >= 820px`): `.hero` becomes a one-cell grid;
+  the scrub box and the strip share the cell; the strip is `position: sticky; bottom: 0; align-self: end`.
+  It sits on the frame's foot while the frame is pinned, and its own place is the scrub box's last rows,
+  which reach the viewport bottom exactly when the pin ends, so after the pin they leave together.
+  Nothing is measured; the scrub box, its 170vh, its view timeline and the script's pinned range are
+  untouched. The frame reserves the strip's room (`--strip-room`: its figure line, two label lines, its
+  padding and `--hero-pad`, all tokens) and centres the grid in the rest, so a taller screen splits its
+  extra paper equally above and below the content instead of leaving one hole over the strip.
+- **Short wide screens** (`height < 820px`, e.g. 1366×768): the strip follows the scrub box as before
+  (top padding `space-6`, as when it was its own section after a zero-padding hero).
+- **A large screen** (`width >= 1600px` and `height >= 1000px`): the H1 takes its column's measure
+  (`min(max(fs-display, 7vh), 13cqi)`, 75.6 px at 1920×1080, 77.5 at 2560) and the figure zooms 1.12
+  (`--hero-zoom`; 528 → 591 px, the 596 px column's width).
+- `content-visibility`: the strip is no longer a `main > section`, so the `:not()` list drops `.strip`;
+  the rule still never reaches it.
+- The H1 is still the LCP element and never moves during the scrub (same top at 0, 40 % and 100 % at every
+  size checked); nothing changes after load, so no CLS. Scrub timing and reduced motion are unchanged.
+
+**Gaps at scroll 0** (above = bar to the eyebrow/inbox top line; below = content foot to the next thing
+on the first screen: the strip after, the viewport foot before).
+
+| Viewport | Before above / below | After above / content→strip / strip→foot |
+|---|---|---|
+| 1366×768 (short) | 111 / 63 | 46 / 80 to the foot (strip after the pin) |
+| 1440×900 | 174 / 129 | 76 / 52 / 48 |
+| 1536×864 | 156 / 111 | 58 / 34 / 48 |
+| 1920×1080 | 264 / 219 | 132 / 108 / 48 |
+| 1920×890 (owner) | 169 / 124 | 71 / 47 / 48 |
+| 2560×1440 | 444 / 399 | 312 / 288 / 48 |
+
+**Judgment calls.**
+- The brief said top-align; the frame now top-aligns the eyebrow with the inbox, but centres that block in
+  the room above the strip. On the owner's 1920×890 that is 71 px over the content and 47 px under it. Pure top
+  alignment with the strip at the foot (tried first) left one hole over the strip instead: 190 px at
+  1920×1080 and 550 px at 2560×1440.
+- **The 1240 px container stays** (owner decision). At 2560×1440 the content (column-capped at 596 px) can't
+  fill a 1376 px frame, so about 300 px of paper stays above and below it, balanced. Widening the hero alone
+  would put its copy off the bar's logo edge; widening the site is the owner's call. Many 2560×1440 screens
+  run at 125–150 % scaling (2048×1152 or 1707×960 CSS px), where the frame is smaller; not measured.
+- The 820 px threshold: the frame holds top pad + inbox (≈580) + strip (≈150) only from about 820 px of
+  viewport; 1536×864 (34 px between content and strip) is the tightest size that pins it.
+
+**Tests.** `page.test.tsx`: the section order drops "strip" and pins the strip as the hero's last child.
+`landing.spec.ts`: the order drops "The product in numbers"; new: at 1920×890 and 1440×900 the gap above is
+16–110 px, the strip clears the content and its foot is the viewport's, no sideways scroll; at 1366×768 the
+strip starts below the first screen. (For the coordinator's e2e run; checked the same values by hand.)
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `app/(marketing)`,
+`components/marketing`, `components/site`, `styles`: 16 files, 410 tests pass. Screenshots on :3162 at
+1366×768, 1440×900, 1536×864, 1920×1080, 1920×890, 2560×1440 (scroll 0, 40 %, end of pin, 200 px past),
+375×812 and 768×1024; no sideways scroll at any size.
+
+## C-158 · Sign-in and sign-up pages
+
+### C-158 · Auth pages
+
+The owner asked (2026-10-30) to audit the sign-in and sign-up pages, bring them up to the new public
+site (C-155, C-157) and add the Terms and Privacy Policy links. Branch `feature/auth-pages`, from
+`feature/site-redesign`. Audit, before and after screenshots and the skill reviews are in the session
+scratchpad (`auth/audit.md`, `auth/before-*.png`, `auth/after-*.png`); none are committed.
+
+**What the audit found (top items).** No visible keyboard focus on Clerk's buttons and links (Clerk
+sets `outline: 0`); Clerk's consent links at 2.9:1 and its consent checkbox edge at about 1.3:1 in
+Dark; no legal link on sign-in at all; a side panel the site has moved past: the old inbox
+screenshot with old demo data (Pune, a Hinglish message, which C-155 removed from the public site),
+a brand glow, film grain, a gradient Continue, tinted icon chips; two logos on desktop; the card
+narrower on sign-in than on sign-up. SEO (noindex), the skip link, one h1 and no sideways scroll were
+already right.
+
+**What changed.**
+- **Panel = the site's night band.** From `lg`, the left column is `bg-night` with the night inks:
+  theme-invariant, so it reads the same in Dark and Light, as the site's night bands do, while the
+  form column keeps the member's theme (C-129). Logo (back to the public home via `siteHref("/")`),
+  the landing's headline at `text-site-h2-sm` bold, broken only between its phrases, the hero's line
+  ("For small businesses and creators: …"), three plain lines of the site's own copy (unchanged from
+  UI-079: no icon chips), and `SITE_TAGLINE` with the three channel marks at the foot. The panel stays
+  put while the form column scrolls. No screenshot, glow, grain or gradient.
+- **Below `lg`:** a bar with the logo, the card, the legal line. The tablet's benefit grid and the
+  untilted screenshot are gone: the page is the task.
+  - **Judgment call:** phones and tablets lose the pitch. They arrive from the site or an invite;
+    the form is what they came for, and the pitch cost a 1,400 px page at 768.
+- **Clerk's card** (`authCardAppearance`, moved from `AuthShell` to `lib/clerk-appearance.ts` so the
+  client bundle that renders Clerk no longer imports the server shell): no in-card logo (one logo per
+  page); title 20 px bold, left-aligned; the primary button flat ink (`fg` on `canvas`, the site's
+  `.btn-main`; near-white in Dark), no arrow, hover at 88 % opacity; 44 px controls; no shadow at rest;
+  the app's focus outline restated on every link, button and checkbox; field errors in `danger-fg`;
+  24 px side padding under 480 px. The card fills a 400 px column on both pages. The app-wide Clerk
+  appearance (user menu, account modal) is unchanged.
+- **The consent checkbox** (Clerk's "Require express consent to legal documents"; `@clerk/ui` 1.38
+  names its parts `formFieldCheckboxInput` and `formFieldCheckboxLabel`, there are no `legalConsent*`
+  element keys): a 16 px box with the 3:1 `line-control` edge (as an outline, so focus replaces it),
+  `brand-strong` when checked, label in `fg-secondary`, links `brand-fg` underlined.
+- **Lint:** the design lint now knows the site's type roles (`text-site-*`) as text sizes, not colours
+  (its `--text-*` pattern skipped hyphenated names). The grain exception for AuthShell is removed.
+
+**Legal links and Clerk's consent checkbox.**
+- A quiet line under the card on both pages, always visible, links from `LEGAL_DOCUMENTS` through
+  `siteHref()`: the public site's origin when the app has its own host
+  (https://amplychat.com/terms, /privacy), relative with one origin. They open in a new tab (a
+  half-filled form isn't lost), with "(opens in a new tab)" for screen readers.
+- Sign-in: "Terms · Privacy".
+- Sign-up: "By continuing, you agree to our Terms and Privacy Policy." while the Clerk setting is off.
+  When it is on, Clerk's checkbox already says "I agree to the Terms of Service and Privacy Policy",
+  so the sentence would say it twice: the line becomes "Terms · Privacy", as on sign-in. The swap is
+  CSS only: `main` is `group/auth`, and `group-has-[#legalAccepted-field]` (Clerk's checkbox input id)
+  hides one line and shows the other, on every step of the flow. No script.
+  - **Judgment call:** keep a short line even with the checkbox, so the links are on every step
+    (the checkbox is on the first step only) and the two pages match.
+- The **development** Clerk instance already has the setting on, with the amplychat.com URLs: the
+  "after" screenshots show the checkbox. F-01 (`e2e/f01-sign-up.spec.ts`) now ticks it when present,
+  or the sign-up journey would stop at Clerk's "must accept" error.
+
+**Skills.** impeccable `critique`, `audit` (13/20 before) and `polish` (inline: a subagent run, no
+nested assessment agents) and its detector (clean on `components/auth`); design-taste-frontend
+`inspect.mjs --app`: 3 FAIL before (gradient, gradient button, heavy shadow), 0 FAIL after. Its three
+remaining WARNs are defended: `unused-canvas` is the centred 400 px form column; `heavy-borders`
+reads Clerk's `& *` border recolour without its 14 % alpha; `panel-void` is the panel's
+logo-top/tagline-foot spread. Its "no indigo" and "no thin rules" rules give way to the owner's brand
+and to the inputs' and card's edges (form fields keep their lines). No motion was added, so
+transitions-dev had nothing to tune: the only transitions are Clerk's own and the legal links'
+colour (`duration-fast`).
+
+**Tests.** `components/auth/AuthLegal.test.tsx`: the hrefs come from `LEGAL_DOCUMENTS`, absolute on
+the site's origin with a separate app host and relative without, both wordings on sign-up with the
+CSS swap classes, "Terms · Privacy" on sign-in, the shell carries the line and adds no h1.
+`e2e/c158-auth-pages.spec.ts`: each page renders Clerk's h1 with no page errors, noindex, exactly one
+visible Terms and one Privacy link (to /terms and /privacy), on sign-up exactly one wording for
+whichever Clerk shows, no sideways scroll at 375 and 1440, the logo back to `/`. Its assertions were
+run against the local dev server with the development instance (2 passed); the suite itself is for
+the coordinator's e2e run.
+
+**For the owner (Clerk dashboard, development and production instances).**
+- Configure → Legal: turn on "Require express consent to legal documents" with Terms
+  `https://amplychat.com/terms` and Privacy `https://amplychat.com/privacy`. Development already has
+  it; production needs it (the pages read fine either way).
+- Optional, both instances: Customization → Branding still holds the old logo URL for Clerk's emails
+  and hosted pages; the card no longer shows a logo, so nothing on these pages depends on it.
+- "Secured by Clerk" stays (removing it is a paid Clerk plan option).
+
+## C-159 · Premium inner pages
+
+### C-159 (guides)
+
+The owner's screenshot of `/guides/whatsapp-business-api-vs-app` at 1920: one text column and an
+empty right half. `/guides` and every guide now read as part of the premium site (C-157).
+
+**A guide.**
+- **Head:** the back link, the "Guide" eyebrow, the h1 (24ch), the guide's own description as the
+  lede (existing text, already the meta description), then one ruled meta row: the guide's icon, the
+  byline, the topic chips.
+- **Two columns from 1060 px (site-wide):** the article column with the body at a 68ch measure
+  (17 → 19 px, the lede step; 1.7 leading; body ink, not the secondary ink), and an 18rem sticky side
+  column: "On this page", a facts card (reading time, updated date, topics), and a quiet Start free
+  card ("Try it on your own messages / The Free plan needs no card.", wording from the old end card).
+  Below 1060 px the side column is hidden and the contents fold into an "In this guide" disclosure
+  above the body.
+- **Contents:** each body h2 is a `GuideH2` (its id from its text, `sectionId`, plus a link to itself
+  shown on hover or focus). `Guide.sections` lists the h2s; guides.test.tsx holds them equal to the
+  body. "Common questions" is the last entry. `TocSpy` (an idle-loaded client island, no render)
+  marks the current section with `aria-current="location"`: one IntersectionObserver whose root
+  runs from far above the page to 35% down the viewport, so a heading counts once it has passed that
+  line even when the page jumps (an anchor, a scrollbar drag). No scroll handler, no layout reads.
+- **Reading progress:** a 3 px ink bar fixed at the top, a CSS `view-timeline` over the article
+  (`contain` range, transform only). Without scroll timelines TocSpy steps it by section.
+- **Body blocks, in the guides' own words** (`components/marketing/guides/blocks.tsx`):
+  - WhatsApp: app vs Platform as two cards; "enough if" vs "makes sense when" as two cards; "Neither
+    is better" as a "what this means for you" callout; the middle path as a tip; "what to know before
+    you decide" as a note.
+  - Instagram DMs: the policy wording vs your wording as two cards; the Suggest-first advice as a
+    tip; the short checklist as a checklist card.
+  - Comment-to-DM: the four parts as step cards; Instagram's one-message rule as a note; the three
+    match modes as three cards; the two mistakes as a note; the set-up steps as a checklist.
+  - New words: only the callout titles ("Tip", "Note", "What this means for you", "A practical
+    middle path", "What to know before you decide", "Instagram's rule", "Two mistakes to avoid").
+    "A practical middle path:" and "And what to know before you decide:" moved from the text into
+    titles. Every guide still holds 900–1,500 words with its reading time.
+- **Questions** as cards (dl kept). The FAQPage JSON-LD is unchanged and matches them; e2e checks it.
+- **After the article:** "Keep reading" on the deeper paper: the other guides as cards, then the
+  related pages that aren't one of them as outlined buttons. Then the landing's night `FinalCta`
+  (without a trial line: the guides are static and don't read plans).
+- **Typography:** styled lists (ink-3 dots), ordered-list markers, inline links (iris, 1 px
+  underline), tables, blockquotes and code for future guides.
+
+**The index:** a split head (h1 left; the lede and RSS link right, bottom-aligned), the newest guide
+as a wide featured card with its screenshot on the deeper paper (from 900 px), the rest in an
+auto-fit grid, then the night close. Each card: the guide's icon, topics, title (the card's one link
+covering the card, focus ring on the card), excerpt, reading time and an arrow. Three `article`s,
+as before.
+
+**Icons:** the channel glyph in its colour for a WhatsApp or plain Instagram guide; Workflow in the
+comment colour for automations; MessageSquareReply in iris for AI replies (an AI moment).
+
+**Motion:** the landing's rise (`site-rise` on `view()`, 40 ms stagger along a row) on guide cards,
+body cards, callouts, the checklist and question cards; hover lift (3 px for linked guide cards with
+the arrow nudging, 2 px for body cards). No IntersectionObserver fallback for the rise: content
+starts visible, as on the landing without script. All of it off under reduced motion.
+
+**Judgment calls.**
+- Impeccable's craft floor bans the eyebrow; the owner's brief asks for one. Kept, as everywhere else.
+- Body cards lift on hover though they aren't links (as the landing's unlinked cards, C-157 motion).
+- The featured screenshot loads eagerly (it is the index's largest paint at 1440), so phones fetch
+  one 18rem image they don't show.
+- `PROSE` is no longer used by the guides (legal and info pages keep it); the guide body has its own
+  `.gprose` in the C-159 guides block of site.css.
+
+**Shared components for the others:** `components/site/Callout.tsx` (tip, note, means; optional
+title), `components/site/TocNav.tsx` + `TocSpy.tsx` (`toc-spy.ts`; any page with `[data-toc]` links
+and matching ids, and `[data-toc-progress]` for the fallback progress). Their styles (`.callout`,
+`.toc`) sit in the C-159 guides block, scoped under `.site` but not under `.guide`, so other pages can
+use them.
+
+**Checks:** typegen, tsc, eslint on the touched folders; vitest for components/site (new
+toc-spy.test.tsx), components/marketing, lib/marketing (guides: contents match the body, ids unique,
+anchors), app/(marketing), styles (design lint), seo and public metadata. e2e (`guides.spec.ts`, for
+the coordinator): two new tests, the two-column layout with contents, anchors, the active entry
+after a contents click, the side Start free in view, question cards matching the FAQPage, two related
+guide cards and the night close; and the phone disclosure.
+
+### C-159 (product)
+
+The product pages (feature pages, `/compare` and every comparison, `/switch-from-manychat`,
+`/for-creators`, `/for-businesses`, `/pricing`, `/faq`, `/developers/api`) brought up to the C-157
+landing's look. Restyle only: every competitor claim, source comment, status, date and trademark note
+is unchanged (gtm-pages.ts, solutions.ts, faq.ts and plan-matrix.ts are untouched).
+
+- **Heads use the width.** Copy beside a side column: the product shot where the page has one (now
+  `priority`, since it is in the first screen), otherwise an "On this page" card linking to the page's
+  sections, with the date the sources were read on a comparison. The audience pages show their feature
+  titles (with status chips) as an at-a-glance card.
+- **Cards.** Every block item is an icon card (the landing's icon-beside-title `.fcard` pattern,
+  lucide 20 px / 1.75 in `.ico`). The icons live in `components/marketing/page-icons.ts`, keyed by the
+  card's title, so the content files keep only words; a unit test fails if a new card has no icon.
+  Iris only on the AI cards (Ask Amplychat, "You choose how much the AI does").
+- **Comparisons.** "Which fits you" is two verdict cards of equal weight, the competitor's first; ours
+  has the control edge only. The table: fixed columns, a header row that sticks under the bar on a
+  wide screen (the box no longer clips there), our column on the paper tone with an ink top rule,
+  statuses as chips with icons (`components/site/StatusChip.tsx`; the words are `STATUS_LABEL`'s,
+  the icon is decoration). At 760 px and below the table scrolls in its own box with the feature
+  column held at the left. "What to know" is a callout card; the sources and the trademark note are
+  one dashed footnote card.
+- **Feature pages** get the site's own three setup steps (`SETUP_STEPS`, the landing's wording) on a
+  paper-deep band. *Judgment call:* no new steps text was written for each feature; the AI inbox's
+  "How it works" block stays as cards because its items aren't a sequence.
+- **Closing band:** every GTM page, the hub and the audience pages end on `FinalCta` (the landing's
+  night band). It replaces the lone "Start free" button under "Keep reading". On the hub this adds a
+  second mailto link to the support address, so the hub test now scopes it to the note.
+- **Keep reading** is a grid of linked cards with an arrow (`RelatedCards`, exported from GtmPageView
+  and reused by the audience pages).
+- **Hub:** "How we compare" as four icon cards (same four sentences), each group headed by its
+  channel's glyph in its colour (Instagram, WhatsApp), comparison cards with a hover lift and arrow,
+  the trademark note as a footnote card.
+- **Audience pages:** before/after as one card in two halves (Before on paper-deep, "With Amplychat"
+  with a check); features as icon cards with status chips; integrations as icon cards with the
+  landing's channel marks and status dots; tiers on the plan-card skin (sheet, r-xl, chip).
+- **Pricing:** the landing's `Pricing` component is untouched, so the landing looks exactly as it
+  did. `PlanMatrix` (pricing page only): one column grid for every group, so Free/Pro/Max line up from
+  table to table (they jumped before), a sticky header, Pro's column on the paper tone, Included /
+  Not included as chips, an icon in each caption. `WhatsAppCharges` (pricing page only) is one card:
+  the two rules with icons, "no markup" as a callout, Meta's page as the foot. Same words.
+- **/faq:** one band, a sticky group nav (plain anchors, no script; two columns on a tablet, one on a
+  phone) with each group's icon and question count, each group headed by its icon. The accordion is the
+  landing's `.qa` with FaqMotion, unchanged (C-157 animation kept). The shared `Faq` component is
+  untouched.
+- **Developers API:** a facts card in the head (version, base URL, the auth header), a sticky side nav
+  listing each area with its operations and method markers, endpoint cards with method chips (GET
+  ok, POST plain, PUT/PATCH wait, DELETE stop) and code on the night tokens in Geist Mono (code is the
+  one place mono is used). The app's `Card` and `Badge` are no longer used on this page.
+- **Motion:** the landing's card rise (`view()` timeline, CSS only) and hover lift on the new cards;
+  nothing new runs per frame; no new client JS; reduced motion drops the rise and lift.
+- **CSS:** all in the `/* ==== C-159 product ==== */` block at the end of site.css, scoped under
+  `.site .pp` (the class is on the page's main, or on the pricing page's two sections). Tokens only;
+  no new tokens needed.
+- **Skill advice overridden:** impeccable's "same-size icon cards as structure" and "no eyebrow":
+  the owner asked for icon cards, and the inner pages keep their existing kicker. Mitigated as C-157
+  did (icon beside the title, quiet ink-3 tiles).
+
+### C-159 (trust)
+
+The owner asked (2026-10-30) to make every public page premium "use cards, animations and other things".
+This part covers the legal pages, /security, /safety, /changelog, /ai-info, /contact, /unsubscribe,
+/data-deletion, the public 404 and the `InfoPage` layout. Branch `feature/pages-trust`. Audit, before and
+after screenshots are in the session scratchpad (`pages/trust/`), not committed. **No legal or policy
+sentence was changed**: layout and styling only, checked against the previous text. Nothing here was
+reviewed by a lawyer.
+
+**What the audit found (top items).** At 1440 and 1920 a lone 3xl text column with an empty right side;
+tables squeezed into it (cells wrapping to five or six lines); no sense of place in long reads (privacy
+is about twelve screens) and a contents list with no current item; the 404's illustration in iris (iris
+is for links, focus, selection and AI); /changelog, /security, /safety and /ai-info as walls of bullets.
+
+**Legal pages (`LegalPage`).**
+- A page head with the dates on their own line ("Last updated … · Effective …", a calendar icon).
+- The summary first, as a sheet with a "Summary" label and icon (new label, one word), lede-sized text.
+- The contents sticky beside the text above 1060 px; the section being read is marked
+  (`aria-current="location"`, an ink bar on the list's rule). `TocSpy` (new, `components/site/TocSpy.tsx`):
+  a client island that renders nothing, starts at an idle moment after load, one IntersectionObserver over
+  the sections (a band from 25 % to 40 % of the viewport), no scroll handler, no layout reads per frame.
+  At 1060 px and below the contents are a closed disclosure under the summary; above, CSS keeps them open
+  (`::details-content`) and TocSpy opens the `<details>` where that selector isn't supported.
+- A reading bar: 2 px of ink along the top edge, CSS only (`animation-timeline: scroll(root)`); browsers
+  without scroll timelines show none. It is not motion the reader triggers, so reduced motion keeps it.
+- Sections keep their numbers in the heading text ("1. Title", so anchors and screen readers are
+  unchanged); the number is set apart in ink-3. Prose: 64ch measure (about 75 characters), line-height
+  1.7, more space above a heading than below, quiet round bullets, iris links.
+- Tables (subprocessors, cookies, retention, legal bases, transfers): a sheet with a tinted head row and
+  row rules; a table of three or more columns keeps a 42rem minimum and scrolls inside its box on a
+  phone; the page never scrolls sideways. Done in CSS on the existing `.overflow-x-auto` wrappers, so the
+  pages' markup is unchanged.
+- `LegalFacts` is now a facts callout: an icon per fact (Building2, Briefcase, UserRound, MapPin, Phone,
+  Mail, Scale), label over value, as many columns as fit. Same terms, values and links.
+- New `Callout` (`components/site/Callout.tsx`): an icon tile beside an optional title and the text, a tone
+  step on the paper, no coloured edge; iris only with `ai`. Used on /safety, /security and /ai-info; for
+  the other areas to reuse.
+
+**`InfoPage`** gains `head` (actions under the lede), `className`, and two exports: `InfoBand` (the
+heading block left and sticky, the content right, like the landing's security spec list; `wide` puts the
+heading above; `night` makes the closing night band) and `InfoCard` (the landing's `.fcard`: icon beside
+the title, the text under it; rise and hover lift come from site.css). `sections` still renders a single
+reading column for a page that wants one.
+
+**Pages.**
+- **/safety:** the pace as four figure cards (a `dl`: the pace large, what it paces under it), the queue
+  paragraph, the 7-day and 24-hour rules as cards; login and what we never do as icon cards (the bold
+  lead-ins became card titles, same words); restrictions as cards plus a "what to do" callout; "What we
+  can't promise" and the related links on a night band.
+- **/security:** the lede is the old summary card's sentence, with an ink button to the report email
+  (its label is the address); "Tell us" as four icon cards; in and out of scope side by side (check and
+  minus marks); testing rules as cards; "After you report" with security.txt on a night band. It now has
+  breadcrumbs JSON-LD (via InfoPage).
+- **/changelog:** a vertical timeline. Month headings are ink pills on the line that stay in view while
+  their month scrolls; each entry is a card hung off the line by a dot, with a date chip ("28 Oct"; the
+  full date is the `<time>`'s title and a screen-reader text), its area with an icon, and the "With Meta's
+  approval" tag; two columns from 900 px. Cards rise in (the landing's `view()` rise) and lift on hover.
+  `ChangelogEntry` gains a required `area` (inbox, ai, automations, publishing, commerce "Selling", team,
+  website, app); I assigned each of the 28 entries. Iris only on the AI area's icon.
+- **/ai-info:** fact cards: the lead fact (SITE_DESCRIPTION, then the paragraph), for / not for, channels
+  as the landing's connection cards with `PlatformGlyph` in each channel's colour and the honest status,
+  plan cards with each plan's state from the plans API as a chip, honest limits as icon cards, the
+  company, and claims to avoid (a cross per claim) on the night band with the llms.txt line. The
+  "name: status. body" sentences became name, status and body on a card: same words.
+- **/contact:** contact cards (Email with the response time when set, Phone when set, Privacy grievances
+  with the officer's role, Location or the registered address), "About us" beside the facts callout, and
+  "Find an answer" as icon link cards (arrow nudge, 3 px lift). The Email card's line now starts with a
+  capital ("For support, …") and the grievance line with "Email us …", as standalone sentences.
+- **/data-deletion:** the options as icon cards in two columns, the facts callout; the form unchanged.
+- **The 404** (`SiteNotFound`, new; the app's 404 keeps `NotFoundPage`): the head left (Error 404, the h1,
+  the line, the path asked for, the three buttons), and six link cards right (Features, How it works,
+  Guides, Common questions, What's new, Contact: the footer's labels and addresses, through `siteHref`).
+  The iris illustration is not shown on the public 404 any more. New label: the cards' nav is "Popular
+  pages" (for screen readers).
+- **/unsubscribe:** one sheet card centred between the header and the footer; the missing-link state
+  gets a MailX icon like the other states' icons.
+
+**Styles.** All in the `C-159 trust` block at the end of site.css, scoped to these pages' classes; tokens
+only; no existing rule edited. The rise and lift reuse `.fcard`, `.crow` and `.feat-lead`'s existing
+rules; the block adds the same rise for `.tl-card`, `.scope-card` and `.fact-lead`, and the lift for `.tl-card`. Reduced
+motion: no rise, no lift (as the landing).
+
+**Skills.** impeccable (context, craft floor, detector: no findings on the changed files);
+design-taste-frontend inspector on /privacy and /changelog. Its FAILs are defended or owner-overruled:
+`eyebrow` (the brief asks for an eyebrow in the page head; the other two were sentences above an h2, a
+false positive), `outlined-box` (the site's card language), `icon-cards` (owner's ask, C-157), `palette-
+purple` (the iris link colour), `few-pictures` and `focal-point` (a legal page and a changelog have no
+pictures; the h1 leads). WARNs: `side-scroll` at 390 is the tables scrolling in their own box (by
+design), `off-centre` at 768 on /changelog is the timeline's left rail, `small-text` is Next's dev
+indicator and the 404 path chip. The measure WARN was fixed (70ch to 64ch).
+
+**Checks.** `next typegen`, `tsc --noEmit` and eslint on the touched files clean; vitest `src/lib/legal`,
+`app/(marketing)`, `components/not-found`, `components/site`, `components/marketing`, `lib/marketing`,
+`styles`, `app/seo`: 26 files pass. New tests: `toc-spy.test.tsx` (the band, the first section wins,
+open on wide only), `LegalPage.test.tsx` (one h1, the summary region, contents linking every numbered
+section, the reading bar), `SiteNotFound.test.tsx`, and trust-pages tests for the timeline, /safety and
+/security. `legal.test.tsx`: the contact page shows the location twice now (card and facts), and its
+placeholder check ignores the new breadcrumbs JSON-LD. E2E for the coordinator: `c159-trust-pages.spec.ts`
+(one h1, no errors, no sideways scroll at 375/768/1440/1920 on fifteen pages; the contents open, sticky
+and marking "How long we keep it" on /privacy at 1440; the phone disclosure and a table scrolling in its
+box; CLS under 0.1 on /terms and /changelog; the 404's six links), and `not-found.spec.ts` now checks the
+404's link cards instead of the illustration.
+
+**For the coordinator.** Run the e2e above. Check the reading bar sits over the header's top edge in
+Safari (scroll timelines from Safari 26) and that Firefox shows the contents open on a wide screen once
+TocSpy loads. `TocSpy` and `Callout` are in `components/site/` for the guides agent's long reads.
+
+### C-159 (integration)
+
+The three branches merged into `feature/site-redesign` (guides, then product, then trust). The guides and
+trust agents each wrote a `Callout` and a `TocSpy`; they are now one of each.
+- **Callout** (`components/site/Callout.tsx`): `tone` = `note` | `tip` | `means` | `info`, plus optional
+  `icon`, `title`, `ai` and `className`. Always an `aside` named by its title or kind. `info` is the
+  trust look (tinted, 40 px quiet tile, no title unless given); the legal and info pages now pass
+  `tone="info"`.
+- **Contents**: `TocNav` (`items`, `label`, `numbered`, `collapsible`) renders both the guides' rail and
+  the legal pages' numbered disclosure; `LegalContents` is a thin wrapper. `startTocSpy` (`toc-spy.ts`)
+  reads every `[data-toc]` nav's `a[href="#id"]`, marks the last heading past 35% of the viewport (the
+  guides' algorithm: no gaps, robust to jumps; trust's "band" observer is dropped), opens a `details`
+  inside the nav on a wide screen (trust), and steps `[data-toc-progress]` only where scroll timelines
+  are missing (guides). The island waits for load and an idle moment (trust).
+- **CSS**: `.callout`, `.toc` and the reading bar's keyframe live once in a new `C-159 shared` block
+  before the three area blocks. Each area block keeps only placement (`.gprose .callout`,
+  `.ib-body > .callout`, `.legal-side .toc` sticky/boxed). Collisions removed: `.callout`, `.callout-b`,
+  `.callout-t`, `.toc`, `.toc-t`, `.toc ol/a` defined in two or three blocks (trust's later rules were
+  restyling the guides' callouts and contents, and trust's `.callout` margin leaked onto product);
+  product's own callout is now `.pp-callout`; the guides' rise motion on `.callout` is scoped to
+  `.gprose`; `g-progress` and `site-read` (the same scaleX 0 to 1) are one `site-read`.
+- `/contact`'s "Frequently asked questions" now links to `/faq` (pinned in `lib/legal.test.tsx`).
+
+### C-159 (final CTA)
+
+The owner said the closing section "needs redesign". It repeated the hero (copy left, a small still inbox
+right), so it read as a weaker second hero. `FinalCta` is now a centred finale on the night band, used
+unchanged by the landing and every inner page that closes with it (same props: `trialDays`; same
+`section.night.close`, `#cta-title`, copy, single "Start free", trust row and email line).
+
+- **Layout:** the convergence, then the H2 at the display size (`min(--fs-display, 11cqi)`, 700,
+  display tracking, 24ch, balanced: two lines from 768 px up, four at 375), the lede (52ch), one light
+  "Start free" (the night CTA role), the trust points as a centred quiet row, the "Questions? Write to …"
+  line. The trial perk still shows only when `trialDays > 0` (Pro on sale).
+- **The convergence** (`.converge`, `aria-hidden`, server-rendered inline SVG): Instagram, WhatsApp,
+  website chat and Facebook in their night-colour glyphs (`PlatformGlyph` in `.ico.ico-mark` tiles; `.night`
+  already maps `--ig`/`--web` to their night variants) on the outside, each with a thin neutral stream
+  (night line, 1.5 px, non-scaling) that leaves level and arrives level at the Amplychat `LogoMark` in the
+  middle, so the two on each side join before they land. One 560 × 160 field scales with the column; the
+  tiles (36–52 px) and the hub (48–72 px) keep floors so the phone version is compact but legible.
+  Positions are margins, so `transform` stays free for the motion. No images, no new dependency, CLS 0
+  (the field's box is fixed by `aspect-ratio`).
+- **Motion:** drawn by the scroll, once, then held. A named `view-timeline` on the field inside
+  `@supports (animation-timeline: view())` and `prefers-reduced-motion: no-preference`; the rest state is
+  the drawn picture, so no scroll timeline or reduced motion simply shows it. The sequence is the
+  entrance token (1200 ms) laid over `cover` 20–56%: the marks settle (8 px, 0.96, opacity) over the
+  very-slow token with the micro stagger, the streams draw (`stroke-dashoffset` on `pathLength=1`) over
+  500 ms from the fast token's offset, the hub lands last over the medium token; smooth-out throughout.
+  No loop, so no pause control. No script, no layout reads.
+- **Removed:** the mini inbox (`MINI_ROWS` in data.ts, `.mini*`, `.mrow2`, `.close-grid` in site.css).
+- **Tests:** `FinalCta.test.tsx` (trial only when passed, two links, the hidden convergence with four
+  streams and the hub, no motion scope, no image); the landing test pins the convergence above the H2
+  and the mark colours; `landing.spec.ts` checks one Start free, the email line and the hidden marks.
+
+**Judgment calls.**
+- **Facebook is in the picture** although Facebook Pages waits for Meta's approval (the connections say so).
+  The coordinator's direction lists it; the picture is decorative and claims nothing in words, and the
+  lede still names the three live channels. Drop the fourth stream if the owner wants only live ones.
+- **The hub is the logo as it is**, its own tile gradient included: it is the brand mark, not decoration.
+- **Scroll-linked, not time-based:** CSS can't start a timed animation on entry without script, so the
+  draw follows the scroll and would undraw if the visitor scrolls back above it; once past 56% of its
+  cover range it holds. Accepted over adding an IntersectionObserver island.
+
+**Skill advice overridden.**
+- design-taste-frontend: "headlines two lines or fewer at every width" fails at 390 (four lines); the
+  wording is the owner's and fixed. "Left-aligned by default": this is the page's one centred moment.
+  "Buttons square or round": the site's 12 px radius stays (C-157).
+- impeccable: "one authored moment" — the hero's scrub stays the page's main moment; this is the
+  closing echo of it, quiet and one-shot.
+- transitions-dev ships time-based snippets; only its token scale was used, mapped onto the scroll range.
+
+**Checks.** typegen, `tsc --noEmit`, eslint on the touched folders clean; vitest for components/marketing,
+app/(marketing), components/site, styles and lib/marketing: 25 files, 472 tests pass. Impeccable detector: no
+findings on the changed files. Taste inspector on `/` (dev server): no new FAILs from the section beyond
+the copy-locked headline at 390 (the other FAILs and WARNs are the existing C-157 set). Screenshots on
+:3169 at 375, 768, 1440 and 1920, plus mid-draw and final at 1440, on `/` and
+`/guides/whatsapp-business-api-vs-app`; no sideways scroll at any width.
+
+## C-160 · How it works and features pages
+
+The owner asked (2026-10-31) for "pages for how it works, features with detailed explanations … proper
+cards, with animation, flow, bento grid … premium feels". Two new public pages on
+`feature/explainer-pages`; the header's Features and How it works now lead to them instead of the
+landing's anchors.
+
+**`/how-it-works`: the product as a guided flow.**
+- Head: the "How it works" eyebrow, the h1 "From first message to reply", a lede, Start free and "See
+  every feature", and an at-a-glance card (the three channel marks joined into one inbox with the
+  "AI draft" and "Needs you" chips).
+- The eight stages as one `<ol>` of sections (connect, knowledge, one inbox, reads and tags, drafts or
+  replies, hand-off and gaps, automations, see what works), each with its number on a line down the
+  page, a heading ("Step N:" for screen readers), one or two paragraphs, three specifics and a scene.
+- **Sticky step tracker** from 1060 px: the shared `TocNav` (numbered), the current stage marked by
+  toc-spy. Hidden below 1060 px.
+- **The line draws as you scroll** (CSS `view-timeline` on the list, `@supports`): an ink fill up to the
+  middle of the screen, each number turning ink as it passes. Without scroll timelines, and with
+  reduced motion, it is a plain line. The last stage covers the line below its number.
+- **Landing scenes reused, not copied:** `HeroInbox` (stage 3), `ModeSwitch` (stage 5) and
+  `CommentMachine` (stage 7) are now exported from Hero.tsx, Modes.tsx and Comments.tsx; the landing
+  sections render them, with identical markup. The landing script (`startLandingMotion`) runs here too
+  for the switch and the machine (one round, with its pause control).
+- Card-built scenes elsewhere (`components/marketing/explainers/visuals.tsx`): the four connections
+  with their statuses, the knowledge sources and a test question, the tags on a message (intent,
+  sentiment, lead score), the hand-off thread on a night card (the landing's `.handoff`/`.gap` parts),
+  the Monday report beside an Ask Amplychat question.
+- Then six questions from `lib/marketing/faq.ts` (the shared `Faq`, with the /faq link, no extra
+  FAQPage JSON-LD), "Keep reading" (`RelatedCards`) and `FinalCta` (its trial line from the plans API).
+
+**`/features`: a bento grid, then the details.**
+- Head: eyebrow, the landing's features heading as the h1, its lede plus one new sentence, two CTAs.
+- **Bento grid** (12 columns; 2 below 1060 px; 1 below 760 px), 15 cells: two headline cells with a
+  scene (the AI inbox, AI replies from your own knowledge), two large (comment-to-DM, scheduling), three
+  medium with a hint of a scene (comment intelligence, analytics and the weekly report, Ask), eight
+  small. Every cell: an icon (a channel mark for Website chat and Facebook Pages), a title that is
+  the cell's one link, one or two lines, a status chip where it isn't live ("With Meta's approval",
+  "Coming soon", "Pro"). Links: the feature's own page or guide, else its detail below.
+- **"In detail"** on the deeper paper: a sticky side nav ("Feature groups", toc-spy) beside ten group
+  cards, each with a paragraph, the specifics and a Free/Pro/Max limits table read from
+  `plan-table.json`. A note above says which plans can be had today, from the plans API (when the API
+  can't be reached only Free's state is said).
+- A comparison teaser (the hub's description, four links) and `FinalCta`.
+
+**Navigation.** `NAV_LINKS` (bar and phone menu), the footer's Product column and the public 404's
+cards point at `/features` and `/how-it-works` (`FEATURES_PATH`, `HOW_IT_WORKS_PATH` in site.ts). The
+landing keeps `#features` and `#how-it-works` (the hero's "See how it works" still jumps in page).
+Both pages are in `PUBLIC_PATHS`, `PAGE_UPDATED` (2026-10-31), the sitemap and llms.txt (Product). The
+feature pages' breadcrumbs are now Home › Features › page (like the comparisons under /compare).
+`SiteHeader.test.tsx` and `seo.test.ts` updated; no e2e spec pinned the old anchors.
+
+**Motion.** One idle island (`ExplainerMotion`, the dynamic `explainer-motion.ts`): toc-spy for the
+tracker and the side nav; scenes that start off screen are armed and their parts arrive once in order
+(`[data-xv]`, 80 ms apart, 500 ms, transform and opacity); the hero inbox sorts once as it arrives (it
+stays sorted and still until armed, so no script means no pile); cards rise with the landing's
+`view()` rise and a 40 ms stagger (the script arms them where `view()` is missing); cells lift on
+hover. No loop of our own; reduced motion turns all of it off. No layout reads.
+
+**Claims checked against the code.**
+- Monday 9:00 AM local weekly email and its contents: `notify/digest.py`, `jobs/tasks/digests.py`.
+- Credit costs (message analysis 1, draft or auto reply 2, test question 1, caption 1):
+  `billing/plans.py` `CREDIT_COSTS`. *Found:* gtm-pages.ts's comment intelligence card says "analysing a
+  comment costs a credit", but `comment_analysis` charges 1 credit per 20 comments (`ai/metering.py`);
+  not my file, left for the owner.
+- Auto on Pro, limits per plan: `plan-table.json` (`ai_modes`, `crawl_pages`, `members` …).
+- Knowledge types (text, Q&A, links, files, website pages): `models/ai.py` `KnowledgeType`; products
+  through the catalogue on Pro (`commerce`); test question: `POST /knowledge/test`.
+- Intents and sentiments: `models/ai.py` `Intent`, `Sentiment`; lead score 0–100: `services/analysis.py`.
+- Drafts show their sources: `schemas/inbox.py` `Suggestion.sources`.
+- Follow nudge never a condition: `models/automations.py` `follow_nudge` (FR-AUT-22).
+- 750 private replies an hour: `platforms/buckets.py` (as FAQ_BAN_RISK).
+- Takeover pause 2 hours by default, 30 min / 24 h / until resumed: FAQ_TAKEOVER (`human_takeover`).
+- Sequences stop on a reply: `models/sequences.py` `stop_on_reply`; broadcasts off:
+  `settings.broadcasts_enabled = False`.
+- Roles owner, admin, agent: `models/identity.py` `Role`. Push: `notify/push_webpush.py`.
+- Widget "one line of code": `WidgetSettingsPage.tsx` (embed code before `</body>`).
+- Ask never acts by itself: the landing's FEATURES note and gtm-pages' Ask card (GR-36 proposals wait
+  for approval).
+
+**Judgment calls and skill advice overridden.**
+- *Numbered stages* (the brief) against C-157's "no step numbers" and both skills' ban on index
+  numbers: kept, because the sequence is the page's subject; the numbers are the `<ol>`'s order, in
+  Geist (no mono), quiet, and screen readers hear "Step N:" in the heading.
+- *Eyebrows* ("How it works", "Features") kept, as every inner page head (C-159).
+- Taste inspector, left FAILs: `eyebrow` (above); `icon-cards` and `outlined-box` (the owner's card
+  language, C-157/C-159); `hairline` (the toc rail, C-159 shared); `few-pictures`/`no-footage` (the
+  scenes are `data-ui` fragments, as C-157); `headline-lines` at 390 for the landing's features
+  heading (site copy) and `FinalCta`'s heading (not this branch's file); `off-centre` at 768 on
+  /features (the lede's measure, not the frame). Fixed from it: the features h1 now two lines at 1440
+  (wider head column), the shorter how-it-works h1, row rules as borders instead of shadows.
+- Impeccable detector on the new files: no findings. Its `animate` advice ("one authored moment")
+  is met by the drawing line; the per-scene arrivals are small and once only.
+- transitions-dev tokens used through the site's names (`--dur-*`, `--ease`, `--dist-*`), no `t-*`
+  snippets.
+- The stage headings carry no icon (the number is the marker); the content keeps an icon per stage
+  for later use.
+- Example numbers in the scenes (214 messages, 96%, 4 min, lead score 72 …) are captioned "Example
+  data", like the landing's.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest
+`app/(marketing)` (new `explainers.test.tsx`: navigation, the stages and tracker, the reused scenes,
+plan-table limits, one h1 and breadcrumbs on both pages, every bento cell's icon and link, statuses,
+the plans-API states), `app/seo`, `app/public-metadata`, `app/layout`, `lib/marketing`,
+`components/marketing`, `components/site`, `components/not-found`, `styles`, `lib/copy-lint`: 31 files,
+552 tests pass. E2E for the coordinator: `e2e/c160-explainers.spec.ts` (one h1, no errors, no sideways
+scroll at 375/768/1440/1920; the tracker sticky and marking the stage; hidden on a phone; a scene arms
+and plays; the switch; bento links to a detail and a page; header bar, phone menu and footer links;
+the landing's anchors).
+
+## C-161 · Closing CTA and footer
+
+### C-161 · Closing CTA and footer
+
+The owner said (2026-10-31): "CTA design is not looking good also footer check some competitors web
+design for idea", and then: "also remove address from footer". On `feature/cta-footer`.
+
+**Research** (screenshots of the closing section and the footer at 1440 and 375, 2026-10-31): Spur,
+Inrō, CreatorFlow, LinkDM, InstantDM, Wati, respond.io, Later, Metricool, Hootsuite, Linear, Vercel,
+Resend, Cal.com. None blocked; Wati at 375 timed out, Cal.com and LinkDM have no `<footer>` element at
+375 (bottom of page taken instead), Manychat not attempted (known to block). What the best ones share:
+- **One closing composition.** Resend, Spur and Linear run the CTA into the footer on the same ground
+  with space between them, not a second band; the weak ones (Hootsuite, Wati, respond.io) stack a card
+  on one ground and a different footer below.
+- **Type-led CTAs.** Linear, Vercel and Resend close on a short statement at display size and one or
+  two buttons, nothing competing; illustrated CTAs (Inrō, CreatorFlow, Hootsuite) read as a second hero.
+- **Footer structure:** a brand column, link groups of four to seven in equal columns, a quiet bar for
+  © and legal; the long Meta trademark/API note as fine print beside the © (CreatorFlow).
+- **Brand moment:** Resend, Spur, Later and Metricool end on the name set at full width, after the
+  legal line: a full stop for the page.
+- Badges, seals, app-store buttons, glows and textures (Wati, Metricool, respond.io, Spur) add noise.
+
+**Diagnosis of C-159's version.** The convergence was small and wispy (1.5 px grey streams, dim
+tiles), so the closing looked like an icon diagram over a centred stack of five centred items; the
+facts row wrapped raggedly on a phone; the CTA and the footer were two night blocks split by a
+full-bleed rule; the footer was a plain sitemap whose ten-link Legal column left a hole beside four
+short ones; the bottom bar's © and Meta lines sat apart at both edges; nothing closed the page.
+
+**Direction: "One close".** The CTA and the footer are one night composition.
+- **CTA** (`FinalCta`): the channel line (the site's motif: Instagram, WhatsApp, website chat, from the
+  tokens) opens it at the container's width; the heading at the display size on the page's left edge
+  (two lines from 768 px, unchanged words); a row with the lede on the left and, on the right, the one
+  "Start free", the facts as a vertical list and the email line. One column below 900 px. Same props
+  and behaviour: `trialDays` (the trial perk only while Pro is on sale), `section.night.close`,
+  `#cta-title`, "What you get", two links. **The convergence is removed** (`Converge`, `.converge`,
+  `.cv-*`, the `site-settle`/`site-draw` keyframes): the research favours type alone, and the line
+  carries the channels.
+- **Footer** (`SiteFooter`): no rule after the CTA, space alone. The about column, the four short
+  groups, then Legal and trust in two columns (`nav.foot-two`) so every group ends together; the bar
+  shares the grid's tracks: © on the about column, the official-API line and the Meta trademark note
+  as fine print starting on the link groups' edge. Then **the name at the container's full width**
+  (`p.foot-word`, `aria-hidden`, Geist 700 at 20.4cqi, `--night-3` on night, descenders running off the
+  foot) as the brand moment. All links, the conditional Status link and both Meta lines are kept.
+- **Address removed (owner):** the bar now reads "© {year} UNCHARTD"; `publicLocation()` is no longer
+  used by the footer. The legal pages, /contact and /ai-info still state the location (C-156).
+- **Motion:** the view() rise the cards use, so no script: the channel line draws from the left
+  (`site-wipe`, scaleX), the heading, lede and action rise 12 px one stagger step apart, and the name
+  rises as it enters. Once, no loop, held when played; nothing moves with reduced motion or without
+  scroll timelines. Link hovers fade colour and underline over the quick token. No new dependency, no
+  image, CLS 0 (the name's box is set by its font size in container units).
+
+**Copy.** Unchanged. The owner's lines elsewhere (the hero's "Every DM. Every comment. One inbox.") are
+not clearly stronger for a close, so the C-159 wording stays.
+
+**Skill advice overridden.**
+- design-taste-frontend: "headlines two lines or fewer" fails at 390 (four lines; the owner's wording,
+  as C-159). `size-count` and the 253 px size: the full-width name is the brand moment. `small-text`:
+  the Meta fine print stays at the micro size (legal fine print). "Buttons square or round": the site's
+  12 px radius stays (C-157). "No thin rules": the 3 px channel line stays (the site's own motif, a
+  filled band, not a divider); the footer's own rule was removed for this reason.
+- impeccable: no PRODUCT.md, so the refinement ran on the incumbent system without the interview (a
+  subagent with no way to ask); its detector found nothing on the changed files.
+- transitions-dev: its tokens (very-slow, 12 px text reveal, stagger) through the site's names, mapped
+  onto the view() range; no `t-*` snippet.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint`: clean. vitest `components/marketing`,
+`app/(marketing)`, `components/site`, `styles`, `lib/marketing`, `lib/legal.test.tsx`: 28 files, 494
+tests pass. Tests updated: `FinalCta.test.tsx` (the channel line above the heading, the row, no
+convergence), `page.test.tsx` (the closer), `trust-pages.test.tsx` (the bar without the location, the
+hidden name, the two-column legal group), `e2e/landing.spec.ts` (the channel line instead of the
+marks), `e2e/gr37-gtm-pages.spec.ts` (the bar without the location, the hidden name); e2e not run here.
+Screenshots at 375, 768, 1440 and 1920 on `/`, `/features` and `/guides/whatsapp-business-api-vs-app`,
+before and after, no sideways scroll at any width.
+
+### C-161 (v2)
+
+The owner pasted a design review and two references (Voxly: a soft glowing arc behind a centred CTA
+and a simple footer with a legal bar; Nova: a centred CTA with one accent word and two buttons, a
+clean footer, a large faded wordmark at the bottom). The coordinator decided on the owner's behalf;
+the feel was taken, not the layouts. On `feature/close-v2`. Scope: `FinalCta`, `SiteFooter`,
+`footerColumns()`, their rules in `site.css`, new tokens in `globals.css`, and one dev-config line.
+
+**CTA** (`FinalCta`, same props and hooks: `trialDays`, `section.night.close`, `#cta-title`, used on
+the landing and every inner page that closed with it).
+- Centred. Heading "Ready to take control of *every conversation*?" at the display size, 700,
+  balanced, with "every conversation" in the iris accent (`em`, `--s-link`, never breaks), as the hero
+  sets "One inbox.". Two lines from 768 px, three on a phone.
+- Lede: "Connect Instagram, WhatsApp and your website chat, add what your business knows, and let the
+  AI draft or send the replies." (true: Auto sends on Pro, Suggest drafts on every plan).
+- Two actions: "Start free" (light on night; hover lifts 1 px with a soft offset iris-cast shadow,
+  active presses to 0.98 over the micro token, the shared iris-night focus ring) and "See how it works"
+  (outlined, `/how-it-works`). Stacked full width (max 360 px) below 520 px.
+- One row of facts with small checks: "Free plan, no card required", "Try Pro free for {n} days"
+  (only while Pro is on sale, from `trialDays`), "Official Meta APIs, no password needed". A column on
+  a phone.
+- **Removed:** the support email line, and the pink/green/cyan channel line (`.close-line`, its
+  `site-wipe` keyframes, `.close-row`, `.close-act`, `.close-mail`).
+- **The arc** (`span.close-arc`, `aria-hidden`): a large ellipse (140% of the band, 2:1, at least
+  760 px), clipped by the band, with a 1 px `--arc-edge` top border that tapers to nothing at its
+  sides, a soft low glow above it (`--arc-glow`, an offset box-shadow) and a faint haze inside
+  (`--arc-haze`, a radial gradient). Pure CSS, tokens only, no image, no loop; it fades in once on view.
+  **Owner override:** the owner asked for this premium glow, which overrides the "no gradients or
+  glows" default (C-157) for this one element only. No grid lines (Nova's): the arc is enough, and lines
+  would fight the footer's rule.
+- **Motion:** the view() rise the cards use: the arc fades, then the heading, lede, actions and facts
+  rise 12 px one stagger step apart; once, held; nothing moves with reduced motion or without scroll
+  timelines. Button states use the quick, fast and micro tokens.
+
+**Footer** (`SiteFooter`, `footerColumns()`).
+- **Space and seam:** the CTA-to-footer gap is about 35% shorter (the close's foot is `--space-14`, the
+  footer's own top padding is dropped after a close via `.site:has(.close) .foot`, the grid starts
+  `--space-10` under the rule); a 1 px `--night-line` rule inside the container opens the footer. On a
+  page without the CTA the footer keeps its `--space-16` top padding.
+- **Grid:** the brand column (logo and name, one sentence at 32ch, "Contact us" with an arrow to
+  `/contact`; the email is gone) and six equal link tracks: Product, Solutions, Compare, Resources, and
+  Legal and trust spanning two tracks, its list in two CSS columns whose gap equals the grid's, so each
+  sits on a track. Tablet (1060 px and below): the brand row, then the six tracks. 900 px and below:
+  three tracks (Product, Solutions, Compare / Resources, Legal across two). Phone (520 px and below):
+  two tracks (Product, Solutions / Compare, Resources / Legal across both). Links 32 px tall, 44 px on
+  touch. No sideways overflow from 375 to 1920.
+- **"Shipping" becomes "Delivery"** as the footer label; the page stays at `/shipping`, titled
+  "Shipping and Delivery Policy" (payment-provider reviews look for it). The other label for it
+  ("Shipping and delivery" in site.ts's legal list) is unchanged.
+- **Bottom bar** on the grid's tracks: "© {year} UNCHARTD." and "Amplychat is a product of UNCHARTD."
+  (from `operatorName(LEGAL)` and `SITE_NAME`; the second sentence is dropped if the operator name is
+  unset and falls back to the product name), one per line over the brand column and the first link
+  track; the official-APIs line and the Meta trademark note, unchanged, as fine print from the second
+  link track. No location. No "Privacy · Terms" on the right: they are already links in the grid, and a
+  second copy would duplicate them. The conditional Status link stays in Product.
+- **The wordmark:** centred, 18.5cqi (was 20.4cqi, edge to edge), a top-to-bottom fade from
+  `--word-top` (night-ink 16% over night, a step above night-high) to `--word-bottom` (night-raised)
+  painted on the text; `padding-bottom: 0.14em` keeps the descenders inside its box, and the footer has
+  `--space-8` under it, so it is never cut and never overflows. Still `aria-hidden`.
+
+**Tokens** (globals.css, `.site`): `--arc-edge` (iris-night 55%, a graphic line about 3.3:1),
+`--arc-glow` (iris 45%), `--arc-haze` (iris 12%: the worst case under the heading is about #16162C,
+where night-ink is 15.9:1, the accent 7.8:1, night-ink-2 9.0:1), `--shadow-cta-night`, `--word-top`,
+`--word-bottom`.
+
+**Dev indicator:** `devIndicators: false` in `next.config.ts`, with a comment: the "N" button only shows
+under `next dev`, never in production, but sat in every local screenshot; the error overlay still shows.
+
+**Copy, old to new.**
+- Heading: "Bring every customer conversation into one inbox" to "Ready to take control of every
+  conversation?"
+- Lede: "… and let the AI draft the replies." to "… and let the AI draft or send the replies."
+- Facts: "Free plan, no card needed" to "Free plan, no card required"; "{n}-day trial of Pro" to "Try Pro
+  free for {n} days"; "Official Meta APIs, no password asked" to "Official Meta APIs, no password needed".
+- New secondary action "See how it works"; removed "Questions? Write to support@amplychat.com".
+- Footer: "Questions? support@amplychat.com" to "Contact us"; "Shipping" to "Delivery"; "© {year}
+  UNCHARTD" to "© {year} UNCHARTD. Amplychat is a product of UNCHARTD."
+
+**Skill advice overridden.**
+- design-taste-frontend inspector FAILs from this work, all owner decisions: `gradient` and `shadow`
+  (the arc's haze and glow), `gradient-text` (the wordmark's fade), "no styled accent word" (the iris
+  phrase), "no thin rules" (the footer's divider), `headline-lines` at 390 (three lines; the owner's
+  wording). "Left-aligned by default": the close is the page's one centred moment. "Buttons square or
+  round": the site's 12 px radius stays (C-157). The inspector's other FAILs and WARNs are the existing
+  C-157 set on other sections.
+- impeccable: no PRODUCT.md and no way to ask from a subagent, so the refinement ran on the incumbent
+  system; its detector flagged only the wordmark's gradient text (the owner's fade, above).
+- transitions-dev: its token scale (quick, fast, micro, 12 px text reveal, 0.98 press) through the
+  site's names; no `t-*` snippet.
+
+**Note:** on `/how-it-works` the closer's "See how it works" links to the page itself (the closer is
+shared); harmless, but a per-page secondary could replace it later.
+
+**Checks.** `next typegen`, `tsc --noEmit`, `pnpm lint` clean; vitest `components/marketing`,
+`app/(marketing)`, `components/site`, `styles`, `lib/marketing`, `lib/legal.test.tsx`: 28 files, 494
+tests pass. Tests updated: `FinalCta.test.tsx`, `page.test.tsx` (the closer; the hero's "See how it
+works" scoped to the hero), `explainers.test.tsx`, `product-pages.test.tsx`, `trust-pages.test.tsx`
+(the bar, Contact us, Delivery, no email), `e2e/landing.spec.ts`, `e2e/gr37-gtm-pages.spec.ts`,
+`e2e/c160-explainers.spec.ts` (scoped to the hero); e2e not run here. Dev server on :3172: screenshots
+at 375, 430, 768, 1440 and 1920 on `/` and `/features`, no sideways scroll, the wordmark inside its box
+at every width; keyboard order Start free, See how it works, logo, Contact us, links, all with the
+iris-night ring; contrast on night: headings 17:1, links and body 9.6:1, fine print 6.0:1.
+
+**The arc, rebuilt (owner: "Brand purple, same look").** The first arc was a thin line with a weak
+haze; the owner's crop of Voxly is a planet-like dome, so the arc now copies its shape, slope,
+intensity and layering, in the brand purple. Pure CSS on `span.close-arc` and its two pseudo-elements,
+no image, no filter:
+- **Shape:** a circle 235% of the band wide at 1440 (`max(160cqi, 272cqi - 529px)`: 160% on a phone,
+  244% at 1920), never shorter than 140% of the band (so its foot never shows on a tall phone band),
+  apex `clamp(space-8, 5cqi, 2 × space-12)` down, clipped by the band (`overflow: clip`; the section is
+  now an inline-size container). The ends drop about 22% of the half-width, as in the reference
+  (125/560 there, 163/720 here); they leave the sides at about 40% of the band at 1440, 52% at 1920
+  and 20% on a phone (the phone band is twice as tall for its width, so the reference's 55–65% would
+  need a dome taller than wide). The section's top padding grew from `space-6` to `space-12` above
+  the section token so the heading sits under the apex, not on it.
+- **Rim:** a 2 px lavender top border (`--arc-edge`, iris-night 85%) and a 2 px white-hot highlight
+  (`::after`, `--arc-rim` = iris-soft) masked so it is brightest at the apex and gone towards the
+  sides.
+- **Halo:** two soft outer shadows that follow the curve (`--arc-glow`, iris-night 42%) and an apex
+  flare (`::before`, a closest-side radial gradient centred on the apex, `--arc-flare`, iris-soft 60%).
+- **Body:** a radial gradient from the apex, lit lavender (`--arc-lit`, iris-night 55% into iris) to
+  saturated iris (`--arc-body`, iris 85% over night) to `--arc-haze` (iris 32% over night) to clear,
+  plus two inset shadows that keep the fill bright just inside the rim along the whole curve. The
+  night around the dome stays near-black.
+- **Accent:** iris-night sank into the purple, so "every conversation" is now `--close-accent`
+  (iris-night mixed half with iris-soft, about #CAC5FE), a near-white lavender; the hero's accent is
+  unchanged.
+- **Contrast,** measured on the rendered band with the text hidden, at the brightest pixel behind
+  each text at 375, 768, 1440 and 1920: heading (night-ink) 5.6:1 at worst (1920 is 5.8, 375 is 5.6;
+  large text, needs 3:1), accent 5.0:1 (1920), lede (night-ink-2) 6.4:1 (1920), facts 9.1:1, the
+  outlined button's label 13.5:1; the light "Start free" keeps its own fill. The old iris-night accent
+  would have been about 3.9:1 on the 1920 body.
+- **Motion:** unchanged: the arc fades in once on view (`site-fade`, view timeline), static under
+  reduced motion; no loop. CLS 0 (the arc is absolute and decorative). No sideways scroll at 375, 768,
+  1440 or 1920.
+- **Gotcha:** `min()` mixing a percentage and `cqi` as a radial-gradient size computes to invalid in
+  Chromium (the whole background drops to `none`), so the gradient and mask sizes use `cqi` and
+  `clamp()` of lengths only.

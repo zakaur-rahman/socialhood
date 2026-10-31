@@ -1,33 +1,36 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 import { LOGO_BARS, LOGO_BUBBLE_PATH } from "@/components/marketing/primitives";
 import { OG_IMAGE, SITE_NAME } from "@/lib/marketing/site";
 import { colorValue } from "@/styles/tokens";
 
-/** `rgb(r g b / a)` as `rgba(r,g,b,a)`: Satori parses only the comma form. */
-function legacyRgba(value: string): string {
-  const match = value.match(/^rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)$/);
-  if (!match) throw new Error(`Not an rgb() token: ${value}`);
-  return `rgba(${match.slice(1).join(",")})`;
-}
-
 // Satori can't read CSS variables, so the values come from styles/tokens.ts (UI-ISS-095).
 const TOKENS = {
-  canvas: colorValue("canvas"),
-  panel: colorValue("panel"),
-  fg: colorValue("fg"),
-  fgSecondary: colorValue("fg-secondary"),
-  brandFg: colorValue("brand-fg"),
-  brandDeep: colorValue("brand-deep"),
-  brandLine: legacyRgba(colorValue("brand-line")),
+  paper: colorValue("paper"),
+  ink: colorValue("ink"),
+  inkSecondary: colorValue("ink-secondary"),
+  iris: colorValue("iris"),
   shell1: colorValue("shell-1"),
   shell2: colorValue("shell-2"),
-  instagram: colorValue("instagram"),
-  whatsapp: colorValue("whatsapp"),
+  brandDeep: colorValue("brand-deep"),
+  onBrand: colorValue("on-brand"),
 };
 
-/** The share card for every public page (Open Graph and Twitter), drawn with next/og. */
-export function renderOgImage(): ImageResponse {
+/** Geist at weight 700 (SIL OFL), the site's heading face; Satori reads static TTF, not the variable woff2. */
+const FONT_PATH = ["src", "components", "marketing", "fonts", "Geist-Bold.ttf"];
+
+/** The tagline under the headline: the channels, named plainly. */
+export const OG_CHANNELS_LINE = "For Instagram, WhatsApp and website chat.";
+
+/**
+ * The share card for every public page (Open Graph and Twitter), drawn with next/og on the site's
+ * paper. The route is force-static, so it is drawn once at build time and cached (C-157).
+ */
+export async function renderOgImage(): Promise<ImageResponse> {
+  const font = await readFile(join(process.cwd(), ...FONT_PATH));
   return new ImageResponse(
     (
       <div
@@ -38,51 +41,48 @@ export function renderOgImage(): ImageResponse {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 72,
-          backgroundColor: TOKENS.canvas,
-          backgroundImage: `radial-gradient(circle at 85% 0%, ${TOKENS.brandLine}, rgba(0,0,0,0) 55%)`,
-          color: TOKENS.fg,
-          fontFamily: "sans-serif",
+          backgroundColor: TOKENS.paper,
+          color: TOKENS.ink,
+          fontFamily: "Geist",
+          fontWeight: 700,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: 20,
+              width: 64,
+              height: 64,
+              borderRadius: 18,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               backgroundImage: `linear-gradient(135deg, ${TOKENS.shell1}, ${TOKENS.shell2})`,
             }}
           >
-            <svg width="72" height="72" viewBox="0 0 64 64">
-              <path d={LOGO_BUBBLE_PATH} fill={TOKENS.fg} />
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <path d={LOGO_BUBBLE_PATH} fill={TOKENS.onBrand} />
               {LOGO_BARS.map(([x, y, height]) => (
                 <rect key={x} x={x} y={y} width="5" height={height} rx="2.5" fill={TOKENS.brandDeep} />
               ))}
             </svg>
           </div>
-          <div style={{ fontSize: 40, fontWeight: 600, letterSpacing: -1 }}>{SITE_NAME}</div>
+          <div style={{ fontSize: 36, letterSpacing: -1 }}>{SITE_NAME}</div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div style={{ fontSize: 68, fontWeight: 700, lineHeight: 1.08, letterSpacing: -2, maxWidth: 1000 }}>
-            The AI inbox for businesses that sell on Instagram and WhatsApp
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: 100, lineHeight: 1.02, letterSpacing: -4 }}>
+            <div>Every DM.</div>
+            <div>Every comment.</div>
+            <div style={{ color: TOKENS.iris }}>One inbox.</div>
           </div>
-          <div style={{ fontSize: 30, color: TOKENS.fgSecondary, maxWidth: 980, lineHeight: 1.35 }}>
-            Replies from your own business knowledge, comment and DM automations, in English, Hindi and Hinglish.
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 24, color: TOKENS.brandFg }}>
-          <div style={{ width: 14, height: 14, borderRadius: 14, background: TOKENS.instagram }} />
-          Instagram
-          <div style={{ width: 14, height: 14, borderRadius: 14, background: TOKENS.whatsapp, marginLeft: 16 }} />
-          WhatsApp
+          <div style={{ fontSize: 34, letterSpacing: -0.5, color: TOKENS.inkSecondary }}>{OG_CHANNELS_LINE}</div>
         </div>
       </div>
     ),
-    { width: OG_IMAGE.width, height: OG_IMAGE.height },
+    {
+      width: OG_IMAGE.width,
+      height: OG_IMAGE.height,
+      fonts: [{ name: "Geist", data: font, weight: 700, style: "normal" }],
+    },
   );
 }

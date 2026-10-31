@@ -2,8 +2,7 @@
 
 import { SignIn, SignUp, UserButton } from "@clerk/nextjs";
 
-import { authAppearance } from "@/components/auth/AuthShell";
-import { clerkAppearanceFor } from "@/lib/clerk-appearance";
+import { authCardAppearance, clerkAppearanceFor } from "@/lib/clerk-appearance";
 import { useTheme } from "@/lib/use-theme";
 import type { Theme } from "@/styles/tokens";
 
@@ -17,18 +16,19 @@ function withBase(theme: Theme) {
  * Clerk's components with the appearance for the theme on screen (C-129). Clerk takes its colours
  * as literals, so the root layout's provider carries the dark ones and each Clerk component passes
  * the set for Light when the page is light; the element styles are CSS variables and follow by
- * themselves. These three are the only places Clerk's UI is rendered.
+ * themselves. These three are the only places Clerk's UI is rendered. The sign-in and sign-up cards
+ * add their own layout and type (authCardAppearance, C-158).
  */
 export function ThemedSignIn() {
   const { resolved } = useTheme();
   const { theme, variables } = withBase(resolved);
-  return <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/app" appearance={{ ...authAppearance, theme, variables }} />;
+  return <SignIn signUpUrl="/sign-up" fallbackRedirectUrl="/app" appearance={{ ...authCardAppearance, theme, variables }} />;
 }
 
 export function ThemedSignUp() {
   const { resolved } = useTheme();
   const { theme, variables } = withBase(resolved);
-  return <SignUp signInUrl="/sign-in" fallbackRedirectUrl="/app" appearance={{ ...authAppearance, theme, variables }} />;
+  return <SignUp signInUrl="/sign-in" fallbackRedirectUrl="/app" appearance={{ ...authCardAppearance, theme, variables }} />;
 }
 
 export function ThemedUserButton() {
