@@ -60,6 +60,7 @@ export type ScheduledMessageList = Schemas["ScheduledMessageList"];
 export type ScheduledMessageCreate = Schemas["ScheduledMessageCreate"];
 export type ScheduledMessagePatch = Schemas["ScheduledMessagePatch"];
 export type UploadSignature = Schemas["UploadSignature"];
+export type McpUploadTicket = Schemas["McpUploadTicket"]; // C-165: an AI app's upload ticket
 export type MediaAsset = Schemas["MediaAssetOut"];
 export type ResourceType = MediaAsset["resource_type"];
 export type AssetPurpose = Schemas["UploadSignatureRequest"]["purpose"];

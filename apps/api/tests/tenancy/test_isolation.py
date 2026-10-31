@@ -85,6 +85,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "user_id": "user_id",  # GR-19
     "invitation_id": "invitation_id",
     "key_id": "api_key_id",  # GR-25
+    "upload_id": "mcp_upload_id",  # C-165 phase B
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
     "broadcast_id": "broadcast_id",  # GR-23
     "product_id": "product_id",  # GR-31
@@ -139,6 +140,9 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
+    ("POST", "/v1/w/{wid}/mcp-uploads/{upload_id}/complete"): {
+        "public_id": "ws/00000000-0000-4000-8000-000000000000/post/x1"
+    },
     # GR-29: Facebook Pages connect (the nonce is bound to the member and workspace) and a
     # sandbox Facebook Page.
     ("POST", "/v1/w/{wid}/social-accounts/facebook/pages"): {"nonce": "not-yours"},
@@ -572,6 +576,7 @@ class Seed:
     user_id: str = ""
     invitation_id: str = ""
     api_key_id: str = ""  # GR-25
+    mcp_upload_id: str = ""  # C-165 phase B: an AI app's upload ticket
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
     broadcast_id: str = ""
     product_id: str = ""  # GR-31
@@ -736,6 +741,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                     " RETURNING id"
                 ),
                 {"w": wid, "h": "b" * 64},
+            )
+        ).scalar_one()
+        mcp_upload = (
+            await conn.execute(
+                text(
+                    "INSERT INTO mcp_uploads (workspace_id, kind, status, expires_at)"
+                    " VALUES (:w, 'video', 'waiting', now() + interval '30 minutes')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
             )
         ).scalar_one()
         rest_hook = (
@@ -1024,6 +1039,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         user_id=b["id"],
         invitation_id=str(invitation),
         api_key_id=str(api_key),
+        mcp_upload_id=str(mcp_upload),
         hook_id=str(rest_hook),
         broadcast_id=broadcast,
         product_id=str(product),
