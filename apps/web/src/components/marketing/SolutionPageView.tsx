@@ -4,7 +4,8 @@ import type { CSSProperties } from "react";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { StatusChip } from "@/components/site/StatusChip";
 import type { PlanCard, Pricing } from "@/lib/marketing/plans";
-import { faqPageJsonLd } from "@/lib/marketing/seo";
+import { FAQ_ALL } from "@/lib/marketing/faq";
+import { faqPageJsonLd, uniqueFaq } from "@/lib/marketing/seo";
 import { SIGN_UP_PATH, SITE_NAME, absoluteUrl, appUrl, siteUrl } from "@/lib/marketing/site";
 import type { SolutionPage, Tier } from "@/lib/marketing/solutions";
 import { cn } from "@/lib/utils";
@@ -50,16 +51,20 @@ function TierCard({ tier, pricing }: { tier: Tier; pricing: Pricing }) {
  * /for-creators and /for-businesses (C-156; C-159 look): the head beside an "at a glance" card,
  * "Sounds familiar?" as before and after cards, the features as icon cards with their status, the
  * integrations (businesses), plans by audience size on the plan-card skin (no testimonials: there
- * are none to show), the FAQ with its FAQPage JSON-LD, related pages and the night closing band.
+ * are none to show), the FAQ (its FAQPage JSON-LD names only the questions /faq doesn't already mark
+ * up, C-162), related pages and the night closing band.
  * The content is lib/marketing/solutions.ts; Pro's state comes from the plans API.
  */
 export function SolutionPageView({ page, pricing }: { page: SolutionPage; pricing: Pricing }) {
   const origin = siteUrl();
   const pro = pricing.plans.find((card) => card.plan === "pro");
+  const ownFaq = uniqueFaq(page.faq, FAQ_ALL);
   return (
     <main id="main" tabIndex={-1} className="pp flex-1 outline-none">
       <BreadcrumbJsonLd name={page.name} path={page.path} />
-      <JsonLd data={{ "@context": "https://schema.org", ...faqPageJsonLd(page.faq, origin, `${absoluteUrl(page.path, origin)}#faq`) }} />
+      {ownFaq.length ? (
+        <JsonLd data={{ "@context": "https://schema.org", ...faqPageJsonLd(ownFaq, origin, `${absoluteUrl(page.path, origin)}#faq`) }} />
+      ) : null}
       <section className="page-head pp-head">
         <div className="wrap pp-head-grid">
           <div>

@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { CHANGELOG, CHANGELOG_AREAS, changelogByMonth, changelogUpdated } from "@/lib/marketing/changelog";
-import { FAQ } from "@/lib/marketing/faq";
+import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
+import { uniqueFaq } from "@/lib/marketing/seo";
 import { llmsText } from "@/lib/marketing/llms";
 import { statusUrl } from "@/lib/marketing/site";
 import { FOR_BUSINESSES, FOR_CREATORS } from "@/lib/marketing/solutions";
@@ -109,14 +110,23 @@ describe("the audience pages (C-156)", () => {
     expect(screen.getAllByText("Coming soon").length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/₹|\$\d/);
 
-    const faq = jsonLds(container).find((data) => data["@type"] === "FAQPage") as { "@id": string; mainEntity: { name: string; acceptedAnswer: { text: string } }[] };
-    expect(faq["@id"]).toBe(`https://socialhood.example${path}#faq`);
-    const shown = container.querySelectorAll("section#faq details");
+    // Every question is shown; the FAQPage names only those /faq doesn't already mark up (C-162),
+    // each word for word as shown.
+    const shown = [...container.querySelectorAll("section#faq details")];
     expect(shown).toHaveLength(data.faq.length);
-    faq.mainEntity.forEach((entity, index) => {
-      expect(shown[index].querySelector("summary")?.textContent).toBe(entity.name);
-      expect(shown[index].querySelector("p")?.textContent).toBe(entity.acceptedAnswer.text);
-    });
+    const own = uniqueFaq(data.faq, FAQ_ALL);
+    const faq = jsonLds(container).find((node) => node["@type"] === "FAQPage") as
+      | { "@id": string; mainEntity: { name: string; acceptedAnswer: { text: string } }[] }
+      | undefined;
+    if (!own.length) expect(faq).toBeUndefined();
+    else {
+      expect(faq?.["@id"]).toBe(`https://socialhood.example${path}#faq`);
+      expect(faq?.mainEntity.map((entity) => entity.name)).toEqual(own.map((item) => item.question));
+      for (const entity of faq?.mainEntity ?? []) {
+        const details = shown.find((node) => node.querySelector("summary")?.textContent === entity.name);
+        expect(details?.querySelector("p")?.textContent).toBe(entity.acceptedAnswer.text);
+      }
+    }
     expect(jsonLds(container).some((data) => data["@type"] === "BreadcrumbList")).toBe(true);
   });
 

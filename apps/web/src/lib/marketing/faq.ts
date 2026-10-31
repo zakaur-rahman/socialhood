@@ -126,7 +126,8 @@ export const FAQ_SUPPORT: FaqItem = {
 
 /**
  * The landing page's questions (C-157: 8 of them, the ones a visitor asks before signing up, the
- * creator questions among them). The FAQPage JSON-LD on / repeats exactly these; /faq has them all.
+ * creator questions among them). /faq has them all and marks them up as FAQPage; / doesn't (C-162:
+ * Google wants a repeated question marked up once on the site).
  */
 export const FAQ: FaqItem[] = [
   FAQ_AUTO_REPLY,

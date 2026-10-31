@@ -1,7 +1,8 @@
 """The public pages' plan table is a copy of billing/plans.py; this test keeps it honest (GR-37).
 
 apps/web/src/lib/marketing/plan-table.json holds every entitlement per plan, as exported from
-`ENTITLEMENTS` and `TRIAL_DAYS`. The pricing page's comparison table (lib/marketing/plan-matrix.ts)
+`ENTITLEMENTS` and `TRIAL_DAYS`, plus `CREDIT_COSTS` (the credits each AI feature uses, which the
+feature pages state, C-163). The pricing page's comparison table (lib/marketing/plan-matrix.ts)
 reads that file, and a web test checks that every row it shows exists there, so a number can't be
 edited in one place and forgotten in the other. After changing billing/plans.py, run
 
@@ -17,7 +18,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from socialhood.billing.plans import ENTITLEMENTS, PLANS, TRIAL_DAYS
+from socialhood.billing.plans import CREDIT_COSTS, ENTITLEMENTS, PLANS, TRIAL_DAYS
 
 TABLE = (
     Path(__file__).resolve().parents[3] / "web" / "src" / "lib" / "marketing" / "plan-table.json"
@@ -36,6 +37,7 @@ def exported() -> dict[str, Any]:
             }
             for key, by_plan in ENTITLEMENTS.items()
         },
+        "credit_costs": dict(CREDIT_COSTS),
     }
 
 

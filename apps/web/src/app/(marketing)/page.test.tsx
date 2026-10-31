@@ -138,6 +138,8 @@ describe("the landing page", () => {
     expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
     expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
     expect(features.querySelectorAll(".more-links")).toHaveLength(1);
+    // The hub of every feature (C-163).
+    expect(within(features).getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");
     // Who it's for: the two audience pages.
     const audience = within(container.querySelector("section#who-its-for") as HTMLElement);
     expect(audience.getByRole("link", { name: "For creators" })).toHaveAttribute("href", "/for-creators");
@@ -203,23 +205,23 @@ describe("the landing page", () => {
     expect(close.querySelector(".converge")).toBeNull();
     expect(close.querySelector(".mini")).toBeNull();
 
-    // Structured data with only true fields, and the FAQ exactly as written on the page.
+    // Structured data with only true fields. No FAQPage (C-162): /faq marks up these questions once.
     const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];
-    expect(graph.map((node) => node["@type"])).toEqual(["Organization", "WebSite", "SoftwareApplication", "FAQPage"]);
+    expect(graph.map((node) => node["@type"])).toEqual(["Organization", "WebSite", "SoftwareApplication"]);
     expect(graph[0]).toMatchObject({
       name: "Amplychat",
       url: "https://socialhood.example/",
-      logo: "https://socialhood.example/icons/icon-512.png",
+      logo: expect.objectContaining({ url: "https://socialhood.example/icons/icon-512.png" }),
       email: "support@amplychat.com",
     });
-    expect(graph[0]).not.toHaveProperty("sameAs");
+    expect(graph[0].sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470"]);
     expect(graph[1]).toMatchObject({ url: "https://socialhood.example/", publisher: { "@id": "https://socialhood.example/#organization" } });
+    // The FAQ is still on the page, as written.
     const faq = container.querySelectorAll("section#faq details");
-    const entities = graph[3].mainEntity as { name: string; acceptedAnswer: { text: string } }[];
-    expect(entities).toHaveLength(FAQ.length);
-    entities.forEach((entity, index) => {
-      expect(faq[index].querySelector("summary")?.textContent).toBe(entity.name);
-      expect(faq[index].querySelector("p")?.textContent).toBe(entity.acceptedAnswer.text);
+    expect(faq).toHaveLength(FAQ.length);
+    FAQ.forEach((item, index) => {
+      expect(faq[index].querySelector("summary")?.textContent).toBe(item.question);
+      expect(faq[index].querySelector("p")?.textContent).toBe(item.answer);
     });
     const data = graph[2];
     expect(data).toMatchObject({ "@type": "SoftwareApplication", name: "Amplychat", url: "https://socialhood.example/" });

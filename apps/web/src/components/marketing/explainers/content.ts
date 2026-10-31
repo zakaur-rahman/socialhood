@@ -79,6 +79,8 @@ export type Stage = {
   points: string[];
   /** The stage's visual spans the stage's width under the text (a wide landing scene). */
   wide?: boolean;
+  /** Where to read more about the stage (C-163). */
+  link?: { label: string; href: string };
 };
 
 /** The journey, in order (C-160). The page renders them as an <ol> of sections, numbered by position. */
@@ -195,6 +197,7 @@ export const STAGES: Stage[] = [
       feature("Sequences, and broadcasts soon").body,
     ],
     wide: true,
+    link: { label: "Every automation type, with Meta's rules for each", href: "/automations" },
   },
   {
     id: "results",
@@ -277,7 +280,7 @@ export const BENTO: Cell[] = [
     title: "Comment-to-DM automations",
     icon: Workflow,
     size: "l",
-    href: "/guides/comment-to-dm-automations",
+    href: "/instagram/comment-to-dm",
     visual: "comments",
     body: "Someone comments your keyword and gets the link in a DM, with a public reply if you want one.",
   },
@@ -340,7 +343,7 @@ export const BENTO: Cell[] = [
     icon: PanelsTopLeft,
     platform: "web",
     size: "s",
-    href: "#d-inbox",
+    href: "/website-chat",
     body: integration("Website chat").body,
   },
   {
@@ -429,7 +432,11 @@ export const DETAILS: DetailGroup[] = [
       row("New website chats a day", "widget_conversations_daily"),
       row("Message history", "message_history_days", (v) => (v === null ? "No limit" : `${limit(v as number)} days`)),
     ],
-    links: [{ label: "The AI inbox", href: "/features/ai-inbox" }],
+    links: [
+      { label: "The AI inbox", href: "/features/ai-inbox" },
+      // C-163
+      { label: "WhatsApp auto-reply", href: "/whatsapp/auto-reply" },
+    ],
   },
   {
     id: "d-ai",
@@ -470,6 +477,8 @@ export const DETAILS: DetailGroup[] = [
       row("Active sequences", "active_sequences"),
     ],
     links: [
+      // C-163
+      { label: "Every automation type", href: "/automations" },
       { label: "The comment-to-DM guide", href: "/guides/comment-to-dm-automations" },
       { label: "How sending stays safe", href: "/safety" },
     ],

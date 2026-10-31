@@ -1,3 +1,7 @@
+import { ArrowRight } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
+
 import { TocNav } from "@/components/site/TocNav";
 
 import { STAGES } from "./content";
@@ -40,6 +44,14 @@ export function HowItWorksStages() {
                       <li key={point}>{point}</li>
                     ))}
                   </ul>
+                  {stage.link ? (
+                    <p className="xp-more">
+                      <Link href={stage.link.href as Route} className="tlink">
+                        {stage.link.label}
+                        <ArrowRight className="size-4" aria-hidden />
+                      </Link>
+                    </p>
+                  ) : null}
                 </div>
                 <div className="xp-vis">
                   <StageVisual id={stage.id} />

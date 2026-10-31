@@ -8790,3 +8790,302 @@ no image, no filter:
 - **Gotcha:** `min()` mixing a percentage and `cqi` as a radial-gradient size computes to invalid in
   Chromium (the whole background drops to `none`), so the gradient and mask sizes use `cqi` and
   `clamp()` of lengths only.
+
+## C-162 · SEO audit (feature/seo-audit)
+
+A technical and strategic SEO pass over the rebuilt public site (develop 82b31a0b), crawled from `/`
+on the local dev server (raw HTML and Playwright) plus read-only checks of production. The owner's
+report is `amplychat-seo-audit.html` beside the repository.
+
+### What the crawl found
+- 40 sitemap URLs, all 200, all reachable from `/` in at most 2 clicks, no orphans; every canonical
+  is absolute on `https://amplychat.com`, self-referencing and equal to its sitemap URL (no trailing
+  slash; `/x/` → `/x` 308). No hreflang anywhere (correct for an English-only site; no self or
+  x-default tags needed). `/hi` and the Hinglish guide 308 in `next.config.ts`.
+- Every page's h1, copy, links, JSON-LD and FAQ answers are in the server HTML. Below-the-fold
+  landing sections use `content-visibility: auto` and scroll reveals start at opacity 0 (CSS
+  `view()` timelines): the text is still in the DOM, so this is noted, not changed.
+- Production (old design) still serves `/hi` with hreflang `en`/`hi`/`x-default` in the page and
+  the sitemap; the release removes them. `http://www` took two hops to the apex.
+
+### Fixed here (decided)
+- **No brand twice in a title.** `pageMetadata` emits a title that already contains "Amplychat"
+  as it is (absolute), without "· Amplychat": the 9 compare pages, `/features`, `/how-it-works`,
+  `/compare` and `/ai-info`. A test holds every public title to one "Amplychat".
+- **`/features/ai-inbox` title** was the landing's title with the brand moved
+  ("AI inbox for Instagram, WhatsApp and web chat"); now "AI inbox that replies from your own
+  knowledge". A test rejects two titles that differ only in where the brand sits.
+- **FAQPage once per question.** Google asks for a question repeated across pages to be marked up
+  once. `/faq` keeps the full FAQPage; the landing drops its FAQPage (all 8 are on `/faq`);
+  `/for-creators` and `/for-businesses` mark up only their questions `/faq` doesn't have
+  (`uniqueFaq`). Every question is still shown on every page.
+- **Organization:** `logo` is an ImageObject with its 512 × 512 size; `address` is a PostalAddress
+  from `LEGAL.publicLocation` (region and country only, as the legal pages show). No founder (the
+  owner's call), no `sameAs` (no profiles yet).
+- **`/shipping` BreadcrumbList** (the only public page without one), from a `layout.tsx` like the
+  other legal pages.
+- **Broken internal link:** `/contact` linked `/developers` (404); now `/developers/api`.
+- **Typo in the refunds description:** "a Amplychat" → "an Amplychat".
+- **Caddy:** `http://www.amplychat.com` redirects straight to `https://amplychat.com` (one 308
+  instead of two hops); the API host sends `X-Robots-Tag: noindex, nofollow` (a header, not a
+  robots.txt Disallow, so the widget script stays fetchable). Takes effect on the next VM deploy.
+
+### Left to the owner (proposals in the report)
+Copy: richer titles for the compare pages, `/faq` and `/pricing`; the header's Pricing and FAQ
+links point at `/#pricing` and `/#faq` rather than the pages. Off-site: Search Console and Bing
+(verify, submit the sitemap, request removal of `/hi`), social profiles for `sameAs`, directory
+and review-site listings. New page sets (integrations, use cases, glossary, more comparisons) are
+proposals with their data source and thin-content risk.
+
+### Checks
+`next typegen`, `tsc --noEmit`, eslint on the touched folders; vitest for `app`, `lib/marketing`,
+`components/marketing` and `styles` (all pass). `caddy adapt` on the Caddyfile. The e2e title for
+`/features/ai-inbox` in `gr37-gtm-pages.spec.ts` follows the new title; CI runs e2e.
+
+## C-163 · SEO content
+
+### C-163 (feat)
+
+The SEO audit's content and link-equity proposals for the feature pages (`feature/seo-feat`).
+
+**The three feature pages go deep.** `/features/ai-inbox`, `/features/comment-intelligence` and
+`/features/publishing` were 305 to 376 words; now about 1,050 to 1,320 words each (measured on the
+rendered page, head to questions). Titles, descriptions and h1s are unchanged (the e2e pins them and
+they already fit the audit's rules). `GtmPage` gets an optional `feature` (`FeatureDepth` in
+gtm-pages.ts); `GtmPageView` renders it through `FeatureDepthView.tsx`, so the comparisons are
+untouched. Each page, in order:
+- an "On this page" bar (the shared `TocNav`), sticky under the header, scrolling sideways on a phone,
+  the current section marked by toc-spy (the explainer island, `ExplainerMotion`, now runs on these
+  pages; it also plays the scenes once);
+- "What it does": a short concrete scenario beside a product scene (`feature-scenes.tsx`: the inbox
+  reuses /how-it-works' hand-off scene; new card scenes for a post's comment summary and filters, the
+  composer's checklist and a week on the calendar), captioned "Example data";
+- the existing cards, rewritten and extended (every title has an icon in page-icons.ts);
+- "How it works": 5 or 6 steps of the real behaviour, a line with a dot each (no numbers, C-157). It
+  replaces the generic "Set up in three steps" on these pages (the product-pages test follows);
+- "Plans and credits": a Free/Pro/Max table read from plan-table.json and the AI credit costs;
+- "What it doesn't do yet": cards with the site's status chips (approval / soon / not offered);
+- "Who it's for": creators and businesses, linking `/for-creators` and `/for-businesses`;
+- 4 or 5 questions of its own (the shared `Faq`), marked up as FAQPage through `uniqueFaq` (none is on
+  /faq, so C-162's one-markup rule holds; a unit test checks it).
+`PAGE_UPDATED` for the three pages is 2026-10-31.
+
+**Credit costs are exported, not typed.** `plan-table.json` gains `credit_costs`, written from
+`billing/plans.py` `CREDIT_COSTS` by `tests/unit/test_marketing_plan_table.py` (the same export and
+check as the entitlements). Ran it locally: passes. The per-20-comments rule (`COMMENTS_PER_CREDIT`,
+services/comments/analysis.py) isn't in the table and is named in a comment.
+
+**Corrections found on the way** (the old copy was wrong or stale):
+- comment analysis costs 1 credit per 20 comments (C-160 found it; the card is now gone and the
+  credits table says it);
+- "A Story is a single photo": a Story is one image or one video (3 to 60 s), `rules.py` STORY_ONE_FILE;
+- Facebook Pages on publishing was titled "coming soon" with no chip; now "With Meta's approval", as
+  everywhere else (the gtm-pages test follows).
+
+**Meta rules quoted**, each from Meta's own developer docs, read 2026-10-31 with an automated read
+(listed as the page's sources): Instagram messaging's 24-hour window and the 7-day Human Agent window
+(instagram-api-with-instagram-login/messaging-api); WhatsApp's 24-hour customer service window, then
+templates only (whatsapp/cloud-api/guides/send-messages); one private reply per comment within 7 days
+(instagram-platform/private-replies). Meta's content-publishing page now says carousels hold up to 20
+items while our checklist allows 10 (`CAROUSEL_MAX_ASSETS`); the page states ours ("2 to 10 files")
+and no Meta number. *For the owner:* raising the cap is a product call.
+
+**Internal links (audit section 5).**
+- Header: Pricing and FAQ go to `/pricing` and `/faq` (`NAV_LINKS`, bar and phone menu);
+  `SiteHeader.test.tsx` updated. The landing's `#pricing` and `#faq` anchors stay.
+- Landing: "See every feature" to `/features` at the start of the features section's "Go deeper" line.
+- Guides: comment-to-DM → `/for-creators` and Amplychat vs Manychat; Instagram DM auto-replies →
+  `/for-businesses` and Amplychat vs InstantDM; WhatsApp API vs app → `/for-businesses` (beside the
+  existing vs Interakt). `updated` dates not bumped (links only).
+- Feature pages: both audience pages from "Who it's for"; related now includes the matching guides,
+  so the gtm-pages test accepts guide paths as related links.
+
+**Judgment calls.** Copy-lint wants "AI polish" (lower case). "Best posting times" is the feature's
+name, so the no-ranking test ignores that phrase. Ask Amplychat's card left the AI inbox page (it has
+its own detail on /features) to keep the page near the length asked. The bar on a wide screen holds
+the page's 7 sections; the publishing head (no screenshot) shows the calendar scene instead of its
+old "On this page" card, which the bar replaces. Skill advice: the scenes use the existing `.xs`
+language and C-160 motion tokens; no new tokens.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest for
+`app/(marketing)`, `app/seo`, `app/public-metadata`, `app/layout`, `lib/marketing`,
+`components/marketing`, `components/site`, `styles`, `lib/copy-lint`: 32 files, 581 tests pass (new
+`feature-pages.test.tsx`: sections and bar, word count, metadata uniqueness, FAQPage and breadcrumbs,
+plan and credit values, statuses, audience links, links resolve, no ranking words, source comments).
+API: `test_marketing_plan_table.py` passes. E2E for the coordinator: `e2e/c163-feature-pages.spec.ts`.
+Screenshots at 375 and 1440 in the session scratchpad (`seo-content/feat/`), no sideways scroll.
+
+### C-163 (auto)
+
+The SEO audit's programmatic set 1: six automation and channel pages and their hub, on
+`feature/seo-auto`. Web only; no API change.
+
+**Pages and searches.**
+- `/automations` (hub): "Instagram automations", "WhatsApp automation", the set as a whole.
+- `/instagram/comment-to-dm`: "how to auto-reply to Instagram comments with a DM", "Instagram comment to DM".
+- `/instagram/story-replies`: "Instagram story reply automation", "auto DM when someone mentions you in their story".
+- `/instagram/dm-keywords`: "Instagram DM keyword auto reply".
+- `/instagram/conversation-starters`: "Instagram conversation starters", "Instagram ice breakers". Built (GR-11:
+  `services/ice_breakers.py`, the Conversation starters page under Automations), so the page exists.
+- `/whatsapp/auto-reply`: "WhatsApp auto reply", "WhatsApp Business API auto reply".
+- `/website-chat`: "AI chat for website", "AI chatbot widget for small business website".
+
+**Decided.**
+- **The hub is `/automations`:** no top-level app route uses it (the app's automations are
+  `/w/{slug}/automations`; `proxy.ts`/`lib/hosts.ts` APP_PREFIXES are `/app`, `/w`, `/sign-in`, `/sign-up`,
+  `/dev`), and robots.txt doesn't block it.
+- **One data file and one view**: `lib/marketing/automation-pages.tsx` (every page's words, limits, credits,
+  questions and Meta sources, plus `META`, the dated source list) and
+  `components/marketing/automations/AutomationPageView.tsx`. Each route is a three-line `page.tsx` with a
+  static `metadata` export, not a dynamic segment, because `public-metadata.test.ts` maps every
+  `PUBLIC_PATHS` entry to a page module with `metadata`.
+- **The guides' reading layout** (C-159 `main.guide`: head, sticky contents and facts, progress bar,
+  question cards, "Keep reading", night close) plus the C-160 scene parts (`.xp`), so the pages need little
+  CSS of their own (the `C-163 auto` block). A full-width product scene sits between the head and the
+  article: the landing's `CommentMachine` (comment to DM), `ModeSwitch` (WhatsApp) and `HeroInbox` (the hub),
+  imported; small card scenes for story replies, keywords, starters and the widget, all captioned "Example
+  data".
+- **Template sections** after each body: "Plan limits and AI credits" (from plan-table.json), "Common
+  questions" (3–4 per page, none on `/faq` or in a guide; a test holds this, so the FAQPage markup is the
+  page's own, C-162), and "Meta's sources" (each link with the date read).
+- **Structured data:** Article + FAQPage in one graph, Home › Automations › page breadcrumbs; the hub has an
+  ItemList and breadcrumbs, no FAQPage.
+- **Links in:** the footer's Product column ("Automations"); `/features` (the comment-to-DM cell now opens
+  `/instagram/comment-to-dm`, the website chat cell `/website-chat`; the inbox details link WhatsApp
+  auto-reply, the automations details link the hub); `/how-it-works` (the automations stage gets a "read
+  more" link, a new optional `Stage.link`); and each of the three guides' related links.
+- **Copy:** the app's own labels for triggers and match modes ("Instagram DM keyword", "Whole word", "Exact
+  message", "Contains"); examples are made-up shops and creators, labelled "Example data".
+
+**Claims and their sources.**
+- Triggers, match modes, scopes, cooldown 0–72 h (default 24), up to 50 keywords, up to five public replies,
+  up to three link buttons, tap first, follow nudge never a condition, priority order, business-hours
+  condition: `models/automations.py`, `schemas/automations.py`, `services/automations/{matching,runtime,validation}.py`.
+- Private replies: text and buttons only, 7-day skip, queue at 750 an hour: `validation.py`, `queue.py`,
+  `platforms/buckets.py`.
+- Story replies (keywords optional, up to 20 chosen Stories, the heart, a heart-only reply starts nothing),
+  mentions (Mentions page under Comments): `runtime.py`, `schemas/automations.py`, `components/comments/MentionsPage.tsx`.
+- Conversation starters: up to 4, 80 characters, unique, mapped to an automation or the AI, pushed to
+  Instagram with a kept list and Sync again on failure: `services/ice_breakers.py`.
+- Disclosure line on automated messages: `models/identity.py` `automation_disclosure`.
+- Figures and funnel: `services/automations/stats.py`, `funnel.py`; Activity page (changelog 2026-10-23).
+- WhatsApp: automations run on Instagram and Facebook only (`AUTOMATION_PLATFORMS`); AI modes, Auto on
+  Pro; Auto always or out of hours, the away message once per closed window and not on top of Auto
+  (`services/business_hours.py`); takeover 2 h; templates read from Meta and cached 5 min
+  (`services/whatsapp_templates.py`); sequences send text inside the window, templates wait on broadcasts
+  (`services/sequences/runner.py`, `broadcasts_enabled = False`); round-robin assignment (`services/assignment.py`).
+- Website chat: one line of code, up to 20 domains, title, greeting, colour, side, email off / optional /
+  required, consent evidence, branding off on Pro and Max, daily chat cap, no window, signed visitor
+  token and rate limits, history on return: `models/widget.py`, `services/widget/chat.py`,
+  `services/reply_window.py`.
+- Limits: `plan-table.json` (active_automations, flow_steps, ai_reply_automations, ai_modes,
+  ai_credits_monthly, accounts_per_platform, widget_conversations_daily, crawl_pages,
+  widget_remove_branding). Credits: `billing/plans.py` CREDIT_COSTS (message_analysis 1, reply_suggestion /
+  auto_reply 2, automation_ai_reply 2, knowledge_test 1).
+- Meta (all read 2026-10-31; URLs and quotes in `META`): private replies (one message, 7 days, follow-ups
+  within 24 h of their reply); Instagram messaging window (24 h, 7-day Human Agent); Instagram rate limits
+  (750 private replies an hour, 100 text messages a second; confirmed by a web search and a second fetch);
+  ice breakers (4 max, not on desktop); the Messenger/IG messaging policy (disclose automation); WhatsApp
+  customer service window (24 h, resets, templates only after); WhatsApp pricing (templates per message;
+  1,000 free service messages per number a month from 1 October 2026, charged after).
+
+**For the owner.**
+- **Meta's WhatsApp pricing changed on 1 October 2026:** service messages are free only up to 1,000 a month
+  per number, then charged. The WhatsApp guide's "Is the WhatsApp Business API free?" answer and any "free
+  service replies" wording elsewhere predate this; not my files, left for review. The new page states the
+  current rule.
+- Human Agent (7 days) is off until Meta approves it (`ig_human_agent_enabled = False`); the DM keywords page
+  says so.
+
+**Skill advice.** The owner's site language (eyebrows, icon cards, step cards) is kept as on the guides
+(C-159). No new tokens; no new dependency; server-rendered with the existing idle island
+(`ExplainerMotion`), CLS 0, motion off with reduced motion.
+
+**Checks.** `next typegen`, `tsc --noEmit`, eslint on the touched folders: clean. vitest `app/(marketing)`,
+`app/seo`, `app/public-metadata`, `lib/marketing`, `components/marketing`, `components/site`,
+`components/not-found`, `styles`, `lib/copy-lint`: 33 files, 594 tests pass (new `automations.test.tsx`:
+listing in sitemap, PAGE_UPDATED and llms.txt; unique titles, descriptions and questions; one h1; contents
+match the body; 800–1,200 words; no claim words or "please"; links resolve; Article/FAQPage/breadcrumb;
+the hub's ItemList; the links in). `seo.test.ts`'s sitemap list gains the seven paths. E2E for the
+coordinator: `e2e/c163-automations.spec.ts` (not run here). Screenshots at 375 and 1440 on the dev server
+(:3191), no sideways scroll and no page errors.
+
+### C-163 (gloss)
+
+The audit's programmatic sets 2 and 3: a glossary of Meta messaging terms and a "Manychat
+alternatives" list page. Web only.
+
+**Glossary (`/glossary`, `/glossary/{slug}`).**
+- 24 terms as typed data (`lib/marketing/glossary.ts`), the same no-CMS model as the guides (C-153):
+  a one-sentence definition (also the meta description, at most 155 characters), the detail, "How
+  Amplychat handles it" as status cards (the comparison statuses), related terms, a guide or feature
+  to read next, and Meta's sources with the date read. `dynamicParams = false`, so any other slug is a
+  404. A test holds every term to 200–450 words, Meta-only source hosts, links that resolve and no
+  "best", "#1" or "please".
+- **Dropped (no Meta source):** knowledge base, keyword trigger and lead scoring. **Kept with a
+  Meta source for the mechanism:** comment-to-DM (private replies) and human hand-off (Meta's
+  policy example, Conversation Routing, the human agent tag). BSP is defined as Meta's older name
+  for what its docs now call Solution Partners, with Tech Providers beside it.
+- **Sources** (all read 2026-10-31): developers.facebook.com pages read directly; Meta's help
+  centres (quality rating, business verification, Instagram professional account) and two pages
+  that only came through a search engine (message tags, the Instagram Messaging changelog) are
+  marked `via: "search"` and the page says "read through a search engine's copy".
+- **Our side, checked in the code:** reply window (`services/reply_window.py`, `sending.py`), human
+  agent tag built and off until Meta approves it (`ig_human_agent_enabled`), templates listed but not
+  created (`platforms/whatsapp/adapter.py`, `TemplatePicker`), consent records and STOP
+  (`ContactConsent`, `broadcasts/stop.py`), Embedded Signup (`lib/whatsapp/embedded-signup.ts`), Cloud
+  API (`platforms/whatsapp/graph.py`), the send queue (`platforms/buckets.py`), private-reply rules
+  (`services/comments/actions.py`), ice breakers (`services/ice_breakers.py`), quick replies
+  (`schemas/flows.py`), story triggers (GR-06/07), Instagram Login scopes
+  (`platforms/instagram/oauth.py`), professional accounts only (`PROFESSIONAL_TYPES`), escalation and
+  takeover (`ai/policy.py`, `services/takeover.py`). Broadcast-side handling (tiers, quality pauses,
+  cost estimates) is "Coming soon" (O-11). Coexistence is "Not offered" (only the Embedded Signup
+  finish event is accepted; no sync).
+- **Look:** a split head, a sticky bar with A–Z links and the filter island, the terms as dictionary
+  rows by letter, "How we write these", the night close. A term: back link, eyebrow with the
+  channel, the h1, the definition as the lede with an ink rule, then the detail, status cards and
+  related-term cards beside a sticky side column (channel, date, sources, the page to read next, a
+  quiet Start free). The landing's rise and lift; nothing moves under reduced motion.
+- **The filter** (`GlossaryFilter`, a client island) fills a slot whose height CSS reserves, renders
+  nothing until hydrated (`useSyncExternalStore`), and only toggles `hidden` on the server-rendered
+  list. Without script the full list and the letter links work. No layout reads.
+- **JSON-LD:** `DefinedTermSet` with every `DefinedTerm` on the index, `DefinedTerm` with
+  `inDefinedTermSet` on each term, breadcrumbs Home › Glossary › term (`lib/marketing/glossary-seo.ts`,
+  kept out of `seo.ts` to avoid merge conflicts).
+- *The slug `app-review` was renamed `meta-app-review`: the sitemap test rejects any URL with
+  `/app` followed by a word boundary.*
+
+**Manychat alternatives (`/compare/manychat-alternatives`).**
+- Built only from what the comparison pages already say (`lib/marketing/alternatives.ts`; every line
+  names the row it restates; prices are read from the "How it is priced"/"Starting price" cells). Why
+  people look (billing by active contacts, AI in beta, comments and publishing not found) from
+  `COMPARE_MANYCHAT`, and "Where Manychat stays strong" from its "Which fits you" line.
+- Nine tools in **alphabetical order**, Amplychat second by the alphabet, with its own limits (no
+  canvas, no share or follow triggers, broadcasts soon, Facebook waiting on Meta, no TikTok,
+  Telegram, SMS or email). The page says the order isn't a ranking; the ItemList is
+  `ItemListUnordered`. No "best", no scores.
+- An at-a-glance table, then a card per tool (suits, strengths, limits, starting price with "Checked
+  on 29 October 2026", a link to the full comparison). The plural trademark note
+  (`competitorsNote` in `competitor-note.ts`) names every competitor.
+
+**Links in:** footer Compare ("Manychat alternatives") and Resources ("Glossary"); the `/compare`
+hub (a card after the groups); `related` on `/compare/manychat` and `/switch-from-manychat`; the
+WhatsApp guide ("WhatsApp terms explained") and the comment-to-DM guide ("What private replies
+are"); llms.txt (the list page and a Glossary section with every term). `PUBLIC_PATHS` and
+`PAGE_UPDATED` gain `/glossary` and the list page; the sitemap adds each term with its date.
+
+**For the coordinator and the owner.**
+- **Meta's pricing changed on 1 October 2026:** service messages (free-form replies in the window)
+  are charged again after 1,000 free a month per number (developers.facebook.com/docs/whatsapp/pricing,
+  read 2026-10-31). `WhatsAppCharges.tsx` and the WhatsApp guide still say replies inside the window
+  aren't charged. The glossary states the new rule; those pages need the same fix.
+- **Meta's messaging-limit tiers are now 250, 2,000, 10,000, 100,000 and unlimited**, set per
+  business portfolio. `services/broadcasts/throttle.py` `TIER_LIMITS` still has 50/250/1K/10K/100K.
+  Broadcasts are off, so nothing is claimed, but the table needs updating before they open.
+
+**Checks:** typegen, `tsc --noEmit`, eslint on the touched folders and the e2e spec; vitest for
+`lib/marketing`, `components/marketing`, `components/site`, `app/(marketing)`, `app/seo`,
+`app/public-metadata` and `styles` (633 tests pass). New: `glossary.test.ts`,
+`glossary-filter.test.ts`, `app/(marketing)/seo-content.test.tsx`. New e2e
+`e2e/c163-gloss.spec.ts` (not run here). Screenshots at 375 and 1440 in
+`scratchpad/seo-content/gloss/`.

@@ -3,7 +3,10 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { LEGAL, operatorName } from "@/lib/legal";
-import { SITE_NAME, footerColumns, type FooterLink } from "@/lib/marketing/site";
+import { FacebookGlyph } from "@/components/connections/FacebookGlyph";
+import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
+import { LinkedInGlyph } from "@/components/connections/LinkedInGlyph";
+import { SITE_NAME, SOCIAL_PROFILES, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
 import { Logo } from "./primitives";
 
@@ -45,6 +48,23 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
             <Link href="/contact" prefetch={false} className="foot-contact">
               Contact us <ArrowRight className="size-4" aria-hidden />
             </Link>
+            {SOCIAL_PROFILES.length ? (
+              <ul className="foot-social" aria-label={`${SITE_NAME} elsewhere`}>
+                {SOCIAL_PROFILES.map((profile) => (
+                  <li key={profile.url}>
+                    <a href={profile.url} rel="me noopener noreferrer" target="_blank" aria-label={`${SITE_NAME} on ${profile.label} (opens in a new tab)`}>
+                      {profile.network === "instagram" ? (
+                        <InstagramGlyph className="size-5" />
+                      ) : profile.network === "linkedin" ? (
+                        <LinkedInGlyph className="size-5" />
+                      ) : (
+                        <FacebookGlyph className="size-5" />
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
           {columns.map((column) => (
             <nav key={column.id} aria-labelledby={`footer-${column.id}`} className={column.id === "legal" ? "foot-two" : undefined}>

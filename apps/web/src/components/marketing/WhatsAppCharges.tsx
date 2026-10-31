@@ -11,8 +11,9 @@ export const META_WHATSAPP_PRICING_URL = "https://developers.facebook.com/docs/w
  * WhatsApp message charges on the pricing page (C-156). Owner decision 2026-10-29: customers pay
  * Meta directly through their own WhatsApp Business account, and Amplychat adds no markup. Meta's
  * model as its pricing page describes it (per template message, by category and the recipient's
- * country code; free-form replies inside the customer service window aren't charged); no rates are
- * written here, they change.
+ * country code; since 1 October 2026 service messages, the replies inside the customer service window,
+ * are charged after 1,000 free a month per business phone number: developers.facebook.com/docs/whatsapp/pricing,
+ * read 2026-10-31, C-163); no rates are written here, they change.
  *
  * C-159 look: one card, the two rules side by side with their icons, then who pays as a callout
  * row, and Meta's page as the card's foot.
@@ -37,8 +38,9 @@ export function WhatsAppCharges() {
             <div className="wa-rule">
               <Ico icon={Clock} />
               <p>
-                When a customer messages you, a 24-hour window opens. Inside it you can reply freely, and Meta doesn&apos;t charge
-                for those replies. After 24 hours without a message from them, you can only reach them with a template.
+                When a customer messages you, a 24-hour window opens and you can reply in your own words. Meta calls these
+                service messages: each business number gets 1,000 free a month, and Meta charges for them after that. After 24
+                hours without a message from them, you can only reach them with a template.
               </p>
             </div>
           </div>
