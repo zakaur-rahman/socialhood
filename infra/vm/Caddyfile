@@ -57,8 +57,10 @@
 	}
 }
 
-# www → the canonical apex (C-142), permanent and method-preserving.
-{$WWW_HOST:www.amplychat.com} {
+# www → the canonical apex (C-142), permanent and method-preserving. The http:// address is listed
+# too so http://www goes straight to https://apex in one hop (C-162), instead of Caddy's automatic
+# http → https://www → https://apex chain.
+{$WWW_HOST:www.amplychat.com}, http://{$WWW_HOST:www.amplychat.com} {
 	header -Server
 	redir https://{$SITE_HOST:amplychat.com}{uri} 308
 }
@@ -86,6 +88,10 @@
 # The API: the app's calls, webhooks, OAuth callbacks and the website chat widget.
 {$API_HOST:api.amplychat.com} {
 	import common
+	# Nothing the API answers is a search result (C-162). A header rather than a robots.txt
+	# Disallow, so search engines can still fetch the chat widget's script when they render a
+	# customer's site.
+	header X-Robots-Tag "noindex, nofollow"
 	# The API refuses more than 5 MB itself (webhooks; 1 MB elsewhere, api/middleware.py). Media,
 	# videos included (POST_VIDEO_MAX_MB), go from the browser straight to Cloudinary with a signed
 	# upload, never through here.

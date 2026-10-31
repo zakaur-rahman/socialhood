@@ -22,7 +22,7 @@ const PAGES = [
   { path: "/compare/spur", h1: "Amplychat vs Spur", title: "Amplychat vs Spur" },
   { path: "/compare", h1: "How Amplychat compares", title: "How Amplychat compares" },
   { path: "/features/comment-intelligence", h1: "Know what your comments are telling you", title: "Comment intelligence for Instagram" },
-  { path: "/features/ai-inbox", h1: "One inbox that answers from what you know", title: "AI inbox for Instagram, WhatsApp and web chat" },
+  { path: "/features/ai-inbox", h1: "One inbox that answers from what you know", title: "AI inbox that replies from your own knowledge" },
   { path: "/features/publishing", h1: "Plan your posts where your customers reply", title: "Schedule Instagram posts and Stories" },
 ] as const;
 

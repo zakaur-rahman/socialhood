@@ -8790,3 +8790,54 @@ no image, no filter:
 - **Gotcha:** `min()` mixing a percentage and `cqi` as a radial-gradient size computes to invalid in
   Chromium (the whole background drops to `none`), so the gradient and mask sizes use `cqi` and
   `clamp()` of lengths only.
+
+## C-162 · SEO audit (feature/seo-audit)
+
+A technical and strategic SEO pass over the rebuilt public site (develop 82b31a0b), crawled from `/`
+on the local dev server (raw HTML and Playwright) plus read-only checks of production. The owner's
+report is `amplychat-seo-audit.html` beside the repository.
+
+### What the crawl found
+- 40 sitemap URLs, all 200, all reachable from `/` in at most 2 clicks, no orphans; every canonical
+  is absolute on `https://amplychat.com`, self-referencing and equal to its sitemap URL (no trailing
+  slash; `/x/` → `/x` 308). No hreflang anywhere (correct for an English-only site; no self or
+  x-default tags needed). `/hi` and the Hinglish guide 308 in `next.config.ts`.
+- Every page's h1, copy, links, JSON-LD and FAQ answers are in the server HTML. Below-the-fold
+  landing sections use `content-visibility: auto` and scroll reveals start at opacity 0 (CSS
+  `view()` timelines): the text is still in the DOM, so this is noted, not changed.
+- Production (old design) still serves `/hi` with hreflang `en`/`hi`/`x-default` in the page and
+  the sitemap; the release removes them. `http://www` took two hops to the apex.
+
+### Fixed here (decided)
+- **No brand twice in a title.** `pageMetadata` emits a title that already contains "Amplychat"
+  as it is (absolute), without "· Amplychat": the 9 compare pages, `/features`, `/how-it-works`,
+  `/compare` and `/ai-info`. A test holds every public title to one "Amplychat".
+- **`/features/ai-inbox` title** was the landing's title with the brand moved
+  ("AI inbox for Instagram, WhatsApp and web chat"); now "AI inbox that replies from your own
+  knowledge". A test rejects two titles that differ only in where the brand sits.
+- **FAQPage once per question.** Google asks for a question repeated across pages to be marked up
+  once. `/faq` keeps the full FAQPage; the landing drops its FAQPage (all 8 are on `/faq`);
+  `/for-creators` and `/for-businesses` mark up only their questions `/faq` doesn't have
+  (`uniqueFaq`). Every question is still shown on every page.
+- **Organization:** `logo` is an ImageObject with its 512 × 512 size; `address` is a PostalAddress
+  from `LEGAL.publicLocation` (region and country only, as the legal pages show). No founder (the
+  owner's call), no `sameAs` (no profiles yet).
+- **`/shipping` BreadcrumbList** (the only public page without one), from a `layout.tsx` like the
+  other legal pages.
+- **Broken internal link:** `/contact` linked `/developers` (404); now `/developers/api`.
+- **Typo in the refunds description:** "a Amplychat" → "an Amplychat".
+- **Caddy:** `http://www.amplychat.com` redirects straight to `https://amplychat.com` (one 308
+  instead of two hops); the API host sends `X-Robots-Tag: noindex, nofollow` (a header, not a
+  robots.txt Disallow, so the widget script stays fetchable). Takes effect on the next VM deploy.
+
+### Left to the owner (proposals in the report)
+Copy: richer titles for the compare pages, `/faq` and `/pricing`; the header's Pricing and FAQ
+links point at `/#pricing` and `/#faq` rather than the pages. Off-site: Search Console and Bing
+(verify, submit the sitemap, request removal of `/hi`), social profiles for `sameAs`, directory
+and review-site listings. New page sets (integrations, use cases, glossary, more comparisons) are
+proposals with their data source and thin-content risk.
+
+### Checks
+`next typegen`, `tsc --noEmit`, eslint on the touched folders; vitest for `app`, `lib/marketing`,
+`components/marketing` and `styles` (all pass). `caddy adapt` on the Caddyfile. The e2e title for
+`/features/ai-inbox` in `gr37-gtm-pages.spec.ts` follows the new title; CI runs e2e.

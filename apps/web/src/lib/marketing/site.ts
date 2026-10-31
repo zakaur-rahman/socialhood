@@ -74,6 +74,8 @@ export const SITE_DESCRIPTION =
 
 /** The logo for structured data (Organization.logo): the 512 px app icon, a square PNG. */
 export const LOGO_PATH = "/icons/icon-512.png";
+/** Its width and height in pixels. */
+export const LOGO_SIZE = 512;
 
 /**
  * The business's own social profiles, for Organization.sameAs. Empty until real ones exist: a
@@ -297,7 +299,7 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/compare/aisensy": "2026-10-29",
   "/compare/spur": "2026-10-29",
   "/features/comment-intelligence": "2026-10-26",
-  "/features/ai-inbox": "2026-10-29",
+  "/features/ai-inbox": "2026-10-31",
   "/features/publishing": "2026-10-26",
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",

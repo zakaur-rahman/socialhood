@@ -60,6 +60,13 @@ describe("every public page's metadata (C-142)", () => {
     expect(new Set(titles).size).toBe(titles.length);
     expect(new Set(descriptions).size).toBe(descriptions.length);
   });
+
+  it("no title names the product twice, and no two titles differ only in where the name sits (C-162)", () => {
+    const titles = PAGES.flatMap(([, metadata]) => (metadata ? [shownTitle(metadata.title)] : []));
+    for (const title of titles) expect(title.split(SITE_NAME).length - 1, title).toBe(1);
+    const stems = titles.map((title) => title.replace(SITE_NAME, "").replace(/^\s*·\s*|\s*·\s*$/g, "").trim().toLowerCase());
+    expect(new Set(stems).size).toBe(stems.length);
+  });
 });
 
 describe("pages that are never indexed (C-142)", () => {

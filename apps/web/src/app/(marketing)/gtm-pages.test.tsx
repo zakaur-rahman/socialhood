@@ -78,11 +78,13 @@ it("every go-to-market page is rendered by a test here", () => {
 
 describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
   it("has its metadata, Open Graph and a sitemap entry", () => {
-    expect(metadata.title).toBe(page.title);
+    // C-162: a title that already names Amplychat isn't suffixed with it again.
+    const named = page.title.includes("Amplychat");
+    expect(metadata.title).toEqual(named ? { absolute: page.title } : page.title);
     expect(metadata.description).toBe(page.description);
     expect(metadata.alternates?.canonical).toBe(page.path);
     expect(metadata).toMatchObject({
-      openGraph: { url: page.path, title: `${page.title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] },
+      openGraph: { url: page.path, title: named ? page.title : `${page.title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] },
       twitter: { card: "summary_large_image" },
     });
     expect(PUBLIC_PATHS).toContain(page.path);

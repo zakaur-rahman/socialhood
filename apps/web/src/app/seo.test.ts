@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEGAL } from "@/lib/legal";
 import { GUIDES, guidesUpdated } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
-import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, verificationMetadata } from "@/lib/marketing/seo";
+import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
+import { breadcrumbJsonLd, breadcrumbTrailJsonLd, organizationJsonLd, pageMetadata, uniqueFaq, verificationMetadata } from "@/lib/marketing/seo";
+import { FOR_BUSINESSES, FOR_CREATORS } from "@/lib/marketing/solutions";
 import {
   DEFAULT_SITE_URL,
   OG_IMAGE,
@@ -44,6 +46,13 @@ describe("page metadata", () => {
       expect(metadata.openGraph).toMatchObject({ url: path, title: `${title} · Amplychat`, images: [expect.objectContaining({ url: "/og.png" })] });
       expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [expect.objectContaining({ url: "/og.png" })] });
     }
+  });
+
+  it("a title that already names the product isn't suffixed with it again (C-162)", () => {
+    const metadata = pageMetadata({ title: "Amplychat vs Manychat", description: "d", path: "/compare/manychat" });
+    expect(metadata.title).toEqual({ absolute: "Amplychat vs Manychat" });
+    expect(metadata.openGraph).toMatchObject({ title: "Amplychat vs Manychat" });
+    expect(pageMetadata({ title: "Pricing", description: "d", path: "/pricing" }).title).toBe("Pricing");
   });
 
   it("the landing page names itself in full", () => {
@@ -179,12 +188,22 @@ describe("structured data (C-142)", () => {
       "@id": "https://socialhood.example/#organization",
       name: "Amplychat",
       url: "https://socialhood.example/",
-      logo: "https://socialhood.example/icons/icon-512.png",
+      logo: { "@type": "ImageObject", url: "https://socialhood.example/icons/icon-512.png", width: 512, height: 512 },
       email: "support@amplychat.com",
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "support@amplychat.com" },
     });
     if (LEGAL.entityName) expect(org.legalName).toBe(LEGAL.entityName.trim());
+    // C-162: the state and country the legal pages already show, never a street address.
+    if (LEGAL.publicLocation) expect(org.address).toEqual({ "@type": "PostalAddress", addressRegion: "Bihar", addressCountry: "India" });
+    expect(org.address).not.toHaveProperty("streetAddress");
     expect(org).not.toHaveProperty("sameAs");
     expect(org).not.toHaveProperty("aggregateRating");
+  });
+
+  it("a question is marked up as FAQPage on one page only: /faq has the shared ones (C-162)", () => {
+    expect(uniqueFaq(FAQ, FAQ_ALL)).toEqual([]);
+    const marked = [...FAQ_ALL, ...uniqueFaq(FOR_CREATORS.faq, FAQ_ALL), ...uniqueFaq(FOR_BUSINESSES.faq, FAQ_ALL)].map((item) => item.question);
+    expect(new Set(marked).size).toBe(marked.length);
   });
 
   it("a guide's breadcrumb goes Home, Guides, then the guide (C-153)", () => {

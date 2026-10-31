@@ -21,7 +21,7 @@ const HELP_LINKS: { label: string; href: string; note: string; icon: LucideIcon 
   { label: "Frequently asked questions", href: FAQ_PATH, note: `Common questions about ${SITE_NAME}`, icon: CircleHelp },
   { label: "Plans and limits", href: "/pricing", note: "What each plan includes and costs", icon: Tag },
   { label: "Data deletion", href: "/data-deletion", note: "Delete your data, or check a request from Instagram", icon: Trash2 },
-  { label: "Developers", href: "/developers", note: "The public API, webhooks and Zapier", icon: Code },
+  { label: "Developers", href: "/developers/api", note: "The public API, webhooks and Zapier", icon: Code },
   { label: "Privacy Policy", href: "/privacy", note: "Your rights and how to raise a grievance", icon: ShieldCheck },
 ];
 

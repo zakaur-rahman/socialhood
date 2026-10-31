@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, isSet } from "@/lib/legal";
 
 import type { Pricing } from "./plans";
-import { LOGO_PATH, OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SOCIAL_PROFILES, absoluteUrl, siteUrl } from "./site";
+import { LOGO_PATH, LOGO_SIZE, OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SOCIAL_PROFILES, absoluteUrl, siteUrl } from "./site";
 
 /** Search results cut titles and descriptions near these lengths (C-142); a test holds every public page to them. */
 export const TITLE_MAX = 60;
@@ -37,9 +37,12 @@ export function pageMetadata({
   /** Feeds to advertise: title to path (`<link rel="alternate" type="application/rss+xml">`). */
   feeds?: Record<string, string>;
 }): Metadata {
-  const shareTitle = absoluteTitle ? title : `${title} · ${SITE_NAME}`;
+  // A title that already names the product ("Amplychat vs Manychat") stands alone: "… · Amplychat"
+  // would repeat the brand in the search result (C-162).
+  const standalone = absoluteTitle || title.includes(SITE_NAME);
+  const shareTitle = standalone ? title : `${title} · ${SITE_NAME}`;
   return {
-    title: absoluteTitle ? { absolute: title } : title,
+    title: standalone ? { absolute: title } : title,
     description,
     alternates: {
       canonical: path,
@@ -89,9 +92,18 @@ function websiteId(origin: string): string {
   return `${origin}/#website`;
 }
 
+/** "Bihar, India" as a PostalAddress (region, country): the state and country the site already shows (C-156). */
+function publicAddress(location: string | undefined): Record<string, unknown> | undefined {
+  if (!isSet(location)) return undefined;
+  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return { "@type": "PostalAddress", addressCountry: parts[0] };
+  return { "@type": "PostalAddress", addressRegion: parts.slice(0, -1).join(", "), addressCountry: parts[parts.length - 1] };
+}
+
 /**
  * The business: the product's name, the registered entity as legalName when the legal config has
- * it, the site, the logo and the support address. sameAs only once real profiles exist.
+ * it, the site, the logo (an ImageObject with its size, C-162), the state and country the legal
+ * pages show, and the support address. sameAs only once real profiles exist.
  */
 export function organizationJsonLd(origin: string = siteUrl()): Record<string, unknown> {
   return {
@@ -100,7 +112,8 @@ export function organizationJsonLd(origin: string = siteUrl()): Record<string, u
     name: SITE_NAME,
     ...(isSet(LEGAL.entityName) ? { legalName: LEGAL.entityName.trim() } : {}),
     url: `${origin}/`,
-    logo: absoluteUrl(LOGO_PATH, origin),
+    logo: { "@type": "ImageObject", url: absoluteUrl(LOGO_PATH, origin), width: LOGO_SIZE, height: LOGO_SIZE },
+    ...(publicAddress(LEGAL.publicLocation) ? { address: publicAddress(LEGAL.publicLocation) } : {}),
     email: SUPPORT_EMAIL,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: SUPPORT_EMAIL },
     ...(SOCIAL_PROFILES.length ? { sameAs: [...SOCIAL_PROFILES] } : {}),
@@ -227,21 +240,25 @@ export function articleJsonLd(article: ArticleFields, origin: string = siteUrl()
   };
 }
 
-/** One @graph for the landing page: the Organization, the WebSite, the app and the FAQ. */
-export function landingJsonLd(
-  pricing: Pricing,
-  faq: readonly { question: string; answer: string }[],
-  origin: string = siteUrl(),
-): Record<string, unknown> {
+/**
+ * One @graph for the landing page: the Organization, the WebSite and the app. No FAQPage here
+ * (C-162): every question the landing shows is also on /faq, and Google asks for a repeated
+ * question to be marked up once on the whole site, so /faq carries it.
+ */
+export function landingJsonLd(pricing: Pricing, origin: string = siteUrl()): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
-    "@graph": [
-      organizationJsonLd(origin),
-      webSiteJsonLd(origin),
-      softwareApplicationNode(pricing, origin, { "@id": organizationId(origin) }),
-      faqPageJsonLd(faq, origin),
-    ],
+    "@graph": [organizationJsonLd(origin), webSiteJsonLd(origin), softwareApplicationNode(pricing, origin, { "@id": organizationId(origin) })],
   };
+}
+
+/**
+ * The questions a page may mark up as FAQPage: those not already marked up on /faq (C-162). A page
+ * still shows every question; only the structured data leaves out the repeats.
+ */
+export function uniqueFaq<T extends { question: string }>(faq: readonly T[], hub: readonly { question: string }[]): T[] {
+  const marked = new Set(hub.map((item) => item.question));
+  return faq.filter((item) => !marked.has(item.question));
 }
 
 /** JSON for a <script type="application/ld+json">, with "<" escaped so it can't close the tag. */

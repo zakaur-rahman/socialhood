@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Refund and Cancellation Policy",
-  description: `How to cancel a ${SITE_NAME} subscription, when we refund a payment, and how to ask about a charge.`,
+  description: `How to cancel an ${SITE_NAME} subscription, when we refund a payment, and how to ask about a charge.`,
   path: "/refunds",
 });
 
