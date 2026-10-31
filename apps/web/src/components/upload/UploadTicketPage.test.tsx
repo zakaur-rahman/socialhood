@@ -60,7 +60,7 @@ describe("UploadTicketPage", () => {
     setup(waiting);
     const input = await screen.findByLabelText("Choose a file");
     await userEvent.upload(input, new File(["x"], "photo.jpg", { type: "image/jpeg" }), { applyAccept: false });
-    expect(await screen.findByRole("alert")).toHaveTextContent("Use a MP4, MOV file.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Use an MP4 or MOV file.");
     expect(storage.sendToStorage).not.toHaveBeenCalled();
   });
 

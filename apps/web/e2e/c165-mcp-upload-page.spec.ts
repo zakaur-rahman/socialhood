@@ -38,7 +38,7 @@ test.describe("C-165 upload page for AI apps", () => {
     await page
       .getByLabel("Choose a file")
       .setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: Buffer.from("x") });
-    await expect(page.getByRole("alert")).toContainText("Use a MP4, MOV file.");
+    await expect(page.getByRole("alert").filter({ hasText: "Use an MP4 or MOV file." })).toBeVisible();
 
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });

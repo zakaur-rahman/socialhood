@@ -149,10 +149,12 @@ test.describe("C-165 AI app connections", () => {
     await page.goto("/developers/mcp");
     await expect(page.getByRole("heading", { level: 1, name: "Connect Amplychat to Claude, ChatGPT and Codex" })).toBeVisible();
     for (const name of ["Claude Code", "ChatGPT", "Codex"]) {
-      await expect(page.getByRole("heading", { level: 3, name })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name, exact: true })).toBeVisible();
     }
     await expect(page.getByRole("table", { name: "What each plan includes for AI apps" })).toBeVisible();
-    await expect(page.locator('script[type="application/ld+json"]').filter({ hasText: "FAQPage" })).toHaveCount(1);
+    // hasText skips <script> contents, so read the blocks (as c163-gloss.spec.ts does).
+    const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+    expect(blocks.filter((block) => block.includes('"FAQPage"'))).toHaveLength(1);
     await expect(page.getByRole("link", { name: "Using an API key instead" }).first()).toHaveAttribute("href", "/developers/mcp/api-key");
   });
 
@@ -167,7 +169,9 @@ test.describe("C-165 AI app connections", () => {
     await page.goto("/developers/mcp/api-key");
     await expect(page.getByRole("heading", { level: 1, name: "Connect an AI app with an API key" })).toBeVisible();
     await expect(page.getByText("bearer_token_env_var", { exact: false }).first()).toBeVisible();
-    await expect(page.locator('script[type="application/ld+json"]').filter({ hasText: "FAQPage" })).toHaveCount(1);
+    // hasText skips <script> contents, so read the blocks (as c163-gloss.spec.ts does).
+    const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+    expect(blocks.filter((block) => block.includes('"FAQPage"'))).toHaveLength(1);
   });
 
   test("API keys are their own Settings section, not under Integrations", async ({ page, workspace }) => {

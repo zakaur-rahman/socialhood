@@ -13,6 +13,13 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 const MB = 1024 * 1024;
 
+/** ["mp4", "mov"] → "an MP4 or MOV" (the article follows the first format's sound). */
+function formatList(formats: string[]): string {
+  const names = formats.map((f) => f.toUpperCase());
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : (names[0] ?? "");
+  return `${/^[AEFHILMNORSX]/.test(list) ? "an" : "a"} ${list}`;
+}
+
 /**
  * C-165: an AI app that cannot run an upload command gives the member this page's link. The file
  * goes straight to storage with the ticket's signature (it never passes through our servers), then
@@ -36,7 +43,7 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
     if (!data?.upload || !kind) return;
     setProblem(null);
     if (limits?.formats && !limits.formats.includes(extensionOf(file.name))) {
-      setProblem(`Use a ${limits.formats.join(", ").toUpperCase()} file.`);
+      setProblem(`Use ${formatList(limits.formats)} file.`);
       return;
     }
     if (resourceTypeFor(file) !== kind) {
