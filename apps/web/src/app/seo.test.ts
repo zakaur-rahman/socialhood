@@ -210,7 +210,7 @@ describe("structured data (C-142)", () => {
     expect(org).not.toHaveProperty("address");
     expect(JSON.stringify(org)).not.toMatch(/Bihar/);
     // sameAs lists the business's own live profiles, and nothing else (owner, 2026-10-31).
-    expect(org.sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470", "https://www.linkedin.com/company/amplychat"]);
+    expect(org.sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470"]);
     expect(org).not.toHaveProperty("aggregateRating");
   });
 

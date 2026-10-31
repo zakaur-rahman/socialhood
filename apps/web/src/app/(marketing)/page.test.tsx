@@ -214,7 +214,7 @@ describe("the landing page", () => {
       logo: expect.objectContaining({ url: "https://socialhood.example/icons/icon-512.png" }),
       email: "support@amplychat.com",
     });
-    expect(graph[0].sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470", "https://www.linkedin.com/company/amplychat"]);
+    expect(graph[0].sameAs).toEqual(["https://www.instagram.com/amplychat_67/", "https://www.facebook.com/profile.php?id=61595928331470"]);
     expect(graph[1]).toMatchObject({ url: "https://socialhood.example/", publisher: { "@id": "https://socialhood.example/#organization" } });
     // The FAQ is still on the page, as written.
     const faq = container.querySelectorAll("section#faq details");

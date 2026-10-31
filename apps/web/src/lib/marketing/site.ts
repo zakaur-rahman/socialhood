@@ -79,13 +79,13 @@ export const LOGO_SIZE = 512;
 
 /**
  * The business's own social profiles: Organization.sameAs and the footer's links. A profile is
- * listed here only once it is live and run by the business (Instagram, the Facebook Page and the
- * LinkedIn company page, owner 2026-10-31).
+ * listed here only once it is live and run by the business (Instagram and the Facebook Page, owner
+ * 2026-10-31). LinkedIn (linkedin.com/company/amplychat) is held back for now at the owner's request;
+ * the network and its glyph stay supported, so adding it back is one line here.
  */
 export const SOCIAL_PROFILES: readonly { network: "instagram" | "facebook" | "linkedin"; label: string; url: string }[] = [
   { network: "instagram", label: "Instagram", url: "https://www.instagram.com/amplychat_67/" },
   { network: "facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61595928331470" },
-  { network: "linkedin", label: "LinkedIn", url: "https://www.linkedin.com/company/amplychat" },
 ];
 
 /** The share image every public page names, drawn by app/(marketing)/og.png/route.tsx (next/og). */
