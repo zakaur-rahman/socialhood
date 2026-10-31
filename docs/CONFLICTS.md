@@ -9356,3 +9356,9 @@ Owner asked for a public MCP product page, a separate API-key connection page, a
   - `api/v1/oauth.py:90` and `services/activity/feed.py:93` point at `/settings/integrations` for the Google Sheets and webhook cases, which stay there.
 - **CSS:** a block at the end of `components/site/site.css` (`/* ==== C-165 mcp page ==== */`), tokens only. The brief named `app/site.css`; the C-165 connect block lives in `components/site/site.css`, so it went there.
 - **e2e:** `gr25-public-api.spec.ts` now opens `/settings/api-keys`; `c165-ai-connections.spec.ts` gained the two public pages and the settings page. Not run.
+
+### C-165 (fix: ChatGPT metadata document)
+
+- **Found in production (2026-11-01):** ChatGPT's client metadata document (`https://chatgpt.com/oauth/client.json`) names `private_key_jwt` as its method and lists `none` in `token_endpoint_auth_methods_supported`. Phase C refused any method but `none`, so ChatGPT got "Clients identified by a metadata document must use 'none'".
+- **Fix:** a document is accepted when its method is `none`, or when it lists `none` as supported. The client is stored and treated as public (PKCE and its exact redirect URI). A client assertion it sends anyway is ignored, never trusted. A document that only offers `private_key_jwt`, or a secret method, is still refused. Our metadata still doesn't advertise `private_key_jwt`.
+- **Follow-up:** verify `private_key_jwt` assertions against the client's `jwks_uri` (needs a column for it; after C-167's migration 0056).
