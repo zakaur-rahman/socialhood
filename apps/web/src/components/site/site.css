@@ -2388,6 +2388,39 @@ body:has(.site) {
     @media (prefers-reduced-motion: no-preference) {
       @supports (animation-timeline: view()) {
         & :is(.fp-steps, .fp-notyet, .fp-aud) > li {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+      @media (scripting: enabled) {
+        & :is(.fp-steps, .fp-notyet, .fp-aud) > li { transition: opacity var(--dur-very-slow) var(--ease), translate var(--dur-very-slow) var(--ease); }
+      }
+    }
+
+    /* ---- responsive */
+    @media (width <= 1060px) { /* site-wide */
+      & .fp-plans { grid-template-columns: minmax(0, 1fr); }
+      & .fp-credits dd { max-width: none; }
+    }
+    @media (width <= 900px) { /* site-md */
+      & .fp-what { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
+      & .fp-steps li { grid-template-columns: minmax(0, 1fr); padding-left: var(--space-8); }
+      & .fp-notyet, & .fp-aud { grid-template-columns: minmax(0, 1fr); }
+      & :is(.fp-notyet, .fp-aud) > li { --n: 0; }
+    }
+    @media (width <= 760px) { /* site-nav: the bar is the links alone, scrolling sideways in its own row */
+      & .fp-jump .toc-t { display: none; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .fp-aud li, & .fp-notyet li, & .fp-credits { padding: var(--space-5); }
+      & .fs-week { gap: 2px; }
+      & .fs-week li { min-height: 88px; padding: var(--space-1); }
+      & .fs-week :is(b, i) { padding: var(--space-1) 2px; }
+      & .fs-week small { display: none; } /* the format alone fits a phone's day column */
+    }
+  }
+}
+/* ==== end C-163 feat ==== */
 
 /* ==== C-163 auto ==== */
 /* The automation and channel pages (`main.guide.xp.ap`) and their hub (`main.guides.xp.ap.ap-hub`): the
@@ -2524,36 +2557,6 @@ body:has(.site) {
           animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
         }
       }
-      @media (scripting: enabled) {
-        & :is(.fp-steps, .fp-notyet, .fp-aud) > li { transition: opacity var(--dur-very-slow) var(--ease), translate var(--dur-very-slow) var(--ease); }
-      }
-    }
-
-    /* ---- responsive */
-    @media (width <= 1060px) { /* site-wide */
-      & .fp-plans { grid-template-columns: minmax(0, 1fr); }
-      & .fp-credits dd { max-width: none; }
-    }
-    @media (width <= 900px) { /* site-md */
-      & .fp-what { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
-      & .fp-steps li { grid-template-columns: minmax(0, 1fr); padding-left: var(--space-8); }
-      & .fp-notyet, & .fp-aud { grid-template-columns: minmax(0, 1fr); }
-      & :is(.fp-notyet, .fp-aud) > li { --n: 0; }
-    }
-    @media (width <= 760px) { /* site-nav: the bar is the links alone, scrolling sideways in its own row */
-      & .fp-jump .toc-t { display: none; }
-    }
-    @media (width <= 520px) { /* site-sm */
-      & .fp-aud li, & .fp-notyet li, & .fp-credits { padding: var(--space-5); }
-      & .fs-week { gap: 2px; }
-      & .fs-week li { min-height: 88px; padding: var(--space-1); }
-      & .fs-week :is(b, i) { padding: var(--space-1) 2px; }
-      & .fs-week small { display: none; } /* the format alone fits a phone's day column */
-    }
-  }
-}
-/* ==== end C-163 feat ==== */
-
     }
 
     /* ---- responsive */
