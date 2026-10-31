@@ -43,10 +43,10 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 const DEFAULT_SCOPES: ApiScopeName[] = ["contacts:read"];
 
 /**
- * Settings › Integrations › API keys (GR-25): keys for the public API and the Zapier app. Make a
+ * Settings › API keys (GR-25, own section since C-165): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
  * revoke one. The public API is part of Pro and Max: a Free workspace is told so instead of
- * being offered the form. Owners and admins, like the webhook endpoints beside it.
+ * being offered the form. Owners and admins, like the webhook endpoints.
  */
 export function ApiKeysSection() {
   const workspace = useCurrentWorkspace();
@@ -64,7 +64,7 @@ export function ApiKeysSection() {
       title="API keys"
       description={
         <>
-          Connect your own tools, or Zapier, to your contacts and conversations.{" "}
+          Connect your own tools, Zapier or an AI app to this workspace.{" "}
           <Link className="font-medium text-brand-fg underline underline-offset-4" href={siteHref("/developers/api") as Route}>
             Read the API reference
           </Link>

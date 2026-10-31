@@ -45,6 +45,7 @@ describe("Settings rail (UX-SCR-07)", () => {
       "Connected AI apps",
       "Billing and usage",
       "Integrations",
+      "API keys",
       "Audit log",
       "Activity",
       "Notifications",

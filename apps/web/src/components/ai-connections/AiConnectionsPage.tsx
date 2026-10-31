@@ -229,7 +229,11 @@ function ConnectionsCard() {
           <Link className="font-medium text-brand-fg underline underline-offset-4" href={siteHref(SETUP_GUIDE_PATH) as Route}>
             setup guide
           </Link>
-          . API keys for Claude Code and Codex are in Settings › Integrations.
+          . API keys for Claude Code and Codex are in{" "}
+          <Link className="font-medium text-brand-fg underline underline-offset-4" href={`/w/${workspace.slug}/settings/api-keys` as Route}>
+            Settings › API keys
+          </Link>
+          .
         </p>
       ) : (
         <ul className="divide-y divide-line-subtle" aria-label="Connected AI apps">

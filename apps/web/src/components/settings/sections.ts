@@ -26,6 +26,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
   // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.
   { segment: "integrations", label: "Integrations", roles: ["owner", "admin"] },
+  // C-165: API keys in their own section (they were a card under Integrations): the public API,
+  // Zapier and AI apps over MCP. Owners and admins, like the keys API (the integrations permission).
+  { segment: "api-keys", label: "API keys", roles: ["owner", "admin"] },
   // GR-19: the team and who did what, for owners and admins (the API enforces members.read and
   // audit.read; the pages also ask the API what the caller may do).
   { segment: "members", label: "Members", roles: ["owner", "admin"] },

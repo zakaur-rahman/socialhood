@@ -35,6 +35,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Appearance",
       "Billing and usage",
       "Integrations",
+      "API keys",
       "Members",
       "Audit log",
       "Activity",
