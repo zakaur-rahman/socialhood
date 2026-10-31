@@ -203,6 +203,9 @@ export const INSTAGRAM_DM_AUTO_REPLIES: Guide = {
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
     { label: "Comment-to-DM automations", href: "/guides/comment-to-dm-automations" },
+    // C-163: the matching audience page and one comparison (the SEO audit's internal-linking finding).
+    { label: `${N} for businesses`, href: "/for-businesses" },
+    { label: `${N} vs InstantDM`, href: "/compare/instantdm" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

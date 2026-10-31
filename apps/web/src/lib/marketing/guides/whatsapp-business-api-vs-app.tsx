@@ -213,6 +213,8 @@ export const WHATSAPP_API_VS_APP: Guide = {
   ],
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
+    // C-163: the matching audience page beside the comparison (the SEO audit's internal-linking finding).
+    { label: `${N} for businesses`, href: "/for-businesses" },
     { label: `${N} vs Interakt`, href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },
   ],

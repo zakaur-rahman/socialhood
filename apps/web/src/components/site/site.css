@@ -2263,3 +2263,157 @@ body:has(.site) {
 @keyframes xp-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes xp-mark { to { background-color: var(--s-text); border-color: var(--s-text); color: var(--s-bg); } }
 /* ==== end C-160 explainers ==== */
+
+/* ==== C-163 feat ==== */
+/* The feature pages' depth (C-163): `.fp` on the page's main, beside `.pp` (the head, cards and chips)
+   and `.xp` (C-160's scenes and limits table). The "On this page" bar (sticky under the header; toc-spy
+   marks the section being read), "What it does" beside a scene, the steps as a line with a dot each (no
+   numbers: the list's order), plans beside credits, the not-yet cards with their chips and the two
+   audience cards. Tokens only; no existing rule is edited. Motion: the landing's card rise (a `view()`
+   timeline, or the explainer script's arm-then-rise) and the scenes' one-time arrival; all off with
+   reduced motion. */
+@layer components {
+  .site .fp {
+    /* Sections land below the header and the bar (the blocks' utility margin is shorter). */
+    & section[id] { scroll-margin-top: calc(var(--nav-h) + var(--space-16)) !important; }
+
+    /* ---- the "On this page" bar */
+    & .fp-bar { position: sticky; top: var(--nav-h); z-index: 5; background: var(--s-bg); border-block: 1px solid var(--s-line); }
+    & .fp-jump { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
+    & .fp-jump .toc-t { flex: none; margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 600; color: var(--s-text-3); }
+    & .fp-jump ol { display: flex; gap: var(--space-1); min-width: 0; border-left: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+    & .fp-jump ol::-webkit-scrollbar { display: none; }
+    & .fp-jump li { flex: none; }
+    & .fp-jump a {
+      display: flex; align-items: center; min-height: 44px; margin: var(--space-1) 0; padding: 0 var(--space-3);
+      border-left: 0; border-radius: var(--r-sm); white-space: nowrap;
+      transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+    }
+    & .fp-jump a[aria-current] { border-left: 0; background: var(--s-hover); }
+    @media (hover: hover) {
+      & .fp-jump a:hover { background: var(--s-hover); }
+    }
+
+    /* ---- what it does: the story beside the scene */
+    & .fp-what { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-14); align-items: center; }
+    & .fp-p { margin: var(--space-5) 0 0; max-width: 60ch; font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); }
+    & .fp-what .h-sec + .fp-p { margin-top: var(--space-6); }
+
+    /* ---- the scenes (feature-scenes.tsx), in the scene language of `.xs` */
+    & .fs-sum { margin: 0 0 var(--space-4); font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--ink-2); }
+    & .fs-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+    & .fs-topics li {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3);
+      padding: var(--space-2) var(--space-3); border-radius: var(--r-sm); background: var(--paper-2); font-size: var(--fs-label);
+    }
+    & .fs-topics b { font-weight: 600; color: var(--ink); }
+    & .fs-topics .num { font-size: var(--fs-caption); color: var(--ink-3); }
+    & .fs-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-4); }
+    & .fs-cmt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--r-md); background: var(--paper-2); }
+    & .fs-cmt p { margin: 0; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--ink); }
+    & .fs-cmt p b { margin-right: var(--space-1); font-weight: 600; }
+    & .fs-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    & .fs-acts span {
+      display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border-radius: var(--r-sm);
+      background: var(--sheet); border: 1px solid var(--rule); font-size: var(--fs-caption); font-weight: 600; color: var(--ink-2);
+    }
+    & .fs-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+    & .fs-checks li { display: flex; align-items: center; gap: var(--space-3); font-size: var(--fs-label); line-height: var(--lh-label); color: var(--ink); }
+    & .fs-checks svg { flex: none; color: var(--ok); }
+    & .fs-next {
+      display: flex; align-items: center; gap: var(--space-3); margin: var(--space-5) 0 0; padding: var(--space-3) var(--space-4);
+      border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font-size: var(--fs-label); line-height: var(--lh-label);
+    }
+    & .fs-next svg { flex: none; }
+    & .fs-next b { font-weight: 600; }
+    & .fs-week { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
+    & .fs-week li {
+      display: grid; align-content: start; gap: var(--space-2); min-height: 132px; padding: var(--space-2); border-radius: var(--r-sm);
+      background: var(--paper-2); font-size: var(--fs-micro); color: var(--ink-3);
+    }
+    & .fs-week :is(b, i) { display: grid; gap: 2px; padding: var(--space-2) var(--space-1); border-radius: var(--r-xs); font-style: normal; font-weight: 600; }
+    & .fs-week b { background: var(--ink); color: var(--on-ink); }
+    & .fs-week i { border: 1px dashed var(--ink-3); color: var(--ink-2); }
+    & .fs-week small { font-size: var(--fs-micro); font-weight: 500; }
+
+    /* ---- how it works: a line down the steps, a dot at each, the title beside the text */
+    & .fp-how-band { background: var(--paper-2); }
+    & .fp-how-band, & .fp-how-band + .band { padding-block: var(--space-band); }
+    & .fp-steps { list-style: none; margin-bottom: 0; padding: 0; display: grid; max-width: 68rem; }
+    & .fp-steps li { position: relative; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--space-3) var(--space-10); padding: 0 0 var(--space-10) var(--space-10); }
+    & .fp-steps li::before { content: ""; position: absolute; left: 4px; top: var(--space-3); bottom: 0; width: 1px; background: var(--s-line-control); }
+    & .fp-steps li::after { content: ""; position: absolute; left: 0; top: var(--space-2); width: 9px; height: 9px; border-radius: 50%; background: var(--s-text); }
+    & .fp-steps li:last-child { padding-bottom: 0; }
+    & .fp-steps li:last-child::before { display: none; }
+    & .fp-steps h3 { margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .fp-steps p { margin: 0; max-width: 60ch; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--s-text-2); }
+
+    /* ---- plans and credits */
+    & .fp-plans { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+    & .fp-plans .xp-lim thead th:first-child { width: 34%; }
+    & .fp-plans .xp-lim-box { margin-top: 0; background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
+    & .fp-credits { padding: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
+    & .fp-credits h3 { display: flex; align-items: center; gap: var(--space-4); margin: 0 0 var(--space-3); font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .fp-credits .ico { background: var(--s-surface-2); }
+    & .fp-credits dl { margin: 0; display: grid; }
+    & .fp-credits dl > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-1) var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--s-line-2); }
+    & .fp-credits dt { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text); }
+    & .fp-credits dd { margin: 0; max-width: 16ch; text-align: right; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
+    & .fp-credits dd b { display: block; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); font-weight: 600; color: var(--s-text); }
+
+    /* ---- what it doesn't do yet: a card each, the status chip beside the title */
+    & .fp-notyet { list-style: none; margin-bottom: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-6); }
+    & .fp-notyet li {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: start; gap: var(--space-3) var(--space-4);
+      padding: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
+    }
+    & .fp-notyet h3 { align-self: center; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
+    & .fp-notyet .chip { align-self: center; }
+    & .fp-notyet p { grid-column: 1 / -1; margin: 0; max-width: 60ch; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); }
+
+    /* ---- who it's for: two cards of equal weight, each leading to its audience page */
+    & .fp-aud { list-style: none; margin-bottom: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); }
+    & .fp-aud li { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); padding: var(--space-8); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg); }
+    & .fp-aud h3 { display: flex; align-items: center; gap: var(--space-4); margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
+    & .fp-aud .ico { background: var(--s-surface-2); }
+    & .fp-aud p { margin: 0; max-width: 56ch; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--s-text-2); }
+    & .fp-aud .tlink { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: auto; }
+
+    /* ---- motion: the landing's rise, staggered a little across a row */
+    & :is(.fp-notyet, .fp-aud) > li:nth-child(2n) { --n: 1; }
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        & :is(.fp-steps, .fp-notyet, .fp-aud) > li {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+      @media (scripting: enabled) {
+        & :is(.fp-steps, .fp-notyet, .fp-aud) > li { transition: opacity var(--dur-very-slow) var(--ease), translate var(--dur-very-slow) var(--ease); }
+      }
+    }
+
+    /* ---- responsive */
+    @media (width <= 1060px) { /* site-wide */
+      & .fp-plans { grid-template-columns: minmax(0, 1fr); }
+      & .fp-credits dd { max-width: none; }
+    }
+    @media (width <= 900px) { /* site-md */
+      & .fp-what { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); }
+      & .fp-steps li { grid-template-columns: minmax(0, 1fr); padding-left: var(--space-8); }
+      & .fp-notyet, & .fp-aud { grid-template-columns: minmax(0, 1fr); }
+      & :is(.fp-notyet, .fp-aud) > li { --n: 0; }
+    }
+    @media (width <= 760px) { /* site-nav: the bar is the links alone, scrolling sideways in its own row */
+      & .fp-jump .toc-t { display: none; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .fp-aud li, & .fp-notyet li, & .fp-credits { padding: var(--space-5); }
+      & .fs-week { gap: 2px; }
+      & .fs-week li { min-height: 88px; padding: var(--space-1); }
+      & .fs-week :is(b, i) { padding: var(--space-1) 2px; }
+      & .fs-week small { display: none; } /* the format alone fits a phone's day column */
+    }
+  }
+}
+/* ==== end C-163 feat ==== */

@@ -190,6 +190,9 @@ export const COMMENT_TO_DM: Guide = {
   related: [
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
+    // C-163: the matching audience page and one comparison (the SEO audit's internal-linking finding).
+    { label: `${N} for creators`, href: "/for-creators" },
+    { label: `${N} vs Manychat`, href: "/compare/manychat" },
     { label: "Plans and limits", href: "/pricing" },
   ],
   Body,

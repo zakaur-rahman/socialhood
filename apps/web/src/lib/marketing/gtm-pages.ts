@@ -20,6 +20,8 @@
  * - Money: no price of ours is written anywhere; ours comes from Dodo through the plan list.
  */
 
+import table from "./plan-table.json";
+
 export type Status = "yes" | "soon" | "approval" | "no" | "not-found";
 
 export const STATUS_LABEL: Record<Status, string> = {
@@ -36,6 +38,33 @@ export type Item = { title: string; body: string };
 export type Block = { id: string; title: string; intro?: string; items: Item[] };
 export type Source = { label: string; url: string; checked: string };
 export type PageLink = { label: string; href: string };
+
+/** A feature page's limits row: Free, Pro and Max as words, read from plan-table.json (C-163). */
+export type LimitRow = { label: string; free: string; pro: string; max: string };
+/** What an AI action costs, from plan-table.json `credit_costs` (billing/plans.py CREDIT_COSTS). */
+export type CreditRow = { label: string; credits: number; per?: string };
+/** Something the feature doesn't do yet, with its honest status. */
+export type NotYet = { title: string; body: string; status: Status };
+export type PageFaq = { question: string; answer: string };
+/** A product scene on a feature page (components/marketing/feature-scenes.tsx). */
+export type FeatureScene = "inbox" | "comments" | "composer" | "calendar";
+
+/**
+ * A feature page's deeper sections (C-163), in the order the page shows them: what it does with a
+ * scene, how it works step by step, plans and credits, what it doesn't do yet, who it's for and the
+ * page's own questions (plain text: the FAQPage JSON-LD repeats them word for word).
+ */
+export type FeatureDepth = {
+  whatItDoes: { paragraphs: string[]; scene: FeatureScene };
+  /** The head's side scene, on a page with no screenshot. */
+  headScene?: FeatureScene;
+  steps: Item[];
+  limits: LimitRow[];
+  credits: CreditRow[];
+  notYet: NotYet[];
+  audience: { creators: string; businesses: string };
+  faq: PageFaq[];
+};
 
 export type GtmPage = {
   path: string;
@@ -54,6 +83,8 @@ export type GtmPage = {
   honesty: string[];
   sources: Source[];
   related: PageLink[];
+  /** A feature page's deeper sections (C-163). */
+  feature?: FeatureDepth;
   /** The screenshot, if the page shows one (components/marketing/shots). */
   shot?: "inbox" | "aiDraft" | "automationPreview" | "knowledge";
 };
@@ -1401,6 +1432,55 @@ export const COMPARE_SPUR: GtmPage = {
 };
 
 // ---- Feature pages
+//
+// C-163: each feature page goes deeper (`feature`): what it does with a product scene, how it works
+// step by step, the limits on each plan (read from plan-table.json, never typed) and the AI credits
+// (plan-table.json `credit_costs`, exported from billing/plans.py CREDIT_COSTS and kept equal by
+// apps/api/tests/unit/test_marketing_plan_table.py), what it doesn't do yet, who it's for and the
+// page's own questions (none of them on /faq, so the page may mark them up as FAQPage). Every claim
+// names its source in the comment above it. Meta's rules are quoted from Meta's own developer docs,
+// read 2026-10-31 (the `sources` of the page).
+
+const E = table.entitlements;
+const CREDITS = table.credit_costs;
+const count = new Intl.NumberFormat("en-US");
+type PlanKey = keyof typeof E;
+type Plans<T> = Record<"free" | "pro" | "max", T>;
+
+/** A plan's number as the pricing page words it: null is "No limit" (billing/plans.py). */
+const amount = (value: number | null, unit = "") => (value === null ? "No limit" : `${count.format(value)}${unit}`);
+
+/** One row of a feature page's limits table, read from plan-table.json; `word` says a plan's value. */
+function planRow(label: string, key: PlanKey, word: (value: unknown) => string = (value) => amount(value as number | null)): LimitRow {
+  const values = E[key] as Plans<unknown>;
+  return { label, free: word(values.free), pro: word(values.pro), max: word(values.max) };
+}
+
+const days = (value: unknown) => (value === null ? "No limit" : `${count.format(value as number)} days`);
+const modes = (value: unknown) => ((value as string[]).includes("auto") ? "Off, Suggest, Auto" : "Off, Suggest");
+/** Words for a credit count. */
+const credits = (n: number) => `${n} ${n === 1 ? "credit" : "credits"}`;
+
+// services/comments/analysis.py COMMENTS_PER_CREDIT: comment_analysis is charged per 20 comments,
+// rounded up for each batch (ai/metering.py).
+const COMMENTS_PER_CREDIT = 20;
+
+/** The Meta developer docs the feature pages quote (read 2026-10-31 with an automated read). */
+const META_IG_MESSAGING: Source = {
+  label: "Meta for Developers: Instagram Messaging API",
+  url: "https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api",
+  checked: "2026-10-31",
+};
+const META_WA_WINDOW: Source = {
+  label: "Meta for Developers: WhatsApp Cloud API, sending messages",
+  url: "https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages",
+  checked: "2026-10-31",
+};
+const META_IG_PRIVATE_REPLIES: Source = {
+  label: "Meta for Developers: Instagram private replies",
+  url: "https://developers.facebook.com/docs/instagram-platform/private-replies",
+  checked: "2026-10-31",
+};
 
 export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
   path: "/features/comment-intelligence",
@@ -1414,31 +1494,123 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
     "Every comment is read for sentiment, questions, buying signals and spam. Each post gets a summary and topics, so you can find the comments that need a reply without scrolling.",
   blocks: [
     {
-      id: "what-it-does",
-      title: "What it does",
+      id: "inside",
+      title: "What you get",
       items: [
-        { title: "Reads every comment", body: "Each comment is marked as a question, a buying signal or spam, with its sentiment." },
-        { title: "Summarises each post", body: "A short summary and the main topics for the post, and how many comments still need a reply." },
-        { title: "Sorts posts by what needs you", body: "The posts grid shows which posts have comments waiting, so the busiest conversations come first." },
-        { title: "Acts from one page", body: "Reply publicly, send a DM, hide or delete a comment. Hide spam automatically if you choose." },
-      ],
-    },
-    {
-      id: "limits",
-      title: "How it is limited",
-      items: [
-        { title: "Free analyses your latest posts", body: "Free reads the comments on your latest posts for each account. Pro reads every post." },
-        { title: "It uses AI credits", body: "Analysing comments costs a credit for every 20 comments, and summarising a post's comments costs two. The pricing page lists the allowance for each plan." },
-        { title: "You stay in charge", body: "Amplychat hides spam only when you turn that on. Nothing is deleted without you." },
+        // schemas/posts.py CommentAnalysis: sentiment, intent (models/ai.py Intent), is_spam, a topic of at most 3 words.
+        { title: "Reads every comment", body: "Each comment gets a sentiment, an intent such as a price question, a purchase or a complaint, a short topic and a spam flag." },
+        // services/comments/summaries.py: two or three sentences, at most 6 labels with their count and sentiment.
+        { title: "Summarises each post", body: "Two or three sentences and up to six topics, each with how many comments it covers and how people feel about it." },
+        // schemas/posts.py CommentFilter: the post detail's filter chips.
+        { title: "Filters that find the work", body: "Positive, neutral, negative, questions, buying signals, spam, hidden and needs reply, each a tap away." },
+        // schemas/posts.py PostSort: recent or needs_reply.
+        { title: "Sorts posts by what needs you", body: "Sort the posts grid by the newest or by the comments still waiting for a reply, so the busiest conversations come first." },
+        // services/comments/actions.py: public reply, private reply, hide, unhide, delete (admins).
+        { title: "Acts from one page", body: "Reply in public, send one private DM, hide or unhide a comment. Admins can also delete." },
+        // models/connections.py auto_hide_spam (off by default); AccountCard "Hide spam comments".
+        { title: "You stay in charge", body: "Spam is hidden only on accounts where you turn on Hide spam comments. Nothing is deleted without you." },
       ],
     },
   ],
+  feature: {
+    whatItDoes: {
+      paragraphs: [
+        "Say a Reel takes off overnight. Some comments ask the price, some ask where to buy, a few are spam links, and most say they love it. Reading them all in the Instagram app takes an evening.",
+        // services/comments/summaries.py and schemas/posts.py CommentFilter (needs_reply).
+        "In Amplychat the post shows a short summary, its main topics with how people feel about each, and filters for questions, buying signals, spam and comments that still need a reply. Open Needs reply, answer in public or by DM, hide the spam, and move on.",
+      ],
+      scene: "comments",
+    },
+    steps: [
+      // services/comments/backfill.py: the 25 most recent posts, up to 200 comments each; the 6-hourly sync.
+      {
+        title: "Connect Instagram",
+        body: "Amplychat stores your 25 most recent posts and brings in their comments, up to 200 a post. New comments arrive as they are posted, and a sync every 6 hours fills any gaps.",
+      },
+      // services/comments/analysis.py: every 30 seconds, batches of up to 50, oldest first; schemas/posts.py CommentStats.
+      {
+        title: "Comments are read in batches",
+        body: "Every 30 seconds new comments are read in batches of up to 50, oldest first. A busy post is worked through in order, and it shows how many comments are read so far.",
+      },
+      // services/comments/analysis.py step 4 (FR-CMT-05): spam hidden before the batch is stored, when auto-hide is on.
+      {
+        title: "Spam is hidden, if you chose that",
+        body: "On an account with Hide spam comments on, a comment marked as spam is hidden on Instagram straight away. If Instagram refuses, the comment stays visible.",
+      },
+      // services/comments/summaries.py: after 20 new analysed comments, when 24 hours behind, or on Refresh.
+      {
+        title: "Each post gets its summary",
+        body: "The summary refreshes after every 20 newly read comments, at least once a day while new comments come in, or when you press Refresh.",
+      },
+      // schemas/posts.py CommentFilter needs_reply: not replied, not spam, not hidden, last 7 days.
+      {
+        title: "You answer what matters",
+        body: "Needs reply lists comments from the last 7 days that you haven't answered and that aren't spam or hidden. Reply in public or send a private DM from the same row.",
+      },
+    ],
+    limits: [
+      planRow("Posts with comment intelligence, per account", "comment_intelligence_posts", (value) =>
+        value === null ? "Every post" : `Latest ${count.format(value as number)}`,
+      ),
+      planRow("AI credits a month", "ai_credits_monthly"),
+      planRow("Accounts per platform", "accounts_per_platform"),
+      planRow("Team members", "members"),
+    ],
+    credits: [
+      { label: "Reading comments", credits: CREDITS.comment_analysis, per: `for every ${COMMENTS_PER_CREDIT} comments or part of them` },
+      { label: "A post summary", credits: CREDITS.post_summary },
+    ],
+    notYet: [
+      // landing/Channels.tsx Facebook Pages, C-077: built, waits on Meta's approval.
+      { title: "Facebook Page comments", status: "approval", body: "Page comments are built and join the same page once Meta approves Amplychat for them." },
+      // landing/Channels.tsx "Live comments and ads": Meta only sends these events to approved apps.
+      { title: "Comments during a Live", status: "approval", body: "Comments made during an Instagram Live reach Amplychat once Meta approves those events." },
+      // landing/Channels.tsx: post insights need a permission production doesn't ask for yet (C-155).
+      { title: "Reach and saves for each post", status: "approval", body: "Post insights follow Meta's approval. Comment counts and likes work today." },
+      // platforms/: instagram, facebook, whatsapp and web only.
+      { title: "Other networks", status: "no", body: "Amplychat doesn't read comments on TikTok, YouTube or other networks." },
+    ],
+    audience: {
+      // comment_intelligence_posts (plan-table.json).
+      creators: `See what your audience asks under each Reel, which topics land and which posts still have questions waiting, so your next post answers them. Free covers your ${E.comment_intelligence_posts.free} latest posts for each account.`,
+      businesses: "Spot buying signals and price questions on product posts and answer them before the customer moves on. Hide spam automatically, so a launch post stays clean.",
+    },
+    faq: [
+      // services/comments/backfill.py (25 posts, 200 comments); analysis.py comment_intelligence_posts.
+      {
+        question: "Does Amplychat read comments on my older posts?",
+        answer: `When you connect, it brings in your 25 most recent posts and up to 200 comments on each, and new comments arrive as they are posted. On Free, analysis covers the ${E.comment_intelligence_posts.free} most recent posts of each account; on Pro and Max it covers every post.`,
+      },
+      // services/comments/actions.py hide and unhide; analysis.py auto-hide; delete is for admins.
+      {
+        question: "Does hiding spam delete the comment?",
+        answer:
+          "No. A hidden comment stays on Instagram, out of view on your post, and you can unhide it. Auto-hide only hides comments the AI marks as spam, on accounts where you turned it on. Deleting is a separate action for admins.",
+      },
+      // Meta, Instagram private replies (read 2026-10-31): one message, within 7 days of the comment.
+      // platforms/buckets.py: at most 750 private replies an hour per account, shared with automations.
+      {
+        question: "How many private replies can I send to one comment?",
+        answer:
+          "One, within 7 days of the comment. That is Instagram's rule, and Amplychat checks it before sending. Private replies from you and from automations go out at no more than 750 an hour for each account.",
+      },
+      // analysis.py step 1 (FR-PRV-02): with AI analysis off nothing reaches the provider; comments are skipped.
+      // analysis.py step 2 (FR-AI-05): with credits used up, waiting comments are skipped, not queued.
+      {
+        question: "Can I use the comments page without the AI reading my comments?",
+        answer:
+          "Yes. Turn AI analysis off for the account and no comment text is sent to the AI. Comments still arrive and you can reply, hide and delete them, but they aren't tagged, summarised or hidden as spam. The same happens to new comments while your AI credits are used up.",
+      },
+    ],
+  },
   honesty: ["Comment analysis needs your Instagram account connected, which depends on Meta's approval of Amplychat's app."],
-  sources: [],
+  sources: [META_IG_PRIVATE_REPLIES],
   related: [
     { label: "The AI inbox", href: "/features/ai-inbox" },
+    { label: "The comment-to-DM guide", href: "/guides/comment-to-dm-automations" },
     { label: "Publishing", href: "/features/publishing" },
     { label: "Amplychat vs Manychat", href: "/compare/manychat" },
+    { label: "Plans and limits", href: "/pricing" },
   ],
   shot: "inbox",
 };
@@ -1455,31 +1627,149 @@ export const FEATURE_AI_INBOX: GtmPage = {
     "Instagram DMs and WhatsApp chats arrive in real time with intent, sentiment and a lead score. The AI replies from your own knowledge base, and when it isn't sure it hands the conversation to a person.",
   blocks: [
     {
-      id: "how-it-works",
-      title: "How it works",
+      id: "inside",
+      title: "What's in the inbox",
       items: [
+        // explainers/content.ts (the inbox stage): story replies and mentions (C-082, C-083); website chat (GR-28).
+        { title: "One list for every channel", body: "Instagram DMs, story replies and mentions, WhatsApp chats and your website chat arrive in real time, in one list." },
+        // models/ai.py Intent and Sentiment; services/analysis.py: lead score 0 to 100, crossing 70 notifies every member once.
+        { title: "Every message read and tagged", body: "Intent, sentiment and a lead score from 0 to 100. When a lead crosses 70, your team is told once." },
         { title: "You choose how much the AI does", body: "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Pro." },
-        { title: "Only your knowledge", body: "Answers come from the documents, questions and products you add. When the answer isn't there it doesn't guess." },
+        // schemas/inbox.py Suggestion.sources.
+        { title: "Only your knowledge", body: "Answers come from the documents, questions and products you add, and each draft shows what it used. When the answer isn't there it doesn't guess." },
+        // models/ai.py EscalationReason; services/sending.py human_takeover.
         { title: "Escalation you can rely on", body: "Refunds, legal threats, complaints, abuse, low confidence, or your own phrases go to Needs you. Replying yourself pauses the AI." },
-        { title: "Questions it couldn't answer", body: "Each unanswered question is recorded, so you know what to add to your knowledge." },
-      ],
-    },
-    {
-      id: "team",
-      title: "Built for a team",
-      items: [
-        { title: "Assign, save replies, set hours", body: "Assign conversations, reuse saved replies and send an away message outside business hours." },
-        { title: "Ask Amplychat", body: "Ask about your own posts, comments and conversations in plain words. Answers cite the figures they used, and anything it prepares waits for your approval." },
+        // services/knowledge/gaps.py: similar questions matched and counted, most asked first; an answer becomes knowledge.
+        { title: "Questions it couldn't answer", body: "Similar questions are grouped and counted, most asked first. Answer one and it joins your knowledge." },
+        // services/summaries.py (up to three sentences and a next step); services/polish.py (adds nothing new).
+        { title: "Summaries and AI polish", body: "A long thread gets a summary with a suggested next step. AI polish tidies your own draft and refuses to add prices, links or numbers you didn't write." },
+        // services/assignment.py (round-robin), saved_replies.py ("/" shortcuts), business_hours.py (away message).
+        { title: "Assign, save replies, set hours", body: "Assign conversations by hand or in turn, insert saved replies with a slash, and send an away message outside business hours." },
       ],
     },
   ],
+  feature: {
+    whatItDoes: {
+      paragraphs: [
+        "Picture a Tuesday morning. Overnight, someone on Instagram asked whether the linen shirt comes in M, a visitor on your website asked about returns, and a WhatsApp customer wants to know if you take bulk orders.",
+        // services/suggestions (drafts with sources); ai/policy.py out_of_knowledge; services/sending.py takeover.
+        "In Amplychat all three sit in one list, already tagged. The shirt and returns questions have drafts waiting, each showing the knowledge it used. Bulk orders isn't in your knowledge, so the AI doesn't guess: that conversation is at the top under Needs you, and the question is saved as a gap to fill.",
+      ],
+      scene: "inbox",
+    },
+    steps: [
+      // FAQ_ACCOUNT_LOGIN; platforms/instagram/oauth.py; Embedded Signup; WidgetSettingsPage (one line of code).
+      {
+        title: "Connect your channels",
+        body: "Instagram with Instagram's own login, for Business and Creator accounts. WhatsApp with a number your business owns, through Meta's Embedded Signup. Website chat with one line of code. Amplychat never asks for your password.",
+      },
+      // models/ai.py KnowledgeType; POST /knowledge/test.
+      {
+        title: "Add what you know",
+        body: "Text, questions and answers, links, files and your website's pages. Test a question to see the answer and the source it came from.",
+      },
+      // services/analysis.py: deferred 4 s so a burst is read once, with the last 12 messages as context.
+      {
+        title: "A message arrives and is read",
+        body: "A few seconds after the customer stops typing, their newest message is read with the conversation around it and tagged. A burst of messages is read once.",
+      },
+      // ai/policy.py: the 13 checks in order; MAX_AI_REPLIES_PER_HOUR = 5 per conversation (services/suggestions/auto.py).
+      {
+        title: "The AI drafts, or replies on Pro",
+        body: "In Suggest, the draft waits for you. In Auto, a reply goes out only after 13 checks pass, among them: the reply window is open, nobody asked for a person, it isn't a refund or complaint, the answer is grounded in your knowledge, and the AI has sent fewer than 5 replies in that conversation in the last hour.",
+      },
+      // FAQ_TAKEOVER (services/sending.py human_takeover, models/ai.py TAKEOVER_MINUTES).
+      {
+        title: "You step in whenever you like",
+        body: "When you reply yourself, in Amplychat or in the Instagram app, the AI pauses on that conversation for 2 hours by default. You can change the pause to 30 minutes, 24 hours or until you resume the AI.",
+      },
+      // services/knowledge/gaps.py and sources.py (an FAQ created from a gap answers it).
+      {
+        title: "Gaps become knowledge",
+        body: "Questions the AI couldn't answer wait on the Knowledge page with real examples. Add the answer once, and the next customer who asks gets it.",
+      },
+    ],
+    limits: [
+      planRow("Accounts per platform", "accounts_per_platform"),
+      planRow("Team members", "members"),
+      planRow("AI credits a month", "ai_credits_monthly"),
+      planRow("AI modes", "ai_modes", modes),
+      planRow("Knowledge, in characters", "knowledge_characters"),
+      planRow("Website pages read", "crawl_pages"),
+      planRow("Message history", "message_history_days", days),
+      planRow("Scheduled messages waiting", "pending_scheduled_messages"),
+      planRow("New website chats a day", "widget_conversations_daily"),
+    ],
+    credits: [
+      { label: "Reading a message", credits: CREDITS.message_analysis },
+      { label: "A draft reply", credits: CREDITS.reply_suggestion },
+      { label: "An automatic reply", credits: CREDITS.auto_reply },
+      { label: "A conversation summary", credits: CREDITS.conversation_summary },
+      { label: "AI polish on your draft", credits: CREDITS.reply_polish },
+      { label: "A test question", credits: CREDITS.knowledge_test },
+    ],
+    notYet: [
+      // landing/Channels.tsx Facebook Pages (C-077).
+      { title: "Facebook Messenger", status: "approval", body: "Messenger chats are built and join the inbox once Meta approves Amplychat for them." },
+      // services/reply_window.py: Human Agent only when IG_HUMAN_AGENT_ENABLED (Meta approves it for the app).
+      // Meta, Instagram Messaging API (read 2026-10-31): the 24-hour window and the separate 7-day Human Agent window.
+      {
+        title: "Replies after 24 hours on Instagram",
+        status: "approval",
+        body: "Meta lets a person reply for up to 7 days with its Human Agent tag. Amplychat supports it and turns it on once Meta grants it; until then Instagram replies follow the 24-hour window.",
+      },
+      // settings.broadcasts_enabled = False (O-11, the consent review).
+      { title: "WhatsApp broadcasts", status: "soon", body: "Broadcasts are built and open after our review of consent rules." },
+      // SWITCH_PAGE "Instagram and WhatsApp first"; platforms/.
+      { title: "Other channels", status: "no", body: "Amplychat has no TikTok, Telegram, SMS or email inbox." },
+    ],
+    audience: {
+      // models/ai.py Intent.COLLABORATION.
+      creators: "Fans ask the same things about your gear, your rates and your next drop. Let the AI draft those answers from your own notes, while collaboration requests are tagged as their own kind of message for you to answer.",
+      businesses: "Price, stock, delivery and order questions arrive on several channels. Your team works one list with assignment, saved replies and business hours, and every lead is scored so ready buyers don't wait.",
+    },
+    faq: [
+      // ai/policy.py: Auto on Pro only; small talk (C-062) may be answered without a source; FACT_INTENTS need one.
+      {
+        question: "Which messages does the AI answer on its own?",
+        answer:
+          "Only in Auto mode, which is part of Pro, and only when all 13 checks pass. A greeting or a thank-you can be answered without your knowledge; a question about price, stock or delivery needs a source from it. Everything else waits for you.",
+      },
+      // components/ai/DecisionInfo.tsx: the info button on an AI-sent message, its checks and "Should not have sent".
+      {
+        question: "Can I see why the AI sent a reply?",
+        answer:
+          "Yes. Every message the AI sent has an info button that shows each check it passed. If a reply shouldn't have gone out, mark it as Should not have sent.",
+      },
+      // services/business_hours.py: auto_mode out_of_hours; the away message once per closed window.
+      {
+        question: "Can Auto mode reply only outside business hours?",
+        answer:
+          "Yes. Set business hours for the workspace or for one account, and choose that Auto replies only while you're closed. During open hours the AI's draft waits for your team. An away message can go out once each time you close.",
+      },
+      // services/analysis.py step 1 (FR-PRV-02); AccountCard "AI analysis".
+      {
+        question: "Can I turn the AI off for one account?",
+        answer:
+          "Yes. With AI analysis off for an account, none of its messages are sent to the AI, so nothing is tagged or drafted there. The inbox, assignment and saved replies keep working.",
+      },
+      // CREDIT_COSTS message_analysis 1, reply_suggestion 2; services/analysis.py (a burst read once).
+      {
+        question: "How many AI credits does a typical question use?",
+        answer: `About ${CREDITS.message_analysis + CREDITS.reply_suggestion}: reading the message uses ${credits(CREDITS.message_analysis)} and a draft or an automatic reply uses ${credits(CREDITS.reply_suggestion)}. Several messages sent together are read once.`,
+      },
+    ],
+  },
   honesty: [
-    "Instagram only allows a business to message within 24 hours of the customer's last message. Amplychat shows when the window closes.",
+    // Meta, Instagram Messaging API and WhatsApp Cloud API (read 2026-10-31); services/reply_window.py.
+    "Instagram only allows a business to message within 24 hours of the customer's last message, and WhatsApp allows only approved templates after 24 hours. Amplychat shows when the window closes. Website chat has no window.",
     "The AI uses credits from your monthly allowance. Plan limits are on the pricing page.",
   ],
-  sources: [],
+  sources: [META_IG_MESSAGING, META_WA_WINDOW],
   related: [
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
+    { label: "The Instagram DM auto-reply guide", href: "/guides/instagram-dm-auto-replies" },
+    { label: "How Amplychat works", href: "/how-it-works" },
     { label: "Amplychat vs Interakt", href: "/compare/interakt" },
     { label: "Plans and limits", href: "/pricing" },
   ],
@@ -1498,30 +1788,135 @@ export const FEATURE_PUBLISHING: GtmPage = {
     "Schedule Instagram posts from a calendar, then watch the comments and DMs they bring in the same app. Publishing sits next to the inbox, so you can see what each post produced.",
   blocks: [
     {
-      id: "what-it-does",
+      id: "inside",
       title: "What you can do",
       items: [
-        { title: "Images, carousels, Reels and Stories", body: "Compose once and schedule. A Story is a single photo that disappears after 24 hours." },
-        { title: "A calendar and a queue", body: "Week, month and list views, a posting queue and posting times." },
-        { title: "AI captions and hashtags", body: "Draft a caption or hashtags, then edit them. Each uses one AI credit." },
-        { title: "A media library", body: "Upload once and reuse." },
-        { title: "Best posting times", body: "Suggestions from how your own posts performed." },
-      ],
-    },
-    {
-      id: "limits",
-      title: "Limits and what is coming",
-      items: [
-        { title: "Scheduled posts a month", body: "The number depends on the plan. See the pricing page." },
-        { title: "Facebook Pages are coming soon", body: "Publishing to a Facebook Page is built and waits on Meta's approval." },
+        // services/scheduled_posts/rules.py (format from the files); models/publishing.py CAROUSEL_MIN/MAX_ASSETS,
+        // STORY_LIFETIME; a Story is one image or one video (STORY_ONE_FILE).
+        { title: "Images, carousels, Reels and Stories", body: "The format follows your files: one image is a post, one video a Reel, 2 to 10 files a carousel. A Story is one image or one video and disappears after 24 hours." },
+        // services/scheduled_posts/calendar.py and slots.py.
+        { title: "A calendar and a queue", body: "Week, month and list views. Set weekly posting times for each account, and Add to queue picks the next free one." },
+        // services/captions.py: brand voice, up to 20 hashtags (SUGGESTED_HASHTAGS_MAX); caption_generation.
+        { title: "AI captions and hashtags", body: `Draft a caption from a short brief in your brand voice, or get up to 20 hashtag ideas, then edit them. Each uses ${credits(CREDITS.caption_generation)}.` },
+        // services/scheduled_posts/hashtag_groups.py: 1 to 30 hashtags, inserted with a click.
+        { title: "Hashtag groups", body: "Save sets of up to 30 hashtags and add one to a caption or a first comment with a click." },
+        // services/scheduled_posts/library.py.
+        { title: "A media library", body: "Images and videos you upload for posts stay in the library, newest first, to filter by type and date and reuse." },
+        // services/scheduled_posts/best_times.py: MAX_POSTS 90, MIN_POSTS 10, no AI model.
+        { title: "Best posting times", body: "A suggested hour for each weekday from your own last 90 posts, once you have 10. Plain arithmetic, so it uses no AI credits." },
+        // services/post_publishing/extras.py, COLLABORATORS_MAX 3; first comment (FR-PUB-11).
+        { title: "Collaborators, tags and a first comment", body: "Invite up to 3 Instagram collaborators to a post, carousel or Reel, add a location and user tags, and post a first comment once it's live." },
       ],
     },
   ],
-  honesty: ["WhatsApp has no publishing API, so publishing is for Instagram and, once approved, Facebook Pages."],
+  feature: {
+    whatItDoes: {
+      paragraphs: [
+        "Say you plan your week on Sunday evening: a photo for Tuesday, a Reel for Thursday and a Story for Saturday. Upload the files once, write the captions or draft them with AI, and drop each post into a free posting time on the calendar.",
+        // services/post_publishing/publish.py: link_scheduled_post and link_next_posts (FR-AUT-18).
+        "When a post goes out, its comments and DMs land in the same app. A comment-to-DM automation set for that post, or for your next post, starts working the moment it's live.",
+      ],
+      scene: "composer",
+    },
+    headScene: "calendar",
+    steps: [
+      // services/scheduled_posts/posts.py: targets (accounts), caption_override per target, drafts autosave.
+      {
+        title: "Compose once",
+        body: "Pick one or more accounts, add your files and write the caption, with a different caption for each account if you like. Drafts save as you go.",
+      },
+      // services/scheduled_posts/rules.py checklist; models/publishing.py CAPTION_MAX_CHARS, MAX_HASHTAGS, MAX_MENTIONS.
+      {
+        title: "Check before you schedule",
+        body: "A checklist looks at the format, a caption of up to 2,200 characters with at most 30 hashtags and 20 mentions, and video lengths. A post with a problem can't be scheduled until it's fixed.",
+      },
+      // services/scheduled_posts/slots.py (MIN_SCHEDULE_LEAD 5 minutes, the queue within 8 weeks); posts.py counted_at.
+      {
+        title: "Pick a time or add to the queue",
+        body: "Choose a time at least 5 minutes ahead, or let the queue take the next posting time that is free on every account you picked. Each post counts once toward the month's scheduled posts.",
+      },
+      // services/post_publishing/publish.py: the quota first, polls the video, never publishes a container twice;
+      // models/publishing.py PUBLISH_ATTEMPTS = 3.
+      {
+        title: "Amplychat publishes it",
+        body: "It checks the account's Instagram publishing limit first, waits for a video to finish processing, retries short failures up to 3 times, and never publishes the same post twice.",
+      },
+      // publish.py: post_first_comment, automations linked, owners and admins notified of a failure;
+      // collaborators.py: checked every hour for three days.
+      {
+        title: "After it's live",
+        body: "The first comment goes up, collaborator invites are checked every hour for three days, and linked automations start. If a post fails, owners and admins are told why and can edit and retry it.",
+      },
+    ],
+    limits: [
+      planRow("Scheduled posts a month", "scheduled_posts_monthly"),
+      planRow("Accounts per platform", "accounts_per_platform"),
+      planRow("AI credits a month", "ai_credits_monthly"),
+      planRow("Team members", "members"),
+    ],
+    credits: [
+      { label: "An AI caption", credits: CREDITS.caption_generation },
+      { label: "Hashtag ideas", credits: CREDITS.caption_generation },
+      // best_times.py: no AI model involved.
+      { label: "Best posting times", credits: 0 },
+    ],
+    notYet: [
+      // C-077; services/scheduled_posts/rules.py (Facebook formats are built).
+      { title: "Facebook Pages", status: "approval", body: "Publishing to a Facebook Page is built and waits on Meta's approval." },
+      // landing/Channels.tsx (C-155); best_times.py falls back to likes and comments.
+      { title: "Reach and saves for each post", status: "approval", body: "Post insights follow Meta's approval. Until then, best posting times use likes and comments." },
+      // The existing honesty line: WhatsApp has no publishing API.
+      { title: "WhatsApp", status: "no", body: "WhatsApp has no publishing API, so there is nothing to schedule there." },
+      // The media editor is parked (feature/media-editor), not in the product.
+      { title: "A photo and video editor", status: "no", body: "There is no built-in editor yet. Upload finished files." },
+      // platforms/: instagram, facebook, whatsapp and web only.
+      { title: "Other networks", status: "no", body: "Amplychat doesn't publish to TikTok, YouTube, LinkedIn or X." },
+    ],
+    audience: {
+      creators: "Keep a steady rhythm of Reels, carousels and Stories, tag collaborators on brand work, and have your comment-to-DM automation ready for the next post before it's live.",
+      // accounts_per_platform (plan-table.json).
+      businesses: `Plan launches and offers across up to ${E.accounts_per_platform.pro} Instagram accounts on Pro and ${E.accounts_per_platform.max} on Max, keep captions in your brand voice, and see the questions each post brings in the inbox.`,
+    },
+    faq: [
+      // jobs/tasks/publishing.py dispatch_due_posts (server side, every 30 s); posts.py (a failed post can be edited and retried).
+      {
+        question: "Do I need to keep Amplychat open for a post to go out?",
+        answer:
+          "No. Posts are published from our servers at the time you set, whether or not you're signed in. If one fails, owners and admins are told why and can edit and retry it.",
+      },
+      // posts.py targets and caption_override; slots.py (the queue's shared free time).
+      {
+        question: "Can one post go to several Instagram accounts?",
+        answer:
+          "Yes. Pick several accounts in the composer, with a different caption for each if you like. Add to queue finds the next posting time that is free on every account you picked.",
+      },
+      // models/publishing.py STORY_VIDEO_MIN_S 3, STORY_VIDEO_MAX_S 60; rules.py STORY_NO_CAPTION, EXTRAS_NOT_ON_STORIES.
+      {
+        question: "Can I schedule a Story with a video?",
+        answer:
+          "Yes. A Story is one image, or one video from 3 to 60 seconds. Stories go out without a caption, collaborators or tags.",
+      },
+      // services/scheduled_posts/posts.py: edit, move or unschedule while draft or scheduled (409 once publishing);
+      // services/post_publishing/collaborators.py: collaborators can't be added or changed after publishing.
+      {
+        question: "Can I change a post after it's scheduled?",
+        answer:
+          "Yes, until it starts publishing: edit it, move it to another time or unschedule it. Once a post is live, Amplychat can't add or change its collaborators.",
+      },
+      // posts.py counted_at: once per post per billing period; scheduled_posts_monthly (plan-table.json).
+      {
+        question: "What counts toward the monthly scheduled posts?",
+        answer: `Each post counts once, when you schedule it or publish it now, however many accounts it goes to. Free schedules ${amount(E.scheduled_posts_monthly.free)} posts a month and Pro ${amount(E.scheduled_posts_monthly.pro)}; Max ${E.scheduled_posts_monthly.max === null ? "has no limit" : `schedules ${amount(E.scheduled_posts_monthly.max)}`}.`,
+      },
+    ],
+  },
+  honesty: ["Instagram and WhatsApp connections depend on Meta's approval of Amplychat's app. Publishing works for Instagram today and, once approved, for Facebook Pages."],
   sources: [],
   related: [
     { label: "Comment intelligence", href: "/features/comment-intelligence" },
     { label: "The AI inbox", href: "/features/ai-inbox" },
+    { label: "The comment-to-DM guide", href: "/guides/comment-to-dm-automations" },
+    { label: "Amplychat vs Manychat", href: "/compare/manychat" },
     { label: "Plans and limits", href: "/pricing" },
   ],
 };

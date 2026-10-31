@@ -138,6 +138,8 @@ describe("the landing page", () => {
     expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
     expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
     expect(features.querySelectorAll(".more-links")).toHaveLength(1);
+    // The hub of every feature (C-163).
+    expect(within(features).getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");
     // Who it's for: the two audience pages.
     const audience = within(container.querySelector("section#who-its-for") as HTMLElement);
     expect(audience.getByRole("link", { name: "For creators" })).toHaveAttribute("href", "/for-creators");

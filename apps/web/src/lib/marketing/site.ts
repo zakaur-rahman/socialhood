@@ -110,14 +110,15 @@ export const FEATURES_PATH = "/features";
 export const HOW_IT_WORKS_PATH = "/how-it-works";
 
 /**
- * The header's links. Features and How it works have their own pages (C-160); Pricing and FAQ still
- * point at the landing page's sections, whose anchors stay for in-page links.
+ * The header's links (bar and phone menu). Features and How it works have their own pages (C-160);
+ * Pricing and FAQ lead to /pricing and /faq (C-163, the SEO audit's link-equity finding), not the
+ * landing's sections, whose anchors stay for in-page links.
  */
 export const NAV_LINKS = [
   { label: "Features", href: FEATURES_PATH },
   { label: "How it works", href: HOW_IT_WORKS_PATH },
-  { label: "Pricing", href: `/#${SECTION_IDS.pricing}` },
-  { label: "FAQ", href: `/#${SECTION_IDS.faq}` },
+  { label: "Pricing", href: "/pricing" },
+  { label: "FAQ", href: "/faq" },
   { label: "Guides", href: "/guides" },
 ] as const;
 
@@ -298,9 +299,9 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/compare/wati": "2026-10-29",
   "/compare/aisensy": "2026-10-29",
   "/compare/spur": "2026-10-29",
-  "/features/comment-intelligence": "2026-10-26",
+  "/features/comment-intelligence": "2026-10-31",
   "/features/ai-inbox": "2026-10-31",
-  "/features/publishing": "2026-10-26",
+  "/features/publishing": "2026-10-31",
   "/data-deletion": "2026-10-26",
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",

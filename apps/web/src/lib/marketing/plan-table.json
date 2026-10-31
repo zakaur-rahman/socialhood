@@ -151,5 +151,18 @@
       "pro": 10,
       "max": 20
     }
+  },
+  "credit_costs": {
+    "message_analysis": 1,
+    "reply_suggestion": 2,
+    "auto_reply": 2,
+    "conversation_summary": 1,
+    "comment_analysis": 1,
+    "post_summary": 2,
+    "caption_generation": 1,
+    "knowledge_test": 1,
+    "automation_ai_reply": 2,
+    "agent_turn": 1,
+    "reply_polish": 1
   }
 }
