@@ -20,9 +20,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.db.tenancy import workspace_scope
+from socialhood.mcp.context import AuditNote
 from socialhood.mcp.principal import McpPrincipal
+from socialhood.models.identity import User
 from socialhood.models.mcp import CallOutcome, CredentialKind, McpToolCall
+from socialhood.models.team import AuditEvent
 from socialhood.observability.logging import get_logger
+from socialhood.services.audit import actor_label, clean_detail
 
 log = get_logger(__name__)
 
@@ -113,3 +117,39 @@ async def record(sessionmaker: async_sessionmaker[AsyncSession], call: CallRecor
         credential=principal.credential.value,
         credential_id=str(principal.credential_id),
     )
+
+
+async def mirror(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    principal: McpPrincipal,
+    notes: list[AuditNote],
+    *,
+    client_name: str | None,
+) -> None:
+    """Mirror a committed write into the workspace's audit log (``audit_events``, GR-19), the
+    line the Team page's Audit log shows: "Asha via Claude Code: post.created". Written after the
+    change committed, in its own transaction; one that fails is logged and never fails the call.
+    The detail never holds caption or message text (services/audit.clean_detail)."""
+    if not notes:
+        return
+    try:
+        with workspace_scope(principal.workspace_id):
+            async with sessionmaker() as session:
+                user = await session.get(User, principal.user_id)
+                who = actor_label(user) if user is not None else "A member"
+                via = (client_name or principal.credential_label or "an AI app")[:60]
+                for note in notes:
+                    session.add(
+                        AuditEvent(
+                            workspace_id=principal.workspace_id,
+                            actor_user_id=principal.user_id,
+                            actor_label=f"{who} via {via}"[:120],
+                            action=note.action[:60],
+                            target_type=note.target_type[:40],
+                            target_id=note.target_id[:80] if note.target_id else None,
+                            detail=clean_detail({**note.detail, "via": "mcp", "client": via}),
+                        )
+                    )
+                await session.commit()
+    except Exception as error:
+        log.warning("mcp_audit_mirror_failed", error=type(error).__name__)

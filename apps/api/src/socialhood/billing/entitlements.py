@@ -85,6 +85,9 @@ THINGS = {
     "active_sequences": "active sequences",
     "sequence_steps": "steps in a sequence",
     "mcp_calls_daily": "AI app tool calls a day",
+    "mcp_posts_daily": "posts scheduled from AI apps a day",
+    "mcp_uploads_daily": "files uploaded from AI apps a day",
+    "mcp_upload_mb_daily": "megabytes uploaded from AI apps a day",
 }
 
 

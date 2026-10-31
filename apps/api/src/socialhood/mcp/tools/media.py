@@ -1,6 +1,6 @@
 """Media uploads (01-design.md §5): get_media_upload, the read side of an upload ticket.
 
-Phase B adds start_media_upload, finish_media_upload and import_media_from_url, which make and
+start_media_upload, finish_media_upload and import_media_from_url (tools/media_write.py) make and
 finish tickets; this reads one. A ticket id is a handle the model passes back, looked up in the
 connection's workspace like any other id, so another workspace's ticket is "not found".
 """

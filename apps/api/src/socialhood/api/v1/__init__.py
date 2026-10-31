@@ -33,6 +33,7 @@ from socialhood.api.v1 import (
     integrations,
     knowledge,
     leads,
+    mcp_uploads,
     me,
     media,
     messages,
@@ -96,6 +97,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     google_sheets.router,
     api_keys.router,  # GR-25
     ai_connections.router,  # C-165
+    mcp_uploads.router,  # C-165 phase B: the upload page for AI apps
     analytics.router,
     reports.router,
     publishing.router,

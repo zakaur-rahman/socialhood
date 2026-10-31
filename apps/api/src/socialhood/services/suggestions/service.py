@@ -48,6 +48,7 @@ from socialhood.repositories import inbox, social_accounts
 from socialhood.repositories import ingest as ingest_rows
 from socialhood.repositories import suggestions as repo
 from socialhood.schemas.inbox import Suggestion, SuggestionSource
+from socialhood.services.sending import TEXT_LIMITS
 from socialhood.services.suggestions import drafting, knowledge_port, small_talk
 
 log = get_logger(__name__)
@@ -362,6 +363,42 @@ async def regenerate(session: AsyncSession, conv: Conversation) -> uuid.UUID:
         raise ApiError("quota_exceeded", "Your AI credits are used up until they reset.")
     await enqueue_suggest(conv.workspace_id, conv.id, target.id, regeneration=n)
     return target.id
+
+
+async def save_draft(
+    session: AsyncSession, conv: Conversation, target: Message, text: str, *, source: str
+) -> ReplySuggestion:
+    """A reply written outside the inbox (an AI app over MCP, C-165) saved as the conversation's
+    pending suggestion for ``target``, the customer message it answers. The inbox shows it like
+    any suggestion: a member reads it, edits it and sends it, or dismisses it. This never sends.
+    The one pending suggestion becomes superseded, as when a new draft is generated. The caller
+    commits and publishes; the length is checked against the platform's limit (422 on ``text``)."""
+    limit = TEXT_LIMITS.get(conv.platform)
+    if limit is not None and not drafting.fits(text, conv.platform, limit.max):
+        raise ApiError(
+            "validation_error",
+            errors=[
+                FieldError("text", f"A {conv.platform} reply can be up to {limit.max} characters.")
+            ],
+        )
+    await ingest_rows.lock_conversation(session, conv.id)
+    superseded = await repo.leave_pending(session, conv.id, S.SUPERSEDED)
+    row = ReplySuggestion(
+        conversation_id=conv.id,
+        message_id=target.id,
+        status=S.PENDING,
+        can_answer=True,
+        reply_text=text,
+        model=source,
+        prompt_version="external",
+    )
+    session.add(row)
+    await session.flush()
+    await session.refresh(row)
+    for old in superseded:
+        await queue_event(session, old, created=False)
+    await queue_event(session, row, created=True)
+    return row
 
 
 async def dismiss(session: AsyncSession, row: ReplySuggestion) -> ReplySuggestion:

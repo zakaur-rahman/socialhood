@@ -56,10 +56,58 @@ R1_READ_TOOLS = {
 # ---------------------------------------------------------------- the catalogue
 
 
-def test_phase_a_ships_the_read_tools() -> None:
+R1_WRITE_TOOLS = {
+    "create_post",
+    "update_post",
+    "cancel_post",
+    "start_media_upload",
+    "finish_media_upload",
+    "import_media_from_url",
+    "draft_reply",
+    "add_knowledge",
+    "pause_automation",
+    "resume_automation",
+    "ask_amplychat",
+    "get_ask_answer",
+}
+
+
+def test_r1_ships_the_design_s_25_tools() -> None:
     registry = load_tools()
-    assert {t.name for t in registry} == R1_READ_TOOLS
-    assert [t.name for t in registry] == sorted(R1_READ_TOOLS)  # deterministic tools/list
+    everything = R1_READ_TOOLS | R1_WRITE_TOOLS
+    assert len(everything) == 25
+    assert {t.name for t in registry} == everything
+    assert [t.name for t in registry] == sorted(everything)  # deterministic tools/list
+
+
+def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
+    """name: (scope, least role, access, destructive, open world)."""
+    expected = {
+        "create_post": ("posts:write", Role.ADMIN, Access.DRAFT, False, True),
+        "update_post": ("posts:write", Role.ADMIN, Access.DRAFT, True, True),
+        "cancel_post": ("posts:write", Role.ADMIN, Access.WRITE, True, False),
+        "start_media_upload": ("media:write", Role.ADMIN, Access.DRAFT, False, False),
+        "finish_media_upload": ("media:write", Role.ADMIN, Access.DRAFT, False, False),
+        "import_media_from_url": ("media:write", Role.ADMIN, Access.DRAFT, False, True),
+        "draft_reply": ("replies:draft", Role.AGENT, Access.DRAFT, False, False),
+        "add_knowledge": ("knowledge:write", Role.ADMIN, Access.WRITE, False, False),
+        "pause_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, False),
+        "resume_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
+        "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
+        "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
+    }
+    registry = load_tools()
+    for name, (scope, role, access, destructive, open_world) in expected.items():
+        t = registry.get(name)
+        assert t is not None, name
+        assert (t.scope, t.min_role, t.access, t.destructive, t.open_world) == (
+            scope,
+            role,
+            access,
+            destructive,
+            open_world,
+        ), name
+    assert registry.get("create_post").dedupe_window_s == 600  # type: ignore[union-attr]
 
 
 def test_every_tool_follows_the_conventions() -> None:

@@ -105,6 +105,10 @@ class WriteOutput(ToolOutput):
     stored result of an earlier identical call (an idempotency key, or the dedupe window)."""
 
     duplicate_of_previous_call: bool = False
+    # True when nothing was changed because the call wasn't confirmed: the result shows what the
+    # call would do (the resolved time, the checklist), and a call with ``confirmed: true`` does
+    # it. A preview is never stored for replay.
+    preview: bool = False
 
 
 type Handler[I: ToolInput, O: ToolOutput] = Callable[[ToolCall, I], Awaitable[O]]

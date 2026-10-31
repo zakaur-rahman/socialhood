@@ -28,11 +28,13 @@ from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel.server import Server
 from mcp.server.streamable_http_manager import StreamableHTTPASGIApp, StreamableHTTPSessionManager
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.shared.exceptions import MCPError
 from starlette.routing import Route
 
 from socialhood import __version__
 from socialhood.api.middleware import API_BODY_LIMIT
-from socialhood.mcp import calls
+from socialhood.errors import ApiError
+from socialhood.mcp import calls, prompts
 from socialhood.mcp.auth import RESOLVERS, AuthEnv, CredentialResolver
 from socialhood.mcp.http import PRM_PATH, McpEndpoint, prm_endpoint
 from socialhood.mcp.principal import current_request
@@ -90,6 +92,19 @@ def build_server(registry: McpRegistry, env: calls.CallEnv) -> Server[Any]:
             registry, env, current_request(), params.name, params.arguments or {}, meta=meta
         )
 
+    async def on_list_prompts(
+        ctx: ServerRequestContext[Any], params: types.PaginatedRequestParams | None
+    ) -> types.ListPromptsResult:
+        return types.ListPromptsResult(prompts=list(prompts.PROMPTS))
+
+    async def on_get_prompt(
+        ctx: ServerRequestContext[Any], params: types.GetPromptRequestParams
+    ) -> types.GetPromptResult:
+        try:
+            return prompts.get_prompt(params.name, params.arguments)
+        except ApiError as error:
+            raise MCPError(types.INVALID_PARAMS, error.detail or "No such prompt.") from error
+
     return Server(
         NAME,
         version=__version__,
@@ -99,6 +114,8 @@ def build_server(registry: McpRegistry, env: calls.CallEnv) -> Server[Any]:
         cache_hints={"tools/list": CacheHint(ttl_ms=0, scope="private")},
         on_list_tools=on_list_tools,
         on_call_tool=on_call_tool,
+        on_list_prompts=on_list_prompts,
+        on_get_prompt=on_get_prompt,
     )
 
 

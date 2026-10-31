@@ -10,7 +10,8 @@ Rules for every tool (the registry checks what it can):
 - lists capped (20 by default) and saying how many more there are;
 - times echoed in the workspace's zone and UTC.
 
-Phase A ships the read tools; phase B adds the writes and media uploads.
+Phase A ships the read tools; phase B adds the writes (publish, media_write, drafts,
+automations_write) and Ask.
 """
 
 from __future__ import annotations
@@ -22,10 +23,15 @@ from socialhood.mcp.registry import McpRegistry, registry
 TOOL_MODULES = (
     "socialhood.mcp.tools.workspace",
     "socialhood.mcp.tools.posts",
+    "socialhood.mcp.tools.publish",
     "socialhood.mcp.tools.media",
+    "socialhood.mcp.tools.media_write",
     "socialhood.mcp.tools.inbox",
     "socialhood.mcp.tools.insights",
     "socialhood.mcp.tools.knowledge",
+    "socialhood.mcp.tools.drafts",
+    "socialhood.mcp.tools.automations_write",
+    "socialhood.mcp.tools.ask",
 )
 
 

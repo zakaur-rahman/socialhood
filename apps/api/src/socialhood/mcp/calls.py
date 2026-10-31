@@ -39,6 +39,7 @@ from socialhood.models.identity import Workspace
 from socialhood.models.mcp import AiConnectionsMode, CallOutcome
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps, deps_from
+from socialhood.realtime import events
 from socialhood.security import ratelimit
 from socialhood.services.analytics.common import zone
 from socialhood.settings import Settings
@@ -238,8 +239,9 @@ async def call_tool(
     principal = request.principal
     started = time.monotonic()
     outcome, code = CallOutcome.OK, None
+    client_name, client_version = client_of(meta, request.user_agent)
     try:
-        result = await _run(tool, env, principal, arguments)
+        result = await _run(tool, env, principal, arguments, client_name)
     except _Refused as refused:
         outcome, code = CallOutcome.REFUSED, refused.error.code
         result = results.failure(refused.error, plans_url=env.plans_url)
@@ -250,7 +252,6 @@ async def call_tool(
         log.exception("mcp_tool_failed", tool=name)
         outcome, code = CallOutcome.ERROR, "internal"
         result = results.failure(ApiError("internal", results.INTERNAL))
-    client_name, client_version = client_of(meta, request.user_agent)
     await audit.record(
         env.sessionmaker,
         audit.CallRecord(
@@ -269,7 +270,11 @@ async def call_tool(
 
 
 async def _run(
-    tool: McpTool[Any, Any], env: CallEnv, principal: McpPrincipal, arguments: dict[str, Any]
+    tool: McpTool[Any, Any],
+    env: CallEnv,
+    principal: McpPrincipal,
+    arguments: dict[str, Any],
+    client_name: str | None = None,
 ) -> types.CallToolResult:
     now = datetime.now(UTC)
     with workspace_scope(principal.workspace_id):
@@ -312,22 +317,38 @@ async def _run(
                 mode=mode,
                 now=now,
                 timezone=_zone(workspace.timezone),
+                client_name=client_name,
             )
             try:
                 output = await tool.handler(call, args)
                 if tool.read_only:
                     await session.rollback()
+                    events.discard(session)
                 else:
-                    await session.commit()
+                    await events.commit_and_publish(session, env.redis)
             except BaseException:
                 await session.rollback()
+                events.discard(session)
                 if guard is not None:
                     await guard.release()
                 raise
             if not isinstance(output, tool.output_model):
                 raise TypeError(f"tool {tool.name} returned {type(output).__name__}")
+            previewed = isinstance(output, WriteOutput) and output.preview
             if guard is not None:
-                await guard.complete(output.model_dump(mode="json"))
+                if previewed:
+                    await guard.release()  # nothing changed: the same key can still do it
+                else:
+                    await guard.complete(output.model_dump(mode="json"))
+            if not tool.read_only and not previewed:
+                for step in call.after_commit:
+                    try:
+                        await step()
+                    except Exception:
+                        log.exception("mcp_after_commit_failed", tool=tool.name)
+                await audit.mirror(
+                    env.sessionmaker, principal, call.audit_notes, client_name=client_name
+                )
             return results.success(output)
 
 
