@@ -32,6 +32,8 @@ import { BreadcrumbJsonLd, JsonLd } from "../JsonLd";
 import { Ico } from "../landing/Ico";
 import { CtaLink, SECTION_EYEBROW } from "../primitives";
 
+import { Code } from "./CodeBlock";
+
 const CAPABILITY_ICONS: Record<string, LucideIcon> = {
   "Schedule Instagram posts": CalendarClock,
   "Edit a video, then post it": Clapperboard,
@@ -53,14 +55,6 @@ const SECTIONS = [
   { id: "safety", label: "Safety" },
   { id: "faq", label: "Common questions" },
 ] as const;
-
-export function Code({ children }: { children: string }) {
-  return (
-    <pre className="cx-code" tabIndex={0}>
-      <code>{children}</code>
-    </pre>
-  );
-}
 
 function Guide({ guide }: { guide: ClientGuide }) {
   return (

@@ -25,7 +25,7 @@ import { RelatedCards } from "../GtmPageView";
 import { BreadcrumbJsonLd, JsonLd } from "../JsonLd";
 import { Ico } from "../landing/Ico";
 import { CtaLink, SECTION_EYEBROW } from "../primitives";
-import { Code } from "./ConnectAiView";
+import { Code } from "./CodeBlock";
 
 const SAFE_ICONS: LucideIcon[] = [KeyRound, ListChecks, ShieldCheck, Timer, ShieldCheck, ListChecks];
 
