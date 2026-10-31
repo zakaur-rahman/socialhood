@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import CanManagePublishing, Session
 from socialhood.billing.plans import current_plan
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.models.mcp import McpUpload, UploadStatus
@@ -88,7 +88,7 @@ def _out(
 
 @router.get("/mcp-uploads/{upload_id}", operation_id="get_mcp_upload")
 async def get_mcp_upload(
-    request: Request, upload_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, upload_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> McpUploadTicket:
     """The upload an AI app asked for, with the signed fields to send the file to storage while it
     waits. 404 for a ticket that isn't this workspace's."""
@@ -107,7 +107,7 @@ async def complete_mcp_upload(
     request: Request,
     upload_id: uuid.UUID,
     body: McpUploadComplete,
-    ctx: Admin,
+    ctx: CanManagePublishing,
     session: Session,
 ) -> McpUploadTicket:
     """After the browser uploaded the file: check it came in with this ticket and add it to the
