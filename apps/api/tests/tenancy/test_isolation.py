@@ -169,6 +169,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
     ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
     ("POST", "/v1/w/{wid}/api-keys"): {"name": "Not yours", "scopes": ["contacts:read"]},  # GR-25
+    ("PUT", "/v1/w/{wid}/ai-connections/settings"): {"mode": "off"},  # C-165
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -533,6 +534,8 @@ B_TABLES = (
     "weekly_digests",
     "workspace_invitations",  # GR-19
     "audit_events",
+    "mcp_tool_calls",  # C-165
+    "mcp_uploads",
 )
 
 
