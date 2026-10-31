@@ -51,6 +51,16 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # The public API, API keys and the Zapier app (GR-25, GR-26): Pro and Max only. Outbound
     # webhooks above stay on every plan. Owner decision PD-6 (2026-10-24).
     "public_api": {"free": False, "pro": True, "max": True},
+    # AI connections over MCP (C-165, D2 decided 2026-10-31): every plan connects; the modes a
+    # workspace may choose (models/mcp.AiConnectionsMode). Free reads and saves drafts; scheduling
+    # from an AI client is part of Pro. Separate from public_api so either can change alone.
+    "ai_connections": {
+        "free": ("off", "read_only", "read_drafts"),
+        "pro": ("off", "read_only", "read_drafts", "full"),
+        "max": ("off", "read_only", "read_drafts", "full"),
+    },
+    # MCP tool calls a workspace may make in a UTC day, across all its AI connections (C-165, §6.1).
+    "mcp_calls_daily": {"free": 100, "pro": 2000, "max": 10000},
     # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.

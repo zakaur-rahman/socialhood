@@ -19,6 +19,18 @@ ApiScopeName = Literal[
     "messages:send",
     "automations:read",
     "webhooks:subscribe",
+    # C-165: the MCP server's scopes (docs/architecture/mcp/01-design.md §3.4). An AI app
+    # connected with this key can use the tools these open; workspace:read is always granted.
+    "posts:read",
+    "posts:write",
+    "media:write",
+    "replies:draft",
+    "comments:read",
+    "analytics:read",
+    "knowledge:read",
+    "knowledge:write",
+    "automations:write",
+    "ask",
 ]
 
 # What each scope allows, in the words the key form and the docs page show.
@@ -31,6 +43,16 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "messages:send": "Send a message in a conversation, inside the platform's reply window.",
     "automations:read": "Read automation runs.",
     "webhooks:subscribe": "Subscribe and unsubscribe REST hooks (what Zapier triggers use).",
+    "posts:read": "AI apps: read scheduled posts, the calendar, best times and the media library.",
+    "posts:write": "AI apps: create, change, reschedule and cancel scheduled posts.",
+    "media:write": "AI apps: upload or import images and videos for posts.",
+    "replies:draft": "AI apps: prepare a reply for a member to send in Amplychat (never sent).",
+    "comments:read": "AI apps: read post comments, their topics and sentiment.",
+    "analytics:read": "AI apps: read post and account analytics.",
+    "knowledge:read": "AI apps: search the knowledge base.",
+    "knowledge:write": "AI apps: add a text note or a website to the knowledge base.",
+    "automations:write": "AI apps: pause and resume automations.",
+    "ask": "AI apps: ask Amplychat's own assistant (uses AI credits).",
 }
 
 

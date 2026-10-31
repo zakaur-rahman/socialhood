@@ -25,7 +25,9 @@ from typing import Annotated
 
 import structlog
 from fastapi import Depends, Request
+from redis.asyncio import Redis
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.deps import Session, _bearer
 from socialhood.billing.entitlements import check_entitlement
@@ -51,16 +53,21 @@ class ApiKeyContext:
         return self.workspace.id
 
 
+async def find_key(session: AsyncSession, raw: str) -> ApiKey | None:
+    """The key ``raw`` is, revoked or not; None for anything that isn't one of ours. The one
+    cross-workspace lookup: the key is how we find its workspace. Also used by the MCP server
+    (auth/mcp_credentials.py)."""
+    if not api_keys.looks_like_key(raw):
+        return None
+    with tenant_bypass_scope():
+        return (
+            await session.scalars(select(ApiKey).where(ApiKey.key_hash == api_keys.hash_key(raw)))
+        ).one_or_none()
+
+
 async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKeyContext]:
     raw = _bearer(request)
-    key = None
-    if api_keys.looks_like_key(raw):
-        with tenant_bypass_scope():  # the key is how we find its workspace
-            key = (
-                await session.scalars(
-                    select(ApiKey).where(ApiKey.key_hash == api_keys.hash_key(raw))
-                )
-            ).one_or_none()
+    key = await find_key(session, raw)
     if key is None:
         await ratelimit.enforce(request, "public", ratelimit.client_ip(request))
         raise ApiError("unauthorized", "That API key isn't valid.")
@@ -77,19 +84,17 @@ async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKe
         )
         await ratelimit.enforce(request, "api_key", str(key.id))
         await check_entitlement(session, "public_api")
-        await _touch_last_used(request, session, key)
+        await touch_last_used(request.app.state.redis, session, key)
         yield ApiKeyContext(key_id=key.id, workspace=workspace, scopes=frozenset(key.scopes))
     finally:
         with suppress(ValueError):  # a different context (after the response) cannot reset
             current_workspace_id.reset(token)
 
 
-async def _touch_last_used(request: Request, session: Session, key: ApiKey) -> None:
+async def touch_last_used(redis: Redis, session: AsyncSession, key: ApiKey) -> None:
     """At most one write per key per minute; a Valkey outage never blocks a request."""
     try:
-        first = await request.app.state.redis.set(
-            f"apikey-used:{key.id}", "1", nx=True, ex=LAST_USED_EVERY_S
-        )
+        first = await redis.set(f"apikey-used:{key.id}", "1", nx=True, ex=LAST_USED_EVERY_S)
     except Exception:
         return
     if first:

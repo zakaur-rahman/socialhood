@@ -60,6 +60,10 @@ FEATURES = {
     "ai_reply_automations": "AI replies in automations are part of Pro.",
     "sheets_sync": "Google Sheets sync is part of Pro.",
     "public_api": "The public API, API keys and Zapier are part of Pro.",
+    "ai_connections": (
+        "Scheduling and changing things from an AI app is part of Pro. On Free, AI apps can read "
+        "and save drafts."
+    ),
     "broadcast_recipients_monthly": "WhatsApp broadcasts are part of Pro.",
     "commerce": "The product catalogue is part of Pro.",
 }
@@ -80,6 +84,7 @@ THINGS = {
     "orders_monthly": "orders a month",
     "active_sequences": "active sequences",
     "sequence_steps": "steps in a sequence",
+    "mcp_calls_daily": "AI app tool calls a day",
 }
 
 

@@ -68,7 +68,8 @@ def upgrade() -> None:
             "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.CheckConstraint(
-            "credential_kind IN ('api_key', 'oauth')", name=op.f("ck_mcp_tool_calls_credential_kind")
+            "credential_kind IN ('api_key', 'oauth')",
+            name=op.f("ck_mcp_tool_calls_credential_kind"),
         ),
         sa.CheckConstraint(
             "outcome IN ('ok', 'error', 'refused')", name=op.f("ck_mcp_tool_calls_outcome")
@@ -105,9 +106,7 @@ def upgrade() -> None:
         ["workspace_id", "created_at"],
         unique=False,
     )
-    op.create_index(
-        "ix_mcp_tool_calls_api_key_id", "mcp_tool_calls", ["api_key_id"], unique=False
-    )
+    op.create_index("ix_mcp_tool_calls_api_key_id", "mcp_tool_calls", ["api_key_id"], unique=False)
 
     op.create_table(
         "mcp_uploads",
@@ -138,7 +137,10 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], name=op.f("fk_mcp_uploads_user_id_users"), ondelete="SET NULL"
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_mcp_uploads_user_id_users"),
+            ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
             ["media_asset_id"],
@@ -160,7 +162,5 @@ def downgrade() -> None:
     op.drop_index("ix_mcp_tool_calls_workspace_id_created_at", table_name="mcp_tool_calls")
     op.drop_index(op.f("ix_mcp_tool_calls_workspace_id"), table_name="mcp_tool_calls")
     op.drop_table("mcp_tool_calls")
-    op.drop_constraint(
-        op.f("ck_workspaces_ai_connections_mode"), "workspaces", type_="check"
-    )
+    op.drop_constraint(op.f("ck_workspaces_ai_connections_mode"), "workspaces", type_="check")
     op.drop_column("workspaces", "ai_connections_mode")
