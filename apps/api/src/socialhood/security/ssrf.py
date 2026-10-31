@@ -326,6 +326,89 @@ async def _read(response: httpx.Response, url: httpx.URL, fetch: _Request) -> Pa
     )
 
 
+@dataclass(frozen=True)
+class Probed:
+    url: str  # the final address, after redirects
+    content_type: str
+    content_length: int | None  # as the server declares it; None when it doesn't
+
+
+MEDIA_ACCEPT = "image/*,video/*;q=0.9,*/*;q=0.1"
+
+
+async def probe(
+    raw_url: str,
+    *,
+    accept: str = MEDIA_ACCEPT,
+    resolve: Resolver | None = None,
+    timeout_s: float = 10.0,
+    max_redirects: int = MAX_REDIRECTS,
+) -> Probed:
+    """Look at a large file's headers without downloading it (an AI app's media import): the same
+    address rules as ``fetch_document`` at every hop, redirects followed by hand, and the answer
+    is the final address, its content type and declared length. The body is never read, so a 100
+    MB video costs nothing here; the storage service fetches it from the final address."""
+    url = check_url(raw_url)
+    request = _Request(frozenset(), accept, {}, False, 0)
+    async with httpx.AsyncClient(
+        follow_redirects=False,
+        trust_env=False,
+        timeout=httpx.Timeout(timeout_s),
+        limits=httpx.Limits(max_keepalive_connections=0),
+    ) as client:
+        try:
+            async with asyncio.timeout(timeout_s):
+                return await _probe(client, url, resolve, request, max_redirects)
+        except TimeoutError as error:
+            raise FetchError(
+                "timeout", "The file took too long to respond.", retryable=True
+            ) from error
+
+
+async def _probe(
+    client: httpx.AsyncClient,
+    url: httpx.URL,
+    resolve: Resolver | None,
+    request: _Request,
+    max_redirects: int,
+) -> Probed:
+    for hop in range(max_redirects + 1):
+        addresses = await public_addresses(url, resolve)
+        response = await _connect(client, url, addresses, request)
+        try:
+            if response.status_code in REDIRECTS:
+                location = response.headers.get("location")
+                if not location:
+                    raise FetchError("http_error", "The link redirects to nowhere.")
+                if hop == max_redirects:
+                    raise FetchError("redirects", "The link redirects too many times.")
+                try:
+                    url = check_url(str(url.join(location)))
+                except FetchError as error:
+                    raise FetchError(
+                        error.code, "The link redirects to an address that can't be used."
+                    ) from error
+                continue
+            if response.status_code >= 400:
+                raise FetchError(
+                    "http_error",
+                    f"The link returned an error ({response.status_code}).",
+                    status=response.status_code,
+                )
+            declared = response.headers.get("content-length", "")
+            return Probed(
+                url=str(url),
+                content_type=response.headers.get("content-type", "")
+                .split(";", 1)[0]
+                .strip()
+                .lower(),
+                content_length=int(declared) if declared.isdigit() else None,
+            )
+        finally:
+            await response.aclose()
+    raise FetchError("redirects", "The link redirects too many times.")  # pragma: no cover
+
+
 def _megabytes(size: int) -> str:
     return f"{size // (1024 * 1024)} MB" if size >= 1024 * 1024 else f"{max(size // 1024, 1)} KB"
 

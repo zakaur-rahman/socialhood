@@ -51,6 +51,22 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # The public API, API keys and the Zapier app (GR-25, GR-26): Pro and Max only. Outbound
     # webhooks above stay on every plan. Owner decision PD-6 (2026-10-24).
     "public_api": {"free": False, "pro": True, "max": True},
+    # AI connections over MCP (C-165, D2 decided 2026-10-31): every plan connects; the modes a
+    # workspace may choose (models/mcp.AiConnectionsMode). Free reads and saves drafts; scheduling
+    # from an AI client is part of Pro. Separate from public_api so either can change alone.
+    "ai_connections": {
+        "free": ("off", "read_only", "read_drafts"),
+        "pro": ("off", "read_only", "read_drafts", "full"),
+        "max": ("off", "read_only", "read_drafts", "full"),
+    },
+    # MCP tool calls a workspace may make in a UTC day, across all its AI connections (C-165, §6.1).
+    "mcp_calls_daily": {"free": 100, "pro": 2000, "max": 10000},
+    # Posts an AI app may schedule in a UTC day (C-165 phase B, §6.1: below Instagram's 100 API
+    # posts per 24 hours per account). Free saves drafts only, so its cap is 0 scheduled posts.
+    "mcp_posts_daily": {"free": 0, "pro": 25, "max": 100},
+    # Files and megabytes an AI app may upload in a UTC day (§5.3).
+    "mcp_uploads_daily": {"free": 20, "pro": 200, "max": 1000},
+    "mcp_upload_mb_daily": {"free": 500, "pro": 10_000, "max": 50_000},
     # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.

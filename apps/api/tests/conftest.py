@@ -35,6 +35,7 @@ pytest_plugins = [
     "tests.support.instagram",
     "tests.support.facebook",
     "tests.support.ai",
+    "tests.support.mcp",  # C-165: the MCP server under test
 ]
 
 os.environ["APP_ENV"] = "test"

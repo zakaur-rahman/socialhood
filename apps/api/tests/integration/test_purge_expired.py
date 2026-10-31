@@ -307,3 +307,22 @@ def test_months_before_keeps_the_day_or_the_months_last() -> None:
     assert months_before(datetime(2026, 1, 15, tzinfo=UTC), 13) == datetime(
         2024, 12, 15, tzinfo=UTC
     )
+
+
+async def test_the_mcp_audit_is_kept_90_days(
+    engine: AsyncEngine, maker: async_sessionmaker[Any]
+) -> None:
+    wid = await make_workspace(engine)
+    async with engine.begin() as conn:
+        for tool, days in (("old_one", 91), ("older_one", 200), ("kept_one", 89)):
+            await conn.execute(
+                text(
+                    "INSERT INTO mcp_tool_calls (workspace_id, credential_kind, credential_label,"
+                    " tool, arguments_digest, outcome, latency_ms, created_at) VALUES"
+                    " (:w, 'api_key', 'API key', :t, 'd', 'ok', 1, :at)"
+                ),
+                {"w": wid, "t": tool, "at": NOW - timedelta(days=days)},
+            )
+    counts = await run(maker)
+    assert counts["mcp_tool_calls"] == 2
+    assert await ids(engine, "SELECT tool FROM mcp_tool_calls") == {"kept_one"}

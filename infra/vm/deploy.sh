@@ -87,7 +87,20 @@ start() {
     registry_login || return 1
     compose pull --quiet || { log "pull failed (the VM's service account needs Artifact Registry Reader)"; return 1; }
   fi
-  compose up -d --remove-orphans && wait_healthy
+  compose up -d --remove-orphans && sync_caddy && wait_healthy
+}
+
+# The Caddyfile is a single-file bind mount, which keeps the file the container started with: when a
+# deploy replaces it (a new inode), Caddy would go on serving the old rules, and a reload reads the old
+# file too. Recreate Caddy only when its copy differs from the one on disk, so a deploy that doesn't
+# touch the Caddyfile has no blip.
+sync_caddy() {
+  local live want
+  want=$(sha256sum Caddyfile | cut -d' ' -f1)
+  live=$(compose exec -T caddy sha256sum /etc/caddy/Caddyfile 2>/dev/null | cut -d' ' -f1) || live=""
+  [[ "$live" == "$want" ]] && return 0
+  log "the Caddyfile changed: recreating caddy"
+  compose up -d --no-deps --force-recreate caddy
 }
 
 main() {

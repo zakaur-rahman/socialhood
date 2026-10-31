@@ -232,8 +232,19 @@ class Settings(BaseSettings):
     rate_limits_enabled: bool = True
     client_ip_header: str | None = None
 
+    # C-165: the MCP server at /mcp (docs/architecture/mcp). Off: /mcp isn't served at all (404),
+    # the operator's switch over every workspace's own (workspaces.ai_connections_mode).
+    mcp_enabled: bool = True
+    # Host header values /mcp accepts besides API_BASE_URL's host (DNS-rebinding protection, the
+    # MCP spec's MUST); localhost on any port is accepted outside production.
+    mcp_allowed_hosts: CommaList = Field(default_factory=list)
+
     @field_validator(
-        "cors_allowed_origins", "clerk_authorized_parties", "token_encryption_keys", mode="before"
+        "cors_allowed_origins",
+        "clerk_authorized_parties",
+        "token_encryption_keys",
+        "mcp_allowed_hosts",
+        mode="before",
     )
     @classmethod
     def _split_commas(cls, value: object) -> object:
@@ -342,6 +353,11 @@ class Settings(BaseSettings):
     def site_url(self) -> str | None:
         """The public site's base URL: SITE_BASE_URL, else WEB_BASE_URL (one origin)."""
         return self.site_base_url or self.web_base_url
+
+    @property
+    def mcp_resource_url(self) -> str:
+        """The MCP server's canonical URL (RFC 9728 ``resource``): API_BASE_URL + /mcp."""
+        return f"{(self.api_base_url or 'http://localhost:8000').rstrip('/')}/mcp"
 
     @property
     def billing_enabled(self) -> bool:

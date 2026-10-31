@@ -15,8 +15,9 @@
 
 import { appOrigin, siteUrl } from "@/lib/marketing/site";
 
-/** Pages that belong to the app: the signed-in app, Clerk's pages and the dev-only pages. */
-const APP_PREFIXES = ["/app", "/w", "/sign-in", "/sign-up", "/dev"] as const;
+/** Pages that belong to the app: the signed-in app, Clerk's pages, the AI app consent page
+ * (C-165) and the dev-only pages. */
+const APP_PREFIXES = ["/app", "/w", "/connect", "/sign-in", "/sign-up", "/dev"] as const;
 
 /** Served on either host: framework files, icons, the manifest, the service worker, well-known files. */
 const SHARED_PREFIXES = [

@@ -13,7 +13,7 @@ from socialhood.auth.api_key import ApiKeyContext, require_scope
 from socialhood.billing.plans import ENTITLEMENTS, PLANS, entitlement
 from socialhood.errors import ApiError
 from socialhood.main import create_app
-from socialhood.schemas.api_keys import SCOPE_DESCRIPTIONS, ApiScopeName
+from socialhood.schemas.api_keys import MCP_ONLY_SCOPES, SCOPE_DESCRIPTIONS, ApiScopeName
 from socialhood.security.ratelimit import LIMITS
 from socialhood.services import api_keys
 from tests.unit.test_schema_security import (
@@ -122,8 +122,9 @@ def test_every_public_operation_needs_a_known_scope(
             assert operation["responses"]["default"]["content"]["application/problem+json"], where
             ids.append(operation["operationId"])
     assert len(ids) == len(set(ids))
-    # No scope a key can carry opens nothing (webhooks:subscribe: tests/unit/test_zapier_hooks.py).
-    assert used >= set(SCOPE_DESCRIPTIONS) - {"webhooks:subscribe"}
+    # No scope a key can carry opens nothing (webhooks:subscribe: tests/unit/test_zapier_hooks.py;
+    # the MCP server's own scopes: tests/unit/test_mcp_registry.py).
+    assert used >= set(SCOPE_DESCRIPTIONS) - {"webhooks:subscribe", *MCP_ONLY_SCOPES}
     assert public["components"]["securitySchemes"]["ApiKey"]["scheme"] == "bearer"
 
 

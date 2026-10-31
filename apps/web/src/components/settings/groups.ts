@@ -5,10 +5,12 @@ import {
   Building2,
   CreditCard,
   Globe,
+  KeyRound,
   Link2,
   MessageSquareText,
   MoreHorizontal,
   Palette,
+  Plug,
   ScrollText,
   Sparkles,
   Timer,
@@ -74,6 +76,16 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
     description: "Ask Amplychat and its run history",
     keywords: ["assistant", "ask", "runs", "history"],
   },
+  "ai-apps": {
+    icon: Plug,
+    description: "Claude, ChatGPT and Codex",
+    keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps"],
+  },
+  "api-keys": {
+    icon: KeyRound,
+    description: "For the public API and AI apps",
+    keywords: ["api", "key", "token", "mcp", "claude code", "codex", "zapier", "bearer"],
+  },
   billing: {
     icon: CreditCard,
     description: "Plan, usage and invoices",
@@ -82,7 +94,7 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
   integrations: {
     icon: Webhook,
     description: "Webhooks and outside tools",
-    keywords: ["webhook", "api", "zapier", "outbound"],
+    keywords: ["webhook", "zapier", "outbound", "sheets"],
   },
   audit: {
     icon: ScrollText,
@@ -123,12 +135,12 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
   {
     id: "automation",
     label: "Automation and AI",
-    segments: ["ai", "replies", "agent"],
+    segments: ["ai", "replies", "agent", "ai-apps"],
   },
   {
     id: "admin",
     label: "Admin",
-    segments: ["billing", "integrations", "audit", "activity"],
+    segments: ["billing", "integrations", "api-keys", "audit", "activity"],
   },
   {
     id: "you",

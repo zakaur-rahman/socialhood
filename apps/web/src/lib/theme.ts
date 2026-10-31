@@ -58,13 +58,14 @@ export function applyThemeColor(theme: Theme, doc: Document = document): void {
 }
 
 /**
- * The routes that follow the member's theme: the app, sign-in and sign-up, and the dev pages.
+ * The routes that follow the member's theme: the app, the AI app consent page (C-165), sign-in
+ * and sign-up, and the dev pages.
  * Every other page (the public site and its 404) has its own paper-and-night look (C-155, which
  * replaces C-129's always-dark site): <html> is pinned to SITE_THEME there, so the browser's own
  * parts (scrollbars, form controls) are light. app/layout.test.ts keeps this in step with the
  * (app), (auth), (dev) and (marketing) route folders.
  */
-export const THEMED_ROUTE = /^\/(app|w|sign-in|sign-up|dev)(\/|$)/;
+export const THEMED_ROUTE = /^\/(app|w|connect|sign-in|sign-up|dev)(\/|$)/;
 
 /** The scheme the public pages pin on <html> (C-155): their paper palette is light, with night bands. */
 export const SITE_THEME = "light" satisfies ThemeChoice;

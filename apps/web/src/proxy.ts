@@ -6,7 +6,8 @@ import { appOrigin, siteUrl } from "@/lib/marketing/site";
 
 // TR-FE-01: every app route needs a signed-in user. Signed-out visits go to /sign-in and come
 // back to the same page afterwards (F-02). Marketing, legal and auth pages stay public.
-const isAppRoute = createRouteMatcher(["/app(.*)", "/w/(.*)"]);
+// C-165: /connect/authorize, the AI app consent page, signs in the same way.
+const isAppRoute = createRouteMatcher(["/app(.*)", "/w/(.*)", "/connect/(.*)"]);
 
 // C-146: with NEXT_PUBLIC_APP_URL set, the site and the app are two origins on the same Clerk
 // production instance (sessions are shared across its subdomains). Clerk checks each session

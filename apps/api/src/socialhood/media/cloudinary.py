@@ -39,6 +39,7 @@ class StoredResource:
     width: int | None = None
     height: int | None = None
     duration_s: float | None = None
+    tags: tuple[str, ...] = ()
 
     @classmethod
     def from_api(cls, body: dict[str, Any]) -> StoredResource:
@@ -51,6 +52,7 @@ class StoredResource:
             width=body.get("width"),
             height=body.get("height"),
             duration_s=body.get("duration"),
+            tags=tuple(str(t) for t in body.get("tags") or ()),
         )
 
 
@@ -90,17 +92,28 @@ class Cloudinary:
             raise CloudinaryError("Cloudinary is not configured")
 
     def upload_signature(
-        self, *, folder: str, resource_type: ResourceType, timestamp: int | None = None
+        self,
+        *,
+        folder: str,
+        resource_type: ResourceType,
+        timestamp: int | None = None,
+        tags: str | None = None,
     ) -> dict[str, Any]:
-        """Parameters for a signed direct upload from the browser (TR-MED-01)."""
+        """Parameters for a signed direct upload from the browser (TR-MED-01). ``tags`` is signed
+        too, so the upload carries it and nothing else can: an AI app's one-time ticket
+        (mcp/tools/media.py) is the tag ``mcp_upload_{id}``."""
         self._require()
         ts = timestamp or int(time.time())
+        signed: dict[str, Any] = {"folder": folder, "timestamp": ts}
+        if tags:
+            signed["tags"] = tags
         return {
             "cloud_name": self.cloud,
             "api_key": self.api_key,
             "timestamp": ts,
             "folder": folder,
-            "signature": sign({"folder": folder, "timestamp": ts}, self.secret),
+            **({"tags": tags} if tags else {}),
+            "signature": sign(signed, self.secret),
             "upload_url": f"{API}/{self.cloud}/{resource_type}/upload",
         }
 
@@ -112,12 +125,15 @@ class Cloudinary:
         resource_type: ResourceType | Literal["auto"] = "auto",
         public_id: str | None = None,
         filename: str = "upload",
+        tags: str | None = None,
     ) -> StoredResource:
         """Server-side upload of bytes or a fetchable URL (inbound media, TR-MED-03)."""
         self._require()
         params: dict[str, Any] = {"folder": folder, "timestamp": int(time.time())}
         if public_id:
             params["public_id"] = public_id
+        if tags:
+            params["tags"] = tags
         data = {**params, "api_key": self.api_key, "signature": sign(params, self.secret)}
         url = f"{API}/{self.cloud}/{resource_type}/upload"
         if isinstance(file, bytes):

@@ -85,7 +85,11 @@
 	reverse_proxy web:3000
 }
 
-# The API: the app's calls, webhooks, OAuth callbacks and the website chat widget.
+# The API: the app's calls, webhooks, OAuth callbacks, the website chat widget and the MCP server
+# (/mcp, C-165). /mcp answers JSON (stateless Streamable HTTP; compressed like other JSON) and may
+# stream text/event-stream to older clients, which flush_interval -1 passes on at once and the
+# encode matcher never buffers; no write timeout, so a slow tool call isn't cut. The Authorization
+# header a client sends (an API key) is redacted from the access log by Caddy itself.
 {$API_HOST:api.amplychat.com} {
 	import common
 	# Nothing the API answers is a search result (C-162). A header rather than a robots.txt

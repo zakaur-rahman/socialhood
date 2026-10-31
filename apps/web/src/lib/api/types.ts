@@ -60,6 +60,7 @@ export type ScheduledMessageList = Schemas["ScheduledMessageList"];
 export type ScheduledMessageCreate = Schemas["ScheduledMessageCreate"];
 export type ScheduledMessagePatch = Schemas["ScheduledMessagePatch"];
 export type UploadSignature = Schemas["UploadSignature"];
+export type McpUploadTicket = Schemas["McpUploadTicket"]; // C-165: an AI app's upload ticket
 export type MediaAsset = Schemas["MediaAssetOut"];
 export type ResourceType = MediaAsset["resource_type"];
 export type AssetPurpose = Schemas["UploadSignatureRequest"]["purpose"];
@@ -481,6 +482,17 @@ export type ApiKey = Schemas["ApiKey"];
 export type ApiKeyWithKey = Schemas["ApiKeyWithKey"];
 export type ApiKeyList = Schemas["ApiKeyList"];
 export type ApiKeyCreate = Schemas["ApiKeyCreate"];
+// C-165 phase C: AI app connections (OAuth) and the consent page.
+export type AiConnectionsSettings = Schemas["AiConnectionsSettings"];
+export type AiConnectionsMode = AiConnectionsSettings["mode"];
+export type AiConnection = Schemas["AiConnection"];
+export type AiConnectionList = Schemas["AiConnectionList"];
+export type AiConnectionCall = Schemas["AiConnectionCall"];
+export type AiConnectionActivity = Schemas["AiConnectionActivity"];
+export type ConnectRequest = Schemas["ConnectRequest"];
+export type ConnectWorkspace = Schemas["ConnectWorkspace"];
+export type ConnectApproval = Schemas["ConnectApproval"];
+export type ConnectRedirect = Schemas["ConnectRedirect"];
 export type ApiScope = Schemas["ApiScope"];
 export type ApiScopeName = ApiScope["scope"];
 

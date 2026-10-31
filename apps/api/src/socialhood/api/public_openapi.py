@@ -21,7 +21,7 @@ from socialhood.schemas.api_keys import SCOPE_DESCRIPTIONS
 DESCRIPTION = (
     "The Amplychat public API reads and updates a workspace's contacts, tags, conversations "
     "and automation runs, sends messages inside the platform's reply window, and subscribes "
-    "REST hooks. Make a key in Settings, Integrations, and send it as "
+    "REST hooks. Make a key in Settings, API keys, and send it as "
     "`Authorization: Bearer <key>`. The public API is part of the Pro and Max plans. Each key "
     "can make 120 requests a minute; sending also counts against the workspace's 60 sends a "
     "minute. Errors are `application/problem+json`."
@@ -76,7 +76,7 @@ def public_openapi(app: FastAPI) -> dict[str, Any]:
         "ApiKey": {
             "type": "http",
             "scheme": "bearer",
-            "description": "A workspace API key, made in Settings, Integrations.",
+            "description": "A workspace API key, made in Settings, API keys.",
         }
     }
     schema["x-scopes"] = SCOPE_DESCRIPTIONS
