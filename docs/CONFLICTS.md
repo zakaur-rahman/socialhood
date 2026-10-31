@@ -9362,3 +9362,8 @@ Owner asked for a public MCP product page, a separate API-key connection page, a
 - **Found in production (2026-11-01):** ChatGPT's client metadata document (`https://chatgpt.com/oauth/client.json`) names `private_key_jwt` as its method and lists `none` in `token_endpoint_auth_methods_supported`. Phase C refused any method but `none`, so ChatGPT got "Clients identified by a metadata document must use 'none'".
 - **Fix:** a document is accepted when its method is `none`, or when it lists `none` as supported. The client is stored and treated as public (PKCE and its exact redirect URI). A client assertion it sends anyway is ignored, never trusted. A document that only offers `private_key_jwt`, or a secret method, is still refused. Our metadata still doesn't advertise `private_key_jwt`.
 - **Follow-up:** verify `private_key_jwt` assertions against the client's `jwks_uri` (needs a column for it; after C-167's migration 0056).
+- **Also found (2026-11-01): the write tools were hidden.**
+  - The protected-resource metadata advertised only the reads and publishing, so clients asked for no `automations:write`, `knowledge:write` or `ask`.
+  - Since `tools/list` hides a tool whose scope wasn't granted, `pause_automation`, `resume_automation`, `add_knowledge` and the Ask tools never appeared, and the step-up never happened.
+  - Now `scopes_supported` is every grantable scope. The member unticks groups on the consent page, and a test keeps the two lists equal.
+  - Existing connections must reconnect to get the new scopes.

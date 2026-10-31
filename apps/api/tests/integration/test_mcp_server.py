@@ -15,6 +15,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.oauth import scopes
 from socialhood.security.ratelimit import LIMITS, Limit
 from socialhood.settings import Settings
 from tests.support.api import Clerk
@@ -185,6 +186,8 @@ async def test_no_token_is_401_pointing_at_the_resource_metadata(
             assert prm.json()["authorization_servers"] == [BASE]
             assert prm.json()["bearer_methods_supported"] == ["header"]
             assert "posts:write" in prm.json()["scopes_supported"]
+            # Every grantable scope, so no tool is hidden before a step-up could ask for it.
+            assert set(prm.json()["scopes_supported"]) == set(scopes.GRANTABLE)
 
 
 @pytest.mark.parametrize(
