@@ -23,10 +23,13 @@ export function ExplainerMotion({ scenes = false }: { scenes?: boolean }) {
   useEffect(() => {
     let stop: (() => void) | undefined;
     let cancelled = false;
+    // Left before the idle moment or the import finished (a quick navigation, or a test's teardown):
+    // start nothing, so no motion runs against a page that is gone.
     void loaded()
       .then(() => import("./explainer-motion"))
-      .then(({ startExplainerMotion }) => startExplainerMotion(document, { scenes }))
+      .then(({ startExplainerMotion }) => (cancelled || typeof document === "undefined" ? undefined : startExplainerMotion(document, { scenes })))
       .then((cleanup) => {
+        if (!cleanup) return;
         if (cancelled) cleanup();
         else stop = cleanup;
       });
