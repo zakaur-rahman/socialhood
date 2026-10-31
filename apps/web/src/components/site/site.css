@@ -2797,3 +2797,61 @@ body:has(.site) {
   }
 }
 /* ==== end C-163 gloss ==== */
+
+/* ==== C-165 connect ==== */
+/* /developers/mcp (C-165 phase C): `.cx` beside `.pp` (the C-159 head, toc card, icon cards, steps band
+   and the night close). New here: the server address and code blocks, the jump links to each app, the
+   four setup cards with numbered steps, and the plans table. Tokens only; no existing rule is edited. */
+@layer components {
+  .site .cx {
+    & .cx-url { margin-top: var(--space-6); max-width: 40rem; }
+    & .cx-url-label { margin: 0 0 var(--space-2); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 600; color: var(--s-text-3); }
+    & .cx-code {
+      margin: var(--space-2) 0 0; padding: var(--space-3) var(--space-4); overflow-x: auto; overscroll-behavior-x: contain;
+      background: var(--s-surface-2); border: 1px solid var(--s-line); border-radius: var(--r-md);
+      font-family: var(--font-mono); font-size: var(--fs-caption); line-height: 1.6; color: var(--s-text); white-space: pre;
+    }
+    & .cx-code code { font: inherit; }
+
+    & .cx-jump { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    & .cx-jump a {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4);
+      border: 1px solid var(--s-line); border-radius: 999px; background: var(--s-surface);
+      color: var(--s-text); text-decoration: none; font-size: var(--fs-label); font-weight: 600;
+      transition: background-color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease);
+    }
+    @media (hover: hover) {
+      & .cx-jump a:hover { background: var(--s-hover); }
+    }
+
+    & .cx-guides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); margin-top: var(--space-8); }
+    & .cx-guide {
+      min-width: 0; padding: var(--space-6); background: var(--s-surface); border: 1px solid var(--s-line); border-radius: var(--r-lg);
+      scroll-margin-top: calc(var(--nav-h) + var(--space-6));
+    }
+    & .cx-guide h3 { display: flex; align-items: center; gap: var(--space-3); margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; color: var(--s-text); }
+    & .cx-who { margin: var(--space-3) 0 0; color: var(--s-text-2); }
+    & .cx-steps { margin: var(--space-5) 0 0; padding: 0; list-style: none; counter-reset: cx; display: grid; gap: var(--space-4); }
+    & .cx-steps li { counter-increment: cx; position: relative; padding-left: var(--space-10); min-width: 0; }
+    & .cx-steps li::before {
+      content: counter(cx); position: absolute; left: 0; top: 0; display: grid; place-items: center;
+      width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--s-line); background: var(--s-bg);
+      font-size: var(--fs-caption); font-weight: 600; color: var(--s-text-2);
+    }
+    & .cx-steps p { margin: 0; color: var(--s-text); }
+    & .cx-note { margin: var(--space-5) 0 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--s-text-3); }
+
+    & .cx-table-box { overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--s-line); border-radius: var(--r-lg); background: var(--s-surface); }
+    & .cx-table { width: 100%; min-width: 34rem; border-collapse: collapse; font-size: var(--fs-label); }
+    & .cx-table :is(th, td) { padding: var(--space-3) var(--space-4); text-align: left; border-top: 1px solid var(--s-line-2); }
+    & .cx-table thead th { border-top: 0; font-weight: 600; color: var(--s-text-2); background: var(--s-surface-2); }
+    & .cx-table tbody th { font-weight: 500; color: var(--s-text); }
+    & .cx-table td { color: var(--s-text-2); }
+
+    @media (max-width: 899px) {
+      & .cx-guides { grid-template-columns: minmax(0, 1fr); }
+      & .cx-guide { padding: var(--space-5); }
+    }
+  }
+}
+/* ==== end C-165 connect ==== */

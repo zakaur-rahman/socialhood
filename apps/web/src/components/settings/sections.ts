@@ -35,4 +35,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "activity", label: "Activity", roles: ["owner", "admin"] },
   // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
   { segment: "agent", label: "Ask Amplychat", roles: EVERYONE },
+  // C-165: Claude, ChatGPT and Codex over MCP. Everyone sees their own connections; owners and
+  // admins also set the mode and see everyone's (the API decides which list each gets).
+  { segment: "ai-apps", label: "Connected AI apps", roles: EVERYONE },
 ];

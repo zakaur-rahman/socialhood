@@ -42,6 +42,7 @@ describe("Settings rail (UX-SCR-07)", () => {
       "AI rules and takeover",
       "Saved replies",
       "Ask Amplychat",
+      "Connected AI apps",
       "Billing and usage",
       "Integrations",
       "Audit log",
