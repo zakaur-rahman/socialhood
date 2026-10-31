@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LEGAL, operatorName } from "@/lib/legal";
 import { FacebookGlyph } from "@/components/connections/FacebookGlyph";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
+import { LinkedInGlyph } from "@/components/connections/LinkedInGlyph";
 import { SITE_NAME, SOCIAL_PROFILES, footerColumns, type FooterLink } from "@/lib/marketing/site";
 
 import { Logo } from "./primitives";
@@ -52,7 +53,13 @@ export function SiteFooter({ year = new Date().getFullYear(), status }: { year?:
                 {SOCIAL_PROFILES.map((profile) => (
                   <li key={profile.url}>
                     <a href={profile.url} rel="me noopener noreferrer" target="_blank" aria-label={`${SITE_NAME} on ${profile.label} (opens in a new tab)`}>
-                      {profile.network === "instagram" ? <InstagramGlyph className="size-5" /> : <FacebookGlyph className="size-5" />}
+                      {profile.network === "instagram" ? (
+                        <InstagramGlyph className="size-5" />
+                      ) : profile.network === "linkedin" ? (
+                        <LinkedInGlyph className="size-5" />
+                      ) : (
+                        <FacebookGlyph className="size-5" />
+                      )}
                     </a>
                   </li>
                 ))}
