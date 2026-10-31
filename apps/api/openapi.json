@@ -1984,6 +1984,221 @@
         "title": "AgentThreadList",
         "type": "object"
       },
+      "AiConnection": {
+        "properties": {
+          "calls_7d": {
+            "title": "Calls 7D",
+            "type": "integer"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_yours": {
+            "title": "Is Yours",
+            "type": "boolean"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "member": {
+            "$ref": "#/components/schemas/AiConnectionMember"
+          },
+          "recent_calls": {
+            "items": {
+              "$ref": "#/components/schemas/AiConnectionCall"
+            },
+            "title": "Recent Calls",
+            "type": "array"
+          },
+          "redirect_host": {
+            "title": "Redirect Host",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          },
+          "verified_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Host"
+          }
+        },
+        "required": [
+          "id",
+          "client_name",
+          "redirect_host",
+          "member",
+          "is_yours",
+          "scopes",
+          "created_at",
+          "expires_at",
+          "calls_7d",
+          "recent_calls"
+        ],
+        "title": "AiConnection",
+        "type": "object"
+      },
+      "AiConnectionActivity": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AiConnectionCall"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AiConnectionActivity",
+        "type": "object"
+      },
+      "AiConnectionCall": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "ok",
+              "error",
+              "refused"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool",
+          "outcome",
+          "created_at"
+        ],
+        "title": "AiConnectionCall",
+        "type": "object"
+      },
+      "AiConnectionList": {
+        "properties": {
+          "can_manage_all": {
+            "title": "Can Manage All",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AiConnection"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "can_manage_all"
+        ],
+        "title": "AiConnectionList",
+        "type": "object"
+      },
+      "AiConnectionMember": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "AiConnectionMember",
+        "type": "object"
+      },
+      "AiConnectionsRevoked": {
+        "properties": {
+          "revoked": {
+            "title": "Revoked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "title": "AiConnectionsRevoked",
+        "type": "object"
+      },
       "AiConnectionsSettings": {
         "properties": {
           "effective_mode": {
@@ -7542,6 +7757,192 @@
         "title": "CommentStats",
         "type": "object"
       },
+      "ConnectApproval": {
+        "additionalProperties": false,
+        "properties": {
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Scopes",
+            "type": "array"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id"
+        ],
+        "title": "ConnectApproval",
+        "type": "object"
+      },
+      "ConnectClient": {
+        "properties": {
+          "logo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "loopback": {
+            "title": "Loopback",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "redirect_host": {
+            "title": "Redirect Host",
+            "type": "string"
+          },
+          "verified_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Host"
+          }
+        },
+        "required": [
+          "name",
+          "redirect_host",
+          "loopback"
+        ],
+        "title": "ConnectClient",
+        "type": "object"
+      },
+      "ConnectMember": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ConnectMember",
+        "type": "object"
+      },
+      "ConnectRedirect": {
+        "properties": {
+          "redirect_to": {
+            "title": "Redirect To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_to"
+        ],
+        "title": "ConnectRedirect",
+        "type": "object"
+      },
+      "ConnectRequest": {
+        "properties": {
+          "always": {
+            "title": "Always",
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ConnectClient"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectScopeGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "member": {
+            "$ref": "#/components/schemas/ConnectMember"
+          },
+          "workspaces": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectWorkspace"
+            },
+            "title": "Workspaces",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client",
+          "always",
+          "groups",
+          "member",
+          "workspaces"
+        ],
+        "title": "ConnectRequest",
+        "type": "object"
+      },
+      "ConnectScope": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "description"
+        ],
+        "title": "ConnectScope",
+        "type": "object"
+      },
+      "ConnectScopeGroup": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectScope"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "scopes"
+        ],
+        "title": "ConnectScopeGroup",
+        "type": "object"
+      },
       "ConnectStart": {
         "properties": {
           "authorize_url": {
@@ -7553,6 +7954,67 @@
           "authorize_url"
         ],
         "title": "ConnectStart",
+        "type": "object"
+      },
+      "ConnectWorkspace": {
+        "properties": {
+          "can_connect": {
+            "title": "Can Connect",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "off",
+              "read_only",
+              "read_drafts",
+              "full"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "plan",
+          "role",
+          "mode",
+          "can_connect"
+        ],
+        "title": "ConnectWorkspace",
         "type": "object"
       },
       "Consent": {
@@ -26742,6 +27204,172 @@
         ]
       }
     },
+    "/v1/connect/requests/{request_id}": {
+      "get": {
+        "operationId": "get_connect_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Request",
+        "tags": [
+          "ai-connections"
+        ]
+      }
+    },
+    "/v1/connect/requests/{request_id}/approve": {
+      "post": {
+        "operationId": "approve_connect_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectRedirect"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "ai-connections"
+        ]
+      }
+    },
+    "/v1/connect/requests/{request_id}/deny": {
+      "post": {
+        "operationId": "deny_connect_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectRedirect"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Deny",
+        "tags": [
+          "ai-connections"
+        ]
+      }
+    },
     "/v1/data-deletion/{code}": {
       "get": {
         "operationId": "get_data_deletion_status",
@@ -28136,6 +28764,114 @@
         ]
       }
     },
+    "/v1/w/{wid}/ai-connections": {
+      "get": {
+        "description": "Live OAuth connections, newest first, with each one's tool calls in the last 7 days and\nits 5 latest. Owners and admins see everyone's; other members see their own.",
+        "operationId": "list_ai_connections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Connections",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/ai-connections/revoke-all": {
+      "post": {
+        "description": "\"Disconnect all\": every AI app connection in the workspace, at once (\u00a76.7). API keys\nare separate (Settings, Integrations).",
+        "operationId": "revoke_all_ai_connections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionsRevoked"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Revoke All",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
     "/v1/w/{wid}/ai-connections/settings": {
       "get": {
         "operationId": "get_ai_connections_settings",
@@ -28246,6 +28982,127 @@
           }
         },
         "summary": "Update Settings",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/ai-connections/{connection_id}": {
+      "delete": {
+        "description": "Disconnect: every token of it stops on its next request. Revoking again is a no-op.\nEvery member may disconnect their own (``self.preferences``); owners and admins anyone's.",
+        "operationId": "revoke_ai_connection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Revoke Connection",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/ai-connections/{connection_id}/activity": {
+      "get": {
+        "description": "The connection's latest 50 tool calls (the MCP audit keeps 90 days).",
+        "operationId": "get_ai_connection_activity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Connection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionActivity"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Activity",
         "tags": [
           "integrations"
         ]

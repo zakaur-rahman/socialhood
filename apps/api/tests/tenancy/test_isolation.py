@@ -91,12 +91,24 @@ PARAM_TO_SEED: dict[str, str] = {
     "order_id": "order_id",  # GR-32
     "sequence_id": "sequence_id",  # GR-24
     "enrolment_id": "enrolment_id",
+    "connection_id": "connection_id",  # C-165 phase C: an AI app connection (OAuth grant)
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
 # "/l/{code}" (GR-15, the tracked link redirect) is public and not in the OpenAPI schema, so the
 # walk never sees it; it is tested in tests/integration/test_link_clicks.py.
-PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}", "/l/{code}"})
+# C-165 phase C: the consent page's routes are keyed by a waiting OAuth request (a Valkey id), not
+# a workspace; the workspace is chosen in the body and checked against the caller's memberships
+# (tests/integration/test_mcp_oauth.py, test_one_connection_one_workspace).
+PUBLIC_ROUTES = frozenset(
+    {
+        "/v1/data-deletion/{code}",
+        "/l/{code}",
+        "/v1/connect/requests/{request_id}",
+        "/v1/connect/requests/{request_id}/approve",
+        "/v1/connect/requests/{request_id}/deny",
+    }
+)
 
 # A valid body for each write route, so the call fails on tenancy, not validation.
 # A string "{param}" in a body is replaced by B's id for that parameter.
@@ -536,6 +548,9 @@ B_TABLES = (
     "audit_events",
     "mcp_tool_calls",  # C-165
     "mcp_uploads",
+    "mcp_connections",  # C-165 phase C
+    "oauth_codes",
+    "oauth_tokens",
 )
 
 
@@ -578,6 +593,7 @@ class Seed:
     order_id: str = ""  # GR-32
     sequence_id: str = ""  # GR-24
     enrolment_id: str = ""
+    connection_id: str = ""  # C-165 phase C
 
 
 @dataclass(frozen=True)
@@ -736,6 +752,27 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                     " RETURNING id"
                 ),
                 {"w": wid, "h": "b" * 64},
+            )
+        ).scalar_one()
+        oauth_client = (
+            await conn.execute(
+                text(
+                    "INSERT INTO oauth_clients (client_id, kind, client_name, redirect_uris,"
+                    " token_endpoint_auth_method) VALUES ('dcr_isolation_b', 'dcr', 'B app',"
+                    " ARRAY['http://127.0.0.1/cb'], 'none') RETURNING id"
+                )
+            )
+        ).scalar_one()
+        connection = (
+            await conn.execute(
+                text(
+                    "INSERT INTO mcp_connections (workspace_id, user_id, oauth_client_id,"
+                    " client_name, redirect_uri, scopes, resource, expires_at)"
+                    " SELECT :w, owner_user_id, :c, 'B app', 'http://127.0.0.1/cb',"
+                    " ARRAY['posts:read'], 'http://localhost:8000/mcp', now() + interval '1 day'"
+                    " FROM workspaces WHERE id = :w RETURNING id"
+                ),
+                {"w": wid, "c": oauth_client},
             )
         ).scalar_one()
         rest_hook = (
@@ -1030,6 +1067,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         order_id=str(order),
         sequence_id=sequence,
         enrolment_id=enrolment,
+        connection_id=str(connection),
     )
 
 

@@ -192,7 +192,7 @@ async def test_no_token_is_401_pointing_at_the_resource_metadata(
     [
         "shk_" + "x" * 43,  # the shape of a key, but no key
         "not-a-key",
-        "sho_" + "x" * 43,  # OAuth access tokens arrive in phase C
+        "sho_" + "x" * 43,  # the shape of an OAuth access token (phase C), but no token
     ],
 )
 async def test_a_bad_token_is_401_invalid_token(mcp_app: FastAPI, setup: Setup, token: str) -> None:
@@ -201,7 +201,8 @@ async def test_a_bad_token_is_401_invalid_token(mcp_app: FastAPI, setup: Setup, 
     assert response.status_code == 401
     challenge = response.headers["www-authenticate"]
     assert challenge.startswith('Bearer error="invalid_token"')
-    assert 'error_description="That API key isn\'t valid."' in challenge
+    what = "access token" if token.startswith("sho_") else "API key"
+    assert f'error_description="That {what} isn\'t valid."' in challenge
     assert f'resource_metadata="{PRM}"' in challenge
 
 

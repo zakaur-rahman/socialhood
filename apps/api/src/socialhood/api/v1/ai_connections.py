@@ -21,7 +21,13 @@ from typing import Literal
 
 from fastapi import APIRouter
 
-from socialhood.auth.deps import AnyMember, CanManageIntegrations, Session, WorkspaceContext
+from socialhood.auth.deps import (
+    AnyMember,
+    CanManageIntegrations,
+    CanSelf,
+    Session,
+    WorkspaceContext,
+)
 from socialhood.auth.permissions import Permission, has_permission
 from socialhood.billing.entitlements import entitlement_error
 from socialhood.billing.plans import current_plan, entitlement
@@ -126,8 +132,9 @@ async def get_activity(
     operation_id="revoke_ai_connection",
     status_code=204,
 )
-async def revoke_connection(connection_id: uuid.UUID, ctx: AnyMember, session: Session) -> None:
-    """Disconnect: every token of it stops on its next request. Revoking again is a no-op."""
+async def revoke_connection(connection_id: uuid.UUID, ctx: CanSelf, session: Session) -> None:
+    """Disconnect: every token of it stops on its next request. Revoking again is a no-op.
+    Every member may disconnect their own (``self.preferences``); owners and admins anyone's."""
     connection = await connections.get_visible(
         session, connection_id, ctx.user.id, all_members=_manages_all(ctx)
     )

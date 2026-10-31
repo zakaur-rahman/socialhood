@@ -52,8 +52,8 @@ async def _live(
     )
     if user_id is not None:
         statement = statement.where(McpConnection.user_id == user_id)
-    rows = (await session.execute(statement)).tuples().all()
-    return [r for r in rows if tokens.connection_problem(r[0], now) is None]
+    rows = (await session.execute(statement)).all()
+    return [(r[0], r[1], r[2]) for r in rows if tokens.connection_problem(r[0], now) is None]
 
 
 def _call(row: McpToolCall) -> AiConnectionCall:
@@ -74,7 +74,7 @@ async def list_connections(
             .where(McpToolCall.connection_id.in_(ids), McpToolCall.created_at >= since)
             .group_by(McpToolCall.connection_id)
         )
-        counts = {cid: n for cid, n in counted.tuples().all() if cid is not None}
+        counts = {cid: n for cid, n in counted.all() if cid is not None}
         ranked = (
             select(
                 McpToolCall,

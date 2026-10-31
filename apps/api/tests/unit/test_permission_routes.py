@@ -25,6 +25,10 @@ NO_WORKSPACE = {
     ("POST", "/v1/widget/session"),
     ("POST", "/v1/widget/messages"),
     ("POST", "/v1/widget/email"),
+    # C-165 phase C: the AI app consent page decides the caller's own waiting OAuth request; the
+    # workspace is in the body and must be one of the caller's (oauth/service.approve).
+    ("POST", "/v1/connect/requests/{request_id}/approve"),
+    ("POST", "/v1/connect/requests/{request_id}/deny"),
 }
 
 
