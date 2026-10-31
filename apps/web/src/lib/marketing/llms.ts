@@ -62,11 +62,13 @@ export function llmsText(origin: string = siteUrl()): string {
     "## Developers",
     "",
     link("Public API", "/developers/api", "authentication, scopes and every operation of the public REST API"),
+    link("Use Amplychat from your AI app (MCP)", "/mcp", "what the MCP server does, where it works in Claude, ChatGPT and Codex, example asks, plans and safety"),
     link(
       "Connect AI apps (MCP)",
       "/developers/mcp",
       "connect Amplychat to Claude, ChatGPT and Codex with its MCP server: setup, plans and safety",
     ),
+    link("Connect with an API key (MCP)", "/developers/mcp/api-key", "use an Amplychat API key instead of signing in: Claude Code, Codex, other MCP apps and scripts"),
     "",
     "## Legal",
     "",
