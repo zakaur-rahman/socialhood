@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ChipInput } from "@/components/ui/chip-input";
 import {
   Dialog,
   DialogContent,
@@ -31,9 +32,10 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApiKeys, useCreateApiKey, useRevokeApiKey } from "@/lib/api/queries";
-import type { ApiKey, ApiScope, ApiScopeName } from "@/lib/api/types";
+import { useApiKeys, useCreateApiKey, useRevokeApiKey, useUpdateApiKey } from "@/lib/api/queries";
+import type { ApiKey, ApiKeyCreate, ApiScope, ApiScopeName } from "@/lib/api/types";
 import { siteHref } from "@/lib/marketing/site";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
@@ -42,11 +44,42 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 /** What a new key can do before the member changes it: read-only, the safer start. */
 const DEFAULT_SCOPES: ApiScopeName[] = ["contacts:read"];
 
+/** C-167: how long a new key lasts. "never" is the default. */
+const EXPIRY_CHOICES = [
+  { value: "never", label: "Never" },
+  { value: "30", label: "30 days" },
+  { value: "90", label: "90 days" },
+  { value: "365", label: "1 year" },
+] as const;
+type ExpiryChoice = (typeof EXPIRY_CHOICES)[number]["value"];
+const MAX_ALLOWED_IPS = 20;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "12 Jan 2027", in the workspace's time zone. */
+function expiryDate(iso: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "numeric", year: "numeric", timeZone })
+    .formatToParts(new Date(iso))
+    .reduce<Record<string, string>>((all, part) => ({ ...all, [part.type]: part.value }), {});
+  return `${Number(parts.day)} ${MONTHS[Number(parts.month) - 1]} ${parts.year}`;
+}
+
+/** "Expires 12 Jan 2027", "Expired", or null for a key that never expires. */
+function expiryText(apiKey: Pick<ApiKey, "expires_at">, timeZone: string, now: Date = new Date()): string | null {
+  if (!apiKey.expires_at) return null;
+  return new Date(apiKey.expires_at).getTime() <= now.getTime() ? "Expired" : `Expires ${expiryDate(apiKey.expires_at, timeZone)}`;
+}
+
+const IP_HINT = "IP addresses or CIDR ranges, IPv4 or IPv6, like 203.0.113.7 or 10.0.0.0/8. Leave empty to allow any address.";
+
 /**
  * Settings › API keys (GR-25, own section since C-165): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
  * revoke one. The public API is part of Pro and Max: a Free workspace is told so instead of
  * being offered the form. Owners and admins, like the webhook endpoints.
+ *
+ * C-167: a key can expire (30 days, 90 days, a year, or never) and can be limited to IP addresses
+ * and ranges. The list shows both; the name and the addresses can be edited later, the scopes
+ * never. A key whose maker's account is gone says "Made by a former member".
  */
 export function ApiKeysSection() {
   const workspace = useCurrentWorkspace();
@@ -97,7 +130,13 @@ export function ApiKeysSection() {
       ) : (
         <ul className="divide-y divide-line-subtle" aria-label="API keys">
           {items.map((key) => (
-            <KeyRow key={key.id} apiKey={key} wid={wid} catalogue={keys.data?.scopes ?? []} />
+            <KeyRow
+              key={key.id}
+              apiKey={key}
+              wid={wid}
+              timeZone={workspace.timezone}
+              catalogue={keys.data?.scopes ?? []}
+            />
           ))}
         </ul>
       )}
@@ -116,11 +155,24 @@ export function ApiKeysSection() {
   );
 }
 
-function KeyRow({ apiKey, wid, catalogue }: { apiKey: ApiKey; wid: string; catalogue: ApiScope[] }) {
+function KeyRow({
+  apiKey,
+  wid,
+  timeZone,
+  catalogue,
+}: {
+  apiKey: ApiKey;
+  wid: string;
+  timeZone: string;
+  catalogue: ApiScope[];
+}) {
   const revoke = useRevokeApiKey(wid);
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const revoked = apiKey.revoked_at !== null && apiKey.revoked_at !== undefined;
   const label = (scope: ApiScopeName) => catalogue.find((s) => s.scope === scope)?.description ?? scope;
+  const expiry = revoked ? null : expiryText(apiKey, timeZone);
+  const allowed = apiKey.allowed_ips ?? [];
 
   return (
     <li data-testid="api-key" className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0">
@@ -128,6 +180,7 @@ function KeyRow({ apiKey, wid, catalogue }: { apiKey: ApiKey; wid: string; catal
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold break-all">{apiKey.name}</p>
           {revoked ? <Badge tone="neutral">Revoked</Badge> : null}
+          {expiry === "Expired" ? <Badge tone="warning">Expired</Badge> : null}
         </div>
         <p className="font-mono text-xs text-fg-secondary">{apiKey.key_prefix}&hellip;</p>
         <div className="flex flex-wrap gap-1.5" aria-label={`Scopes of ${apiKey.name}`}>
@@ -144,13 +197,28 @@ function KeyRow({ apiKey, wid, catalogue }: { apiKey: ApiKey; wid: string; catal
             : apiKey.last_used_at
               ? ` · last used ${relativeTime(apiKey.last_used_at)}`
               : " · never used"}
+          {expiry && expiry !== "Expired" ? ` · ${expiry.replace("Expires", "expires")}` : ""}
         </p>
+        {allowed.length > 0 ? (
+          <p className="text-xs text-fg-secondary" data-testid="api-key-ips">
+            Only from <span className="font-mono">{allowed.join(", ")}</span>
+          </p>
+        ) : null}
+        {apiKey.made_by_former_member && !revoked ? (
+          <p className="text-xs text-fg-secondary">Made by a former member. Revoke it if nothing still needs it.</p>
+        ) : null}
       </div>
       {revoked ? null : (
-        <Button variant="destructive-ghost" size="sm" onClick={() => setConfirming(true)}>
-          <Trash2 aria-hidden /> Revoke
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)} aria-label={`Edit ${apiKey.name}`}>
+            <Pencil aria-hidden /> Edit
+          </Button>
+          <Button variant="destructive-ghost" size="sm" onClick={() => setConfirming(true)}>
+            <Trash2 aria-hidden /> Revoke
+          </Button>
+        </div>
       )}
+      {editing ? <EditKeyDialog apiKey={apiKey} wid={wid} onClose={() => setEditing(false)} /> : null}
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -196,6 +264,8 @@ function CreateKeyDialog({
   const create = useCreateApiKey(wid);
   const [name, setName] = useState("");
   const [chosen, setChosen] = useState<ApiScopeName[]>(DEFAULT_SCOPES);
+  const [expiry, setExpiry] = useState<ExpiryChoice>("never");
+  const [ips, setIps] = useState<string[]>([]);
 
   function toggle(scope: ApiScopeName, checked: boolean) {
     setChosen((current) => (checked ? [...current, scope] : current.filter((s) => s !== scope)));
@@ -203,12 +273,17 @@ function CreateKeyDialog({
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
+    const body: ApiKeyCreate = { name: name.trim(), scopes: chosen };
+    if (expiry !== "never") body.expires_in_days = Number(expiry) as ApiKeyCreate["expires_in_days"];
+    if (ips.length > 0) body.allowed_ips = ips;
     create.mutate(
-      { name: name.trim(), scopes: chosen },
+      body,
       {
         onSuccess: (made) => {
           setName("");
           setChosen(DEFAULT_SCOPES);
+          setExpiry("never");
+          setIps([]);
           onCreated(made.key);
         },
         onError: (error) => toastError(error),
@@ -253,12 +328,111 @@ function CreateKeyDialog({
               </label>
             ))}
           </fieldset>
+          <Field>
+            <FieldLabel htmlFor="api-key-expiry">Expires</FieldLabel>
+            <Select value={expiry} onValueChange={(value) => setExpiry(value as ExpiryChoice)}>
+              <SelectTrigger id="api-key-expiry" className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPIRY_CHOICES.map((choice) => (
+                  <SelectItem key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldDescription>We&rsquo;ll remind owners and admins a week before it stops working.</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="api-key-ips">Allowed IP addresses</FieldLabel>
+            <ChipInput
+              id="api-key-ips"
+              value={ips}
+              onValueChange={setIps}
+              listLabel="Allowed IP addresses"
+              separator="comma"
+              max={MAX_ALLOWED_IPS}
+              maxLength={50}
+              placeholder="Any address"
+              hint={IP_HINT}
+            />
+          </Field>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" loading={create.isPending} disabled={name.trim() === "" || chosen.length === 0}>
               Create key
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** C-167: rename a key or change the addresses it works from. Scopes stay as they were made. */
+function EditKeyDialog({ apiKey, wid, onClose }: { apiKey: ApiKey; wid: string; onClose: () => void }) {
+  const update = useUpdateApiKey(wid);
+  const [name, setName] = useState(apiKey.name);
+  const [ips, setIps] = useState<string[]>(apiKey.allowed_ips ?? []);
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    update.mutate(
+      { id: apiKey.id, body: { name: name.trim(), allowed_ips: ips } },
+      {
+        onSuccess: () => {
+          toast.success("API key saved");
+          onClose();
+        },
+        onError: (error) => toastError(error),
+      },
+    );
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <form onSubmit={submit} className="space-y-5">
+          <DialogHeader>
+            <DialogTitle>Edit {apiKey.name}</DialogTitle>
+            <DialogDescription>
+              Change its name or where it can be used from. Its scopes stay as they are: make another key for different
+              ones.
+            </DialogDescription>
+          </DialogHeader>
+          <Field>
+            <FieldLabel htmlFor={`api-key-name-${apiKey.id}`}>Name</FieldLabel>
+            <Input
+              id={`api-key-name-${apiKey.id}`}
+              required
+              maxLength={80}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`api-key-ips-${apiKey.id}`}>Allowed IP addresses</FieldLabel>
+            <ChipInput
+              id={`api-key-ips-${apiKey.id}`}
+              value={ips}
+              onValueChange={setIps}
+              listLabel="Allowed IP addresses"
+              separator="comma"
+              max={MAX_ALLOWED_IPS}
+              maxLength={50}
+              placeholder="Any address"
+              hint={IP_HINT}
+            />
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={update.isPending} disabled={name.trim() === ""}>
+              Save
             </Button>
           </DialogFooter>
         </form>
