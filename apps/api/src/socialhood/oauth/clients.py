@@ -201,8 +201,7 @@ def parse_cimd(client_id: str, content: bytes) -> dict[str, Any]:
         raise ClientError(
             "invalid_client", "The client metadata document's client_id doesn't match its URL."
         )
-    method = doc.get("token_endpoint_auth_method", ClientAuth.NONE.value)
-    if method != ClientAuth.NONE.value:
+    if not _public_ok(doc):
         raise ClientError(
             "invalid_client", "Clients identified by a metadata document must use 'none'."
         )
@@ -217,6 +216,20 @@ def parse_cimd(client_id: str, content: bytes) -> dict[str, Any]:
         "software_id": _short(doc.get("software_id")),
         "software_version": _short(doc.get("software_version")),
     }
+
+
+def _public_ok(doc: dict[str, Any]) -> bool:
+    """Whether the client can act as a public client (``none``: PKCE and its exact redirect URI
+    are the proof). Its main method may be another, so long as it lists ``none`` among
+    ``token_endpoint_auth_methods_supported``: ChatGPT's document says ``private_key_jwt`` and
+    supports ``none`` (https://chatgpt.com/oauth/client.json, read 2026-11-01), and our metadata
+    advertises no ``private_key_jwt``, so it uses ``none`` with us. A method that needs a shared
+    secret is never possible here: a document can't hold one."""
+    method = doc.get("token_endpoint_auth_method", ClientAuth.NONE.value)
+    if method == ClientAuth.NONE.value:
+        return True
+    supported = doc.get("token_endpoint_auth_methods_supported")
+    return isinstance(supported, list) and ClientAuth.NONE.value in supported
 
 
 def _short(value: object) -> str | None:

@@ -542,6 +542,31 @@ async def test_a_metadata_document_client_connects(
     assert issued["access_token"].startswith("sho_")
 
 
+async def test_a_private_key_jwt_client_that_supports_none_connects_as_public(
+    mcp_app: FastAPI, setup: Setup
+) -> None:
+    """ChatGPT's document (2026-11-01): private_key_jwt first, none supported. Our metadata
+    offers no private_key_jwt, so it is a public client here; an assertion it sends anyway is
+    ignored, not trusted."""
+    mcp_app.state.cimd_fetch = FakeFetch(
+        _document(
+            token_endpoint_auth_method="private_key_jwt",
+            token_endpoint_auth_methods_supported=["none", "private_key_jwt"],
+            token_endpoint_auth_signing_alg="RS256",
+            jwks_uri="https://client.example/jwks.json",
+        )
+    )
+    flow = Flow(app=mcp_app, client_id=CIMD_URL)
+    issued = await flow.tokens(setup)
+    assert issued["access_token"].startswith("sho_")
+    response = await flow.exchange(
+        await flow.code(setup),
+        client_assertion_type="urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        client_assertion="eyJhbGciOiJSUzI1NiJ9.e30.c2ln",
+    )
+    assert response.status_code == 200, response.text
+
+
 async def test_a_logo_on_another_host_isnt_shown(mcp_app: FastAPI, setup: Setup) -> None:
     mcp_app.state.cimd_fetch = FakeFetch(_document(logo_uri="https://tracker.example/l.png"))
     flow = Flow(app=mcp_app, client_id=CIMD_URL)
@@ -554,6 +579,11 @@ async def test_a_logo_on_another_host_isnt_shown(mcp_app: FastAPI, setup: Setup)
     [
         _document(client_id="https://client.example/other.json"),
         _document(token_endpoint_auth_method="client_secret_basic"),
+        _document(token_endpoint_auth_method="private_key_jwt"),
+        _document(
+            token_endpoint_auth_method="private_key_jwt",
+            token_endpoint_auth_methods_supported=["private_key_jwt"],
+        ),
         _document(redirect_uris=["http://evil.example/callback"]),
         _document(redirect_uris=[]),
         _document(client_name=""),
