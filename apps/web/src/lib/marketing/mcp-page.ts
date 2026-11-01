@@ -89,12 +89,7 @@ export const ASKS: readonly Ask[] = [
   {
     prompt: "When someone comments \"price\" on my last post, DM them the price.",
     result:
-      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it stays off unless you ask for it on. Once it's on, the automation sends the DMs, and your team is told.",
-    plan: "Pro and Max",
-  },
-  {
-    prompt: "Pause the giveaway automation.",
-    result: "It pauses that automation and tells you. Ask it to resume it later.",
+      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it stays off unless you ask for it on. Once it's on, the automation sends the DMs, and your team is told. Ask it to pause the automation whenever you like.",
     plan: "Pro and Max",
   },
   {
