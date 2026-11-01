@@ -1,5 +1,7 @@
 """Publishing reads (01-design.md §4.1): list_scheduled_posts, get_scheduled_post,
 get_best_times, list_media. Owners and admins, as the Schedule page (``min_role`` admin).
+list_instagram_posts (C-169): the posts synced from the accounts (``media_items``), any member, as
+the Comments page; how “my last post” is found for the tools that take ``post``.
 
 Captions and media are the workspace's own content, not third-party text.
 """
@@ -7,7 +9,7 @@ Captions and media are the workspace's own content, not third-party text.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, time
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -17,7 +19,9 @@ from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
 from socialhood.mcp.tools.common import agent_tool, moment
 from socialhood.models.identity import Role
+from socialhood.models.media import MediaType
 from socialhood.repositories import social_accounts
+from socialhood.services.comments.queries import find_posts
 from socialhood.services.scheduled_posts import best_times, library, posts, slots
 
 ACCOUNT = "A connected account's id or @handle (from list_accounts)."
@@ -397,4 +401,116 @@ async def list_media(call: ToolCall, args: ListMediaInput) -> MediaResult:
         + (" (more with next_cursor)" if page.next_cursor else ""),
         items=items,
         next_cursor=page.next_cursor,
+    )
+
+
+# ---------------------------------------------------------------- list_instagram_posts (C-169)
+
+CAPTION_SNIPPET = 120
+POST_TYPES: dict[str, str] = {
+    MediaType.IMAGE: "post",
+    MediaType.VIDEO: "post",
+    MediaType.CAROUSEL: "carousel",
+    MediaType.REEL: "reel",
+    MediaType.STORY: "story",
+}
+WITH_STORIES = tuple(MediaType)
+
+
+class ListInstagramPostsInput(ToolInput):
+    account: str | None = Field(default=None, max_length=100, description=ACCOUNT)
+    limit: int = Field(default=10, ge=1, le=20, description="How many to list (at most 20).")
+    since: date | None = Field(
+        default=None, description="Published on or after this day (workspace time zone)."
+    )
+    include_stories: bool = Field(
+        default=False,
+        description="Also list Stories that have synced. They take no comments, so “latest” "
+        "never picks one.",
+    )
+
+
+class InstagramPostOut(BaseModel):
+    post_id: uuid.UUID
+    account: str
+    platform: str  # instagram, facebook
+    type: str  # post, reel, carousel, story
+    caption_start: str | None = None  # the workspace's own caption, first 120 characters
+    published_at: str | None = None  # local and UTC
+    published_at_utc: str
+    permalink: str | None = None
+    comments: int | None = None
+    likes: int | None = None
+
+
+class InstagramPostsResult(ToolOutput):
+    items: list[InstagramPostOut]
+    total: int
+    more: int
+
+
+def caption_snippet(caption: str | None) -> str | None:
+    text = " ".join((caption or "").split())
+    if not text:
+        return None
+    return text if len(text) <= CAPTION_SNIPPET else text[: CAPTION_SNIPPET - 1].rstrip() + "…"
+
+
+@tool(
+    registry,
+    name="list_instagram_posts",
+    title="List published posts",
+    description=(
+        "The posts published on the connected accounts, as synced from Instagram (and Facebook "
+        "Pages), newest first: post_id, account, type (post, Reel, carousel, Story), the start "
+        "of the caption, when it was published, its link and its comment and like counts. The "
+        "first item is the latest post, the one “latest” means in create_automation, "
+        "update_automation and get_post_comments_summary. Captions are the workspace's own "
+        "content. Scheduled posts not yet published are in list_scheduled_posts."
+    ),
+    input_model=ListInstagramPostsInput,
+    output_model=InstagramPostsResult,
+    scope="posts:read",
+)
+async def list_instagram_posts(
+    call: ToolCall, args: ListInstagramPostsInput
+) -> InstagramPostsResult:
+    acct = await find_account(call.agent_context(), args.account)
+    start = datetime.combine(args.since, time(0), tzinfo=call.timezone) if args.since else None
+    found = await find_posts(
+        call.session,
+        start=start,
+        media_types=WITH_STORIES if args.include_stories else None,
+        account_id=acct.id if acct else None,
+        limit=args.limit,
+    )
+    names = {a.id: a for a in await social_accounts.list_all(call.session)}
+    items = []
+    for item in found.items:
+        owner = names.get(item.social_account_id)
+        items.append(
+            InstagramPostOut(
+                post_id=item.id,
+                account=handle(owner) if owner else "a removed account",
+                platform=owner.platform if owner else "instagram",
+                type=POST_TYPES.get(item.media_type, "post"),
+                caption_start=caption_snippet(item.caption),
+                published_at=moment(call, item.posted_at),
+                published_at_utc=item.posted_at.astimezone(UTC).isoformat(),
+                permalink=item.permalink,
+                comments=item.comments_count,
+                likes=item.like_count,
+            )
+        )
+    more = max(found.total - len(items), 0)
+    if not items:
+        summary = "No published posts have synced" + (" for that account" if acct else "")
+    else:
+        noun = "post" if len(items) == 1 else "posts"
+        summary = f"{len(items)} published {noun}, newest first" + (
+            f"; {more} more" if more else ""
+        )
+    caveats = [] if items else ["Posts appear here once they sync from Instagram."]
+    return InstagramPostsResult(
+        summary=summary, items=items, total=found.total, more=more, caveats=caveats
     )
