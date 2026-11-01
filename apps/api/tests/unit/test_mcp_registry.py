@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from socialhood.mcp.audit import digest, redact
 from socialhood.mcp.calls import effective_mode, plan_cap
+from socialhood.mcp.confirmations import TTL_S
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import (
     BANNED_PHRASES,
@@ -95,8 +96,8 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         "add_knowledge": ("knowledge:write", Role.ADMIN, Access.WRITE, False, False),
         "pause_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, False),
         "resume_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
-        "create_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
-        "update_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, True),
+        "create_automation": ("automations:create", Role.ADMIN, Access.WRITE, False, True),
+        "update_automation": ("automations:create", Role.ADMIN, Access.WRITE, True, True),
         "list_instagram_posts": ("posts:read", Role.AGENT, Access.READ, False, False),
         "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
         "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
@@ -112,8 +113,9 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
             destructive,
             open_world,
         ), name
-    assert registry.get("create_post").dedupe_window_s == 600  # type: ignore[union-attr]
-    assert registry.get("create_automation").dedupe_window_s == 600  # type: ignore[union-attr]
+    # As long as a confirmation token lasts, so the same token can't do it twice.
+    assert registry.get("create_post").dedupe_window_s == TTL_S  # type: ignore[union-attr]
+    assert registry.get("create_automation").dedupe_window_s == TTL_S  # type: ignore[union-attr]
     assert registry.get("update_automation").dedupe_window_s is None  # type: ignore[union-attr]
 
 

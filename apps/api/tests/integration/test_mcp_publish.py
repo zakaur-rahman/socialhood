@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.billing.plans import ENTITLEMENTS
 from tests.support.automation_api import set_plan
 from tests.support.inbox import make_asset
-from tests.support.mcp import connect, error_of, make_key, structured
+from tests.support.mcp import confirm, connect, error_of, make_key, structured
 from tests.support.publishing import make_posting_slot
 from tests.support.sending import Setup, clean_outbox
 
@@ -102,8 +102,20 @@ async def test_scheduling_is_previewed_then_confirmed(
     assert await rows(engine, "SELECT 1 FROM scheduled_posts") == []  # nothing stored
     assert await rows(engine, "SELECT 1 FROM audit_events WHERE action LIKE 'post.%'") == []
 
-    done = structured(await call(mcp_app, key, "create_post", {**args, "confirmed": True}))
-    assert (done["status"], done["preview"]) == ("scheduled", False)
+    assert preview["confirmation_token"]
+    done = structured(
+        await call(
+            mcp_app,
+            key,
+            "create_post",
+            {**args, "confirmed": True, "confirmation_token": preview["confirmation_token"]},
+        )
+    )
+    assert (done["status"], done["preview"], done["confirmation_token"]) == (
+        "scheduled",
+        False,
+        None,
+    )
     [post] = await rows(engine, "SELECT status FROM scheduled_posts")
     assert post["status"] == "scheduled"
     [note] = await rows(engine, "SELECT * FROM notifications WHERE type = 'ai_post_change'")
@@ -117,7 +129,9 @@ async def test_the_same_key_returns_the_same_post(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
     media = await image(engine, setup)
-    args = post_args(setup, media, when=at(days=2), confirmed=True, idempotency_key="retry-0001")
+    args = post_args(setup, media, when=at(days=2), idempotency_key="retry-0001")
+    token = structured(await call(mcp_app, key, "create_post", args))["confirmation_token"]
+    args = {**args, "confirmed": True, "confirmation_token": token}
     first = structured(await call(mcp_app, key, "create_post", args))
     again = structured(await call(mcp_app, key, "create_post", args))
     assert again == {**first, "duplicate_of_previous_call": True}
@@ -125,8 +139,7 @@ async def test_the_same_key_returns_the_same_post(
     assert len(await rows(engine, "SELECT 1 FROM notifications WHERE type = 'ai_post_change'")) == 1
     # A preview isn't stored: the same key can still do the real thing.
     other = post_args(setup, media, when=at(days=3), idempotency_key="retry-0002")
-    assert structured(await call(mcp_app, key, "create_post", other))["preview"] is True
-    done = structured(await call(mcp_app, key, "create_post", {**other, "confirmed": True}))
+    done = structured(await confirm(mcp_app, key, "create_post", other))
     assert done["status"] == "scheduled"
     assert done["duplicate_of_previous_call"] is False
 
@@ -197,12 +210,7 @@ async def test_next_free_slot_uses_the_accounts_posting_times(
         )
     media = await image(engine, setup)
     result = structured(
-        await call(
-            mcp_app,
-            key,
-            "create_post",
-            post_args(setup, media, when="next_free_slot", confirmed=True),
-        )
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when="next_free_slot"))
     )
     assert result["status"] == "scheduled"
     assert "18:00 UTC" in result["publish_at"] or "6:00 pm" in result["publish_at"]
@@ -256,12 +264,7 @@ async def test_update_and_cancel_a_scheduled_post(
 ) -> None:
     media = await image(engine, setup)
     made = structured(
-        await call(
-            mcp_app,
-            key,
-            "create_post",
-            post_args(setup, media, when=at(days=2), confirmed=True),
-        )
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when=at(days=2)))
     )
     post_id = made["post_id"]
 
@@ -279,7 +282,12 @@ async def test_update_and_cancel_a_scheduled_post(
             mcp_app,
             key,
             "update_post",
-            {"post_id": post_id, "caption": "New words", "confirmed": True},
+            {
+                "post_id": post_id,
+                "caption": "New words",
+                "confirmed": True,
+                "confirmation_token": preview["confirmation_token"],
+            },
         )
     )
     assert (changed["caption"], changed["status"]) == ("New words", "scheduled")
@@ -287,12 +295,7 @@ async def test_update_and_cancel_a_scheduled_post(
     assert (await rows(engine, "SELECT caption FROM scheduled_posts"))[0]["caption"] == "New words"
 
     moved = structured(
-        await call(
-            mcp_app,
-            key,
-            "update_post",
-            {"post_id": post_id, "when": at(days=5), "confirmed": True},
-        )
+        await confirm(mcp_app, key, "update_post", {"post_id": post_id, "when": at(days=5)})
     )
     assert moved["publish_at"] != made["publish_at"]
     too_soon = error_of(
@@ -313,7 +316,16 @@ async def test_update_and_cancel_a_scheduled_post(
     assert preview["preview"] is True
     assert (await rows(engine, "SELECT status FROM scheduled_posts"))[0]["status"] == "scheduled"
     canceled = structured(
-        await call(mcp_app, key, "cancel_post", {"post_id": post_id, "confirmed": True})
+        await call(
+            mcp_app,
+            key,
+            "cancel_post",
+            {
+                "post_id": post_id,
+                "confirmed": True,
+                "confirmation_token": preview["confirmation_token"],
+            },
+        )
     )
     assert (canceled["status"], canceled["preview"]) == ("draft", False)
     assert (await rows(engine, "SELECT status FROM scheduled_posts"))[0]["status"] == "draft"
@@ -333,11 +345,8 @@ async def test_a_draft_given_a_time_is_scheduled_and_unknown_posts_are_not_found
         await call(mcp_app, key, "create_post", post_args(setup, media, when="draft"))
     )
     scheduled = structured(
-        await call(
-            mcp_app,
-            key,
-            "update_post",
-            {"post_id": draft["post_id"], "when": at(days=3), "confirmed": True},
+        await confirm(
+            mcp_app, key, "update_post", {"post_id": draft["post_id"], "when": at(days=3)}
         )
     )
     assert scheduled["status"] == "scheduled"
@@ -371,15 +380,11 @@ async def test_the_daily_post_cap(
     monkeypatch.setitem(ENTITLEMENTS["mcp_posts_daily"], "pro", 1)
     media = await image(engine, setup)
     first = structured(
-        await call(
-            mcp_app, key, "create_post", post_args(setup, media, when=at(days=2), confirmed=True)
-        )
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when=at(days=2)))
     )
     assert first["status"] == "scheduled"
     error = error_of(
-        await call(
-            mcp_app, key, "create_post", post_args(setup, media, when=at(days=3), confirmed=True)
-        )
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when=at(days=3)))
     )
     assert (error["code"], error["entitlement"], error["limit"]) == (
         "quota_exceeded",
@@ -415,3 +420,68 @@ async def test_roles_and_scopes_gate_the_write_tools(
         assert "create_post" not in {t.name for t in (await mcp.list_tools()).tools}
         error = error_of(await mcp.call_tool("create_post", {"accounts": ["x"], "when": "draft"}))
     assert error["code"] == "forbidden"
+
+
+# ---------------------------------------------------------------- the server-checked preview
+
+
+async def test_a_change_needs_the_preview_s_token_and_a_draft_doesn_t(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    media = await image(engine, setup)
+    when = at(days=2)
+    refused = error_of(
+        await call(mcp_app, key, "create_post", post_args(setup, media, when=when, confirmed=True))
+    )
+    assert refused["code"] == "validation_error"
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    assert "preview" in refused["message"]
+    assert await rows(engine, "SELECT 1 FROM scheduled_posts") == []
+    # Saving a draft needs none, even with confirmed.
+    draft = structured(
+        await call(
+            mcp_app, key, "create_post", post_args(setup, media, when="draft", confirmed=True)
+        )
+    )
+    assert draft["status"] == "draft"
+    # A token for another post time, or from another tool, is not this change's.
+    token = structured(await call(mcp_app, key, "create_post", post_args(setup, media, when=when)))[
+        "confirmation_token"
+    ]
+    moved = error_of(
+        await call(
+            mcp_app,
+            key,
+            "create_post",
+            post_args(setup, media, when=at(days=3), confirmed=True, confirmation_token=token),
+        )
+    )
+    assert moved["code"] == "validation_error"
+    other_tool = error_of(
+        await call(
+            mcp_app,
+            key,
+            "update_post",
+            {
+                "post_id": draft["post_id"],
+                "when": when,
+                "confirmed": True,
+                "confirmation_token": token,
+            },
+        )
+    )
+    assert other_tool["field_errors"][0]["field"] == "confirmation_token"
+    made = structured(
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when=when, caption="B"))
+    )
+    # update_post and cancel_post refuse a scheduled post's change without a token.
+    for name, args in (
+        ("update_post", {"post_id": made["post_id"], "caption": "C", "confirmed": True}),
+        ("cancel_post", {"post_id": made["post_id"], "confirmed": True}),
+    ):
+        error = error_of(await call(mcp_app, key, name, args))
+        assert error["field_errors"][0]["field"] == "confirmation_token"
+    [row] = await rows(
+        engine, "SELECT status, caption FROM scheduled_posts WHERE id = :i", i=made["post_id"]
+    )
+    assert (row["status"], row["caption"]) == ("scheduled", "B")

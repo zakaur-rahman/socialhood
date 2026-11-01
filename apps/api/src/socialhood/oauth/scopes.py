@@ -74,10 +74,10 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "Automations",
         (
             ("automations:read", "See your automations and how they're doing"),
+            ("automations:write", "Pause and resume automations"),
             (
-                "automations:write",
-                "Create and edit keyword automations and turn them on, after you confirm; pause "
-                "and resume automations",
+                "automations:create",
+                "Create and change keyword automations, and turn new ones on, after a preview",
             ),
         ),
     ),

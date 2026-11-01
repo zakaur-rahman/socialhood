@@ -100,6 +100,23 @@ class WriteInput(ToolInput):
     )
 
 
+class ConfirmedInput(WriteInput):
+    """Base of a write whose change is previewed first (mcp/confirmations.py)."""
+
+    confirmed: bool = Field(
+        default=False,
+        description="false (the default): nothing changes and the result is a preview to show the "
+        "member. true: do it, with the preview's confirmation_token. Send true only after the "
+        "member has agreed.",
+    )
+    confirmation_token: str | None = Field(
+        default=None,
+        max_length=120,
+        description="From the preview, needed with confirmed true. It is for exactly those "
+        "arguments, for 15 minutes: changed arguments need a new preview.",
+    )
+
+
 class WriteOutput(ToolOutput):
     """Base of a write tool's result: ``duplicate_of_previous_call`` is true when this is the
     stored result of an earlier identical call (an idempotency key, or the dedupe window)."""
@@ -109,6 +126,8 @@ class WriteOutput(ToolOutput):
     # call would do (the resolved time, the checklist), and a call with ``confirmed: true`` does
     # it. A preview is never stored for replay.
     preview: bool = False
+    # A preview's token, which the confirmed call sends back (mcp/confirmations.py).
+    confirmation_token: str | None = None
 
 
 type Handler[I: ToolInput, O: ToolOutput] = Callable[[ToolCall, I], Awaitable[O]]

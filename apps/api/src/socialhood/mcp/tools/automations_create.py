@@ -6,7 +6,9 @@ editor's own services: ``definitions.create`` then ``definitions.update`` (the a
 ``definitions.activate`` to turn one on, so the validation, the plan's ``active_automations``
 limit and the overlap check are the app's, never a second set of rules.
 
-- **Confirmation.** Nothing changes until the call is repeated with ``confirmed: true``. The first
+- **Confirmation.** Nothing changes until the call is repeated with ``confirmed: true`` and the
+  preview's ``confirmation_token`` (mcp/confirmations.py), which the server checks; it also binds
+  the post “latest” resolved to, so a post synced after the preview needs a new one. The first
   call runs the same services inside a savepoint and rolls it back, so the preview's errors are
   the real ones and it shows what the app would store: the resolved account and post, the tap
   first opening the app adds to new comment automations, overlaps with live automations, what
@@ -38,8 +40,9 @@ from socialhood.agent.tools.common import find_account, handle
 from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
+from socialhood.mcp import confirmations
 from socialhood.mcp.context import ToolCall
-from socialhood.mcp.registry import Access, WriteInput, WriteOutput, registry, tool
+from socialhood.mcp.registry import Access, ConfirmedInput, WriteOutput, registry, tool
 from socialhood.mcp.tools.common import moment, resolve_post
 from socialhood.mcp.tools.posts import POST_TYPES, caption_snippet
 from socialhood.models.identity import Role, User
@@ -71,10 +74,6 @@ ACTIVE = "active"  # an automation that is on (the projection's status)
 MAX_KEYWORDS = 20
 DM_TEXT_CHARS = 2000  # a backstop: the app's checks give the real limit (1,000 bytes on Instagram)
 
-CONFIRMED = (
-    "false (the default): nothing changes and the result shows what would happen. true: do it. "
-    "Send true only after the member has seen the preview."
-)
 POST = (
     "For a comment trigger: a post id from list_instagram_posts, “latest” for the newest post, "
     "“next” for the next post published, or “any” for every post (the default)."
@@ -107,7 +106,7 @@ class LinkButton(BaseModel):
     url: str = Field(min_length=1, max_length=2000, description="An https link.")
 
 
-class CreateAutomationInput(WriteInput):
+class CreateAutomationInput(ConfirmedInput):
     name: str = Field(min_length=1, max_length=80)
     account: str | None = Field(
         default=None,
@@ -142,10 +141,9 @@ class CreateAutomationInput(WriteInput):
         description="true: switch it on once created, so it starts messaging people who match. "
         "false (the default): it is saved off, as a draft.",
     )
-    confirmed: bool = Field(default=False, description=CONFIRMED)
 
 
-class UpdateAutomationInput(WriteInput):
+class UpdateAutomationInput(ConfirmedInput):
     automation_id: uuid.UUID = Field(description="From list_automations.")
     name: str | None = Field(default=None, min_length=1, max_length=80)
     keywords: list[Keyword] | None = Field(
@@ -163,7 +161,6 @@ class UpdateAutomationInput(WriteInput):
         max_length=PUBLIC_REPLY_CHARS,
         description="Comment triggers: replaces the public replies; an empty string removes them.",
     )
-    confirmed: bool = Field(default=False, description=CONFIRMED)
 
 
 class PostOut(BaseModel):
@@ -313,6 +310,7 @@ async def _result(
     summary: str,
     next_step: str,
     stored: bool = True,
+    token: str | None = None,
 ) -> AutomationWriteResult:
     """The automation as the app stores it (``queries.one``), with what activation would still
     find (``flow_store.problems``, the editor's checklist) and the plan's limit."""
@@ -340,6 +338,7 @@ async def _result(
     return AutomationWriteResult(
         summary=summary[:400],
         preview=preview,
+        confirmation_token=token,
         automation_id=out.id if stored else None,
         name=out.name,
         status=out.status,
@@ -395,8 +394,8 @@ async def _notify(call: ToolCall, automation: AutomationOut, did: str) -> None:
 
 def _confirm_step(then: str) -> str:
     return (
-        f"Nothing was changed. Show the member this, then call again with confirmed: true to "
-        f"{then}."
+        "Nothing was changed. Show the member this. After they agree, call again with the same "
+        f"arguments, confirmed: true and this confirmation_token to {then}."
     )
 
 
@@ -457,17 +456,18 @@ def _what(out: AutomationOut) -> str:
         "latest, the next one, or any) or sends it in a DM, Amplychat sends them a DM, with an "
         "optional link button and, for comments, a public reply. It is checked as in the "
         "automation editor. The first call is a preview: the account and post, the messages, "
-        "overlaps with live automations, what it still needs and the plan's limit. A second "
-        "call with confirmed true creates it, off unless turn_on is true; once on, it messages "
-        "the people who match. The team is notified. Part of Pro."
+        "overlaps with live automations, what it still needs and the plan's limit. Show the "
+        "member the preview and call again only after they agree, with confirmed true and its "
+        "confirmation_token. It is created off unless turn_on is true; once on, it messages the "
+        "people who match. The team is notified. Part of Pro."
     ),
     input_model=CreateAutomationInput,
     output_model=AutomationWriteResult,
-    scope="automations:write",
+    scope="automations:create",
     access=Access.WRITE,
     min_role=Role.ADMIN,
     open_world=True,  # once on, it messages real customers
-    dedupe_window_s=600,
+    dedupe_window_s=confirmations.TTL_S,  # as long as a confirmation token lasts
 )
 async def create_automation(call: ToolCall, args: CreateAutomationInput) -> AutomationWriteResult:
     comment = args.trigger == "comment_keyword"
@@ -490,6 +490,9 @@ async def create_automation(call: ToolCall, args: CreateAutomationInput) -> Auto
         if len(live) > 1:
             names = ", ".join(handle(a) for a in live)
             raise ApiError("conflict", WHICH_ACCOUNT.format(names=names))
+    resolved = {"account": account_id, "post": scope.item.id if scope.item else None}
+    if args.confirmed:
+        confirmations.require(call, args, args.confirmation_token, **resolved)
     savepoint = None if args.confirmed else await call.session.begin_nested()
     automation = await definitions.create(
         call.session,
@@ -538,6 +541,7 @@ async def create_automation(call: ToolCall, args: CreateAutomationInput) -> Auto
             "Nothing is created yet",
             next_step=_confirm_step("create it"),
             stored=False,
+            token=confirmations.issue(call, args, **resolved),
         )
         await _preview_end(call, savepoint)
         return result
@@ -584,12 +588,13 @@ def _not_simple(out: AutomationOut) -> str | None:
         "name, keywords, matching, post, DM text, link button or public reply. Only the fields "
         "sent change. A multi-step flow, an AI reply or another trigger is refused with a link "
         "to the editor. It doesn't turn the automation on or off (pause_automation and "
-        "resume_automation do), and a live automation has to stay complete. Previewed first; a "
-        "second call with confirmed true saves it. The team is notified. Part of Pro."
+        "resume_automation do), and a live automation has to stay complete. Previewed first: "
+        "show the member the preview and call again only after they agree, with confirmed true "
+        "and its confirmation_token. The team is notified. Part of Pro."
     ),
     input_model=UpdateAutomationInput,
     output_model=AutomationWriteResult,
-    scope="automations:write",
+    scope="automations:create",
     access=Access.WRITE,
     min_role=Role.ADMIN,
     destructive=True,  # it overwrites what was there
@@ -609,6 +614,7 @@ async def update_automation(call: ToolCall, args: UpdateAutomationInput) -> Auto
     if args.link_button is not None and args.remove_link_button:
         raise _bad("remove_link_button", "Send link_button or remove_link_button, not both.")
     changes: dict[str, object] = {}
+    resolved: dict[str, object] = {}
     if args.name is not None:
         changes["name"] = args.name
     if args.keywords is not None:
@@ -629,8 +635,11 @@ async def update_automation(call: ToolCall, args: UpdateAutomationInput) -> Auto
         changes["post_scope"] = scope.post_scope
         changes["media_item_ids"] = [scope.item.id] if scope.item else []
         changes["scheduled_post_ids"] = []
+        resolved["post"] = scope.item.id if scope.item else None
     if not changes:
         raise ApiError("validation_error", "Nothing to change: send at least one field to change.")
+    if args.confirmed:
+        confirmations.require(call, args, args.confirmation_token, **resolved)
     body = body_of(current).model_copy(update=changes)
     savepoint = None if args.confirmed else await call.session.begin_nested()
     await definitions.update(
@@ -648,6 +657,7 @@ async def update_automation(call: ToolCall, args: UpdateAutomationInput) -> Auto
             preview=True,
             summary=f"Preview: “{out.name}” would be changed as shown. Nothing is changed yet",
             next_step=_confirm_step("save the change"),
+            token=confirmations.issue(call, args, **resolved),
         )
         await _preview_end(call, savepoint)
         return result
