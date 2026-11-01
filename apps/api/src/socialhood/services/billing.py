@@ -161,7 +161,7 @@ async def plan_list(redis: Redis | None, dodo: DodoClient, settings: Settings) -
                 price=prices.get(plan),
                 trial_days=TRIAL_DAYS[plan],
                 entitlements=entitlements_of(plan),
-                available=on_sale and is_available(plan, settings),
+                available=plan == "free" or (on_sale and is_available(plan, settings)),
             )
             for plan in PLANS
         ]

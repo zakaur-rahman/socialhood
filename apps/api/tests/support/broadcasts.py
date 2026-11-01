@@ -183,6 +183,7 @@ async def shop(
     clerk_id, me = await sign_in(client, clerk, email=email, first_name="Asha")
     wid = me["workspaces"][0]["id"]
     headers = clerk.headers(clerk_id)
+    await set_plan(engine, wid, "pro")  # WhatsApp isn't on Free (C-172): connect it first
     created = await client.post(
         f"/v1/w/{wid}/dev/sandbox/accounts", json={"platform": "whatsapp"}, headers=headers
     )

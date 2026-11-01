@@ -257,7 +257,7 @@ async def test_the_daily_upload_cap(
     clerk: Clerk,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["mcp_uploads_daily"], "pro", 1)
+    monkeypatch.setitem(ENTITLEMENTS["mcp_uploads_daily"], "max", 1)
     upload_id = (await start(mcp_app, key))["upload_id"]
     public_id = f"ws/{setup.wid}/post/cap1"
     mock_lookup(clerk, public_id, "video", tags=[f"mcp_upload_{upload_id}"])
@@ -281,7 +281,7 @@ async def test_the_daily_upload_megabytes(
     clerk: Clerk,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["mcp_upload_mb_daily"], "pro", 4)
+    monkeypatch.setitem(ENTITLEMENTS["mcp_upload_mb_daily"], "max", 4)
     upload_id = (await start(mcp_app, key))["upload_id"]
     public_id = f"ws/{setup.wid}/post/big1"
     mock_lookup(clerk, public_id, "video", tags=[f"mcp_upload_{upload_id}"])  # 5 MB

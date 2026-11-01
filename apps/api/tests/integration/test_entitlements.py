@@ -189,7 +189,7 @@ async def test_activating_an_ai_reply_automation(ws: Ws) -> None:
     )
     response = await ws.call("POST", f"/automations/{draft['id']}/activate")
     body = assert_402(response, "entitlement_required", "ai_reply_automations", None)
-    assert body["detail"] == "AI replies in automations are part of Pro."
+    assert body["detail"] == "AI replies in automations are part of Creator and Business."
 
 
 async def test_activating_past_the_active_automations(ws: Ws, engine: AsyncEngine) -> None:

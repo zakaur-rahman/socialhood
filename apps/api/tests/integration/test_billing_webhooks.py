@@ -158,7 +158,7 @@ async def test_active_with_a_trial_starts_the_pro_trial(owner: Owner, redis: Red
     assert [t for t, _ in await owner.notifications()] == ["plan_activated"]
     published = [data for kind, data in await stream(redis, owner.wid) if kind == "usage.updated"]
     assert {p["metric"] for p in published} == {"ai_credits", "scheduled_posts"}
-    assert next(p for p in published if p["metric"] == "ai_credits")["limit"] == 5000
+    assert next(p for p in published if p["metric"] == "ai_credits")["limit"] == 1500
 
 
 async def test_active_without_a_trial_is_active_and_keeps_the_trial(owner: Owner) -> None:

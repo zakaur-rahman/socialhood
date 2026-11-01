@@ -148,7 +148,7 @@ async def mcp_app(api_settings: Settings, clean_db: None) -> AsyncIterator[FastA
 
 @pytest.fixture
 async def mcp_setup(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Setup:
-    """A Pro workspace with one conversation (keys are made on Pro, PD-6)."""
+    """A Business workspace with one conversation (keys are made on Business, PD-6)."""
     made = await workspace_with_thread(client, clerk, engine)
-    await set_plan(engine, made.wid, "pro")
+    await set_plan(engine, made.wid, "max")
     return made
