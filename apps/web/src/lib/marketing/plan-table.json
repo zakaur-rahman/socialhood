@@ -122,8 +122,8 @@
     },
     "mcp_posts_daily": {
       "free": 0,
-      "pro": 25,
-      "max": 100
+      "pro": 100,
+      "max": 300
     },
     "mcp_uploads_daily": {
       "free": 20,

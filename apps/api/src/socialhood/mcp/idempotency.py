@@ -31,6 +31,8 @@ from socialhood.services.idempotency import IdempotencyKey, fingerprint
 log = get_logger(__name__)
 
 KEY_ARGUMENT = "idempotency_key"
+# Each preview gives a new token: a retry after another preview is still the same call.
+NOT_THE_CALL = frozenset({KEY_ARGUMENT, "confirmation_token"})
 
 
 @dataclass
@@ -45,7 +47,7 @@ class WriteGuard:
     dedupe_window_s: int | None
 
     def __post_init__(self) -> None:
-        body = {k: v for k, v in self.arguments.items() if k != KEY_ARGUMENT}
+        body = {k: v for k, v in self.arguments.items() if k not in NOT_THE_CALL}
         key = self.arguments.get(KEY_ARGUMENT)
         self._explicit: IdempotencyKey | None = None
         if key:

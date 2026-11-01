@@ -325,7 +325,7 @@ function sections(): LegalSection[] {
           <ul>
             <li>
               <strong>What the AI app receives.</strong> Only what a tool returns for the member&apos;s request, and only
-              what that member&apos;s role can see in that workspace: for example scheduled posts, analytics, comment
+              what that member&apos;s role can see in that workspace: for example published and scheduled posts, analytics, comment
               summaries, or the recent messages of a conversation they asked about. Messages and comments written by
               customers are marked as third-party content.
             </li>
@@ -344,7 +344,7 @@ function sections(): LegalSection[] {
               sign-in, the workspace, the member, the access it was given and when it was last used. Access tokens are
               stored only as one-way hashes. For each tool call: which tool, a shortened copy of what it was asked (long
               text cut, keys and tokens removed), the outcome and how long it took, but not what {N} returned. Changes
-              an AI app makes, such as a scheduled post, also appear in the workspace&apos;s audit log as made by the
+              an AI app makes, such as a scheduled post or a new automation, also appear in the workspace&apos;s audit log as made by the
               member through that app.
             </li>
             <li>
@@ -354,7 +354,10 @@ function sections(): LegalSection[] {
             </li>
             <li>
               <strong>Sending.</strong> An AI app can&apos;t send a direct message or a comment reply. It can prepare a
-              draft, which a person sends from {N}.
+              draft, which a person sends from {N}. A member can also ask it to create or change a keyword automation;
+              {N} requires the AI app to fetch a preview first, and once it is confirmed and on, the automation sends messages
+              to the people who match, as one made in {N} does. An AI app set to always allow {N}&apos;s tools can confirm
+              without asking the member.
             </li>
           </ul>
           <p>

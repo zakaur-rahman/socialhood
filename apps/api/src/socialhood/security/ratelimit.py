@@ -63,6 +63,8 @@ LIMITS: dict[str, Limit] = {
         # and per workspace across all its connections.
         Limit("mcp", 120, 60),
         Limit("mcp_workspace", 300, 60),
+        # C-169: posts scheduled from AI apps, per workspace across its connections (mcp/limits.py).
+        Limit("mcp_posts", 20, 60),
         # C-165 phase C, the OAuth endpoints (§6.1): authorize per IP, registration per IP (DCR
         # makes a client each time), token and revoke per client.
         Limit("oauth_authorize", 30, 60),
@@ -114,6 +116,12 @@ async def hit(redis: Redis, limit: Limit, subject: str, *, now: float | None = N
         args=[now_ms, limit.window_s * 1000, limit.max_requests, f"{now_ms}-{uuid.uuid4().hex}"],
     )
     return int(wait_ms) / 1000
+
+
+async def release(redis: Redis, limit: Limit, subject: str) -> None:
+    """Give back one request that ``hit`` admitted, for work that then didn't happen (the newest
+    entry goes: only the count matters)."""
+    await redis.zpopmax(window_key(limit, subject))
 
 
 async def enforce(request: Request, name: str, subject: str) -> None:

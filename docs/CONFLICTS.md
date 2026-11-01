@@ -9460,3 +9460,59 @@ Five items on branch `feature/api-key-hardening`, with one migration (`0056`, ch
 - `active_api_keys` on members, `expires_at`, `allowed_ips` and `made_by_former_member` on keys, `ApiKeyUpdate`, and the security route are new in `openapi.json` and `schema.d.ts`, which were regenerated. `plan-table.json` is unchanged: no entitlement changed.
 - Public copy: `/developers/mcp/api-key` "Keeping keys safe" gained "Give it an end date" and "Limit where it works from". "It acts as the member who made it" now says their keys are revoked when they leave or delete their account. `/privacy` and `/security` say nothing about keys that became untrue.
 - e2e: `apps/web/e2e/c167-api-keys.spec.ts` (create with expiry and allowlist, the list, 403 from this machine, then edit) is written and not run.
+
+## C-169 · MCP automations and Instagram posts
+
+Owner, with the connector live on production: Claude couldn't create an automation ("price" on "my last post", DM "RS 500"), and couldn't find the last post, because only `list_scheduled_posts` existed. Built on `feature/mcp-automations`. Tools and behaviour: `docs/architecture/mcp/04-phase-b.md`, last section. No migration, no REST route. Entitlement values changed (`mcp_posts_daily`), and a new scope is in the contract.
+
+### Calls I made
+
+- **A first activation from an AI app.** 01-design.md §4.4 and `resume_automation` keep a first activation in the app. The owner asked for `turn_on`, so `create_automation` can do one, after the preview, through `definitions.activate`. `resume_automation` still refuses a never-live draft, so a draft created off is turned on in the app. §4.4 is updated.
+- **Reuse.** Ask's `prepare_automation` only fills an unsaved editor card and stores nothing, so it wasn't reused. The writes call what the editor's routes call. `agent/actions.execute_flow` is the same create-then-update pattern.
+- **Server-checked preview (owner, after my first report).** `mcp/confirmations.py`. A stateless token, `<expiry>.<hmac>`, 15 minutes, keyed from `TOKEN_ENCRYPTION_KEYS` with its own purpose string (like the widget's tokens; rotation keeps live previews valid), over the tool, workspace, credential id, canonical arguments (without `confirmed`, the token, `idempotency_key`).
+  - **Also bound: what the arguments resolved to**, for the automation tools (beyond the brief). With only the arguments, `latest` could mean another post by the time of the yes, one the member never saw. A new post means a new preview.
+  - **Not bound: a post's resolved time.** A phrase like "in 2 hours" would never confirm if it were. So "tomorrow 7 pm" or `next_free_slot` confirmed later can land on a different time than the preview showed, as before this change. An explicit time doesn't move.
+  - **Order.** The token is read after the plan, mode and role gates and after arguments resolve, before anything is counted or written. Retries replay before it is read, so a stored result still comes back whatever the token says.
+  - **The dedupe digest and idempotency fingerprint ignore the token**, since every preview gives a new one.
+  - **`create_post` and `create_automation` dedupe for 15 minutes, up from 10**, matching the token's life, so one token can't create twice with no idempotency key. The token isn't single use: sending it again with a different `idempotency_key` would create a second one. `update_*` and `cancel_post` repeat harmlessly.
+- **`automations:create` (owner).** §6.8. `automations:write` keeps its old words. Connections and keys made before it don't see the two tools: they need to connect again or make a new key.
+- **Scheduling limits (owner).** `mcp_posts`, 20 a minute per workspace (`mcp/limits.reserve_post`), checked after the token and before the day's cap, on the same two paths that reserve the cap. A post that then fails (the checklist, the month's quota) gives back its place in the minute as well as the day: a sliding window has no refund, so `ratelimit.release` pops the newest entry, since only the count matters. `mcp_posts_daily` Pro 100, Max 300. It's workspace-wide; `scheduled_posts_monthly` still applies, in `posts._schedule` (tested).
+- **Instagram's limit: 50 (owner).** `DEFAULT_PUBLISHING_LIMIT`, was 100, for the composer's checklist as well as MCP. Read 2026-11-01: Meta's Content Publishing guide says 100 in its limitations and 50 in its carousel section; the `media_publish` and `content_publishing_limit` references say 50. An account Meta really allows 100 is held to 50 when scheduling, in Amplychat, until the checklist reads the live quota (it doesn't call Meta). The checklist now says "the limit for an Instagram account is 50", not "Instagram allows 50".
+- **Quota read again before publishing (a fix).** `publish_target` read it once, before the containers; a video can wait minutes after that, then `_poll` called `media_publish` unchecked. `_poll` now reads it again and ends the target as `LIMIT_REACHED`, as `publish_target` does, without publishing. One more Graph read per Instagram post.
+- **Over the limit in the preview too.** The preview runs the real activation, so with `turn_on` it refuses as the confirmed call would, rather than promising something that will fail. Same code (`quota_exceeded`) and `plan_limit`; the words are MCP's (pause one or upgrade, or create it off).
+- **Tap first stays on.** New comment automations start with tap first in the app (FR-AUT-21), so a comment automation made here sends an opening with a button, then the DM after a tap. There's no argument to turn it off; the preview shows the opening (`tap_first_opening`, `tap_first_button`), so the member sees what people get. The editor changes it.
+- **`match`.** The service's names, `word` (default, as in the editor), `exact`, `contains`.
+- **Extra `post` values.** `next` (the service's `next_post`) and `any`, beyond the brief's id and `latest`. `any` lets `update_automation` go back to every post.
+- **`link_button`, not `link_buttons`.** One button; the service allows 3, and the editor edits more. `update_automation` replaces all of them when given. `public_reply` likewise replaces all of the stored replies; an empty string removes them. `remove_link_button` removes the buttons.
+- **An omitted account.** With a post, the post's account. Without one, the service's rule (the only live Instagram account); with several, `conflict` asking which, because the service would otherwise save an automation with no account.
+- **`update_post` doesn't take `latest`.** The brief lists it, but its `post_id` is a scheduled post in `scheduled_posts`, not a synced one, and a published post can't be changed. `get_analytics_summary`'s `post_id` does take it, and is now a string of at most 60 characters.
+- **`list_instagram_posts`.** Any member, as the Comments page (the other `posts:read` tools are admin, as the Schedule page). It lists Facebook Page posts too when they exist, with `platform`; the name follows the brief. Stories only with `include_stories`, so the first item is always what `latest` means. A Story as `post` is refused.
+- **`update_automation` refuses** more than flows: AI replies, an image (the tool neither shows nor changes it), Live comments (a post would be silently dropped by `definitions._normalized`) and other triggers.
+- **Notification type.** New `ai_automation_change`, not `ai_post_change`, since the words and link differ. No database check on the type; it isn't emailed or pushed, like `ai_post_change`. The dedupe key includes the call id, so each change is told.
+- **No dedupe window on `update_automation`,** as `update_post`: a later identical call has to run.
+- **Live events.** The automation services queue none today (the dashboard refetches), so `commit_and_publish` has nothing extra to send; the notification goes out as usual.
+- **Module.** `automations_create.py`, not `automations_write.py`, which keeps pause and resume short.
+
+### Copy
+
+Scope group (`oauth/scopes.py`), API key scopes (`schemas/api_keys.py`, `mcp-api-key.ts`), Settings' labels and Full mode (`AiConnectionsPage.tsx`); `connect-ai.ts` (capability, plan rows, safety, FAQ); `mcp-page.ts` (new ask, which also takes in the old "Pause the giveaway" ask so the page keeps eight cards in its two-column grid; `CONFIRM_LINE`; new FAQ "Can the AI message my customers?", cost FAQ); landing `AiApps` ("It doesn't message your customers itself"), `Features`; `/faq`; the compare and switch pages; the plan table note; `/privacy`; `llms.txt`.
+
+Every claim keeps the line the owner drew: the AI doesn't send messages itself; the automation sends, after the member confirms and it is on. "AI apps can't send messages" became "... themselves" wherever it stood alone, because an automation set up from one does message people.
+
+### Checked: nothing in the MCP path goes around Meta's rules
+
+The automation tools only write the definition (`definitions.create`, `update`, `activate`). `mcp/` imports nothing that sends. Once live, an automation runs on the same code as one made in the app, with nothing that says where it came from:
+
+- **24 hour window:** every DM goes through `services/sending.queue_outbound`, which refuses a closed window (`reply_window_closed`).
+- **One private reply per comment, within 7 days:** the unique index `uq_automation_runs_comment` (`models/automations.py`), `comments.private_reply_message_id`, and `services/automations/queue.py` (`PRIVATE_REPLY_LIMIT`, past it `skipped_expired`). The 750 an hour bucket is in the same queue.
+- **Tap first:** `services/automations/answers.py`. It stays on for a new comment automation, with no MCP argument to turn it off, and `update_automation` keeps what is stored.
+- **Activation:** `definitions.activate`, the dashboard's, with its validation, plan limit and read-only account check.
+- **Publishing:** the checklist rule is `services/scheduled_posts/rules.py` (`publishing_limit`, per target), reached through `posts.schedule` and `replace`; tested from MCP with several accounts.
+
+This is reading the code and our tests, not a review by Meta, and no copy claims otherwise.
+
+### Known limits
+
+- **A person reading the preview can't be proved.** An AI app set to always allow the tools can confirm by itself. `/mcp`, `/developers/mcp`, the landing band, `/faq` and `/privacy` say so.
+- **Connections from before `automations:create`** have to connect again for the new tools. They see no error, only no tool; `/developers/mcp/api-key` says why.
+- **Two posts racing for an account's last slot.** The quota is read just before `media_publish`, not atomically, and when Meta won't give the quota we go on. In both cases Meta itself refuses with error 2207042, and the target fails with `LIMIT_REACHED`'s words.

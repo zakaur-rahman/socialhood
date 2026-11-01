@@ -99,7 +99,7 @@ describe("the landing page", () => {
     expect(aiApps.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Works with Claude, ChatGPT and Codex",
       "You confirm first",
-      "It can't message your customers",
+      "It doesn't message your customers itself",
       "Reading and drafts on every plan",
     ]);
     expect(aiApps.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/mcp");

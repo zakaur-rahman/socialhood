@@ -31,6 +31,7 @@ TOOL_MODULES = (
     "socialhood.mcp.tools.knowledge",
     "socialhood.mcp.tools.drafts",
     "socialhood.mcp.tools.automations_write",
+    "socialhood.mcp.tools.automations_create",
     "socialhood.mcp.tools.ask",
 )
 

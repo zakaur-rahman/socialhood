@@ -112,7 +112,7 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     title: "Knowledge and automations",
-    body: "Search what your knowledge base says, add a note or a question and answer, and see automations and pause or resume them.",
+    body: "Search what your knowledge base says and add a note or a question and answer. See automations, pause or resume them, and set up a keyword automation, such as a DM to everyone who comments a word on your last post. You see a preview first, and it messages people once you've confirmed it and it's on.",
   },
   {
     title: "Ask Amplychat",
@@ -128,21 +128,22 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Schedule, change and cancel posts", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Add knowledge, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
+  { label: "Add knowledge", free: "No", pro: "Yes", max: "Yes" },
+  { label: "Create, change, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
   { label: "Connect with an API key", free: "No", pro: "Yes", max: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "10,000" },
-  { label: "Posts scheduled from AI apps a day", free: "None", pro: "25", max: "100" },
+  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "300" },
   { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "200 (10,000 MB)", max: "1,000 (50,000 MB)" },
 ];
 
 export const SAFETY: readonly Capability[] = [
   {
     title: "Nothing is sent from your inbox without you",
-    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person.",
+    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app sends nothing until you've confirmed it and it's on, and you can pause it at any time.",
   },
   {
-    title: "Posts wait at least 5 minutes",
-    body: "A post scheduled by an AI app is at least 5 minutes out, so your team can see it in the calendar and cancel it.",
+    title: "A preview first, and posts wait at least 5 minutes",
+    body: "Amplychat refuses a change to a post or an automation until the AI app has fetched a preview of exactly that change. A post scheduled by an AI app is at least 5 minutes out, so your team can see it in the calendar and cancel it. If you set your AI app to always allow Amplychat's tools, it can confirm without asking you, so keep approvals on for changes.",
   },
   {
     title: "It acts as you, never more",
@@ -165,11 +166,11 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and pausing automations from an AI app are part of Pro and Max. API keys are Pro and Max.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and creating, changing or pausing automations from an AI app are part of Pro and Max. API keys are Pro and Max.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",
-    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available.`,
+    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Pro and Max; once you've confirmed it and it's on, the automation sends the DMs, as one made in the app does.`,
   },
   {
     question: "How do I disconnect an AI app?",

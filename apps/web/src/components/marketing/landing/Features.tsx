@@ -74,8 +74,8 @@ export const FEATURES: Feature[] = [
     title: "Work from Claude, ChatGPT and Codex",
     href: "/mcp",
     icon: Bot,
-    body: "Connect your AI assistant and ask it to schedule a Reel, sum up this week's DMs or check how your posts did. It shows a preview before anything is scheduled, and it can't message your customers.",
-    note: "Reading and drafts on every plan; scheduling on Pro and Max",
+    body: "Connect your AI assistant and ask it to schedule a Reel, sum up this week's DMs or check how your posts did. It shows a preview before it schedules a post or sets up an automation, and it never messages your customers itself.",
+    note: "Reading and drafts on every plan; scheduling and automations on Pro and Max",
   },
   {
     title: "Notifications, on your phone too",

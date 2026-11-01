@@ -5848,7 +5848,7 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "automations:create" | "ask")[];
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -5859,7 +5859,7 @@ export interface components {
             /** Name */
             name: string;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "automations:create" | "ask")[];
         };
         /** ApiKeyList */
         ApiKeyList: {
@@ -5915,7 +5915,7 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
             /** Scopes */
-            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask")[];
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "automations:create" | "ask")[];
         };
         /** ApiScope */
         ApiScope: {
@@ -5925,7 +5925,7 @@ export interface components {
              * Scope
              * @enum {string}
              */
-            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "ask";
+            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe" | "posts:read" | "posts:write" | "media:write" | "replies:draft" | "comments:read" | "analytics:read" | "knowledge:read" | "knowledge:write" | "automations:write" | "automations:create" | "ask";
         };
         /**
          * ApprovalApprove

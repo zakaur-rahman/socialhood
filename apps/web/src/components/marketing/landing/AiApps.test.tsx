@@ -77,9 +77,11 @@ describe("the AI assistant band (C-168)", () => {
     const { container } = render(<AiApps />);
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/\bonly\b|the first\b|first to|\bunique\b|exclusive|\bfew\b|no other|\bbest\b|#1|official partner|verified|TikTok/i);
-    // Never says the AI sends messages or builds automations.
-    expect(text).not.toMatch(/sends? (a |the )?(DM|message|reply)|create(s)? automations|build(s)? automations/i);
-    expect(text).toMatch(/can't message your customers/);
+    // Never says the AI sends messages (C-169: it can set up an automation, which sends once on).
+    expect(text).not.toMatch(/sends? (a |the )?(DM|message|reply)/i);
+    expect(text).toMatch(/doesn't message your customers itself/);
+    expect(text).toMatch(/does nothing until you confirm it and it's on/);
+    expect(text).toMatch(/Keep approvals on in your AI app/);
     expect(text).toMatch(/waits for your yes/);
   });
 

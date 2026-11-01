@@ -304,6 +304,28 @@ async def test_quota_exhausted_fails_with_the_reason(desk: Desk) -> None:
     assert "Instagram's daily publishing limit reached" in note["body"]
 
 
+async def test_the_quota_is_read_again_and_a_full_account_is_never_published_to(
+    desk: Desk,
+) -> None:
+    """C-169: room when the container was made, none when it is ready: no media_publish."""
+    made = await desk.post(("image",))
+    [target_id] = made.target_ids.values()
+    await claim(desk, target_id)
+    assert await desk.publish(target_id) == "containers_created"
+
+    sandbox.set_quota(100, 100)
+    assert await desk.poll(target_id, 1) == "failed"
+    row = await desk.target(target_id)
+    assert (row["status"], row["error_code"], row["error_message"]) == (
+        "failed",
+        "platform_rejected",
+        "Instagram's daily publishing limit reached",
+    )
+    assert row["platform_media_id"] is None
+    assert await desk.rows("SELECT 1 FROM media_items") == []
+    assert (await desk.post_row(made.id))["status"] == "failed"
+
+
 async def test_the_limit_counts_posts_already_published(desk: Desk) -> None:
     sandbox.set_quota(98, 100)
     first = await desk.post(("image",))
@@ -490,7 +512,7 @@ async def test_an_instagram_post_publishes_through_the_graph_calls(
         assert await desk.publish(target_id) == "containers_created"
         assert await desk.poll(target_id, 1) == "published"
 
-    assert quota.call_count == 1
+    assert quota.call_count == 2  # before the container, and again before publishing it
     sent = create.calls.last.request
     assert sent.headers["authorization"] == "Bearer IGQVJlong-test-token"
     assert b"f_jpg" in sent.content
