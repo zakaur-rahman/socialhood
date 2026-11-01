@@ -6,6 +6,9 @@ another owner. A solely owned workspace takes the same path as DELETE /v1/w/{wid
 scheduled work stopped) and purged by the purge_workspace job, which cancels its Dodo subscription
 first and keeps retrying while Dodo doesn't answer, so a failed cancel is never lost (C-052). The
 user row goes at once; a deleting workspace may outlive its owner (migration 0015).
+
+C-167: first, in every workspace they belong to, the API keys they made are revoked (one audit
+row each, "Account deleted"), so no key outlives its maker's account.
 """
 
 from __future__ import annotations
@@ -17,10 +20,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.clerk import parse_clerk_user
+from socialhood.auth.memberships import memberships_for
 from socialhood.db.tenancy import workspace_scope
 from socialhood.models.identity import Role, WorkspaceMember, WorkspaceStatus
 from socialhood.repositories import users, workspaces
-from socialhood.services import workspace_deletion
+from socialhood.services import api_keys, workspace_deletion
 
 Outcome = Literal["processed", "ignored"]
 
@@ -55,6 +59,15 @@ async def _deleted(session: AsyncSession, data: dict[str, Any]) -> Outcome:
     if user is None:
         return "ignored"
     now = datetime.now(UTC)
+    for membership in await memberships_for(session, user.id):
+        with workspace_scope(membership.workspace_id):
+            await api_keys.revoke_for_member(
+                session,
+                user.id,
+                now=now,
+                reason=api_keys.REASON_ACCOUNT_DELETED,
+                label="Account deleted",
+            )
     for workspace in await workspaces.owned_by(session, user.id):
         if workspace.status != WorkspaceStatus.ACTIVE:
             continue  # already being deleted
