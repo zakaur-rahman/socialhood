@@ -122,11 +122,12 @@ export const FAQ_CANCEL: FaqItem = {
 
 // C-168: the MCP server (docs/architecture/mcp 04-phase-b.md, 05-phase-c.md; connect-ai.ts PLAN_ROWS
 // and SAFETY): reading and drafts on every plan, scheduling on Pro and Max, a preview and a yes
-// before anything is scheduled, and no messages sent from an AI app.
+// before anything is scheduled, and no messages sent from an AI app. C-169: keyword automations
+// from an AI app on Pro and Max; the automation sends, once confirmed and on.
 export const FAQ_AI_APPS: FaqItem = {
   question: "Can I use Amplychat from Claude or ChatGPT?",
   answer:
-    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts on Pro and Max. The AI shows a preview and waits for your yes before it schedules anything, and it can't send messages to your customers.",
+    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Pro and Max. The AI shows a preview and waits for your yes first, and it can't send messages to your customers itself: an automation sends once you've confirmed it and it's on.",
   link: { label: "How it works with AI apps", href: "/mcp" },
 };
 

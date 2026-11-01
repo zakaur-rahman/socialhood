@@ -86,3 +86,20 @@ Without a shell (claude.ai), step 3 gives `upload_page_url` instead: the member 
 ## Tests
 
 `tests/integration/test_mcp_publish.py`, `test_mcp_media.py`, `test_mcp_writes.py`, plus additions to `tests/unit/test_mcp_registry.py` (the 25 tools and the write tools' scope, role, access and hints) and `tests/tenancy/test_isolation.py` (the upload ticket routes). All use the SDK client against the mounted app, as phase A's do.
+
+## C-169: automations and Instagram posts
+
+Added after launch, because Claude could neither create an automation nor find "my last post". The catalogue is now 28 tools (`mcp/tools/automations_create.py`, and `list_instagram_posts` in `mcp/tools/posts.py`). Decisions: "C-169" in `docs/CONFLICTS.md`.
+
+| Tool | Scope | Role | Access | Plan | Hints (read-only / destructive / idempotent / open world) |
+|---|---|---|---|---|---|
+| `list_instagram_posts` | `posts:read` | agent | read | all | true / false / true / false |
+| `create_automation` | `automations:write` | admin | write | Pro, Max | false / false / true / true |
+| `update_automation` | `automations:write` | admin | write | Pro, Max | false / true / true / true |
+
+- **`post`.** `resolve_post` (`mcp/tools/common.py`) is the one reader of a post id or `latest`, used by `create_automation`, `update_automation`, `get_post_comments_summary` and `get_analytics_summary` (`post_id`). `latest` is the first item of `list_instagram_posts`, without Stories (they take no comments), of `account` when given. The automation tools also take `next` and `any`.
+- **`create_automation`** goes through the editor's services: `definitions.create`, `definitions.update` (the autosave PUT), and `definitions.activate` when `turn_on` is true. Without `confirmed` the same calls run inside a savepoint, so its errors are the real ones. The result shows the account, the post, the keywords, the DM, the public reply, the tap first opening, overlaps with live automations (`queries`, FR-AUT-15), what activation would still refuse (`flow_store.problems`) and active automations used and allowed. Over the limit, it is `quota_exceeded` telling the member to pause one or upgrade, in the preview and in the confirmed call, and nothing is created. Identical confirmed calls dedupe for 10 minutes.
+- **`update_automation`** sends the stored definition back with only the fields given. It refuses a flow, an AI reply, an image, Live comments and other triggers, with a link to the editor. It doesn't turn anything on or off.
+- **Told and recorded.** `ai_automation_change` notifies owners and admins; `automation.created`, `automation.activated` and `automation.updated` go to the audit mirror.
+- **Prompt.** `set_up_comment_automation` (`mcp/prompts.py`).
+- **Tests.** `tests/integration/test_mcp_automations.py`.

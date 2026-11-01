@@ -9460,3 +9460,36 @@ Five items on branch `feature/api-key-hardening`, with one migration (`0056`, ch
 - `active_api_keys` on members, `expires_at`, `allowed_ips` and `made_by_former_member` on keys, `ApiKeyUpdate`, and the security route are new in `openapi.json` and `schema.d.ts`, which were regenerated. `plan-table.json` is unchanged: no entitlement changed.
 - Public copy: `/developers/mcp/api-key` "Keeping keys safe" gained "Give it an end date" and "Limit where it works from". "It acts as the member who made it" now says their keys are revoked when they leave or delete their account. `/privacy` and `/security` say nothing about keys that became untrue.
 - e2e: `apps/web/e2e/c167-api-keys.spec.ts` (create with expiry and allowlist, the list, 403 from this machine, then edit) is written and not run.
+
+## C-169 · MCP automations and Instagram posts
+
+Owner, with the connector live on production: Claude couldn't create an automation ("price" on "my last post", DM "RS 500"), and couldn't find the last post, because only `list_scheduled_posts` existed. Built on `feature/mcp-automations`. Tools and behaviour: `docs/architecture/mcp/04-phase-b.md`, last section. No migration, no entitlement change, no REST route.
+
+### Calls I made
+
+- **A first activation from an AI app.** 01-design.md §4.4 and `resume_automation` keep a first activation in the app. The owner asked for `turn_on`, so `create_automation` can do one, after the preview, through `definitions.activate`. `resume_automation` still refuses a never-live draft, so a draft created off is turned on in the app. §4.4 is updated.
+- **Reuse.** Ask's `prepare_automation` only fills an unsaved editor card and stores nothing, so it wasn't reused. The writes call what the editor's routes call. `agent/actions.execute_flow` is the same create-then-update pattern.
+- **Over the limit in the preview too.** The preview runs the real activation, so with `turn_on` it refuses as the confirmed call would, rather than promising something that will fail. Same code (`quota_exceeded`) and `plan_limit`; the words are MCP's (pause one or upgrade, or create it off).
+- **Tap first stays on.** New comment automations start with tap first in the app (FR-AUT-21), so a comment automation made here sends an opening with a button, then the DM after a tap. There's no argument to turn it off; the preview shows the opening (`tap_first_opening`, `tap_first_button`), so the member sees what people get. The editor changes it.
+- **`match`.** The service's names, `word` (default, as in the editor), `exact`, `contains`.
+- **Extra `post` values.** `next` (the service's `next_post`) and `any`, beyond the brief's id and `latest`. `any` lets `update_automation` go back to every post.
+- **`link_button`, not `link_buttons`.** One button; the service allows 3, and the editor edits more. `update_automation` replaces all of them when given. `public_reply` likewise replaces all of the stored replies; an empty string removes them. `remove_link_button` removes the buttons.
+- **An omitted account.** With a post, the post's account. Without one, the service's rule (the only live Instagram account); with several, `conflict` asking which, because the service would otherwise save an automation with no account.
+- **`update_post` doesn't take `latest`.** The brief lists it, but its `post_id` is a scheduled post in `scheduled_posts`, not a synced one, and a published post can't be changed. `get_analytics_summary`'s `post_id` does take it, and is now a string of at most 60 characters.
+- **`list_instagram_posts`.** Any member, as the Comments page (the other `posts:read` tools are admin, as the Schedule page). It lists Facebook Page posts too when they exist, with `platform`; the name follows the brief. Stories only with `include_stories`, so the first item is always what `latest` means. A Story as `post` is refused.
+- **`update_automation` refuses** more than flows: AI replies, an image (the tool neither shows nor changes it), Live comments (a post would be silently dropped by `definitions._normalized`) and other triggers.
+- **Notification type.** New `ai_automation_change`, not `ai_post_change`, since the words and link differ. No database check on the type; it isn't emailed or pushed, like `ai_post_change`. The dedupe key includes the call id, so each change is told.
+- **No dedupe window on `update_automation`,** as `update_post`: a later identical call has to run.
+- **Live events.** The automation services queue none today (the dashboard refetches), so `commit_and_publish` has nothing extra to send; the notification goes out as usual.
+- **Module.** `automations_create.py`, not `automations_write.py`, which keeps pause and resume short.
+
+### Copy
+
+Scope group (`oauth/scopes.py`), API key scopes (`schemas/api_keys.py`, `mcp-api-key.ts`), Settings' labels and Full mode (`AiConnectionsPage.tsx`); `connect-ai.ts` (capability, plan rows, safety, FAQ); `mcp-page.ts` (new ask, `CONFIRM_LINE`, new FAQ "Can the AI message my customers?", cost FAQ); landing `AiApps` ("It doesn't message your customers itself"), `Features`; `/faq`; the compare and switch pages; the plan table note; `/privacy`; `llms.txt`.
+
+Every claim keeps the line the owner drew: the AI doesn't send messages itself; the automation sends, after the member confirms and it is on. "AI apps can't send messages" became "... themselves" wherever it stood alone, because an automation set up from one does message people.
+
+### Known limits
+
+- **Connections made before this.** `automations:write` keeps its name, so an OAuth connection or API key that already holds it can use the new tools at once, though the member agreed when the words said only pause and resume. The owner chose to extend the scope; a new scope would have needed everyone to connect again.
+- `confirmed` and `turn_on` are arguments the AI app sets, as `confirmed` is on `create_post`: the server doesn't check that a preview came first or that a person said yes. The safety nets are the client's own confirmation for non-read-only tools, the tool descriptions, the owner notification, the audit line and pausing. An automation messages people sooner than a post, which waits 5 minutes, so a server-side preview token is a possible follow-up. Not built: not asked for.

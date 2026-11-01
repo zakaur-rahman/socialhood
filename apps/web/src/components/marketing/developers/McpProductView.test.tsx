@@ -30,9 +30,9 @@ describe("/mcp (C-165)", () => {
     expect(screen.getByText(/haven't tested them yet/)).toBeInTheDocument();
   });
 
-  it("shows 6 to 8 asks and reuses the shared plans and safety", () => {
+  it("shows 6 to 9 asks and reuses the shared plans and safety", () => {
     expect(ASKS.length).toBeGreaterThanOrEqual(6);
-    expect(ASKS.length).toBeLessThanOrEqual(8);
+    expect(ASKS.length).toBeLessThanOrEqual(9); // C-169: the owner added the automation ask
     render(<McpProductView />);
     const table = screen.getByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(PLAN_ROWS.length + 1);

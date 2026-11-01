@@ -10,7 +10,8 @@ import { CtaLink } from "../primitives";
  * 03-phase-a.md, 04-phase-b.md, 05-phase-c.md; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY):
  * the preview and the yes before anything is scheduled (CONFIRM_LINE), posts at least 5 minutes out
  * with owners and admins told, no DMs or comment replies from an AI app, reading and drafts on every
- * plan. Not claimed: creating automations from the AI, sending messages, TikTok, a listing in
+ * plan. C-169: keyword automations can be set up from an AI app (Pro and Max); the automation sends,
+ * after the member confirms and it is on. Not claimed: the AI sending messages, TikTok, a listing in
  * Anthropic's or OpenAI's directories, or that we are the only or first tool with an MCP server
  * (C-168: four of the nine competitors we compare have one).
  */
@@ -33,14 +34,14 @@ export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[]
     body: `${CONFIRM_LINE} A post goes out at least 5 minutes later, and owners and admins are told.`,
   },
   {
-    title: "It can't message your customers",
+    title: "It doesn't message your customers itself",
     icon: MessageSquareOff,
-    body: `AI apps read conversations and draft replies. Sending a DM or a comment reply stays in ${SITE_NAME}, with a person.`,
+    body: `AI apps read conversations and draft replies. Sending a DM or a comment reply stays in ${SITE_NAME}, with a person. An automation set up from your AI app does nothing until you confirm it and it's on.`,
   },
   {
     title: "Reading and drafts on every plan",
     icon: BookOpen,
-    body: "Free included. Scheduling posts, adding knowledge and pausing automations are on Pro and Max.",
+    body: "Free included. Scheduling posts, adding knowledge and creating or pausing automations are on Pro and Max.",
   },
 ];
 

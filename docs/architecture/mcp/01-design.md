@@ -226,7 +226,7 @@ The existing public API scopes stay. MCP adds:
 | `comments:read` | Post comments, topics and sentiment | Insights |
 | `analytics:read` | Post and account analytics | Insights |
 | `knowledge:read`, `knowledge:write` | Search knowledge, and add a text or website source | Knowledge |
-| `automations:read` *(exists)*, `automations:write` | List automations and their stats, and pause or resume one | Automations |
+| `automations:read` *(exists)*, `automations:write` | List automations and their stats; create and change keyword automations, and pause or resume one (C-169) | Automations |
 | `ask` | Ask Amplychat a question (uses AI credits) | Ask |
 | `messages:send` *(exists, R2 on MCP)* | Send a reply (with approval in R2) | — |
 
@@ -399,7 +399,8 @@ That's **25 tools** in R1. The model reads the list on every turn, so we don't a
 | Media upload or import | **direct** | Only lands in the library. Nothing is public |
 | Add knowledge | **direct** | Internal. It shows in Knowledge, where it can be removed |
 | Pause an automation | **direct** (destructive) | Pausing is the safe direction |
-| Resume a previously live automation | **direct** | It was live before. A first activation stays in the app |
+| Resume a previously live automation | **direct** | It was live before |
+| Create or change a keyword automation, and turn a new one on | **direct, after a preview** (C-169, owner's request; replaces "a first activation stays in the app") | The member asked and confirmed the preview. The app's own activation and plan limit apply, owners and admins are told, and it can be paused. See [04-phase-b.md](04-phase-b.md#c-169-automations-and-instagram-posts) |
 | Draft a reply | not a write | It returns a pre-filled deep link |
 | Send a DM or comment reply | **R2, approval** | It reaches a customer, is irreversible, and carries Meta policy and prompt-injection exfiltration risk (§6.5) |
 | Create or change a flow or segment | **R2, approval** (existing GR-36) | Same as Ask today |
