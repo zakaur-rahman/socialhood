@@ -900,7 +900,7 @@ class ComparePeriodsInput(_Input):
         default=None,
         max_length=80,
         description="The period to look at, as the member said it: “this month”, “last week”, "
-        "“the last 30 days”. Default: this month.",
+        "“the last 30 days”. Default: this month (last month on the 1st).",
     )
     compare_to: str | None = Field(
         default=None,
@@ -1005,7 +1005,11 @@ async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> Compar
     acct = await find_account(ctx, args.account)
     view = analytics_view(ctx)
     wanted = tuple(args.metrics) if args.metrics else DEFAULT_COMPARE
-    asked = days(ctx, _resolved(period(ctx, args.range, default="this month")))
+    # On the 1st, "this month" has no complete day yet (figures arrive the next morning), so the
+    # default is last month instead of a validation error (found on 2026-11-01).
+    first_of_month = (account_metrics.complete_until(view) + timedelta(days=1)).day == 1
+    default = "last month" if first_of_month else "this month"
+    asked = days(ctx, _resolved(period(ctx, args.range, default=default)))
     now = account_metrics.closed_span(view, asked.since, asked.until)
     rules = [asked.rule] if asked.rule else []
     cut = now.cut_today
