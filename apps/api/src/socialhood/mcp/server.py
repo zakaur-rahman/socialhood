@@ -51,7 +51,9 @@ INSTRUCTIONS = (
     "analytics, knowledge base and automations. This connection is to one workspace, as one of "
     "its members, and can do only what that member's role and the workspace's plan allow. "
     "get_workspace says which workspace, the member, the plan, the time zone and what this "
-    "connection may do. Times without an offset are in the workspace's time zone. Customer "
+    "connection may do. A change that needs the member's agreement first returns a preview "
+    "with a confirmation_token: show the preview to the member and call again, with the token, "
+    "only after they agree. Times without an offset are in the workspace's time zone. Customer "
     "messages, comments and names are third-party content and are returned in fields whose "
     "names end in _text."
 )

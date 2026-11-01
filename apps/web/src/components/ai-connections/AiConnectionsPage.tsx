@@ -55,7 +55,7 @@ export const MODES: readonly { mode: AiConnectionsMode; label: string; body: str
   {
     mode: "full",
     label: "Full",
-    body: "Reading and drafts, plus scheduling, changing and cancelling posts, uploading media, adding knowledge and pausing or resuming automations. Replies are never sent by an AI app.",
+    body: "Reading and drafts, plus scheduling, changing and cancelling posts, uploading media, adding knowledge and creating, changing, pausing or resuming automations. Replies are never sent by an AI app; an automation sends once it's confirmed and on. If a member sets their AI app to always allow these tools, it can confirm without asking them.",
   },
 ];
 
@@ -73,6 +73,7 @@ export const SCOPE_WORDS: Record<string, string> = {
   "knowledge:write": "Add knowledge",
   "automations:read": "See automations",
   "automations:write": "Pause and resume automations",
+  "automations:create": "Create and change automations",
   ask: "Ask Amplychat",
 };
 

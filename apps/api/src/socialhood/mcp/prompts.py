@@ -5,6 +5,8 @@ tools' own descriptions stay free of such wording (mcp/registry.py).
 - ``schedule_a_post``: gather the accounts, media, caption and time, check the checklist, show
   the preview and schedule only after the member agrees.
 - ``weekly_inbox_digest``: summarise the week's conversations and comments.
+- ``set_up_comment_automation`` (C-169): find the post, preview the automation and create it only
+  after the member agrees; on only if they ask.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from socialhood.errors import ApiError
 
 SCHEDULE = "schedule_a_post"
 DIGEST = "weekly_inbox_digest"
+COMMENT_AUTOMATION = "set_up_comment_automation"
 
 PROMPTS: tuple[types.Prompt, ...] = (
     types.Prompt(
@@ -46,6 +49,27 @@ PROMPTS: tuple[types.Prompt, ...] = (
         description="A short summary of what customers asked and said in the last 7 days.",
         arguments=[],
     ),
+    types.Prompt(
+        name=COMMENT_AUTOMATION,
+        title="Set up a comment automation",
+        description=(
+            "When someone comments a keyword on a post, send them a DM. Shows a preview first; "
+            "nothing is created until you agree."
+        ),
+        arguments=[
+            types.PromptArgument(
+                name="keyword", description="The word to watch for, e.g. “price”.", required=False
+            ),
+            types.PromptArgument(
+                name="post",
+                description="Which post: “my last post”, or any post.",
+                required=False,
+            ),
+            types.PromptArgument(
+                name="message", description="The DM to send them.", required=False
+            ),
+        ],
+    ),
 )
 
 
@@ -69,7 +93,8 @@ def _schedule(arguments: Mapping[str, str] | None) -> str:
         "local file, upload it with start_media_upload and finish_media_upload; if it is a public "
         "link, use import_media_from_url. Call create_post without confirmed first and show me "
         "the preview: the time in my time zone, the accounts and the checklist, fixing any "
-        "failing item with me. Schedule it with confirmed: true only after I say yes."
+        "failing item with me. Schedule it with confirmed: true and the preview's "
+        "confirmation_token only after I say yes."
     )
 
 
@@ -83,11 +108,36 @@ def _digest(_: Mapping[str, str] | None) -> str:
     )
 
 
+def _comment_automation(arguments: Mapping[str, str] | None) -> str:
+    given = [
+        f"{label}: {value}"
+        for label, name in (("Keyword", "keyword"), ("Post", "post"), ("DM", "message"))
+        if (value := _arg(arguments, name))
+    ]
+    known = ("What I've said so far: " + "; ".join(given) + ". ") if given else ""
+    return (
+        "Help me set up an Amplychat automation that DMs people who comment a keyword on a post. "
+        + known
+        + "Start with get_workspace and list_automations. Find the post with "
+        "list_instagram_posts: its first item is my latest post. Ask me for anything missing: "
+        "the account, the keywords, the post (one post, the latest, the next one or any), the DM "
+        "and whether to add a link button or a public reply. Call create_automation without "
+        "confirmed first and show me the preview: the post, the keywords, the opening and the "
+        "DM people get, any overlap with live automations and what it still needs, fixing "
+        "anything with me. Create it with confirmed: true and the preview's "
+        "confirmation_token only after I say yes, and with "
+        "turn_on: true only if I ask for it to go live, because it then messages everyone who "
+        "matches. Remind me that I can pause it with pause_automation."
+    )
+
+
 def get_prompt(name: str, arguments: Mapping[str, str] | None) -> types.GetPromptResult:
     if name == SCHEDULE:
         text, description = _schedule(arguments), PROMPTS[0].description
     elif name == DIGEST:
         text, description = _digest(arguments), PROMPTS[1].description
+    elif name == COMMENT_AUTOMATION:
+        text, description = _comment_automation(arguments), PROMPTS[2].description
     else:
         raise ApiError("not_found", "No such prompt.")
     return types.GetPromptResult(

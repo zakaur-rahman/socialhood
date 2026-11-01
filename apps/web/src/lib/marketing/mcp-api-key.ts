@@ -20,7 +20,7 @@ export const API_KEY_META = {
 
 /** The scopes an AI app's key can carry, in plain words (schemas/api_keys.py SCOPE_DESCRIPTIONS). */
 export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
-  { scope: "posts:read", body: "Read scheduled posts, the calendar, best times and the media library." },
+  { scope: "posts:read", body: "Read published and scheduled posts, the calendar, best times and the media library." },
   { scope: "posts:write", body: "Create, change, reschedule and cancel posts. Scheduling is Pro and Max." },
   { scope: "media:write", body: "Upload or import images and videos for posts." },
   { scope: "conversations:read", body: "Read conversations and their messages." },
@@ -31,6 +31,7 @@ export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "knowledge:write", body: "Add a text note or a website to the knowledge base." },
   { scope: "automations:read", body: "Read automations and their runs." },
   { scope: "automations:write", body: "Pause and resume automations." },
+  { scope: "automations:create", body: "Create and change keyword automations, and turn new ones on. Pro and Max." },
   { scope: "ask", body: "Ask Amplychat's own assistant (uses AI credits)." },
 ];
 
@@ -115,6 +116,7 @@ export const KEEP_SAFE = [
 /** Rate limits (mcp/calls.py, security/ratelimit.py). */
 export const KEY_LIMITS = [
   "120 requests a minute for each key, and 300 a minute for the whole workspace.",
+  "20 posts scheduled a minute for the whole workspace, across all its keys and connections. Previews and drafts don't count.",
   "Requests with an unknown key count against the caller's address (60 a minute), so a script with a wrong key is slowed.",
 ] as const;
 
@@ -133,6 +135,6 @@ export const API_KEY_FAQ = [
   {
     question: "Why can't the AI app see a tool?",
     answer:
-      "The tool needs a scope the key lacks, or a role the key's member doesn't have. A tool is listed only when the key's scopes open it.",
+      "The tool needs a scope the key lacks, or a role the key's member doesn't have. A tool is listed only when the key's scopes open it. Creating and changing automations needs automations:create, so a key made for pausing them needs replacing.",
   },
 ] as const;

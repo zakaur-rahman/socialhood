@@ -9,8 +9,11 @@ or is canceled when the account was disconnected); the quota is read first (none
 delivery URLs: one for an image, a Reel or a Story, the children in order for a carousel (Meta
 refuses a carousel whose children are still processing, so poll_container creates the carousel
 itself once they are FINISHED). The target becomes ``container_created`` and poll 1 is queued at
-once. Retryable errors retry while the job will (the target stays ``publishing``); the last try or a
-refusal fails the target.
+once. The quota is read again just before publishing (C-169: a video can wait minutes for its
+container, and other posts of the account may have gone out meanwhile), so none left ends the
+target the same way and media_publish isn't called. When Instagram won't say, it enforces the
+limit itself (error 2207042). Retryable errors retry while the job will (the target stays
+``publishing``); the last try or a refusal fails the target.
 
 poll_container(n): one round of status reads, never more than one per container a minute.
 Polls 1 to 5 run a minute apart, then 5 minutes apart up to poll 10; a video still IN_PROGRESS
@@ -667,6 +670,22 @@ async def _poll(p: _Poll) -> Outcome:
         return await _container_failed(p, status)
     if status.status_code == "PUBLISHED":
         return await _recover(p, container_id)
+
+    if p.acct.platform == "instagram":  # Facebook Pages have no limit to read (C-115)
+        try:
+            quota = await _quota(p.adapter, p.acct)
+        except PlatformError as error:
+            return await _later(p, error, processing=False)
+        if quota is not None and quota.remaining <= 0:
+            return await _end(
+                p.sessionmaker,
+                p.redis,
+                p.target_id,
+                expect=TargetStatus.CONTAINER_CREATED,
+                code="platform_rejected",
+                message=LIMIT_REACHED,
+                poll=p.n,
+            )
 
     try:
         media_id = await p.adapter.publish_container(p.acct, container_id, caption=p.caption)

@@ -91,6 +91,20 @@ def error_of(result: types.CallToolResult) -> dict[str, Any]:
     return body["error"]
 
 
+async def confirm(
+    app: FastAPI, key: str, name: str, arguments: dict[str, Any]
+) -> types.CallToolResult:
+    """The real flow of a change that is previewed first: the call without ``confirmed``, then
+    with ``confirmed`` and the preview's token (mcp/confirmations.py)."""
+    async with connect(app, key) as client:
+        preview = structured(await client.call_tool(name, arguments))
+        assert preview["preview"] is True, preview
+        return await client.call_tool(
+            name,
+            {**arguments, "confirmed": True, "confirmation_token": preview["confirmation_token"]},
+        )
+
+
 def rpc(method: str, params: dict[str, Any] | None = None, request_id: int = 1) -> dict[str, Any]:
     body: dict[str, Any] = {"jsonrpc": "2.0", "id": request_id, "method": method}
     if params is not None:

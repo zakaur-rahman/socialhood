@@ -13,10 +13,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from socialhood.errors import ApiError, FieldError
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
-from socialhood.mcp.tools.common import agent_tool, moment
+from socialhood.mcp.tools.common import agent_tool, moment, resolve_post
 from socialhood.schemas.analytics import AccountMetricName, MetricName
 
 ACCOUNT = "A connected account's id or @handle."
@@ -30,8 +29,8 @@ class CommentsSummaryInput(ToolInput):
         default=None,
         max_length=60,
         description=(
-            "A published post's id (post_id from get_analytics_summary or a published scheduled "
-            "post), or “latest”. Omitted: the comments made in the period, across posts."
+            "A published post's id (from list_instagram_posts or get_analytics_summary), or "
+            "“latest” for the newest one. Omitted: the comments made in the period, across posts."
         ),
     )
     period: str | None = Field(
@@ -91,19 +90,7 @@ class CommentsSummaryResult(ToolOutput):
 async def _post_id(call: ToolCall, args: CommentsSummaryInput) -> uuid.UUID | None:
     if args.post is None:
         return None
-    if args.post.strip().lower() == "latest":
-        latest = await agent_tool(call, "get_latest_post", {"account": args.account})
-        if latest.post is None:
-            raise ApiError("not_found", "No published posts have synced yet.")
-        return uuid.UUID(str(latest.post.id))
-    try:
-        return uuid.UUID(args.post.strip())
-    except ValueError:
-        raise ApiError(
-            "validation_error",
-            "post is a post id or “latest”.",
-            errors=[FieldError("post", "Give a post id or “latest”.")],
-        ) from None
+    return (await resolve_post(call, args.post, account=args.account)).id
 
 
 @tool(
@@ -198,7 +185,12 @@ class AnalyticsInput(ToolInput):
         )
     )
     account: str | None = Field(default=None, max_length=100, description=ACCOUNT)
-    post_id: uuid.UUID | None = Field(default=None, description="For scope post.")
+    post_id: str | None = Field(
+        default=None,
+        max_length=60,
+        description="For scope post: a post's id (from list_instagram_posts), or “latest” for the "
+        "newest one.",
+    )
     period: str | None = Field(
         default=None,
         max_length=80,
@@ -346,8 +338,9 @@ async def get_analytics_summary(call: ToolCall, args: AnalyticsInput) -> Analyti
             caveats=found.caveats,
         )
     if args.scope == "post":
+        item = await resolve_post(call, args.post_id or "", account=args.account, field="post_id")
         perf = await agent_tool(
-            call, "post_performance", {"post_id": args.post_id, "at_age": args.at_age}
+            call, "post_performance", {"post_id": item.id, "at_age": args.at_age}
         )
         figures = perf.metrics
         return AnalyticsResult(

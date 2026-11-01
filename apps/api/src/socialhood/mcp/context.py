@@ -51,6 +51,7 @@ class ToolCall:
     now: datetime  # UTC; every relative time in this call resolves against it
     timezone: ZoneInfo  # the workspace's
     call_id: uuid.UUID = field(default_factory=uuid.uuid4)
+    tool_name: str = ""  # the tool being called (what a confirmation token is bound to)
     client_name: str | None = None  # the AI app (clientInfo, else the User-Agent)
     # Work for after the commit (an enqueue that needs the committed row), run by the pipeline in
     # order; a failing one is logged and never fails the call.

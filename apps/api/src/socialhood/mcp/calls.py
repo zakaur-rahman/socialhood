@@ -341,6 +341,7 @@ async def _run(
                 now=now,
                 timezone=_zone(workspace.timezone),
                 client_name=client_name,
+                tool_name=tool.name,
             )
             try:
                 output = await tool.handler(call, args)

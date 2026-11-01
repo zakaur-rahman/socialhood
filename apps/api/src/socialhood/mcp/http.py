@@ -69,6 +69,7 @@ SCOPES_SUPPORTED = (
     "knowledge:write",
     "automations:read",
     "automations:write",
+    "automations:create",
     "ask",
 )
 

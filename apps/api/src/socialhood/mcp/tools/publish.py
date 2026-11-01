@@ -3,17 +3,18 @@
 Posts go directly, as the member's own action (decision D3), with these safety nets:
 
 - **Confirmation.** A call that would schedule, change or cancel a scheduled post does nothing
-  until it is repeated with ``confirmed: true``. Without it the result is a preview (``preview``
-  true, nothing stored): the resolved time in the workspace's zone and UTC, the accounts, and
-  the composer's checklist, so a wrong time-zone guess or a failing item shows before anything
-  is scheduled. Saving a draft needs no confirmation.
+  until it is repeated with ``confirmed: true`` and the preview's ``confirmation_token``
+  (mcp/confirmations.py), which the server checks. Without it the result is a preview
+  (``preview`` true, nothing stored): the resolved time in the workspace's zone and UTC, the
+  accounts, and the composer's checklist, so a wrong time-zone guess or a failing item shows
+  before anything is scheduled. Saving a draft needs no confirmation.
 - **Five minutes ahead at least** (``MIN_SCHEDULE_LEAD``): AI apps cannot publish now, so a team
   member always has a window to see a post and cancel it.
 - **The team is told.** Owners and admins get a notification naming the AI app and the member,
   with a link to the post (where it is cancelled).
 - **Free saves drafts only.** The workspace's mode and the plan decide (``require_scheduling``);
   Free gets ``entitlement_required``, a workspace set to "read and drafts" a plain refusal.
-- **A daily cap** on posts scheduled (``mcp_posts_daily``).
+- **Caps** on posts scheduled: per day (``mcp_posts_daily``) and per minute (``mcp_posts``).
 
 Everything else is the app's own rules: the same services as the composer
 (``services/scheduled_posts``), so the checklist, the account and media checks, the monthly
@@ -34,9 +35,9 @@ from socialhood.agent.timeparse import TimeParseError, resolve_instant
 from socialhood.agent.tools.common import find_account, handle
 from socialhood.billing.entitlements import entitlement_error
 from socialhood.errors import ApiError, FieldError
-from socialhood.mcp import limits
+from socialhood.mcp import confirmations, limits
 from socialhood.mcp.context import ToolCall
-from socialhood.mcp.registry import Access, ToolInput, WriteInput, WriteOutput, registry, tool
+from socialhood.mcp.registry import Access, ConfirmedInput, ToolInput, WriteOutput, registry, tool
 from socialhood.mcp.tools.common import moment
 from socialhood.mcp.tools.posts import ACCOUNT, ChecklistOut
 from socialhood.models.identity import Role, User
@@ -65,10 +66,6 @@ WHEN = (
     "workspace's time zone, or words like “tomorrow 7 pm”), “next_free_slot” for the earliest "
     "free posting time of the accounts, or “draft” to save it without a time. At least 5 "
     "minutes from now."
-)
-CONFIRMED = (
-    "false (the default): nothing changes and the result shows what would happen. true: do it. "
-    "Send true only after the member has seen the preview."
 )
 KIND = (
     "post: an image, a video (published as a Reel on Instagram) or a carousel; reel: one video "
@@ -123,14 +120,13 @@ class PostFields(ToolInput):
     )
 
 
-class CreatePostInput(PostFields, WriteInput):
+class CreatePostInput(PostFields, ConfirmedInput):
     accounts: list[str] = Field(min_length=1, max_length=10, description=ACCOUNT)
     kind: Kind = Field(default="post", description=KIND)
     when: str = Field(min_length=1, max_length=100, description=WHEN)
-    confirmed: bool = Field(default=False, description=CONFIRMED)
 
 
-class UpdatePostInput(PostFields, WriteInput):
+class UpdatePostInput(PostFields, ConfirmedInput):
     post_id: uuid.UUID = Field(description="A draft or scheduled post's id.")
     accounts: list[str] | None = Field(
         default=None, min_length=1, max_length=10, description=ACCOUNT
@@ -142,12 +138,10 @@ class UpdatePostInput(PostFields, WriteInput):
         description="A new time (the same forms as create_post) or “next_free_slot”. A draft "
         "given a time is scheduled. Omit to keep the time.",
     )
-    confirmed: bool = Field(default=False, description=CONFIRMED)
 
 
-class CancelPostInput(WriteInput):
+class CancelPostInput(ConfirmedInput):
     post_id: uuid.UUID = Field(description="A scheduled post's id.")
-    confirmed: bool = Field(default=False, description=CONFIRMED)
 
 
 class PostResult(WriteOutput):
@@ -212,6 +206,16 @@ def require_scheduling(call: ToolCall) -> None:
     )
 
 
+async def _reserve_post(call: ToolCall) -> limits.Reservation:
+    return await limits.reserve_post(
+        call.redis,
+        call.plan,
+        call.workspace.id,
+        call.now,
+        rate_limited=call.settings.rate_limits_enabled,
+    )
+
+
 async def _accounts(call: ToolCall, names: list[str]) -> list[uuid.UUID]:
     ctx = call.agent_context()
     found: list[uuid.UUID] = []
@@ -249,11 +253,13 @@ async def _result(
     summary: str,
     next_step: str,
     stored: bool = True,
+    token: str | None = None,
 ) -> PostResult:
     names = {a.id: handle(a) for a in await social_accounts.list_all(call.session)}
     return PostResult(
         summary=summary,
         preview=preview,
+        confirmation_token=token,
         post_id=post.id if stored else None,
         status=post.status,
         kind=post.kind,
@@ -309,8 +315,8 @@ async def _notify(call: ToolCall, post: ScheduledPost, did: str) -> None:
 
 def _confirm_step(preview: bool, then: str) -> str:
     return (
-        f"Nothing was changed. Show the member this, then call again with confirmed: true to "
-        f"{then}."
+        "Nothing was changed. Show the member this. After they agree, call again with the same "
+        f"arguments, confirmed: true and this confirmation_token to {then}."
         if preview
         else ""
     )
@@ -335,9 +341,10 @@ async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> No
         "library, and either save it as a draft, schedule it for a time, or put it in the next "
         "free posting slot. It is checked with the same checklist as the composer, and a failing "
         "item stops scheduling. Scheduling is previewed first: the call shows the resolved time "
-        "and the checklist, and a second call with confirmed true schedules it. Posts go out at "
-        "least 5 minutes later and the team is notified. Plans: scheduling is part of Pro; "
-        "drafts work on every plan."
+        "and the checklist. Show the member the preview and call again only after they agree, "
+        "with confirmed true and the preview's confirmation_token. Posts go out at least 5 "
+        "minutes later and the team is notified. Plans: scheduling is part of Pro; drafts work "
+        "on every plan, with no preview."
     ),
     input_model=CreatePostInput,
     output_model=PostResult,
@@ -345,7 +352,7 @@ async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> No
     access=Access.DRAFT,
     min_role=Role.ADMIN,
     open_world=True,
-    dedupe_window_s=600,
+    dedupe_window_s=confirmations.TTL_S,  # as long as a confirmation token lasts
 )
 async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
     when = resolve_when(call, args.when)
@@ -370,15 +377,11 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
         audio_name=options.audio_name,
     )
     preview = scheduling and not args.confirmed
+    if scheduling and not preview:
+        confirmations.require(call, args, args.confirmation_token)
     reservation = None
     if scheduling and not preview:
-        reservation = await limits.reserve(
-            call.redis,
-            call.plan,
-            limits.POSTS,
-            call.workspace.id,
-            call.now,
-        )
+        reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
     try:
         post = await posts.create(call.session, draft, _env(call), user_id=call.principal.user_id)
@@ -405,6 +408,7 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
             f"{moment(call, post.publish_at)}. Nothing is scheduled yet",
             next_step=_confirm_step(True, "schedule it"),
             stored=False,
+            token=confirmations.issue(call, args),
         )
     if not scheduling:
         call.note("post.created", "scheduled_post", post.id, status=post.status)
@@ -491,9 +495,10 @@ def _merge(
     description=(
         "Change a draft or scheduled post: caption, first comment, media, accounts, "
         "collaborators, Reel options or time. Only the fields sent change. Changing a scheduled "
-        "post, or giving a draft a time, is previewed first and needs a second call with "
-        "confirmed true. A post whose publishing has started can't be changed. Changing "
-        "scheduled posts is part of Pro."
+        "post, or giving a draft a time, is previewed first: show the member the preview and "
+        "call again only after they agree, with confirmed true and its confirmation_token. A "
+        "post whose publishing has started can't be changed. Changing scheduled posts is part "
+        "of Pro."
     ),
     input_model=UpdatePostInput,
     output_model=PostResult,
@@ -538,11 +543,11 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
     moved = when if isinstance(when, datetime) and scheduled_before else None
     merged = _merge(current, args, targets=targets, kind=kind, publish_at=moved)
     preview = scheduling and not args.confirmed
+    if scheduling and not preview:
+        confirmations.require(call, args, args.confirmation_token)
     reservation = None
     if scheduling and not scheduled_before and not preview:
-        reservation = await limits.reserve(
-            call.redis, call.plan, limits.POSTS, call.workspace.id, call.now
-        )
+        reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
     try:
         post = await posts.replace(call.session, args.post_id, merged, env)
@@ -562,6 +567,7 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
             preview=True,
             summary="Preview: the post would be changed as shown. Nothing is changed yet",
             next_step=_confirm_step(True, "make the change"),
+            token=confirmations.issue(call, args),
         )
     call.note("post.updated", "scheduled_post", post.id, status=post.status)
     if post.status == SCHEDULED:
@@ -587,8 +593,9 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
     title="Cancel a scheduled post",
     description=(
         "Take a scheduled post back to a draft so it doesn't publish. The post, its media and "
-        "its time are kept. Needs a second call with confirmed true. A post that is publishing "
-        "or published can't be cancelled."
+        "its time are kept. Previewed first: show the member the preview and call again only "
+        "after they agree, with confirmed true and its confirmation_token. A post that is "
+        "publishing or published can't be cancelled."
     ),
     input_model=CancelPostInput,
     output_model=PostResult,
@@ -602,6 +609,8 @@ async def cancel_post(call: ToolCall, args: CancelPostInput) -> PostResult:
     current = await posts.get(call.session, args.post_id, env)
     was_scheduled = current.status == SCHEDULED
     preview = was_scheduled and not args.confirmed
+    if was_scheduled and not preview:
+        confirmations.require(call, args, args.confirmation_token)
     savepoint = await call.session.begin_nested() if preview else None
     post = await posts.unschedule(call.session, args.post_id, env)
     if savepoint is not None:
@@ -613,6 +622,7 @@ async def cancel_post(call: ToolCall, args: CancelPostInput) -> PostResult:
             summary="Preview: the post would go back to a draft and not publish. Nothing is "
             "changed yet",
             next_step=_confirm_step(True, "cancel it"),
+            token=confirmations.issue(call, args),
         )
     if was_scheduled:
         call.note("post.canceled", "scheduled_post", post.id)

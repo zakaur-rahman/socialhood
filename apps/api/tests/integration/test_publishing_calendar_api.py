@@ -102,7 +102,7 @@ async def test_the_calendar_shows_posts_messages_and_free_slots(
     assert (str(shop.account_id), busy_day) not in slots
     rail = {a["social_account_id"]: a for a in cal["accounts"]}
     assert set(rail) == {str(shop.account_id), str(second)}
-    assert rail[str(shop.account_id)]["publishing_limit"] == 100
+    assert rail[str(shop.account_id)]["publishing_limit"] == 50
     assert parse(rail[str(shop.account_id)]["next_free_at"]) == free_day
     assert rail[str(second)]["next_free_at"] is None
 

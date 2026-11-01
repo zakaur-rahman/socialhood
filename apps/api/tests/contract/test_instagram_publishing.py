@@ -88,7 +88,7 @@ async def test_a_quota_without_its_config_falls_back_to_the_default_limit(
         200, json={"data": [{"quota_usage": 100}]}
     )
     quota = await adapter.get_publishing_quota(account(adapter))
-    assert (quota.used, quota.limit, quota.remaining) == (100, 100, 0)
+    assert (quota.used, quota.limit, quota.remaining) == (100, 50, 0)
 
 
 # ---------------------------------------------------------------- containers

@@ -32,6 +32,7 @@ ApiScopeName = Literal[
     "knowledge:read",
     "knowledge:write",
     "automations:write",
+    "automations:create",  # C-169: create and change automations, apart from pause and resume
     "ask",
 ]
 
@@ -46,6 +47,7 @@ MCP_ONLY_SCOPES: tuple[str, ...] = (
     "knowledge:read",
     "knowledge:write",
     "automations:write",
+    "automations:create",
     "ask",
 )
 
@@ -59,7 +61,10 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "messages:send": "Send a message in a conversation, inside the platform's reply window.",
     "automations:read": "Read automation runs.",
     "webhooks:subscribe": "Subscribe and unsubscribe REST hooks (what Zapier triggers use).",
-    "posts:read": "AI apps: read scheduled posts, the calendar, best times and the media library.",
+    "posts:read": (
+        "AI apps: read published and scheduled posts, the calendar, best times and the media "
+        "library."
+    ),
     "posts:write": "AI apps: create, change, reschedule and cancel scheduled posts.",
     "media:write": "AI apps: upload or import images and videos for posts.",
     "replies:draft": "AI apps: prepare a reply for a member to send in Amplychat (never sent).",
@@ -68,6 +73,7 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "knowledge:read": "AI apps: search the knowledge base.",
     "knowledge:write": "AI apps: add a text note or a website to the knowledge base.",
     "automations:write": "AI apps: pause and resume automations.",
+    "automations:create": "AI apps: create and change keyword automations, and turn new ones on.",
     "ask": "AI apps: ask Amplychat's own assistant (uses AI credits).",
 }
 
