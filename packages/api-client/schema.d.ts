@@ -188,6 +188,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/security/secret-scanning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report Leaked Secrets
+         * @description GitHub's secret scanning partner alert: a JSON array of ``{token, type, url, source}``,
+         *     signed with ``Github-Public-Key-Identifier`` and ``Github-Public-Key-Signature``. Each
+         *     token that is one of our keys is revoked and its workspace told. 401 when the signature
+         *     doesn't verify.
+         */
+        post: operations["report_leaked_secrets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}": {
         parameters: {
             query?: never;
@@ -740,7 +763,8 @@ export interface paths {
         /**
          * Create Api Key
          * @description The key is in this response only. 402 entitlement_required on Free (the public API is part
-         *     of Pro); 409 at 20 active keys.
+         *     of Pro); 409 at 20 active keys. C-167: ``expires_in_days`` (30, 90 or 365; leave out for
+         *     never) and ``allowed_ips`` (IPs and CIDRs; empty for any address).
          */
         post: operations["create_api_key"];
         delete?: never;
@@ -767,7 +791,12 @@ export interface paths {
         delete: operations["revoke_api_key"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Api Key
+         * @description C-167: rename a key or change the addresses it may be used from. Scopes never change.
+         *     409 for a revoked key.
+         */
+        patch: operations["update_api_key"];
         trace?: never;
     };
     "/v1/w/{wid}/assignment": {
@@ -5791,11 +5820,15 @@ export interface components {
         };
         /** ApiKey */
         ApiKey: {
+            /** Allowed Ips */
+            allowed_ips?: string[];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Expires At */
+            expires_at?: string | null;
             /**
              * Id
              * Format: uuid
@@ -5805,6 +5838,11 @@ export interface components {
             key_prefix: string;
             /** Last Used At */
             last_used_at?: string | null;
+            /**
+             * Made By Former Member
+             * @default false
+             */
+            made_by_former_member: boolean;
             /** Name */
             name: string;
             /** Revoked At */
@@ -5814,6 +5852,10 @@ export interface components {
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
+            /** Allowed Ips */
+            allowed_ips?: string[];
+            /** Expires In Days */
+            expires_in_days?: (30 | 90 | 365) | null;
             /** Name */
             name: string;
             /** Scopes */
@@ -5829,15 +5871,29 @@ export interface components {
             scopes: components["schemas"]["ApiScope"][];
         };
         /**
+         * ApiKeyUpdate
+         * @description C-167: only the name and the allowlist change after a key is made; never its scopes.
+         */
+        ApiKeyUpdate: {
+            /** Allowed Ips */
+            allowed_ips?: string[] | null;
+            /** Name */
+            name?: string | null;
+        };
+        /**
          * ApiKeyWithKey
          * @description Create only: the key itself, shown this once. Only its hash is kept.
          */
         ApiKeyWithKey: {
+            /** Allowed Ips */
+            allowed_ips?: string[];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Expires At */
+            expires_at?: string | null;
             /**
              * Id
              * Format: uuid
@@ -5849,6 +5905,11 @@ export interface components {
             key_prefix: string;
             /** Last Used At */
             last_used_at?: string | null;
+            /**
+             * Made By Former Member
+             * @default false
+             */
+            made_by_former_member: boolean;
             /** Name */
             name: string;
             /** Revoked At */
@@ -8690,6 +8751,18 @@ export interface components {
             /** Nonce */
             nonce: string;
         };
+        /** Feedback */
+        Feedback: {
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "true_positive" | "false_positive";
+            /** Token Hash */
+            token_hash: string;
+            /** Token Type */
+            token_type: string;
+        };
         /**
          * FieldCondition
          * @description ``equals`` ignores case; ``set`` is any value.
@@ -9797,6 +9870,11 @@ export interface components {
         };
         /** Member */
         Member: {
+            /**
+             * Active Api Keys
+             * @default 0
+             */
+            active_api_keys: number;
             /** Avatar Url */
             avatar_url: string | null;
             /** Email */
@@ -14738,6 +14816,35 @@ export interface operations {
             };
         };
     };
+    report_leaked_secrets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Feedback"][];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_workspace: {
         parameters: {
             query?: never;
@@ -16126,6 +16233,51 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiKeyUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
