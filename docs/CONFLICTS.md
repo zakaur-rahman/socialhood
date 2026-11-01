@@ -9516,3 +9516,12 @@ This is reading the code and our tests, not a review by Meta, and no copy claims
 - **A person reading the preview can't be proved.** An AI app set to always allow the tools can confirm by itself. `/mcp`, `/developers/mcp`, the landing band, `/faq` and `/privacy` say so.
 - **Connections from before `automations:create`** have to connect again for the new tools. They see no error, only no tool; `/developers/mcp/api-key` says why.
 - **Two posts racing for an account's last slot.** The quota is read just before `media_publish`, not atomically, and when Meta won't give the quota we go on. In both cases Meta itself refuses with error 2207042, and the target fails with `LIMIT_REACHED`'s words.
+
+## C-171 · Billing and usage tabs
+
+The owner asked for two tabs on Settings › Billing and usage (2026-11-01). Decisions:
+
+- **Usage comes first and opens by default.** Billing shows little until paid plans are on sale. The current plan card stays above the tabs.
+- **`?tab=billing` opens Billing,** so a reload keeps the tab. "See plans", "Compare plans" and "View billing" links use `PLANS_HREF`. `BILLING_HREF` stays for links about the page in general.
+- **Usage shows a dot when a monthly allowance is used up** (credits, posts). A full slot, like the one Instagram account Free allows, gets none: it would stay on for anyone using their one account.
+- **The quota grid fits its container** instead of the viewport (auto-fill, 15rem minimum). With the two sidebars at laptop width, four columns broke words in half.

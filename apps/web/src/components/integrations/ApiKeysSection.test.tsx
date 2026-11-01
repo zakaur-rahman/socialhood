@@ -138,7 +138,7 @@ describe("Settings > API keys (GR-25)", () => {
     setup({ ws: { ...workspace, plan: "free" } });
     expect(await screen.findByText("The public API, API keys and Zapier are part of Pro.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
 
   it("opens the upgrade dialog when the API says the plan lacks it", async () => {

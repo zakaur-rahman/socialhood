@@ -108,7 +108,7 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
 
     const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Pro" });
     // Already on a paid plan: the owner is sent to billing rather than a second checkout.
-    expect(within(upgrade).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(within(upgrade).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(toast.error).not.toHaveBeenCalled();
   });
 

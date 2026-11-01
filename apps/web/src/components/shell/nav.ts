@@ -77,6 +77,8 @@ export const SETTINGS_NAV: NavItem = {
 };
 
 export const BILLING_HREF = (slug: string): Route => route(`/w/${slug}/settings/billing`);
+/** The billing page opened on its Billing tab, where the plans are (C-171). */
+export const PLANS_HREF = (slug: string): Route => route(`/w/${slug}/settings/billing?tab=billing`);
 export const WORKSPACE_SETTINGS_HREF = (slug: string): Route => route(`/w/${slug}/settings/workspace`);
 /** Where switching to another workspace lands. */
 export const WORKSPACE_HOME_HREF = (slug: string): Route => route(`/w/${slug}/home`);

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { BILLING_HREF } from "@/components/shell/nav";
+import { PLANS_HREF } from "@/components/shell/nav";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import {
   AlertDialog,
@@ -116,7 +116,7 @@ export function ApiKeysSection() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-raised p-4">
           <p className="text-sm">The public API, API keys and Zapier are part of Pro.</p>
           <Button asChild variant="secondary">
-            <Link href={BILLING_HREF(workspace.slug)}>See plans</Link>
+            <Link href={PLANS_HREF(workspace.slug)}>See plans</Link>
           </Button>
         </div>
       ) : keys.isPending ? (

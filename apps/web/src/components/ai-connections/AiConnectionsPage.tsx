@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BILLING_HREF } from "@/components/shell/nav";
+import { PLANS_HREF } from "@/components/shell/nav";
 import {
   useAiConnectionActivity,
   useAiConnections,
@@ -185,7 +185,7 @@ function ModeCard() {
       {capped ? (
         <p className="text-sm text-fg-secondary">
           Your plan allows up to &ldquo;Read and drafts&rdquo;, so that&rsquo;s what applies now.{" "}
-          <Link className="font-medium text-brand-fg underline underline-offset-4" href={BILLING_HREF(workspace.slug)}>
+          <Link className="font-medium text-brand-fg underline underline-offset-4" href={PLANS_HREF(workspace.slug)}>
             See plans
           </Link>
         </p>

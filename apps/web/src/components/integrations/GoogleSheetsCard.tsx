@@ -147,7 +147,7 @@ function Body({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
     return (
       <p className="text-sm text-fg-secondary">
         Google Sheets sync is part of Pro.{" "}
-        <Link href={`/w/${slug}/settings/billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+        <Link href={`/w/${slug}/settings/billing?tab=billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
           See plans
         </Link>
       </p>

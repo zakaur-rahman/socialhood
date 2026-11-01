@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardInset } from "@/components/ui/card";
 import { Meter, meterLevel, type MeterKind } from "@/components/ui/meter";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBilling, useBillingPlans, useCancelPlan, useResumePlan } from "@/lib/api/queries";
 import type { BillingState } from "@/lib/api/types";
 import {
@@ -99,6 +100,8 @@ const SLOT_METRICS = new Set(["instagram_accounts", "whatsapp_accounts", "facebo
 const DOWNGRADE_EFFECTS =
   "Accounts in Auto switch to Suggest, AI-reply automations pause, automations over Free's limit pause and extra accounts become read-only. Nothing is deleted.";
 
+type BillingTab = "usage" | "billing";
+
 /**
  * UX-SCR-07 Billing, F-15, FR-BIL-02…06: the current plan and its status, usage meters for every
  * limited entitlement, the plans, and the owner's actions (checkout, Manage billing in Dodo's
@@ -106,6 +109,8 @@ const DOWNGRADE_EFFECTS =
  * ?checkout=return; the page waits for the webhook and never assumes the payment worked.
  * Owners manage; admins see it read-only; agents are sent to their own notification settings.
  * C-066: a plan hero, a grid of quota meters, the plans side by side and the payment history.
+ * C-171: the plan stays on top; Usage (the default) and Billing are tabs. ?tab=billing opens Billing,
+ * so a "See plans" link lands on the plans and a reload keeps the tab.
  */
 export function BillingPage() {
   const workspace = useCurrentWorkspace();
@@ -114,6 +119,7 @@ export function BillingPage() {
   const params = useSearchParams();
   const agent = workspace.role === "agent";
   const [returned] = useState(() => params.get("checkout") === "return");
+  const [tab, setTab] = useState<BillingTab>(() => (params.get("tab") === "billing" ? "billing" : "usage"));
   const returnedAt = useRef<number | null>(null);
   useEffect(() => {
     if (returned) returnedAt.current ??= Date.now();
@@ -147,6 +153,11 @@ export function BillingPage() {
 
   const state = billing.data;
   const isOwner = workspace.role === "owner";
+  const chooseTab = (next: string) => {
+    const chosen: BillingTab = next === "billing" ? "billing" : "usage";
+    setTab(chosen);
+    router.replace(`${pathname}${chosen === "billing" ? "?tab=billing" : ""}` as Route, { scroll: false });
+  };
   return (
     <SettingsFrame
       header={
@@ -166,19 +177,37 @@ export function BillingPage() {
           checkout={checkout}
           trialDays={plans.data?.items.find((offer) => offer.plan === "pro")?.trial_days || TRIAL_DAYS}
         />
-        <Usage billing={state} />
-        <section aria-labelledby="plans-title" className="space-y-4">
-          <div className="space-y-1">
-            <h2 id="plans-title" className={SECTION_TITLE}>
-              Compare plans
-            </h2>
-            <p className="text-sm text-fg-secondary">
-              What each plan includes. {billingOpen(state) ? "Max is coming soon." : "Pro and Max are coming soon."}
-            </p>
-          </div>
-          <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
-        </section>
-        <PaymentHistory />
+        <Tabs value={tab} onValueChange={chooseTab} className="gap-6">
+          <TabsList size="xl" className="w-full sm:w-72">
+            <TabsTrigger value="usage">
+              Usage
+              {usageRanOut(state, workspace.timezone) ? (
+                <>
+                  <span aria-hidden className="ml-1.5 size-1.5 rounded-full bg-danger" data-testid="usage-ran-out" />
+                  <span className="sr-only"> (a limit has run out)</span>
+                </>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
+          </TabsList>
+          <TabsContent value="usage">
+            <Usage billing={state} />
+          </TabsContent>
+          <TabsContent value="billing" className="space-y-6">
+            <section aria-labelledby="plans-title" className="space-y-4">
+              <div className="space-y-1">
+                <h2 id="plans-title" className={SECTION_TITLE}>
+                  Compare plans
+                </h2>
+                <p className="text-sm text-fg-secondary">
+                  What each plan includes. {billingOpen(state) ? "Max is coming soon." : "Pro and Max are coming soon."}
+                </p>
+              </div>
+              <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
+            </section>
+            <PaymentHistory />
+          </TabsContent>
+        </Tabs>
       </div>
     </SettingsFrame>
   );
@@ -335,6 +364,13 @@ function CurrentPlan({
  * its percentage and, for a monthly allowance, when it resets; warning at 80 % and danger at
  * 100 %. The plan's other limits are listed (the UI never counts usage itself, TR-BIL-04).
  */
+/** Whether a monthly allowance is used up (credits, posts). A full slot, like the one Instagram account Free allows, isn't running out. */
+function usageRanOut(billing: BillingState, timeZone: string): boolean {
+  return meterViews(billing.usage, timeZone).some(
+    (meter) => !SLOT_METRICS.has(meter.metric) && meterLevel(meter.used, meter.limit, "consumable") === "full",
+  );
+}
+
 function Usage({ billing }: { billing: BillingState }) {
   const workspace = useCurrentWorkspace();
   const meters = meterViews(billing.usage, workspace.timezone);
@@ -351,7 +387,7 @@ function Usage({ billing }: { billing: BillingState }) {
       description={`What this workspace has used of ${PLAN_NAME[billing.plan]}'s limits.`}
     >
       {meters.length > 0 ? (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Usage">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-3" aria-label="Usage">
           {meters.map((meter) => {
             const key = ENTITLEMENT_FOR_METRIC[meter.metric] ?? meter.metric;
             return (

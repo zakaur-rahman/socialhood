@@ -91,7 +91,7 @@ describe("Google Sheets card (GR-27)", () => {
   it("says Sheets sync is part of Pro on a plan without it", async () => {
     setup(status({ entitled: false }));
     expect(await screen.findByText(/Google Sheets sync is part of Pro/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(screen.queryByRole("button", { name: "Connect Google" })).not.toBeInTheDocument();
   });
 
