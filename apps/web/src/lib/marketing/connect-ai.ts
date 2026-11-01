@@ -132,7 +132,7 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Create, change, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
   { label: "Connect with an API key", free: "No", pro: "Yes", max: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "10,000" },
-  { label: "Posts scheduled from AI apps a day", free: "None", pro: "25", max: "100" },
+  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "300" },
   { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "200 (10,000 MB)", max: "1,000 (50,000 MB)" },
 ];
 
@@ -142,8 +142,8 @@ export const SAFETY: readonly Capability[] = [
     body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app sends nothing until you've confirmed it and it's on, and you can pause it at any time.",
   },
   {
-    title: "Posts wait at least 5 minutes",
-    body: "A post scheduled by an AI app is at least 5 minutes out, so your team can see it in the calendar and cancel it.",
+    title: "A preview first, and posts wait at least 5 minutes",
+    body: "Amplychat refuses a change to a post or an automation until the AI app has fetched a preview of exactly that change. A post scheduled by an AI app is at least 5 minutes out, so your team can see it in the calendar and cancel it. If you set your AI app to always allow Amplychat's tools, it can confirm without asking you, so keep approvals on for changes.",
   },
   {
     title: "It acts as you, never more",

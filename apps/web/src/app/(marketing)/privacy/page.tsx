@@ -355,8 +355,9 @@ function sections(): LegalSection[] {
             <li>
               <strong>Sending.</strong> An AI app can&apos;t send a direct message or a comment reply. It can prepare a
               draft, which a person sends from {N}. A member can also ask it to create or change a keyword automation;
-              once the member confirms it and it is on, the automation sends messages to the people who match, as one made
-              in {N} does.
+              {N} requires the AI app to fetch a preview first, and once it is confirmed and on, the automation sends messages
+              to the people who match, as one made in {N} does. An AI app set to always allow {N}&apos;s tools can confirm
+              without asking the member.
             </li>
           </ul>
           <p>

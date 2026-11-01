@@ -31,7 +31,7 @@ export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[]
   {
     title: "You confirm first",
     icon: CircleCheck,
-    body: `${CONFIRM_LINE} A post goes out at least 5 minutes later, and owners and admins are told.`,
+    body: `${CONFIRM_LINE} A post goes out at least 5 minutes later, and owners and admins are told. Keep approvals on in your AI app for changes: set to always allow, it can confirm without asking you.`,
   },
   {
     title: "It doesn't message your customers itself",

@@ -2888,6 +2888,7 @@
                 "knowledge:read",
                 "knowledge:write",
                 "automations:write",
+                "automations:create",
                 "ask"
               ],
               "type": "string"
@@ -2961,6 +2962,7 @@
                 "knowledge:read",
                 "knowledge:write",
                 "automations:write",
+                "automations:create",
                 "ask"
               ],
               "type": "string"
@@ -3138,6 +3140,7 @@
                 "knowledge:read",
                 "knowledge:write",
                 "automations:write",
+                "automations:create",
                 "ask"
               ],
               "type": "string"
@@ -3182,6 +3185,7 @@
               "knowledge:read",
               "knowledge:write",
               "automations:write",
+              "automations:create",
               "ask"
             ],
             "title": "Scope",

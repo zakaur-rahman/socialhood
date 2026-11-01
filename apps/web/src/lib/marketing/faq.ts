@@ -127,7 +127,7 @@ export const FAQ_CANCEL: FaqItem = {
 export const FAQ_AI_APPS: FaqItem = {
   question: "Can I use Amplychat from Claude or ChatGPT?",
   answer:
-    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Pro and Max. The AI shows a preview and waits for your yes first, and it can't send messages to your customers itself: an automation sends once you've confirmed it and it's on.",
+    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Pro and Max. Amplychat requires a preview first and the AI waits for your yes, unless you set your AI app to always allow Amplychat's tools, so keep approvals on for changes. It can't send messages to your customers itself: an automation sends once it's confirmed and on.",
   link: { label: "How it works with AI apps", href: "/mcp" },
 };
 

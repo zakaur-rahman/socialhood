@@ -56,6 +56,9 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   },
 ];
 
+/** C-169: the server can require the preview; it can't prove a person read it. */
+export const ALWAYS_ALLOW_LINE = "If you set your AI app to always allow Amplychat's tools, it can confirm without asking you, so keep approvals on for changes.";
+
 export type Ask = { prompt: string; result: string; plan?: string };
 
 export const ASKS: readonly Ask[] = [
@@ -116,7 +119,7 @@ export const HOW_STEPS: readonly { title: string; body: string }[] = [
 ];
 
 export const CONFIRM_LINE =
-  "Before a post is scheduled, changed or cancelled, or an automation is created or changed, the AI shows a preview and waits for your yes.";
+  "Before a post is scheduled, changed or cancelled, or an automation is created or changed, Amplychat requires a preview, and the AI shows it to you and waits for your yes.";
 
 export const MCP_PAGE_FAQ = [
   {
@@ -131,11 +134,11 @@ export const MCP_PAGE_FAQ = [
   {
     question: "Does the AI post to my accounts by itself?",
     answer:
-      "No. It only acts when you ask, it shows a preview before it schedules, changes or cancels a post, and a post waits at least 5 minutes so your team can cancel it.",
+      "No. It only acts when you ask, Amplychat requires a preview before a post is scheduled, changed or cancelled, and a post waits at least 5 minutes so your team can cancel it. " + ALWAYS_ALLOW_LINE,
   },
   {
     question: "Can the AI message my customers?",
-    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Pro and Max it can also set up a keyword automation: you check the preview and say yes, and once it's on, the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
+    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Pro and Max it can also set up a keyword automation: Amplychat requires a preview first, you say yes, and once it's on, the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told. ${ALWAYS_ALLOW_LINE}`,
   },
   {
     question: "Does this cost extra?",

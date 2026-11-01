@@ -81,6 +81,7 @@ describe("the AI assistant band (C-168)", () => {
     expect(text).not.toMatch(/sends? (a |the )?(DM|message|reply)/i);
     expect(text).toMatch(/doesn't message your customers itself/);
     expect(text).toMatch(/does nothing until you confirm it and it's on/);
+    expect(text).toMatch(/Keep approvals on in your AI app/);
     expect(text).toMatch(/waits for your yes/);
   });
 
