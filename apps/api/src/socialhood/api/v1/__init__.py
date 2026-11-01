@@ -48,6 +48,7 @@ from socialhood.api.v1 import (
     reports,
     saved_replies,
     scheduled,
+    security,
     sequences,
     stories,
     team,
@@ -110,4 +111,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     team.router,
     widget.router,
     widget_public.router,
+    security.router,
 )

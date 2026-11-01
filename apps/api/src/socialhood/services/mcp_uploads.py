@@ -17,6 +17,13 @@ media library. The MCP tools (mcp/tools/media.py) and the drop page's routes
   file that breaks a rule is deleted from storage and the ticket says why (``rejected``).
 - **Daily caps** (``mcp_uploads_daily``, ``mcp_upload_mb_daily``) count files that finished.
 
+- **Cleanup** (C-167; 01-design.md §5.3): a ticket that never finished (waiting, expired or
+  rejected, no media asset) and expired more than ``STALE_AFTER`` ago has the files carrying its
+  tag deleted from storage, except any registered in the library, and then its row is deleted:
+  it can't be finished, the daily caps count only finished files, and the AI app that asked
+  stopped waiting a day ago. ``clean_stale`` does one ticket; the daily job is
+  jobs/tasks/purge.clean_mcp_uploads.
+
 Nothing here commits except ``media_assets.register``, which commits as it always has.
 """
 
@@ -31,6 +38,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError, FieldError
 from socialhood.mcp import limits
 from socialhood.media.cloudinary import (
@@ -39,10 +47,12 @@ from socialhood.media.cloudinary import (
     ResourceType,
     workspace_folder,
 )
+from socialhood.media.purge import MediaPurger
 from socialhood.models.mcp import McpUpload, UploadStatus
 from socialhood.models.media import AssetPurpose, MediaAsset
 from socialhood.models.publishing import IG_REEL_MAX_S, STORY_VIDEO_MAX_S, STORY_VIDEO_MIN_S
 from socialhood.observability.logging import get_logger
+from socialhood.repositories.base import scoped_delete
 from socialhood.security import ssrf
 from socialhood.services import media_assets
 from socialhood.services.media_assets import IMAGE, MB, POST_VIDEO
@@ -52,6 +62,7 @@ log = get_logger(__name__)
 
 Kind = Literal["image", "video"]
 TICKET_TTL = timedelta(minutes=30)
+STALE_AFTER = timedelta(hours=24)  # after its expiry, an unfinished ticket's files are deleted
 TAG_PREFIX = "mcp_upload_"
 NOT_FOUND = "No upload with this id. Start a new one with start_media_upload."
 EXPIRED = "This upload expired. Start a new one with start_media_upload."
@@ -431,3 +442,32 @@ async def import_url(
         post_video_max_mb=post_video_max_mb,
         now=now,
     )
+
+
+# ---------------------------------------------------------------- cleanup (C-167)
+
+
+async def clean_stale(session: AsyncSession, media: MediaPurger, upload_id: uuid.UUID) -> int:
+    """Delete an unfinished ticket's files from storage (never one the library holds), then the
+    ticket, in the current workspace. Returns the files deleted; 0 for a ticket that finished or
+    is gone. Raises CloudinaryError when storage can't be reached (the row stays, so the next
+    day's run tries again). The caller commits."""
+    ticket = await session.get(McpUpload, upload_id)
+    if ticket is None or ticket.status == UploadStatus.UPLOADED or ticket.media_asset_id:
+        return 0
+    workspace_id = require_workspace()
+    files = await media.list_tagged(workspace_id, tag_of(ticket.id))
+    doomed = files
+    if files:
+        registered = set(
+            await session.scalars(
+                select(MediaAsset.public_id).where(
+                    MediaAsset.public_id.in_([f.public_id for f in files])
+                )
+            )
+        )
+        doomed = [f for f in files if f.public_id not in registered]
+        if doomed:
+            await media.delete_files(workspace_id, doomed)
+    await session.execute(scoped_delete(McpUpload, id=ticket.id))
+    return len(doomed)

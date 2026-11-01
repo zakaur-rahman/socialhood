@@ -18,6 +18,10 @@ services/workspace_deletion.py, the retention deletes in repositories/retention.
   message_history_days (Free: 90) with the conversations they leave empty, and finished queue jobs
   30 days (TR-OPS-04). It also sweeps deletions. Idempotency keys live in Valkey with a 24-hour
   TTL (services/idempotency.py) and audit_logs doesn't exist in R1, so neither has a rule here.
+- clean_mcp_uploads: periodic, daily 04:30 UTC (bulk lane, singleton, 600 s), C-167 (01-design.md
+  §5.3): MCP upload tickets that never finished and expired more than a day ago have their tagged
+  files deleted from Cloudinary (never one registered in the library) and then their rows
+  (services/mcp_uploads.clean_stale). A ticket whose storage call fails stays for the next run.
 """
 
 from __future__ import annotations
@@ -40,11 +44,12 @@ from socialhood.jobs.app import BULK, app
 from socialhood.jobs.retry import BASE_DELAY_S, MAX_DELAY_S
 from socialhood.jobs.runtime import runtime
 from socialhood.jobs.tasks import privacy
-from socialhood.media.purge import get_media_purger
+from socialhood.media.cloudinary import CloudinaryError
+from socialhood.media.purge import MediaPurger, get_media_purger
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import account_deletion as account_rows
 from socialhood.repositories import retention
-from socialhood.services import account_deletion
+from socialhood.services import account_deletion, mcp_uploads
 from socialhood.services import workspace_deletion as deletion
 
 log = get_logger(__name__)
@@ -317,6 +322,57 @@ async def _purge_expired() -> None:
     await purge_expired_rows(rt.sessionmaker)
     await delete_finished_jobs()
     await sweep_all(rt.sessionmaker, datetime.now(UTC))
+
+
+# ---------------------------------------------------------------- clean_mcp_uploads (C-167)
+
+MCP_UPLOADS_BATCH = 500
+
+
+async def clean_mcp_upload_tickets(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    media: MediaPurger,
+    *,
+    now: datetime | None = None,
+    batch: int = MCP_UPLOADS_BATCH,
+) -> dict[str, int]:
+    """One pass over the stale tickets, each in its own workspace and transaction. Returns the
+    tickets cleaned, the files deleted and the tickets left for the next run."""
+    now = now or datetime.now(UTC)
+    counts = {"tickets": 0, "files": 0, "failed": 0}
+    async with sessionmaker() as session:
+        with tenant_bypass_scope():
+            stale = await retention.stale_mcp_uploads(
+                session, now - mcp_uploads.STALE_AFTER, limit=batch
+            )
+    for upload_id, workspace_id in stale:
+        async with sessionmaker() as session:
+            with workspace_scope(workspace_id):
+                try:
+                    counts["files"] += await mcp_uploads.clean_stale(session, media, upload_id)
+                except CloudinaryError as error:
+                    log.warning(
+                        "mcp_upload_cleanup_failed",
+                        workspace_id=str(workspace_id),
+                        upload_id=str(upload_id),
+                        error=str(error)[:200],
+                    )
+                    counts["failed"] += 1
+                    continue
+                await session.commit()
+        counts["tickets"] += 1
+    log.info("mcp_uploads_cleaned", **counts)
+    return counts
+
+
+@app.periodic(cron="30 4 * * *", periodic_id="clean_mcp_uploads")
+@app.task(name="clean_mcp_uploads", queue=BULK, queueing_lock="clean_mcp_uploads")
+async def clean_mcp_uploads(timestamp: int) -> None:
+    rt = runtime()
+    await asyncio.wait_for(
+        clean_mcp_upload_tickets(rt.sessionmaker, get_media_purger(rt.http, rt.settings)),
+        timeout=PURGE_EXPIRED_TIMEOUT_S,
+    )
 
 
 @app.periodic(cron="0 4 * * *", periodic_id="purge_expired")

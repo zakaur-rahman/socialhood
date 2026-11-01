@@ -57,6 +57,8 @@ LIMITS: dict[str, Limit] = {
         Limit("oauth_callback", 30, 60),
         Limit("public", 60, 60),
         Limit("api_key", 120, 60),
+        # C-167: GitHub secret scanning reports, per IP (GitHub sends from a few addresses).
+        Limit("secret_scanning", 120, 60),
         # C-165, MCP tool calls: per connection (an API key or, from phase C, an OAuth grant),
         # and per workspace across all its connections.
         Limit("mcp", 120, 60),

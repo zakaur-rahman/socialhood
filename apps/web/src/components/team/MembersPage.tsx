@@ -55,6 +55,14 @@ function seatSummary(seats: TeamSeats): string {
   return pending > 0 ? `${used}, plus ${pending} pending invitation${pending === 1 ? "" : "s"}.` : `${used}.`;
 }
 
+/** C-167: what removing a member does to the API keys they made. */
+function revokedKeysText(count: number): string {
+  if (count === 0) return "They haven’t made any API keys.";
+  return count === 1
+    ? "The 1 API key they made is revoked, so anything using it stops working."
+    : `The ${count} API keys they made are revoked, so anything using them stops working.`;
+}
+
 /**
  * GR-19: Settings → Members. Who can work in the workspace and as what. Owners and admins see the
  * list and invite (admins invite agents only); owners change roles, remove people and hand over
@@ -285,6 +293,7 @@ export function MembersPage() {
             <AlertDialogTitle>Remove {removing?.name ?? removing?.email}?</AlertDialogTitle>
             <AlertDialogDescription>
               They lose access to this workspace at once. Messages they sent and changes they made stay, under their name.
+              {removing ? ` ${revokedKeysText(removing.active_api_keys)}` : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
