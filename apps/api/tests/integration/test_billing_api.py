@@ -20,8 +20,8 @@ from socialhood.billing.dodo_fake import FAKE_CHECKOUT_BASE, FAKE_PORTAL_BASE, F
 from socialhood.billing.plans import ENTITLEMENTS, entitlement
 from tests.support.api import WEB, Clerk, sign_in
 from tests.support.billing import (
-    PRO_PRICE_MINOR,
     MAX_PRODUCT,
+    PRO_PRICE_MINOR,
     PRO_PRODUCT,
     dodo_event,
     make_payment,

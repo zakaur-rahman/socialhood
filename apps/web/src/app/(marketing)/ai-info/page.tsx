@@ -39,9 +39,6 @@ export const metadata = pageMetadata({
   path: PATH,
 });
 
-const E = table.entitlements;
-const n = (value: number | null) => (value === null ? "unlimited" : new Intl.NumberFormat("en-US").format(value));
-
 /** A plan's state today, from the plans API only: never a price written into the page. */
 function planState(card: PlanCard | undefined): string {
   if (!card) return "not available yet";

@@ -226,7 +226,7 @@ async def test_publishing_past_the_scheduled_posts(shop: Shop, action: str) -> N
 
 async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEngine) -> None:
     """After a downgrade, accounts past accounts_per_platform can't send (scheduled messages,
-    automations); the earliest connected keeps the plan's slot, and Business lifts the limit (C-172)."""
+    automations); the earliest connected keeps the plan's slot, and Business lifts it (C-172)."""
     extra = await shop.account("maple.cakes")
     await shop.execute(
         "UPDATE social_accounts SET connected_at = now() + interval '1 minute' WHERE id = :a",
@@ -398,6 +398,8 @@ async def test_api_keys_are_business_only(shop: Shop) -> None:
         await set_plan(shop.engine, shop.wid, plan)
         refused = await shop.call("POST", "/api-keys", body)
         assert_402(refused, "entitlement_required", "public_api", None)
-        assert refused.json()["detail"] == "The public API, API keys and Zapier are part of Business."
+        assert (
+            refused.json()["detail"] == "The public API, API keys and Zapier are part of Business."
+        )
     await set_plan(shop.engine, shop.wid, "max")
     assert (await shop.call("POST", "/api-keys", body)).status_code == 201
