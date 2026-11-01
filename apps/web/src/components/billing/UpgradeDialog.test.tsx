@@ -81,7 +81,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(dialog).toHaveTextContent("Free includes 3 active automations.");
     expect(await within(dialog).findByText("Pro includes 50 active automations.")).toBeInTheDocument();
     expect(dialog).toHaveTextContent("Try Pro free for 7 days, then ₹999 a month. Cancel anytime.");
-    expect(within(dialog).getByRole("link", { name: "Compare plans" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(within(dialog).getByRole("link", { name: "Compare plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
 
     await user.click(within(dialog).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
@@ -108,7 +108,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(dialog).toHaveTextContent("Paid plans aren't available yet. Everything on Free keeps working.");
     expect(dialog).not.toHaveTextContent("Pro includes 50 active automations.");
     expect(within(dialog).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(within(dialog).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(calls.some((c) => c.path.endsWith("/billing/checkout"))).toBe(false);
   });
 
@@ -146,7 +146,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     await user.click(screen.getByRole("button", { name: "Activate" }));
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     expect(dialog).toHaveTextContent("Only the workspace owner can change the plan.");
-    expect(within(dialog).getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    expect(within(dialog).getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(within(dialog).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
   });
 

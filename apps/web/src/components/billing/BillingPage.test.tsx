@@ -96,6 +96,10 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     // Limits GET …/billing doesn't count are listed, never counted by the page.
     expect(screen.getByRole("list", { name: "Other limits" })).toHaveTextContent("3 active automations");
 
+    // C-171: Usage opens first; the plans are on the Billing tab, and the address keeps it.
+    expect(screen.queryByRole("list", { name: "Plans" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /Billing/ }));
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/billing?tab=billing", { scroll: false });
     const plans = await screen.findByRole("list", { name: "Plans" });
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
     expect(cards).toHaveLength(3);
@@ -114,6 +118,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
   });
 
   it("C-149: without billing on the server, Free says paid plans aren't on sale and offers no checkout", async () => {
+    nav.search = "tab=billing";
     setup({
       billing: { ...free, billing_available: false, prices: [] },
       handlers: { "GET /v1/billing/plans": () => json(planList({ billingOff: true })) },
@@ -280,6 +285,10 @@ function payment(overrides: Partial<Payment> = {}): Payment {
 }
 
 describe("payment history (C-066)", () => {
+  beforeEach(() => {
+    nav.search = "tab=billing"; // C-171: the history is on the Billing tab
+  });
+
   it("lists payments newest first: date, amount and currency, status, invoice; older ones on demand", async () => {
     const user = userEvent.setup();
     const { calls } = setup({
@@ -388,5 +397,23 @@ describe("plan hero and quotas (C-066)", () => {
       "1 of 3 connected",
     );
     expect(tiles[1].querySelector(".bg-facebook-logo")).not.toBeNull();
+  });
+});
+
+describe("the Usage and Billing tabs (C-171)", () => {
+  it("?tab=billing opens Billing; Usage is the default", async () => {
+    nav.search = "tab=billing";
+    setup();
+    expect(await screen.findByRole("tab", { name: /Billing/ })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("list", { name: "Plans" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Usage" })).not.toBeInTheDocument();
+  });
+
+  it("marks Usage when a monthly allowance has run out, not when a slot is full", async () => {
+    setup();
+    await screen.findByRole("tab", { name: /Usage/ });
+    // The fixture has scheduled posts used up.
+    expect(screen.getByTestId("usage-ran-out")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Usage/ })).toHaveTextContent("a limit has run out");
   });
 });

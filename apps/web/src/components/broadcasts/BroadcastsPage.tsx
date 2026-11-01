@@ -89,7 +89,7 @@ export function BroadcastsPage() {
             <AlertTitle>Broadcasts are part of Pro</AlertTitle>
             <AlertDescription>
               Send a WhatsApp template to everyone in a segment who agreed to hear from you.{" "}
-              <Link href={`/w/${workspace.slug}/settings/billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+              <Link href={`/w/${workspace.slug}/settings/billing?tab=billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
                 See plans
               </Link>
             </AlertDescription>
