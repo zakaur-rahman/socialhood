@@ -56,6 +56,10 @@ test.describe("GR-19 team", () => {
     await agentPage.goto("/sign-up");
     await agentPage.getByLabel("Email address").fill(email);
     await agentPage.getByLabel("Password", { exact: true }).fill(`E2e-${randomBytes(12).toString("hex")}!`);
+    // C-158: with Clerk's "Require express consent to legal documents" on, the card has a checkbox
+    // (as f01-sign-up.spec.ts).
+    const consent = agentPage.locator("#legalAccepted-field");
+    if (await consent.count()) await consent.check();
     await agentPage.getByRole("button", { name: "Continue", exact: true }).click();
     await agentPage.getByLabel(/verification code/i).first().pressSequentially("424242");
     await expect(agentPage).toHaveURL(new RegExp(`/w/${workspace.slug}/`), { timeout: 30_000 });
