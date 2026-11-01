@@ -15,6 +15,10 @@ ALLOWED = {
     # GR-04: an outbound webhook's signing secret, by design in the create and rotate responses
     # only (shown once to the admin who made it, like any webhook provider's).
     "signing_secret",
+    # C-167: GitHub's secret scanning feedback format (its field names): the SHA-256 of a
+    # reported token and GitHub's name for the token's type, never a credential.
+    "token_hash",
+    "token_type",
 }
 
 

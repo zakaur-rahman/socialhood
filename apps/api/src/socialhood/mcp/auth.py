@@ -51,9 +51,12 @@ class CredentialResolver(Protocol):
 
     prefix: str  # the token's fixed start, e.g. "shk_"
 
-    async def resolve(self, token: str, env: AuthEnv) -> McpPrincipal:
+    async def resolve(
+        self, token: str, env: AuthEnv, *, client_ip: str | None = None
+    ) -> McpPrincipal:
         """The principal ``token`` acts as; ``CredentialRefused`` when it doesn't authenticate
-        (unknown, revoked, expired, its member gone, its workspace inactive)."""
+        (unknown, revoked, expired, its member gone, its workspace inactive) or may not be used
+        from ``client_ip`` (an API key's allowlist, C-167)."""
         ...
 
 
@@ -62,9 +65,11 @@ class ApiKeyResolver:
 
     prefix = KEY_PREFIX
 
-    async def resolve(self, token: str, env: AuthEnv) -> McpPrincipal:
+    async def resolve(
+        self, token: str, env: AuthEnv, *, client_ip: str | None = None
+    ) -> McpPrincipal:
         async with env.sessionmaker() as session:
-            principal = await principal_for_api_key(session, env.redis, token)
+            principal = await principal_for_api_key(session, env.redis, token, client_ip=client_ip)
             await session.commit()
             return principal
 
@@ -76,7 +81,9 @@ class OAuthResolver:
 
     prefix = ACCESS_PREFIX
 
-    async def resolve(self, token: str, env: AuthEnv) -> McpPrincipal:
+    async def resolve(
+        self, token: str, env: AuthEnv, *, client_ip: str | None = None
+    ) -> McpPrincipal:
         async with env.sessionmaker() as session:
             try:
                 return await principal_for_access_token(
@@ -90,9 +97,13 @@ RESOLVERS: tuple[CredentialResolver, ...] = (ApiKeyResolver(), OAuthResolver())
 
 
 async def resolve_bearer(
-    token: str, env: AuthEnv, resolvers: Sequence[CredentialResolver] = RESOLVERS
+    token: str,
+    env: AuthEnv,
+    resolvers: Sequence[CredentialResolver] = RESOLVERS,
+    *,
+    client_ip: str | None = None,
 ) -> McpPrincipal:
     for resolver in resolvers:
         if token.startswith(resolver.prefix):
-            return await resolver.resolve(token, env)
+            return await resolver.resolve(token, env, client_ip=client_ip)
     raise CredentialRefused(INVALID, unknown=True)

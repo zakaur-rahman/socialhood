@@ -29,6 +29,10 @@ NO_WORKSPACE = {
     # workspace is in the body and must be one of the caller's (oauth/service.approve).
     ("POST", "/v1/connect/requests/{request_id}/approve"),
     ("POST", "/v1/connect/requests/{request_id}/deny"),
+    # C-167: GitHub's secret scanning reports. Public by design: GitHub's ECDSA signature over the
+    # body stands in for a member; a reported key is revoked wherever it is (services/
+    # secret_scanning.py).
+    ("POST", "/v1/security/secret-scanning"),
 }
 
 

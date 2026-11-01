@@ -83,6 +83,8 @@ class NotificationType(StrEnum):
     PLAN_ACTIVATED = "plan_activated"  # "We'll email you when Pro is active" (F-15)
     AI_POST_CHANGE = "ai_post_change"  # an AI app scheduled, changed or cancelled a post (C-165)
     PLAN_DOWNGRADED = "plan_downgraded"  # expired: what the downgrade changed (FR-BIL-07)
+    API_KEY_EXPIRING = "api_key_expiring"  # C-167: a key expires within 7 days, in app only
+    API_KEY_LEAKED = "api_key_leaked"  # C-167: GitHub found a key in public; we revoked it
 
 
 class PushEvent(StrEnum):

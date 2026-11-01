@@ -162,17 +162,21 @@ class McpEndpoint:
         if scheme.lower() != "bearer" or not token:
             await self._challenge(scope, receive, send, None)
             return
+        client_ip = ratelimit.client_ip(request)
         try:
-            principal = await resolve_bearer(token, self.auth, self.resolvers)
+            principal = await resolve_bearer(token, self.auth, self.resolvers, client_ip=client_ip)
         except CredentialRefused as refused:
             if refused.unknown and (wait := await self._guessing(request)):
                 await self._too_many(scope, receive, send, wait)
+                return
+            if refused.forbidden:
+                await self._forbidden(scope, receive, send, refused.message)
                 return
             await self._challenge(scope, receive, send, refused.message)
             return
         context = McpRequest(
             principal=principal,
-            client_ip=ratelimit.client_ip(request),
+            client_ip=client_ip,
             user_agent=(request.headers.get("user-agent") or None),
             request_id=current_request_id.get(),
         )
@@ -256,6 +260,17 @@ class McpEndpoint:
                 "WWW-Authenticate": "Bearer " + ", ".join(parts),
                 "X-Robots-Tag": "noindex, nofollow",
             },
+        )
+        await response(scope, receive, send)
+
+    async def _forbidden(self, scope: Scope, receive: Receive, send: Send, reason: str) -> None:
+        """A valid credential that may not be used from here (an API key's IP allowlist,
+        C-167). 403, not 401: signing in again wouldn't help."""
+        response = Response(
+            json.dumps({"error": "forbidden", "error_description": reason}),
+            status_code=403,
+            media_type="application/json",
+            headers={"X-Robots-Tag": "noindex, nofollow"},
         )
         await response(scope, receive, send)
 

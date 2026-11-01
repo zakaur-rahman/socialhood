@@ -9367,3 +9367,70 @@ Owner asked for a public MCP product page, a separate API-key connection page, a
   - Since `tools/list` hides a tool whose scope wasn't granted, `pause_automation`, `resume_automation`, `add_knowledge` and the Ask tools never appeared, and the step-up never happened.
   - Now `scopes_supported` is every grantable scope. The member unticks groups on the consent page, and a test keeps the two lists equal.
   - Existing connections must reconnect to get the new scopes.
+
+## C-167 · API key hardening
+
+Five items on branch `feature/api-key-hardening`, with one migration (`0056`, chained on `0055`).
+
+### Calls I made
+
+- **Revoked when a member leaves.**
+  - Two ways out exist in the code, and both now revoke, in the same transaction, every unrevoked key the person made in that workspace. Each revocation goes through `services/api_keys.revoke`, so the key's REST hooks are deleted too.
+    - Removal (`services/team.remove_member`) writes one `api_key.revoked` audit row per key, as the owner who removed them, with the reason "revoked: the member who made it was removed from the workspace". The `member.removed` row gets `revoked_api_access` (the count). Audit detail drops any key containing "key".
+    - Account deletion (Clerk `user.deleted`, `services/clerk_sync`) revokes the keys in every workspace they belong to before the user row goes, with the actor "Account deleted".
+  - **No "leave" route exists.** A member can't leave on their own; only an owner removes them. `revoke_for_member` is the one call a future leave route makes.
+  - **Ownership transfer revokes nothing** (tested).
+  - **Defence in depth:** the public API now also refuses (401) a key whose maker, when there is one on record, is no longer a member. Before, only MCP did. This covers a revocation that was missed and any future way out that forgets to revoke.
+  - **Existing keys of people who already left** are revoked by migration 0056: revoked_at set, their REST hooks deleted, and one audit row each with the actor "Amplychat".
+  - **Keys with `created_by_user_id` NULL are kept.** The maker's account was deleted before C-167; from now on account deletion revokes first, so no new ones appear. They still work on the public API, as before, and MCP still refuses them. The list returns `made_by_former_member: true` and the UI says "Made by a former member. Revoke it if nothing still needs it."
+  - **The members dialog** says how many keys a removal revokes. The count comes from a new `active_api_keys` field on each member in `GET /members`: one grouped query, no new route.
+- **Expiry.**
+  - `expires_in_days` is a `Literal[30, 90, 365]` or null (never, the default), and the key stores `expires_at`.
+  - Expired is 401 "That API key has expired." on `/public/v1` and on `/mcp`, where it goes in the `WWW-Authenticate` challenge.
+  - The daily job `notify_expiring_api_keys` (05:15 UTC, `jobs/tasks/api_keys.py`) notifies owners and admins in the app with the new type `api_key_expiring`, for keys that expire within 7 days.
+    - It is sent once per key: `expiry_notified_at` is set, and the dedupe key `api-key-expiring:{id}` also guards it.
+    - It isn't emailed, because the email types are a fixed, templated set. There's no database check on the type, so no migration is needed for it.
+  - The list shows "· expires 12 Jan 2027" in the workspace's time zone, or an "Expired" badge.
+- **IP allowlist.**
+  - `allowed_ips` is `ARRAY(Text)`, not INET: values are normalised by `ipaddress` on input and matched in Python, so the column only stores them.
+  - Validation, at most 20 entries:
+    - A single address is stored without a prefix length.
+    - A network with host bits set (`10.0.0.5/8`) is refused with "Did you mean 10.0.0.0/8?", not silently widened.
+    - Repeats are dropped.
+  - An IPv4-mapped IPv6 caller (`::ffff:203.0.113.7`) is matched as its IPv4 address.
+  - An address that doesn't parse (`unknown`) never matches a non-empty list.
+  - Outside the list is 403 "This API key can't be used from this address." on both surfaces.
+    - On `/mcp`, `CredentialRefused(forbidden=True)` becomes a plain 403 JSON response. It has no `WWW-Authenticate`, because signing in again wouldn't help.
+    - The resolvers gained a keyword-only `client_ip`; the OAuth resolver ignores it.
+  - The check order is: hash, revoked, expired, allowlist, workspace, maker still a member.
+  - The client IP is `ratelimit.client_ip`. In production, `CLIENT_IP_HEADER=x-forwarded-for` (`infra/vm/api.env.example`). Caddy replaces any client-sent X-Forwarded-For with the address it connected from, and the API reads it from the right past the private and Cloudflare ranges (`security/client_ip.py`). This is correct behind Caddy, and the tests use the same header setting.
+  - `PATCH /v1/w/{wid}/api-keys/{key_id}` (integrations permission) takes `name` and/or `allowed_ips` only. `scopes` is a 422, because the request model forbids extra fields. A revoked key is a 409. Each change writes an `api_key.updated` audit row naming the changed fields.
+  - I also added an audit row (`api_key.revoked`) to the manual revoke route, which had none, so every revocation is in the log.
+- **GitHub secret scanning.**
+  - The route is `POST /v1/security/secret-scanning`: public, outside workspaces, with its own limit `secret_scanning` (120 a minute per IP, since GitHub sends from few addresses). It is in both tests' outside-workspace lists, with reasons.
+  - The signature is checked first, on the raw body: ECDSA P-256 SHA-256, DER in base64 (from GitHub's partner page, read 2026-11-01). Anything unsigned, unknown or wrong is 401 and nothing is looked up.
+  - GitHub's keys are cached for a day. An unknown key id refetches them, at most once a minute. If the fetch fails and nothing is cached, the request is 401, so GitHub retries.
+  - **Response:** GitHub documents no status code. The 200 body is the optional feedback array: `token_hash` (SHA-256 hex), `token_type` and `label`.
+    - The label is `true_positive` for any key of ours, whether it was on or already off, and `false_positive` otherwise.
+    - Only a request GitHub signed gets this body, so existence leaks to nobody else.
+    - GitHub doesn't say whether the hash is hex or base64; the owner asks when enrolling.
+  - A leaked key gets an audit row "revoked: found in a public GitHub repository" with the url and source, and a critical in-app notification of the new type `api_key_leaked` (no email, for the same reason as above).
+  - `test_schema_security`'s credential-name list now allows `token_hash` and `token_type`. They are GitHub's field names for a hash and a type name.
+  - Owner steps are in `docs/security/github-secret-scanning.md`. The regex `shk_[A-Za-z0-9_-]{43}` is confirmed: `token_urlsafe(32)` is always 43 URL-safe base64 characters, and a test checks 200 keys.
+- **MCP upload cleanup** (04-phase-b.md's "Not built").
+  - The daily job `clean_mcp_uploads` runs at 04:30 UTC (`jobs/tasks/purge.py`, bulk lane, 600 s).
+  - Which tickets: those not `uploaded`, with no media asset, that expired more than 24 hours ago (`STALE_AFTER`). That includes `rejected` tickets, whose file is normally already gone.
+  - For each ticket, in its own workspace and transaction:
+    1. List the ticket tag's files with the new `MediaPurger.list_tagged` (Cloudinary `GET /resources/{image,video}/tags/{tag}`, only files in the workspace's folder).
+    2. Drop any whose public id is a registered `media_assets` row. This covers a crash between `register`, which commits, and marking the ticket.
+    3. Delete the rest with the existing `delete_files`.
+    4. **Delete the ticket row.** It can't be finished, the daily caps count only finished files, and the AI app stopped waiting long ago.
+  - A storage failure keeps the row for the next run.
+  - Tested with a fake purger (the deletion tests' pattern). There is no unit test of the real Cloudinary listing call.
+
+### Deviations and notes
+
+- `MediaPurger` (a Protocol) gained `list_tagged`. The deletion tests' fakes don't implement it and don't need to: mypy only checks `src`.
+- `active_api_keys` on members, `expires_at`, `allowed_ips` and `made_by_former_member` on keys, `ApiKeyUpdate`, and the security route are new in `openapi.json` and `schema.d.ts`, which were regenerated. `plan-table.json` is unchanged: no entitlement changed.
+- Public copy: `/developers/mcp/api-key` "Keeping keys safe" gained "Give it an end date" and "Limit where it works from". "It acts as the member who made it" now says their keys are revoked when they leave or delete their account. `/privacy` and `/security` say nothing about keys that became untrue.
+- e2e: `apps/web/e2e/c167-api-keys.spec.ts` (create with expiry and allowlist, the list, 403 from this machine, then edit) is written and not run.

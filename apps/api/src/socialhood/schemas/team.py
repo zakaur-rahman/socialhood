@@ -41,6 +41,8 @@ class Member(ResponseModel):
     last_seen_at: datetime | None
     joined_at: datetime
     is_you: bool
+    # C-167: the unrevoked API keys they made here; removing them revokes these.
+    active_api_keys: int = 0
 
 
 class MemberList(ResponseModel):

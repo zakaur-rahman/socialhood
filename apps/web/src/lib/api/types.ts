@@ -482,6 +482,7 @@ export type ApiKey = Schemas["ApiKey"];
 export type ApiKeyWithKey = Schemas["ApiKeyWithKey"];
 export type ApiKeyList = Schemas["ApiKeyList"];
 export type ApiKeyCreate = Schemas["ApiKeyCreate"];
+export type ApiKeyUpdate = Schemas["ApiKeyUpdate"];
 // C-165 phase C: AI app connections (OAuth) and the consent page.
 export type AiConnectionsSettings = Schemas["AiConnectionsSettings"];
 export type AiConnectionsMode = AiConnectionsSettings["mode"];
