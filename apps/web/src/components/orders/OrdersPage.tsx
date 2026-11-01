@@ -41,7 +41,7 @@ const FILTERS: { value: Filter; label: string }[] = [
  * Orders (GR-32, under Engage): the orders made in conversations, with their status and total, and
  * the payment settings for owners and admins. Orders are made from a conversation in the inbox
  * ("Create order"); here they are followed up: ask for payment, record a payment, ship, refund, change or cancel.
- * Reading is on every plan; making orders is part of Pro (PD-8) and the page says so.
+ * Reading is on every plan; making orders is part of Creator and Business (PD-8) and the page says so.
  */
 export function OrdersPage() {
   const workspace = useCurrentWorkspace();
@@ -92,7 +92,7 @@ export function OrdersPage() {
 
             {!entitled ? (
               <Alert tone="brand" className="mt-4">
-                Orders and payment requests are part of Pro. You can see what is here, but making orders needs Pro.{" "}
+                Orders and payment requests are part of Creator and Business. You can see what is here, but making orders needs Creator or Business.{" "}
                 {manager ? (
                   <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
                     See plans

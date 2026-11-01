@@ -78,18 +78,18 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     expect(within(dialog).getByRole("button", { name: "Start from blank" })).toBeInTheDocument();
   });
 
-  it("shows the card's trigger and action, and Pro on Free for paid templates", () => {
+  it("shows the card's trigger and action, and Creator on Free for paid templates", () => {
     renderGallery([account()], "free");
     const card = screen.getByRole("article", { name: "Price on request" });
     expect(card).toHaveTextContent("Instagram comment keyword");
     expect(card).toHaveTextContent("AI reply");
-    expect(within(card).getByText("Pro")).toBeInTheDocument();
+    expect(within(card).getByText("Creator")).toBeInTheDocument();
     // D-10: a card's action is secondary.
     expect(within(card).getByRole("button", { name: "Use template: Price on request" })).toHaveAttribute("data-variant", "secondary");
-    expect(within(screen.getByRole("article", { name: "Send a link to commenters" })).queryByText("Pro")).toBeNull();
-    // UI-063: a Pro template says on Free that it can be set up and runs on Pro; the others don't.
-    expect(within(card).getByText("Set it up on Free. It runs on Pro.")).toBeInTheDocument();
-    expect(screen.getAllByText("Set it up on Free. It runs on Pro.")).toHaveLength(1);
+    expect(within(screen.getByRole("article", { name: "Send a link to commenters" })).queryByText("Creator")).toBeNull();
+    // UI-063: a Creator template says on Free that it can be set up and runs on Creator; the others don't.
+    expect(within(card).getByText("Set it up on Free. It runs on Creator.")).toBeInTheDocument();
+    expect(screen.getAllByText("Set it up on Free. It runs on Creator.")).toHaveLength(1);
   });
 
   it("shows the steps of a template that starts as a flow", () => {

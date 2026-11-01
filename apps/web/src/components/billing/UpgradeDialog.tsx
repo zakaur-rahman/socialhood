@@ -12,7 +12,7 @@ import { useUpgradeDialog, type UpgradeRequest } from "@/lib/api/provider";
 import { useBilling, useBillingPlans, usageMeter } from "@/lib/api/queries";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
 import { METRIC_FOR_ENTITLEMENT, TRIAL_DAYS, billingOpen, canStartCheckout, entitlementOf, priceOf } from "@/lib/billing/plan";
-import { billingCopy, planOffers, pricePerMonth, upgradeCopy } from "@/lib/copy";
+import { billingCopy, planOffers, pricePerMonth, upgradeCopy, upgradeTarget } from "@/lib/copy";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { useStartCheckout } from "./use-billing-actions";
@@ -24,18 +24,19 @@ function limitFor(request: UpgradeRequest, billing: BillingState | undefined): n
   return typeof value === "number" ? value : request.limit;
 }
 
-/** What Pro offers for the same key, for a Free workspace that hit a limit. */
-function proOffer(request: UpgradeRequest, pro: PlanOffer | undefined): string | null {
-  if (request.code !== "quota_exceeded" || !request.entitlement || !pro) return null;
-  const value = entitlementOf(pro.entitlements, request.entitlement);
-  if (value === null) return planOffers(request.entitlement, null, "pro");
-  return typeof value === "number" ? planOffers(request.entitlement, value, "pro") : null;
+/** What the plan on offer gives for the same key, for a workspace that hit a limit. */
+function proOffer(request: UpgradeRequest, offer: PlanOffer | undefined): string | null {
+  if (request.code !== "quota_exceeded" || !request.entitlement || !offer) return null;
+  const value = entitlementOf(offer.entitlements, request.entitlement);
+  if (value === null) return planOffers(request.entitlement, null, offer.plan);
+  return typeof value === "number" ? planOffers(request.entitlement, value, offer.plan) : null;
 }
 
 /**
  * F-15, T8.4: the upgrade dialog every 402 opens (lib/api/provider.tsx). It names the limit with
- * copy per entitlement (§4.7, C-049), shows the Pro price from GET …/billing, and offers "Start
- * 7-day trial" when eligible, else "Upgrade to Pro", straight to checkout. Only the owner can
+ * copy per entitlement (§4.7, C-049), shows the price of the plan on offer from GET …/billing
+ * (Creator, or Business for what only Business has, C-172), and offers "Start 7-day trial" when
+ * eligible (Creator only), else "Upgrade to Creator" or "Upgrade to Business", straight to checkout. Only the owner can
  * pay (§2.15): admins get the billing page, agents are told to ask an owner.
  */
 export function UpgradeDialog() {
@@ -63,13 +64,14 @@ export function UpgradeDialog() {
     { ...shown, limit: limitFor(shown, state) },
     { plan: state?.plan ?? null, resetsOn: credits?.period_end ?? null },
   );
-  const pro = plans.data?.items.find((item) => item.plan === "pro");
+  const target = upgradeTarget(shown.entitlement);
+  const pro = plans.data?.items.find((item) => item.plan === target);
   const offer = canStartCheckout(state) ? proOffer(shown, pro) : null;
-  const price = priceOf("pro", state, plans.data?.items);
+  const price = priceOf(target, state, plans.data?.items);
   const perMonth = price ? pricePerMonth(price) : null;
   const trialDays = pro?.trial_days || TRIAL_DAYS;
-  const trial = Boolean(state?.trial_eligible);
-  const pitch = mayPay ? (trial ? billingCopy.trialOffer(trialDays, perMonth) : perMonth ? billingCopy.proPrice(perMonth) : null) : null;
+  const trial = Boolean(state?.trial_eligible) && target === "pro"; // only Creator has a trial (C-172)
+  const pitch = mayPay ? (trial ? billingCopy.trialOffer(trialDays, perMonth) : perMonth ? (target === "max" ? billingCopy.businessPrice(perMonth) : billingCopy.proPrice(perMonth)) : null) : null;
   // C-149: while paid plans aren't on sale, say so instead of offering an upgrade.
   const roleNote = !billingOpen(state)
     ? billingCopy.paidPlansSoon
@@ -121,9 +123,9 @@ export function UpgradeDialog() {
               <Button
                 loading={checkout.pending}
                 disabled={billing.isPending}
-                onClick={() => checkout.start("pro")}
+                onClick={() => checkout.start(target)}
               >
-                {trial ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
+                {trial ? billingCopy.trialCta(trialDays) : target === "max" ? billingCopy.upgradeToBusiness : billingCopy.upgradeCta}
               </Button>
             </>
           ) : !isAgent ? (

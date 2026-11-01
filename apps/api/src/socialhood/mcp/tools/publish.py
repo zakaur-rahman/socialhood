@@ -343,8 +343,8 @@ async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> No
         "item stops scheduling. Scheduling is previewed first: the call shows the resolved time "
         "and the checklist. Show the member the preview and call again only after they agree, "
         "with confirmed true and the preview's confirmation_token. Posts go out at least 5 "
-        "minutes later and the team is notified. Plans: scheduling is part of Pro; drafts work "
-        "on every plan, with no preview."
+        "minutes later and the team is notified. Plans: scheduling is part of Creator and "
+        "Business; drafts work on every plan, with no preview."
     ),
     input_model=CreatePostInput,
     output_model=PostResult,
@@ -498,7 +498,7 @@ def _merge(
         "post, or giving a draft a time, is previewed first: show the member the preview and "
         "call again only after they agree, with confirmed true and its confirmation_token. A "
         "post whose publishing has started can't be changed. Changing scheduled posts is part "
-        "of Pro."
+        "of Creator and Business."
     ),
     input_model=UpdatePostInput,
     output_model=PostResult,

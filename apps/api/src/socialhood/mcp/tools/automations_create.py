@@ -459,7 +459,7 @@ def _what(out: AutomationOut) -> str:
         "overlaps with live automations, what it still needs and the plan's limit. Show the "
         "member the preview and call again only after they agree, with confirmed true and its "
         "confirmation_token. It is created off unless turn_on is true; once on, it messages the "
-        "people who match. The team is notified. Part of Pro."
+        "people who match. The team is notified. Part of Creator and Business."
     ),
     input_model=CreateAutomationInput,
     output_model=AutomationWriteResult,
@@ -590,7 +590,7 @@ def _not_simple(out: AutomationOut) -> str | None:
         "to the editor. It doesn't turn the automation on or off (pause_automation and "
         "resume_automation do), and a live automation has to stay complete. Previewed first: "
         "show the member the preview and call again only after they agree, with confirmed true "
-        "and its confirmation_token. The team is notified. Part of Pro."
+        "and its confirmation_token. The team is notified. Part of Creator and Business."
     ),
     input_model=UpdateAutomationInput,
     output_model=AutomationWriteResult,

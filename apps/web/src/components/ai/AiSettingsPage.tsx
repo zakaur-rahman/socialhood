@@ -200,7 +200,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
                           ) : null}
                         </ToggleGroupItem>
                       </TooltipTrigger>
-                      <TooltipContent>{locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}</TooltipContent>
+                      <TooltipContent>{locked ? "Auto is part of Creator and Business" : AI_MODE_HINT[mode]}</TooltipContent>
                     </Tooltip>
                   );
                 })}
@@ -212,7 +212,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
       {!allowsAuto && accounts.length > 0 ? (
         <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-secondary">
           <Lock className="size-4 shrink-0" aria-hidden />
-          Auto is part of Pro.
+          Auto is part of Creator and Business.
           {canManage ? (
             // An inline link in the sentence: the link Button's 32 px (40 px on coarse pointers), no padding.
             <Button type="button" variant="link" className="px-0" onClick={() => upgrade.open(AUTO_UPGRADE)}>

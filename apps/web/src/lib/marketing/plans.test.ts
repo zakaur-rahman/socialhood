@@ -37,8 +37,11 @@ describe("buildPricing", () => {
     const [free, pro, max] = pricing.plans;
     expect(free).toMatchObject({ plan: "free", price: null, available: true });
     expect(pro).toMatchObject({ plan: "pro", price: "₹999", offer: { price: "999.00", currency: "INR" }, trialDays: 7 });
-    expect(max).toMatchObject({ plan: "max", available: false, features: [] });
-    expect(pricing.credits).toEqual({ free: 200, pro: 5000 });
+    expect(max).toMatchObject({ plan: "max", name: "Business", available: false });
+    expect(max.features).toContain("5,000 AI credits a month");
+    expect(max.features).toContain("API keys and the Zapier app");
+    expect(pro.name).toBe("Creator");
+    expect(pricing.credits).toEqual({ free: 200, pro: 1500 });
   });
 
   it("a Pro plan Dodo couldn't price has no price, never a made-up one", () => {
@@ -68,7 +71,8 @@ describe("buildPricing", () => {
 describe("planFeatures", () => {
   it("phrases the entitlements as the product guide does", () => {
     expect(planFeatures(FALLBACK_ENTITLEMENTS.free)).toEqual([
-      "1 Instagram and 1 WhatsApp account",
+      "2 channels in total, from Instagram, Facebook and web chat",
+      "No WhatsApp",
       "1 team member",
       "AI replies: Off and Suggest",
       "200 AI credits a month",
@@ -81,22 +85,32 @@ describe("planFeatures", () => {
       "Read and draft from Claude, ChatGPT and Codex (MCP)",
     ]);
     expect(planFeatures(FALLBACK_ENTITLEMENTS.pro)).toEqual([
-      "3 Instagram and 3 WhatsApp accounts",
-      "3 team members",
+      "1 Instagram, 1 WhatsApp, 1 Facebook and 1 web chat",
+      "2 team members",
       "AI replies: Off, Suggest and Auto",
       "AI replies inside automations",
-      "5,000 AI credits a month",
-      "50 active automations",
-      "5,000,000 characters of knowledge",
-      "300 scheduled posts a month",
+      "1,500 AI credits a month",
+      "25 active automations",
+      "1,000,000 characters of knowledge",
+      "100 scheduled posts a month",
       "500 pending scheduled messages",
       "Unlimited message history",
       "Comment analysis on all posts",
       "Claude, ChatGPT and Codex, with scheduling (MCP)",
-      "Public API and Zapier app",
       "Google Sheets sync",
       "Product catalogue",
     ]);
+    expect(planFeatures(FALLBACK_ENTITLEMENTS.max)).toEqual(
+      expect.arrayContaining([
+        "3 each of Instagram, WhatsApp and Facebook, and web chat",
+        "3 team members",
+        "5,000 AI credits a month",
+        "50 active automations",
+        "5,000,000 characters of knowledge",
+        "300 scheduled posts a month",
+        "API keys and the Zapier app",
+      ]),
+    );
   });
 
   it("leaves out keys it doesn't know", () => {

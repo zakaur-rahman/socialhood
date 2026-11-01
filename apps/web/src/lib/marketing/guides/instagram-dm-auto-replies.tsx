@@ -133,7 +133,7 @@ function Body() {
         You don&apos;t have to trust the AI on day one. {N} has three modes for each connected account. <strong>Off</strong>{" "}
         means no AI replies. <strong>Suggest</strong> writes a draft above the reply box for you to send, edit or redo.{" "}
         <strong>Auto</strong> sends a reply by itself when it is confident and still hands the rest to you; Auto is part of
-        the Pro plan.
+        the Creator and Business plans.
       </p>
       <Callout tone="tip">
         <p>

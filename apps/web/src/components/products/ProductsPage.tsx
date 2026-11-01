@@ -49,7 +49,7 @@ type Filter = "all" | "active" | "off";
 /**
  * Products (GR-31, under Grow beside Knowledge): the catalogue the AI quotes prices, stock and links
  * from, and the "send product" flow step reads. Add products by hand, import a CSV file, or copy
- * them from Shopify. Reading is on every plan; adding, importing and syncing are part of Pro (PD-8),
+ * them from Shopify. Reading is on every plan; adding, importing and syncing are part of Creator and Business (PD-8),
  * and the page says so and opens the upgrade dialog instead of leaving a dead button. Owners and admins.
  */
 export function ProductsPage({ upload }: { upload?: ProductUploader }) {
@@ -122,8 +122,8 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
 
             {!entitled ? (
               <Alert tone="brand" className="mt-4">
-                The product catalogue is part of Pro. You can see what is here, but adding, importing and syncing products
-                need Pro.{" "}
+                The product catalogue is part of Creator and Business. You can see what is here, but adding, importing and syncing products
+                need Creator or Business.{" "}
                 {canUpgrade ? (
                   <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
                     See plans
@@ -198,7 +198,7 @@ function Empty({
         body={
           entitled
             ? "Add what you sell, import a CSV file, or connect Shopify. The AI then answers price, stock and link questions from here."
-            : "The product catalogue is part of Pro. Upgrade to add what you sell, and the AI can answer price, stock and link questions."
+            : "The product catalogue is part of Creator and Business. Upgrade to add what you sell, and the AI can answer price, stock and link questions."
         }
         action={
           <div className="flex flex-wrap justify-center gap-2">

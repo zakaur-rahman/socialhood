@@ -3,12 +3,14 @@
  * from billing/plans.py and paid prices from Dodo. Read on the server and revalidated hourly (the
  * API caches Dodo's prices for an hour too). A price is never written here: when the API can't be
  * reached, or Dodo gave it no price, the page lists the plan's features and says the price is
- * shown at sign-up.
+ * shown at sign-up. While billing is off (C-172) a paid plan shows its planned price from one
+ * constant (copy.ts PLANNED_PRICE_USD), labelled "when we launch"; that figure is never an offer
+ * in structured data.
  */
 import { z } from "zod";
 
 import type { EntitlementValue } from "@/lib/api/types";
-import { PLAN_NAME, formatPrice } from "@/lib/copy";
+import { PLAN_NAME, formatPrice, plannedPriceLabel } from "@/lib/copy";
 
 import table from "./plan-table.json";
 
@@ -69,13 +71,15 @@ export type PlanCard = {
   plan: PlanName;
   name: string;
   tagline: string;
-  /** "$10" or "₹999" from Dodo through the API; null when there is none to show. */
+  /** "$14" or "₹999" from Dodo through the API; null when there is none to show. */
   price: string | null;
+  /** C-172: "$14 a month when we launch", for a paid plan that isn't on sale and has no real price. */
+  planned: { amount: string; label: string } | null;
   /** The same price for structured data: a decimal amount and its ISO currency. */
   offer: { price: string; currency: string } | null;
   trialDays: number;
   features: string[];
-  /** False for Max until R2: shown as "Coming soon". */
+  /** False while the plan can't be bought (billing off, or Business without its product): "Coming soon". */
   available: boolean;
 };
 
@@ -89,9 +93,15 @@ export type Pricing = {
 
 const TAGLINE: Record<PlanName, string> = {
   free: "To get started.",
-  pro: "For a growing business.",
-  max: "For teams with several members.",
+  pro: "For creators and small businesses.",
+  max: "For growing businesses with a team.",
 };
+
+/** C-172: the planned price shown while a paid plan isn't on sale. */
+function planned(plan: PlanName): PlanCard["planned"] {
+  if (plan === "free") return null;
+  return { amount: plannedPriceLabel(plan).split(" ")[0], label: plannedPriceLabel(plan) };
+}
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -103,10 +113,21 @@ type Line = (value: EntitlementValue["value"]) => string | null;
 
 /** Each §1.7 entitlement as a line on the plan card, in the product guide's order. */
 const LINES: { key: string; line: Line }[] = [
+  // C-172: Free counts channels in total; the paid plans count accounts per platform.
+  {
+    key: "channels_total",
+    line: (v) => (typeof v === "number" ? `${count.format(v)} channels in total, from Instagram, Facebook and web chat` : null),
+  },
   {
     key: "accounts_per_platform",
-    line: (v) => (typeof v === "number" ? `${count.format(v)} Instagram and ${plural(v, "WhatsApp account", "WhatsApp accounts")}` : null),
+    line: (v) =>
+      typeof v !== "number"
+        ? null
+        : v === 1
+          ? "1 Instagram, 1 WhatsApp, 1 Facebook and 1 web chat"
+          : `${count.format(v)} each of Instagram, WhatsApp and Facebook, and web chat`,
   },
+  { key: "whatsapp", line: (v) => (v === false ? "No WhatsApp" : null) },
   { key: "members", line: (v) => (typeof v === "number" ? plural(v, "team member", "team members") : null) },
   {
     key: "ai_modes",
@@ -156,14 +177,16 @@ const LINES: { key: string; line: Line }[] = [
             : null
         : null,
   },
-  { key: "public_api", line: (v) => (v === true ? "Public API and Zapier app" : null) },
+  { key: "public_api", line: (v) => (v === true ? "API keys and the Zapier app" : null) },
   { key: "sheets_sync", line: (v) => (v === true ? "Google Sheets sync" : null) },
   { key: "commerce", line: (v) => (v === true ? "Product catalogue" : null) },
 ];
 
 /** The plan card's feature lines from its entitlements; unknown keys are left out. */
 export function planFeatures(entitlements: EntitlementValue[]): string[] {
+  const channelsTotal = typeof entitlements.find((entry) => entry.key === "channels_total")?.value === "number";
   return LINES.flatMap(({ key, line }) => {
+    if (key === "accounts_per_platform" && channelsTotal) return []; // the total says it for Free
     const item = entitlements.find((entry) => entry.key === key);
     const text = item ? line(item.value) : null;
     return text ? [text] : [];
@@ -180,34 +203,35 @@ function numberOf(entitlements: EntitlementValue[], key: string): number | null 
  * used only when the API can't be reached, so the page still lists what each plan includes. Never
  * a price.
  */
-function fromTable(plan: "free" | "pro"): EntitlementValue[] {
+function fromTable(plan: "free" | "pro" | "max"): EntitlementValue[] {
   return Object.entries(table.entitlements).map(([key, byPlan]) => ({
     key,
     value: (byPlan as Record<string, EntitlementValue["value"]>)[plan],
   }));
 }
 
-export const FALLBACK_ENTITLEMENTS: Record<"free" | "pro", EntitlementValue[]> = {
+export const FALLBACK_ENTITLEMENTS: Record<PlanName, EntitlementValue[]> = {
   free: fromTable("free"),
   pro: fromTable("pro"),
+  max: fromTable("max"),
 };
 
-/** FR-BIL-03: Pro's trial, once per workspace; used only in the fallback. */
+/** FR-BIL-03: Creator's (pro) trial, once per workspace; used only in the fallback. */
 const FALLBACK_TRIAL_DAYS = 7;
 
 function fallbackCard(plan: PlanName): PlanCard {
-  if (plan === "max") {
-    return { plan, name: PLAN_NAME.max, tagline: TAGLINE.max, price: null, offer: null, trialDays: 0, features: [], available: false };
-  }
+  // The fallback has no price and no word on availability: Free is open, the paid plans read as
+  // not on sale (their planned price shows, never an offer).
   return {
     plan,
     name: PLAN_NAME[plan],
     tagline: TAGLINE[plan],
     price: null,
+    planned: planned(plan),
     offer: null,
     trialDays: plan === "pro" ? FALLBACK_TRIAL_DAYS : 0,
     features: planFeatures(FALLBACK_ENTITLEMENTS[plan]),
-    available: true,
+    available: plan === "free",
   };
 }
 
@@ -229,11 +253,11 @@ function cardFrom(offer: PlanOfferBody): PlanCard {
     name: PLAN_NAME[offer.plan],
     tagline: TAGLINE[offer.plan],
     price: price ? formatPrice(price) : null,
+    planned: !price && !offer.available ? planned(offer.plan) : null,
     offer: price ? { price: decimalAmount(price.amount_minor, price.currency), currency: price.currency } : null,
     trialDays: offer.trial_days,
-    // Pro lists what it will include even while it isn't on sale (C-149: no billing yet); Max
-    // stays a short note until R2.
-    features: offer.available || offer.plan === "pro" ? planFeatures(offer.entitlements) : [],
+    // A paid plan lists what it will include even while it isn't on sale (C-149: no billing yet).
+    features: planFeatures(offer.entitlements),
     available: offer.available,
   };
 }

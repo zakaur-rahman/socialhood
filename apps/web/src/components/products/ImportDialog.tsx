@@ -182,7 +182,7 @@ function ImportBody({ limits, onDone }: { limits: CatalogueLimits | undefined; o
         >
           {overLimit.code === "quota_exceeded"
             ? (overLimit.detail ?? "Your plan's import limit is reached.")
-            : "The product catalogue is part of Pro."}
+            : "The product catalogue is part of Creator and Business."}
         </Alert>
       ) : null}
       {problem ? (

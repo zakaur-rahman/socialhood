@@ -80,20 +80,20 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     await waitFor(() => expect(patches()).toEqual([{ path: "/v1/w/w1/social-accounts/a1", body: { ai_mode: "auto" } }]));
   });
 
-  it("on Free, Auto is disabled with a Pro badge on every account, and the hint opens the upgrade dialog", async () => {
+  it("on Free, Auto is disabled with a Creator badge on every account, and the hint opens the upgrade dialog", async () => {
     const user = userEvent.setup();
     const { patches } = setup({
       billing: billingState({ plan: "free", status: "free", entitlements: [{ key: "ai_modes", value: ["off", "suggest"] }] }),
     });
     const instagram = await screen.findByRole("radiogroup", { name: "@maple.bakery" });
-    const auto = await within(instagram).findByRole("radio", { name: "Auto Pro" });
+    const auto = await within(instagram).findByRole("radio", { name: "Auto Creator" });
     expect(auto).toBeDisabled();
-    expect(within(screen.getByRole("radiogroup", { name: "Maple Orders" })).getByRole("radio", { name: "Auto Pro" })).toBeDisabled();
+    expect(within(screen.getByRole("radiogroup", { name: "Maple Orders" })).getByRole("radio", { name: "Auto Creator" })).toBeDisabled();
     // Off and Suggest still work on Free.
     expect(within(instagram).getByRole("radio", { name: "Off" })).toBeEnabled();
-    expect(screen.getByText("Auto is part of Pro.")).toBeInTheDocument();
+    expect(screen.getByText("Auto is part of Creator and Business.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Upgrade for Auto" }));
-    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Pro" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Creator and Business" })).toBeInTheDocument();
     expect(patches()).toEqual([]);
   });
 
@@ -109,17 +109,17 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     // A disconnected account has no AI mode to choose.
     expect(screen.queryByRole("radiogroup", { name: "@old.maple" })).toBeNull();
     expect(screen.getByText("2 connected")).toBeInTheDocument();
-    expect(screen.queryByText("Auto is part of Pro.")).toBeNull();
+    expect(screen.queryByText("Auto is part of Creator and Business.")).toBeNull();
   });
 
   it("a 402 from the API opens the upgrade dialog", async () => {
     const user = userEvent.setup();
-    setup({ patch: () => problem(402, "entitlement_required", "Auto mode is part of Pro.") });
+    setup({ patch: () => problem(402, "entitlement_required", "Auto mode is part of Creator and Business.") });
     const instagram = await screen.findByRole("radiogroup", { name: "@maple.bakery" });
     await user.click(within(instagram).getByRole("radio", { name: "Auto" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Turn on Auto" }));
     // A 402 from before C-049 carries only its detail; the dialog still knows what it is about.
-    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Pro" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Creator and Business" })).toBeInTheDocument();
     expect(toast.error).not.toHaveBeenCalled();
   });
 

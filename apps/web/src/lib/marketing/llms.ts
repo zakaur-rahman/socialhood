@@ -19,7 +19,7 @@ export function llmsText(origin: string = siteUrl()): string {
     "",
     `> ${SITE_DESCRIPTION}`,
     "",
-    `${SITE_NAME} is a web app for businesses and creators: one inbox for Instagram, WhatsApp and website chat, with AI replies from your own knowledge and comment-to-DM automations. Instagram and WhatsApp connect through Meta's official APIs. It also runs an MCP server (${mcpUrl()}), so Claude, ChatGPT and Codex can read the inbox, comments and analytics and draft replies on every plan, and, on Pro and Max, schedule Instagram posts and set up keyword automations after a preview and the user's confirmation; AI apps can't send messages themselves (an automation sends once the user has confirmed it and it is on). There is a Free plan; prices for paid plans are on the pricing page. Questions: ${SUPPORT_EMAIL}.`,
+    `${SITE_NAME} is a web app for businesses and creators: one inbox for Instagram, WhatsApp and website chat, with AI replies from your own knowledge and comment-to-DM automations. Instagram and WhatsApp connect through Meta's official APIs. It also runs an MCP server (${mcpUrl()}), so Claude, ChatGPT and Codex can read the inbox, comments and analytics and draft replies on every plan, and, on Creator and Business, schedule Instagram posts and set up keyword automations after a preview and the user's confirmation; AI apps can't send messages themselves (an automation sends once the user has confirmed it and it is on). There is a Free plan; prices for paid plans are on the pricing page. Questions: ${SUPPORT_EMAIL}.`,
     "",
     `For a plain fact sheet about ${SITE_NAME} (what it is, who it's for, channels and their status, plans, honest limits and claims to avoid), read the AI info page first.`,
     "",

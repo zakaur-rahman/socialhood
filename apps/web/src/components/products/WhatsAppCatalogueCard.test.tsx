@@ -63,9 +63,9 @@ beforeEach(() => {
 });
 
 describe("WhatsApp catalogue card (GR-33)", () => {
-  it("tells Free that product messages are part of Pro", async () => {
+  it("tells Free that product messages are part of Creator and Business", async () => {
     setup(status({ entitled: false }));
-    expect(await screen.findByText(/WhatsApp product messages are part of Pro/)).toBeInTheDocument();
+    expect(await screen.findByText(/WhatsApp product messages are part of Creator and Business/)).toBeInTheDocument();
   });
 
   it("connects a catalogue by its id", async () => {

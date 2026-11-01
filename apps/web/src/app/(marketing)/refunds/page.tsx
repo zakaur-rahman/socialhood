@@ -22,12 +22,12 @@ const mail = <a href={`mailto:${email}`}>{email}</a>;
 const SECTIONS: LegalSection[] = [
   {
     id: "free-and-trial",
-    title: "Free plan and the Pro trial",
+    title: "Free plan and the Creator trial",
     body: (
       <ul>
         <li>The Free plan costs nothing, so there is nothing to refund.</li>
         <li>
-          Pro starts with a 7-day free trial, once per workspace. A card is needed to start it, but you aren&apos;t charged
+          Creator starts with a 7-day free trial, once per workspace. A card is needed to start it, but you aren&apos;t charged
           during the trial. Cancel before it ends (Settings → Billing) and you won&apos;t be charged at all.
         </li>
       </ul>
@@ -40,7 +40,7 @@ const SECTIONS: LegalSection[] = [
       <>
         <p>
           The workspace owner can cancel at any time in Settings → Billing, with no cancellation fee. The cancellation takes
-          effect at the end of the period you&apos;ve paid for: Pro stays active until then, and you can resume before it
+          effect at the end of the period you&apos;ve paid for: your paid plan stays active until then, and you can resume before it
           ends. After that the workspace moves to Free, and nothing more is charged.
         </p>
         <p>
@@ -52,17 +52,17 @@ const SECTIONS: LegalSection[] = [
   },
   {
     id: "subscriptions",
-    title: "Refunds for Pro subscriptions",
+    title: "Refunds for paid subscriptions",
     body: (
       <>
         <p>
-          Pro is paid monthly, in advance. Because you keep full access for the period you&apos;ve paid for, we don&apos;t
+          Creator and Business are paid monthly, in advance. Because you keep full access for the period you&apos;ve paid for, we don&apos;t
           refund:
         </p>
         <ul>
           <li>the rest of a period after you cancel or move to Free;</li>
           <li>AI credits or other allowances you didn&apos;t use;</li>
-          <li>a renewal you forgot to cancel, once that period has started and Pro has been used.</li>
+          <li>a renewal you forgot to cancel, once that period has started and the plan has been used.</li>
         </ul>
         <p>If you think a renewal shouldn&apos;t have happened, write to us anyway and we&apos;ll look at it.</p>
       </>
@@ -131,7 +131,7 @@ export default function RefundsPage() {
       sections={SECTIONS}
       summary={
         <p>
-          Cancel anytime in Settings → Billing and keep Pro until the end of the period you&apos;ve paid for. We don&apos;t
+          Cancel anytime in Settings → Billing and keep your plan until the end of the period you&apos;ve paid for. We don&apos;t
           refund partial periods or unused credits, but we always refund billing mistakes. Questions about a charge? Email{" "}
           {mail}.
         </p>

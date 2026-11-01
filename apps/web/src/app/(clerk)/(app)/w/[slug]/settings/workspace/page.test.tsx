@@ -185,7 +185,7 @@ describe("the save bar (C-066)", () => {
   it("the summary is the workspace's own: plan, live channels, members, created", async () => {
     renderPage(settings({ member_count: 3 }));
     const summary = await screen.findByRole("region", { name: "At a glance" });
-    expect(within(summary).getByText("Pro")).toBeInTheDocument();
+    expect(within(summary).getByText("Creator")).toBeInTheDocument();
     expect(await within(summary).findByText("Instagram (1), WhatsApp (1)")).toBeInTheDocument();
     expect(within(summary).getByText("3")).toBeInTheDocument();
     expect(within(summary).getByText(/^1 Sep/)).toBeInTheDocument();

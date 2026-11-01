@@ -33,13 +33,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.ai.metering import quota
 from socialhood.auth.deps import WorkspaceContext
 from socialhood.billing.dodo import CheckoutParams, DodoClient, DodoError, ProductPrice
+from socialhood.billing.entitlements import allows, count_channels
 from socialhood.billing.plans import (
-    AVAILABLE,
     ENTITLEMENTS,
     PAID_PLANS,
     PLANS,
     TRIAL_DAYS,
     entitlement,
+    is_available,
     product_for,
 )
 from socialhood.billing.usage import live_used, period_used
@@ -71,6 +72,8 @@ log = get_logger(__name__)
 
 PRICE_TTL_S = 3600  # TR-BIL-06: prices cached for 1 h
 PRICE_FAILURE_TTL_S = 60
+# Display names of the stored plan keys (C-172): pro is Creator, max is Business.
+PLAN_NAMES = {"free": "Free", "pro": "Creator", "max": "Business"}
 DODO_UNAVAILABLE = "The payment provider didn't answer. Try again in a moment."
 NOT_CONFIGURED = "Payments aren't set up yet."
 FREE_PLAN = "You're on the Free plan."
@@ -158,7 +161,7 @@ async def plan_list(redis: Redis | None, dodo: DodoClient, settings: Settings) -
                 price=prices.get(plan),
                 trial_days=TRIAL_DAYS[plan],
                 entitlements=entitlements_of(plan),
-                available=AVAILABLE[plan] and (plan == "free" or on_sale),
+                available=on_sale and is_available(plan, settings),
             )
             for plan in PLANS
         ]
@@ -211,7 +214,22 @@ async def billing_state(
             limit=entitlement(plan, "pending_scheduled_messages"),
         ),
     ]
+    whatsapp_used = await social_accounts.count_live(session, Platform.WHATSAPP)
+    total = entitlement(plan, "channels_total")
+    if total is not None:
+        # C-172: Free counts channels in total, so the page shows "1 of 2 channels".
+        meters.append(
+            UsageMeter(
+                metric="channels",
+                used=await count_channels(session),
+                limit=total,
+            )
+        )
     for platform in (Platform.INSTAGRAM, Platform.WHATSAPP, Platform.FACEBOOK):
+        if platform == Platform.WHATSAPP and not allows(plan, "whatsapp") and not whatsapp_used:
+            continue  # no WhatsApp tile where the plan has none
+        if total is not None and platform != Platform.WHATSAPP:
+            continue  # the "channels" tile stands for them where a total applies (Free)
         meters.append(
             UsageMeter(
                 metric=f"{platform.value}_accounts",
@@ -275,10 +293,11 @@ async def start_checkout(
     """TR-BIL-01: Dodo's hosted checkout for ``body.plan``. The return URL changes nothing by
     itself (FR-BIL-02): the plan changes with Dodo's signed webhook."""
     require_billing(settings)
-    if not AVAILABLE[body.plan]:
+    if not is_available(body.plan, settings):
+        name = PLAN_NAMES.get(body.plan, body.plan.capitalize())
         raise ApiError(
             "validation_error",
-            errors=[FieldError("plan", f"{body.plan.capitalize()} isn't available yet.")],
+            errors=[FieldError("plan", f"{name} isn't available yet.")],
         )
     sub = await subscriptions.current(session)
     if sub is not None and sub.plan != Plan.FREE and sub.status in LIVE_STATUSES:

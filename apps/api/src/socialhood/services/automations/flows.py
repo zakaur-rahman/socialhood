@@ -128,8 +128,8 @@ COPY = {
     "product_off": "That product is switched off. Turn it on, or choose another.",
     "variant_missing": "That variant doesn't exist any more. Choose another.",
     "variant_needed": "Choose a variant of this product.",
-    "product_plan": "Sending products is part of Pro.",
-    "payment_plan": "Asking for payment is part of Pro.",
+    "product_plan": "Sending products is part of Creator and Business.",
+    "payment_plan": "Asking for payment is part of Creator and Business.",
     "payment_items": "Choose at least one product to sell.",
     "payment_razorpay": (
         "Razorpay isn't set up for this workspace. Add your keys in Integrations first."

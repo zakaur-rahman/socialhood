@@ -85,7 +85,7 @@ class CallEnv:
 
 
 def plan_cap(plan: str) -> AiConnectionsMode:
-    """The most a plan allows (D2: Free reads and saves drafts; Pro and Max everything)."""
+    """The most a plan allows (D2: Free reads and saves drafts; Creator and Business everything)."""
     allowed = {AiConnectionsMode(m) for m in entitlement(plan, "ai_connections")}
     return max(allowed, key=MODE_ORDER.index)
 

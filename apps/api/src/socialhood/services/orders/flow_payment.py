@@ -39,7 +39,7 @@ from socialhood.services.orders import orders
 
 OPEN = (OrderStatus.DRAFT, OrderStatus.AWAITING_PAYMENT, OrderStatus.PARTIALLY_PAID)
 NO_ORDER = "There is no unpaid order in this conversation to ask for."
-NO_PLAN = "Orders are part of Pro."
+NO_PLAN = "Orders are part of Creator and Business."
 
 
 class Failed(Exception):

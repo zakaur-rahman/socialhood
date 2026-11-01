@@ -160,7 +160,7 @@ export function createBody(values: ProductFormValues): ProductCreate {
  * Add or change a product (GR-31): name, price, stock, picture and link, and variants (size,
  * colour…) that each have their own price, stock and SKU. With variants the product's own price and
  * stock are not used. A blank stock means "not tracked", which is different from 0: the AI says it
- * doesn't know, and never calls it in stock. Owners and admins; the catalogue is part of Pro.
+ * doesn't know, and never calls it in stock. Owners and admins; the catalogue is part of Creator and Business.
  */
 export function ProductSheet({
   product,
@@ -500,7 +500,7 @@ function ProductForm({
         >
           {overLimit.code === "quota_exceeded"
             ? `${overLimit.detail ?? "Your plan's product limit is reached."} Remove a product or upgrade for more.`
-            : "The product catalogue is part of Pro."}
+            : "The product catalogue is part of Creator and Business."}
         </Alert>
       ) : null}
       {formError ? (

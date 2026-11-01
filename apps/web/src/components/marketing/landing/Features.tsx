@@ -55,7 +55,7 @@ export const FEATURES: Feature[] = [
     title: "Product catalogue, orders and payment links",
     icon: ShoppingBag,
     body: "Add products by hand or CSV, and the AI answers price and stock. Send a payment link in the chat; the money goes to your own account.",
-    plan: "Pro",
+    plan: "Creator and Business",
     note: "Shopify sync arrives with our Shopify app listing.",
   },
   {
@@ -66,7 +66,7 @@ export const FEATURES: Feature[] = [
   {
     title: "Team roles and assignment",
     icon: UsersRound,
-    body: "Owners, admins and agents, with conversations assigned by hand or in turn. The Free plan has 1 seat, so a team starts on Pro.",
+    body: "Owners, admins and agents, with conversations assigned by hand or in turn. The Free plan has 1 seat, so a team starts on Creator.",
   },
   {
     // C-165: the MCP server (api.amplychat.com/mcp); the tools, the confirm step and the plan rules
@@ -75,7 +75,7 @@ export const FEATURES: Feature[] = [
     href: "/mcp",
     icon: Bot,
     body: "Connect your AI assistant and ask it to schedule a Reel, sum up this week's DMs or check how your posts did. It shows a preview before it schedules a post or sets up an automation, and it never messages your customers itself.",
-    note: "Reading and drafts on every plan; scheduling and automations on Pro and Max",
+    note: "Reading and drafts on every plan; scheduling and automations on Creator and Business",
   },
   {
     title: "Notifications, on your phone too",

@@ -38,7 +38,7 @@ describe("?plan=pro from the pricing page (UI-ISS-073)", () => {
   it("offers the trial once to the owner of a Free workspace, and drops the parameter", async () => {
     search.value = "plan=pro";
     setup();
-    const dialog = await screen.findByRole("dialog", { name: "Upgrade to Pro" });
+    const dialog = await screen.findByRole("dialog", { name: "Upgrade to Creator" });
     expect(await within(dialog).findByRole("button", { name: "Start 7-day trial" })).toBeInTheDocument();
     await waitFor(() => expect(window.location.search).toBe(""));
   });

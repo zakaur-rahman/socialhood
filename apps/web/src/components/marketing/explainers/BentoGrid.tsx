@@ -15,7 +15,7 @@ const STATUS: Record<CellStatus, { icon: LucideIcon; tone: string }> = {
   pro: { icon: Crown, tone: "t-plain" },
 };
 
-/** A cell's status as a chip with its icon (StatusChip's look; "Pro" is a plan, not a status there). */
+/** A cell's status as a chip with its icon (StatusChip's look; "Creator and Business" is a plan, not a status there). */
 export function CellChip({ status }: { status: CellStatus }) {
   const { icon: Icon, tone } = STATUS[status];
   return (

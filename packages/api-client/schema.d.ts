@@ -13,10 +13,11 @@ export interface paths {
         };
         /**
          * List Billing Plans
-         * @description Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
-         *     entitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing
-         *     page and the upgrade dialog's comparison. The same numbers as GET …/billing. While billing
-         *     isn't set up on this server (C-149) Pro and Max are ``available: false`` without prices.
+         * @description Public, no sign-in: Free, Creator and Business (``available: false`` until a paid
+         *     plan's product is set) with their §1.7 entitlements and Dodo prices (cached 1 h; null when
+         *     Dodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same
+         *     numbers as GET …/billing. While billing isn't set up on this server (C-149) the paid plans
+         *     are ``available: false`` without prices.
          */
         get: operations["list_billing_plans"];
         put?: never;
@@ -762,9 +763,10 @@ export interface paths {
         put?: never;
         /**
          * Create Api Key
-         * @description The key is in this response only. 402 entitlement_required on Free (the public API is part
-         *     of Pro); 409 at 20 active keys. C-167: ``expires_in_days`` (30, 90 or 365; leave out for
-         *     never) and ``allowed_ips`` (IPs and CIDRs; empty for any address).
+         * @description The key is in this response only. 402 entitlement_required on a plan without the public
+         *     API (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:
+         *     ``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and
+         *     CIDRs; empty for any address).
          */
         post: operations["create_api_key"];
         delete?: never;
@@ -7400,7 +7402,8 @@ export interface components {
         };
         /**
          * CheckoutRequest
-         * @description POST …/billing/checkout (F-15). Max is R2: "max" is refused with 422 until then.
+         * @description POST …/billing/checkout (F-15). "max" (Business) is refused with 422 until its Dodo product
+         *     is set.
          */
         CheckoutRequest: {
             /**

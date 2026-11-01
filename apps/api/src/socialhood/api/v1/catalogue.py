@@ -3,7 +3,7 @@
 The rules are in services/catalogue/: products.py (create, change, delete, the plan), csv_import.py
 (the header row, the preview, the save), shopify.py (connect, sync, webhooks) and facts.py (how the
 AI reads products). Reading what exists is never refused (owners and admins, like Knowledge);
-writing needs ``knowledge.manage`` and the catalogue on the plan (PD-8: Pro and Max, 402
+writing needs ``knowledge.manage`` and the catalogue on the plan (PD-8: Creator and Business, 402
 ``entitlement_required`` on Free), connecting Shopify needs ``integrations.manage``.
 
 A request that names another workspace's picture or product is a 404 before any plan check, so

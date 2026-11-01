@@ -39,7 +39,7 @@ export type Block = { id: string; title: string; intro?: string; items: Item[] }
 export type Source = { label: string; url: string; checked: string };
 export type PageLink = { label: string; href: string };
 
-/** A feature page's limits row: Free, Pro and Max as words, read from plan-table.json (C-163). */
+/** A feature page's limits row: Free, Creator and Business as words, read from plan-table.json (C-163). */
 export type LimitRow = { label: string; free: string; pro: string; max: string };
 /** What an AI action costs, from plan-table.json `credit_costs` (billing/plans.py CREDIT_COSTS). */
 export type CreditRow = { label: string; credits: number; per?: string };
@@ -92,7 +92,7 @@ export type GtmPage = {
 /** C-168: the MCP server (docs/architecture/mcp; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY). */
 const OURS_MCP: Cell = {
   status: "yes",
-  text: "Claude, ChatGPT and Codex: read and draft on every plan; schedule posts and set up automations on Pro and Max after a preview. AI apps can't send messages themselves.",
+  text: "Claude, ChatGPT and Codex: read and draft on every plan; schedule posts and set up automations on Creator and Business after a preview. AI apps can't send messages themselves.",
 };
 /** C-168: the MCP row was checked later than the rest of each table. */
 const mcpHonesty = (name: string) =>
@@ -145,7 +145,7 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "Connect your other tools",
-          body: "Outbound webhooks on every plan. A public API, API keys, a Zapier app and Google Sheets sync on Pro and Max.",
+          body: "Outbound webhooks on every plan. A public API, API keys and a Zapier app on Business, and Google Sheets sync on Creator and Business.",
         },
       ],
     },
@@ -168,7 +168,7 @@ export const SWITCH_PAGE: GtmPage = {
         {
           // C-168: the MCP server; Manychat's side is the comparison's MCP row (not found, 2026-11-01).
           title: "Work from Claude, ChatGPT and Codex",
-          body: "Connect your AI assistant to read the inbox, draft replies and, on Pro and Max, schedule posts and set up automations after a preview. AI apps can't send messages themselves.",
+          body: "Connect your AI assistant to read the inbox, draft replies and, on Creator and Business, schedule posts and set up automations after a preview. AI apps can't send messages themselves.",
         },
         {
           title: "Flat plans",
@@ -325,7 +325,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Integrations",
-        ours: { status: "yes", text: "Webhooks on every plan. API, Zapier app and Google Sheets on Pro and Max." },
+        ours: { status: "yes", text: "Webhooks on every plan. API and Zapier app on Business; Google Sheets on Creator and Business." },
         // source: Manychat help centre "Zapier Integration" and "Google Sheets integration", read 2026-10-29. Make is dropped: no Manychat page we read names it.
         theirs: { status: "yes", text: "Zapier, Google Sheets and others." },
       },
@@ -355,7 +355,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "How it is priced",
-        ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts." },
+        ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts. Planned: Creator at $14 a month and Business at $29 once billing opens, with contacts unlimited." },
         // source: Manychat help centre "Pro plan" and "Active Contacts", read 2026-10-29: plans from 2 March 2026 billed by active contacts a month; Pro $39 a month on monthly billing for 2,500 active contacts; prices can vary by region. Replaces the third-party guides (Chatarmin, Layer3 Labs, DMChamp, 2026-10-22).
         theirs: { status: "yes", text: "By active contacts a month, on plans introduced on 2 March 2026. Pro is $39 a month for 2,500 active contacts on monthly billing." },
       },
@@ -517,7 +517,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Bulk WhatsApp campaigns",
-        ours: { status: "soon", text: "Broadcasts are built and open after our review of consent rules. Pro and Max only." },
+        ours: { status: "soon", text: "Broadcasts are built and open after our review of consent rules. Creator and Business only." },
         // source: interakt.shop/pricing, read 2026-10-29: one-time and ongoing campaigns from Starter; click and conversion tracking from Growth
         theirs: { status: "yes", text: "One-time and ongoing campaigns, with click and conversion tracking from the Growth plan." },
       },
@@ -525,7 +525,7 @@ export const COMPARE_INTERAKT: GtmPage = {
         feature: "Product catalogue",
         ours: {
           status: "approval",
-          text: "Add products by hand or CSV; the AI answers price and stock from it, and you can send a product or product list in WhatsApp from the inbox. The WhatsApp catalogue messages need your Meta catalogue set up and Meta's approval. Shopify sync is coming soon. Pro and Max.",
+          text: "Add products by hand or CSV; the AI answers price and stock from it, and you can send a product or product list in WhatsApp from the inbox. The WhatsApp catalogue messages need your Meta catalogue set up and Meta's approval. Shopify sync is coming soon. Creator and Business.",
         },
         // source: interakt.shop/pricing, read 2026-10-29: WhatsApp catalogue creation, product and catalogue message templates and Shopify catalogue auto-sync, from Growth
         theirs: { status: "yes", text: "Catalogue creation, product message templates and Shopify catalogue sync, from the Growth plan." },
@@ -534,7 +534,7 @@ export const COMPARE_INTERAKT: GtmPage = {
         feature: "Payments and checkout in chat",
         ours: {
           status: "yes",
-          text: "Send a payment request in the chat: a Razorpay link paid to your own Razorpay account, or your UPI ID marked paid by hand. Orders are tracked in the Orders page. Pro and Max. We do not hold your money, and we do not offer WhatsApp Pay.",
+          text: "Send a payment request in the chat: a Razorpay link paid to your own Razorpay account, or your UPI ID marked paid by hand. Orders are tracked in the Orders page. Creator and Business. We do not hold your money, and we do not offer WhatsApp Pay.",
         },
         // source: interakt.shop/pricing, read 2026-10-29: "Send Payment Links from Inbox" on Starter; "WhatsApp Checkout Bot" and "Native WhatsApp Payment (WhatsApp Pay)" on Growth. Replaces the third-party guides (Hyperleap, InstantDM, 2026-10-22).
         theirs: { status: "yes", text: "Payment links from the inbox, and a WhatsApp checkout bot with WhatsApp Pay from the Growth plan." },
@@ -577,7 +577,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Starting price",
-        ours: { status: "yes", text: "A Free plan with no card. See the pricing page for Pro." },
+        ours: { status: "yes", text: "A Free plan with no card. See the pricing page for the paid plans." },
         // source: interakt.shop/pricing, read 2026-10-29: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
         theirs: { status: "yes", text: "₹999 a month for Instagram only and ₹2,799 for WhatsApp and Instagram (Growth), plus taxes." },
       },
@@ -616,19 +616,19 @@ const OURS_PUBLISHING: Cell = {
   status: "yes",
   text: "Instagram images, carousels, Reels and Stories from a calendar. Facebook publishing waits on Meta's approval.",
 };
-const OURS_BROADCASTS: Cell = { status: "soon", text: "WhatsApp broadcasts are built and open after our review of consent rules. Pro and Max." };
+const OURS_BROADCASTS: Cell = { status: "soon", text: "WhatsApp broadcasts are built and open after our review of consent rules. Creator and Business." };
 const OURS_TEAM: Cell = { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan." };
-const OURS_PRICE: Cell = { status: "yes", text: "A Free plan with no card. Plans cap features, never contacts. See the pricing page for Pro." };
+const OURS_PRICE: Cell = { status: "yes", text: "A Free plan with no card. Plans cap features, never contacts. See the pricing page for the paid plans." };
 const OURS_META_FEES: Cell = {
   status: "yes",
   text: "You pay Meta directly through your own WhatsApp Business account. Amplychat adds no markup.",
 };
 const OURS_CATALOGUE: Cell = {
   status: "approval",
-  text: "Products by hand or CSV, which the AI answers from; product messages in WhatsApp need your Meta catalogue and Meta's approval. Shopify sync is coming soon. Pro and Max.",
+  text: "Products by hand or CSV, which the AI answers from; product messages in WhatsApp need your Meta catalogue and Meta's approval. Shopify sync is coming soon. Creator and Business.",
 };
 const OURS_LEAD_CAPTURE: Cell = { status: "yes", text: "A flow asks for an email or phone and saves it to the contact. Contacts export as CSV." };
-const OURS_INTEGRATIONS: Cell = { status: "yes", text: "Webhooks on every plan. API, Zapier app and Google Sheets on Pro and Max." };
+const OURS_INTEGRATIONS: Cell = { status: "yes", text: "Webhooks on every plan. API and Zapier app on Business; Google Sheets on Creator and Business." };
 
 const OURS_HONESTY = "Our column is checked against our own code. Anything that depends on Meta, Shopify or a legal review says so.";
 
@@ -1319,7 +1319,7 @@ export const COMPARE_AISENSY: GtmPage = {
         feature: "Catalogue and payments",
         ours: {
           status: "yes",
-          text: "Products the AI answers from, and payment requests by Razorpay link or your UPI ID, on Pro and Max. WhatsApp product messages need Meta's approval.",
+          text: "Products the AI answers from, and payment requests by Razorpay link or your UPI ID, on Creator and Business. WhatsApp product messages need Meta's approval.",
         },
         // source: aisensy.com/pricing and aisensy.com/aisensy-vs-interakt, read 2026-10-29: "Sell Products on WhatsApp" (WhatsApp Catalog) and "Collect Payments via UPI & Card"
         theirs: { status: "yes", text: "A WhatsApp catalogue and payments by UPI and card." },
@@ -1541,6 +1541,17 @@ function planRow(label: string, key: PlanKey, word: (value: unknown) => string =
   return { label, free: word(values.free), pro: word(values.pro), max: word(values.max) };
 }
 
+/** Connected channels: Free counts channels in total; the paid plans count accounts per platform (C-172). */
+export function channelsRow(label = "Connected channels"): LimitRow {
+  const per = E.accounts_per_platform as Plans<number>;
+  return {
+    label,
+    free: `${count.format((E.channels_total as Plans<number | null>).free ?? 0)} in total from Instagram, Facebook and web chat, no WhatsApp`,
+    pro: `${per.pro} each of Instagram, WhatsApp, Facebook and web chat`,
+    max: `${per.max} each of Instagram, WhatsApp and Facebook`,
+  };
+}
+
 const days = (value: unknown) => (value === null ? "No limit" : `${count.format(value as number)} days`);
 const modes = (value: unknown) => ((value as string[]).includes("auto") ? "Off, Suggest, Auto" : "Off, Suggest");
 /** Words for a credit count. */
@@ -1638,7 +1649,7 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
         value === null ? "Every post" : `Latest ${count.format(value as number)}`,
       ),
       planRow("AI credits a month", "ai_credits_monthly"),
-      planRow("Accounts per platform", "accounts_per_platform"),
+      channelsRow(),
       planRow("Team members", "members"),
     ],
     credits: [
@@ -1664,7 +1675,7 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
       // services/comments/backfill.py (25 posts, 200 comments); analysis.py comment_intelligence_posts.
       {
         question: "Does Amplychat read comments on my older posts?",
-        answer: `When you connect, it brings in your 25 most recent posts and up to 200 comments on each, and new comments arrive as they are posted. On Free, analysis covers the ${E.comment_intelligence_posts.free} most recent posts of each account; on Pro and Max it covers every post.`,
+        answer: `When you connect, it brings in your 25 most recent posts and up to 200 comments on each, and new comments arrive as they are posted. On Free, analysis covers the ${E.comment_intelligence_posts.free} most recent posts of each account; on Creator and Business it covers every post.`,
       },
       // services/comments/actions.py hide and unhide; analysis.py auto-hide; delete is for admins.
       {
@@ -1719,7 +1730,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
         { title: "One list for every channel", body: "Instagram DMs, story replies and mentions, WhatsApp chats and your website chat arrive in real time, in one list." },
         // models/ai.py Intent and Sentiment; services/analysis.py: lead score 0 to 100, crossing 70 notifies every member once.
         { title: "Every message read and tagged", body: "Intent, sentiment and a lead score from 0 to 100. When a lead crosses 70, your team is told once." },
-        { title: "You choose how much the AI does", body: "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Pro." },
+        { title: "You choose how much the AI does", body: "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Creator and Business." },
         // schemas/inbox.py Suggestion.sources.
         { title: "Only your knowledge", body: "Answers come from the documents, questions and products you add, and each draft shows what it used. When the answer isn't there it doesn't guess." },
         // models/ai.py EscalationReason; services/sending.py human_takeover.
@@ -1760,7 +1771,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
       },
       // ai/policy.py: the 13 checks in order; MAX_AI_REPLIES_PER_HOUR = 5 per conversation (services/suggestions/auto.py).
       {
-        title: "The AI drafts, or replies on Pro",
+        title: "The AI drafts, or replies on Creator and Business",
         body: "In Suggest, the draft waits for you. In Auto, a reply goes out only after 13 checks pass, among them: the reply window is open, nobody asked for a person, it isn't a refund or complaint, the answer is grounded in your knowledge, and the AI has sent fewer than 5 replies in that conversation in the last hour.",
       },
       // FAQ_TAKEOVER (services/sending.py human_takeover, models/ai.py TAKEOVER_MINUTES).
@@ -1775,7 +1786,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
       },
     ],
     limits: [
-      planRow("Accounts per platform", "accounts_per_platform"),
+      channelsRow(),
       planRow("Team members", "members"),
       planRow("AI credits a month", "ai_credits_monthly"),
       planRow("AI modes", "ai_modes", modes),
@@ -1814,11 +1825,11 @@ export const FEATURE_AI_INBOX: GtmPage = {
       businesses: "Price, stock, delivery and order questions arrive on several channels. Your team works one list with assignment, saved replies and business hours, and every lead is scored so ready buyers don't wait.",
     },
     faq: [
-      // ai/policy.py: Auto on Pro only; small talk (C-062) may be answered without a source; FACT_INTENTS need one.
+      // ai/policy.py: Auto on Creator and Business; small talk (C-062) may be answered without a source; FACT_INTENTS need one.
       {
         question: "Which messages does the AI answer on its own?",
         answer:
-          "Only in Auto mode, which is part of Pro, and only when all 13 checks pass. A greeting or a thank-you can be answered without your knowledge; a question about price, stock or delivery needs a source from it. Everything else waits for you.",
+          "Only in Auto mode, which is part of Creator and Business, and only when all 13 checks pass. A greeting or a thank-you can be answered without your knowledge; a question about price, stock or delivery needs a source from it. Everything else waits for you.",
       },
       // components/ai/DecisionInfo.tsx: the info button on an AI-sent message, its checks and "Should not have sent".
       {
@@ -1935,7 +1946,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
     ],
     limits: [
       planRow("Scheduled posts a month", "scheduled_posts_monthly"),
-      planRow("Accounts per platform", "accounts_per_platform"),
+      channelsRow(),
       planRow("AI credits a month", "ai_credits_monthly"),
       planRow("Team members", "members"),
     ],
@@ -1960,7 +1971,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
     audience: {
       creators: "Keep a steady rhythm of Reels, carousels and Stories, tag collaborators on brand work, and have your comment-to-DM automation ready for the next post before it's live.",
       // accounts_per_platform (plan-table.json).
-      businesses: `Plan launches and offers across up to ${E.accounts_per_platform.pro} Instagram accounts on Pro and ${E.accounts_per_platform.max} on Max, keep captions in your brand voice, and see the questions each post brings in the inbox.`,
+      businesses: `Plan launches and offers across your Instagram accounts (${E.accounts_per_platform.pro} on Creator, up to ${E.accounts_per_platform.max} on Business), keep captions in your brand voice, and see the questions each post brings in the inbox.`,
     },
     faq: [
       // jobs/tasks/publishing.py dispatch_due_posts (server side, every 30 s); posts.py (a failed post can be edited and retried).
@@ -1991,7 +2002,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
       // posts.py counted_at: once per post per billing period; scheduled_posts_monthly (plan-table.json).
       {
         question: "What counts toward the monthly scheduled posts?",
-        answer: `Each post counts once, when you schedule it or publish it now, however many accounts it goes to. Free schedules ${amount(E.scheduled_posts_monthly.free)} posts a month and Pro ${amount(E.scheduled_posts_monthly.pro)}; Max ${E.scheduled_posts_monthly.max === null ? "has no limit" : `schedules ${amount(E.scheduled_posts_monthly.max)}`}.`,
+        answer: `Each post counts once, when you schedule it or publish it now, however many accounts it goes to. Free schedules ${amount(E.scheduled_posts_monthly.free)} posts a month and Creator ${amount(E.scheduled_posts_monthly.pro)}; Business ${E.scheduled_posts_monthly.max === null ? "has no limit" : `schedules ${amount(E.scheduled_posts_monthly.max)}`}.`,
       },
     ],
   },

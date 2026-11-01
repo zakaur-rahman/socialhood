@@ -180,7 +180,7 @@ class OrderOut(ResponseModel):
 
 
 class OrderLimits(ResponseModel):
-    entitled: bool  # the plan includes commerce (PD-8: Pro and Max)
+    entitled: bool  # the plan includes commerce (PD-8: Creator and Business)
     razorpay_ready: bool
     upi_ready: bool
 

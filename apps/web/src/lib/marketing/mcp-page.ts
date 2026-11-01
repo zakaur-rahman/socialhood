@@ -36,7 +36,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "claude-code",
     title: "Claude Code",
-    body: "Add the server with one command and sign in, or use an API key (Pro and Max). It can also upload a video you edited and schedule it as a Reel.",
+    body: "Add the server with one command and sign in, or use an API key (Business). It can also upload a video you edited and schedule it as a Reel.",
   },
   {
     id: "chatgpt",
@@ -46,7 +46,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "codex",
     title: "Codex",
-    body: "Use an API key (Pro and Max), or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
+    body: "Use an API key (Business), or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
   },
   {
     id: "other",
@@ -66,7 +66,7 @@ export const ASKS: readonly Ask[] = [
     prompt: "Schedule this Reel for Friday at 6 pm.",
     result:
       "The AI shows a preview with the time, the account and the composer's checklist. Nothing is scheduled until you say yes. A scheduled post waits at least 5 minutes, and your team is told.",
-    plan: "Pro and Max",
+    plan: "Creator and Business",
   },
   {
     prompt: "Sum up this week's DMs.",
@@ -87,19 +87,19 @@ export const ASKS: readonly Ask[] = [
   {
     prompt: "Add our new return policy to the knowledge base.",
     result: "It adds a note that your AI replies can use. Your plan's knowledge limit applies.",
-    plan: "Pro and Max",
+    plan: "Creator and Business",
   },
   {
     prompt: "When someone comments \"price\" on my last post, DM them the price.",
     result:
       "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it stays off unless you ask for it on. Once it's on, the automation sends the DMs, and your team is told. Ask it to pause the automation whenever you like.",
-    plan: "Pro and Max",
+    plan: "Creator and Business",
   },
   {
     prompt: "Edit this video and post it.",
     result:
       "In Claude Code or Codex, it trims the video with your own tools, uploads it to your media library and schedules it as a Reel, after you approve the preview.",
-    plan: "Pro and Max",
+    plan: "Creator and Business",
   },
 ];
 
@@ -138,11 +138,11 @@ export const MCP_PAGE_FAQ = [
   },
   {
     question: "Can the AI message my customers?",
-    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Pro and Max it can also set up a keyword automation: Amplychat requires a preview first, you say yes, and once it's on, the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told. ${ALWAYS_ALLOW_LINE}`,
+    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also set up a keyword automation: Amplychat requires a preview first, you say yes, and once it's on, the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told. ${ALWAYS_ALLOW_LINE}`,
   },
   {
     question: "Does this cost extra?",
-    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Pro and Max can schedule posts, add knowledge and create, change or pause automations, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
+    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule posts, add knowledge and create, change or pause automations, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
   },
   {
     question: "Can I use it with Cursor or VS Code?",

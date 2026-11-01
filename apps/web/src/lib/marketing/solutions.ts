@@ -2,7 +2,7 @@
  * /for-creators and /for-businesses (C-156): the same structure for two audiences, as data the page
  * renders (components/marketing/SolutionPageView). Rules, as for the GTM pages (gtm-pages.ts): every
  * claim is built and checked against the code (named in a comment where it isn't obvious), a feature
- * that waits on something says so with its status, no prices are written here (Pro's comes from the
+ * that waits on something says so with its status, no prices are written here (the paid plans' come from the
  * plans API), and there are no testimonials, user counts or badges. Plan numbers come from
  * plan-table.json, the API's own plan table.
  */
@@ -27,7 +27,7 @@ const n = (value: number) => new Intl.NumberFormat("en-US").format(value);
 
 export type Familiar = { before: string; after: string };
 export type SolutionFeature = { title: string; body: string; status?: Status };
-export type Tier = { name: string; who: string; plan: "free" | "pro"; body: string };
+export type Tier = { name: string; who: string; plan: "free" | "pro" | "max"; body: string };
 
 export type SolutionPage = {
   path: string;
@@ -115,7 +115,7 @@ export const FOR_CREATORS: SolutionPage = {
     },
     {
       title: "AI replies from your own notes",
-      body: "Add your notes, FAQs or your website, and the AI drafts replies in your tone. On Free you send them; Auto mode on Pro replies when it's confident. The rest comes to you.",
+      body: "Add your notes, FAQs or your website, and the AI drafts replies in your tone. On Free you send them; Auto mode on Creator and Business replies when it's confident. The rest comes to you.",
       status: "yes",
     },
     {
@@ -141,7 +141,7 @@ export const FOR_CREATORS: SolutionPage = {
       name: "Just starting",
       who: "One account and a few link drops a week.",
       plan: "free",
-      body: `${E.accounts_per_platform.free} Instagram account, ${E.active_automations.free} automations on at once, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and comment analysis on your ${E.comment_intelligence_posts.free} latest posts.`,
+      body: `${E.channels_total.free} channels in total from Instagram, Facebook and web chat, ${E.active_automations.free} automations on at once, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and comment analysis on your ${E.comment_intelligence_posts.free} latest posts.`,
     },
     {
       name: "Growing",
@@ -152,8 +152,8 @@ export const FOR_CREATORS: SolutionPage = {
     {
       name: "Established",
       who: "More than one account, with a manager or an assistant.",
-      plan: "pro",
-      body: `${E.accounts_per_platform.pro} accounts per platform, ${E.members.pro} team members, comment analysis on every post and your full message history.`,
+      plan: "max",
+      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, up to ${E.active_automations.max} automations on at once and ${n(E.ai_credits_monthly.max)} AI credits a month.`,
     },
   ],
   faq: [FAQ_BAN_RISK, FAQ_ACCOUNT_LOGIN, FAQ_WHY_PROFESSIONAL, FAQ_ROBOTIC, FAQ_TAKEOVER, FAQ_FREE_LIMIT],
@@ -171,7 +171,7 @@ export const FOR_CREATORS: SolutionPage = {
 // Built: the inbox for Instagram, WhatsApp and website chat (C-150), assignment (GR-20), saved
 // replies and business hours with away messages (GR-21, GR-22), AI modes with escalation and
 // knowledge gaps, website crawl (GR-35), intent, sentiment and lead score on every message, the
-// leads list (GR-18), catalogue, orders and payment links on Pro (GR-31, GR-32), Sheets on Pro (GR-26).
+// leads list (GR-18), catalogue, orders and payment links on Creator and Business (GR-31, GR-32), Sheets on Creator and Business (GR-26).
 export const FOR_BUSINESSES: SolutionPage = {
   path: "/for-businesses",
   name: "For businesses",
@@ -209,7 +209,7 @@ export const FOR_BUSINESSES: SolutionPage = {
   features: [
     {
       title: "One inbox, with your team",
-      body: "Instagram DMs and comments, WhatsApp and your website chat in one list. Assign conversations by hand or in turn, use saved replies, and set business hours with an away message. Teams start on Pro.",
+      body: "Instagram DMs and comments, WhatsApp and your website chat in one list. Assign conversations by hand or in turn, use saved replies, and set business hours with an away message. Teams start on Creator.",
       status: "yes",
     },
     {
@@ -219,12 +219,12 @@ export const FOR_BUSINESSES: SolutionPage = {
     },
     {
       title: "Lead scoring",
-      body: "Every message is tagged with intent and sentiment and gets a lead score. Ask for an email or phone in a flow, see your leads in one list, and send them to Google Sheets on Pro.",
+      body: "Every message is tagged with intent and sentiment and gets a lead score. Ask for an email or phone in a flow, see your leads in one list, and send them to Google Sheets on Creator and Business.",
       status: "yes",
     },
     {
       title: "Catalogue, orders and payment links",
-      body: "Add products by hand or CSV, and the AI answers price and stock. Send a Razorpay payment link or a UPI request in the chat, from your own Razorpay account; the money goes to you, never through us. Part of Pro.",
+      body: "Add products by hand or CSV, and the AI answers price and stock. Send a Razorpay payment link or a UPI request in the chat, from your own Razorpay account; the money goes to you, never through us. Part of Creator and Business.",
       status: "yes",
     },
     {
@@ -243,21 +243,21 @@ export const FOR_BUSINESSES: SolutionPage = {
   tiers: [
     {
       name: "Just starting",
-      who: "One person answering, on one Instagram and one WhatsApp.",
+      who: "One person answering, on Instagram, Facebook or website chat.",
       plan: "free",
-      body: `${E.accounts_per_platform.free} account per platform, ${E.members.free} seat, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and website chat for up to ${E.widget_conversations_daily.free} conversations a day.`,
+      body: `${E.channels_total.free} channels in total (no WhatsApp), ${E.members.free} seat, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and website chat for up to ${E.widget_conversations_daily.free} conversations a day.`,
     },
     {
       name: "Growing",
       who: "Chats every hour, and a teammate or two.",
       plan: "pro",
-      body: `Auto replies, ${E.members.pro} team members, ${n(E.ai_credits_monthly.pro)} AI credits a month, the catalogue and payment links, Google Sheets and the public API.`,
+      body: `Auto replies, ${E.members.pro} team members, ${n(E.ai_credits_monthly.pro)} AI credits a month, the catalogue and payment links and Google Sheets.`,
     },
     {
       name: "Established",
       who: "Several brands or numbers, and a bigger team.",
-      plan: "pro",
-      body: `${E.accounts_per_platform.pro} accounts per platform today. A larger plan for bigger teams is planned and can't be bought yet.`,
+      plan: "max",
+      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, the public API and API keys. Enterprise, for high volume and agencies, is a card on the pricing page: contact us.`,
     },
   ],
   faq: [
@@ -266,12 +266,12 @@ export const FOR_BUSINESSES: SolutionPage = {
     FAQ_TAKEOVER,
     {
       question: "Can my team share the inbox?",
-      answer: `Yes, on Pro: up to ${E.members.pro} team members with owner, admin and agent roles, and conversations assigned by hand or in turn. Free has ${E.members.free} seat.`,
+      answer: `Yes, on Creator and Business: up to ${E.members.pro} team members on Creator and ${E.members.max} on Business, with owner, admin and agent roles, and conversations assigned by hand or in turn. Free has ${E.members.free} seat.`,
     },
     {
       question: "Does it work with Shopify?",
       answer:
-        "Shopify sync arrives with our Shopify app listing. Until then, add products by hand or from a CSV file on Pro, and the AI answers price and stock from them.",
+        "Shopify sync arrives with our Shopify app listing. Until then, add products by hand or from a CSV file on Creator and Business, and the AI answers price and stock from them.",
     },
     FAQ_ACCOUNT_LOGIN,
     FAQ_FREE_LIMIT,

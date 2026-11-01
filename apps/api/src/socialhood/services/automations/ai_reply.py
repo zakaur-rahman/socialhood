@@ -64,7 +64,7 @@ CAPTION_CHARS = 300
 NO_CREDITS = ("ai_credits_exhausted", "AI credits are used up, so this automation sent nothing.")
 NOT_ON_PLAN = (
     "entitlement_required",
-    "AI replies in automations are part of Pro, so this automation sent nothing.",
+    "AI replies in automations are part of Creator and Business, so this automation sent nothing.",
 )
 
 

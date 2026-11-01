@@ -3,7 +3,7 @@ import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { FOR_BUSINESSES } from "@/lib/marketing/solutions";
 
-// ISR like the pricing page: Pro's state and price come from the plans API, read at most once an hour.
+// ISR like the pricing page: the paid plans' state and price come from the plans API, read at most once an hour.
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({ title: FOR_BUSINESSES.title, description: FOR_BUSINESSES.description, path: FOR_BUSINESSES.path });

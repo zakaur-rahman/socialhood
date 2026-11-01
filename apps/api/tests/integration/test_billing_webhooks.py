@@ -154,7 +154,7 @@ async def test_active_with_a_trial_starts_the_pro_trial(owner: Owner, redis: Red
         False,
     )
     credits = next(m for m in billing["usage"] if m["metric"] == "ai_credits")
-    assert credits["limit"] == 5000
+    assert credits["limit"] == 1500
     assert [t for t, _ in await owner.notifications()] == ["plan_activated"]
     published = [data for kind, data in await stream(redis, owner.wid) if kind == "usage.updated"]
     assert {p["metric"] for p in published} == {"ai_credits", "scheduled_posts"}

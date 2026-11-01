@@ -95,7 +95,7 @@ describe.each(PAGES)("$page.path (C-163)", ({ page, Component, metadata }) => {
   it("shows the limits from plan-table.json and the credits from billing/plans.py", () => {
     render(<Component />);
     const limits = screen.getByRole("table", { name: `${page.name}: limits on each plan` });
-    expect(within(limits).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Limit", "Free", "Pro", "Max"]);
+    expect(within(limits).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Limit", "Free", "Creator", "Business"]);
     expect(within(limits).getAllByRole("row")).toHaveLength(depth.limits.length + 1);
     expect(limits.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
     const costs = Object.values(table.credit_costs);

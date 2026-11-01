@@ -382,7 +382,7 @@ export function knowledgeLimitReached(limit: number | null | undefined): string 
 }
 
 export const aiCopy = {
-  autoIsPro: "Auto mode is part of Pro.",
+  autoIsPro: "Auto mode is part of Creator and Business.",
   businessDescriptionHint: "Two or three sentences about what you sell and who buys it.",
   notInKnowledge: "Not in your knowledge",
   drafting: "Drafting a reply…",
@@ -392,7 +392,45 @@ export const aiCopy = {
 
 export type PlanName = "free" | "pro" | "max";
 
-export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Pro", max: "Max" };
+/** C-172: the stored plan keys stay free, pro and max; they are shown as Free, Creator and Business. */
+export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Creator", max: "Business" };
+
+/**
+ * C-172: what the paid plans will cost, shown only while billing is off (the real price from the
+ * API replaces it once it is on) so a visitor, and Dodo's reviewer, can see what customers will pay.
+ * Never used in structured data (JSON-LD offers) while the plans aren't on sale. Whole US dollars.
+ */
+export const PLANNED_PRICE_USD: Record<"pro" | "max", number> = { pro: 14, max: 29 };
+
+/** "$14 a month when we launch" */
+export function plannedPriceLabel(plan: "pro" | "max"): string {
+  return `$${PLANNED_PRICE_USD[plan]} a month when we launch`;
+}
+
+/**
+ * C-172: Enterprise is a card with a "Contact us" link, not a plan: no plan key, no checkout, no
+ * entitlements in the API. It lists only the plan table's rows and "for high volume and agencies".
+ */
+export const ENTERPRISE = {
+  name: "Enterprise",
+  tagline: "For high volume and agencies.",
+  price: "Contact us",
+  from: "from $99 a month",
+  cta: "Contact us",
+  href: `mailto:${SUPPORT_EMAIL}`,
+  lines: [
+    "10 or more channels",
+    "Unlimited active automations",
+    "25,000 or more AI credits a month",
+    "Unlimited scheduled posts",
+    "AI replies: Auto and suggestions",
+    "10 or more team members",
+    "50 million or more characters of knowledge",
+    "Claude and ChatGPT (MCP): full access",
+    "API keys and Zapier",
+    "Full message history",
+  ],
+} as const;
 
 function counted(n: number, one: string, many: string): string {
   return `${count.format(n)} ${n === 1 ? one : many}`;
@@ -418,6 +456,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     limitTitle: "Account limit reached",
     includes: (n) => `${counted(n, "account", "accounts")} per platform`,
     unlimited: "connected accounts",
+  },
+  channels_total: {
+    limitTitle: "Channel limit reached",
+    includes: (n) => `${counted(n, "channel", "channels")} in total`,
+    unlimited: "channels",
   },
   knowledge_characters: {
     limitTitle: "Knowledge limit reached",
@@ -486,33 +529,56 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
   },
 };
 
-/** Features a plan has or lacks (entitlement_required, §4.7 "{Feature} is part of Pro."). */
-const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
+/** Features a plan has or lacks (entitlement_required, §4.7 "{Feature} is part of {plans}."). */
+const FEATURE_COPY: Record<string, { feature: string; plans: string; body: string; target: "pro" | "max" }> = {
   ai_modes: {
     feature: "Auto mode",
-    body: "On Pro, the AI can answer customers on its own when it's confident and the answer is in your knowledge.",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "On Creator and Business, the AI can answer customers on its own when it's confident and the answer is in your knowledge.",
   },
   ai_reply_automations: {
     feature: "AI replies in automations",
-    body: "On Pro, an automation can answer with AI from your knowledge instead of a fixed message.",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "On Creator and Business, an automation can answer with AI from your knowledge instead of a fixed message.",
   },
   sheets_sync: {
     feature: "Google Sheets sync",
-    body: "On Pro, every lead you capture is added to a Google Sheet as a new row.",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "On Creator and Business, every lead you capture is added to a Google Sheet as a new row.",
   },
   public_api: {
     feature: "Public API access",
-    body: "On Pro, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
+    plans: "Business",
+    target: "max",
+    body: "On Business, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
   },
   commerce: {
     feature: "The product catalogue",
-    body: "On Pro, add products with prices and stock, import them from a CSV file or Shopify, and let the AI answer product questions.",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "On Creator and Business, add products with prices and stock, import them from a CSV file or Shopify, and let the AI answer product questions.",
   },
   widget_remove_branding: {
     feature: "Hiding \"Powered by Amplychat\"",
-    body: "On Pro, you can turn off the \"Powered by Amplychat\" link in your website chat.",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "On Creator and Business, you can turn off the \"Powered by Amplychat\" link in your website chat.",
+  },
+  whatsapp: {
+    feature: "WhatsApp",
+    plans: "Creator and Business",
+    target: "pro",
+    body: "Free includes Instagram, Facebook and web chat. Creator and Business add WhatsApp.",
   },
 };
+
+/** The plan an upgrade for this 402 should offer: Business for what only Business has (C-172), else Creator. */
+export function upgradeTarget(entitlement: string | null | undefined): "pro" | "max" {
+  return (entitlement && FEATURE_COPY[entitlement]?.target) || "pro";
+}
 
 /** What a limit of n on this §1.7 key includes, e.g. "3 active automations"; null for other keys. */
 export function limitText(key: string, limit: number): string | null {
@@ -526,7 +592,7 @@ export function planIncludes(key: string, limit: number, plan?: PlanName | null)
   return `${plan ? PLAN_NAME[plan] : "Your plan"} includes ${copy.includes(limit)}.`;
 }
 
-/** What another plan offers for the same key: "Pro includes 50 active automations." */
+/** What another plan offers for the same key: "Creator includes 25 active automations." */
 export function planOffers(key: string, value: number | null, plan: PlanName): string | null {
   const copy = LIMIT_COPY[key];
   if (!copy) return null;
@@ -544,7 +610,7 @@ export type UpgradeCopyInput = {
 
 /**
  * The upgrade dialog's title and first sentence for a 402 (§4.7): entitlement_required says
- * "{Feature} is part of Pro."; quota_exceeded names the limit, and for AI credits when they reset.
+ * "{Feature} is part of Creator and Business."; quota_exceeded names the limit, and for AI credits when they reset.
  */
 export function upgradeCopy(
   input: UpgradeCopyInput,
@@ -555,15 +621,15 @@ export function upgradeCopy(
     // A plain Upgrade (the sidebar's, a banner's): no feature was blocked.
     if (key === "pro") {
       return {
-        title: "Upgrade to Pro",
-        body: "Pro adds Auto replies, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
+        title: "Upgrade to Creator",
+        body: "Creator adds Auto replies, WhatsApp, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
       };
     }
     const feature = FEATURE_COPY[key];
-    if (feature) return { title: `${feature.feature} is part of Pro`, body: feature.body };
-    const named = input.detail?.match(/^(.+?) is part of Pro\.?$/);
-    if (named) return { title: `${named[1]} is part of Pro`, body: "Upgrade to Pro to use it." };
-    return { title: "This is part of Pro", body: input.detail || "Upgrade to Pro to use it." };
+    if (feature) return { title: `${feature.feature} is part of ${feature.plans}`, body: feature.body };
+    const named = input.detail?.match(/^(.+?) is part of (Creator and Business|Business|Creator)\.?$/);
+    if (named) return { title: `${named[1]} is part of ${named[2]}`, body: `Upgrade to ${named[2] === "Business" ? "Business" : "Creator"} to use it.` };
+    return { title: "This is part of a paid plan", body: input.detail || "Upgrade to Creator to use it." };
   }
   const copy = LIMIT_COPY[key];
   if (key === "ai_credits_monthly" && typeof input.limit === "number") {
@@ -581,7 +647,7 @@ export function upgradeCopy(
  */
 export function inferEntitlement(detail: string | null | undefined): string | null {
   if (!detail) return null;
-  if (/^Auto mode is part of Pro/i.test(detail)) return "ai_modes";
+  if (/^Auto mode is part of/i.test(detail)) return "ai_modes";
   if (/AI replies in automations/i.test(detail)) return "ai_reply_automations";
   if (/AI credits/i.test(detail)) return "ai_credits_monthly";
   if (/active automations/i.test(detail)) return "active_automations";
@@ -628,23 +694,25 @@ export function pricePerMonth(price: { amount_minor: number; currency: string })
 }
 
 export const billingCopy = {
-  upgradeCta: "Upgrade to Pro",
-  /** A Pro template on a Free workspace (UI-ISS-072): it can be set up, it runs on Pro. */
-  proTemplateNote: "Set it up on Free. It runs on Pro.",
+  upgradeCta: "Upgrade to Creator",
+  upgradeToBusiness: "Upgrade to Business",
+  /** A paid template on a Free workspace (UI-ISS-072): it can be set up, it runs on Creator. */
+  proTemplateNote: "Set it up on Free. It runs on Creator.",
   trialCta: (days: number) => `Start ${days}-day trial`,
   trialOffer: (days: number, price: string | null) =>
-    price ? `Try Pro free for ${days} days, then ${price}. Cancel anytime.` : `Try Pro free for ${days} days. Cancel anytime.`,
-  proPrice: (price: string) => `Pro is ${price}.`,
+    price ? `Try Creator free for ${days} days, then ${price}. Cancel anytime.` : `Try Creator free for ${days} days. Cancel anytime.`,
+  proPrice: (price: string) => `Creator is ${price}.`,
+  businessPrice: (price: string) => `Business is ${price}.`,
   ownerOnly: "Only the workspace owner can change the plan.",
   askOwner: "Ask an owner of this workspace to upgrade.",
   confirming: "Confirming your payment…",
   confirmingBody: "This takes a few seconds. Your plan changes as soon as the payment is confirmed.",
   confirmed: (plan: string) => `You're on ${plan}`,
-  confirmedTrial: "Your Pro trial has started",
+  confirmedTrial: "Your Creator trial has started",
   confirmedBody: "Your new limits are ready to use.",
-  slow: "Payment received? It can take a minute. We'll email you when Pro is active.",
+  slow: "Payment received? It can take a minute. We'll email you when your plan is active.",
   checkoutConflict: "This workspace already has a paid plan. Change it from Manage billing.",
-  maxUnavailable: "Max isn't available yet.",
+  maxUnavailable: "Business isn't available yet.",
   paymentsUnavailable: "Payments aren't available right now. Try again in a few minutes.",
   /** C-149: billing isn't set up on this server, so only Free exists for now. */
   paidPlansSoon: "Paid plans aren't available yet. Everything on Free keeps working.",
@@ -657,17 +725,17 @@ export const billingCopy = {
 /** FR-BIL-06, F-15: the owner's banner while the subscription is on hold. */
 export function paymentFailedBanner(graceUntil: string | null): string {
   return graceUntil
-    ? `Payment failed. Update your payment method by ${graceUntil} to keep Pro`
-    : "Payment failed. Update your payment method to keep Pro";
+    ? `Payment failed. Update your payment method by ${graceUntil} to keep your plan`
+    : "Payment failed. Update your payment method to keep your plan";
 }
 
 /** The owner's reminder in the last days of a trial (Dodo charges the card when it ends). */
 export function trialEndingBanner(daysLeft: number, endsOn: string, renews: boolean, price: string | null): string {
   const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
-  if (!renews) return `Your Pro trial ends ${when}, on ${endsOn}. The workspace moves to Free then`;
+  if (!renews) return `Your Creator trial ends ${when}, on ${endsOn}. The workspace moves to Free then`;
   return price
-    ? `Your Pro trial ends ${when}, on ${endsOn}. Pro then continues at ${price}`
-    : `Your Pro trial ends ${when}, on ${endsOn}. Pro then continues on your card`;
+    ? `Your Creator trial ends ${when}, on ${endsOn}. Creator then continues at ${price}`
+    : `Your Creator trial ends ${when}, on ${endsOn}. Creator then continues on your card`;
 }
 
 // ---- notifications and push (P8: FR-NOT-03, FR-NOT-04, F-19, UX-SCR-07)

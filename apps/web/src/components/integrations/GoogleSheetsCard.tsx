@@ -146,7 +146,7 @@ function Body({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
   if (!status.entitled) {
     return (
       <p className="text-sm text-fg-secondary">
-        Google Sheets sync is part of Pro.{" "}
+        Google Sheets sync is part of Creator and Business.{" "}
         <Link href={`/w/${slug}/settings/billing?tab=billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
           See plans
         </Link>

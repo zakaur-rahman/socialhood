@@ -4,8 +4,9 @@
   keeps its SHA-256 (the key is long and random, so a plain hash is enough) and its first
   twelve characters, so a member can tell keys apart in the list.
 - Keys carry scopes (schemas/api_keys.py). A key never gains scopes: make another.
-- Public API access is Pro and Max (PD-6, the ``public_api`` entitlement): making a key on Free
-  is 402. Listing and revoking stay open, so a workspace that downgraded can still clean up.
+- Public API access is Business only (C-172, was PD-6; the ``public_api`` entitlement): making a
+  key on Free or Creator is 402. Listing and revoking stay open, so a workspace that downgraded
+  can still clean up.
 - Revoking sets ``revoked_at`` and deletes the REST hooks the key subscribed (services/
   api_hooks.py): a key that is off sends nothing. Revoking again changes nothing.
 - A workspace holds at most ``ACTIVE_LIMIT`` unrevoked keys.

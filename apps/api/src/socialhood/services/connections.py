@@ -12,7 +12,7 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.entitlements import entitlement_error, quota_error
+from socialhood.billing.entitlements import check_new_channel, entitlement_error, quota_error
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError
 from socialhood.models.connections import AccountStatus, AiMode, Platform, SocialAccount
@@ -88,7 +88,10 @@ async def get_or_404(session: AsyncSession, account_id: uuid.UUID) -> SocialAcco
 
 
 async def _at_capacity(session: AsyncSession, platform: str, plan: str) -> int | None:
-    """The plan's limit when the workspace already has that many live accounts, else None."""
+    """The plan's limit when the workspace already has that many live accounts, else None. For a
+    new channel only: raises the C-172 channel rules first (WhatsApp on a plan without it, the
+    plan's channels in total)."""
+    await check_new_channel(session, platform, plan)
     limit = entitlement(plan, "accounts_per_platform")
     if limit is not None and await accounts.count_live(session, platform) >= limit:
         return int(limit)
@@ -107,8 +110,10 @@ def _quota_error(limit: int, platform: str) -> ApiError:
 async def _check_capacity(session: AsyncSession, platform: str, plan: str) -> None:
     """At the start of a connect: refuse early unless an account could be reconnected. The
     callback decides exactly, once it knows which account came back."""
+    if await accounts.count_reconnectable(session, platform):
+        return
     limit = await _at_capacity(session, platform, plan)
-    if limit is not None and not await accounts.count_reconnectable(session, platform):
+    if limit is not None:
         raise _quota_error(limit, platform)
 
 

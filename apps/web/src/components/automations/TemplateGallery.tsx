@@ -234,7 +234,7 @@ export function TemplateCard({
 }
 
 export function ProBadge() {
-  return <Badge tone="brand">Pro</Badge>;
+  return <Badge tone="brand">Creator</Badge>;
 }
 
 function AccountQuestion({

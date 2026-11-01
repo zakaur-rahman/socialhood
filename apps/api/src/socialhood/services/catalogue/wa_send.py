@@ -44,7 +44,7 @@ from socialhood.services.catalogue import products, wa_catalogue
 NOT_WHATSAPP = "Product messages are for WhatsApp conversations."
 NOT_CONNECTED = "Connect a WhatsApp catalogue on the Products page first."
 OTHER_NUMBER = "This catalogue is connected to a different WhatsApp number."
-PLAN = "The WhatsApp catalogue is part of Pro."
+PLAN = "The WhatsApp catalogue is part of Creator and Business."
 NEEDS_HEADER = "A product list needs a header."
 NEEDS_ITEM = "Choose a product."
 NEEDS_SECTIONS = "Add at least one section with products."

@@ -30,6 +30,13 @@ disconnected but not send (``check_account_writable``): replies and retries
 (services/sending.queue_outbound, so AI, automation and scheduled sends too), comment replies,
 scheduled messages and automation activations refuse them, and the automation runtime skips them
 (``read_only_error``). Publishing is not gated (C-050).
+
+C-172 adds two channel rules on top of accounts_per_platform: ``channels_total`` (Free: 2 channels
+across Instagram, Facebook and the website chat) and ``whatsapp`` (not on Free). Both are checked
+where a channel is added (``check_new_channel``: connecting an account, the website chat's first
+open) and both feed ``read_only_accounts``, so an existing Free workspace with WhatsApp, or with
+more than 2 channels, keeps every account connected and readable, and the extra ones are
+read-only exactly like a per-platform downgrade. Nothing is deleted.
 """
 
 from __future__ import annotations
@@ -54,18 +61,24 @@ from socialhood.models.identity import Role
 
 CREDITS = "ai_credits_monthly"
 
-# §4.7 entitlement_required: "{Feature} is part of Pro."
+# The channels the Free total counts (C-172): the website chat's account is platform "web".
+CHANNEL_PLATFORMS: tuple[str, ...] = ("instagram", "facebook", "whatsapp", "web")
+
+# §4.7 entitlement_required: "{Feature} is part of {plans}." (C-172: Free, Creator, Business.)
 FEATURES = {
-    "ai_modes": "Auto mode is part of Pro.",
-    "ai_reply_automations": "AI replies in automations are part of Pro.",
-    "sheets_sync": "Google Sheets sync is part of Pro.",
-    "public_api": "The public API, API keys and Zapier are part of Pro.",
+    "ai_modes": "Auto mode is part of Creator and Business.",
+    "ai_reply_automations": "AI replies in automations are part of Creator and Business.",
+    "sheets_sync": "Google Sheets sync is part of Creator and Business.",
+    "public_api": "The public API, API keys and Zapier are part of Business.",
     "ai_connections": (
-        "Scheduling and changing things from an AI app is part of Pro. On Free, AI apps can read "
-        "and save drafts."
+        "Scheduling and changing things from an AI app is part of Creator and Business. On Free, "
+        "AI apps can read and save drafts."
     ),
-    "broadcast_recipients_monthly": "WhatsApp broadcasts are part of Pro.",
-    "commerce": "The product catalogue is part of Pro.",
+    "broadcast_recipients_monthly": "WhatsApp broadcasts are part of Creator and Business.",
+    "commerce": "The product catalogue is part of Creator and Business.",
+    "whatsapp": (
+        "WhatsApp is part of Creator and Business. Free includes Instagram, Facebook and web chat."
+    ),
 }
 # §4.7 quota_exceeded: "Your plan includes {limit} {thing}."
 THINGS = {
@@ -74,6 +87,7 @@ THINGS = {
     "scheduled_posts_monthly": "scheduled posts a month",
     "knowledge_characters": "characters of knowledge",
     "members": "members",
+    "channels_total": "channels in total",
     "contact_fields": "custom contact fields",
     "webhook_endpoints": "webhook endpoints",
     "flow_steps": "steps in a flow",
@@ -97,7 +111,7 @@ THINGS = {
 def entitlement_error(key: str, detail: str | None = None) -> ApiError:
     return ApiError(
         "entitlement_required",
-        detail or FEATURES.get(key, "This feature is part of Pro."),
+        detail or FEATURES.get(key, "This feature is part of Creator and Business."),
         plan_limit=PlanLimit(entitlement=key),
     )
 
@@ -177,16 +191,49 @@ async def check_capacity(
 # ---------------------------------------------------------------- read-only accounts (FR-BIL-07)
 
 
+async def count_channels(session: AsyncSession) -> int:
+    """Connected (not disconnected) accounts on the channel platforms: what channels_total caps."""
+    from socialhood.repositories import social_accounts
+
+    return await social_accounts.count_live_in(session, CHANNEL_PLATFORMS)
+
+
+async def check_new_channel(
+    session: AsyncSession, platform: str, plan: str, *, adding: int = 1
+) -> None:
+    """The C-172 channel rules for a channel about to be added (not for a reconnect of a live
+    one, which keeps its slot): 402 entitlement_required for WhatsApp on a plan without it, 402
+    quota_exceeded (channels_total) when the plan's channels in total are all in use. The
+    per-platform limit (accounts_per_platform) is the caller's own check."""
+    if platform == "whatsapp" and not allows(plan, "whatsapp"):
+        raise entitlement_error("whatsapp")
+    total = entitlement(plan, "channels_total")
+    if (
+        total is not None
+        and platform in CHANNEL_PLATFORMS
+        and await count_channels(session) + adding > int(total)
+    ):
+        raise quota_error(
+            "channels_total",
+            int(total),
+            f"Your plan includes {int(total)} channels in total. Disconnect one or upgrade to "
+            "connect another.",
+        )
+
+
 def _noun(limit: int, platform: str) -> str:
     return f"{limit} {platform.capitalize()} account{'' if limit == 1 else 's'}"
 
 
-async def read_only_accounts(session: AsyncSession, *, plan: str | None = None) -> set[uuid.UUID]:
-    """Connected accounts beyond the plan's accounts_per_platform: each platform's earliest
-    connected accounts keep the plan's slots."""
-    limit = entitlement(plan or await current_plan(session), "accounts_per_platform")
-    if limit is None:
-        return set()
+async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID, str]:
+    """Each read-only account and why: ``whatsapp`` (the plan has none), ``platform`` (beyond
+    accounts_per_platform) or ``total`` (beyond channels_total). The earliest connected accounts
+    keep the slots."""
+    limit = entitlement(plan, "accounts_per_platform")
+    total = entitlement(plan, "channels_total")
+    whatsapp = allows(plan, "whatsapp")
+    if limit is None and total is None and whatsapp:
+        return {}
     rows = (
         await session.execute(
             select(SocialAccount.id, SocialAccount.platform)
@@ -199,24 +246,54 @@ async def read_only_accounts(session: AsyncSession, *, plan: str | None = None) 
         )
     ).all()
     seen: dict[str, int] = {}
-    extra: set[uuid.UUID] = set()
+    extra: dict[uuid.UUID, str] = {}
+    channels = 0
     for account_id, platform in rows:
+        if platform == "whatsapp" and not whatsapp:
+            extra[account_id] = "whatsapp"
+            continue
         seen[platform] = seen.get(platform, 0) + 1
-        if seen[platform] > limit:
-            extra.add(account_id)
+        if limit is not None and seen[platform] > int(limit):
+            extra[account_id] = "platform"
+            continue
+        if platform in CHANNEL_PLATFORMS:
+            channels += 1
+            if total is not None and channels > int(total):
+                extra[account_id] = "total"
     return extra
+
+
+async def read_only_accounts(session: AsyncSession, *, plan: str | None = None) -> set[uuid.UUID]:
+    """Connected accounts beyond the plan's limits (see ``_read_only_reasons``)."""
+    return set(await _read_only_reasons(session, plan or await current_plan(session)))
 
 
 async def read_only_error(
     session: AsyncSession, account: SocialAccount, *, plan: str | None = None
 ) -> ApiError | None:
-    """The 402 quota_exceeded for an ``account`` that is read-only on this plan (FR-BIL-07), or
-    None when it may send. For callers that record the refusal instead of raising it."""
+    """The 402 for an ``account`` that is read-only on this plan (FR-BIL-07), or None when it may
+    send: quota_exceeded, or entitlement_required for WhatsApp on a plan without it. For callers
+    that record the refusal instead of raising it."""
     plan = plan or await current_plan(session)
-    if account.id not in await read_only_accounts(session, plan=plan):
+    reason = (await _read_only_reasons(session, plan)).get(account.id)
+    if reason is None:
         return None
-    limit = int(entitlement(plan, "accounts_per_platform"))
     name = f"@{account.username}" if account.username else "This account"
+    if reason == "whatsapp":
+        return entitlement_error(
+            "whatsapp",
+            f"WhatsApp isn't included in your plan. {name} is read-only until you upgrade to "
+            "Creator or Business, or disconnect it.",
+        )
+    if reason == "total":
+        total = int(entitlement(plan, "channels_total"))
+        return quota_error(
+            "channels_total",
+            total,
+            f"Your plan includes {total} channels in total. {name} is read-only until you "
+            "upgrade or disconnect another channel.",
+        )
+    limit = int(entitlement(plan, "accounts_per_platform"))
     return quota_error(
         "accounts_per_platform",
         limit,

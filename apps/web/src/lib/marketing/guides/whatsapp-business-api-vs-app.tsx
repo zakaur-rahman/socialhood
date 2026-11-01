@@ -143,7 +143,7 @@ function Body() {
       <ul>
         <li>
           <strong>AI replies from your knowledge</strong>, as drafts you send (Suggest) or
-          sent by themselves when the AI is confident (Auto, on Pro). Anything about refunds, complaints or that the AI
+          sent by themselves when the AI is confident (Auto, on Creator and Business). Anything about refunds, complaints or that the AI
           isn&apos;t sure of goes to a person.
         </li>
         <li>
@@ -154,7 +154,7 @@ function Body() {
           <strong>Teamwork</strong>: assign chats, saved replies, business hours and away messages.
         </li>
         <li>
-          <strong>Payment requests in the chat</strong> on Pro and Max: a Razorpay link paid to your own Razorpay account,
+          <strong>Payment requests in the chat</strong> on Creator and Business: a Razorpay link paid to your own Razorpay account,
           or your UPI ID marked paid by hand. The money goes to you, never through us.
         </li>
       </ul>

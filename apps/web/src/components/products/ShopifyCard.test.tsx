@@ -76,9 +76,9 @@ describe("Shopify card (GR-31)", () => {
     expect(screen.queryByRole("button", { name: "Connect Shopify" })).not.toBeInTheDocument();
   });
 
-  it("says Shopify import is part of Pro on a plan without the catalogue", async () => {
+  it("says Shopify import is part of Creator and Business on a plan without the catalogue", async () => {
     setup(status({ entitled: false }));
-    expect(await screen.findByText(/with Shopify import, is part of Pro/)).toBeInTheDocument();
+    expect(await screen.findByText(/with Shopify import, is part of Creator and Business/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Connect Shopify" })).not.toBeInTheDocument();
   });
 

@@ -39,7 +39,7 @@ from socialhood.schemas.orders import PaymentSettings, RazorpayConnect, UpiSave
 from socialhood.security.crypto import TokenCipher
 
 KEY = "commerce"
-PLAN_COPY = "Orders and payment requests are part of Pro."
+PLAN_COPY = "Orders and payment requests are part of Creator and Business."
 RAZORPAY_MISSING = "Razorpay isn't set up for this workspace. Add your keys in Integrations first."
 UPI_MISSING = "A UPI address isn't set up for this workspace. Add it in Integrations first."
 KEYS_REFUSED = "Razorpay doesn't accept these keys. Check them and try again."

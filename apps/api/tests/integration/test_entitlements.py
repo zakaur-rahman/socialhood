@@ -73,6 +73,7 @@ async def test_connecting_a_second_instagram_account(shop: Shop) -> None:
 
 
 async def test_connecting_a_second_whatsapp_number(shop: Shop) -> None:
+    await set_plan(shop.engine, shop.wid, "pro")  # Creator has WhatsApp, 1 number (C-172)
     await make_account(shop.engine, shop.wid, platform="whatsapp", platform_account_id="1234567")
     response = await shop.call(
         "POST",
@@ -89,7 +90,7 @@ async def test_connecting_a_second_whatsapp_number(shop: Shop) -> None:
 async def test_auto_mode_on_an_account(shop: Shop) -> None:
     response = await shop.call("PATCH", f"/social-accounts/{shop.account_id}", {"ai_mode": "auto"})
     body = assert_402(response, "entitlement_required", "ai_modes", None)
-    assert body["detail"] == "Auto mode is part of Pro."
+    assert body["detail"] == "Auto mode is part of Creator and Business."
     assert (
         await shop.call("PATCH", f"/social-accounts/{shop.account_id}", {"ai_mode": "off"})
     ).status_code == 200
@@ -225,7 +226,7 @@ async def test_publishing_past_the_scheduled_posts(shop: Shop, action: str) -> N
 
 async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEngine) -> None:
     """After a downgrade, accounts past accounts_per_platform can't send (scheduled messages,
-    automations); the earliest connected keeps the plan's slot, and Pro lifts the limit."""
+    automations); the earliest connected keeps the plan's slot, and Business lifts the limit (C-172)."""
     extra = await shop.account("maple.cakes")
     await shop.execute(
         "UPDATE social_accounts SET connected_at = now() + interval '1 minute' WHERE id = :a",
@@ -248,7 +249,9 @@ async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEn
 
     first = f"/conversations/{await thread(shop)}/scheduled-messages"
     assert (await shop.call("POST", first, later_message)).status_code == 201
-    await set_plan(engine, shop.wid, "pro")
+    await set_plan(engine, shop.wid, "pro")  # Creator still has 1 Instagram account
+    assert (await shop.call("POST", path, later_message)).status_code == 402
+    await set_plan(engine, shop.wid, "max")  # Business has 3
     assert (await shop.call("POST", path, later_message)).status_code == 201
 
 
@@ -302,3 +305,99 @@ async def test_require_entitlement_and_require_capacity_gate_a_route(
     assert (await shop.call("GET", "/_gate/automation")).status_code == 200
     other = await shop.client.get(f"/v1/w/{uuid.uuid4()}/_gate/auto", headers=shop.headers)
     assert other.status_code == 404  # the role check runs first
+
+
+# ---------------------------------------------------------------- C-172 channels
+
+
+async def test_free_is_refused_whatsapp(shop: Shop) -> None:
+    response = await shop.call(
+        "POST",
+        "/social-accounts/whatsapp/embedded-signup",
+        {"code": "wa-code", "waba_id": WABA_ID, "phone_number_id": PHONE_NUMBER_ID},
+    )
+    body = assert_402(response, "entitlement_required", "whatsapp", None)
+    assert body["detail"].startswith("WhatsApp is part of Creator and Business.")
+
+
+async def test_free_is_refused_a_third_channel(shop: Shop) -> None:
+    """Free has 2 channels in total from Instagram, Facebook and web chat: with Instagram and a
+    Facebook Page connected, the website chat can't be made (the account is made on first open)."""
+    await make_account(
+        shop.engine, shop.wid, platform="facebook", platform_account_id="fb-1", username="maple"
+    )
+    response = await shop.call("GET", "/widget")
+    body = assert_402(response, "quota_exceeded", "channels_total", 2)
+    assert body["detail"] == (
+        "Your plan includes 2 channels in total. Disconnect one or upgrade to connect another."
+    )
+    # Creator has no total; Business neither.
+    await set_plan(shop.engine, shop.wid, "pro")
+    assert (await shop.call("GET", "/widget")).status_code == 200
+
+
+async def test_the_second_free_channel_is_allowed(shop: Shop) -> None:
+    assert (await shop.call("GET", "/widget")).status_code == 200  # Instagram + web chat = 2
+
+
+async def test_a_free_workspace_with_whatsapp_keeps_it_read_only(
+    shop: Shop, engine: AsyncEngine
+) -> None:
+    """Nothing is deleted: WhatsApp stays connected and readable, and cannot send on Free."""
+    wa = await make_account(shop.engine, shop.wid, platform="whatsapp", platform_account_id="999")
+    listed = (await shop.call("GET", "/social-accounts")).json()["items"]
+    assert {a["platform"] for a in listed} == {"instagram", "whatsapp"}
+    conversation = await thread(shop, wa)
+    path = f"/conversations/{conversation}/scheduled-messages"
+    later_message = {"text": "Your order ships today", "send_at": iso(later(minutes=10))}
+    body = assert_402(
+        await shop.call("POST", path, later_message), "entitlement_required", "whatsapp", None
+    )
+    assert "read-only until you upgrade to Creator or Business" in body["detail"]
+    await set_plan(engine, shop.wid, "pro")
+    assert (await shop.call("POST", path, later_message)).status_code == 201
+
+
+async def test_channels_past_the_free_total_are_read_only(shop: Shop) -> None:
+    await make_account(
+        shop.engine, shop.wid, platform="facebook", platform_account_id="fb-1", username="maple"
+    )
+    web = await make_account(
+        shop.engine, shop.wid, platform="web", platform_account_id="wgt_x", username="web"
+    )
+    await shop.execute(
+        "UPDATE social_accounts SET connected_at = now() + interval '1 minute' WHERE id = :a",
+        a=web,
+    )
+    path = f"/conversations/{await thread(shop, web)}/scheduled-messages"
+    later_message = {"text": "Hello", "send_at": iso(later(minutes=10))}
+    body = assert_402(
+        await shop.call("POST", path, later_message), "quota_exceeded", "channels_total", 2
+    )
+    assert "is read-only until you upgrade or disconnect another channel" in body["detail"]
+
+
+async def test_creator_is_refused_a_second_instagram_account_and_business_is_allowed(
+    shop: Shop,
+) -> None:
+    await set_plan(shop.engine, shop.wid, "pro")
+    assert_402(
+        await shop.call("POST", "/social-accounts/instagram/connect"),
+        "quota_exceeded",
+        "accounts_per_platform",
+        1,
+    )
+    await set_plan(shop.engine, shop.wid, "max")
+    allowed = await shop.call("POST", "/social-accounts/instagram/connect")
+    assert allowed.status_code == 200, allowed.text
+
+
+async def test_api_keys_are_business_only(shop: Shop) -> None:
+    body = {"name": "Zapier", "scopes": ["contacts:read"]}
+    for plan in ("free", "pro"):
+        await set_plan(shop.engine, shop.wid, plan)
+        refused = await shop.call("POST", "/api-keys", body)
+        assert_402(refused, "entitlement_required", "public_api", None)
+        assert refused.json()["detail"] == "The public API, API keys and Zapier are part of Business."
+    await set_plan(shop.engine, shop.wid, "max")
+    assert (await shop.call("POST", "/api-keys", body)).status_code == 201

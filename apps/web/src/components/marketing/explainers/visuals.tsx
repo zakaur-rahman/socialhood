@@ -76,7 +76,7 @@ const SOURCES_SHOWN = [
   { icon: FileText, title: KNOWLEDGE[0].title, kind: "File" },
   { icon: Link2, title: "Returns policy", kind: "Link" },
   { icon: Globe, title: "indigolane.example", kind: "Website, 12 pages" },
-  { icon: ShoppingBag, title: "Product catalogue", kind: "Pro" },
+  { icon: ShoppingBag, title: "Product catalogue", kind: "Creator and Business" },
 ];
 
 function KnowledgeScene() {

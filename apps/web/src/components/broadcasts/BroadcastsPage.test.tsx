@@ -89,9 +89,9 @@ describe("the broadcasts list (GR-23)", () => {
     expect(screen.getByRole("link", { name: /New/ })).toHaveAttribute("href", "/w/maple/broadcasts/new");
   });
 
-  it("says broadcasts are part of Pro on a plan without them, and offers no new broadcast", async () => {
+  it("says broadcasts are part of Creator and Business on a plan without them, and offers no new broadcast", async () => {
     setup({ plan_allowed: false, monthly_limit: 0 });
-    expect(await screen.findByText("Broadcasts are part of Pro")).toBeInTheDocument();
+    expect(await screen.findByText("Broadcasts are part of Creator and Business")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /New/ })).not.toBeInTheDocument();
   });
 

@@ -128,10 +128,10 @@ describe("the landing page", () => {
     expect(automations.getByText(/Never a condition for getting the link/)).toBeInTheDocument();
     expect(automations.getByRole("textbox", { name: "The keyword is yours" })).toHaveValue("LINK");
 
-    // Modes: a pressed Suggest, with Auto marked Pro; the three setup steps have their own band.
+    // Modes: a pressed Suggest, with Auto marked Creator and Business; the three setup steps have their own band.
     const modes = within(container.querySelector("section#modes") as HTMLElement);
     expect(modes.getByRole("button", { name: "Suggest" })).toHaveAttribute("aria-pressed", "true");
-    expect(modes.getByRole("button", { name: /Auto/ })).toHaveTextContent("Pro");
+    expect(modes.getByRole("button", { name: /Auto/ })).toHaveTextContent("Creator and Business");
     const setup = within(container.querySelector("section#setup") as HTMLElement);
     expect(setup.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
       "Connect your accounts",
@@ -145,7 +145,7 @@ describe("the landing page", () => {
     const features = container.querySelector("section#features") as HTMLElement;
     const groups = [...features.querySelectorAll(".fgroup")].map((group) => ({
       title: group.querySelector("h3")?.textContent,
-      items: [...group.querySelectorAll("h4")].map((h) => h.textContent?.replace(/ · Pro$/, "")),
+      items: [...group.querySelectorAll("h4")].map((h) => h.textContent?.replace(/ · Creator and Business$/, "")),
     }));
     expect(groups).toEqual([
       { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
@@ -218,8 +218,8 @@ describe("the landing page", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Will the AI make things up?" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See all questions" })).toHaveAttribute("href", "/faq");
 
-    // The closing claims Pro's trial only while Pro is on sale; two actions, no email (C-161 v2).
-    expect(screen.getByText("Try Pro free for 7 days")).toBeInTheDocument();
+    // The closing claims Creator's trial only while Creator is on sale; two actions, no email (C-161 v2).
+    expect(screen.getByText("Try Creator free for 7 days")).toBeInTheDocument();
     const close = container.querySelector("section.close") as HTMLElement;
     expect(within(close).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/sign-up", "/how-it-works"]);
     expect(close.querySelector(".falling")).toBeNull();
@@ -255,7 +255,7 @@ describe("the landing page", () => {
     expect(data.description).toMatch(/website chat/);
     expect(data.offers).toEqual([
       expect.objectContaining({ name: "Free", price: "0", priceCurrency: "INR" }),
-      expect.objectContaining({ name: "Pro", price: "999.00", priceCurrency: "INR" }),
+      expect.objectContaining({ name: "Creator", price: "999.00", priceCurrency: "INR" }),
     ]);
     expect(data).not.toHaveProperty("aggregateRating");
     expect(data).not.toHaveProperty("review");
@@ -308,11 +308,11 @@ describe("the landing page", () => {
     expect(faq.querySelectorAll("details.qa > summary")).toHaveLength(faq.querySelectorAll("details.qa").length);
   });
 
-  it("C-149: with Pro not on sale, the closing makes no trial claim and Free is the plan to start on", async () => {
+  it("C-149: with Creator not on sale, the closing makes no trial claim and Free is the plan to start on", async () => {
     const items = plansFixture().items.map((offer) => (offer.plan === "pro" ? { ...offer, available: false, price: null } : offer));
     vi.stubGlobal("fetch", vi.fn(plansFetch({ items })));
     const { container } = render(await HomePage());
-    expect(screen.queryByText(/Try Pro free/)).toBeNull();
+    expect(screen.queryByText(/Try Creator free/)).toBeNull();
     expect(container.querySelector("section#pricing .plan.main h3")?.textContent).toBe("Free");
   });
 
@@ -336,12 +336,13 @@ describe("the landing page", () => {
     );
     const { container } = render(await HomePage());
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByText("See pricing when you sign up")).toBeInTheDocument();
+    expect(pricing.getByTestId("planned-price-pro")).toHaveTextContent("$14 a month when we launch");
+    expect(pricing.getByTestId("planned-price-max")).toHaveTextContent("$29 a month when we launch");
     expect(pricing.getByText("3 active automations")).toBeInTheDocument();
     // A site deployed without the API reads the same: no "couldn't load" notice, no blanks or "null".
     expect(pricing.queryByText(/couldn't be loaded/)).toBeNull();
     expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
-    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/[$₹€£]\s?\d/);
+    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/[₹€£]\s?\d/);
     const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];
     expect(graph.find((node) => node["@type"] === "SoftwareApplication")).not.toHaveProperty("offers");
   });
@@ -353,8 +354,10 @@ describe("the landing page", () => {
     const { container } = render(await HomePage());
     expect(fetcher).not.toHaveBeenCalled();
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByRole("heading", { level: 3, name: "Pro" })).toBeInTheDocument();
-    expect(pricing.getByText(/Max:/).closest("p")).toHaveTextContent("isn't available to buy yet");
+    expect(pricing.getByRole("heading", { level: 3, name: "Creator" })).toBeInTheDocument();
+    expect(pricing.getByRole("heading", { level: 3, name: "Business" })).toBeInTheDocument();
+    expect(pricing.getByRole("heading", { level: 3, name: "Enterprise" })).toBeInTheDocument();
+    expect(pricing.getByText(/Business isn't available to buy yet/)).toBeInTheDocument();
   });
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {

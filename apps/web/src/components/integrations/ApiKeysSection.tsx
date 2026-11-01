@@ -74,7 +74,7 @@ const IP_HINT = "IP addresses or CIDR ranges, IPv4 or IPv6, like 203.0.113.7 or 
 /**
  * Settings › API keys (GR-25, own section since C-165): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
- * revoke one. The public API is part of Pro and Max: a Free workspace is told so instead of
+ * revoke one. The public API is part of Business: a workspace without it is told so instead of
  * being offered the form. Owners and admins, like the webhook endpoints.
  *
  * C-167: a key can expire (30 days, 90 days, a year, or never) and can be limited to IP addresses
@@ -88,7 +88,8 @@ export function ApiKeysSection() {
   const [adding, setAdding] = useState(false);
   const [shown, setShown] = useState<string | null>(null);
   const items = keys.data?.items ?? [];
-  const free = workspace.plan === "free";
+  // C-172: API keys are Business only (stored plan max).
+  const free = workspace.plan !== "max";
 
   return (
     <SettingsCard
@@ -114,7 +115,7 @@ export function ApiKeysSection() {
     >
       {free && items.length === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-raised p-4">
-          <p className="text-sm">The public API, API keys and Zapier are part of Pro.</p>
+          <p className="text-sm">The public API, API keys and Zapier are part of Business.</p>
           <Button asChild variant="secondary">
             <Link href={PLANS_HREF(workspace.slug)}>See plans</Link>
           </Button>

@@ -38,7 +38,7 @@ class WidgetSettingsOut(ResponseModel):
     email_prompt: str
     marketing_consent_enabled: bool
     marketing_consent_text: str
-    # What the visitor sees: false only on Pro and Max with the setting turned off.
+    # What the visitor sees: false only on Creator and Business with the setting turned off.
     show_branding: bool
     # Free cannot turn the branding off; the settings page shows the switch locked.
     can_remove_branding: bool

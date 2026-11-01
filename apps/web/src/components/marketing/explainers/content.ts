@@ -107,9 +107,9 @@ export const STAGES: Stage[] = [
     icon: BookOpenText,
     body: [SETUP_STEPS[1].body],
     points: [
-      // models/ai.py KnowledgeType: faq, text, url, file, site/page (GR-35); the catalogue is Pro (commerce).
-      `Add text and question-and-answer pairs, links, files and your website's pages, up to ${limit(E.crawl_pages.free)} pages on Free and ${limit(E.crawl_pages.pro)} on Pro.`,
-      "On Pro, the AI also answers price and stock from your product catalogue.",
+      // models/ai.py KnowledgeType: faq, text, url, file, site/page (GR-35); the catalogue is Creator and Business (commerce).
+      `Add text and question-and-answer pairs, links, files and your website's pages, up to ${limit(E.crawl_pages.free)} pages on Free and ${limit(E.crawl_pages.pro)} on Creator.`,
+      "On Creator and Business, the AI also answers price and stock from your product catalogue.",
       // billing/plans.py CREDIT_COSTS knowledge_test: 1.
       "Each test question uses one AI credit.",
     ],
@@ -154,7 +154,7 @@ export const STAGES: Stage[] = [
     icon: MessageSquareReply,
     // gtm-pages.ts, the AI inbox's "You choose how much the AI does" and "Only your knowledge".
     body: [
-      "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Pro.",
+      "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Creator and Business.",
       "Answers come from the documents, questions and products you add, and each draft shows the knowledge it used.",
     ],
     points: [
@@ -252,7 +252,7 @@ export type Cell = {
 export const CELL_STATUS_LABEL: Record<CellStatus, string> = {
   approval: "With Meta's approval",
   soon: "Coming soon",
-  pro: "Pro",
+  pro: "Creator and Business",
 };
 
 /** The grid, in reading order (C-160). Links go to a feature's own page where it has one, else to its detail below. */
@@ -338,7 +338,7 @@ export const BENTO: Cell[] = [
     icon: UsersRound,
     size: "s",
     href: "#d-team",
-    body: "Owners, admins and agents, with conversations assigned by hand or in turn. A team starts on Pro.",
+    body: "Owners, admins and agents, with conversations assigned by hand or in turn. A team starts on Creator.",
   },
   {
     id: "notifications",
@@ -391,7 +391,7 @@ export const BENTO: Cell[] = [
     icon: Plug,
     size: "s",
     href: "/developers/api",
-    body: "Google Sheets, Zapier and the public API on Pro and Max, webhooks on every plan. Shopify follows our app listing.",
+    body: "Google Sheets on Creator and Business, Zapier and the public API on Business, webhooks on every plan. Shopify follows our app listing.",
   },
   {
     id: "security",
@@ -405,7 +405,7 @@ export const BENTO: Cell[] = [
 
 // ---------------------------------------------------------------- /features: the details
 
-/** One plan limit: a label and Free, Pro and Max. */
+/** One plan limit: a label and Free, Creator and Business. */
 export type Limit = { label: string; free: string; pro: string; max: string };
 
 export type DetailGroup = {
@@ -456,7 +456,7 @@ export const DETAILS: DetailGroup[] = [
     ai: true,
     body: FAQ_MADE_UP.answer,
     points: [
-      "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Pro.",
+      "Off, Suggest or Auto for each account. Suggest drafts a reply for you to send. Auto replies by itself when it is confident, and is part of Creator and Business.",
       "Refunds, legal threats, complaints, abuse, low confidence, or your own phrases go to Needs you. Replying yourself pauses the AI.",
       "The AI writes in the tone you pick, with your emoji level, your do's and don'ts and your sign-off.",
       "Reading a message uses one AI credit, a draft or an automatic reply two, and a test question one.",
@@ -568,8 +568,8 @@ export const DETAILS: DetailGroup[] = [
     body: "Connect to other tools with Zapier, webhooks and API keys.",
     points: [
       "Webhooks on every plan.",
-      "Send leads to a spreadsheet you own with Google Sheets, on Pro and Max.",
-      "Zapier and the public API, on Pro and Max.",
+      "Send leads to a spreadsheet you own with Google Sheets, on Creator and Business.",
+      "Zapier and the public API, on Business.",
       "Shopify: bring your products in and keep prices and stock in step, with our Shopify app listing.",
     ],
     limits: [row("Webhook endpoints", "webhook_endpoints"), row("Google Sheets", "sheets_sync"), row("Public API", "public_api")],

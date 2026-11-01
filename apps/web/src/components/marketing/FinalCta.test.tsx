@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { FinalCta } from "./FinalCta";
 
 describe("the closing call to action (C-159 final CTA, C-161 v2)", () => {
-  it("claims Pro's trial only when one is passed, with two actions and no email", () => {
+  it("claims Creator's trial only when one is passed, with two actions and no email", () => {
     const { container, rerender } = render(<FinalCta />);
     const section = container.querySelector("section.night.close") as HTMLElement;
     expect(section).toHaveAttribute("aria-labelledby", "cta-title");
@@ -18,7 +18,7 @@ describe("the closing call to action (C-159 final CTA, C-161 v2)", () => {
       "Free plan, no card required",
       "Official Meta APIs, no password needed",
     ]);
-    expect(screen.queryByText(/Try Pro free/)).toBeNull();
+    expect(screen.queryByText(/Try Creator free/)).toBeNull();
     expect(screen.getAllByRole("link").map((link) => [link.textContent?.trim(), link.getAttribute("href")])).toEqual([
       ["Start free", "/sign-up"],
       ["See how it works", "/how-it-works"],
@@ -26,7 +26,7 @@ describe("the closing call to action (C-159 final CTA, C-161 v2)", () => {
     expect(container.querySelector('a[href^="mailto:"]')).toBeNull();
 
     rerender(<FinalCta trialDays={14} />);
-    expect(screen.getByText("Try Pro free for 14 days")).toBeInTheDocument();
+    expect(screen.getByText("Try Creator free for 14 days")).toBeInTheDocument();
   });
 
   it("puts a still, hidden arc behind the close: no channel line, no loop, no image (C-161 v2)", () => {

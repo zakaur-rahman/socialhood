@@ -60,7 +60,7 @@ export function McpApiKeyView({ apiBase }: { apiBase?: string }) {
             <h1 className="h-page">{API_KEY_H1}</h1>
             <p className="lede">
               Use an Amplychat API key instead of signing in. It suits Claude Code, Codex, other MCP apps that send a header, and
-              your own scripts. A key is part of Pro and Max.
+              your own scripts. A key is part of Business.
             </p>
             <div className="cx-url">
               <p className="cx-url-label">Server address</p>
@@ -84,7 +84,7 @@ export function McpApiKeyView({ apiBase }: { apiBase?: string }) {
                 </li>
               ))}
             </ul>
-            <p className="pp-toc-foot">Pro and Max</p>
+            <p className="pp-toc-foot">Business</p>
           </nav>
         </div>
       </section>
@@ -105,7 +105,7 @@ export function McpApiKeyView({ apiBase }: { apiBase?: string }) {
             ))}
           </ul>
           <p className="cx-note">
-            Making a key needs a Pro or Max workspace. A key acts as the member who made it, with that member&apos;s role.
+            Making a key needs a Business workspace. A key acts as the member who made it, with that member&apos;s role.
           </p>
         </div>
       </section>
@@ -223,8 +223,8 @@ export function McpApiKeyView({ apiBase }: { apiBase?: string }) {
                 <tr>
                   <th scope="col">Per workspace</th>
                   <th scope="col">Free</th>
-                  <th scope="col">Pro</th>
-                  <th scope="col">Max</th>
+                  <th scope="col">Creator</th>
+                  <th scope="col">Business</th>
                 </tr>
               </thead>
               <tbody>
