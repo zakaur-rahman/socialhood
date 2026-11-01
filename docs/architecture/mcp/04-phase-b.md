@@ -33,7 +33,7 @@
 2. **Five minutes ahead.** `when` earlier than now + 5 minutes (`MIN_SCHEDULE_LEAD`) is a field error on `when`. There is no "publish now".
 3. **The team is told.** A scheduled, changed or cancelled post notifies the owners and admins (in the app, `ai_post_change`) with the AI app, the member and a link to the post, where it is cancelled.
 4. **Free saves drafts only.** `create_post` is a draft-tier tool, so Free (mode capped at `read_drafts`) can call it with `when: "draft"`; any other `when` is `entitlement_required` (`ai_connections`). A Pro workspace set to "read and drafts" gets a plain refusal instead.
-5. **Daily cap.** `mcp_posts_daily`: Pro 25, Max 100, counted when a post is scheduled.
+5. **Caps.** `mcp_posts_daily`: Pro 100, Max 300 (C-169; were 25 and 100), and 20 a minute per workspace (`mcp_posts`), both counted when a post is scheduled.
 
 `when` is one string: an ISO time (an offset, or the workspace zone without one), words like "tomorrow 7 pm" (the Ask resolver), `next_free_slot`, or `draft`. The rules are the composer's: `services/scheduled_posts` (checklist, quota `scheduled_posts_monthly`, formats).
 
@@ -94,12 +94,14 @@ Added after launch, because Claude could neither create an automation nor find "
 | Tool | Scope | Role | Access | Plan | Hints (read-only / destructive / idempotent / open world) |
 |---|---|---|---|---|---|
 | `list_instagram_posts` | `posts:read` | agent | read | all | true / false / true / false |
-| `create_automation` | `automations:write` | admin | write | Pro, Max | false / false / true / true |
-| `update_automation` | `automations:write` | admin | write | Pro, Max | false / true / true / true |
+| `create_automation` | `automations:create` | admin | write | Pro, Max | false / false / true / true |
+| `update_automation` | `automations:create` | admin | write | Pro, Max | false / true / true / true |
 
 - **`post`.** `resolve_post` (`mcp/tools/common.py`) is the one reader of a post id or `latest`, used by `create_automation`, `update_automation`, `get_post_comments_summary` and `get_analytics_summary` (`post_id`). `latest` is the first item of `list_instagram_posts`, without Stories (they take no comments), of `account` when given. The automation tools also take `next` and `any`.
-- **`create_automation`** goes through the editor's services: `definitions.create`, `definitions.update` (the autosave PUT), and `definitions.activate` when `turn_on` is true. Without `confirmed` the same calls run inside a savepoint, so its errors are the real ones. The result shows the account, the post, the keywords, the DM, the public reply, the tap first opening, overlaps with live automations (`queries`, FR-AUT-15), what activation would still refuse (`flow_store.problems`) and active automations used and allowed. Over the limit, it is `quota_exceeded` telling the member to pause one or upgrade, in the preview and in the confirmed call, and nothing is created. Identical confirmed calls dedupe for 10 minutes.
+- **`create_automation`** goes through the editor's services: `definitions.create`, `definitions.update` (the autosave PUT), and `definitions.activate` when `turn_on` is true. Without `confirmed` the same calls run inside a savepoint, so its errors are the real ones. The result shows the account, the post, the keywords, the DM, the public reply, the tap first opening, overlaps with live automations (`queries`, FR-AUT-15), what activation would still refuse (`flow_store.problems`) and active automations used and allowed. Over the limit, it is `quota_exceeded` telling the member to pause one or upgrade, in the preview and in the confirmed call, and nothing is created. Identical confirmed calls dedupe for 15 minutes, as long as a confirmation token lasts (`create_post` too).
 - **`update_automation`** sends the stored definition back with only the fields given. It refuses a flow, an AI reply, an image, Live comments and other triggers, with a link to the editor. It doesn't turn anything on or off.
 - **Told and recorded.** `ai_automation_change` notifies owners and admins; `automation.created`, `automation.activated` and `automation.updated` go to the audit mirror.
 - **Prompt.** `set_up_comment_automation` (`mcp/prompts.py`).
+- **Preview, enforced.** `mcp/confirmations.py`: a confirmed change needs the preview's `confirmation_token` (01-design.md §6.6). This also applies to `create_post` (scheduling), `update_post` and `cancel_post`; item 1 of "Posts" above now means this.
+- **Scope.** The two automation tools need `automations:create`; `automations:write` stays pause and resume, so existing connections don't gain them.
 - **Tests.** `tests/integration/test_mcp_automations.py`.

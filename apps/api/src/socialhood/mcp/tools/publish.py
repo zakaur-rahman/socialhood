@@ -14,7 +14,7 @@ Posts go directly, as the member's own action (decision D3), with these safety n
   with a link to the post (where it is cancelled).
 - **Free saves drafts only.** The workspace's mode and the plan decide (``require_scheduling``);
   Free gets ``entitlement_required``, a workspace set to "read and drafts" a plain refusal.
-- **A daily cap** on posts scheduled (``mcp_posts_daily``).
+- **Caps** on posts scheduled: per day (``mcp_posts_daily``) and per minute (``mcp_posts``).
 
 Everything else is the app's own rules: the same services as the composer
 (``services/scheduled_posts``), so the checklist, the account and media checks, the monthly
@@ -206,6 +206,16 @@ def require_scheduling(call: ToolCall) -> None:
     )
 
 
+async def _reserve_post(call: ToolCall) -> limits.Reservation:
+    return await limits.reserve_post(
+        call.redis,
+        call.plan,
+        call.workspace.id,
+        call.now,
+        rate_limited=call.settings.rate_limits_enabled,
+    )
+
+
 async def _accounts(call: ToolCall, names: list[str]) -> list[uuid.UUID]:
     ctx = call.agent_context()
     found: list[uuid.UUID] = []
@@ -371,13 +381,7 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
         confirmations.require(call, args, args.confirmation_token)
     reservation = None
     if scheduling and not preview:
-        reservation = await limits.reserve(
-            call.redis,
-            call.plan,
-            limits.POSTS,
-            call.workspace.id,
-            call.now,
-        )
+        reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
     try:
         post = await posts.create(call.session, draft, _env(call), user_id=call.principal.user_id)
@@ -543,9 +547,7 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
         confirmations.require(call, args, args.confirmation_token)
     reservation = None
     if scheduling and not scheduled_before and not preview:
-        reservation = await limits.reserve(
-            call.redis, call.plan, limits.POSTS, call.workspace.id, call.now
-        )
+        reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
     try:
         post = await posts.replace(call.session, args.post_id, merged, env)

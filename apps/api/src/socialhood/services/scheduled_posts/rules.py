@@ -699,7 +699,7 @@ def checklist(
             _item(
                 "publishing_limit",
                 f"{t.handle} already has {t.recent_posts} posts in the 24 hours before this time; "
-                f"Instagram allows {publishing_limit}.",
+                f"the limit for an Instagram account is {publishing_limit}.",
                 ok=False,
                 field=f"targets.{i}",
             )

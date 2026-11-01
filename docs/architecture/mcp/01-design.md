@@ -226,7 +226,8 @@ The existing public API scopes stay. MCP adds:
 | `comments:read` | Post comments, topics and sentiment | Insights |
 | `analytics:read` | Post and account analytics | Insights |
 | `knowledge:read`, `knowledge:write` | Search knowledge, and add a text or website source | Knowledge |
-| `automations:read` *(exists)*, `automations:write` | List automations and their stats; create and change keyword automations, and pause or resume one (C-169) | Automations |
+| `automations:read` *(exists)*, `automations:write` | List automations and their stats, and pause or resume one | Automations |
+| `automations:create` (C-169) | Create and change keyword automations, and turn new ones on | Automations |
 | `ask` | Ask Amplychat a question (uses AI credits) | Ask |
 | `messages:send` *(exists, R2 on MCP)* | Send a reply (with approval in R2) | — |
 
@@ -484,7 +485,9 @@ What exists already (reused as is):
 | `sends` *(exists)* | 60/min | per workspace: every schedule, queue or publish |
 | `ai` *(exists)* | 20/min | per workspace: `ask_amplychat` |
 | Daily tool calls | Free 100, Pro 2,000, Max 10,000 | per workspace |
-| Posts created via MCP | 25/day Pro, 100/day Max (below Instagram's 100 API posts per 24 h per account, `DEFAULT_PUBLISHING_LIMIT`) | per workspace |
+| `mcp_posts` (C-169) | 20 posts scheduled/min | per workspace, across all connections. Only a confirmed post really being scheduled counts; one post to several accounts counts once |
+| Posts scheduled via MCP | 100/day Pro, 300/day Max, none on Free (C-169; was 25 and 100) | per workspace. Not Instagram's limit, which is per account: below |
+| Instagram's publishing limit | 50 posts per account per rolling 24 h in the checklist (`DEFAULT_PUBLISHING_LIMIT`, C-169: Meta's pages say both 100 and 50); the live `quota_total` decides at publish time | per account, composer and MCP alike |
 | OAuth endpoints | `/oauth/register` 10/h per IP; `/oauth/token` 60/min per client; `/oauth/authorize` 30/min per IP | |
 
 A refused call is a tool error that says when to retry. It isn't an HTTP 429 that a client might surface as "server broken".
@@ -509,7 +512,7 @@ A refused call is a tool error that says when to retry. It isn't an HTTP 429 tha
 
 ### 6.4 Meta policy
 
-- **Posts:** posting through the Instagram Content Publishing API on the member's own accounts is the use it's for. Our existing limits (100 API posts per 24 h per account, checked by the publishing rail) apply unchanged.
+- **Posts:** posting through the Instagram Content Publishing API on the member's own accounts is the use it's for. Our existing limits apply unchanged: 50 API posts per 24 h per account in the checklist (C-169, Meta's pages say both 50 and 100), and the live quota read before publishing.
 - **DMs:** sending isn't in R1. When R2 adds it, every send still goes through `services/sending.py`: the 24-hour reply window, the human-agent tag rules, and per-workspace `sends`. Meta's messaging policy (no unsolicited messages, no outside-window promotions) is enforced in code, not left to the AI.
 - **Bulk writes:** there are none in MCP. No tool takes a list of conversations to message.
 
@@ -533,6 +536,8 @@ The real risks, in order:
 
 ### 6.6 Confirmations for destructive actions
 
+**Server-checked preview (C-169).** `create_automation`, `update_automation`, a scheduling `create_post`, `update_post` on a scheduled post (or giving a draft a time) and `cancel_post` of a scheduled post refuse `confirmed: true` without the preview's `confirmation_token` (`mcp/confirmations.py`): a stateless HMAC over the tool, workspace, credential and canonical arguments, for 15 minutes. It proves this connection fetched a preview of exactly this change. It can't prove a person read it: an AI app set to always allow the tools can confirm by itself, and the public copy says so.
+
 - **Hints:** `update_post`, `cancel_post` and `pause_automation` carry `destructiveHint: true`. Claude says destructive tools "always prompt". ChatGPT asks before write actions.
 - **Our side:** we don't rely on hints, which the spec says are untrusted. Every write returns a summary of what changed, with a deep link. A post's status stays `scheduled` (not `publishing`) for at least 5 minutes. The owner notification gives a second, human-side check.
 - **MRTR:** the 2026-07-28 "input required" round trip (an elicitation form returned as a result) could ask "Schedule this to 3 accounts?" from the server. Client support is uneven, so it's R2 at the earliest.
@@ -552,7 +557,7 @@ Operators also get a global `MCP_ENABLED` setting, and a per-client block list (
 
 ### 6.8 Per-token scopes
 
-§3.4: each tool needs one scope, `tools/list` shows only allowed tools, and step-up uses 403 `insufficient_scope`. A key or grant never gains scopes silently. A new scope means a new consent.
+§3.4: each tool needs one scope, `tools/list` shows only allowed tools, and step-up uses 403 `insufficient_scope`. A key or grant never gains scopes silently. A new scope means a new consent. That's why creating automations (C-169) has its own `automations:create`, not `automations:write`.
 
 ### 6.9 Other
 

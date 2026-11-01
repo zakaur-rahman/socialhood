@@ -65,10 +65,15 @@ SLOT_BUSY_WITHIN = dt.timedelta(minutes=30)
 HASHTAG_GROUP_NAME_MAX_CHARS = 40
 SUGGESTED_HASHTAGS_MAX = 20  # FR-PUB-02
 CALENDAR_MAX_DAYS = 42  # six weeks: a month grid (§2.15 …/calendar)
-# Instagram's rolling 24 h limit on API-published posts (a carousel counts once). The account's
-# content_publishing_limit (quota_total) is authoritative; this is the fallback when it can't be
-# read. Verify at T0.9.
-DEFAULT_PUBLISHING_LIMIT = 100
+# Instagram's rolling 24 h limit on API-published posts (a carousel counts once). Meta's pages
+# disagree (read 2026-11-01): the Content Publishing guide says 100 in its limitations and 50 in
+# its carousel section (developers.facebook.com/docs/instagram-platform/content-publishing/); the
+# IG User media_publish and content_publishing_limit references say 50
+# (developers.facebook.com/documentation/instagram-platform/instagram-graph-api/reference/ig-user/
+# media_publish.md and content_publishing_limit.md). So we plan with the lower number: this is the
+# checklist's limit for the composer and MCP alike, and the fallback when the quota can't be read.
+# At publish time the account's live content_publishing_limit (quota_total) decides.
+DEFAULT_PUBLISHING_LIMIT = 50
 # Instagram Stories (GR-39, C-114; limits from Meta's Content Publishing guide, unverified until a
 # real account publishes one): a story is one image or one video, live for 24 hours, with no
 # caption. Story videos run 3 to 60 seconds; 9:16 is the shape Meta recommends.
