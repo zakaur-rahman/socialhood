@@ -51,6 +51,8 @@ R1_READ_TOOLS = {
     "search_knowledge",
     "list_automations",
 }
+# C-169: the posts synced from the accounts, and creating and changing automations.
+C169_TOOLS = {"list_instagram_posts", "create_automation", "update_automation"}
 
 
 # ---------------------------------------------------------------- the catalogue
@@ -72,10 +74,10 @@ R1_WRITE_TOOLS = {
 }
 
 
-def test_r1_ships_the_design_s_25_tools() -> None:
+def test_r1_ships_the_design_s_25_tools_and_c169_s_3() -> None:
     registry = load_tools()
-    everything = R1_READ_TOOLS | R1_WRITE_TOOLS
-    assert len(everything) == 25
+    everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS
+    assert len(everything) == 28
     assert {t.name for t in registry} == everything
     assert [t.name for t in registry] == sorted(everything)  # deterministic tools/list
 
@@ -93,6 +95,9 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         "add_knowledge": ("knowledge:write", Role.ADMIN, Access.WRITE, False, False),
         "pause_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, False),
         "resume_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
+        "create_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
+        "update_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, True),
+        "list_instagram_posts": ("posts:read", Role.AGENT, Access.READ, False, False),
         "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
         "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
     }
@@ -108,6 +113,8 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
             open_world,
         ), name
     assert registry.get("create_post").dedupe_window_s == 600  # type: ignore[union-attr]
+    assert registry.get("create_automation").dedupe_window_s == 600  # type: ignore[union-attr]
+    assert registry.get("update_automation").dedupe_window_s is None  # type: ignore[union-attr]
 
 
 def test_every_tool_follows_the_conventions() -> None:

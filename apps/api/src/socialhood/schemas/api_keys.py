@@ -59,7 +59,10 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "messages:send": "Send a message in a conversation, inside the platform's reply window.",
     "automations:read": "Read automation runs.",
     "webhooks:subscribe": "Subscribe and unsubscribe REST hooks (what Zapier triggers use).",
-    "posts:read": "AI apps: read scheduled posts, the calendar, best times and the media library.",
+    "posts:read": (
+        "AI apps: read published and scheduled posts, the calendar, best times and the media "
+        "library."
+    ),
     "posts:write": "AI apps: create, change, reschedule and cancel scheduled posts.",
     "media:write": "AI apps: upload or import images and videos for posts.",
     "replies:draft": "AI apps: prepare a reply for a member to send in Amplychat (never sent).",
@@ -67,7 +70,7 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "analytics:read": "AI apps: read post and account analytics.",
     "knowledge:read": "AI apps: search the knowledge base.",
     "knowledge:write": "AI apps: add a text note or a website to the knowledge base.",
-    "automations:write": "AI apps: pause and resume automations.",
+    "automations:write": "AI apps: create, edit, pause and resume automations.",
     "ask": "AI apps: ask Amplychat's own assistant (uses AI credits).",
 }
 

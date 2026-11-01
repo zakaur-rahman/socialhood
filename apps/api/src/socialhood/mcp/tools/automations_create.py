@@ -93,6 +93,7 @@ FULL = (
     "Your plan allows {limit} automations on at once and {used} are on. Pause one "
     "(pause_automation) or upgrade, or create this one turned off."
 )
+WHICH_ACCOUNT = "Several Instagram accounts could run this: {names}. Which one?"
 NO_POST_ON_DM = "A DM keyword answers DMs, not a post. Leave post out."
 NO_REPLY_ON_DM = "A public reply answers a comment. Leave public_reply out for DMs."
 
@@ -484,6 +485,11 @@ async def create_automation(call: ToolCall, args: CreateAutomationInput) -> Auto
         else _Scope("all")
     )
     account_id = acct.id if acct else (scope.item.social_account_id if scope.item else None)
+    if account_id is None:  # the service only picks an account when there is exactly one
+        live = await automations_repo.live_instagram_accounts(call.session)
+        if len(live) > 1:
+            names = ", ".join(handle(a) for a in live)
+            raise ApiError("conflict", WHICH_ACCOUNT.format(names=names))
     savepoint = None if args.confirmed else await call.session.begin_nested()
     automation = await definitions.create(
         call.session,
@@ -558,6 +564,8 @@ def _not_simple(out: AutomationOut) -> str | None:
     """Why update_automation can't edit this one safely, or None."""
     if out.flow_source == "flow":
         return "is a multi-step flow"
+    if out.comment_surface != "posts":
+        return "answers Live comments"
     if out.trigger not in SIMPLE_TRIGGERS:
         return "starts on something other than a comment or DM keyword"
     if out.action != "send_message":

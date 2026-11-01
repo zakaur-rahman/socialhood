@@ -378,7 +378,11 @@ async def test_ask_needs_its_scope(
 async def test_the_two_prompts(mcp_app: FastAPI, key: str) -> None:
     async with connect(mcp_app, key) as mcp:
         listed = {p.name: p for p in (await mcp.list_prompts()).prompts}
-        assert set(listed) == {"schedule_a_post", "weekly_inbox_digest"}
+        assert set(listed) == {
+            "schedule_a_post",
+            "weekly_inbox_digest",
+            "set_up_comment_automation",
+        }
         schedule = await mcp.get_prompt("schedule_a_post", {"when": "Friday 6 pm"})
         digest = await mcp.get_prompt("weekly_inbox_digest")
     text_of = schedule.messages[0].content

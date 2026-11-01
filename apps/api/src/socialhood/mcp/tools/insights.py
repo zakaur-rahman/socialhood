@@ -185,7 +185,12 @@ class AnalyticsInput(ToolInput):
         )
     )
     account: str | None = Field(default=None, max_length=100, description=ACCOUNT)
-    post_id: uuid.UUID | None = Field(default=None, description="For scope post.")
+    post_id: str | None = Field(
+        default=None,
+        max_length=60,
+        description="For scope post: a post's id (from list_instagram_posts), or “latest” for the "
+        "newest one.",
+    )
     period: str | None = Field(
         default=None,
         max_length=80,
@@ -333,8 +338,9 @@ async def get_analytics_summary(call: ToolCall, args: AnalyticsInput) -> Analyti
             caveats=found.caveats,
         )
     if args.scope == "post":
+        item = await resolve_post(call, args.post_id or "", account=args.account, field="post_id")
         perf = await agent_tool(
-            call, "post_performance", {"post_id": args.post_id, "at_age": args.at_age}
+            call, "post_performance", {"post_id": item.id, "at_age": args.at_age}
         )
         figures = perf.metrics
         return AnalyticsResult(

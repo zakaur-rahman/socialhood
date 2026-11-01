@@ -36,7 +36,11 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "publishing",
         "Publishing",
         (
-            ("posts:read", "See scheduled posts, the calendar, best times and your media library"),
+            (
+                "posts:read",
+                "See published and scheduled posts, the calendar, best times and your media "
+                "library",
+            ),
             ("posts:write", "Schedule, change, reschedule and cancel posts"),
             ("media:write", "Upload or import images and videos for posts"),
         ),
@@ -70,7 +74,11 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "Automations",
         (
             ("automations:read", "See your automations and how they're doing"),
-            ("automations:write", "Pause and resume automations"),
+            (
+                "automations:write",
+                "Create and edit keyword automations and turn them on, after you confirm; pause "
+                "and resume automations",
+            ),
         ),
     ),
     ScopeGroup(
