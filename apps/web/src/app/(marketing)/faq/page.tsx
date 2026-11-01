@@ -1,3 +1,6 @@
+import type { Route } from "next";
+import Link from "next/link";
+
 import { FaqMotion } from "@/components/marketing/FaqMotion";
 import { BreadcrumbJsonLd, JsonLd } from "@/components/marketing/JsonLd";
 import { Ico } from "@/components/marketing/landing/Ico";
@@ -74,6 +77,11 @@ export default function FaqPage() {
                           </span>
                         </summary>
                         <p>{item.answer}</p>
+                        {item.link ? (
+                          <p className="qa-more">
+                            <Link href={item.link.href as Route}>{item.link.label}</Link>
+                          </p>
+                        ) : null}
                       </details>
                     ))}
                   </div>

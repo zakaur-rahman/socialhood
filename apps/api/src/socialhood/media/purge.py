@@ -11,6 +11,10 @@ Deleting one account's data (C-067) deletes named files instead: the ones its me
 type (DELETE /resources/{type}/upload?public_ids[]=…). A file Cloudinary doesn't know is already
 gone; a public id outside the workspace's folder is never sent.
 
+C-167: the daily MCP upload cleanup lists a ticket's files by its tag (``mcp_upload_{id}``,
+GET /resources/{type}/tags/{tag}, image and video), keeps only those in the workspace's folder,
+and deletes the unregistered ones with ``delete_files``.
+
 Without Cloudinary credentials nothing can have been uploaded, so there is nothing to delete.
 Tests swap the purger with ``use_media_purger`` (no test reaches Cloudinary).
 """
@@ -33,6 +37,8 @@ log = get_logger(__name__)
 RESOURCE_TYPES = ("image", "video", "raw")
 MAX_PAGES = 200  # 200,000 files per type in one run; the purge job runs again for the rest
 IDS_PER_CALL = 100  # Cloudinary's limit for public_ids[] in one delete
+TAGGED_TYPES = ("image", "video")  # what an MCP upload ticket can bring in
+TAGGED_MAX = 100  # a ticket takes one file; more would be someone reusing its signature
 
 
 def workspace_prefix(workspace_id: uuid.UUID) -> str:
@@ -53,6 +59,11 @@ class MediaPurger(Protocol):
     async def delete_files(self, workspace_id: uuid.UUID, files: Sequence[StoredFile]) -> None:
         """Delete these files of the workspace (never one outside its folder); raise
         CloudinaryError when Cloudinary can't be reached or refuses, so the purge tries again."""
+        ...
+
+    async def list_tagged(self, workspace_id: uuid.UUID, tag: str) -> list[StoredFile]:
+        """The workspace's files carrying ``tag`` (none outside its folder); raise
+        CloudinaryError when Cloudinary can't be reached or refuses."""
         ...
 
 
@@ -83,6 +94,29 @@ class CloudinaryPurger:
             for start in range(0, len(ids), IDS_PER_CALL):
                 deleted += await self._delete_ids(resource_type, ids[start : start + IDS_PER_CALL])
         log.info("media_files_purged", workspace_id=str(workspace_id), files=deleted)
+
+    async def list_tagged(self, workspace_id: uuid.UUID, tag: str) -> list[StoredFile]:
+        storage = self.cloudinary
+        if not storage.configured:
+            return []
+        found: list[StoredFile] = []
+        for resource_type in TAGGED_TYPES:
+            response = await storage.http.get(
+                f"{API}/{storage.cloud}/resources/{resource_type}/tags/{tag}",
+                params={"max_results": TAGGED_MAX},
+                auth=(storage.api_key, storage.secret),
+            )
+            if response.status_code == 404:
+                continue
+            if response.status_code >= 400:
+                raise CloudinaryError(
+                    f"listing tagged {resource_type} files failed with HTTP {response.status_code}"
+                )
+            for resource in response.json().get("resources") or []:
+                public_id = str(resource.get("public_id") or "")
+                if public_id and in_workspace(public_id, workspace_id):
+                    found.append(StoredFile(public_id, resource_type))
+        return found
 
     async def _delete_ids(self, resource_type: str, public_ids: list[str]) -> int:
         storage = self.cloudinary

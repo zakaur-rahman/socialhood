@@ -1,12 +1,14 @@
-"""API keys (GR-25): the scope catalogue, a key's record and the one-time view of a new key."""
+"""API keys (GR-25): the scope catalogue, a key's record and the one-time view of a new key.
+C-167: optional expiry (30, 90 or 365 days) and an IP allowlist (IPs and CIDRs, IPv4 and IPv6)."""
 
 from __future__ import annotations
 
+import ipaddress
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
@@ -75,9 +77,60 @@ class ApiScope(ResponseModel):
     description: str
 
 
+MAX_ALLOWED_IPS = 20
+IpEntry = Annotated[str, Field(min_length=1, max_length=50)]
+ExpiresInDays = Literal[30, 90, 365]
+
+
+def normalise_ips(values: list[str]) -> list[str]:
+    """Each entry as ``ipaddress`` writes it: "203.0.113.7", "10.0.0.0/8", "2001:db8::/32". A
+    single address keeps no prefix length. Repeats are dropped; the order is the member's."""
+    out: list[str] = []
+    for raw in values:
+        entry = raw.strip()
+        try:
+            network = ipaddress.ip_network(entry, strict=True)
+        except ValueError as error:
+            if "has host bits set" in str(error):
+                fixed = ipaddress.ip_network(entry, strict=False)
+                raise ValueError(
+                    f"{entry} isn't a network address. Did you mean {fixed}?"
+                ) from None
+            raise ValueError(f"{entry} isn't an IP address or a CIDR range.") from None
+        text = (
+            str(network.network_address)
+            if network.prefixlen == network.max_prefixlen
+            else str(network)
+        )
+        if text not in out:
+            out.append(text)
+    return out
+
+
 class ApiKeyCreate(RequestModel):
     name: str = Field(min_length=1, max_length=80)
     scopes: list[ApiScopeName] = Field(min_length=1, max_length=20)
+    # C-167: leave out (or null) for a key that never expires.
+    expires_in_days: ExpiresInDays | None = None
+    # C-167: the addresses the key may be used from; empty for any.
+    allowed_ips: list[IpEntry] = Field(default_factory=list, max_length=MAX_ALLOWED_IPS)
+
+    @field_validator("allowed_ips")
+    @classmethod
+    def _ips(cls, value: list[str]) -> list[str]:
+        return normalise_ips(value)
+
+
+class ApiKeyUpdate(RequestModel):
+    """C-167: only the name and the allowlist change after a key is made; never its scopes."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    allowed_ips: list[IpEntry] | None = Field(default=None, max_length=MAX_ALLOWED_IPS)
+
+    @field_validator("allowed_ips")
+    @classmethod
+    def _ips(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else normalise_ips(value)
 
 
 class ApiKey(ResponseModel):
@@ -88,6 +141,11 @@ class ApiKey(ResponseModel):
     created_at: datetime
     last_used_at: datetime | None = None
     revoked_at: datetime | None = None
+    expires_at: datetime | None = None  # C-167: null for a key that never expires
+    allowed_ips: list[str] = Field(default_factory=list)  # C-167: empty means any address
+    # C-167: the member who made it no longer has an account (a key from before C-167; keys of
+    # members who leave are revoked). It still works on the public API, not over MCP.
+    made_by_former_member: bool = False
 
 
 class ApiKeyWithKey(ApiKey):

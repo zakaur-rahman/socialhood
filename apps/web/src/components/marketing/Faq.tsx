@@ -57,6 +57,11 @@ export function Faq({
                 </span>
               </summary>
               <p>{item.answer}</p>
+              {item.link ? (
+                <p className="qa-more">
+                  <Link href={item.link.href as Route}>{item.link.label}</Link>
+                </p>
+              ) : null}
             </details>
           ))}
           {allLink ? (

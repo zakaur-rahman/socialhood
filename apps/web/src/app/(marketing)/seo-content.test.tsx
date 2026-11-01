@@ -112,7 +112,8 @@ describe("/compare/manychat-alternatives (C-163)", () => {
     expect(cards.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual(names);
     for (const item of ALTERNATIVES) expect(container.querySelector(`a[href="${item.href}"]`)).not.toBeNull();
     // Each competitor card says when its details were checked.
-    expect(screen.getAllByText(/Checked on 29 October 2026\./)).toHaveLength(ALTERNATIVES.filter((item) => !item.ours).length);
+    // C-168: Manychat, Inrō, Wati and Spur were last checked on 1 November 2026 (their MCP pages).
+    expect(screen.getAllByText(/Checked on (29 October|1 November) 2026\./)).toHaveLength(ALTERNATIVES.filter((item) => !item.ours).length);
     const list = jsonLd(container).find((node) => node["@type"] === "ItemList")!;
     expect(list).toMatchObject({ itemListOrder: "https://schema.org/ItemListUnordered", numberOfItems: ALTERNATIVES.length });
     expect((list.itemListElement as unknown[]).length).toBe(ALTERNATIVES.length);

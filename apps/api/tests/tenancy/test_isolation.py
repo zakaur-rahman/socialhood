@@ -101,8 +101,12 @@ PARAM_TO_SEED: dict[str, str] = {
 # C-165 phase C: the consent page's routes are keyed by a waiting OAuth request (a Valkey id), not
 # a workspace; the workspace is chosen in the body and checked against the caller's memberships
 # (tests/integration/test_mcp_oauth.py, test_one_connection_one_workspace).
+# C-167: GitHub's secret scanning reports (POST /v1/security/secret-scanning) name no workspace
+# and no id; GitHub's signature stands in for a sign-in, and a reported key is found by its hash
+# in whichever workspace holds it (tests/integration/test_api_key_hardening.py).
 PUBLIC_ROUTES = frozenset(
     {
+        "/v1/security/secret-scanning",
         "/v1/data-deletion/{code}",
         "/l/{code}",
         "/v1/connect/requests/{request_id}",
@@ -185,6 +189,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
     ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
     ("POST", "/v1/w/{wid}/api-keys"): {"name": "Not yours", "scopes": ["contacts:read"]},  # GR-25
+    ("PATCH", "/v1/w/{wid}/api-keys/{key_id}"): {"name": "Taken over"},  # C-167
     ("PUT", "/v1/w/{wid}/ai-connections/settings"): {"mode": "off"},  # C-165
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},

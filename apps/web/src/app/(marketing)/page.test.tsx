@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HERO_SCENE_LABEL, HERO_TITLE } from "@/components/marketing/landing/Hero";
+import { AI_APPS_SCENE_LABEL } from "@/components/marketing/landing/AiApps";
+import { HERO_NEW, HERO_SCENE_LABEL, HERO_TITLE } from "@/components/marketing/landing/Hero";
 import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
 import { SITE_DESCRIPTION } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
@@ -50,6 +51,7 @@ describe("the landing page", () => {
       "AI replies from your own knowledge",
       "Comment LINK, get the link in a DM",
       "Off, Suggest or Auto, for each account",
+      "Your AI assistant, connected to your Instagram",
       "Your customers' messages, handled with care",
       "Who it's for",
       "Everything your customer conversations need",
@@ -59,11 +61,13 @@ describe("the landing page", () => {
       "Ready to take control of every conversation?",
     ]);
     // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
+    // C-168: the AI assistant band (MCP) is paper, between Modes and Security, so the paper run there is three.
     expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
       "hero",
       "how-it-works",
       "automations",
       "modes",
+      "ai-apps",
       "security",
       "who-its-for",
       "features",
@@ -83,6 +87,23 @@ describe("the landing page", () => {
     expect(screen.getByText("For small businesses and creators:")).toBeInTheDocument();
     expect(screen.getByText(/AI inbox and automations for Instagram, WhatsApp and website chat/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: HERO_SCENE_LABEL })).toBeInTheDocument();
+    // C-168: one "New" link, to the MCP page.
+    const heroNew = within(container.querySelector("section.hero") as HTMLElement).getByRole("link", { name: new RegExp(HERO_NEW) });
+    expect(heroNew).toHaveAttribute("href", "/mcp");
+    expect(heroNew).toHaveTextContent(/^New/);
+
+    // C-168: the AI assistant band: its heading, the example chat as one labelled picture, the four
+    // points, and the two ways on.
+    const aiApps = within(container.querySelector("section#ai-apps") as HTMLElement);
+    expect(aiApps.getByRole("img", { name: AI_APPS_SCENE_LABEL })).toBeInTheDocument();
+    expect(aiApps.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Works with Claude, ChatGPT and Codex",
+      "You confirm first",
+      "It can't message your customers",
+      "Reading and drafts on every plan",
+    ]);
+    expect(aiApps.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/mcp");
+    expect(aiApps.getByRole("link", { name: "Set it up" })).toHaveAttribute("href", "/developers/mcp");
     // The server renders the sorted inbox: what needs a person comes first.
     const tags = [...container.querySelectorAll(".note .tag")].map((tag) => tag.textContent);
     expect(tags.slice(0, 2)).toEqual(["Needs you", "Needs you"]);
@@ -128,7 +149,10 @@ describe("the landing page", () => {
     }));
     expect(groups).toEqual([
       { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
-      { title: "Automate the repetitive work", items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon"] },
+      {
+        title: "Automate the repetitive work",
+        items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon", "Work from Claude, ChatGPT and Codex"],
+      },
       {
         title: "Understand and grow",
         items: ["Analytics and the weekly report", "Comment intelligence", "Product catalogue, orders and payment links"],
@@ -136,7 +160,9 @@ describe("the landing page", () => {
     ]);
     // A feature with its own page is one whole-card link; one "Go deeper" line in the section.
     expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
-    expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
+    expect(features.querySelectorAll(".fcard-link")).toHaveLength(3);
+    // C-165: the MCP card leads to /mcp.
+    expect(within(features).getByRole("link", { name: "Work from Claude, ChatGPT and Codex" })).toHaveAttribute("href", "/mcp");
     expect(features.querySelectorAll(".more-links")).toHaveLength(1);
     // The hub of every feature (C-163).
     expect(within(features).getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");

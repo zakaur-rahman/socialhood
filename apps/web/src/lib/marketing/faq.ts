@@ -2,7 +2,8 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 
 import table from "./plan-table.json";
 
-export type FaqItem = { question: string; answer: string };
+/** `link`: a page that says more, shown after the answer (the FAQPage JSON-LD keeps the plain answer). */
+export type FaqItem = { question: string; answer: string; link?: { label: string; href: string } };
 
 const LIMITS = table.entitlements;
 const count = new Intl.NumberFormat("en-US");
@@ -119,6 +120,16 @@ export const FAQ_CANCEL: FaqItem = {
   answer: "Yes. Pro stays active until the end of the period you've paid for, then your workspace moves to Free.",
 };
 
+// C-168: the MCP server (docs/architecture/mcp 04-phase-b.md, 05-phase-c.md; connect-ai.ts PLAN_ROWS
+// and SAFETY): reading and drafts on every plan, scheduling on Pro and Max, a preview and a yes
+// before anything is scheduled, and no messages sent from an AI app.
+export const FAQ_AI_APPS: FaqItem = {
+  question: "Can I use Amplychat from Claude or ChatGPT?",
+  answer:
+    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts on Pro and Max. The AI shows a preview and waits for your yes before it schedules anything, and it can't send messages to your customers.",
+  link: { label: "How it works with AI apps", href: "/mcp" },
+};
+
 export const FAQ_SUPPORT: FaqItem = {
   question: "How do I contact support?",
   answer: `Email ${SUPPORT_EMAIL}.`,
@@ -149,7 +160,7 @@ export const FAQ_GROUPS: { id: string; title: string; items: FaqItem[] }[] = [
     items: [FAQ_PROFESSIONAL, FAQ_ACCOUNT_LOGIN, FAQ_ACCOUNTS, FAQ_24_HOURS, FAQ_BAN_RISK, FAQ_FOLLOW_GATE, FAQ_POSTS],
   },
   { id: "plans", title: "Plans and billing", items: [FAQ_FREE_LIMIT, FAQ_CREDITS, FAQ_WHATSAPP_FEES, FAQ_CANCEL] },
-  { id: "the-app", title: "The app and support", items: [FAQ_MOBILE, FAQ_SUPPORT] },
+  { id: "the-app", title: "The app and support", items: [FAQ_MOBILE, FAQ_AI_APPS, FAQ_SUPPORT] },
 ];
 
 /** Every question on /faq, in the page's order. */

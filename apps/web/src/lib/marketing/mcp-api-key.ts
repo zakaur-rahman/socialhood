@@ -91,12 +91,20 @@ export const KEEP_SAFE = [
     body: "Pick only the scopes the tool needs. You can't change a key's scopes later; make another.",
   },
   {
+    title: "Give it an end date",
+    body: "A key can expire after 30 days, 90 days or a year. Owners and admins get a reminder a week before, and an expired key is refused.",
+  },
+  {
+    title: "Limit where it works from",
+    body: "List the IP addresses or ranges (IPv4 or IPv6) a key may be used from. A request from anywhere else is refused. You can change the list later.",
+  },
+  {
     title: "Revoke in Settings › API keys",
     body: "Anything using the key stops on its next request. The list shows when each key was last used.",
   },
   {
     title: "It acts as the member who made it",
-    body: "A key has that member's current role, never more. If the member leaves the workspace, the key stops working.",
+    body: "A key has that member's current role, never more. When the member leaves the workspace or deletes their account, their keys are revoked.",
   },
   {
     title: "Changes are recorded",

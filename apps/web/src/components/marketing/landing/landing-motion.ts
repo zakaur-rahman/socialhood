@@ -16,6 +16,7 @@
  * - Automations: one round of comments arrives while the scene is on screen (pause control), then
  *   it holds; the keyword field changes what the automation listens for.
  * - Modes: the Off, Suggest and Auto switch.
+ * - Your AI assistant (C-168): the example chat plays once as it scrolls in from below (aiApps).
  *
  * With `prefers-reduced-motion: reduce` only the two controls work and the scenes stay as rendered.
  */
@@ -44,6 +45,7 @@ export function startLandingMotion(root: ParentNode = document): Cleanup {
   cleanups.push(modes(root, reduce));
   cleanups.push(comments(root, reduce));
   if (!reduce) {
+    cleanups.push(aiApps(root));
     cleanups.push(hero(root));
     cleanups.push(decide(root));
     cleanups.push(reveals(root));
@@ -198,7 +200,7 @@ function hero(root: ParentNode): Cleanup {
 
 // ---------------------------------------------------------------- cards rising in (no scroll timelines)
 
-const REVEAL = ".feat-lead, .fcard, .crow, .pay, .aud-card, .spec-row, .steps > li";
+const REVEAL = ".feat-lead, .fcard, .crow, .pay, .aud-card, .spec-row, .steps > li, .mh-pt";
 
 /**
  * Where CSS has no `view()` timeline: a card that starts off screen is hidden (`data-rv=""`) when the
@@ -718,4 +720,91 @@ function modes(root: ParentNode, reduce: boolean): Cleanup {
   };
   for (const button of buttons) button.addEventListener("click", onClick);
   return () => buttons.forEach((button) => button.removeEventListener("click", onClick));
+}
+
+// ---------------------------------------------------------------- your AI assistant (C-168)
+
+/** When each part of the example chat appears, in ms from the start (under 5 s in all, WCAG 2.2.2). */
+export const AI_APPS_TIMELINE: { at: number; step?: number; press?: true; confirm?: true }[] = [
+  { at: 0, step: 0 },
+  { at: 700, step: 1 },
+  { at: 2000, press: true },
+  { at: 2300, confirm: true, step: 2 },
+  { at: 3300, step: 3 },
+  { at: 4100, step: 4 },
+];
+
+/**
+ * The example chat (AiApps.tsx). The server rendered its final state. When the observer first
+ * reports its band below the viewport, it is armed (`data-live`: every step hidden in its own box, the
+ * button on "Confirm"); when it comes on screen it plays once: the ask, the preview, a press on
+ * Confirm, "Confirmed" with the scheduled line, the second question and its summary. A scene already
+ * on screen when the script arrives is never touched, so nothing blinks. Not called with
+ * `prefers-reduced-motion: reduce`: the final state simply stands.
+ */
+export function aiApps(root: ParentNode): Cleanup {
+  const scene = root.querySelector<HTMLElement>("[data-mh]");
+  if (!scene) return () => {};
+  const stage = scene;
+  const steps = [...stage.querySelectorAll<HTMLElement>(".mh-step")];
+  const button = stage.querySelector<HTMLElement>("[data-mh-btn]");
+  const timers = new Set<number>();
+  let state: "idle" | "armed" | "played" = "idle";
+
+  const arm = () => {
+    state = "armed";
+    stage.dataset.live = "";
+    delete stage.dataset.mhOk;
+    steps.forEach((el) => el.classList.remove("on"));
+  };
+  const play = () => {
+    state = "played";
+    for (const { at, step, press, confirm } of AI_APPS_TIMELINE) {
+      const id = window.setTimeout(() => {
+        timers.delete(id);
+        if (press) button?.classList.add("press");
+        if (confirm) {
+          button?.classList.remove("press");
+          stage.dataset.mhOk = "";
+        }
+        if (step !== undefined) steps.filter((el) => el.dataset.s === String(step)).forEach((el) => el.classList.add("on"));
+      }, at);
+      timers.add(id);
+    }
+  };
+
+  // Two observers. The band's own box decides whether to arm: its content is skipped until it nears
+  // the viewport (site.css, content-visibility), so the scene inside has no geometry of its own yet.
+  // The scene's box then starts the play once a third of it is on screen.
+  const band = stage.closest<HTMLElement>("section") ?? stage;
+  const player = new IntersectionObserver(
+    (entries) => {
+      if (state !== "armed" || !entries.some((entry) => entry.isIntersecting)) return;
+      player.disconnect();
+      play();
+    },
+    { threshold: 0.35 },
+  );
+  const observer = new IntersectionObserver((entries) => {
+    const entry = entries[entries.length - 1];
+    observer.disconnect();
+    // Only a band still below the viewport plays; one on screen or scrolled past stays as rendered.
+    if (state !== "idle" || entry.isIntersecting || entry.boundingClientRect.top <= 0) {
+      state = "played";
+      return;
+    }
+    arm();
+    player.observe(stage);
+  });
+  observer.observe(band);
+
+  return () => {
+    observer.disconnect();
+    player.disconnect();
+    timers.forEach((id) => window.clearTimeout(id));
+    delete stage.dataset.live;
+    delete stage.dataset.mhOk;
+    button?.classList.remove("press");
+    steps.forEach((el) => el.classList.remove("on"));
+  };
 }

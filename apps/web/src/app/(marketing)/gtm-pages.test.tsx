@@ -121,7 +121,7 @@ describe("the content rules (GR-37)", () => {
     const theirs = lines.flatMap((line, index) => (/^\s+theirs: \{/.test(line) ? [index] : []));
     expect(theirs.length).toBe(GTM_PAGES.flatMap((page) => page.compare?.rows ?? []).length);
     for (const index of theirs) {
-      expect(lines[index - 1]).toMatch(/\/\/ source: .*\b2026-10-\d\d\b/);
+      expect(lines[index - 1]).toMatch(/\/\/ source: .*\b2026-1[01]-\d\d\b/);
     }
   });
 
@@ -129,6 +129,21 @@ describe("the content rules (GR-37)", () => {
     for (const page of GTM_PAGES) {
       for (const row of page.compare?.rows ?? []) expect(row.theirs.status).not.toBe("no");
     }
+  });
+
+  it("C-168: every comparison has the MCP row, ours from connect-ai's facts, theirs sourced", () => {
+    for (const page of GTM_PAGES.filter((item) => item.compare)) {
+      const row = page.compare!.rows.find((item) => item.feature === "Use from Claude or ChatGPT (MCP)");
+      expect(row, page.path).toBeDefined();
+      expect(row!.ours.text).toMatch(/Claude, ChatGPT and Codex/);
+      expect(row!.ours.text).toMatch(/can't send messages/);
+      expect(page.honesty.some((line) => /MCP row was checked on 1 November 2026/.test(line)), page.path).toBe(true);
+    }
+    const theirs = (page: GtmPage) => page.compare!.rows.find((item) => item.feature === "Use from Claude or ChatGPT (MCP)")!.theirs.status;
+    expect([COMPARE_INSTANTDM, COMPARE_INRO, COMPARE_WATI, COMPARE_SPUR].map(theirs)).toEqual(["yes", "yes", "yes", "yes"]);
+    expect([COMPARE_MANYCHAT, COMPARE_INTERAKT, COMPARE_LINKDM, COMPARE_CREATORFLOW, COMPARE_AISENSY].map(theirs)).toEqual(
+      Array(5).fill("not-found"),
+    );
   });
 
   it("describes what waits on the owner honestly", () => {
@@ -202,11 +217,14 @@ describe("the trademark and no-affiliation note", () => {
 
   it.each(COMPETITOR_PAGES)("names $name, says we aren't affiliated and dates the check", ({ name, Component, page }) => {
     expect(page.competitor).toBe(name);
-    expect(latestChecked(page)).toBe("2026-10-29");
+    // C-168: the MCP row's sources were read on 1 November 2026 where a vendor has its own MCP page.
+    const mcpSourced = [COMPARE_MANYCHAT, COMPARE_INRO, COMPARE_WATI, COMPARE_SPUR].includes(page);
+    expect(latestChecked(page)).toBe(mcpSourced ? "2026-11-01" : "2026-10-29");
+    const day = mcpSourced ? "1 November 2026" : "29 October 2026";
     render(<Component />);
     const note = screen.getByText(new RegExp(`^${name} is a trademark of its owner`));
     expect(note).toHaveTextContent(
-      `${name} is a trademark of its owner. Amplychat isn't affiliated with or endorsed by ${name}. Details checked on 29 October 2026. If something has changed, tell us at ${SUPPORT_EMAIL}.`,
+      `${name} is a trademark of its owner. Amplychat isn't affiliated with or endorsed by ${name}. Details checked on ${day}. If something has changed, tell us at ${SUPPORT_EMAIL}.`,
     );
     expect(within(note).getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);
   });
@@ -264,7 +282,9 @@ describe("the /compare hub (C-156)", () => {
     const listed = COMPARE_GROUPS.flatMap((group) => group.pages);
     expect(listed).toContain(SWITCH_PAGE);
     for (const page of GTM_PAGES.filter((item) => item.competitor)) expect(listed).toContain(page);
-    expect(screen.getAllByText("Checked on 29 October 2026")).toHaveLength(listed.length);
+    // C-168: the four comparisons with an MCP page of the vendor's were last checked on 1 November 2026.
+    expect(screen.getAllByText(/^Checked on (29 October|1 November) 2026$/)).toHaveLength(listed.length);
+    expect(screen.getAllByText("Checked on 1 November 2026")).toHaveLength(4);
     expect(screen.getByText(/Product names on these pages are trademarks of their owners/)).toBeInTheDocument();
     const note = within(screen.getByRole("region", { name: "Something out of date?" }));
     expect(note.getByRole("link", { name: SUPPORT_EMAIL })).toHaveAttribute("href", `mailto:${SUPPORT_EMAIL}`);

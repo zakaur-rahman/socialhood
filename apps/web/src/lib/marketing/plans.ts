@@ -144,6 +144,18 @@ const LINES: { key: string; line: Line }[] = [
           ? `Comment analysis on your ${plural(v, "latest post", "latest posts")} per account`
           : null,
   },
+  // C-168: what AI apps may do over MCP (ai_connections' highest level).
+  {
+    key: "ai_connections",
+    line: (v) =>
+      Array.isArray(v)
+        ? v.includes("full")
+          ? "Claude, ChatGPT and Codex, with scheduling (MCP)"
+          : v.includes("read_drafts")
+            ? "Read and draft from Claude, ChatGPT and Codex (MCP)"
+            : null
+        : null,
+  },
   { key: "public_api", line: (v) => (v === true ? "Public API and Zapier app" : null) },
   { key: "sheets_sync", line: (v) => (v === true ? "Google Sheets sync" : null) },
   { key: "commerce", line: (v) => (v === true ? "Product catalogue" : null) },

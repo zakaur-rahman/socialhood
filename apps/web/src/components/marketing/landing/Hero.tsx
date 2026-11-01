@@ -1,7 +1,9 @@
 import { ArrowRight, Check } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { MotionToggle } from "@/components/site/MotionToggle";
+import { MCP_PAGE_PATH } from "@/lib/marketing/mcp-page";
 import { SECTION_IDS, SIGN_UP_PATH, SITE_TAGLINE, appUrl } from "@/lib/marketing/site";
 
 import { CtaLink } from "../primitives";
@@ -14,6 +16,9 @@ export { HERO_LINE, HERO_TITLE };
 
 /** The trust row under the calls to action: both true by construction (the official APIs, Free's terms). */
 export const HERO_FACTS = ["Official Meta APIs", "Free plan, no card needed"];
+
+/** C-168: the hero's one announcement, the MCP server (/mcp). Plain names, no logos. */
+export const HERO_NEW = "Works with Claude, ChatGPT and Codex";
 
 /** A message's place in the scattered pile (HERO_PILE), for site.css: its row, offset and tilt. */
 function pile(i: number): CSSProperties {
@@ -48,6 +53,13 @@ export function Hero() {
         <div className="hero-sticky">
           <div className="wrap hero-grid">
             <div className="hero-copy">
+              <p className="hero-new">
+                <Link href={MCP_PAGE_PATH} className="hero-new-link">
+                  <span className="hero-new-pill">New</span>
+                  <span>{HERO_NEW}</span>
+                  <ArrowRight className="hero-new-arrow size-4" aria-hidden />
+                </Link>
+              </p>
               <p className="hero-tag">
                 <span className="chan-dots" aria-hidden>
                   {CHANNELS.map((key) => (
