@@ -128,7 +128,10 @@ describe("the landing page", () => {
     }));
     expect(groups).toEqual([
       { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
-      { title: "Automate the repetitive work", items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon"] },
+      {
+        title: "Automate the repetitive work",
+        items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon", "Work from Claude, ChatGPT and Codex"],
+      },
       {
         title: "Understand and grow",
         items: ["Analytics and the weekly report", "Comment intelligence", "Product catalogue, orders and payment links"],
@@ -136,7 +139,9 @@ describe("the landing page", () => {
     ]);
     // A feature with its own page is one whole-card link; one "Go deeper" line in the section.
     expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
-    expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
+    expect(features.querySelectorAll(".fcard-link")).toHaveLength(3);
+    // C-165: the MCP card leads to /mcp.
+    expect(within(features).getByRole("link", { name: "Work from Claude, ChatGPT and Codex" })).toHaveAttribute("href", "/mcp");
     expect(features.querySelectorAll(".more-links")).toHaveLength(1);
     // The hub of every feature (C-163).
     expect(within(features).getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");

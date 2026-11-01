@@ -2,6 +2,7 @@ import type { Route } from "next";
 import {
   ArrowRight,
   BellRing,
+  Bot,
   CalendarClock,
   ChartLine,
   Inbox,
@@ -68,6 +69,15 @@ export const FEATURES: Feature[] = [
     body: "Owners, admins and agents, with conversations assigned by hand or in turn. The Free plan has 1 seat, so a team starts on Pro.",
   },
   {
+    // C-165: the MCP server (api.amplychat.com/mcp); the tools, the confirm step and the plan rules
+    // are in docs/architecture/mcp (04-phase-b.md, 05-phase-c.md) and lib/marketing/connect-ai.ts.
+    title: "Work from Claude, ChatGPT and Codex",
+    href: "/mcp",
+    icon: Bot,
+    body: "Connect your AI assistant and ask it to schedule a Reel, sum up this week's DMs or check how your posts did. It shows a preview before anything is scheduled, and it can't message your customers.",
+    note: "Reading and drafts on every plan; scheduling on Pro and Max",
+  },
+  {
     title: "Notifications, on your phone too",
     icon: BellRing,
     body: "In the app, by email and as phone push notifications when a conversation needs you or a lead arrives.",
@@ -93,7 +103,11 @@ export const FEATURE_GROUPS: { title: string; icon: LucideIcon; items: Feature[]
   {
     title: "Automate the repetitive work",
     icon: Workflow,
-    items: [byTitle("Scheduling, Reels and Stories"), byTitle("Sequences, and broadcasts soon")],
+    items: [
+      byTitle("Scheduling, Reels and Stories"),
+      byTitle("Sequences, and broadcasts soon"),
+      byTitle("Work from Claude, ChatGPT and Codex"),
+    ],
   },
   {
     title: "Understand and grow",
@@ -168,7 +182,8 @@ export function Features() {
         <p className="more-links">
           <Link href={FEATURES_PATH}>See every feature</Link>. Go deeper: <Link href="/features/ai-inbox">the AI inbox</Link>,{" "}
           <Link href="/features/comment-intelligence">comment intelligence</Link>,{" "}
-          <Link href="/features/publishing">publishing</Link>, or <Link href="/compare">how {SITE_NAME} compares</Link>.
+          <Link href="/features/publishing">publishing</Link>, <Link href="/mcp">using {SITE_NAME} from your AI assistant</Link>, or{" "}
+          <Link href="/compare">how {SITE_NAME} compares</Link>.
         </p>
         <Connections />
       </div>
