@@ -172,7 +172,7 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
   test("the Free plan sees what broadcasts are part of, and no composer", async ({ page, api, workspace }) => {
     await api.connectSandbox(workspace.id, "whatsapp");
     await page.goto(`/w/${workspace.slug}/broadcasts`);
-    await expect(page.getByText("Broadcasts are part of Pro")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Broadcasts are part of Creator and Business")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("link", { name: /New/ })).toHaveCount(0);
     const refused = await api
       .call("POST", `/v1/w/${workspace.id}/broadcasts/preview`, {

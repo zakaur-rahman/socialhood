@@ -20,11 +20,11 @@ const CSV = [
 ].join("\n");
 
 test.describe("GR-31 product catalogue", () => {
-  test("Free sees what exists and is told the catalogue is part of Pro", async ({ page, sandbox }) => {
+  test("Free sees what exists and is told the catalogue is part of Creator and Business", async ({ page, sandbox }) => {
     await page.goto(`/w/${sandbox.workspace.slug}/products`);
     await expect(page.getByText(/adding, importing and syncing products/)).toBeVisible();
     await page.getByRole("button", { name: "Add product" }).first().click();
-    await expect(page.getByRole("heading", { name: /The product catalogue is part of Pro/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /The product catalogue is part of Creator and Business/ })).toBeVisible();
     await expect(page.getByRole("form", { name: "Add a product" })).toHaveCount(0);
   });
 

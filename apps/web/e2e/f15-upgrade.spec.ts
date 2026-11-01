@@ -5,14 +5,14 @@ import { expect, test } from "./support/fixtures";
 
 /**
  * F-15 Upgrade after hitting a limit. A Free workspace with 3 active automations tries to
- * activate a fourth: the API answers 402 and the upgrade dialog names the limit, with the Pro
+ * activate a fourth: the API answers 402 and the upgrade dialog names the limit, with the Creator
  * price and the trial. Checkout goes to the fake Dodo (DODO_PROVIDER=fake: a checkout URL on a
  * .invalid host, which this test serves as a stand-in page that sends the browser back), the
  * billing page waits, and only Dodo's signed subscription.active webhook, posted here with the
- * stack's DODO_WEBHOOK_SECRET, turns Pro on. Then the fourth automation activates.
+ * stack's DODO_WEBHOOK_SECRET, turns Creator on. Then the fourth automation activates.
  */
 test.describe("F-15 upgrade after hitting a limit", () => {
-  test("the automation limit leads to checkout, and the signed webhook turns Pro on", async ({ page, api, sandbox }) => {
+  test("the automation limit leads to checkout, and the signed webhook turns Creator on", async ({ page, api, sandbox }) => {
     const { workspace, account } = sandbox;
     for (const keyword of ["alpha", "bravo", "charlie"]) await api.activeAutomation(workspace.id, account.id, keyword);
 
@@ -32,7 +32,7 @@ test.describe("F-15 upgrade after hitting a limit", () => {
     expect((await refused).status()).toBe(402);
     const dialog = page.getByRole("dialog", { name: "Automation limit reached" });
     await expect(dialog).toContainText("Free includes 3 active automations");
-    await expect(dialog).toContainText("Pro includes 50 active automations");
+    await expect(dialog).toContainText("Creator includes 25 active automations");
     await expect(dialog).toContainText("₹999 a month");
     await expect(page.getByTestId("status-pill")).toHaveText("Draft");
 
@@ -53,7 +53,7 @@ test.describe("F-15 upgrade after hitting a limit", () => {
 
     // Back from Dodo: the page waits; the return URL alone changes nothing.
     await expect(page).toHaveURL(returnUrl);
-    const notice = page.getByRole("status").filter({ hasText: /Confirming your payment…|Your Pro trial has started/ });
+    const notice = page.getByRole("status").filter({ hasText: /Confirming your payment…|Your Creator trial has started/ });
     await expect(notice).toContainText("Confirming your payment…");
     await expect(page.getByRole("region", { name: "Free" })).toBeVisible();
 
@@ -82,10 +82,10 @@ test.describe("F-15 upgrade after hitting a limit", () => {
     });
     expect(status).toBe(200);
 
-    // usage.updated (or the 3 s poll): Pro is on, and the limits follow.
-    await expect(notice).toContainText("Your Pro trial has started");
-    await expect(page.getByRole("region", { name: "Pro" }).getByRole("heading", { name: "Pro", level: 2 })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Usage" })).toContainText("3 of 50 automations");
+    // usage.updated (or the 3 s poll): Creator is on, and the limits follow.
+    await expect(notice).toContainText("Your Creator trial has started");
+    await expect(page.getByRole("region", { name: "Creator" }).getByRole("heading", { name: "Creator", level: 2 })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Usage" })).toContainText("3 of 25 automations");
 
     // The automation that hit the limit now goes live.
     await page.goto(editorUrl);

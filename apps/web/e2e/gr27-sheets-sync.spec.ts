@@ -5,13 +5,13 @@ import { expect, test } from "./support/fixtures";
  * the API's callback, and the sheets and rows live in Redis, shared by the API and the worker).
  * On Pro the member connects Google, creates a sheet, maps the columns and sends a test row; a
  * flow's captured email appears as a row within a minute; a deleted sheet fails the next row with a
- * plain reason. On Free the card says Sheets sync is part of Pro.
+ * plain reason. On Free the card says Sheets sync is part of Creator and Business.
  */
 test.describe("GR-27 Google Sheets sync", () => {
-  test("Free is told Sheets sync is part of Pro", async ({ page, sandbox }) => {
+  test("Free is told Sheets sync is part of Creator and Business", async ({ page, sandbox }) => {
     await page.goto(`/w/${sandbox.workspace.slug}/settings/integrations`);
     const card = page.getByRole("region", { name: "Google Sheets" });
-    await expect(card.getByText(/Google Sheets sync is part of Pro/)).toBeVisible();
+    await expect(card.getByText(/Google Sheets sync is part of Creator and Business/)).toBeVisible();
     await expect(card.getByRole("button", { name: "Connect Google" })).toHaveCount(0);
   });
 

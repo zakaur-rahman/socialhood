@@ -58,7 +58,7 @@ test.describe("C-160 explainer pages", () => {
     await page.evaluate(() => document.getElementById("results")?.scrollIntoView());
     await expect(scene).toHaveAttribute("data-xv", "in");
     await page.locator("#replies [data-mode='auto']").click();
-    await expect(page.locator("#replies [data-mode-desc]")).toContainText("With Auto mode (Pro)");
+    await expect(page.locator("#replies [data-mode-desc]")).toContainText("With Auto mode (Creator and Business)");
   });
 
   test("features: the bento cells link to their pages and details", async ({ page }) => {

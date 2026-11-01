@@ -1,7 +1,7 @@
 import { expect, test } from "./support/fixtures";
 
 /**
- * C-167 API key hardening on the sandbox. A Pro member makes a key that expires in 90 days and
+ * C-167 API key hardening on the sandbox. A Business member makes a key that expires in 90 days and
  * works only from two address ranges; the list shows both. The key is refused (403) from this
  * machine's address until the allowlist is cleared in the edit dialog, which has no scopes to
  * change. A key made without an expiry shows none.
@@ -13,7 +13,7 @@ test.describe("C-167 API key expiry and IP allowlist", () => {
     sandbox,
   }) => {
     const { workspace } = sandbox;
-    await api.setPlan(workspace.id, "pro");
+    await api.setPlan(workspace.id, "max");
 
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
     await page.getByRole("button", { name: "Create API key" }).click();
@@ -59,7 +59,7 @@ test.describe("C-167 API key expiry and IP allowlist", () => {
 
   test("a key made without an expiry shows none", async ({ page, api, sandbox }) => {
     const { workspace } = sandbox;
-    await api.setPlan(workspace.id, "pro");
+    await api.setPlan(workspace.id, "max");
     await api.call("POST", `/v1/w/${workspace.id}/api-keys`, { name: "Forever", scopes: ["contacts:read"] });
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
     const row = page.getByTestId("api-key").filter({ hasText: "Forever" });
