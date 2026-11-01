@@ -50,6 +50,7 @@ ALL_SCOPES = [
     "knowledge:read",
     "knowledge:write",
     "automations:write",
+    "automations:create",
     "ask",
 ]
 
