@@ -47,6 +47,14 @@ describe("the pricing page's plan table (GR-37)", () => {
     expect(cells("comment_intelligence_posts")).toEqual(["Latest 5", "All posts", "All posts"]);
   });
 
+  it("C-168: shows what AI apps may do on each plan, and keeps their daily caps for /developers/mcp", () => {
+    expect(cells("ai_connections")).toEqual(["Read and drafts", "Full", "Full"]);
+    expect(row("ai_connections").label).toBe("Connect Claude, ChatGPT and Codex (MCP)");
+    expect(row("ai_connections").note).toMatch(/never send messages/);
+    expect(NOT_SHOWN).not.toContain("ai_connections");
+    expect(NOT_SHOWN).toEqual(expect.arrayContaining(["mcp_calls_daily", "mcp_posts_daily", "mcp_uploads_daily", "mcp_upload_mb_daily"]));
+  });
+
   it("marks the conditional rows honestly", () => {
     expect(row("broadcast_recipients_monthly").note).toMatch(/Coming soon/);
     expect(row("commerce").note).toMatch(/Shopify sync arrives/);

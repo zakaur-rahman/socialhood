@@ -24,7 +24,9 @@ type Kind =
   | { kind: "modes" }
   | { kind: "days" }
   /** 0 is "Not included"; any other number is a count. */
-  | { kind: "quota"; unit?: string };
+  | { kind: "quota"; unit?: string }
+  /** C-168: what an AI app may do at most on the plan (ai_connections' highest level). */
+  | { kind: "ai-apps" };
 
 export type MatrixRow = {
   key: EntitlementKey;
@@ -99,6 +101,12 @@ export const MATRIX: MatrixGroup[] = [
     id: "developers",
     title: "Integrations and developers",
     rows: [
+      {
+        key: "ai_connections",
+        label: "Connect Claude, ChatGPT and Codex (MCP)",
+        format: { kind: "ai-apps" },
+        note: "Full adds scheduling posts, adding knowledge and pausing automations. AI apps never send messages.",
+      },
       { key: "webhook_endpoints", label: "Outbound webhook endpoints", format: { kind: "count" } },
       { key: "public_api", label: "Public API, API keys and the Zapier app", format: { kind: "flag" } },
       { key: "sheets_sync", label: "Google Sheets sync", format: { kind: "flag" } },
@@ -122,6 +130,11 @@ export function cellText(row: MatrixRow, plan: PlanKey): string {
     case "quota":
       if (value === 0) return "Not included";
       return value === null ? "Unlimited" : typeof value === "number" ? number.format(value) : "Not included";
+    case "ai-apps":
+      if (!Array.isArray(value)) return "Not included";
+      if (value.includes("full")) return "Full";
+      if (value.includes("read_drafts")) return "Read and drafts";
+      return value.includes("read_only") ? "Read only" : "Not included";
     case "count":
       if (value === null) return "Unlimited";
       if (typeof value !== "number") return "Not included";
@@ -135,10 +148,10 @@ export function rowCell(row: MatrixRow, plan: PlanKey): string {
   return cellText(row, plan);
 }
 
-/** Entitlements the table leaves out on purpose. C-165: what AI apps may do, their daily tool
- * calls and their daily post and upload caps are for /developers/mcp, not the pricing table. */
+/** Entitlements the table leaves out on purpose. C-165: AI apps' daily tool calls and their daily
+ * post and upload caps are for /developers/mcp, not the pricing table. C-168: what AI apps may do
+ * (ai_connections) is shown, as "Read and drafts" or "Full". */
 export const NOT_SHOWN: EntitlementKey[] = [
-  "ai_connections",
   "mcp_calls_daily",
   "mcp_posts_daily",
   "mcp_uploads_daily",
