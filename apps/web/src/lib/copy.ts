@@ -426,7 +426,7 @@ export const ENTERPRISE = {
     "AI replies: Auto and suggestions",
     "10 or more team members",
     "50 million or more characters of knowledge",
-    "Claude and ChatGPT (MCP): full access",
+    "Claude, ChatGPT and Codex (MCP): full access",
     "API keys and Zapier",
     "Full message history",
   ],
