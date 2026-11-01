@@ -2892,3 +2892,139 @@ body:has(.site) {
   }
 }
 /* ==== end C-165 mcp page ==== */
+
+/* ==== C-168 mcp highlight ==== */
+/* The MCP highlight (C-168): the hero's "New" link to /mcp, the landing's "Your AI assistant" band
+   (AiApps.tsx: the copy and four points beside an example chat in the landing's scene language,
+   `data-ui`), and the /features bento's extra small cell. Tokens only; no existing rule is edited.
+   Motion: the chat is server-rendered in its final state; landing-motion.ts (aiApps) arms it
+   (`data-live`) only when it starts below the viewport and plays it once (opacity, translate and a
+   label swap inside one box, so nothing moves the layout). Reduced motion: the final state stands. */
+@layer components {
+  .site {
+    /* ---- hero: one announcement above the eyebrow, a quiet pill-in-a-pill link */
+    & .hero-new { margin: 0 0 var(--space-5); }
+    & .hero-new-link {
+      display: inline-flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+      border: 1px solid var(--s-line); border-radius: 999px; background: var(--s-surface); color: var(--s-text); text-decoration: none;
+      font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500;
+      transition: border-color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+    }
+    & .hero-new-pill {
+      display: inline-flex; align-items: center; flex: none; height: 24px; padding: 0 var(--space-2); border-radius: 999px;
+      background: var(--iris-soft); color: var(--iris-ink); font-size: var(--fs-micro); font-weight: 600;
+    }
+    & .hero-new-arrow { flex: none; color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease); }
+    @media (hover: hover) {
+      & .hero-new-link:hover { border-color: var(--s-line-control); }
+      & .hero-new-link:hover .hero-new-arrow { transform: translateX(var(--dist-micro)); color: var(--s-text); }
+    }
+    & .hero-new-link:active { transform: translateY(1px); }
+
+    /* ---- a question with a page that says more (C-168, the MCP question): the link follows the answer. */
+    & .qa p:has(+ .qa-more) { padding-bottom: var(--space-3); }
+
+    /* ---- the band: copy on the left, the example chat on the right */
+    & .mh { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); gap: var(--space-14); align-items: center; }
+    & .mh-copy .h2 { max-width: 15ch; }
+    & .mh-points { margin: var(--space-8) 0 0; padding: 0; list-style: none; border-bottom: 1px solid var(--s-line); }
+    & .mh-pt { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: var(--space-4); row-gap: var(--space-1); padding-block: var(--space-4); border-top: 1px solid var(--s-line); }
+    & .mh-pt-ico { grid-row: 1; align-self: center; color: var(--s-link); }
+    & .mh-pt h3 { grid-column: 2; margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); font-weight: 600; }
+    & .mh-pt p { grid-column: 2; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); color: var(--s-text-2); max-width: 54ch; }
+    & .mh-ctas { margin-top: var(--space-8); }
+    & .mh-pt { transition: opacity var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger)), translate var(--dur-very-slow) var(--ease) calc(var(--n, 0) * var(--dur-stagger)); }
+    & .mh-pt:nth-child(2) { --n: 1; }
+    & .mh-pt:nth-child(3) { --n: 2; }
+    & .mh-pt:nth-child(4) { --n: 3; }
+
+    /* ---- the example chat: an app window (a sheet with its bar), the conversation on paper */
+    & .mh-stage { margin: 0; min-width: 0; }
+    & .mh-win { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-xl); box-shadow: var(--shadow-panel); overflow: hidden; }
+    & .mh-bar { display: flex; align-items: center; gap: var(--space-3); height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); }
+    & .mh-bar b { font-size: var(--fs-label); font-weight: 600; color: var(--ink); }
+    & .mh-dots { display: inline-flex; gap: 6px; }
+    & .mh-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+    & .mh-conn { margin-left: auto; display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+    & .mh-conn i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+    & .mh-chat { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); background: var(--paper); }
+    & .mh-chat p { margin: 0; }
+    & .mh-me {
+      align-self: flex-end; max-width: 84%; padding: var(--space-3) var(--space-4); border-radius: var(--r-lg); border-bottom-right-radius: var(--r-xs);
+      background: var(--ink); color: var(--on-ink); font-size: var(--fs-body-sm); line-height: 1.45;
+    }
+    & .mh-file { display: inline-flex; align-items: center; height: 24px; margin-bottom: var(--space-2); padding: 0 var(--space-2); border-radius: var(--r-xs); background: var(--night-chip); color: var(--night-ink-2); font-size: var(--fs-micro); font-weight: 600; }
+    & .mh-ai { align-self: stretch; max-width: 100%; font-size: var(--fs-body-sm); line-height: 1.5; color: var(--ink); }
+    & .mh-card { margin-top: var(--space-3); padding: var(--space-4); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-lift); }
+    & .mh-card-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+    & .mh-card-h b { font-size: var(--fs-label); font-weight: 600; }
+    & .mh-card-h span { display: inline-flex; align-items: center; height: 22px; padding: 0 var(--space-2); border-radius: var(--r-xs); background: var(--iris-soft); color: var(--iris-ink); font-size: var(--fs-micro); font-weight: 600; }
+    & .mh-card dl { margin: var(--space-3) 0 0; }
+    & .mh-card dl > div { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: var(--space-3); padding-block: var(--space-2); border-top: 1px solid var(--rule-2); }
+    & .mh-card dt { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--ink-3); }
+    & .mh-card dd { margin: 0; min-width: 0; font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+    & .mh-chat .mh-checks { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); font-size: var(--fs-caption); color: var(--ok); }
+    & .mh-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-4); }
+    /* Confirm and Confirmed share one box (transitions.dev text swap); the final state is Confirmed. */
+    & .mh-btn {
+      display: inline-grid; height: 36px; padding: 0 var(--space-4); border-radius: var(--r-sm); background: var(--ok-soft); color: var(--ok);
+      font-size: var(--fs-label); font-weight: 600;
+      transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-quick) var(--ease);
+    }
+    & .mh-btn > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--dur-fast) var(--ease-swap), filter var(--dur-fast) var(--ease-swap), transform var(--dur-fast) var(--ease-swap); }
+    & .mh-btn-a { opacity: 0; filter: blur(var(--blur-small)); transform: scale(var(--scale-medium)); }
+    & .mh-btn.press { transform: scale(var(--scale-large)); }
+    & .mh-done { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--ink-2); }
+    & .mh-sum { margin: var(--space-2) 0 0; padding: 0; list-style: none; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-md); }
+    & .mh-sum li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--rule-2); font-size: var(--fs-label); }
+    & .mh-sum li:first-child { border-top: 0; }
+    & .mh-sum b { font-weight: 600; color: var(--ink-2); }
+    & .mh-chat .mh-note { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); font-size: var(--fs-caption); color: var(--ink-3); }
+    & .mh-cap { margin-top: var(--space-3); }
+
+    /* The play (landing-motion.ts): armed parts wait in their own boxes, then rise in one by one. */
+    @media (prefers-reduced-motion: no-preference) {
+      & .mh-step { transition: opacity var(--dur-slow) var(--ease), translate var(--dur-slow) var(--ease); }
+      & .mh-stage[data-live] .mh-step:not(.on) { opacity: 0; translate: 0 var(--dist-medium); }
+      & .mh-stage[data-live]:not([data-mh-ok]) .mh-btn { background: var(--ink); color: var(--on-ink); }
+      & .mh-stage[data-live]:not([data-mh-ok]) .mh-btn-a { opacity: 1; filter: none; transform: none; }
+      & .mh-stage[data-live]:not([data-mh-ok]) .mh-btn-b { opacity: 0; filter: blur(var(--blur-small)); transform: scale(var(--scale-medium)); }
+      @supports (animation-timeline: view()) {
+        & .mh-pt {
+          animation: site-rise linear both; animation-timing-function: var(--ease); animation-timeline: view();
+          animation-range: entry calc(var(--n, 0) * 8%) entry calc(75% + var(--n, 0) * 8%);
+        }
+      }
+    }
+
+    @media (width <= 1060px) { /* site-wide */
+      & .mh { gap: var(--space-10); }
+    }
+    @media (width <= 900px) { /* site-md */
+      & .mh { grid-template-columns: minmax(0, 1fr); gap: var(--space-head); }
+    }
+    @media (width <= 760px) { /* site-nav: touch targets */
+      & .hero-new-link { min-height: 44px; }
+    }
+    @media (width <= 520px) { /* site-sm */
+      & .hero-new-link { font-size: var(--fs-caption); line-height: var(--lh-caption); }
+      & .mh-chat { padding: var(--space-4); }
+      & .mh-me { max-width: 92%; }
+      & .mh-card { padding: var(--space-3); }
+      & .mh-card dl > div { grid-template-columns: 4.75rem minmax(0, 1fr); gap: var(--space-2); }
+      & .mh-conn { display: none; }
+    }
+  }
+
+  /* /features: nine small cells since the MCP cell (C-168), so a wide screen sets them three to a
+     row; in two columns the MCP cell takes the full width, so no row is left with a hole. */
+  .site .xp {
+    @media (width > 1060px) { /* site-wide */
+      & .bx-s { grid-column: span 4; }
+    }
+    @media (760px < width <= 1060px) { /* site-nav to site-wide */
+      & #f-mcp { grid-column: 1 / -1; }
+    }
+  }
+}
+/* ==== end C-168 mcp highlight ==== */
