@@ -1246,7 +1246,7 @@ async def test_public_routes_hide_other_workspaces(
     member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
     seed = await seed_workspace_b(client, clerk, engine)
     wid_a = a["workspaces"][0]["id"]
-    await set_plan(engine, wid_a, "pro")
+    await set_plan(engine, wid_a, "max")
     made = await client.post(
         f"/v1/w/{wid_a}/api-keys",
         json={

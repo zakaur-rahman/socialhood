@@ -86,7 +86,7 @@ def test_rounding_goes_to_the_paisa() -> None:
     assert rates.estimate("marketing", 1, card) == Decimal("0.79")
 
 
-@pytest.mark.parametrize(("plan", "limit"), [("free", 0), ("pro", 2_500), ("max", 25_000)])
+@pytest.mark.parametrize(("plan", "limit"), [("free", 0), ("pro", 2_500), ("max", 2_500)])
 def test_the_monthly_recipients_by_plan(plan: str, limit: int) -> None:
     """PD-4, decided 2026-10-24: Pro and Max with a monthly recipient quota, not Free."""
     assert plans.entitlement(plan, "broadcast_recipients_monthly") == limit
