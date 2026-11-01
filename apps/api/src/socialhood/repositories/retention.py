@@ -22,7 +22,7 @@ from socialhood.models.billing import AiUsageEvent, Subscription
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
 from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
-from socialhood.models.mcp import McpToolCall
+from socialhood.models.mcp import McpToolCall, McpUpload, UploadStatus
 from socialhood.models.notifications import Notification
 from socialhood.models.oauth import ClientKind, McpConnection, OAuthClient, OAuthCode, OAuthToken
 from socialhood.models.platform import WebhookEvent
@@ -191,3 +191,22 @@ async def empty_conversations(
         func.coalesce(Conversation.last_message_at, Conversation.created_at) < cutoff,
         ~exists().where(Message.conversation_id == Conversation.id),
     )
+
+
+async def stale_mcp_uploads(
+    session: AsyncSession, cutoff: datetime, *, limit: int
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    """C-167: MCP upload tickets that never finished (waiting, expired or rejected, no media
+    asset) and expired before ``cutoff``, as (ticket id, workspace id), oldest first. Every
+    workspace: run in tenant_bypass_scope (jobs/)."""
+    rows = await session.execute(
+        select(McpUpload.id, McpUpload.workspace_id)
+        .where(
+            McpUpload.status != UploadStatus.UPLOADED.value,
+            McpUpload.media_asset_id.is_(None),
+            McpUpload.expires_at < cutoff,
+        )
+        .order_by(McpUpload.expires_at, McpUpload.id)
+        .limit(limit)
+    )
+    return [(ticket_id, workspace_id) for ticket_id, workspace_id in rows.all()]

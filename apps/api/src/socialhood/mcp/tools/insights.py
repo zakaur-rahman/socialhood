@@ -203,7 +203,7 @@ class AnalyticsInput(ToolInput):
         default=None,
         max_length=80,
         description="In words or dates: “this month”, “last 30 days”. Default: this month "
-        "(account) or the last 30 days (top_posts).",
+        "(account; last month on the 1st) or the last 30 days (top_posts).",
     )
     compare_to: str | None = Field(
         default=None,

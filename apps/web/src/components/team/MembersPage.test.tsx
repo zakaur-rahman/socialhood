@@ -26,6 +26,7 @@ const owner: TeamMember = {
   last_seen_at: "2026-10-27T10:00:00Z",
   joined_at: "2026-09-01T10:00:00Z",
   is_you: true,
+  active_api_keys: 0,
 };
 const sam: TeamMember = {
   user_id: "u2",
@@ -36,6 +37,7 @@ const sam: TeamMember = {
   last_seen_at: null,
   joined_at: "2026-10-01T10:00:00Z",
   is_you: false,
+  active_api_keys: 0,
 };
 const invited: TeamInvitation = {
   id: "i1",
@@ -142,8 +144,18 @@ describe("MembersPage (GR-19)", () => {
     });
     await screen.findAllByTestId("member-row");
     await user.click(screen.getByRole("button", { name: "Remove Sam Rao" }));
+    expect(await screen.findByText(/haven’t made any API keys/)).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Remove member" }));
     await waitFor(() => expect(removed).toBe("u2"));
+  });
+
+  it("says how many API keys removing a member revokes (C-167)", async () => {
+    const user = userEvent.setup();
+    setup(OWNER_PERMISSIONS, {}, [owner, { ...sam, active_api_keys: 2 }]);
+    await screen.findAllByTestId("member-row");
+    await user.click(screen.getByRole("button", { name: "Remove Sam Rao" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Remove Sam Rao?" });
+    expect(dialog).toHaveTextContent("The 2 API keys they made are revoked, so anything using them stops working.");
   });
 
   it("transfers ownership only after the workspace name is typed", async () => {

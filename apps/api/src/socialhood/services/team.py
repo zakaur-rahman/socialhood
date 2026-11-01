@@ -13,14 +13,17 @@ Rules (C-106):
   removed or demoted, only replaced by a transfer, which makes the old owner an admin.
 - Removing a member deletes only the membership. The person's past actions (messages sent,
   automations made, audit rows) keep their user id and name. Their conversations go back to
-  nobody (GR-20; services/assignment.clear_for_member).
+  nobody (GR-20; services/assignment.clear_for_member). The API keys they made in the workspace
+  are revoked in the same transaction, one audit row each (C-167); the members list says how
+  many each member has (``active_api_keys``), so the confirm dialog can say so. Moving ownership
+  revokes nothing.
 """
 
 from __future__ import annotations
 
 import html
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from sqlalchemy import func, select
@@ -49,7 +52,7 @@ from socialhood.schemas.team import (
     OwnershipTransfer,
     Seats,
 )
-from socialhood.services import assignment, audit
+from socialhood.services import api_keys, assignment, audit
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -127,6 +130,7 @@ async def list_members(session: AsyncSession, you: uuid.UUID, now: datetime) -> 
             .order_by(WorkspaceMember.created_at, WorkspaceMember.id)
         )
     ).all()
+    key_counts = await api_keys.active_counts_by_member(session)
     return MemberList(
         items=[
             Member(
@@ -138,6 +142,7 @@ async def list_members(session: AsyncSession, you: uuid.UUID, now: datetime) -> 
                 last_seen_at=user.last_seen_at,
                 joined_at=member.created_at,
                 is_you=user.id == you,
+                active_api_keys=key_counts.get(user.id, 0),
             )
             for member, user in rows
         ],
@@ -403,6 +408,9 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
         raise ApiError("conflict", OWNER_NEEDED)
     await session.execute(scoped_delete(WorkspaceMember, id=member.id))
     unassigned = await assignment.clear_for_member(session, user_id)
+    keys_revoked = await api_keys.revoke_for_member(
+        session, user_id, now=datetime.now(UTC), reason=api_keys.REASON_REMOVED, ctx=ctx
+    )
     removed = await session.get(User, user_id)
     if removed is not None and removed.last_workspace_id == ctx.workspace_id:
         # So their next sign-in lands on a workspace they still belong to.
@@ -416,6 +424,7 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
         name=removed.name if removed else None,
         role=member.role,
         unassigned=unassigned,
+        revoked_api_access=keys_revoked,  # how many of their API keys ("key" is never logged)
     )
     await session.flush()
 
