@@ -9485,7 +9485,7 @@ Owner, with the connector live on production: Claude couldn't create an automati
 
 ### Copy
 
-Scope group (`oauth/scopes.py`), API key scopes (`schemas/api_keys.py`, `mcp-api-key.ts`), Settings' labels and Full mode (`AiConnectionsPage.tsx`); `connect-ai.ts` (capability, plan rows, safety, FAQ); `mcp-page.ts` (new ask, `CONFIRM_LINE`, new FAQ "Can the AI message my customers?", cost FAQ); landing `AiApps` ("It doesn't message your customers itself"), `Features`; `/faq`; the compare and switch pages; the plan table note; `/privacy`; `llms.txt`.
+Scope group (`oauth/scopes.py`), API key scopes (`schemas/api_keys.py`, `mcp-api-key.ts`), Settings' labels and Full mode (`AiConnectionsPage.tsx`); `connect-ai.ts` (capability, plan rows, safety, FAQ); `mcp-page.ts` (new ask, which also takes in the old "Pause the giveaway" ask so the page keeps eight cards in its two-column grid; `CONFIRM_LINE`; new FAQ "Can the AI message my customers?", cost FAQ); landing `AiApps` ("It doesn't message your customers itself"), `Features`; `/faq`; the compare and switch pages; the plan table note; `/privacy`; `llms.txt`.
 
 Every claim keeps the line the owner drew: the AI doesn't send messages itself; the automation sends, after the member confirms and it is on. "AI apps can't send messages" became "... themselves" wherever it stood alone, because an automation set up from one does message people.
 
