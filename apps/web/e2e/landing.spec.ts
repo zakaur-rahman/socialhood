@@ -91,6 +91,7 @@ test.describe("landing page", () => {
         "how-it-works",
         "automations",
         "modes",
+        "ai-apps",
         "security",
         "who-its-for",
         "features",
@@ -342,6 +343,49 @@ test.describe("landing page", () => {
     await expect(toggle).toBeVisible();
     await toggle.click();
     await expect(how).toHaveAttribute("data-motion-paused", "");
+  });
+});
+
+test.describe("the MCP highlight (C-168)", () => {
+  test("the hero's New link leads to /mcp, and the AI assistant band plays its example once, then holds", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const heroNew = page.locator("section.hero").getByRole("link", { name: /Works with Claude, ChatGPT and Codex/ });
+    await expect(heroNew).toHaveAttribute("href", "/mcp");
+    await expect(heroNew).toBeVisible();
+
+    const band = page.locator("section#ai-apps");
+    await expect(band.getByRole("heading", { level: 2 })).toHaveText("Your AI assistant, connected to your Instagram");
+    await expect(band.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/mcp");
+    await expect(band.getByRole("link", { name: "Set it up" })).toHaveAttribute("href", "/developers/mcp");
+    await expect(band.getByRole("img", { name: /^Example:/ })).toHaveCount(1);
+    await expect(band.locator("figcaption")).toHaveText("Example. Works in Claude, ChatGPT and Codex.");
+
+    // It starts below the first screen, so the script arms it; on screen it plays to "Confirmed".
+    await expect(page.locator("[data-mh][data-live]")).toHaveCount(1, { timeout: 15_000 });
+    await band.locator("[data-mh]").scrollIntoViewIfNeeded();
+    await expect(page.locator("[data-mh][data-mh-ok]")).toHaveCount(1, { timeout: 10_000 });
+    await expect(band.locator(".mh-step.on")).toHaveCount(5, { timeout: 10_000 });
+    await expect(band.getByText("Nothing was sent or changed.")).toBeVisible();
+
+    // The link works.
+    await heroNew.click();
+    await expect(page).toHaveURL(/\/mcp$/);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test("with reduced motion the example chat stands in its final state", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/");
+    await page.waitForTimeout(2_500);
+    const scene = page.locator("[data-mh]");
+    await scene.scrollIntoViewIfNeeded();
+    await expect(scene).not.toHaveAttribute("data-live");
+    await expect(scene.getByText("Confirmed")).toBeVisible();
+    await expect(scene.getByText("Nothing was sent or changed.")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 });
 

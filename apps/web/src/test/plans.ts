@@ -24,6 +24,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
           { key: "pending_scheduled_messages", value: 20 },
           { key: "message_history_days", value: 90 },
           { key: "comment_intelligence_posts", value: 5 },
+          { key: "ai_connections", value: ["off", "read_only", "read_drafts"] },
         ],
       },
       {
@@ -45,6 +46,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
           { key: "comment_intelligence_posts", value: null },
           { key: "public_api", value: true },
           { key: "sheets_sync", value: true },
+          { key: "ai_connections", value: ["off", "read_only", "read_drafts", "full"] },
           { key: "commerce", value: true },
         ],
       },

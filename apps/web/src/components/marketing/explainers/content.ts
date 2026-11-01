@@ -7,6 +7,7 @@
 import {
   BellRing,
   BookOpenText,
+  Bot,
   CalendarClock,
   ChartLine,
   Hand,
@@ -320,6 +321,16 @@ export const BENTO: Cell[] = [
     href: "#d-ask",
     visual: "ask",
     body: "Ask about your own business data in plain words. It never sends, changes or deletes anything by itself.",
+  },
+  {
+    // C-168: the MCP server, linked to its own page (/mcp); the wording is the landing's card.
+    id: "mcp",
+    title: feature("Work from Claude, ChatGPT and Codex").title,
+    icon: Bot,
+    size: "s",
+    ai: true,
+    href: "/mcp",
+    body: "Ask your AI assistant to schedule a Reel or sum up this week's DMs. It shows a preview first and can't message your customers.",
   },
   {
     id: "team",

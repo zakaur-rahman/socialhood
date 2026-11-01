@@ -1,6 +1,7 @@
 import { Faq } from "@/components/marketing/Faq";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { JsonLd } from "@/components/marketing/JsonLd";
+import { AiApps } from "@/components/marketing/landing/AiApps";
 import { Audience } from "@/components/marketing/landing/Audience";
 import { Comments } from "@/components/marketing/landing/Comments";
 import { Decide } from "@/components/marketing/landing/Decide";
@@ -28,7 +29,7 @@ export const metadata = pageMetadata({
 /**
  * The landing page (§3.1 "/", C-155; order C-157): the owner's design, paper bands with a night band
  * every two or three sections, with the site's own words: the hero and its facts, How it works (night,
- * the peak), Automations, Modes, Security (night), Who it's for, Features with the connections, the
+ * the peak), Automations, Modes, your AI assistant (MCP, C-168), Security (night), Who it's for, Features with the connections, the
  * setup steps (night) into Pricing, the FAQ and the closer (night). Every section is server-rendered and meaningful without script; one small
  * island (LandingMotion) brings the scenes to life after load, and leaves them still under reduced
  * motion. The pricing cards and the trial perk come from the plans API.
@@ -43,6 +44,7 @@ export default async function HomePage() {
       <Decide />
       <Comments />
       <Modes />
+      <AiApps />
       <Trust />
       <Audience />
       <Features />

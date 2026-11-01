@@ -89,6 +89,15 @@ export type GtmPage = {
   shot?: "inbox" | "aiDraft" | "automationPreview" | "knowledge";
 };
 
+/** C-168: the MCP server (docs/architecture/mcp; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY). */
+const OURS_MCP: Cell = {
+  status: "yes",
+  text: "Claude, ChatGPT and Codex: read and draft on every plan, schedule posts on Pro and Max after a preview. AI apps can't send messages.",
+};
+/** C-168: the MCP row was checked later than the rest of each table. */
+const mcpHonesty = (name: string) =>
+  `The MCP row was checked on 1 November 2026, on ${name}'s own pages and through a web search of them. "Not found" there means we didn't see an MCP server, not that ${name} has none.`;
+
 // ---- Switch from Manychat
 
 export const SWITCH_PAGE: GtmPage = {
@@ -155,6 +164,11 @@ export const SWITCH_PAGE: GtmPage = {
         {
           title: "Publishing in the same app",
           body: "Schedule Instagram images, carousels, Reels and Stories from the calendar, with AI captions and a media library.",
+        },
+        {
+          // C-168: the MCP server; Manychat's side is the comparison's MCP row (not found, 2026-11-01).
+          title: "Work from Claude, ChatGPT and Codex",
+          body: "Connect your AI assistant to read the inbox, draft replies and, on Pro and Max, schedule posts after a preview. AI apps can't send messages.",
         },
         {
           title: "Flat plans",
@@ -334,6 +348,12 @@ export const COMPARE_MANYCHAT: GtmPage = {
         theirs: { status: "not-found" },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: help.manychat.com "Claude integration" and the community idea "We need MCPs!" (community.manychat.com), seen through a web search on 2026-11-01 (manychat.com answers automated reads with 403): a Claude action inside automations; a Manychat MCP server not found
+        theirs: { status: "not-found", text: "A Claude step inside automations; an MCP server wasn't found." },
+      },
+      {
         feature: "How it is priced",
         ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts." },
         // source: Manychat help centre "Pro plan" and "Active Contacts", read 2026-10-29: plans from 2 March 2026 billed by active contacts a month; Pro $39 a month on monthly billing for 2,500 active contacts; prices can vary by region. Replaces the third-party guides (Chatarmin, Layer3 Labs, DMChamp, 2026-10-22).
@@ -347,6 +367,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
     "Manychat's column comes from Manychat's own help centre and product updates, checked on 29 October 2026. \"Not found\" means we didn't see it there, not that Manychat lacks it.",
     "Manychat's plans and prices change and can vary by region, so check manychat.com before you decide.",
     "Our column is checked against our own code. Anything that depends on Meta, Shopify or a legal review says so.",
+    mcpHonesty("Manychat"),
   ],
   sources: [
     {
@@ -444,6 +465,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       url: "https://community.manychat.com/product-updates/knowledge-v2-import-website-content-and-review-what-your-ai-knows-9132",
       checked: "2026-10-29",
     },
+    { label: "Manychat help: Claude integration", url: "https://help.manychat.com/hc/en-us/articles/19689792833180-Claude-integration", checked: "2026-11-01" },
   ],
   related: [
     { label: "Switch from Manychat", href: "/switch-from-manychat" },
@@ -548,6 +570,12 @@ export const COMPARE_INTERAKT: GtmPage = {
         theirs: { status: "yes", text: "Unlimited agents from the Growth plan; the pricing page is unclear which roles Growth includes." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: a web search of interakt.shop, 2026-11-01: no MCP server, and no way to use Interakt from Claude or ChatGPT, found
+        theirs: { status: "not-found" },
+      },
+      {
         feature: "Starting price",
         ours: { status: "yes", text: "A Free plan with no card. See the pricing page for Pro." },
         // source: interakt.shop/pricing, read 2026-10-29: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
@@ -559,6 +587,7 @@ export const COMPARE_INTERAKT: GtmPage = {
     "Interakt's column comes from its own pricing page, read on 29 October 2026. Its plans and prices change, so check interakt.shop before you decide.",
     "\"Not found\" means we didn't see it on Interakt's pricing page, not that Interakt lacks it.",
     "Neither company's plans include Meta's WhatsApp messaging fees, which Meta charges to your business.",
+    mcpHonesty("Interakt"),
   ],
   sources: [{ label: "Interakt pricing", url: "https://www.interakt.shop/pricing/", checked: "2026-10-29" }],
   related: [
@@ -698,6 +727,12 @@ export const COMPARE_LINKDM: GtmPage = {
         theirs: { status: "not-found", text: "A DM planner drafts DMs for posts you schedule elsewhere." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: a web search of linkdm.com, 2026-11-01: no MCP server found
+        theirs: { status: "not-found" },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: linkdm.com/pricing, read 2026-10-29: Free $0 (1,000 DMs a month, 1 account); Pro $19 USD per month (25,000 DMs, up to 3 accounts) or $182 USD yearly; Platinum+ $99 USD per month or $832 yearly
@@ -712,6 +747,7 @@ export const COMPARE_LINKDM: GtmPage = {
     "LinkDM's column comes from LinkDM's own home and pricing pages, read on 29 October 2026. \"Not found\" means we didn't see it there, not that LinkDM lacks it.",
     "LinkDM's plans and prices change, so check linkdm.com before you decide.",
     OURS_HONESTY,
+    mcpHonesty("LinkDM"),
   ],
   sources: [
     { label: "LinkDM pricing", url: "https://linkdm.com/pricing", checked: "2026-10-29" },
@@ -816,6 +852,12 @@ export const COMPARE_INSTANTDM: GtmPage = {
         theirs: { status: "yes", text: "Mailchimp, Kit and Klaviyo, webhooks, an API and MCP from Trendsetter." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: instantdm.com/pricing, read 2026-10-29: "MCP" from the Trendsetter plan; which AI apps it supports isn't stated there (its llms.txt, read 2026-11-01, doesn't say either)
+        theirs: { status: "yes", text: "MCP from the Trendsetter plan." },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: instantdm.com/pricing, read 2026-10-29: Free $0 (500 DM automations a month); Legend Pro $9.99, Trendsetter $24.99, Trendsetter Pro $49.99 per month billed yearly; USD shown by default
@@ -830,6 +872,7 @@ export const COMPARE_INSTANTDM: GtmPage = {
     "InstantDM's column comes from InstantDM's own home and pricing pages, read on 29 October 2026. \"Not found\" means we didn't see it there, not that InstantDM lacks it.",
     "InstantDM's plans and prices change, and its pricing page also offers rupee prices, so check instantdm.com before you decide.",
     OURS_HONESTY,
+    mcpHonesty("InstantDM"),
   ],
   sources: [
     { label: "InstantDM pricing", url: "https://instantdm.com/pricing", checked: "2026-10-29" },
@@ -928,6 +971,12 @@ export const COMPARE_INRO: GtmPage = {
         theirs: { status: "not-found", text: "Pro lists Instagram content management; scheduling posts isn't described." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: help.inro.social "Connect your ChatGPT & Claude to Inrō with the MCP server", read 2026-11-01: Claude custom connectors and ChatGPT developer mode (beta), OAuth or an API token; needs Pro or a trial; the tools include send_message
+        theirs: { status: "yes", text: "An MCP server for Claude and ChatGPT, on Pro or a trial. Its tools include sending messages." },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: inro.social/pricing, read 2026-10-29: Free €0 (100 activated contacts a month); Pro "Starting at €12.99 per month", billed monthly, auto-scaling by activated contacts; Annual Pro €1,249 fixed price; Managed from €299 a month
@@ -942,10 +991,12 @@ export const COMPARE_INRO: GtmPage = {
     "Inrō's column comes from Inrō's own home and pricing pages, read on 29 October 2026. \"Not found\" means we didn't see it there, not that Inrō lacks it.",
     "Inrō's plans and prices change, so check inro.social before you decide.",
     OURS_HONESTY,
+    mcpHonesty("Inrō"),
   ],
   sources: [
     { label: "Inrō pricing", url: "https://www.inro.social/pricing", checked: "2026-10-29" },
     { label: "Inrō home page (features and FAQ)", url: "https://www.inro.social/", checked: "2026-10-29" },
+    { label: "Inrō help: connect ChatGPT and Claude with the MCP server", url: "https://help.inro.social/en/articles/14024801-connect-your-chatgpt-claude-to-inro-with-the-mcp-server", checked: "2026-11-01" },
   ],
   related: [
     { label: "All comparisons", href: "/compare" },
@@ -1037,6 +1088,12 @@ export const COMPARE_CREATORFLOW: GtmPage = {
         theirs: { status: "not-found" },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: creatorflow.so/ai-info, read 2026-11-01, and a web search of creatorflow.so: no MCP server found
+        theirs: { status: "not-found" },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: creatorflow.so/pricing, read 2026-10-29: Free $0 (500 DMs a month); Pro $15/mo monthly or $12/mo billed annually ($144/year), 5,000 DMs; Growth $30/mo monthly or $24/mo billed annually ($288/year), 10,000 DMs; "$" with no currency code
@@ -1051,6 +1108,7 @@ export const COMPARE_CREATORFLOW: GtmPage = {
     "CreatorFlow's column comes from CreatorFlow's own home and pricing pages, read on 29 October 2026. \"Not found\" means we didn't see it there, not that CreatorFlow lacks it.",
     "CreatorFlow's pricing page shows prices in dollars without naming the currency, and its plans change, so check creatorflow.so before you decide.",
     OURS_HONESTY,
+    mcpHonesty("CreatorFlow"),
   ],
   sources: [
     { label: "CreatorFlow pricing", url: "https://creatorflow.so/pricing", checked: "2026-10-29" },
@@ -1161,6 +1219,12 @@ export const COMPARE_WATI: GtmPage = {
         theirs: { status: "yes", text: "Charged on top of the plan for template messages, by category and country, from Wati's rate card." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: wati.io blog "What is a WhatsApp MCP Server?" (seen through a web search) and Wati's GitHub repository wati-io/wati-mcp (read), 2026-11-01: a hosted server at mcp.wati.io/mcp with OAuth sign-in, for Claude, ChatGPT, Codex and other MCP apps
+        theirs: { status: "yes", text: "A hosted MCP server for Claude, ChatGPT and other AI apps." },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: wati.io/pricing, read 2026-10-29: Growth ₹2,699, Pro ₹5,799, Business ₹16,799 per month, billed quarterly (monthly and annual billing also offered)
@@ -1173,6 +1237,7 @@ export const COMPARE_WATI: GtmPage = {
     "Wati's prices change and may differ by region and billing period, so check wati.io before you decide.",
     "Meta's WhatsApp message fees are separate from both companies' plans.",
     OURS_HONESTY,
+    mcpHonesty("Wati"),
   ],
   sources: [
     { label: "Wati pricing", url: "https://www.wati.io/pricing/", checked: "2026-10-29" },
@@ -1183,6 +1248,7 @@ export const COMPARE_WATI: GtmPage = {
       url: "https://support.wati.io/en/articles/17634410-how-to-set-up-an-astra-ai-agent-for-instagram",
       checked: "2026-10-29",
     },
+    { label: "Wati blog: what is a WhatsApp MCP server?", url: "https://www.wati.io/en/blog/whatsapp-mcp-server-1/", checked: "2026-11-01" },
   ],
   related: [
     { label: "All comparisons", href: "/compare" },
@@ -1289,6 +1355,12 @@ export const COMPARE_AISENSY: GtmPage = {
         theirs: { status: "yes", text: "Bought separately as WhatsApp conversation credits. AiSensy says it charges nothing to set up the WhatsApp Business API." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: a web search of aisensy.com, 2026-11-01: no AiSensy MCP server found (a third-party connector exists, not AiSensy's)
+        theirs: { status: "not-found" },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: aisensy.com/aisensy-vs-interakt, read 2026-10-29: "Starts at ₹1500/month", "Pro plan, priced at ₹3,200/month"; aisensy.com/pricing: prepaid, monthly, quarterly (5% off) or yearly (10% off). The plan cards on aisensy.com/pricing didn't load for us, so the plan prices come from AiSensy's own comparison page.
@@ -1301,6 +1373,7 @@ export const COMPARE_AISENSY: GtmPage = {
     "AiSensy's plans and prices change, so check aisensy.com before you decide.",
     "Meta's WhatsApp message fees are separate from both companies' plans.",
     OURS_HONESTY,
+    mcpHonesty("AiSensy"),
   ],
   sources: [
     { label: "AiSensy pricing", url: "https://www.aisensy.com/pricing", checked: "2026-10-29" },
@@ -1408,6 +1481,12 @@ export const COMPARE_SPUR: GtmPage = {
         theirs: { status: "yes", text: "Separate from the plan, billed per delivered message at Spur's published rates." },
       },
       {
+        feature: "Use from Claude or ChatGPT (MCP)",
+        ours: OURS_MCP,
+        // source: spurnow.com/en/whats-new, read 2026-11-01: "Introducing Spur MCP: run your WhatsApp stack from Claude" (25 May 2026: broadcasts, customer details, workflows, orders) and "Connect your AI assistant to Spur by signing in" (30 October 2026: Claude or any MCP app)
+        theirs: { status: "yes", text: "Spur MCP, for Claude and other MCP apps: broadcasts, customer details, workflows and orders." },
+      },
+      {
         feature: "How it is priced",
         ours: OURS_PRICE,
         // source: spurnow.com/en/pricing ("$12 per month, $144 billed annually" for AI Acquire; AI Max "$399" a month, "$4,790 billed annually") and llm-info (AI Acquire 15 USD a month; no free plan; 14-day trial on every plan), read 2026-10-29
@@ -1422,11 +1501,13 @@ export const COMPARE_SPUR: GtmPage = {
     "Spur's column comes from Spur's own home page, pricing page and its page for AI assistants, read on 29 October 2026. \"Not found\" means we didn't see it there, not that Spur lacks it.",
     "Spur publishes prices in several currencies and they change, so check spurnow.com before you decide.",
     OURS_HONESTY,
+    mcpHonesty("Spur"),
   ],
   sources: [
     { label: "Spur pricing", url: "https://www.spurnow.com/en/pricing", checked: "2026-10-29" },
     { label: "Spur: information for AI assistants", url: "https://www.spurnow.com/en/llm-info", checked: "2026-10-29" },
     { label: "Spur home page (features and FAQ)", url: "https://www.spurnow.com/", checked: "2026-10-29" },
+    { label: "Spur: what's new (Spur MCP)", url: "https://www.spurnow.com/en/whats-new", checked: "2026-11-01" },
   ],
   related: [
     { label: "All comparisons", href: "/compare" },

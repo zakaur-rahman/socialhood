@@ -1,6 +1,7 @@
 import {
   BellRing,
   BookOpenText,
+  Bot,
   CalendarClock,
   CalendarDays,
   ChartLine,
@@ -64,6 +65,7 @@ export const CARD_ICONS: Record<string, LucideIcon> = {
   "AI that answers from your knowledge": BookOpenText,
   "Comment analysis for every post": ChartLine,
   "Publishing in the same app": CalendarClock,
+  "Work from Claude, ChatGPT and Codex": Bot, // C-168
   "Flat plans": Layers,
   "No free-form canvas": SplitSquareVertical,
   "Instagram and WhatsApp first": Smartphone,

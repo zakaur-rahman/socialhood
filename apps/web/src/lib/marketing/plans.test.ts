@@ -78,6 +78,7 @@ describe("planFeatures", () => {
       "20 pending scheduled messages",
       "90 days of message history",
       "Comment analysis on your 5 latest posts per account",
+      "Read and draft from Claude, ChatGPT and Codex (MCP)",
     ]);
     expect(planFeatures(FALLBACK_ENTITLEMENTS.pro)).toEqual([
       "3 Instagram and 3 WhatsApp accounts",
@@ -91,6 +92,7 @@ describe("planFeatures", () => {
       "500 pending scheduled messages",
       "Unlimited message history",
       "Comment analysis on all posts",
+      "Claude, ChatGPT and Codex, with scheduling (MCP)",
       "Public API and Zapier app",
       "Google Sheets sync",
       "Product catalogue",
