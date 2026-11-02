@@ -22,7 +22,7 @@ DESCRIPTION = (
     "The Amplychat public API reads and updates a workspace's contacts, tags, conversations "
     "and automation runs, sends messages inside the platform's reply window, and subscribes "
     "REST hooks. Make a key in Settings, API keys, and send it as "
-    "`Authorization: Bearer <key>`. The public API is part of the Pro and Max plans. Each key "
+    "`Authorization: Bearer <key>`. The public API is part of the Business plan. Each key "
     "can make 120 requests a minute; sending also counts against the workspace's 60 sends a "
     "minute. Errors are `application/problem+json`."
 )

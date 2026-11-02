@@ -5,7 +5,7 @@ payment, paid, cancelled), payments.py (the workspace's own Razorpay keys and UP
 webhook.py (what Razorpay reports). Any member who can reply may make an order in a conversation,
 send its payment request and mark it paid or cancel it; the payment settings need
 ``integrations.manage``. Reading is never refused; making, paying and connecting need ``commerce``
-on the plan (PD-8: Pro and Max, 402 ``entitlement_required`` on Free).
+on the plan (PD-8: Creator and Business, 402 ``entitlement_required`` on Free).
 
 A request that names another workspace's conversation, product or order is a 404 before any plan
 check, so nothing reveals what exists.

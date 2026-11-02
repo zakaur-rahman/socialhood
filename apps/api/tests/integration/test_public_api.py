@@ -64,7 +64,7 @@ def _outbox() -> Any:
 async def setup(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Setup:
     """A Pro workspace (the public API is Pro and Max, PD-6) with one conversation."""
     made = await workspace_with_thread(client, clerk, engine)
-    await set_plan(engine, made.wid, "pro")
+    await set_plan(engine, made.wid, "max")
     return made
 
 
@@ -91,7 +91,7 @@ async def make_key(
 
 async def second_workspace(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Setup:
     other = await workspace_with_thread(client, clerk, engine, email="other@example.com")
-    await set_plan(engine, other.wid, "pro")
+    await set_plan(engine, other.wid, "max")
     return other
 
 
@@ -308,7 +308,7 @@ async def test_a_workspace_that_leaves_the_plan_stops_the_key(
     refused = await client.get("/public/v1/contacts", headers=bearer(key))
     assert refused.status_code == 402, refused.text
     assert refused.json()["entitlement"] == "public_api"
-    await set_plan(engine, setup.wid, "pro")
+    await set_plan(engine, setup.wid, "max")
     assert (await client.get("/public/v1/contacts", headers=bearer(key))).status_code == 200
 
 

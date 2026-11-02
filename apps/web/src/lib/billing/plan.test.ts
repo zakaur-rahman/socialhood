@@ -41,10 +41,10 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
     expect(status.resumable).toBe(false);
   });
 
-  it("cancelling at period end: Pro until the date, with Resume", () => {
+  it("cancelling at period end: Creator until the date, with Resume", () => {
     const status = planStatus(billingState({ cancel_at_period_end: true, current_period_end: "2026-10-20T06:00:00Z" }), tz, now);
     expect(status.badge.label).toBe("Cancelling");
-    expect(status.line).toBe("Pro until 20 Oct. Then the workspace moves to Free.");
+    expect(status.line).toBe("Creator until 20 Oct. Then the workspace moves to Free.");
     expect(status.resumable).toBe(true);
     expect(status.cancellable).toBe(false);
   });
@@ -52,7 +52,7 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
   it("on hold: the grace end", () => {
     const status = planStatus(billingState({ status: "on_hold", grace_until: "2026-10-02T06:00:00Z" }), tz, now);
     expect(status.badge).toEqual({ label: "On hold", tone: "danger" });
-    expect(status.line).toBe("Update your payment method by 2 Oct to keep Pro.");
+    expect(status.line).toBe("Update your payment method by 2 Oct to keep Creator.");
   });
 
   it("free and expired", () => {
@@ -141,13 +141,13 @@ describe("prices and plans", () => {
 });
 
 describe("upgrade dialog copy (§4.7, F-15)", () => {
-  it("entitlement_required: {Feature} is part of Pro", () => {
-    expect(upgradeCopy({ code: "entitlement_required", entitlement: "ai_modes" }).title).toBe("Auto mode is part of Pro");
+  it("entitlement_required: {Feature} is part of Creator and Business", () => {
+    expect(upgradeCopy({ code: "entitlement_required", entitlement: "ai_modes" }).title).toBe("Auto mode is part of Creator and Business");
     expect(upgradeCopy({ code: "entitlement_required", entitlement: "ai_reply_automations" }).title).toBe(
-      "AI replies in automations is part of Pro",
+      "AI replies in automations is part of Creator and Business",
     );
-    expect(upgradeCopy({ code: "entitlement_required", detail: "Comment insights is part of Pro." }).title).toBe(
-      "Comment insights is part of Pro",
+    expect(upgradeCopy({ code: "entitlement_required", detail: "Comment insights is part of Creator and Business." }).title).toBe(
+      "Comment insights is part of Creator and Business",
     );
   });
 
@@ -178,9 +178,9 @@ describe("upgrade dialog copy (§4.7, F-15)", () => {
     });
   });
 
-  it("what Pro offers instead", () => {
-    expect(planOffers("active_automations", 50, "pro")).toBe("Pro includes 50 active automations.");
-    expect(planOffers("scheduled_posts_monthly", null, "max")).toBe("Max has no limit on scheduled posts.");
+  it("what Creator and Business offer instead", () => {
+    expect(planOffers("active_automations", 50, "pro")).toBe("Creator includes 50 active automations.");
+    expect(planOffers("scheduled_posts_monthly", null, "max")).toBe("Business has no limit on scheduled posts.");
     expect(planIncludes("unknown_key", 3, "free")).toBeNull();
   });
 

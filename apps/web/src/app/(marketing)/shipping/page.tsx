@@ -36,7 +36,7 @@ const SECTIONS: LegalSection[] = [
       <ul>
         <li>The Free plan is available as soon as you sign up.</li>
         <li>
-          Pro and its 7-day trial start as soon as checkout succeeds: your workspace shows the plan within a few minutes,
+          A paid plan starts as soon as checkout succeeds (Creator begins with a 7-day trial): your workspace shows the plan within a few minutes,
           and Dodo Payments emails your receipt.
         </li>
         <li>Each renewal continues your plan without a break.</li>

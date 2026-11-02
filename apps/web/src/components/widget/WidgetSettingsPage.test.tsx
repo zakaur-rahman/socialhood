@@ -165,7 +165,7 @@ describe("WidgetSettingsPage (GR-28)", () => {
     const branding = await screen.findByRole("switch", { name: /Powered by Amplychat/ });
     expect(branding).toBeChecked();
     expect(branding).toBeDisabled();
-    expect(screen.getAllByText(/Turning it off is part of Pro/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Turning it off is part of Creator and Business/).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "See plans" })).toBeInTheDocument();
   });
 

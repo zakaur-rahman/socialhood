@@ -16,7 +16,7 @@ import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
 
-// ISR like the landing page: the closing band's trial line follows Pro's state in the plans API.
+// ISR like the landing page: the closing band's trial line follows Creator's state in the plans API.
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({

@@ -21,5 +21,5 @@ export function knowledgeUpgrade(limit: number | null | undefined): UpgradeReque
   return { code: "quota_exceeded", entitlement: "knowledge_characters", limit };
 }
 
-/** The product catalogue's Upgrade (GR-31, PD-8: Pro and Max): adding, importing and syncing products. */
+/** The product catalogue's Upgrade (GR-31, PD-8: Creator and Business): adding, importing and syncing products. */
 export const COMMERCE_UPGRADE: UpgradeRequest = { code: "entitlement_required", entitlement: "commerce" };

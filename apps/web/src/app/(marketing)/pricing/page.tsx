@@ -14,7 +14,7 @@ export const revalidate = 3600;
 export const metadata = pageMetadata({
   title: "Pricing",
   description:
-    "Amplychat plans side by side: Free to start, Pro with Auto replies, more accounts and team members, and every limit of each plan.",
+    "Amplychat plans side by side: Free to start, Creator and Business with Auto replies, more channels and team members, and every limit of each plan.",
   path: PRICING_PATH,
 });
 

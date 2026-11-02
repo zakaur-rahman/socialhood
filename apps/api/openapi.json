@@ -7379,7 +7379,7 @@
       },
       "CheckoutRequest": {
         "additionalProperties": false,
-        "description": "POST \u2026/billing/checkout (F-15). Max is R2: \"max\" is refused with 422 until then.",
+        "description": "POST \u2026/billing/checkout (F-15). \"max\" (Business) is refused with 422 until its Dodo product\nis set.",
         "properties": {
           "plan": {
             "enum": [
@@ -27461,7 +27461,7 @@
   "paths": {
     "/v1/billing/plans": {
       "get": {
-        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing\npage and the upgrade dialog's comparison. The same numbers as GET \u2026/billing. While billing\nisn't set up on this server (C-149) Pro and Max are ``available: false`` without prices.",
+        "description": "Public, no sign-in: Free, Creator and Business (``available: false`` until a paid\nplan's product is set) with their \u00a71.7 entitlements and Dodo prices (cached 1 h; null when\nDodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same\nnumbers as GET \u2026/billing. While billing isn't set up on this server (C-149) the paid plans\nare ``available: false`` without prices.",
         "operationId": "list_billing_plans",
         "responses": {
           "200": {
@@ -30484,7 +30484,7 @@
         ]
       },
       "post": {
-        "description": "The key is in this response only. 402 entitlement_required on Free (the public API is part\nof Pro); 409 at 20 active keys. C-167: ``expires_in_days`` (30, 90 or 365; leave out for\nnever) and ``allowed_ips`` (IPs and CIDRs; empty for any address).",
+        "description": "The key is in this response only. 402 entitlement_required on a plan without the public\nAPI (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:\n``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and\nCIDRs; empty for any address).",
         "operationId": "create_api_key",
         "parameters": [
           {

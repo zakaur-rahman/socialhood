@@ -159,7 +159,7 @@ async def test_free_gets_drafts_but_not_writes(
     error = error_of(await harness.call("save_note", {"note": "hello"}))
     assert error["code"] == "entitlement_required"
     assert error["entitlement"] == "ai_connections"
-    assert "part of Pro" in error["message"]
+    assert "part of Creator and Business" in error["message"]
     assert harness.saved == []
 
 

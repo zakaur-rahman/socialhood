@@ -2,7 +2,7 @@
 going, and send product and product-list messages in a WhatsApp conversation.
 
 The rules are in services/catalogue/wa_catalogue.py (the sync) and wa_send.py (the messages).
-Connecting and syncing need ``integrations.manage`` and ``commerce`` on the plan (PD-8: Pro and
+Connecting and syncing need ``integrations.manage`` and ``commerce`` on the plan (PD-8: Creator and
 Max, 402 ``entitlement_required`` on Free); reading the status never needs the plan. Sending a
 message needs ``reply`` (any member) and commerce. A request that names another workspace's
 account, conversation or product is a 404 before any plan check.

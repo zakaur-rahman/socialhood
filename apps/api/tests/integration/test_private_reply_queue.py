@@ -162,8 +162,8 @@ async def test_a_surge_of_5000_keeps_to_750_an_hour_and_its_eta(world: World) ->
     )
 
     # Another account in the workspace, with a DM automation and a customer who just wrote
-    # (on Pro: Free's one Instagram slot would leave it read-only, FR-BIL-07).
-    await world.plan("pro")
+    # (on Business: Creator's one Instagram slot would leave it read-only, FR-BIL-07).
+    await world.plan("max")
     other = await make_account(world.engine, world.wid)
     await make_automation(world.engine, workspace_id=world.wid, account_id=other)
 

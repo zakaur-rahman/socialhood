@@ -58,13 +58,13 @@ test.describe("C-160 explainer pages", () => {
     await page.evaluate(() => document.getElementById("results")?.scrollIntoView());
     await expect(scene).toHaveAttribute("data-xv", "in");
     await page.locator("#replies [data-mode='auto']").click();
-    await expect(page.locator("#replies [data-mode-desc]")).toContainText("With Auto mode (Pro)");
+    await expect(page.locator("#replies [data-mode-desc]")).toContainText("With Auto mode (Creator and Business)");
   });
 
   test("features: the bento cells link to their pages and details", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/features");
-    await expect(page.locator("ul.bento > li")).toHaveCount(15);
+    await expect(page.locator("ul.bento > li")).toHaveCount(16);
     await page.locator("#f-ask").getByRole("link").click();
     await expect(page).toHaveURL(/#d-ask$/);
     const nav = page.getByRole("navigation", { name: "Feature groups" });

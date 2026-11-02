@@ -893,7 +893,7 @@ function AiReplyFields({
       {plan === "free" ? (
         <Alert tone="brand">
           <span className="flex items-center gap-2">
-            <ProBadge /> Replies with AI are part of Pro. Set it up now and activate it after upgrading.
+            <ProBadge /> Replies with AI are part of Creator and Business. Set it up now and activate it after upgrading.
           </span>
         </Alert>
       ) : null}

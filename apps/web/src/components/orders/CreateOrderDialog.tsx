@@ -156,7 +156,7 @@ export function CreateOrderDialog({
                   ) : undefined
                 }
               >
-                Orders are part of Pro.
+                Orders are part of Creator and Business.
               </Alert>
             ) : null}
 

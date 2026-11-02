@@ -111,9 +111,9 @@ describe("Orders page (GR-32)", () => {
     expect(within(rows[1]).getByText("Paid")).toBeInTheDocument();
   });
 
-  it("tells Free that orders are part of Pro", async () => {
+  it("tells Free that orders are part of Creator and Business", async () => {
     setup(list([], false));
-    expect(await screen.findByText(/Orders and payment requests are part of Pro\. You can see what is here/)).toBeInTheDocument();
+    expect(await screen.findByText(/Orders and payment requests are part of Creator and Business\. You can see what is here/)).toBeInTheDocument();
     expect(await screen.findByText("No orders yet")).toBeInTheDocument();
   });
 

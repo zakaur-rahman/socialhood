@@ -7,7 +7,7 @@ import { expect, test } from "./support/fixtures";
  *
  * Done when a test-mode Razorpay link marks the sandbox order paid: connect test keys, make an
  * order in a conversation, send the link, post `payment_link.paid`, and the order is Paid. Also a
- * UPI order marked paid by hand, and Free being told orders are part of Pro.
+ * UPI order marked paid by hand, and Free being told orders are part of Creator and Business.
  */
 const WEBHOOK_KEY = "e2e-webhook-secret";
 
@@ -28,9 +28,9 @@ async function customerAndKurta(
 }
 
 test.describe("GR-32 orders and payment requests", () => {
-  test("Free sees the Orders page and is told orders are part of Pro", async ({ page, sandbox }) => {
+  test("Free sees the Orders page and is told orders are part of Creator and Business", async ({ page, sandbox }) => {
     await page.goto(`/w/${sandbox.workspace.slug}/orders`);
-    await expect(page.getByText(/Orders and payment requests are part of Pro/).first()).toBeVisible();
+    await expect(page.getByText(/Orders and payment requests are part of Creator and Business/).first()).toBeVisible();
     await expect(page.getByText("No orders yet")).toBeVisible();
   });
 

@@ -208,8 +208,8 @@ async def test_a_plan_change_moves_the_credit_period_and_its_limits(
     assert row["status"] == "processed"
     assert (await owner.sub())["billing_anchor_day"] == min(started.day, 28)
     meters = await owner.meters()
-    assert (meters["ai_credits"]["used"], meters["ai_credits"]["limit"]) == (0, 5000)
-    assert meters["scheduled_posts"]["limit"] == 300
+    assert (meters["ai_credits"]["used"], meters["ai_credits"]["limit"]) == (0, 1500)
+    assert meters["scheduled_posts"]["limit"] == 100
     assert date.fromisoformat(meters["ai_credits"]["period_end"]) > today
 
     await send(
@@ -269,7 +269,7 @@ async def test_max_to_pro_applies_the_lower_limits(owner: Owner, engine: AsyncEn
     [notice] = await owner.rows(
         "SELECT body FROM notifications WHERE workspace_id = :w AND type = 'plan_downgraded'"
     )
-    assert notice["body"] == "1 account can no longer send."
+    assert notice["body"] == "3 accounts can no longer send."
 
 
 # ---------------------------------------------------------------- workspace deletion (F-16)

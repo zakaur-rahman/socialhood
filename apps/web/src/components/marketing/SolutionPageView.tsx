@@ -21,7 +21,7 @@ import { CtaLink, SECTION_EYEBROW } from "./primitives";
 
 const DOT = { live: "var(--ok)", waiting: "var(--wait-mark)", yours: "var(--iris)" } as const;
 
-/** What a plan says today: Free is available; Pro's state and price come only from the plans API. */
+/** What a plan says today: Free is available; the paid plans' state and price come only from the plans API. */
 function planState(card: PlanCard | undefined): { label: string; tone: "t-ok" | "t-plain" | "t-draft" } {
   if (!card) return { label: "Coming soon", tone: "t-plain" };
   if (card.plan === "free") return { label: "Available now", tone: "t-ok" };
@@ -53,7 +53,7 @@ function TierCard({ tier, pricing }: { tier: Tier; pricing: Pricing }) {
  * integrations (businesses), plans by audience size on the plan-card skin (no testimonials: there
  * are none to show), the FAQ (its FAQPage JSON-LD names only the questions /faq doesn't already mark
  * up, C-162), related pages and the night closing band.
- * The content is lib/marketing/solutions.ts; Pro's state comes from the plans API.
+ * The content is lib/marketing/solutions.ts; the paid plans' state comes from the plans API.
  */
 export function SolutionPageView({ page, pricing }: { page: SolutionPage; pricing: Pricing }) {
   const origin = siteUrl();

@@ -47,6 +47,19 @@ async def count_live(session: AsyncSession, platform: str) -> int:
     return int(count or 0)
 
 
+async def count_live_in(session: AsyncSession, platforms: tuple[str, ...]) -> int:
+    """Connected (not disconnected) accounts on any of ``platforms``."""
+    count = await session.scalar(
+        select(func.count())
+        .select_from(SocialAccount)
+        .where(
+            SocialAccount.platform.in_(platforms),
+            SocialAccount.status != AccountStatus.DISCONNECTED,
+        )
+    )
+    return int(count or 0)
+
+
 async def count_reconnectable(session: AsyncSession, platform: str) -> int:
     count = await session.scalar(
         select(func.count())

@@ -21,7 +21,7 @@ describe("payment problem banner (FR-BIL-06, F-15, UX-SH-04)", () => {
     render(<BannerSlot banners={banners} />);
     // Payment on hold is a danger Alert: announced at once, and it cannot be dismissed.
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("Payment failed. Update your payment method by 3 Oct to keep Pro");
+    expect(alert).toHaveTextContent("Payment failed. Update your payment method by 3 Oct to keep your plan");
     expect(alert).toHaveAttribute("data-tone", "danger");
     await userEvent.click(screen.getByRole("button", { name: "Manage billing" }));
     expect(onManageBilling).toHaveBeenCalledOnce();
@@ -60,21 +60,21 @@ describe("trial ending reminder", () => {
     });
     render(<BannerSlot banners={banners} />);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Your Pro trial ends in 2 days, on 2 Oct. Pro then continues at ₹999 a month",
+      "Your Creator trial ends in 2 days, on 2 Oct. Creator then continues at ₹999 a month",
     );
     expect(screen.getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing");
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismissTrial).toHaveBeenCalledWith("2026-10-02T06:00:00Z");
   });
 
-  it("a cancelled trial says the workspace moves to Free, with Keep Pro", () => {
+  it("a cancelled trial says the workspace moves to Free, with Keep your plan", () => {
     const [banner] = billingBanners(trial("2026-10-01T03:00:00Z", { cancel_at_period_end: true }), {
       ...base,
       role: "owner",
       onManageBilling: vi.fn(),
     });
-    expect(banner.message).toBe("Your Pro trial ends tomorrow, on 1 Oct. The workspace moves to Free then");
-    expect(banner.action?.label).toBe("Keep Pro");
+    expect(banner.message).toBe("Your Creator trial ends tomorrow, on 1 Oct. The workspace moves to Free then");
+    expect(banner.action?.label).toBe("Keep your plan");
   });
 
   it("not earlier, and not once dismissed for this trial", () => {

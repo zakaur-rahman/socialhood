@@ -30,7 +30,7 @@ import { toastError } from "@/lib/toast-error";
  * business's account, never through Amplychat. Razorpay: the keys are checked with Razorpay before
  * they are saved, and a webhook address is shown to add in the Razorpay dashboard with the same
  * webhook secret, which is how a paid link reaches the order. UPI has no confirmation from the
- * bank, so those orders are marked paid by hand. Owners and admins; part of Pro.
+ * bank, so those orders are marked paid by hand. Owners and admins; part of Creator and Business.
  */
 export function PaymentsCard({ wid }: { wid: string }) {
   const settings = usePaymentSettings(wid);
@@ -57,7 +57,7 @@ function Body({ wid, settings }: { wid: string; settings: PaymentSettings }) {
   if (!settings.entitled) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-fg-secondary">Orders and payment requests are part of Pro.</p>
+        <p className="text-sm text-fg-secondary">Orders and payment requests are part of Creator and Business.</p>
         <Button type="button" variant="secondary" size="sm" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
           See plans
         </Button>

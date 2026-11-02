@@ -138,7 +138,7 @@ const modes = (v: number | boolean | null) => ((v as unknown as string[]).includ
 // billing/plans.py CREDIT_COSTS. A message you write is sent without the AI, so it uses none.
 const CREDIT_FIXED = "Sending a message you wrote uses no AI credits.";
 const CREDIT_READ = "The AI reads each incoming message for its intent and sentiment, which uses one credit, as everywhere in the inbox.";
-const CREDIT_AUTOMATION_AI = "An AI reply inside an automation uses two credits, and is part of Pro and Max.";
+const CREDIT_AUTOMATION_AI = "An AI reply inside an automation uses two credits, and is part of Creator and Business.";
 const CREDIT_DRAFT = "A draft (Suggest) or an automatic reply (Auto) uses two credits.";
 
 const ROW_AUTOMATIONS = planRow("Active automations", "active_automations");
@@ -419,7 +419,7 @@ const STORY_REPLIES: AutomationPage = {
   updated: "2026-10-31",
   sections: ["How it works in Amplychat", "Meta's rules for story messages", "Set it up", "An example", "See what it does", "Mistakes to avoid"],
   Body: StoryRepliesBody,
-  limits: [ROW_AUTOMATIONS, ROW_STEPS, planRow("Instagram accounts", "accounts_per_platform")],
+  limits: [ROW_AUTOMATIONS, ROW_STEPS, { label: "Instagram accounts", free: `Within ${E.channels_total.free} channels in total`, pro: `${E.accounts_per_platform.pro}`, max: `${E.accounts_per_platform.max}` }],
   credits: [CREDIT_FIXED, CREDIT_AUTOMATION_AI, CREDIT_READ],
   faq: [
     {
@@ -470,7 +470,7 @@ function DmKeywordsBody() {
       />
       <p>
         When a message matches, the automation sends your message (text, an image and up to three link buttons), runs a flow, or
-        on Pro writes an AI reply from your knowledge. Once an automation has answered, the inbox AI leaves that message alone.
+        on Creator and Business writes an AI reply from your knowledge. Once an automation has answered, the inbox AI leaves that message alone.
       </p>
       <ul>
         <li>
@@ -649,7 +649,7 @@ function StartersBody() {
       />
       <p>
         Set them on the Conversation starters page under Automations. A starter set to answer with AI leaves the message to the
-        inbox AI, which drafts on Suggest or replies by itself on Auto (Pro), and hands it to you when the answer isn&apos;t in your
+        inbox AI, which drafts on Suggest or replies by itself on Auto (Creator and Business), and hands it to you when the answer isn&apos;t in your
         knowledge. Facebook Pages can have conversation starters in Messenger too, once Meta approves Facebook for {N}.
       </p>
 
@@ -766,8 +766,8 @@ function WhatsAppBody() {
       <GuideH2>How it works in Amplychat</GuideH2>
       <StepCards
         items={[
-          // models/ai.py AI modes per account; Auto is Pro (plan-table ai_modes).
-          { icon: Send, body: <><strong>Off, Suggest or Auto</strong> for the number. Suggest drafts each reply for you to send; Auto replies by itself when it is confident, and is part of Pro.</> },
+          // models/ai.py AI modes per account; Auto is Creator and Business (plan-table ai_modes).
+          { icon: Send, body: <><strong>Off, Suggest or Auto</strong> for the number. Suggest drafts each reply for you to send; Auto replies by itself when it is confident, and is part of Creator and Business.</> },
           // Answers only from knowledge; escalation reasons; knowledge gaps.
           { icon: KeyRound, body: <><strong>Answers from your knowledge</strong>: your text, questions and answers, files and website pages. When the answer isn&apos;t there, it goes to Needs you.</> },
           // services/business_hours.py: auto_mode always or out_of_hours; the away message once per closed window.
@@ -863,7 +863,7 @@ const WHATSAPP: AutomationPage = {
   updated: "2026-10-31",
   sections: ["How it works in Amplychat", "WhatsApp's 24-hour window and templates", "Where your team comes in", "Set it up", "An example", "Mistakes to avoid"],
   Body: WhatsAppBody,
-  limits: [ROW_MODES, ROW_CREDITS, planRow("WhatsApp numbers", "accounts_per_platform")],
+  limits: [ROW_MODES, ROW_CREDITS, { label: "WhatsApp numbers", free: "None", pro: `${E.accounts_per_platform.pro}`, max: `${E.accounts_per_platform.max}` }],
   credits: [CREDIT_DRAFT, CREDIT_READ, "An away message uses no AI credits. Meta's WhatsApp fees are separate and paid to Meta."],
   faq: [
     {
@@ -909,12 +909,12 @@ function WebsiteChatBody() {
           // email_capture off / optional / required; marketing consent with the words shown as evidence.
           { icon: AtSign, body: <><strong>Email when you want it</strong>: never, after the first message, or before it, with an optional marketing consent box.</> },
           // AI modes, knowledge, escalation; ingest as on Instagram.
-          { icon: KeyRound, body: <><strong>The same AI</strong>: Suggest or Auto (Pro), answers from your knowledge, and Needs you when it doesn&apos;t know.</> },
+          { icon: KeyRound, body: <><strong>The same AI</strong>: Suggest or Auto (Creator and Business), answers from your knowledge, and Needs you when it doesn&apos;t know.</> },
         ]}
       />
       <p>
         The AI can read your website&apos;s own pages as knowledge, so a visitor asking about delivery gets the answer from your
-        delivery page. Business hours and an away message work here too. On Pro and Max you can remove the “Powered by {N}” line.
+        delivery page. Business hours and an away message work here too. On Creator and Business you can remove the “Powered by {N}” line.
       </p>
       <p>
         A visitor who comes back on the same browser sees their earlier messages, so a conversation can pick up where it stopped.

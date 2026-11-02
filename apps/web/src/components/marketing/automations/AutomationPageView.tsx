@@ -233,7 +233,7 @@ export function AutomationPageView({ page }: { page: AutomationPage }) {
                   <dt>
                     <Sparkles size={16} strokeWidth={1.75} aria-hidden focusable="false" /> Plans
                   </dt>
-                  <dd>Free, Pro and Max</dd>
+                  <dd>Free, Creator and Business</dd>
                 </div>
                 <div>
                   <dt>

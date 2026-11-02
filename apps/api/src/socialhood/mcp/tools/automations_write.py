@@ -50,7 +50,8 @@ NEVER_LIVE = (
     title="Pause an automation",
     description=(
         "Pause a live automation now, so it stops replying to customers. Its settings are kept "
-        "and it can be resumed. Pausing one that is not live changes nothing. Part of Pro."
+        "and it can be resumed. Pausing one that is not live changes nothing. Part of Creator and "
+        "Business."
     ),
     input_model=AutomationIdInput,
     output_model=AutomationStateResult,
@@ -86,7 +87,7 @@ async def pause_automation(call: ToolCall, args: AutomationIdInput) -> Automatio
     description=(
         "Turn a paused automation back on. Only an automation that was live before can be "
         "resumed; a draft that never went live is activated in Amplychat. It is checked and "
-        "limited as when activating in the app. Part of Pro."
+        "limited as when activating in the app. Part of Creator and Business."
     ),
     input_model=AutomationIdInput,
     output_model=AutomationStateResult,

@@ -110,7 +110,7 @@ export function billingBanners(
           !billing.cancel_at_period_end,
           price ? pricePerMonth(price) : null,
         ),
-        action: { label: billing.cancel_at_period_end ? "Keep Pro" : "View billing", href: options.billingHref },
+        action: { label: billing.cancel_at_period_end ? "Keep your plan" : "View billing", href: options.billingHref },
         onDismiss: options.onDismissTrial ? () => options.onDismissTrial?.(ends) : undefined,
       },
     ];

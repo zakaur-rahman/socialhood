@@ -31,20 +31,28 @@ describe("the pricing page's plan table (GR-37)", () => {
   });
 
   it("words the owner's decisions: seats (PD-1), broadcasts (PD-4), API and Sheets (PD-6), widget (PD-7), commerce (PD-8)", () => {
-    expect(cells("members")).toEqual(["1", "3", "10"]);
-    expect(cells("broadcast_recipients_monthly")).toEqual(["Not included", "2,500", "25,000"]);
-    expect(cells("public_api")).toEqual(["Not included", "Included", "Included"]);
+    expect(cells("members")).toEqual(["1", "2", "3"]);
+    expect(cells("broadcast_recipients_monthly")).toEqual(["Not included", "2,500", "2,500"]);
+    expect(cells("public_api")).toEqual(["Not included", "Not included", "Included"]);
     expect(cells("sheets_sync")).toEqual(["Not included", "Included", "Included"]);
     expect(cells("widget_remove_branding")).toEqual(["Not included", "Included", "Included"]);
     expect(cells("commerce")).toEqual(["Not included", "Included", "Included"]);
     expect(rowCell(row("catalogue_products"), "free")).toBe("Not included");
   });
 
+  it("C-172: channels in total and WhatsApp (Free 2 and none; Creator and Business per platform with WhatsApp)", () => {
+    expect(cells("channels_total")).toEqual(["2", "Per platform", "Per platform"]);
+    expect(cells("whatsapp")).toEqual(["Not included", "Included", "Included"]);
+    expect(cells("accounts_per_platform")).toEqual(["1", "1", "3"]);
+    expect(cells("public_api")[1]).toBe("Not included"); // Creator has no API keys or Zapier
+    expect(cells("public_api")[2]).toBe("Included"); // Business does
+  });
+
   it("reads unlimited, days, modes and analysed posts in plain words", () => {
-    expect(rowCell(row("active_automations"), "max")).toBe("Unlimited");
+    expect(cells("active_automations")).toEqual(["3", "25", "50"]);
+    expect(cells("comment_intelligence_posts")).toEqual(["Latest 5", "All posts", "All posts"]);
     expect(cells("message_history_days")).toEqual(["90 days", "Unlimited", "Unlimited"]);
     expect(cells("ai_modes")).toEqual(["Off, Suggest", "Off, Suggest, Auto", "Off, Suggest, Auto"]);
-    expect(cells("comment_intelligence_posts")).toEqual(["Latest 5", "All posts", "All posts"]);
   });
 
   it("C-168: shows what AI apps may do on each plan, and keeps their daily caps for /developers/mcp", () => {

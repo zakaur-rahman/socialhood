@@ -40,7 +40,7 @@ beforeAll(() => {
 
 function setup({
   items = [] as ApiKey[],
-  ws = workspace,
+  ws = { ...workspace, plan: "max" } as WorkspaceSummary, // API keys are Business only (C-172)
   create,
 }: { items?: ApiKey[]; ws?: WorkspaceSummary; create?: (call: Call) => Response } = {}) {
   return renderWithApi(<ApiKeysSection />, {
@@ -134,9 +134,16 @@ describe("Settings > API keys (GR-25)", () => {
     expect(toast.success).toHaveBeenCalledWith("API key revoked");
   });
 
-  it("tells a Free workspace the API is part of Pro instead of offering the form", async () => {
+  it("tells a Creator workspace the API is part of Business instead of offering the form (C-172)", async () => {
+    setup({ ws: { ...workspace, plan: "pro" } });
+    expect(await screen.findByText("The public API, API keys and Zapier are part of Business.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
+  });
+
+  it("tells a Free workspace (not Business) the API is part of Business instead of offering the form", async () => {
     setup({ ws: { ...workspace, plan: "free" } });
-    expect(await screen.findByText("The public API, API keys and Zapier are part of Pro.")).toBeInTheDocument();
+    expect(await screen.findByText("The public API, API keys and Zapier are part of Business.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
@@ -145,7 +152,7 @@ describe("Settings > API keys (GR-25)", () => {
     const user = userEvent.setup();
     setup({
       create: () =>
-        problem(402, "entitlement_required", "The public API, API keys and Zapier are part of Pro.", {
+        problem(402, "entitlement_required", "The public API, API keys and Zapier are part of Business.", {
           entitlement: "public_api",
         }),
     });
@@ -153,7 +160,7 @@ describe("Settings > API keys (GR-25)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create an API key" });
     await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Zapier");
     await user.click(within(dialog).getByRole("button", { name: "Create key" }));
-    expect(await screen.findByText("Public API access is part of Pro")).toBeInTheDocument();
+    expect(await screen.findByText("Public API access is part of Business")).toBeInTheDocument();
     expect(toast.error).not.toHaveBeenCalled(); // the dialog says it, not a toast
   });
 

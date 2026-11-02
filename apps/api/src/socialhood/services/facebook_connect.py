@@ -29,6 +29,7 @@ from typing import Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import check_new_channel
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.connections import AccountStatus, Platform, SocialAccount
@@ -278,12 +279,14 @@ async def _check_room(session: AsyncSession, chosen: list[oauth.FacebookPage], p
     """The plan's accounts_per_platform for all the picked Pages at once: a Page that is already
     live uses its own slot."""
     limit = entitlement(plan, "accounts_per_platform")
-    if limit is None:
-        return
     new = 0
     for page in chosen:
         existing = await accounts.find(session, Platform.FACEBOOK, page.id)
         if existing is None or existing.status == AccountStatus.DISCONNECTED:
             new += 1
+    if new:
+        await check_new_channel(session, Platform.FACEBOOK, plan, adding=new)
+    if limit is None:
+        return
     if new and await accounts.count_live(session, Platform.FACEBOOK) + new > int(limit):
         raise _quota_error(int(limit), Platform.FACEBOOK)

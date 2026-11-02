@@ -106,7 +106,7 @@ describe("the broadcast composer (GR-23)", () => {
     renderWithApi(<BroadcastComposer />, {
       handlers: { "GET /v1/w/:wid/broadcasts/availability": () => json({ ...availability, plan_allowed: false, monthly_limit: 0 }) },
     });
-    expect(await screen.findByText(/Broadcasts are part of Pro/)).toBeInTheDocument();
+    expect(await screen.findByText(/Broadcasts are part of Creator and Business/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
   });
 

@@ -40,7 +40,7 @@ export function ModeSwitch() {
         {ORDER.map((key) => (
           <button key={key} type="button" data-mode={key} aria-pressed={key === DEFAULT_MODE}>
             {MODES[key].label}
-            {key === "auto" ? <span className="pro">Pro</span> : null}
+            {key === "auto" ? <span className="pro">Creator and Business</span> : null}
           </button>
         ))}
       </div>

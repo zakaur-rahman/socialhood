@@ -13,7 +13,7 @@ import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } from "@/lib/marketing/site";
 
-// ISR like the pricing page: Pro's state (and the closing band's trial line) come from the plans API.
+// ISR like the pricing page: Creator's state (and the closing band's trial line) come from the plans API.
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({

@@ -30,7 +30,7 @@ export function useBilling(
   });
 }
 
-/** The public plan list (C-049): Free, Pro and Max with entitlements and Dodo prices. */
+/** The public plan list (C-049): Free, Creator and Business with entitlements and Dodo prices. */
 export function useBillingPlans(enabled = true) {
   const api = useApi();
   return useQuery<PlanList>({

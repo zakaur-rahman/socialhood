@@ -188,8 +188,8 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
                 <tr>
                   <th scope="col">AI apps</th>
                   <th scope="col">Free</th>
-                  <th scope="col">Pro</th>
-                  <th scope="col">Max</th>
+                  <th scope="col">Creator</th>
+                  <th scope="col">Business</th>
                 </tr>
               </thead>
               <tbody>

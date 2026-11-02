@@ -71,7 +71,7 @@ function setup({
 afterEach(() => vi.restoreAllMocks());
 
 describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
-  it("names the limit, what Pro includes and its price, and starts the trial straight away", async () => {
+  it("names the limit, what Creator includes and its price, and starts the trial straight away", async () => {
     const user = userEvent.setup();
     const assign = vi.spyOn(browser, "assign").mockImplementation(() => {});
     const { calls } = setup();
@@ -79,8 +79,8 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     expect(dialog).toHaveTextContent("Free includes 3 active automations.");
-    expect(await within(dialog).findByText("Pro includes 50 active automations.")).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("Try Pro free for 7 days, then ₹999 a month. Cancel anytime.");
+    expect(await within(dialog).findByText("Creator includes 25 active automations.")).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Try Creator free for 7 days, then ₹999 a month. Cancel anytime.");
     expect(within(dialog).getByRole("link", { name: "Compare plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
 
     await user.click(within(dialog).getByRole("button", { name: "Start 7-day trial" }));
@@ -90,13 +90,38 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(within(dialog).getByRole("button", { name: "Start 7-day trial" })).toBeDisabled();
   });
 
-  it("without a trial it offers Upgrade to Pro", async () => {
+  it("without a trial it offers Upgrade to Creator", async () => {
     const user = userEvent.setup();
     setup({ billing: { ...freeBilling, trial_eligible: false } });
     await user.click(screen.getByRole("button", { name: "Activate" }));
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
-    expect(within(dialog).getByRole("button", { name: "Upgrade to Pro" })).toBeInTheDocument();
-    expect(dialog).toHaveTextContent("Pro is ₹999 a month.");
+    expect(within(dialog).getByRole("button", { name: "Upgrade to Creator" })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Creator is ₹999 a month.");
+  });
+
+  it("a Business-only 402 (public_api) offers Upgrade to Business, never the Creator trial", async () => {
+    const user = userEvent.setup();
+    const assign = vi.spyOn(browser, "assign").mockImplementation(() => {});
+    const { calls } = setup({
+      gate: () => problem(402, "entitlement_required", "The public API is part of Business.", { entitlement: "public_api" }),
+    });
+    await user.click(screen.getByRole("button", { name: "Activate" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: /trial/ })).not.toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent("Try Creator free");
+    await user.click(await within(dialog).findByRole("button", { name: "Upgrade to Business" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
+    expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "max" });
+  });
+
+  it("an ordinary 402 offers Creator and the trial, not Business", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup();
+    await user.click(screen.getByRole("button", { name: "Activate" }));
+    const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
+    expect(within(dialog).queryByRole("button", { name: "Upgrade to Business" })).not.toBeInTheDocument();
+    expect(await within(dialog).findByRole("button", { name: "Start 7-day trial" })).toBeInTheDocument();
+    expect(calls.some((c) => c.path.endsWith("/billing/checkout"))).toBe(false);
   });
 
   it("C-149: without billing on the server it names the limit and says paid plans aren't on sale", async () => {
@@ -106,7 +131,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     expect(dialog).toHaveTextContent("Free includes 3 active automations.");
     expect(dialog).toHaveTextContent("Paid plans aren't available yet. Everything on Free keeps working.");
-    expect(dialog).not.toHaveTextContent("Pro includes 50 active automations.");
+    expect(dialog).not.toHaveTextContent("Creator includes 25 active automations.");
     expect(within(dialog).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(calls.some((c) => c.path.endsWith("/billing/checkout"))).toBe(false);
@@ -124,7 +149,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     await user.click(screen.getByRole("button", { name: "Activate" }));
     const dialog = await screen.findByRole("dialog", { name: "AI credits used up" });
     expect(dialog).toHaveTextContent("You've used all 200 AI credits for this month. They reset on 1 Oct.");
-    expect(dialog).toHaveTextContent("Pro includes 5,000 AI credits a month.");
+    expect(dialog).toHaveTextContent("Creator includes 1,500 AI credits a month.");
   });
 
   it("a checkout refused with 409 says why, and the dialog stays", async () => {
@@ -168,7 +193,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     setup({ billing: billingState() });
     await user.click(screen.getByRole("button", { name: "Activate" }));
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
-    expect(dialog).toHaveTextContent("Pro includes 3 active automations.");
+    expect(dialog).toHaveTextContent("Creator includes 3 active automations.");
     expect(within(dialog).getByRole("link", { name: "View billing" })).toBeInTheDocument();
   });
 
@@ -195,7 +220,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(activate).toHaveFocus();
   });
 
-  it("a plain Upgrade button (UI-063) says what Pro adds and Esc returns focus to it", async () => {
+  it("a plain Upgrade button (UI-063) says what Creator adds and Esc returns focus to it", async () => {
     function UpgradeButton() {
       const { open } = useUpgradeDialog();
       return (
@@ -208,8 +233,8 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     setup({ ui: <UpgradeButton /> });
     const button = screen.getByRole("button", { name: "Upgrade" });
     await user.click(button);
-    const dialog = await screen.findByRole("dialog", { name: "Upgrade to Pro" });
-    expect(dialog).toHaveTextContent("Pro adds Auto replies");
+    const dialog = await screen.findByRole("dialog", { name: "Upgrade to Creator" });
+    expect(dialog).toHaveTextContent("Creator adds Auto replies");
     expect(await within(dialog).findByRole("button", { name: "Start 7-day trial" })).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -258,16 +283,16 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
         handlers: {
           "GET /v1/w/:wid/billing": (_call, p) =>
             p.wid === "gated"
-              ? problem(402, "entitlement_required", "Comment insights is part of Pro.")
+              ? problem(402, "entitlement_required", "Comment insights is part of Creator and Business.")
               : json(freeBilling),
           "GET /v1/billing/plans": () => json(planList()),
         },
       },
     );
-    expect(await screen.findByRole("dialog", { name: "Comment insights is part of Pro" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Comment insights is part of Creator and Business" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Not now" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Open" }));
-    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Pro" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Auto mode is part of Creator and Business" })).toBeInTheDocument();
   });
 });

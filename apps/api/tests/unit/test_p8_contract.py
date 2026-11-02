@@ -110,7 +110,7 @@ def test_a_402_names_its_entitlement_and_limit() -> None:
     assert (body["entitlement"], body["limit"]) == ("active_automations", 3)
     feature = problem_body(
         "entitlement_required",
-        detail="Auto mode is part of Pro.",
+        detail="Auto mode is part of Creator and Business.",
         request_id=None,
         plan_limit=PlanLimit(entitlement="ai_modes"),
     )

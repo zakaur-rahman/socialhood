@@ -206,7 +206,7 @@ async def test_add_knowledge_counts_toward_the_plan_and_needs_the_fields(
     ingested: list[uuid.UUID],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["knowledge_characters"], "pro", 30)
+    monkeypatch.setitem(ENTITLEMENTS["knowledge_characters"], "max", 30)
     error = error_of(
         await call(
             mcp_app,
@@ -357,7 +357,7 @@ async def test_ask_uses_the_plans_credits_and_rate_limit(
     queued: list[uuid.UUID],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["ai_credits_monthly"], "pro", 0)
+    monkeypatch.setitem(ENTITLEMENTS["ai_credits_monthly"], "max", 0)
     error = error_of(await call(mcp_app, key, "ask_amplychat", {"question": "How many DMs?"}))
     assert (error["code"], error["entitlement"]) == ("quota_exceeded", "ai_credits_monthly")
     assert await rows(engine, "SELECT 1 FROM agent_runs") == []

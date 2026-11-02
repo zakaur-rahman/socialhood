@@ -404,16 +404,23 @@ export function billingState(overrides: Partial<BillingState> = {}): BillingStat
   };
 }
 
-/** GET /v1/billing/plans (C-049): Free, Pro with its Dodo price and trial, Max not yet available.
- * `billingOff` (C-149): the server has no billing, so Pro is unavailable without a price too. */
-export function planList(overrides: { proPrice?: PlanOffer["price"]; billingOff?: boolean } = {}): PlanList {
+/** GET /v1/billing/plans (C-049, C-172): Free, Creator (pro) with its Dodo price and trial, Business
+ * (max) unavailable unless `businessOnSale` (its product id is set). `billingOff` (C-149): the server
+ * has no billing, so no paid plan is available or priced. */
+export function planList(
+  overrides: { proPrice?: PlanOffer["price"]; billingOff?: boolean; businessOnSale?: boolean } = {},
+): PlanList {
   const ent = (plan: "free" | "pro" | "max") => [
-    { key: "accounts_per_platform", value: { free: 1, pro: 3, max: 10 }[plan] },
-    { key: "active_automations", value: { free: 3, pro: 50, max: null }[plan] },
+    { key: "accounts_per_platform", value: { free: 1, pro: 1, max: 3 }[plan] },
+    { key: "channels_total", value: plan === "free" ? 2 : null },
+    { key: "whatsapp", value: plan !== "free" },
+    { key: "members", value: { free: 1, pro: 2, max: 3 }[plan] },
+    { key: "active_automations", value: { free: 3, pro: 25, max: 50 }[plan] },
     { key: "ai_modes", value: plan === "free" ? ["off", "suggest"] : ["off", "suggest", "auto"] },
-    { key: "ai_credits_monthly", value: { free: 200, pro: 5000, max: 25000 }[plan] },
-    { key: "knowledge_characters", value: { free: 200_000, pro: 5_000_000, max: 50_000_000 }[plan] },
-    { key: "scheduled_posts_monthly", value: { free: 10, pro: 300, max: null }[plan] },
+    { key: "ai_credits_monthly", value: { free: 200, pro: 1500, max: 5000 }[plan] },
+    { key: "knowledge_characters", value: { free: 200_000, pro: 1_000_000, max: 5_000_000 }[plan] },
+    { key: "scheduled_posts_monthly", value: { free: 10, pro: 100, max: 300 }[plan] },
+    { key: "public_api", value: plan === "max" },
   ];
   return {
     items: [
@@ -429,7 +436,16 @@ export function planList(overrides: { proPrice?: PlanOffer["price"]; billingOff?
             : { plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" },
         trial_days: 7,
       },
-      { plan: "max", available: false, entitlements: ent("max"), price: null, trial_days: 0 },
+      {
+        plan: "max",
+        available: Boolean(overrides.businessOnSale) && !overrides.billingOff,
+        entitlements: ent("max"),
+        price:
+          overrides.businessOnSale && !overrides.billingOff
+            ? { plan: "max", amount_minor: 499_900, currency: "INR", interval: "month" }
+            : null,
+        trial_days: 0,
+      },
     ],
   };
 }

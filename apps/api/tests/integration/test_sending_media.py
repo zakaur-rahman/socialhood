@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 from fastapi import FastAPI
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from socialhood.db.tenancy import workspace_scope
@@ -138,6 +139,17 @@ async def test_a_sticker_goes_on_its_own(
 
 async def whatsapp_conversation(engine: AsyncEngine) -> tuple[uuid.UUID, uuid.UUID]:
     wid = await make_workspace(engine)
+    async with (
+        engine.begin() as conn
+    ):  # WhatsApp isn't on Free (C-172); a bare workspace has no row
+        await conn.execute(
+            sql_text(
+                "INSERT INTO subscriptions (workspace_id, plan, status, billing_anchor_day)"
+                " VALUES (:w, 'pro', 'active', 5)"
+                " ON CONFLICT (workspace_id) DO UPDATE SET plan = 'pro'"
+            ),
+            {"w": wid},
+        )
     account = await make_account(
         engine, wid, platform="whatsapp", platform_account_id="1098765432101"
     )

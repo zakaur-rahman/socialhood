@@ -171,7 +171,7 @@ function ModeCard() {
                 <span className="min-w-0 space-y-0.5">
                   <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     {option.label}
-                    {!inPlan ? <Badge tone="neutral">Pro and Max</Badge> : null}
+                    {!inPlan ? <Badge tone="neutral">Creator and Business</Badge> : null}
                   </span>
                   <span id={`${id}-body`} className="block text-sm text-fg-secondary">
                     {option.body}

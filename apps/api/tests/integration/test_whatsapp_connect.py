@@ -17,6 +17,7 @@ from socialhood.services.connections import SUBSCRIBE_FAILED
 from socialhood.services.whatsapp_templates import cache_key
 from socialhood.settings import Settings
 from tests.support.api import META_APP_SECRET, TOKEN_KEY, Clerk, sign_in
+from tests.support.automation_api import set_plan
 from tests.support.instagram import fixture
 from tests.support.whatsapp import (
     BUSINESS_TOKEN,
@@ -45,11 +46,23 @@ def whatsapp(clerk: Clerk) -> FakeWhatsApp:
     return install(clerk)
 
 
+_ENGINE: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+def _remember_engine(engine: AsyncEngine) -> None:
+    _ENGINE[:] = [engine]
+
+
 async def owner(
-    client: httpx.AsyncClient, clerk: Clerk, email: str = "o@example.com"
+    client: httpx.AsyncClient, clerk: Clerk, email: str = "o@example.com", plan: str = "pro"
 ) -> tuple[str, dict[str, Any]]:
+    """The owner of a workspace on Creator (``pro``): WhatsApp isn't on Free (C-172)."""
     clerk_id, me = await sign_in(client, clerk, email=email)
-    return clerk_id, me["workspaces"][0]
+    workspace = me["workspaces"][0]
+    if plan != "free":
+        await set_plan(_ENGINE[0], workspace["id"], plan)
+    return clerk_id, workspace
 
 
 async def rows(engine: AsyncEngine) -> list[dict[str, Any]]:
@@ -145,7 +158,7 @@ async def test_a_failed_registration_leaves_the_number_usable(
     assert (row["status"], row["whatsapp_pin_enc"]) == ("active", None)
 
 
-async def test_the_free_plan_allows_one_whatsapp_number(
+async def test_creator_allows_one_whatsapp_number(
     client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
 ) -> None:
     clerk_id, ws = await owner(client, clerk)
@@ -415,3 +428,17 @@ async def test_a_platform_failure_is_a_502(
     )
     assert response.status_code == 502
     assert response.json()["code"] == "platform_error"
+
+
+async def test_the_free_plan_refuses_whatsapp_before_the_code_is_spent(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    clerk_id, ws = await owner(client, clerk, plan="free")
+    refused = await signup(client, clerk, clerk_id, ws["id"])
+    assert refused.status_code == 402
+    assert (refused.json()["code"], refused.json()["entitlement"]) == (
+        "entitlement_required",
+        "whatsapp",
+    )
+    assert whatsapp.calls == []
+    assert await rows(engine) == []

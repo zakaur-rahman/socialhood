@@ -5,10 +5,11 @@ Rules:
 - A broadcast sends one approved WhatsApp template (marketing or utility; authentication templates
   are one-time codes and are refused) from one connected number to a saved segment's contacts on
   that number who have agreed to WhatsApp marketing (services/broadcasts/audience.py).
-- Plans (PD-4, decided 2026-10-24): Pro and Max, not Free, with a monthly recipient quota
-  (``broadcast_recipients_monthly``: Pro 2,500, Max 25,000). Writing (preview, create, change,
-  start, resume) is refused on a plan without it with 402 ``entitlement_required``; reading what
-  already exists never is. The quota counts recipients handed to the send queue in the current
+- Plans (PD-4, decided 2026-10-24): Creator and Business, not Free, with a monthly recipient quota
+  (``broadcast_recipients_monthly``: Creator and Business 2,500, C-172). Writing (preview,
+  create, change, start, resume) is refused on a plan without it with 402
+  ``entitlement_required``; reading what already exists never is. The quota counts recipients
+  handed to the send queue in the current
   billing period (failures after hand-over included, skipped contacts never). Starting a broadcast
   that would not fit is refused with 402 ``quota_exceeded`` and the numbers; one that runs out of
   quota while it sends pauses with the reason (services/broadcasts/dispatch.py).

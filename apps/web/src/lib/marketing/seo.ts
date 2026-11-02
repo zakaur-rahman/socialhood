@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { SUPPORT_EMAIL } from "@/lib/copy";
+import { PLAN_NAME, SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, isSet } from "@/lib/legal";
 
 import type { Pricing } from "./plans";
@@ -136,7 +136,7 @@ function softwareApplicationNode(pricing: Pricing, origin: string, publisher: Re
   const offers = pro?.offer
     ? [
         { "@type": "Offer", name: "Free", price: "0", priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
-        { "@type": "Offer", name: "Pro", price: pro.offer.price, priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
+        { "@type": "Offer", name: PLAN_NAME.pro, price: pro.offer.price, priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
       ]
     : undefined;
   return {
