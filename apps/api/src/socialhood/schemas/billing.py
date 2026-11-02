@@ -57,7 +57,8 @@ class BillingState(ResponseModel):
 
 
 class CheckoutRequest(RequestModel):
-    """POST …/billing/checkout (F-15). Max is R2: "max" is refused with 422 until then."""
+    """POST …/billing/checkout (F-15). "max" (Business) is refused with 422 until its Dodo product
+    is set."""
 
     plan: PaidPlanName
 
@@ -83,9 +84,11 @@ class PlanOffer(ResponseModel):
 
     plan: PlanName
     price: BillingPrice | None = None
-    trial_days: int = Field(ge=0)  # 7 for Pro, once per workspace and owner email (FR-BIL-03)
+    trial_days: int = Field(
+        ge=0
+    )  # 7 for Creator (pro), once per workspace and owner email (FR-BIL-03)
     entitlements: list[EntitlementValue]
-    available: bool  # false for Max until R2, and for Pro and Max while billing is off (C-149)
+    available: bool  # false while billing is off (C-149), and for Business until its product is set
 
 
 class PlanList(ResponseModel):

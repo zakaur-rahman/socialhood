@@ -1,6 +1,6 @@
 /**
  * The pricing page's comparison table (GR-37): every plan limit in billing/plans.py, grouped and
- * worded for a visitor. The numbers are never typed here. They come from plan-table.json, which is
+ * worded for a visitor (C-172: Free, Creator and Business; Enterprise is a card on the pricing page, not a column). The numbers are never typed here. They come from plan-table.json, which is
  * exported from the API's ENTITLEMENTS and checked against it by tests/unit/test_marketing_plan_table.py,
  * and plan-matrix.test.ts checks that every entitlement in the file has a row below (or is left out
  * on purpose), so a new limit can't ship without the page deciding how to say it.
@@ -26,7 +26,9 @@ type Kind =
   /** 0 is "Not included"; any other number is a count. */
   | { kind: "quota"; unit?: string }
   /** C-168: what an AI app may do at most on the plan (ai_connections' highest level). */
-  | { kind: "ai-apps" };
+  | { kind: "ai-apps" }
+  /** C-172: a total that only Free has; the paid plans limit accounts per platform instead. */
+  | { kind: "total" };
 
 export type MatrixRow = {
   key: EntitlementKey;
@@ -43,7 +45,19 @@ export const MATRIX: MatrixGroup[] = [
     id: "accounts",
     title: "Accounts and team",
     rows: [
-      { key: "accounts_per_platform", label: "Accounts per platform", format: { kind: "count" }, note: "Instagram, WhatsApp and Facebook Pages each count on their own." },
+      {
+        key: "channels_total",
+        label: "Channels in total",
+        format: { kind: "total" },
+        note: "Free: 2 from Instagram, Facebook and web chat. Creator and Business limit accounts per platform instead.",
+      },
+      { key: "whatsapp", label: "WhatsApp", format: { kind: "flag" } },
+      {
+        key: "accounts_per_platform",
+        label: "Accounts per platform",
+        format: { kind: "count" },
+        note: "Instagram, WhatsApp and Facebook Pages each count on their own. One web chat per workspace.",
+      },
       { key: "members", label: "Team members", format: { kind: "count" }, note: "The owner and any pending invitation count." },
       { key: "message_history_days", label: "Message history", format: { kind: "days" } },
     ],
@@ -135,6 +149,8 @@ export function cellText(row: MatrixRow, plan: PlanKey): string {
       if (value.includes("full")) return "Full";
       if (value.includes("read_drafts")) return "Read and drafts";
       return value.includes("read_only") ? "Read only" : "Not included";
+    case "total":
+      return typeof value === "number" ? number.format(value) : "Per platform";
     case "count":
       if (value === null) return "Unlimited";
       if (typeof value !== "number") return "Not included";

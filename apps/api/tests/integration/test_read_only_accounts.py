@@ -113,7 +113,7 @@ async def test_replies_and_retries_from_a_read_only_account_are_402(
     assert opened.status_code == 200, opened.text
     first = await make_thread(shop.engine, workspace_id=shop.wid, account_id=shop.account_id)
     assert (await send(shop, first.conversation_id)).status_code == 202
-    await set_plan(shop.engine, shop.wid, "pro")
+    await set_plan(shop.engine, shop.wid, "max")
     assert (await send(shop, thread.conversation_id)).status_code == 202
 
 

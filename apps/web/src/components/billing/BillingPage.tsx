@@ -50,7 +50,7 @@ import {
   priceOf,
   type MeterView,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { PLAN_NAME, PRICE_TAX_NOTE, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -71,6 +71,7 @@ import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
 const ENTITLEMENT_FOR_METRIC: Record<string, string> = {
   ai_credits: "ai_credits_monthly",
   scheduled_posts: "scheduled_posts_monthly",
+  channels: "channels_total",
   instagram_accounts: "accounts_per_platform",
   whatsapp_accounts: "accounts_per_platform",
   facebook_accounts: "accounts_per_platform",
@@ -98,7 +99,7 @@ const SLOT_METRICS = new Set(["instagram_accounts", "whatsapp_accounts", "facebo
 
 /** FR-BIL-07, said before the owner cancels: what moving to Free changes. Nothing is deleted. */
 const DOWNGRADE_EFFECTS =
-  "Accounts in Auto switch to Suggest, AI-reply automations pause, automations over Free's limit pause and extra accounts become read-only. Nothing is deleted.";
+  "Accounts in Auto switch to Suggest, AI-reply automations pause, automations over Free's limit pause, and WhatsApp and any channels beyond Free's 2 become read-only. Nothing is deleted.";
 
 type BillingTab = "usage" | "billing";
 
@@ -200,7 +201,7 @@ export function BillingPage() {
                   Compare plans
                 </h2>
                 <p className="text-sm text-fg-secondary">
-                  What each plan includes. {billingOpen(state) ? "Max is coming soon." : "Pro and Max are coming soon."}
+                  What each plan includes. Contacts are unlimited on every plan. {PRICE_TAX_NOTE}{billingOpen(state) ? "" : " Paid plans are coming soon."}
                 </p>
               </div>
               <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />

@@ -37,7 +37,7 @@ def _sender() -> Any:
 @pytest.fixture
 async def ws(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None) -> Ws:
     owner = await workspace(client, clerk)
-    await set_plan(engine, owner.wid, "pro")  # three seats
+    await set_plan(engine, owner.wid, "max")  # three seats (Business, C-172)
     return owner
 
 

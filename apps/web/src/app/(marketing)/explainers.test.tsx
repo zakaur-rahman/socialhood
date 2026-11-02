@@ -21,7 +21,7 @@ function jsonLds(container: HTMLElement): Record<string, unknown>[] {
   );
 }
 
-/** Pro as the API reports it while billing is off (C-149): listed, not for sale. */
+/** Creator (pro) as the API reports it while billing is off (C-149): listed, not for sale. */
 function proOffSale() {
   const fixture = plansFixture();
   return { items: fixture.items.map((item) => (item.plan === "pro" ? { ...item, available: false, price: null } : item)) };
@@ -78,11 +78,11 @@ describe("/how-it-works (C-160)", () => {
     expect(container.querySelector("#inbox [data-motion-toggle]")).toBeNull();
   });
 
-  it("states the limits from the plan table, Auto as Pro, and Ask as never acting by itself", () => {
+  it("states the limits from the plan table, Auto as Creator and Business, and Ask as never acting by itself", () => {
     render(<HowItWorksStages />);
     const text = document.body.textContent ?? "";
-    expect(text).toContain(`up to ${table.entitlements.crawl_pages.free} pages on Free and ${table.entitlements.crawl_pages.pro} on Pro`);
-    expect(text).toContain("Auto replies by itself when it is confident, and is part of Pro.");
+    expect(text).toContain(`up to ${table.entitlements.crawl_pages.free} pages on Free and ${table.entitlements.crawl_pages.pro} on Creator`);
+    expect(text).toContain("Auto replies by itself when it is confident, and is part of Creator and Business.");
     expect(text).toContain("Ask Amplychat never sends, changes or deletes anything by itself.");
     expect(text).toContain("never a condition for getting it");
     expect(text).toContain("every Monday at 9:00 AM your time");
@@ -96,8 +96,8 @@ describe("/how-it-works (C-160)", () => {
     expect(crumbs.itemListElement.map((item) => item.name)).toEqual(["Home", "How it works"]);
     expect(screen.getByRole("heading", { level: 2, name: "Common questions" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Keep reading" })).toBeInTheDocument();
-    // Pro isn't on sale, so the closing band claims no trial.
-    expect(container.querySelector(".close")).not.toHaveTextContent("Try Pro free");
+    // Creator isn't on sale, so the closing band claims no trial.
+    expect(container.querySelector(".close")).not.toHaveTextContent("Try Creator free");
   });
 });
 
@@ -129,7 +129,7 @@ describe("/features (C-160)", () => {
     expect(container.querySelector("#f-comments.bx-l .bx-vis")).not.toBeNull();
     expect(container.querySelector("#f-facebook [data-status='approval']")).toHaveTextContent("With Meta's approval");
     expect(container.querySelector("#f-sequences [data-status='soon']")).toHaveTextContent("Coming soon");
-    expect(container.querySelector("#f-catalogue [data-status='pro']")).toHaveTextContent("Pro");
+    expect(container.querySelector("#f-catalogue [data-status='pro']")).toHaveTextContent("Creator and Business");
   });
 
   it("has one h1, breadcrumbs JSON-LD, the details with plan limits, the side nav and the comparison teaser", async () => {
@@ -145,9 +145,10 @@ describe("/features (C-160)", () => {
     const ai = container.querySelector("section#d-ai") as HTMLElement;
     const credits = within(ai).getByRole("row", { name: /AI credits a month/ });
     expect(credits).toHaveTextContent(`${table.entitlements.ai_credits_monthly.free}`);
+    expect(credits).toHaveTextContent("1,500");
     expect(credits).toHaveTextContent("5,000");
-    // Pro's state is the plans API's.
-    expect(container.querySelector(".xp-plans-note")).toHaveTextContent("Pro is coming soon");
+    // Creator's state is the plans API's.
+    expect(container.querySelector(".xp-plans-note")).toHaveTextContent("Creator is coming soon");
     expect(screen.getByRole("link", { name: /All comparisons/ })).toHaveAttribute("href", "/compare");
   });
 
@@ -156,6 +157,6 @@ describe("/features (C-160)", () => {
     const { container } = render(await FeaturesPage());
     const note = container.querySelector(".xp-plans-note")!;
     expect(note).toHaveTextContent("Free is available now");
-    expect(note).not.toHaveTextContent("Pro is");
+    expect(note).not.toHaveTextContent("Creator is");
   });
 });

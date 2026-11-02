@@ -35,7 +35,7 @@ def sender() -> Iterator[FakeInvitationSender]:
 @pytest.fixture
 async def ws(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Ws:
     owner = await workspace(client, clerk)
-    await set_plan(engine, owner.wid, "pro")  # three seats
+    await set_plan(engine, owner.wid, "max")  # three seats (Business, C-172)
     return owner
 
 
@@ -163,7 +163,7 @@ async def test_free_has_one_seat_and_pending_invitations_count(ws: Ws, engine: A
     assert body["entitlement"] == "members"
     assert body["limit"] == 1
 
-    await set_plan(engine, ws.wid, "pro")  # the owner and two more
+    await set_plan(engine, ws.wid, "max")  # Business: the owner and two more (C-172)
     await invite(ws, "a@example.com")
     await invite(ws, "b@example.com")
     seats = (await ws.ok("GET", "/members"))["seats"]

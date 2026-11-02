@@ -12,18 +12,28 @@
   "entitlements": {
     "accounts_per_platform": {
       "free": 1,
-      "pro": 3,
-      "max": 10
+      "pro": 1,
+      "max": 3
+    },
+    "channels_total": {
+      "free": 2,
+      "pro": null,
+      "max": null
+    },
+    "whatsapp": {
+      "free": false,
+      "pro": true,
+      "max": true
     },
     "members": {
       "free": 1,
-      "pro": 3,
-      "max": 10
+      "pro": 2,
+      "max": 3
     },
     "active_automations": {
       "free": 3,
-      "pro": 50,
-      "max": null
+      "pro": 25,
+      "max": 50
     },
     "ai_reply_automations": {
       "free": false,
@@ -48,23 +58,23 @@
     },
     "ai_credits_monthly": {
       "free": 200,
-      "pro": 5000,
-      "max": 25000
+      "pro": 1500,
+      "max": 5000
     },
     "knowledge_characters": {
       "free": 200000,
-      "pro": 5000000,
-      "max": 50000000
+      "pro": 1000000,
+      "max": 5000000
     },
     "scheduled_posts_monthly": {
       "free": 10,
-      "pro": 300,
-      "max": null
+      "pro": 100,
+      "max": 300
     },
     "pending_scheduled_messages": {
       "free": 20,
       "pro": 500,
-      "max": null
+      "max": 500
     },
     "message_history_days": {
       "free": 90,
@@ -79,12 +89,12 @@
     "contact_fields": {
       "free": 5,
       "pro": 50,
-      "max": 200
+      "max": 50
     },
     "webhook_endpoints": {
       "free": 1,
       "pro": 5,
-      "max": 20
+      "max": 5
     },
     "sheets_sync": {
       "free": false,
@@ -93,7 +103,7 @@
     },
     "public_api": {
       "free": false,
-      "pro": true,
+      "pro": false,
       "max": true
     },
     "ai_connections": {
@@ -118,22 +128,22 @@
     "mcp_calls_daily": {
       "free": 100,
       "pro": 2000,
-      "max": 10000
+      "max": 2000
     },
     "mcp_posts_daily": {
       "free": 0,
       "pro": 100,
-      "max": 300
+      "max": 100
     },
     "mcp_uploads_daily": {
       "free": 20,
-      "pro": 200,
-      "max": 1000
+      "pro": 50,
+      "max": 200
     },
     "mcp_upload_mb_daily": {
       "free": 500,
-      "pro": 10000,
-      "max": 50000
+      "pro": 2500,
+      "max": 10000
     },
     "flow_steps": {
       "free": 5,
@@ -143,7 +153,7 @@
     "crawl_pages": {
       "free": 25,
       "pro": 250,
-      "max": 1000
+      "max": 250
     },
     "widget_remove_branding": {
       "free": false,
@@ -153,12 +163,12 @@
     "widget_conversations_daily": {
       "free": 50,
       "pro": 500,
-      "max": 5000
+      "max": 500
     },
     "broadcast_recipients_monthly": {
       "free": 0,
       "pro": 2500,
-      "max": 25000
+      "max": 2500
     },
     "commerce": {
       "free": false,
@@ -168,27 +178,27 @@
     "catalogue_products": {
       "free": 0,
       "pro": 1000,
-      "max": 20000
+      "max": 1000
     },
     "catalogue_import_rows": {
       "free": 0,
       "pro": 500,
-      "max": 5000
+      "max": 500
     },
     "orders_monthly": {
       "free": 0,
       "pro": 500,
-      "max": 5000
+      "max": 500
     },
     "active_sequences": {
       "free": 1,
       "pro": 10,
-      "max": 50
+      "max": 10
     },
     "sequence_steps": {
       "free": 3,
       "pro": 10,
-      "max": 20
+      "max": 10
     }
   },
   "credit_costs": {

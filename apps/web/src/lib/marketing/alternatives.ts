@@ -101,7 +101,7 @@ export const ALTERNATIVES: Alternative[] = [
       "No TikTok, Telegram, SMS or email channels.",
     ],
     // OURS_PRICE (no price of ours is written; the pricing page reads the plan list)
-    price: "A Free plan with no card. See the pricing page for Pro.",
+    price: "A Free plan with no card. See the pricing page for the paid plans.",
     href: COMPARE_MANYCHAT.path,
     linkLabel: COMPARE_MANYCHAT.name,
     page: COMPARE_MANYCHAT,

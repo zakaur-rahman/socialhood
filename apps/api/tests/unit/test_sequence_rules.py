@@ -226,5 +226,5 @@ def test_a_captured_answer_is_an_email_a_phone_or_a_field() -> None:
 
 
 def test_the_plan_limits_are_the_proposed_ones() -> None:
-    assert [entitlement(p, service.KEY_ACTIVE) for p in ("free", "pro", "max")] == [1, 10, 50]
-    assert [entitlement(p, service.KEY_STEPS) for p in ("free", "pro", "max")] == [3, 10, 20]
+    assert [entitlement(p, service.KEY_ACTIVE) for p in ("free", "pro", "max")] == [1, 10, 10]
+    assert [entitlement(p, service.KEY_STEPS) for p in ("free", "pro", "max")] == [3, 10, 10]

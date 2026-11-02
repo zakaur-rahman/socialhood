@@ -261,11 +261,11 @@ async def save(
     if any(isinstance(step, ProductStep) for step in definition.steps) and not allows(
         plan, "commerce"
     ):
-        raise entitlement_error("commerce", "Sending products is part of Pro.")
+        raise entitlement_error("commerce", "Sending products is part of Creator and Business.")
     if any(isinstance(step, PaymentStep) for step in definition.steps) and not allows(
         plan, "commerce"
     ):
-        raise entitlement_error("commerce", "Asking for payment is part of Pro.")
+        raise entitlement_error("commerce", "Asking for payment is part of Creator and Business.")
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:

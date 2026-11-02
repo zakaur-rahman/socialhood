@@ -47,7 +47,7 @@ function signed(secret: string, request: Received): boolean {
 test.describe("GR-26 Zapier REST hooks", () => {
   test("a subscribed trigger gets a signed delivery, and unsubscribing stops them", async ({ page, api, sandbox }) => {
     const { workspace, account } = sandbox;
-    await api.setPlan(workspace.id, "pro");
+    await api.setPlan(workspace.id, "max");
     const made = await api.call<{ key: string }>("POST", `/v1/w/${workspace.id}/api-keys`, {
       name: "Zapier",
       scopes: ["webhooks:subscribe", "contacts:read"],
@@ -106,7 +106,7 @@ test.describe("GR-26 Zapier REST hooks", () => {
 
   test("subscribing needs the scope, a plan with the API, and a valid address", async ({ api, sandbox }) => {
     const { workspace } = sandbox;
-    await api.setPlan(workspace.id, "pro");
+    await api.setPlan(workspace.id, "max");
     const readOnly = await api.call<{ key: string }>("POST", `/v1/w/${workspace.id}/api-keys`, {
       name: "Read only",
       scopes: ["contacts:read"],

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.security.crypto import TokenCipher
 from socialhood.settings import AppEnv, Settings
 from tests.support.api import TOKEN_KEY, Clerk, sign_in
+from tests.support.automation_api import set_plan
 from tests.support.whatsapp import PHONE_NUMBER_ID, WABA_ID, FakeWhatsApp, install, with_whatsapp
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "connect_whatsapp_number.py"
@@ -51,8 +52,18 @@ def token(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(script, "API_ROOT", tmp_path)  # never the developer's own .env
 
 
+_ENGINE: list[AsyncEngine] = []
+
+
+@pytest.fixture(autouse=True)
+def _remember_engine(engine: AsyncEngine) -> None:
+    _ENGINE[:] = [engine]
+
+
 async def workspace(client: httpx.AsyncClient, clerk: Clerk, email: str = "o@example.com") -> Any:
+    """A workspace on Creator: WhatsApp isn't on Free (C-172)."""
     _, me = await sign_in(client, clerk, email=email)
+    await set_plan(_ENGINE[0], me["workspaces"][0]["id"], "pro")
     return me["workspaces"][0]
 
 
@@ -131,7 +142,7 @@ async def test_the_rules_of_the_signup_apply(
     # Live in another workspace.
     assert await script.run(argv(b["slug"]), settings=api_settings) == 1
     assert "account_in_use" in capsys.readouterr().err
-    # The free plan's one WhatsApp number.
+    # The plan's one WhatsApp number (Creator, C-172).
     assert await script.run(argv(a["slug"], "106540352240000"), settings=api_settings) == 1
     assert "quota_exceeded" in capsys.readouterr().err
     assert [str(r["workspace_id"]) for r in await rows(engine)] == [a["id"]]

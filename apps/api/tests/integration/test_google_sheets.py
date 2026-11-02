@@ -73,7 +73,7 @@ async def test_free_is_told_to_upgrade_and_an_agent_is_refused(ws: Ws, engine: A
 
     refused = await ws.call("POST", f"{BASE}/connect")
     assert (refused.status_code, refused.json()["entitlement"]) == (402, "sheets_sync")
-    assert refused.json()["detail"] == "Google Sheets sync is part of Pro."
+    assert refused.json()["detail"] == "Google Sheets sync is part of Creator and Business."
 
     await set_plan(engine, ws.wid, "pro")
     async with engine.begin() as conn:
@@ -498,7 +498,9 @@ async def test_nothing_is_queued_without_a_sheet_or_a_plan_that_includes_it(
 
     await connect_world(world, fake_google, plan="free")
     await capture_email(world, "a@example.com")
-    assert await pending_rows(world) == []  # Free: Sheets sync is part of Pro (PD-6, decided)
+    assert (
+        await pending_rows(world) == []
+    )  # Free: Sheets sync is part of Creator and Business (PD-6, decided)
 
     await world.plan("pro")
     await execute(world, "UPDATE google_connections SET spreadsheet_id = NULL")

@@ -228,7 +228,7 @@ async def test_a_workspace_that_left_pro_fails_the_step_at_run_time(world: World
     await world.run("dm", dm)
     [step] = await world.rows("SELECT status, detail FROM automation_run_steps")
     assert (step["status"], step["detail"]["error_code"]) == ("failed", "entitlement_required")
-    assert step["detail"]["error"] == "Orders are part of Pro."
+    assert step["detail"]["error"] == "Orders are part of Creator and Business."
     assert await world.rows("SELECT id FROM orders") == []
 
 
@@ -262,7 +262,7 @@ async def test_saving_a_payment_step_needs_the_plan(ws: Ws, engine: AsyncEngine)
     free = await ws.call("PUT", f"/automations/{draft['id']}/flow", json=pay_flow(source="draft"))
     assert free.status_code == 402
     assert (free.json()["code"], free.json()["entitlement"]) == ("entitlement_required", "commerce")
-    assert free.json()["detail"] == "Asking for payment is part of Pro."
+    assert free.json()["detail"] == "Asking for payment is part of Creator and Business."
 
 
 async def test_activation_checks_the_method_and_the_lines(ws: Ws, engine: AsyncEngine) -> None:

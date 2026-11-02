@@ -17,7 +17,7 @@ export const SETUP_STEPS: { title: string; body: string; icon: LucideIcon }[] = 
   {
     title: "Let the AI draft or reply",
     icon: MessageSquareReply,
-    body: "Start with Suggest and send the drafts you like. On Pro, switch an account to Auto: the AI replies when it's confident and hands everything else to you.",
+    body: "Start with Suggest and send the drafts you like. On Creator or Business, switch an account to Auto: the AI replies when it's confident and hands everything else to you.",
   },
 ];
 

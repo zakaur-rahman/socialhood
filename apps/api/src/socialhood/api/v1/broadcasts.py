@@ -4,7 +4,8 @@ With BROADCASTS_ENABLED off (the default until the legal check of marketing cons
 route except ``GET /broadcasts/availability`` answers 404 "Broadcasts aren't available yet.", and
 the availability route says ``enabled: false`` so the web shows nothing.
 
-Plans: Pro and Max (PD-4). A write on a plan without broadcasts is 402 ``entitlement_required``;
+Plans: Creator and Business (PD-4). A write on a plan without broadcasts is 402
+``entitlement_required``;
 one that would pass the month's recipients is 402 ``quota_exceeded``.
 
 Every route needs the automations permission (GR-19): broadcasts are marketing sends, managed by

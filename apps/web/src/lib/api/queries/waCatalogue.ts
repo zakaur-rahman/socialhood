@@ -14,7 +14,7 @@ export const WA_CATALOGUE_POLL_MS = 4_000;
 
 /**
  * The WhatsApp catalogue (GR-33): the connection to a Meta commerce catalogue and how its sync is
- * going. Reading is on every plan; connecting and syncing are part of Pro (PD-8).
+ * going. Reading is on every plan; connecting and syncing are part of Creator and Business (PD-8).
  */
 export function useWaCatalogue(wid: string, enabled = true) {
   const api = useApi();

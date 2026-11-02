@@ -79,7 +79,7 @@ CONNECT_FAILED = "Shopify didn't respond. Try again."
 SHOP_INVALID = "Enter your store's address, like my-store.myshopify.com."
 SHOP_IN_USE = "This store is connected to another Amplychat workspace. Disconnect it there first."
 UNINSTALLED = "Access was removed in Shopify. Reconnect to keep your products in step."
-PLAN_STOPPED = "The catalogue is part of Pro, so the sync stopped."
+PLAN_STOPPED = "The catalogue is part of Creator and Business, so the sync stopped."
 CAP_STOPPED = "Some products weren't added: your plan includes {limit:,} products."
 
 Applied = Literal["created", "updated", "skipped"]

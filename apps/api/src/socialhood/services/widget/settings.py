@@ -7,8 +7,8 @@ Decisions (docs/CONFLICTS.md C-111):
   through the allowed-domains list.
 - **Domains are required.** A new widget allows no site; the frame is refused everywhere until a
   domain is added (services/widget/origin.py).
-- **Branding.** Free always shows "Powered by Amplychat"; Pro and Max can turn it off (PD-7,
-  decided 2026-10-24). The stored choice is kept across a downgrade; what the visitor sees is
+- **Branding.** Free always shows "Powered by Amplychat"; Creator and Business can turn it off
+  (PD-7, decided 2026-10-24). The stored choice is kept across a downgrade; what the visitor sees is
   ``show_branding`` only while the plan allows removing it.
 - **AI mode** is the account's, changed with the other accounts' (PATCH social-accounts); the
   settings only report it.
@@ -23,7 +23,7 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.entitlements import allows, check_entitlement
+from socialhood.billing.entitlements import allows, check_entitlement, check_new_channel
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.connections import AccountStatus, SocialAccount
@@ -51,10 +51,12 @@ async def ensure(session: AsyncSession) -> tuple[SocialAccount, WidgetSettings]:
     scope; the caller commits."""
     acct = await repo.find_account(session)
     if acct is None:
+        await check_new_channel(session, "web", await current_plan(session))
         acct = await _create_account(session)
     elif acct.status == AccountStatus.DISCONNECTED:
         if acct.deletion_requested_at is not None:
             raise ApiError("conflict", "The website chat is being deleted. Try again in a minute.")
+        await check_new_channel(session, "web", await current_plan(session))
         acct.status = AccountStatus.ACTIVE  # switched off by a disconnect: back on, same id
         acct.disconnected_at = None
         await session.flush()
@@ -161,7 +163,7 @@ async def update(session: AsyncSession, row: WidgetSettings, body: WidgetSetting
         await check_entitlement(
             session,
             "widget_remove_branding",
-            detail='Removing "Powered by Amplychat" is part of Pro.',
+            detail='Removing "Powered by Amplychat" is part of Creator and Business.',
         )
     if values.get("accent_color"):
         values["accent_color"] = values["accent_color"].upper()

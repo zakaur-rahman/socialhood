@@ -18,8 +18,8 @@
 - **Paying.** Razorpay: a Payment Link on the business's own keys; Razorpay's signed webhook marks
   the order paid (webhook.py). UPI: a ``upi://pay`` link and the VPA in the message; there is no
   webhook for it, so a member marks the order paid and the audit trail says who and when.
-- **Plan.** Making an order, asking for payment and marking paid need ``commerce`` (PD-8: Pro and
-  Max) and room under ``orders_monthly``; reading orders is never refused.
+- **Plan.** Making an order, asking for payment and marking paid need ``commerce`` (PD-8: Creator
+  and Business) and room under ``orders_monthly``; reading orders is never refused.
 """
 
 from __future__ import annotations
@@ -79,7 +79,7 @@ MAX_LISTED_LINES = 5  # lines named in the payment message
 UPI_CURRENCY = "INR"
 
 COPY = {
-    "plan": "Orders are part of Pro.",
+    "plan": "Orders are part of Creator and Business.",
     "cap": "Your plan includes {limit:,} orders a month.",
     "product_gone": "That product doesn't exist any more.",
     "product_off": "{name} is switched off. Turn it on, or choose another.",

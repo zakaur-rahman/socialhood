@@ -134,7 +134,7 @@ function Body({ wid, status }: { wid: string; status: ShopifyStatus }) {
     return (
       <div className="space-y-2">
         <p className="text-sm text-fg-secondary">
-          The product catalogue, with Shopify import, is part of Pro.
+          The product catalogue, with Shopify import, is part of Creator and Business.
         </p>
         {workspace.role === "agent" ? null : (
           <Button type="button" variant="secondary" size="sm" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>

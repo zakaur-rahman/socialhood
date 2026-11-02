@@ -12,7 +12,7 @@ A request is checked in this order, and each refusal stops it:
    is still in it (C-167: their keys are revoked when they leave; this also covers a key whose
    revocation was missed). A key whose maker's account was deleted before C-167 still works;
 4. the per-key rate limit (``api_key`` in security/ratelimit.py: 120 a minute), then the plan
-   (402 entitlement_required when the workspace is no longer on Pro or Max, PD-6);
+   (402 entitlement_required when the workspace is no longer on Business, C-172);
 5. each route's scope (403 forbidden, naming the scope the key lacks).
 
 The key resolves to its workspace, which becomes the request's tenant exactly as for a signed-in

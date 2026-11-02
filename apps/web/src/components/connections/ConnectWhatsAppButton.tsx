@@ -6,9 +6,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DisabledReason } from "@/components/ui/disabled-reason";
 import { ApiError, isPlanLimitError } from "@/lib/api/errors";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { useCompleteWhatsAppSignup } from "@/lib/api/queries";
 import { errorMessage, whatsappConnectError, whatsappConnected } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
+import { useCurrentWorkspace } from "@/lib/workspace";
 import { loadFacebookSdk, runEmbeddedSignup } from "@/lib/whatsapp/embedded-signup";
 
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
@@ -40,6 +42,8 @@ export function whatsappSignupError(error: unknown): string {
 export function useWhatsAppConnect(wid: string, onFailure?: (message: string) => void) {
   const complete = useCompleteWhatsAppSignup(wid);
   const [opening, setOpening] = useState(false);
+  const workspace = useCurrentWorkspace();
+  const upgrade = useUpgradeDialog();
 
   const { appId, configId } = metaConfig();
 
@@ -81,6 +85,10 @@ export function useWhatsAppConnect(wid: string, onFailure?: (message: string) =>
 
   return {
     connect: () => void connect(),
+    /** Connecting a new number (C-172): WhatsApp isn't on Free, so Free sees the upgrade dialog
+     * instead of Meta's sign-up. A reconnect uses `connect`, which the API allows. */
+    connectNew: () =>
+      workspace.plan === "free" ? upgrade.open({ code: "entitlement_required", entitlement: "whatsapp" }) : void connect(),
     busy: opening || complete.isPending,
     configured: Boolean(appId && configId),
   };
@@ -95,7 +103,7 @@ export function ConnectWhatsAppButton({
   size?: "lg" | "xl";
   onFailure?: (message: string) => void;
 }) {
-  const { connect, busy, configured } = useWhatsAppConnect(wid, onFailure);
+  const { connectNew: connect, busy, configured } = useWhatsAppConnect(wid, onFailure);
   return (
     <DisabledReason reason={configured ? null : "WhatsApp isn't set up for this app yet"}>
       <Button variant="secondary" size={size} disabled={!configured} loading={busy} onClick={connect}>

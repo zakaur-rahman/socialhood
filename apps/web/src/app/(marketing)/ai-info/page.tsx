@@ -28,7 +28,7 @@ import { type PlanCard, buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/marketing/site";
 
-// ISR like the pricing page: whether each plan can be bought, and Pro's price, come from the plans API.
+// ISR like the pricing page: whether each plan can be bought, and the paid plans' prices, come from the plans API.
 export const revalidate = 3600;
 
 const PATH = "/ai-info";
@@ -38,9 +38,6 @@ export const metadata = pageMetadata({
   description: `A plain fact sheet about ${SITE_NAME} for AI assistants and researchers: what it is, who it's for, channels, plans, limits and claims to avoid.`,
   path: PATH,
 });
-
-const E = table.entitlements;
-const n = (value: number | null) => (value === null ? "unlimited" : new Intl.NumberFormat("en-US").format(value));
 
 /** A plan's state today, from the plans API only: never a price written into the page. */
 function planState(card: PlanCard | undefined): string {
@@ -61,7 +58,7 @@ const CLAIMS = [
   <>that it includes or resells WhatsApp message charges;</>,
   <>that it supports TikTok, Telegram, X, SMS or email inboxes;</>,
   <>that it imports automations from Manychat in one click;</>,
-  <>a price for Pro or Max that isn&apos;t on the pricing page today.</>,
+  <>a price for Creator or Business that isn&apos;t on the pricing page today.</>,
 ];
 
 /** /ai-info (C-156): a plain fact sheet for AI assistants; llms.txt points here. C-159: fact cards. */
@@ -73,9 +70,9 @@ export default async function AiInfoPage() {
       plan: "free" as const,
       body: (
         <>
-          {n(E.accounts_per_platform.free)} account per platform, {n(E.members.free)} seat, {n(E.active_automations.free)}{" "}
-          active automations, {n(E.ai_credits_monthly.free)} AI credits a month, AI suggestions (no Auto mode),{" "}
-          {n(E.message_history_days.free)} days of message history.
+          2 channels in total from Instagram, Facebook and website chat (no WhatsApp), 1 seat, 3 active automations, 200 AI
+          credits a month, 10 scheduled posts a month, AI suggestions only (no Auto mode), 200K characters of knowledge, 90
+          days of message history, and MCP with reading and drafts.
         </>
       ),
     },
@@ -83,10 +80,9 @@ export default async function AiInfoPage() {
       plan: "pro" as const,
       body: (
         <>
-          {n(E.accounts_per_platform.pro)} accounts per platform, {n(E.members.pro)} team members,{" "}
-          {n(E.active_automations.pro)} active automations, {n(E.ai_credits_monthly.pro)} AI credits a month, Auto mode, the
-          catalogue and payment links, Google Sheets and the public API. {table.trial_days.pro}-day free trial once it is on
-          sale.
+          1 Instagram, 1 WhatsApp, 1 Facebook and 1 website chat, 2 team members, 25 active automations, 1,500 AI credits a
+          month, 100 scheduled posts a month, Auto and Suggest modes, 1M characters of knowledge, full message history, the
+          catalogue and payment links, Google Sheets and full MCP. {table.trial_days.pro}-day free trial once it is on sale.
         </>
       ),
     },
@@ -94,7 +90,9 @@ export default async function AiInfoPage() {
       plan: "max" as const,
       body: (
         <>
-          for larger teams, {n(E.accounts_per_platform.max)} accounts per platform and {n(E.members.max)} team members.
+          3 each of Instagram, WhatsApp and Facebook, 3 team members, 50 active automations, 5,000 AI credits a month, 300
+          scheduled posts a month, 5M characters of knowledge, and everything in Creator plus API keys, Zapier and the public
+          API. Enterprise is for high volume and agencies: contact us.
         </>
       ),
     },

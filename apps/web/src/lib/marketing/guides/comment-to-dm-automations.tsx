@@ -117,7 +117,7 @@ function Body() {
       </p>
       <p>
         This is where an inbox with AI replies helps. In {N}, a follow-up question about price, size or delivery gets a reply
-        drafted from your own knowledge, sent by itself on Auto (Pro) when the AI is confident, and anything else goes to a
+        drafted from your own knowledge, sent by itself on Auto (Creator and Business) when the AI is confident, and anything else goes to a
         person. A flow can also ask for an email or phone number and save it to the contact, tag people by what they asked
         for, or wait and send a reminder, all within Instagram&apos;s 24-hour window.
       </p>

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SUPPORT_EMAIL } from "@/lib/copy";
+import { PLANNED_PRICE_USD, SUPPORT_EMAIL } from "@/lib/copy";
 import { latestChecked } from "@/lib/marketing/competitor-note";
 import {
   COMPARE_AISENSY,
@@ -109,10 +109,18 @@ describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
 });
 
 describe("the content rules (GR-37)", () => {
-  it("never claims a ranking, and never puts a price of ours on a page", () => {
+  it("never claims a ranking, and puts no price of ours on a page except the planned ones", () => {
+    const planned = new Set(Object.values(PLANNED_PRICE_USD).map((amount) => `$${amount}`));
     for (const page of GTM_PAGES) {
-      expect(JSON.stringify(page)).not.toMatch(/\bthe best\b|#1|number one|market leader|\bleading\b|best[- ]in[- ]class/i);
-      for (const row of page.compare?.rows ?? []) expect(row.ours.text ?? "").not.toMatch(/[$₹€£]\s?\d/);
+      expect(JSON.stringify(page)).not.toMatch(/\bthe best\b|\bcheapest\b|#1|number one|market leader|\bleading\b|best[- ]in[- ]class/i);
+      for (const row of page.compare?.rows ?? []) {
+        const text = row.ours.text ?? "";
+        expect(text, row.feature).not.toMatch(/[₹€£]\s?\d/);
+        // C-172: a dollar figure of ours is only a planned price from copy.ts, and says it is planned.
+        const dollars = text.match(/\$\d[\d,.]*/g) ?? [];
+        for (const amount of dollars) expect(planned.has(amount), `${row.feature}: ${amount}`).toBe(true);
+        if (dollars.length) expect(text, row.feature).toMatch(/\bPlanned\b/);
+      }
     }
   });
 
@@ -337,16 +345,21 @@ describe("the pricing page", () => {
     render(await PricingPage());
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1, name: "Start free, upgrade when you grow" })).toBeInTheDocument();
-    const pro = within(screen.getByRole("heading", { level: 3, name: "Pro" }).closest("li") as HTMLElement);
+    const pro = within(screen.getByRole("heading", { level: 3, name: "Creator" }).closest("li") as HTMLElement);
     expect(pro.getByText("₹999")).toBeInTheDocument();
-    expect(pro.getByText("3 team members")).toBeInTheDocument();
-    expect(pro.getByText("Public API and Zapier app")).toBeInTheDocument();
+    expect(pro.getByText("2 team members")).toBeInTheDocument();
     expect(pro.getByText("Product catalogue")).toBeInTheDocument();
+    // API keys and the Zapier app are Business only.
+    expect(pro.queryByText("API keys and the Zapier app")).toBeNull();
+    const business = within(screen.getByRole("heading", { level: 3, name: "Business" }).closest("li") as HTMLElement);
+    expect(business.getByText("API keys and the Zapier app")).toBeInTheDocument();
+    expect(business.getByText("3 team members")).toBeInTheDocument();
+    expect(screen.getByTestId("plan-enterprise")).toHaveTextContent("Contact us");
 
     const broadcasts = screen.getByRole("row", { name: /WhatsApp broadcast recipients a month/ });
     expect(broadcasts).toHaveTextContent("Not included");
     expect(broadcasts).toHaveTextContent("2,500");
-    expect(broadcasts).toHaveTextContent("25,000");
+    expect(broadcasts).not.toHaveTextContent("25,000");
     expect(broadcasts).toHaveTextContent(/Coming soon: broadcasts open after our review of consent rules/);
     expect(screen.getByRole("row", { name: /Remove Powered by Amplychat/ })).toHaveTextContent("Not included");
     expect(screen.getByText(/Catalogue and sequence limits are our current proposals and may change/)).toBeInTheDocument();
@@ -355,7 +368,9 @@ describe("the pricing page", () => {
   it("without the API it still lists the limits and no price", async () => {
     vi.stubGlobal("fetch", vi.fn(plansFetch({ detail: "down" }, 503)));
     const { container } = render(await PricingPage());
-    expect(screen.getByText("See pricing when you sign up")).toBeInTheDocument();
+    // No real price, only the planned ones (never an offer in structured data).
+    expect(screen.getByTestId("planned-price-pro")).toHaveTextContent("$14 a month when we launch");
+    expect(screen.getByTestId("planned-price-max")).toHaveTextContent("$29 a month when we launch");
     expect(screen.getByRole("table", { name: "Accounts and team" })).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/₹\s?\d/);
   });

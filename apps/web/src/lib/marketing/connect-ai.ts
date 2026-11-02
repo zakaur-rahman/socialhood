@@ -52,7 +52,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "claude-code",
       name: "Claude Code",
-      who: "Sign in with your Amplychat account, or use an API key (Pro and Max).",
+      who: "Sign in with your Amplychat account, or use an API key (Business).",
       steps: [
         { text: "Add the server:", code: `claude mcp add --transport http amplychat ${url}` },
         { text: "In Claude Code, run /mcp, pick amplychat and authenticate. Your browser opens Amplychat to choose the workspace and allow it." },
@@ -77,7 +77,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "codex",
       name: "Codex",
-      who: "Use an API key (Pro and Max), or sign in with OAuth.",
+      who: "Use an API key (Business), or sign in with OAuth.",
       steps: [
         {
           text: "Add this to ~/.codex/config.toml (or a trusted project's .codex/config.toml):",
@@ -130,10 +130,10 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Schedule, change and cancel posts", free: "No", pro: "Yes", max: "Yes" },
   { label: "Add knowledge", free: "No", pro: "Yes", max: "Yes" },
   { label: "Create, change, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Connect with an API key", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Tool calls a day", free: "100", pro: "2,000", max: "10,000" },
-  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "300" },
-  { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "200 (10,000 MB)", max: "1,000 (50,000 MB)" },
+  { label: "Connect with an API key", free: "No", pro: "No", max: "Yes" },
+  { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000" },
+  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "100" },
+  { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "50 (2,500 MB)", max: "200 (10,000 MB)" },
 ];
 
 export const SAFETY: readonly Capability[] = [
@@ -166,11 +166,11 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and creating, changing or pausing automations from an AI app are part of Pro and Max. API keys are Pro and Max.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and creating, changing or pausing automations from an AI app are part of Creator and Business. API keys are Business only.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",
-    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Pro and Max; once you've confirmed it and it's on, the automation sends the DMs, as one made in the app does.`,
+    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Creator and Business; once you've confirmed it and it's on, the automation sends the DMs, as one made in the app does.`,
   },
   {
     question: "How do I disconnect an AI app?",

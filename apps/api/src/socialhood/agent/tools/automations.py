@@ -625,7 +625,10 @@ async def prepare_automation(
     if action == "ai_reply" and not entitlement(
         await current_plan(ctx.session), "ai_reply_automations"
     ):
-        caveats.append("AI replies in automations are part of Pro; the editor asks to upgrade.")
+        caveats.append(
+            "AI replies in automations are part of Creator and Business; the editor asks to "
+            "upgrade."
+        )
     what = TRIGGER_WORDS.get(trigger or "", "a trigger to choose")
     return PrepareAutomationResult(
         summary=clip(f"Prepared a draft automation “{name}” on {what}", 300) or "Prepared a draft",

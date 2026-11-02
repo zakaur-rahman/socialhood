@@ -381,7 +381,7 @@ async def test_the_daily_post_cap(
     engine: AsyncEngine,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["mcp_posts_daily"], "pro", 1)
+    monkeypatch.setitem(ENTITLEMENTS["mcp_posts_daily"], "max", 1)
     media = await image(engine, setup)
     first = structured(
         await confirm(mcp_app, key, "create_post", post_args(setup, media, when=at(days=2)))
@@ -614,7 +614,7 @@ async def test_the_month_s_scheduled_posts_still_apply(
     engine: AsyncEngine,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(ENTITLEMENTS["scheduled_posts_monthly"], "pro", 1)
+    monkeypatch.setitem(ENTITLEMENTS["scheduled_posts_monthly"], "max", 1)
     media = await image(engine, setup)
     first = post_args(setup, media, when=at(days=2))
     assert structured(await confirm(mcp_app, key, "create_post", first))["status"] == "scheduled"

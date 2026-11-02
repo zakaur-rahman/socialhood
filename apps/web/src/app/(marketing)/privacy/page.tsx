@@ -537,7 +537,7 @@ function sections(): LegalSection[] {
                   <td>90 days, then deleted with their analysis. Conversations left with no messages are deleted too.</td>
                 </tr>
                 <tr>
-                  <td>Messages on Pro and Max</td>
+                  <td>Messages on Creator and Business</td>
                   <td>While the workspace exists</td>
                 </tr>
                 <tr>

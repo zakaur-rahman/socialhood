@@ -40,7 +40,7 @@ TRIGGERS = {
 @pytest.fixture
 async def setup(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Setup:
     made = await workspace_with_thread(client, clerk, engine)
-    await set_plan(engine, made.wid, "pro")
+    await set_plan(engine, made.wid, "max")
     return made
 
 
@@ -146,7 +146,7 @@ async def test_hooks_take_no_slot_from_the_plans_endpoints(
     client: httpx.AsyncClient, setup: Setup
 ) -> None:
     key, _ = await make_key(client, setup, "webhooks:subscribe")
-    for _ in range(6):  # Pro has 5 endpoints
+    for _ in range(6):  # Business has 5 endpoints
         await subscribe(client, key)
     own = await client.post(
         f"/v1/w/{setup.wid}/webhook-endpoints",
@@ -167,7 +167,7 @@ async def test_a_hook_belongs_to_its_workspace(
     client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, setup: Setup
 ) -> None:
     other = await workspace_with_thread(client, clerk, engine, email="other@example.com")
-    await set_plan(engine, other.wid, "pro")
+    await set_plan(engine, other.wid, "max")
     key_a, _ = await make_key(client, setup, "webhooks:subscribe")
     key_b, _ = await make_key(client, other, "webhooks:subscribe")
     mine = await subscribe(client, key_a)
@@ -273,7 +273,7 @@ async def hook_for(world: World, trigger: str) -> tuple[uuid.UUID, str]:
 
 
 async def test_a_new_message_reaches_the_hook_signed_with_its_secret(world: World) -> None:
-    await on_plan(world, "pro")
+    await on_plan(world, "max")
     _, secret = await hook_for(world, "new_message")
     assert await world.dm(ref(), "Is the hamper available?") is not None
     [message] = await pending(world)
@@ -293,14 +293,14 @@ async def test_a_new_message_reaches_the_hook_signed_with_its_secret(world: Worl
 
 
 async def test_hooks_get_only_the_events_of_their_trigger(world: World) -> None:
-    await on_plan(world, "pro")
+    await on_plan(world, "max")
     await hook_for(world, "new_contact")
     assert await world.dm(ref(), "hello") is not None
     assert [d["event_type"] for d in await pending(world)] == ["contact.created"]
 
 
 async def test_a_failing_hook_retries_like_any_endpoint(world: World) -> None:
-    await on_plan(world, "pro")
+    await on_plan(world, "max")
     await hook_for(world, "new_contact")
     assert await world.dm(ref(), "hello") is not None
     [created] = await pending(world)
@@ -314,8 +314,12 @@ async def test_a_failing_hook_retries_like_any_endpoint(world: World) -> None:
 
 
 async def test_hooks_stop_with_the_plan_and_come_back_with_it(world: World) -> None:
-    await on_plan(world, "pro")
+    await on_plan(world, "max")
     await hook_for(world, "new_contact")
+
+    await on_plan(world, "pro")
+    assert await world.dm(ref(), "creator") is not None
+    assert await pending(world) == []  # Creator: no public API (C-172), so no hook deliveries
 
     await on_plan(world, "free")
     assert await world.dm(ref(), "first") is not None
@@ -327,8 +331,8 @@ async def test_hooks_stop_with_the_plan_and_come_back_with_it(world: World) -> N
 
 
 async def test_a_members_endpoint_still_gets_events_on_free(world: World) -> None:
-    """PD-6: outbound webhooks stay on every plan; only the key's hooks need Pro or Max."""
-    await on_plan(world, "pro")
+    """PD-6: outbound webhooks stay on every plan; only the key's hooks need Business."""
+    await on_plan(world, "max")
     await hook_for(world, "new_contact")
     async with world.engine.begin() as conn:
         await conn.execute(

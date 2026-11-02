@@ -162,7 +162,7 @@ function Connections() {
           <AddAccountMenu
             onInstagram={startConnect}
             onFacebook={startFacebook}
-            onWhatsApp={whatsapp.connect}
+            onWhatsApp={whatsapp.connectNew}
             whatsAppConfigured={whatsapp.configured}
             busy={connect.isPending || finishing || connectFacebook.isPending || whatsapp.busy}
           />

@@ -146,7 +146,7 @@ export const MODES: Record<ModeKey, { label: string; description: string; outcom
   auto: {
     label: "Auto",
     description:
-      "With Auto mode (Pro), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to Needs you.",
+      "With Auto mode (Creator and Business), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to Needs you.",
     outcomes: [
       ["ok", "Sent by the AI", "Yes, S to XL, $39"],
       ["ok", "Sent by the AI", "Sunday, 12 PM to 5 PM"],

@@ -78,8 +78,8 @@ def test_only_owners_invite_admins() -> None:
     assert Role.OWNER not in INVITABLE_ROLES[Role.OWNER]  # ownership moves by transfer
 
 
-def test_seat_plan_values_are_free_1_pro_3_max_10() -> None:
-    assert [entitlement(p, "members") for p in ("free", "pro", "max")] == [1, 3, 10]
+def test_seat_plan_values_are_free_1_creator_2_business_3() -> None:
+    assert [entitlement(p, "members") for p in ("free", "pro", "max")] == [1, 2, 3]
 
 
 @pytest.mark.parametrize(

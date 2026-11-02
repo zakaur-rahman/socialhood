@@ -138,10 +138,11 @@ async def resume_billing(request: Request, ctx: CanManageBilling, session: Sessi
 
 @public_router.get("/plans", operation_id="list_billing_plans", dependencies=[ratelimit.PUBLIC])
 async def list_billing_plans(request: Request) -> PlanList:
-    """Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
-    entitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing
-    page and the upgrade dialog's comparison. The same numbers as GET …/billing. While billing
-    isn't set up on this server (C-149) Pro and Max are ``available: false`` without prices."""
+    """Public, no sign-in: Free, Creator and Business (``available: false`` until a paid
+    plan's product is set) with their §1.7 entitlements and Dodo prices (cached 1 h; null when
+    Dodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same
+    numbers as GET …/billing. While billing isn't set up on this server (C-149) the paid plans
+    are ``available: false`` without prices."""
     return await service.plan_list(
         request.app.state.redis, _dodo(request), request.app.state.settings
     )

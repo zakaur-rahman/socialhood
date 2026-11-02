@@ -107,7 +107,7 @@ class ProductOut(ResponseModel):
 
 
 class CatalogueLimits(ResponseModel):
-    entitled: bool  # the plan includes the catalogue (PD-8: Pro and Max)
+    entitled: bool  # the plan includes the catalogue (PD-8: Creator and Business)
     product_cap: int  # products the plan holds
     import_row_cap: int  # rows one CSV import may carry
     csv_max_chars: int

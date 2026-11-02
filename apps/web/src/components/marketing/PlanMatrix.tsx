@@ -9,11 +9,11 @@ import { MATRIX_GROUP_ICONS } from "./page-icons";
 /**
  * Every plan limit side by side (GR-37), from lib/marketing/plan-matrix.ts: the numbers are the
  * API's own plan table, so a limit changed in billing/plans.py changes this page when the table
- * file is refreshed (the API's unit test fails until it is). Max is shown as coming soon; it can't
- * be bought yet.
+ * file is refreshed (the API's unit test fails until it is). Prices are on the plan cards above, not
+ * here.
  *
  * C-159 look, as the comparison tables: one fixed column grid for every group, so the plan columns
- * line up from table to table; Pro's column on a quiet tone step; "Included" and "Not included" as
+ * line up from table to table; Creator's column on a quiet tone step; "Included" and "Not included" as
  * chips with an icon; each group's caption with its icon. A phone scrolls a table inside its own box.
  */
 export function PlanMatrix() {
@@ -25,8 +25,8 @@ export function PlanMatrix() {
             Compare every limit
           </h2>
           <p className="lede">
-            Limits are on features, never on how many contacts you have. Pro has a {TRIAL_DAYS.pro}-day free trial, once per workspace.
-            Max is coming soon and can&apos;t be bought yet.
+            Limits are on features, never on how many contacts you have: contacts are unlimited on every plan. Creator has a{" "}
+            {TRIAL_DAYS.pro}-day free trial, once per workspace.
           </p>
         </div>
         <div className="mx after-head">
@@ -53,7 +53,6 @@ export function PlanMatrix() {
                       {MATRIX_PLANS.map((plan) => (
                         <th key={plan} scope="col" className={plan === "pro" ? "ours" : undefined}>
                           {PLAN_NAME[plan]}
-                          {plan === "max" ? <span className="th-note">Coming soon</span> : null}
                         </th>
                       ))}
                     </tr>

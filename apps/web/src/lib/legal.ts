@@ -81,11 +81,11 @@ export type LegalDocumentKey =
 
 /** Each document's page and the date its text last changed (shown as "Last updated"). */
 export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, { title: string; path: string; lastUpdated: string }> = {
-  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-11-01" },
-  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-10-29" },
+  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-11-02" },
+  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-11-02" },
   // OWNER REVIEW: the refund terms are a default for a monthly SaaS, not a decision yet.
-  refunds: { title: "Refund and Cancellation Policy", path: "/refunds", lastUpdated: "2026-10-26" },
-  shipping: { title: "Shipping and Delivery Policy", path: "/shipping", lastUpdated: "2026-10-26" },
+  refunds: { title: "Refund and Cancellation Policy", path: "/refunds", lastUpdated: "2026-11-02" },
+  shipping: { title: "Shipping and Delivery Policy", path: "/shipping", lastUpdated: "2026-11-02" },
   // C-156: the subprocessor list, the cookie table, the DPA and the accessibility statement.
   subprocessors: { title: "Subprocessors", path: "/subprocessors", lastUpdated: "2026-10-29" },
   cookies: { title: "Cookies and Storage", path: "/cookies", lastUpdated: "2026-10-29" },

@@ -100,26 +100,26 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
   it("a 402 from the API opens the upgrade dialog, not a toast", async () => {
     const user = userEvent.setup();
     setup({}, {
-      patch: () => problem(402, "entitlement_required", "Auto mode is part of Pro.", { entitlement: "ai_modes", limit: null }),
+      patch: () => problem(402, "entitlement_required", "Auto mode is part of Creator and Business.", { entitlement: "ai_modes", limit: null }),
     });
     const menu = await openMenu();
     await user.click(within(menu).getByRole("menuitemradio", { name: "Auto" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Turn on Auto" }));
 
-    const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Pro" });
+    const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Creator and Business" });
     // Already on a paid plan: the owner is sent to billing rather than a second checkout.
     expect(within(upgrade).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it("on a plan without Auto: a Pro badge, and choosing it offers the trial instead of saving", async () => {
+  it("on a plan without Auto: a Creator badge, and choosing it offers the trial instead of saving", async () => {
     const user = userEvent.setup();
     const assign = vi.spyOn(browser, "assign").mockImplementation(() => {});
     const { patches, calls } = setup({}, { billing: freeBilling });
     const menu = await openMenu();
-    const auto = await within(menu).findByRole("menuitemradio", { name: "Auto Pro" });
+    const auto = await within(menu).findByRole("menuitemradio", { name: "Auto Creator" });
     await user.click(auto);
-    const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Pro" });
+    const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Creator and Business" });
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(patches()).toHaveLength(0);
     // Straight to checkout (F-15).

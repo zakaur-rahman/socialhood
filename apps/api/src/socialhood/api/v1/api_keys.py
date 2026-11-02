@@ -34,9 +34,10 @@ async def list_api_keys(ctx: CanManageIntegrations, session: Session) -> ApiKeyL
 async def create_api_key(
     body: ApiKeyCreate, ctx: CanManageIntegrations, session: Session
 ) -> ApiKeyWithKey:
-    """The key is in this response only. 402 entitlement_required on Free (the public API is part
-    of Pro); 409 at 20 active keys. C-167: ``expires_in_days`` (30, 90 or 365; leave out for
-    never) and ``allowed_ips`` (IPs and CIDRs; empty for any address)."""
+    """The key is in this response only. 402 entitlement_required on a plan without the public
+    API (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:
+    ``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and
+    CIDRs; empty for any address)."""
     out = await service.create(session, body, user_id=ctx.user.id, now=datetime.now(UTC))
     await session.commit()
     return out

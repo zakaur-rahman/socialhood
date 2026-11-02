@@ -240,7 +240,7 @@ async def test_prepare_automation_from_the_members_fields(shop: Shop) -> None:
         "prepare_automation", {"description": "Answer FAQs", "template_key": "answer_faqs"}
     )
     assert faqs.action == "ai_reply"
-    assert "AI replies in automations are part of Pro" in faqs.caveats[-1]
+    assert "AI replies in automations are part of Creator and Business" in faqs.caveats[-1]
     bad = await refused(
         shop, "prepare_automation", {"description": "x", "template_key": "surprise_me"}
     )

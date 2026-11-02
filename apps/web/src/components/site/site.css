@@ -732,6 +732,8 @@ body:has(.site) {
     /* Equal plan cards (C-157 organize): each is a subgrid over six shared rows (name, tagline, price,
        its line, the button, the list), so prices, buttons and lists start at one height in every card. */
     & .plans { display: grid; grid-template-columns: repeat(var(--plan-cols, 2), minmax(0, 1fr)); gap: var(--space-6); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
+    /* C-172: four cards (Free, Creator, Business, Enterprise) go two by two on mid-width screens. */
+    @media (900px < width <= 1280px) { & .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     /* A plan is a sheet on paper (a tone step, no outline); the plan to start on carries an ink edge. */
     & .plan { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; background: var(--s-surface); border: 2px solid transparent; border-radius: var(--r-xl); padding: var(--space-8); }
     & .plan > .plan-top { grid-row: 1; }

@@ -223,7 +223,7 @@ async def test_turn_on_activates_within_the_limit_and_refuses_over_it(
     [note] = await rows(engine, "SELECT title FROM notifications")
     assert note["title"].endswith(", which is on")
 
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "pro", 1)
+    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 1)
     args = {
         "name": "DM hours",
         "account": setup.account_id,
@@ -232,9 +232,9 @@ async def test_turn_on_activates_within_the_limit_and_refuses_over_it(
         "dm_text": "We open at 9.",
         "turn_on": True,
     }
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "pro", 2)
+    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 2)
     token = structured(await call(mcp_app, key, "create_automation", args))["confirmation_token"]
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "pro", 1)
+    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 1)
     # The preview refuses, and so does a confirmed call whose preview was fine when it was made.
     for extra in ({}, {"confirmed": True, "confirmation_token": token}):
         error = error_of(await call(mcp_app, key, "create_automation", {**args, **extra}))
@@ -355,7 +355,7 @@ async def test_plan_role_and_mode_gate_the_automation_writes(
     assert (free["code"], free["entitlement"]) == ("entitlement_required", "ai_connections")
     # list_instagram_posts reads, on every plan.
     assert structured(await call(mcp_app, key, "list_instagram_posts", {}))["items"] == []
-    await set_plan(engine, setup.wid, "pro")
+    await set_plan(engine, setup.wid, "max")
     async with engine.begin() as conn:
         await conn.execute(
             text("UPDATE workspace_members SET role = 'agent' WHERE workspace_id = :w"),

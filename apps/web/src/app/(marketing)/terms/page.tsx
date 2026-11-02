@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 
 export const metadata = pageMetadata({
   title: "Terms of Service",
-  description: `The terms for using ${SITE_NAME}: plans and the Pro trial, billing, cancellation, delivery, acceptable use, AI features, data processing and liability.`,
+  description: `The terms for using ${SITE_NAME}: plans and the Creator trial, billing, cancellation, delivery, acceptable use, AI features, data processing and liability.`,
   path: "/terms",
 });
 
@@ -92,14 +92,14 @@ function sections(): LegalSection[] {
         <>
           <ul>
             <li>
-              <strong>Free</strong> costs nothing and needs no card. <strong>Pro</strong> is a monthly subscription.{" "}
-              <strong>Max</strong> is coming soon. What each plan includes and costs is shown on our{" "}
-              <Link href="/pricing">pricing page</Link> and in the app. Pro isn&apos;t on sale yet; the trial and billing
+              <strong>Free</strong> costs nothing and needs no card. <strong>Creator</strong> and <strong>Business</strong> are monthly subscriptions.{" "}
+              <strong>Enterprise</strong> is arranged by contacting us. What each plan includes and costs is shown on our{" "}
+              <Link href="/pricing">pricing page</Link> and in the app. Paid plans aren&apos;t on sale yet; the trial and billing
               terms below apply once it is.
             </li>
             <li>
-              <strong>Trial.</strong> Pro starts with a 7-day free trial, once per workspace. A card is needed to start it.
-              Unless you cancel before the trial ends, Pro continues as a paid subscription and your card is charged.
+              <strong>Trial.</strong> Creator starts with a 7-day free trial, once per workspace. A card is needed to start it.
+              Unless you cancel before the trial ends, Creator continues as a paid subscription and your card is charged.
             </li>
             <li>
               <strong>Payments.</strong> Dodo Payments is the merchant of record for our subscriptions: it runs checkout,
@@ -108,7 +108,7 @@ function sections(): LegalSection[] {
               subscription renews automatically until you cancel.
             </li>
             <li>
-              <strong>Cancelling.</strong> The workspace owner can cancel at any time in Settings → Billing. Pro stays active
+              <strong>Cancelling.</strong> The workspace owner can cancel at any time in Settings → Billing. Your paid plan stays active
               until the end of the period you&apos;ve paid for, then the workspace moves to Free. You can resume before
               then.
             </li>
@@ -371,8 +371,8 @@ export default function TermsPage() {
       summary={
         <>
           <p>
-            The short version: Free is free; Pro is monthly, starts with a 7-day trial (card required), and you can cancel
-            anytime, keeping Pro until the end of the period you&apos;ve paid for. {N} is delivered online; nothing is
+            The short version: Free is free; Creator and Business are monthly, Creator starts with a 7-day trial (card required), and you can cancel
+            anytime, keeping your plan until the end of the period you&apos;ve paid for. {N} is delivered online; nothing is
             shipped.
           </p>
           <p>

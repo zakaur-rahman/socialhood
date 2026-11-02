@@ -180,7 +180,7 @@ API and worker read the same variables.
 | `CLOUDINARY_API_SECRET` | secrets | yes | Cloudinary console |
 | `DODO_API_KEY` · `DODO_WEBHOOK_SECRET` | secrets | no | Dodo dashboard (live keys in production); with `DODO_PRODUCT_PRO_MONTHLY`, all three or none (C-149: none = billing off, everyone on Free) |
 | `DODO_ENVIRONMENT` | config | no | `live` / `test` |
-| `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (Max in R2) |
+| `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (pro is Creator, max is Business; Business is sold once its id is set) |
 | `DODO_PROVIDER` · `EMAIL_PROVIDER` · `PUSH_PROVIDER` | default | no | real providers; `fake` refused in production |
 | `RESEND_API_KEY` | secrets | yes | Resend → API keys (sending access, one domain) |
 | `EMAIL_FROM` | config | no | `Amplychat <support@amplychat.com>` |

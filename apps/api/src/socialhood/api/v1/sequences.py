@@ -1,7 +1,8 @@
 """Sequences (GR-24): timed follow-up messages after an entry event. Owners and admins manage them
 (the automations permission, GR-19); the rules are in services/sequences.
 
-Plans: Free, Pro and Max with limits on how many sequences run at once and how many steps one has
+Plans: Free, Creator and Business with limits on how many sequences run at once and how many
+steps one has
 (``active_sequences`` and ``sequence_steps``, pending the owner's confirmation, C-118). Past a
 limit a write is 402 ``quota_exceeded``.
 

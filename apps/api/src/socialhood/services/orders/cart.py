@@ -11,8 +11,8 @@ payment**, with its lines; a member then sends the payment link from the Orders 
 - **Tolerant.** A cart is something the customer already did, so it is not refused for stock: items
   that are gone, switched off, unpriced or in another currency than the first are left out, and the
   note names how many. No usable item means no order (the message is still in the thread).
-- **Plan.** Orders are part of Pro (PD-8) and capped per month; a workspace without room gets the
-  message and no order.
+- **Plan.** Orders are part of Creator and Business (PD-8) and capped per month; a workspace without
+  room gets the message and no order.
 """
 
 from __future__ import annotations

@@ -72,7 +72,7 @@ function Body({ wid, status }: { wid: string; status: WaCatalogueStatus }) {
   if (!status.entitled) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-fg-secondary">WhatsApp product messages are part of Pro.</p>
+        <p className="text-sm text-fg-secondary">WhatsApp product messages are part of Creator and Business.</p>
         {workspace.role === "agent" ? null : (
           <Button type="button" variant="secondary" size="sm" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>
             See plans

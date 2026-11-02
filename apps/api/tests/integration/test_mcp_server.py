@@ -81,7 +81,7 @@ async def test_initialize_list_and_call_with_the_handshake(
             assert t.title
         result = structured(await mcp.call_tool("get_workspace", {}))
         assert result["workspace"]["id"] == setup.wid
-        assert result["workspace"]["plan"] == "pro"
+        assert result["workspace"]["plan"] == "max"
         assert result["member"]["role"] == "owner"
         assert result["connection"]["kind"] == "api_key"
         assert result["connection"]["mode"] == "full"
@@ -382,7 +382,7 @@ async def test_a_key_never_reaches_another_workspace(
     client: httpx.AsyncClient, clerk: Clerk, setup: Setup, mcp_app: FastAPI, engine: AsyncEngine
 ) -> None:
     other = await workspace_with_thread(client, clerk, engine, email="other@example.com")
-    await set_plan(engine, other.wid, "pro")
+    await set_plan(engine, other.wid, "max")
     key, _ = await make_key(client, setup)
     async with connect(mcp_app, key) as mcp:
         error = error_of(

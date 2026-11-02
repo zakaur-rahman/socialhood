@@ -20,8 +20,9 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
     workspace,
   }) => {
     const stamp = unique("gr23");
-    const number = await api.connectSandbox(workspace.id, "whatsapp");
+    // C-172: WhatsApp isn't on Free, so the plan comes first.
     await api.setPlan(workspace.id, "pro");
+    const number = await api.connectSandbox(workspace.id, "whatsapp");
 
     // Four customers write in; the sandbox makes each a contact with a WhatsApp number.
     const people = [
@@ -170,9 +171,9 @@ test.describe("GR-23 WhatsApp broadcasts", () => {
   });
 
   test("the Free plan sees what broadcasts are part of, and no composer", async ({ page, api, workspace }) => {
-    await api.connectSandbox(workspace.id, "whatsapp");
+    // C-172: Free can't connect WhatsApp, and the page doesn't need a number to say so.
     await page.goto(`/w/${workspace.slug}/broadcasts`);
-    await expect(page.getByText("Broadcasts are part of Pro")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Broadcasts are part of Creator and Business")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("link", { name: /New/ })).toHaveCount(0);
     const refused = await api
       .call("POST", `/v1/w/${workspace.id}/broadcasts/preview`, {

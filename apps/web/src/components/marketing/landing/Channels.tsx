@@ -81,14 +81,14 @@ export const INTEGRATIONS: Integration[] = [
     name: "Google Sheets",
     icon: Sheet,
     body: "Send leads to a spreadsheet you own, as they arrive.",
-    status: "Pro and Max",
+    status: "Creator and Business",
     tone: "yours",
   },
   {
     name: "Zapier and the public API",
     icon: Webhook,
-    body: "Connect to other tools with Zapier, webhooks and API keys.",
-    status: "Pro and Max",
+    body: "Connect to other tools with Zapier and API keys on Business. Webhooks are on every plan.",
+    status: "Business",
     tone: "yours",
   },
 ];

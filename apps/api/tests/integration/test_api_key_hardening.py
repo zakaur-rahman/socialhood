@@ -62,7 +62,7 @@ def sender() -> Iterator[FakeInvitationSender]:
 @pytest.fixture
 async def ws(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Ws:
     owner = await workspace(client, clerk)
-    await set_plan(engine, owner.wid, "pro")  # keys are Pro (PD-6); three seats
+    await set_plan(engine, owner.wid, "max")  # keys are Business (C-172); three seats
     return owner
 
 

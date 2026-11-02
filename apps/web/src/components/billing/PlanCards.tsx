@@ -9,19 +9,20 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
 import { TRIAL_DAYS, canStartCheckout, planHighlights } from "@/lib/billing/plan";
-import { PLAN_NAME, billingCopy, formatPrice } from "@/lib/copy";
+import { ENTERPRISE, PLAN_NAME, billingCopy, formatPrice, plannedPriceLabel } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 const TAGLINE: Record<PlanOffer["plan"], string> = {
   free: "To get started",
-  pro: "For a growing business",
-  max: "For teams and high volume",
+  pro: "For creators and small businesses",
+  max: "For growing businesses with a team",
 };
 
 /**
  * UX-SCR-07: the plans side by side, from the public GET /v1/billing/plans (C-049). The current
  * plan is marked; the owner of a Free workspace can start the trial or upgrade from Pro's card.
- * Max is shown as coming (R2). C-066: three columns from tablets up, the current plan highlighted.
+ * Business starts a checkout too once its product is set (C-172). Enterprise is a "Contact us" card,
+ * not a plan. C-066: columns from tablets up, the current plan highlighted.
  */
 export function PlanCards({
   plans,
@@ -36,8 +37,8 @@ export function PlanCards({
 }) {
   if (plans.isPending) {
     return (
-      <div role="status" className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-label="Loading plans">
-        {[0, 1, 2].map((i) => (
+      <div role="status" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-busy="true" aria-label="Loading plans">
+        {[0, 1, 2, 3].map((i) => (
           <Card key={i} padding="roomy" className="space-y-3">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-6 w-24" />
@@ -61,7 +62,7 @@ export function PlanCards({
   const current = billing.plan;
   const mayPay = isOwner && canStartCheckout(billing);
   return (
-    <ul className="grid gap-4 md:grid-cols-3" aria-label="Plans">
+    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Plans">
       {plans.data.items.map((offer) => {
         const isCurrent = offer.plan === current;
         const highlights = planHighlights(offer.entitlements);
@@ -101,8 +102,12 @@ export function PlanCards({
                   <span className="text-sm font-normal text-fg-secondary"> a month</span>
                 </>
               ) : !offer.available ? (
-                // C-149: not on sale (Max until R2, or no billing on this server yet): no price to show.
-                <span className="text-base font-normal text-fg-secondary">Not on sale yet</span>
+                // C-149, C-172: not on sale (no billing on this server yet, or Business without its
+                // product): the planned price, labelled as planned.
+                <>
+                  <span data-testid={`planned-price-${offer.plan}`}>{plannedPriceLabel(offer.plan).split(" ")[0]}</span>
+                  <span className="text-sm font-normal text-fg-secondary"> a month when we launch</span>
+                </>
               ) : (
                 <span className="text-base font-normal text-fg-secondary">Price shown at checkout</span>
               )}
@@ -115,22 +120,47 @@ export function PlanCards({
                 </li>
               ))}
             </ul>
-            {mayPay && offer.plan === "pro" && offer.available ? (
+            {mayPay && offer.plan !== "free" && offer.available ? (
               // D-10: the page header's card holds the one primary; a card here is secondary.
               <Button
                 variant="secondary"
                 size="lg"
                 className="mt-5 w-full"
                 loading={checkout.pending}
-                onClick={() => checkout.start("pro")}
+                onClick={() => checkout.start(offer.plan === "max" ? "max" : "pro")}
               >
-                {billing.trial_eligible && offer.trial_days > 0 ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
+                {billing.trial_eligible && offer.trial_days > 0
+                  ? billingCopy.trialCta(trialDays)
+                  : offer.plan === "max"
+                    ? billingCopy.upgradeToBusiness
+                    : billingCopy.upgradeCta}
               </Button>
             ) : null}
           </li>
           </Card>
         );
       })}
+      <Card asChild padding="roomy" className="relative flex flex-col" data-testid="plan-enterprise">
+        <li>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={SECTION_TITLE}>{ENTERPRISE.name}</h3>
+          </div>
+          <p className="text-xs text-fg-secondary">{ENTERPRISE.tagline}</p>
+          <p className={cn("mt-4", KPI)}>{ENTERPRISE.price}</p>
+          <p className="text-sm text-fg-secondary">{ENTERPRISE.from}</p>
+          <ul className="mt-5 flex-1 space-y-2 border-t border-line-subtle pt-5 text-sm">
+            {ENTERPRISE.lines.map((line) => (
+              <li key={line} className="flex items-start gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+          <Button asChild variant="secondary" size="lg" className="mt-5 w-full">
+            <a href={ENTERPRISE.href}>{ENTERPRISE.cta}</a>
+          </Button>
+        </li>
+      </Card>
     </ul>
   );
 }

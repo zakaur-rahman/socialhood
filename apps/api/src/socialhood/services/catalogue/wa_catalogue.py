@@ -20,8 +20,8 @@ listed as unverified in docs/CONFLICTS.md (C-121).
   nothing new is stored). Meta wants ``catalog_management`` (and ``business_management``) and the
   catalogue connected to the WhatsApp Business Account in WhatsApp Manager; both are unverified, so
   the connect step reports whatever Meta says in plain words.
-- **Plan.** Connecting needs ``commerce`` (PD-8: Pro and Max). A downgrade stops the sync; what is
-  in the catalogue stays.
+- **Plan.** Connecting needs ``commerce`` (PD-8: Creator and Business). A downgrade stops the sync;
+  what is in the catalogue stays.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ CATALOGUE_DENIED = (
 )
 META_DOWN = "Meta didn't respond. Try again."
 NOT_WHATSAPP = "Choose a WhatsApp number."
-PLAN_STOPPED = "The catalogue is part of Pro, so the sync stopped."
+PLAN_STOPPED = "The catalogue is part of Creator and Business, so the sync stopped."
 NO_LINK = "Add a link to this product. Meta needs one for every catalogue item."
 NO_PICTURE = "Add a picture to this product. Meta needs one for every catalogue item."
 
@@ -268,7 +268,9 @@ async def connect(
     acct = await accounts.get(session, body.social_account_id)
     if acct is None:
         raise ApiError("not_found")
-    await check_entitlement(session, products.KEY, detail="The WhatsApp catalogue is part of Pro.")
+    await check_entitlement(
+        session, products.KEY, detail="The WhatsApp catalogue is part of Creator and Business."
+    )
     if acct.platform != "whatsapp" or acct.status == AccountStatus.DISCONNECTED:
         raise ApiError("validation_error", NOT_WHATSAPP)
     client = get_catalogue(http, settings, acct)
@@ -342,7 +344,9 @@ async def touch(session: AsyncSession, workspace_id: uuid.UUID) -> None:
 async def request_sync(session: AsyncSession, now: datetime) -> bool:
     """Sync now (the button): False when one is already running. The caller commits, then queues
     the job."""
-    await check_entitlement(session, products.KEY, detail="The WhatsApp catalogue is part of Pro.")
+    await check_entitlement(
+        session, products.KEY, detail="The WhatsApp catalogue is part of Creator and Business."
+    )
     conn = await get(session, lock=True)
     if conn is None:
         raise ApiError("conflict", NOT_CONNECTED)

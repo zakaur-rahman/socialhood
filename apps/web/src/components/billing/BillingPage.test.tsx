@@ -87,7 +87,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     const { posts } = setup();
 
     const current = await screen.findByRole("region", { name: "Free" });
-    expect(current).toHaveTextContent("Upgrade for more accounts");
+    expect(current).toHaveTextContent("Upgrade for WhatsApp, Auto replies and more automations");
     const credits = screen.getByRole("meter", { name: "AI credits" });
     expect(credits).toHaveAttribute("aria-valuetext", "120 of 200 credits");
     expect(screen.getByText("Scheduled posts").closest("[data-level]")).toHaveAttribute("data-level", "full");
@@ -102,13 +102,13 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/billing?tab=billing", { scroll: false });
     const plans = await screen.findByRole("list", { name: "Plans" });
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
-    expect(cards).toHaveLength(3);
+    expect(cards).toHaveLength(4); // Free, Creator, Business and Enterprise (C-172)
     expect(cards[0]).toHaveAttribute("aria-current", "true");
     expect(cards[1]).toHaveTextContent("₹999 a month");
-    expect(cards[1]).toHaveTextContent("50 active automations");
+    expect(cards[1]).toHaveTextContent("25 active automations");
     expect(cards[2]).toHaveTextContent("Coming soon");
 
-    // D-10: the header card holds the one primary; the Pro plan card offers the same action as a secondary.
+    // D-10: the header card holds the one primary; the Creator plan card offers the same action as a secondary.
     expect(within(current).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "default");
     expect(within(cards[1]).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "secondary");
 
@@ -127,14 +127,55 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     const current = await screen.findByRole("region", { name: "Free" });
     expect(current).toHaveTextContent("Paid plans aren't available yet. Everything on Free keeps working.");
     expect(within(current).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/Pro and Max are coming soon\./)).toBeInTheDocument();
+    expect(screen.getByText(/Paid plans are coming soon\./)).toBeInTheDocument();
 
     const plans = await screen.findByRole("list", { name: "Plans" });
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
     expect(cards[1]).toHaveTextContent("Coming soon");
-    expect(cards[1]).toHaveTextContent("Not on sale yet");
-    expect(cards[1]).toHaveTextContent("50 active automations");
+    expect(cards[1]).toHaveTextContent("$14");
+    expect(cards[1]).toHaveTextContent("a month when we launch");
+    expect(cards[1]).toHaveTextContent("25 active automations");
     expect(within(cards[1]).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("C-172: with billing off the paid plans show their planned prices, and Enterprise is a Contact us card with no checkout", async () => {
+    nav.search = "tab=billing";
+    setup({
+      billing: { ...free, billing_available: false, prices: [] },
+      handlers: { "GET /v1/billing/plans": () => json(planList({ billingOff: true })) },
+    });
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
+    expect(cards).toHaveLength(4);
+    expect(cards[1]).toHaveTextContent("Creator");
+    expect(within(cards[1]).getByTestId("planned-price-pro")).toHaveTextContent("$14");
+    expect(cards[1]).toHaveTextContent("a month when we launch");
+    expect(cards[2]).toHaveTextContent("Business");
+    expect(within(cards[2]).getByTestId("planned-price-max")).toHaveTextContent("$29");
+    expect(cards[2]).toHaveTextContent("a month when we launch");
+
+    const enterprise = within(plans).getByTestId("plan-enterprise");
+    expect(enterprise).toHaveTextContent("Enterprise");
+    expect(enterprise).toHaveTextContent("Contact us");
+    expect(enterprise).toHaveTextContent("from $99 a month");
+    expect(within(enterprise).getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "mailto:support@amplychat.com");
+    expect(within(enterprise).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("C-172: with billing on, Creator shows its Dodo price instead of the planned one; Business still shows the planned $29", async () => {
+    nav.search = "tab=billing";
+    setup();
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
+    expect(cards[1]).toHaveTextContent("₹999 a month");
+    expect(cards[1]).not.toHaveTextContent("when we launch");
+    expect(within(cards[1]).queryByTestId("planned-price-pro")).not.toBeInTheDocument();
+    expect(cards[2]).toHaveTextContent("$29");
+    expect(cards[2]).toHaveTextContent("a month when we launch");
+    // Enterprise has no checkout even when billing is on.
+    const enterprise = within(plans).getByTestId("plan-enterprise");
+    expect(within(enterprise).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(enterprise).getByRole("link", { name: "Contact us" })).toBeInTheDocument();
   });
 
   it("C-149: a billing_unavailable answer to checkout says paid plans aren't available", async () => {
@@ -159,12 +200,12 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     );
   });
 
-  it("Pro: renewal date and price; Manage billing opens the portal in a new tab", async () => {
+  it("Creator: renewal date and price; Manage billing opens the portal in a new tab", async () => {
     const user = userEvent.setup();
     const tab = { go: vi.fn(), cancel: vi.fn() };
     vi.spyOn(browser, "openPending").mockReturnValue(tab);
     setup({ billing: pro });
-    const current = await screen.findByRole("region", { name: "Pro" });
+    const current = await screen.findByRole("region", { name: "Creator" });
     expect(current).toHaveTextContent("Active");
     expect(current).toHaveTextContent("Renews on 1 Nov · ₹999 a month");
     expect(within(current).queryByRole("button", { name: /trial|Upgrade/ })).not.toBeInTheDocument();
@@ -187,33 +228,33 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
   it("Cancel asks first with the end date and what Free changes, then Resume undoes it", async () => {
     const user = userEvent.setup();
     const { posts } = setup({ billing: pro });
-    const current = await screen.findByRole("region", { name: "Pro" });
+    const current = await screen.findByRole("region", { name: "Creator" });
     await user.click(within(current).getByRole("button", { name: "Cancel plan" }));
-    const confirm = await screen.findByRole("alertdialog", { name: "Cancel Pro?" });
-    expect(confirm).toHaveTextContent("Pro stays until 1 Nov.");
+    const confirm = await screen.findByRole("alertdialog", { name: "Cancel Creator?" });
+    expect(confirm).toHaveTextContent("Creator stays until 1 Nov.");
     expect(confirm).toHaveTextContent("Accounts in Auto switch to Suggest");
     expect(confirm).toHaveTextContent("Nothing is deleted.");
     expect(posts("/billing/cancel")).toHaveLength(0);
     await user.click(within(confirm).getByRole("button", { name: "Cancel plan" }));
 
     await waitFor(() => expect(posts("/billing/cancel")).toHaveLength(1));
-    await waitFor(() => expect(current).toHaveTextContent("Pro until 1 Nov. Then the workspace moves to Free."));
+    await waitFor(() => expect(current).toHaveTextContent("Creator until 1 Nov. Then the workspace moves to Free."));
     expect(current).toHaveTextContent("Cancelling");
-    expect(toast.success).toHaveBeenCalledWith("Pro until 1 Nov");
+    expect(toast.success).toHaveBeenCalledWith("Creator until 1 Nov");
 
-    await user.click(within(current).getByRole("button", { name: "Resume Pro" }));
-    const resume = await screen.findByRole("alertdialog", { name: "Resume Pro?" });
-    expect(resume).toHaveTextContent("Pro renews on 1 Nov at ₹999 a month");
-    await user.click(within(resume).getByRole("button", { name: "Resume Pro" }));
+    await user.click(within(current).getByRole("button", { name: "Resume Creator" }));
+    const resume = await screen.findByRole("alertdialog", { name: "Resume Creator?" });
+    expect(resume).toHaveTextContent("Creator renews on 1 Nov at ₹999 a month");
+    await user.click(within(resume).getByRole("button", { name: "Resume Creator" }));
     await waitFor(() => expect(posts("/billing/resume")).toHaveLength(1));
     await waitFor(() => expect(current).toHaveTextContent("Renews on 1 Nov"));
   });
 
   it("on hold: payment failed, the grace end, and Update payment method", async () => {
     setup({ billing: billingState({ status: "on_hold", grace_until: "2026-10-03T06:00:00Z" }) });
-    const current = await screen.findByRole("region", { name: "Pro" });
+    const current = await screen.findByRole("region", { name: "Creator" });
     expect(current).toHaveTextContent("On hold");
-    expect(current).toHaveTextContent("Update your payment method by 3 Oct to keep Pro.");
+    expect(current).toHaveTextContent("Update your payment method by 3 Oct to keep Creator.");
     expect(within(current).getByRole("button", { name: "Update payment method" })).toBeInTheDocument();
     expect(within(current).queryByRole("button", { name: "Cancel plan" })).not.toBeInTheDocument();
   });
@@ -244,8 +285,8 @@ describe("checkout return (F-15, FR-BIL-02)", () => {
 
     current = billingState({ status: "trialing", trial_ends_at: "2026-10-07T06:00:00Z", prices: [inr] });
     await act(() => queryClient.invalidateQueries({ queryKey: keys.billing(workspace.id) }));
-    expect(await screen.findByText("Your Pro trial has started")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Pro" })).toHaveTextContent("Trial");
+    expect(await screen.findByText("Your Creator trial has started")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Creator" })).toHaveTextContent("Trial");
   });
 
   it("polls every 3 s, and after 60 s says it can take a minute", async () => {
@@ -260,7 +301,7 @@ describe("checkout return (F-15, FR-BIL-02)", () => {
       expect(gets()).toBeGreaterThanOrEqual(first + 3);
       await act(() => vi.advanceTimersByTimeAsync(52_000));
       expect(
-        await screen.findByText("Payment received? It can take a minute. We'll email you when Pro is active."),
+        await screen.findByText("Payment received? It can take a minute. We'll email you when your plan is active."),
       ).toBeInTheDocument();
       const after = gets();
       await act(() => vi.advanceTimersByTimeAsync(10_000));
@@ -401,6 +442,12 @@ describe("plan hero and quotas (C-066)", () => {
 });
 
 describe("the Usage and Billing tabs (C-171)", () => {
+  it("says tax is added at checkout (C-172)", async () => {
+    nav.search = "tab=billing";
+    setup();
+    expect(await screen.findByText(/Tax is added at checkout where it applies\./)).toBeInTheDocument();
+  });
+
   it("?tab=billing opens Billing; Usage is the default", async () => {
     nav.search = "tab=billing";
     setup();

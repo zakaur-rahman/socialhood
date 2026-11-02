@@ -1,6 +1,6 @@
 /**
  * /developers/mcp/api-key (C-165): connect an AI app with an Amplychat API key instead of signing
- * in. Facts: a key needs the public_api entitlement (Pro and Max, billing/plans.py, PD-6); the key
+ * in. Facts: a key needs the public_api entitlement (Business only, billing/plans.py, PD-6); the key
  * acts as the member who made it with their current role (docs/architecture/mcp/03-phase-a.md);
  * the MCP scopes are schemas/api_keys.py; limits are mcp/calls.py via security/ratelimit.py.
  */
@@ -21,7 +21,7 @@ export const API_KEY_META = {
 /** The scopes an AI app's key can carry, in plain words (schemas/api_keys.py SCOPE_DESCRIPTIONS). */
 export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "posts:read", body: "Read published and scheduled posts, the calendar, best times and the media library." },
-  { scope: "posts:write", body: "Create, change, reschedule and cancel posts. Scheduling is Pro and Max." },
+  { scope: "posts:write", body: "Create, change, reschedule and cancel posts. Scheduling is Creator and Business." },
   { scope: "media:write", body: "Upload or import images and videos for posts." },
   { scope: "conversations:read", body: "Read conversations and their messages." },
   { scope: "replies:draft", body: "Prepare a reply for a member to send in Amplychat. It is never sent." },
@@ -31,7 +31,7 @@ export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "knowledge:write", body: "Add a text note or a website to the knowledge base." },
   { scope: "automations:read", body: "Read automations and their runs." },
   { scope: "automations:write", body: "Pause and resume automations." },
-  { scope: "automations:create", body: "Create and change keyword automations, and turn new ones on. Pro and Max." },
+  { scope: "automations:create", body: "Create and change keyword automations, and turn new ones on. Creator and Business." },
   { scope: "ask", body: "Ask Amplychat's own assistant (uses AI credits)." },
 ];
 
@@ -126,7 +126,7 @@ export const KEY_PLAN_ROWS = PLAN_ROWS.filter((row) => /a day|API key/.test(row.
 export const API_KEY_FAQ = [
   {
     question: "Which plan do I need for an API key?",
-    answer: "Pro or Max. Making a key is part of the public API, which is Pro and Max. On Free, connect by signing in instead.",
+    answer: "Business. Making a key is part of the public API, which is Business only. On Free and Creator, connect by signing in instead.",
   },
   {
     question: "Can I change a key's scopes?",

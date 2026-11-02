@@ -20,6 +20,7 @@ from socialhood.billing.dodo_fake import FAKE_CHECKOUT_BASE, FAKE_PORTAL_BASE, F
 from socialhood.billing.plans import ENTITLEMENTS, entitlement
 from tests.support.api import WEB, Clerk, sign_in
 from tests.support.billing import (
+    MAX_PRODUCT,
     PRO_PRICE_MINOR,
     PRO_PRODUCT,
     dodo_event,
@@ -131,11 +132,35 @@ async def test_checkout_after_an_expired_plan_is_allowed(owner: Owner, fake_dodo
     assert (await owner.post("/billing/checkout", {"plan": "pro"})).status_code == 200
 
 
-async def test_max_is_422_until_r2(owner: Owner, fake_dodo: FakeDodo) -> None:
+async def test_business_checkout_starts_with_its_own_product_and_no_trial(
+    owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    """C-172: Business (max) is bought like Creator once its product id is set; it has no trial."""
+    response = await owner.post("/billing/checkout", {"plan": "max"})
+    assert response.status_code == 200, response.text
+    assert response.json()["trial"] is False
+    (params,) = fake_dodo.checkouts
+    assert params.product_id == MAX_PRODUCT
+    assert params.trial_period_days == 0
+
+
+async def test_business_checkout_is_422_until_its_product_is_set(
+    app: FastAPI, owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    app.state.settings = app.state.settings.model_copy(update={"dodo_product_max_monthly": None})
     response = await owner.post("/billing/checkout", {"plan": "max"})
     assert response.status_code == 422
     assert response.json()["errors"][0]["field"] == "plan"
+    assert response.json()["errors"][0]["message"] == "Business isn't available yet."
     assert fake_dodo.checkouts == []
+    # Creator still sells, and billing as a whole stays on.
+    assert (await owner.post("/billing/checkout", {"plan": "pro"})).status_code == 200
+    items = (await owner.client.get("/v1/billing/plans")).json()["items"]
+    assert {item["plan"]: item["available"] for item in items} == {
+        "free": True,
+        "pro": True,
+        "max": False,
+    }
 
 
 async def test_checkout_is_503_when_dodo_fails_or_isnt_set_up(
@@ -255,7 +280,7 @@ async def test_the_public_plan_list_has_entitlements_prices_and_the_trial(
         "interval": "month",
     }
     assert (items["pro"]["trial_days"], items["pro"]["available"]) == (7, True)
-    assert (items["max"]["trial_days"], items["max"]["available"]) == (0, False)
+    assert (items["max"]["trial_days"], items["max"]["available"]) == (0, True)
     pro = {e["key"]: e["value"] for e in items["pro"]["entitlements"]}
     assert set(pro) == set(ENTITLEMENTS)
     assert pro["active_automations"] == entitlement("pro", "active_automations")
@@ -276,7 +301,7 @@ async def test_prices_are_left_out_when_dodo_cant_give_them(
 
 
 async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) -> None:
-    """Max's price shows although Max can't be bought yet (the plan list says available: false)."""
+    """Both paid plans' prices show (Business is on sale once its product id is set, C-172)."""
     billing = await owner.billing()
 
     assert {(p["plan"], p["amount_minor"]) for p in billing["prices"]} == {
@@ -290,12 +315,11 @@ async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) 
         "knowledge_characters",
         "active_automations",
         "pending_scheduled_messages",
-        "instagram_accounts",
-        "whatsapp_accounts",
-        "facebook_accounts",
+        "channels",
     }
     assert (meters["ai_credits"]["limit"], meters["scheduled_posts"]["limit"]) == (200, 10)
-    assert (meters["instagram_accounts"]["used"], meters["instagram_accounts"]["limit"]) == (0, 1)
+    # C-172: Free counts channels in total; no WhatsApp tile where the plan has none.
+    assert (meters["channels"]["used"], meters["channels"]["limit"]) == (0, 2)
     assert meters["ai_credits"]["period_end"] == meters["scheduled_posts"]["period_end"]
     assert billing["trial_eligible"] is True
 

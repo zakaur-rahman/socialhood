@@ -38,7 +38,7 @@ export const FAQ_PROFESSIONAL: FaqItem = {
 };
 
 // models/ai.py AiSettings: tone (friendly, professional, playful, concise), emoji level, do and
-// don't lists, sign-off. Free has Off and Suggest; Auto is Pro (plan-table.json ai_modes).
+// don't lists, sign-off. Free has Off and Suggest; Auto is Creator and Business (plan-table.json ai_modes).
 export const FAQ_ROBOTIC: FaqItem = {
   question: "Will the replies sound robotic?",
   answer:
@@ -58,7 +58,7 @@ export const FAQ_TAKEOVER: FaqItem = {
 // than message_history_days. ai/metering.py notifies owners and admins in the app (not by email) at 80% and 100% of credits.
 export const FAQ_FREE_LIMIT: FaqItem = {
   question: "What happens when I reach the Free plan's limits?",
-  answer: `Your inbox keeps working. Free runs ${LIMITS.active_automations.free} automations at once, so pause one to turn on another, and schedules ${LIMITS.scheduled_posts_monthly.free} posts a month. When the month's ${count.format(LIMITS.ai_credits_monthly.free)} AI credits are used, AI features pause until they reset, and the app tells you at 80% and 100%. Free keeps messages for ${LIMITS.message_history_days.free} days. Pro raises every limit.`,
+  answer: `Your inbox keeps working. Free runs ${LIMITS.active_automations.free} automations at once, so pause one to turn on another, and schedules ${LIMITS.scheduled_posts_monthly.free} posts a month. When the month's ${count.format(LIMITS.ai_credits_monthly.free)} AI credits are used, AI features pause until they reset, and the app tells you at 80% and 100%. Free keeps messages for ${LIMITS.message_history_days.free} days. Creator and Business raise every limit.`,
 };
 
 // Owner decision 2026-10-29 (C-156): customers pay Meta directly through their own WhatsApp
@@ -78,12 +78,12 @@ export const FAQ_MADE_UP: FaqItem = {
 export const FAQ_AUTO_REPLY: FaqItem = {
   question: "Can Amplychat reply to my customers automatically?",
   answer:
-    "Yes. With Auto mode (Pro), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to \"Needs you\" for a person to answer. On Free, the AI suggests replies and you send them.",
+    "Yes. With Auto mode (Creator and Business), the AI replies by itself when it's confident, using your knowledge base. Anything it isn't sure about goes to \"Needs you\" for a person to answer. On Free, the AI suggests replies and you send them.",
 };
 
 export const FAQ_ACCOUNTS: FaqItem = {
   question: "Can I connect more than one Instagram account?",
-  answer: "Yes. Free includes 1 account per platform, and Pro includes 3.",
+  answer: "Yes. Free connects 2 channels in total from Instagram, Facebook and web chat, with no WhatsApp. Creator connects 1 each of Instagram, WhatsApp, Facebook and web chat, and Business connects 3 each of Instagram, WhatsApp and Facebook.",
 };
 
 export const FAQ_24_HOURS: FaqItem = {
@@ -117,17 +117,17 @@ export const FAQ_CREDITS: FaqItem = {
 
 export const FAQ_CANCEL: FaqItem = {
   question: "Can I cancel anytime?",
-  answer: "Yes. Pro stays active until the end of the period you've paid for, then your workspace moves to Free.",
+  answer: "Yes. Your paid plan stays active until the end of the period you've paid for, then your workspace moves to Free.",
 };
 
 // C-168: the MCP server (docs/architecture/mcp 04-phase-b.md, 05-phase-c.md; connect-ai.ts PLAN_ROWS
-// and SAFETY): reading and drafts on every plan, scheduling on Pro and Max, a preview and a yes
+// and SAFETY): reading and drafts on every plan, scheduling on Creator and Business, a preview and a yes
 // before anything is scheduled, and no messages sent from an AI app. C-169: keyword automations
-// from an AI app on Pro and Max; the automation sends, once confirmed and on.
+// from an AI app on Creator and Business; the automation sends, once confirmed and on.
 export const FAQ_AI_APPS: FaqItem = {
   question: "Can I use Amplychat from Claude or ChatGPT?",
   answer:
-    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Pro and Max. Amplychat requires a preview first and the AI waits for your yes, unless you set your AI app to always allow Amplychat's tools, so keep approvals on for changes. It can't send messages to your customers itself: an automation sends once it's confirmed and on.",
+    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Creator and Business. Amplychat requires a preview first and the AI waits for your yes, unless you set your AI app to always allow Amplychat's tools, so keep approvals on for changes. It can't send messages to your customers itself: an automation sends once it's confirmed and on.",
   link: { label: "How it works with AI apps", href: "/mcp" },
 };
 

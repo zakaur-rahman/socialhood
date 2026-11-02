@@ -9525,3 +9525,36 @@ The owner asked for two tabs on Settings › Billing and usage (2026-11-01). Dec
 - **`?tab=billing` opens Billing,** so a reload keeps the tab. "See plans", "Compare plans" and "View billing" links use `PLANS_HREF`. `BILLING_HREF` stays for links about the page in general.
 - **Usage shows a dot when a monthly allowance is used up** (credits, posts). A full slot, like the one Instagram account Free allows, gets none: it would stay on for anyone using their one account.
 - **The quota grid fits its container** instead of the viewport (auto-fill, 15rem minimum). With the two sidebars at laptop width, four columns broke words in half.
+
+## C-172 · Four plans
+
+The owner's final decision (2026-11-02): "like ManyChat but at low cost". Contacts stay unlimited on every plan. Free, Creator, Business and Enterprise.
+
+| | Free | Creator ($14/month) | Business ($29/month) | Enterprise (Contact us, from $99) |
+|---|---|---|---|---|
+| Channels | 2 in total from Instagram, Facebook and web chat; no WhatsApp | 1 Instagram, 1 WhatsApp, 1 Facebook, 1 web chat | 3 of each | 10+ |
+| Active automations | 3 | 25 | 50 | Unlimited |
+| AI credits a month | 200 | 1,500 | 5,000 | 25,000+ |
+| Scheduled posts a month | 10 | 100 | 300 | Unlimited |
+| AI replies | Suggestions only | Auto and suggestions | Auto and suggestions | Auto and suggestions |
+| Members | 1 | 2 | 3 | 10+ |
+| Knowledge | 200K characters | 1M | 5M | 50M+ |
+| MCP (Claude, ChatGPT) | Read and drafts | Full | Full | Full |
+| API keys, Zapier | No | No | Yes | Yes |
+| Message history | 90 days | Full | Full | Full |
+
+Creator was first given as $10; the owner corrected it to $14 before anything was committed. Decisions:
+
+- **Internal names don't change.** Keys stay `free`, `pro`, `max`: `pro` shows as Creator, `max` as Business (`PLAN_NAME` in `lib/copy.ts`, `WorkspaceMenu`, `ConsentPage`). No data moves, no migration.
+- **Enterprise is a card only,** on the pricing page and in Compare plans (`ENTERPRISE` in `lib/copy.ts`): "Contact us", "from $99 a month", `mailto:support@amplychat.com`, the table's rows and "for high volume and agencies". No plan key, checkout or entitlement. Nothing about uptime, support levels or SSO is promised.
+- **New entitlements:** `channels_total` (Free 2, paid none) and `whatsapp` (Free false). Checked by `check_new_channel` (`billing/entitlements.py`) where a channel is added: Instagram, Facebook and WhatsApp connect (`services/connections._at_capacity`, `facebook_connect._check_room`, `whatsapp_connect`) and the website chat's first open (`services/widget/settings.ensure`, also when it is switched back on). Errors are the existing `entitlement_required` (WhatsApp) and `quota_exceeded` (`channels_total`). The web asks before Meta's sign-up: Free clicking Connect WhatsApp sees the upgrade dialog.
+- **Existing Free workspaces are not touched.** `read_only_accounts` now also marks every WhatsApp account read-only on a plan without WhatsApp, and the accounts past `channels_total` (earliest connected keep the slots, in the order Instagram, Facebook and web chat as connected). They stay connected and readable and can be disconnected; they can't send (replies, scheduled messages, automation activations, comment replies), with the existing 402s and a plain message. This is the same behaviour as any downgrade (`billing/downgrade.py` reports them in the plan_downgraded notice). Nothing is deleted; upgrading lifts it.
+- **The website chat is one per workspace** (C-111), so "3 of each" on Business can't be 3 web chats. Pages say "3 each of Instagram, WhatsApp and Facebook" and the pricing table notes "One web chat per workspace".
+- **Unlisted entitlements.** Business takes today's Creator (`pro`) values; Creator keeps today's `pro` values: pending scheduled messages 500, comment analysis all posts, contact fields 50, webhook endpoints 5, flow steps 50, crawl pages 250, widget branding removable, widget chats a day 500, WhatsApp broadcasts 2,500 recipients a month, catalogue and orders on (1,000 products, 500 import rows, 500 orders a month), sequences 10 with 10 steps, Google Sheets on both paid plans. Free is unchanged. MCP caps: calls a day Free 100, Creator 2,000, Business 2,000; scheduled posts a day 0 / 100 / 100; uploads a day 20 / 50 / 200; upload megabytes a day 500 / 2,500 / 10,000.
+- **API keys and Zapier (`public_api`) are Business only.** The keys page tells Creator and Free so; the upgrade dialog for it offers Business.
+- **Trial:** 7 days on Creator, none on Business.
+- **Selling Business.** `AVAILABLE` is gone; `is_available(plan, settings)` (`billing/plans.py`) is true for a paid plan once its Dodo product id is set. Checkout for `max` uses `DODO_PRODUCT_MAX_MONTHLY` with no trial; without the id it is a 422 "Business isn't available yet." and the plan list says `available: false`. `billing_enabled` is unchanged: Dodo key, webhook secret and the Creator product; Business is simply unavailable until its id is set. Moving Creator to Business or back: checkout refuses a workspace that already has a paid plan ("Change it in Manage billing"), and the app has no plan-change call of its own. The only path is Dodo's customer portal (Manage billing), and the Dodo webhook `subscription.plan_changed` already maps the new product to the plan and applies downgrade effects when it goes down. Whether the portal offers plan switching depends on the Dodo product setup: **the owner must check this in Dodo** and, if it doesn't, a plan-change API call would be a follow-up.
+- **Planned prices while not on sale.** `PLANNED_PRICE_USD` in `lib/copy.ts` ($14, $29) is the only place. With billing off (or Business without its product) the pricing page and Compare plans show "$14 a month when we launch"; they never appear in JSON-LD. With billing on the Dodo price replaces them.
+- **Copy.** Every page was checked against the table. "Pro and Max" became "Creator and Business" except API keys and Zapier (Business) and WhatsApp (not on Free). Comparisons with ManyChat use only its dated source (ManyChat Pro $39 a month on monthly billing for 2,500 active contacts) and the planned prices, with "planned". No page says "cheapest", "best" or "#1" (`lib/marketing/claims.test.ts`). The changelog's past entries are history and were left. Legal: `terms`, `privacy`, `refunds` (plan names only) and `shipping` bumped to 2026-11-02 in `lib/legal.ts`.
+- **Usage page.** Free shows a "channels" tile ("1 of 2 channels") instead of per-platform tiles, and no WhatsApp tile unless a WhatsApp account already exists.
+- **Supersedes** the plan numbers of PD-1 (seats), PD-6 (API for Pro and Max) and the Max-is-R2 note.

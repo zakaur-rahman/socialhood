@@ -131,13 +131,13 @@ describe("Products page (GR-31)", () => {
     expect(await screen.findByText("No products match")).toBeInTheDocument();
   });
 
-  it("on Free shows what exists, says the catalogue is part of Pro, and opens the upgrade dialog instead of the form", async () => {
+  it("on Free shows what exists, says the catalogue is part of Creator and Business, and opens the upgrade dialog instead of the form", async () => {
     const user = userEvent.setup();
     setup(list([product()], false));
     expect(await screen.findByText("Silk scarf")).toBeInTheDocument();
     expect(screen.getByText(/adding, importing and syncing products/)).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: /Add product/ })[0]);
-    expect(await screen.findByRole("heading", { name: /The product catalogue is part of Pro/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /The product catalogue is part of Creator and Business/ })).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "Add a product" })).not.toBeInTheDocument();
   });
 

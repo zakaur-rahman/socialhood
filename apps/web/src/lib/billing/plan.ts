@@ -9,7 +9,7 @@ import { dayKey } from "@/lib/tz";
 
 const DAY_MS = 86_400_000;
 
-/** FR-BIL-03: the Pro trial's length until the plan list says otherwise. */
+/** FR-BIL-03: the Creator (pro) trial's length until the plan list says otherwise. */
 export const TRIAL_DAYS = 7;
 
 /** A timestamp as a date in the workspace timezone: "3 Oct", or "3 Oct 2027" in another year. */
@@ -59,7 +59,7 @@ export type StatusTone = "neutral" | "brand" | "warning" | "danger";
 export type PlanStatus = {
   plan: string;
   badge: { label: string; tone: StatusTone };
-  /** One line under the plan name: renewal, trial end, grace end or when Pro stops. */
+  /** One line under the plan name: renewal, trial end, grace end or when the paid plan stops. */
   line: string;
   /** Resume is offered (a cancellation is pending, FR-BIL-04). */
   resumable: boolean;
@@ -69,7 +69,7 @@ export type PlanStatus = {
 
 /**
  * UX-SCR-07's plan card: name, status and the date that matters. Trial with days left, active
- * with its renewal, on hold with its grace end (FR-BIL-06), or "Pro until {date}" when cancelled.
+ * with its renewal, on hold with its grace end (FR-BIL-06), or "Creator until {date}" when cancelled.
  */
 export function planStatus(billing: BillingState, timeZone: string, now: Date = new Date()): PlanStatus {
   const name = PLAN_NAME[billing.plan];
@@ -147,7 +147,7 @@ export function planStatus(billing: BillingState, timeZone: string, now: Date = 
       return {
         plan: name,
         badge: { label: "Free", tone: "neutral" },
-        line: "Upgrade for more accounts, automations, scheduled posts and AI credits.",
+        line: "Upgrade for WhatsApp, Auto replies and more automations, scheduled posts and AI credits.",
         resumable: false,
         cancellable: false,
       };
@@ -162,6 +162,7 @@ const METERS: Record<string, { label: string; unit: string; periodic?: boolean }
   knowledge_characters: { label: "Knowledge", unit: "characters" },
   active_automations: { label: "Active automations", unit: "automations" },
   pending_scheduled_messages: { label: "Scheduled messages", unit: "waiting" },
+  channels: { label: "Channels", unit: "channels" },
   social_accounts: { label: "Connected accounts", unit: "accounts" },
   instagram_accounts: { label: "Instagram accounts", unit: "connected" },
   whatsapp_accounts: { label: "WhatsApp accounts", unit: "connected" },
@@ -217,6 +218,10 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
 // ---- the plan comparison (the public GET /v1/billing/plans)
 
 const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => string | null }[] = [
+  { key: "channels_total", label: (v) => (typeof v === "number" ? `${v} channels in total (Instagram, Facebook, web chat)` : null) },
+  { key: "whatsapp", label: (v) => (v === true ? "WhatsApp" : null) },
+  { key: "members", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "team member" : "team members"}` : null) },
+  { key: "public_api", label: (v) => (v === true ? "API keys and Zapier" : null) },
   { key: "accounts_per_platform", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "account" : "accounts"} per platform` : null) },
   { key: "active_automations", label: (v) => (v === null ? "Unlimited automations" : typeof v === "number" ? `${fmt(v)} active automations` : null) },
   { key: "ai_credits_monthly", label: (v) => (typeof v === "number" ? `${fmt(v)} AI credits a month` : null) },
