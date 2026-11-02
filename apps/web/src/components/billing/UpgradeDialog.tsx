@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
-import { BILLING_HREF } from "@/components/shell/nav";
+import { PLANS_HREF } from "@/components/shell/nav";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -114,7 +114,7 @@ export function UpgradeDialog() {
           {mayPay ? (
             <>
               <Button asChild variant="secondary">
-                <Link href={BILLING_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
+                <Link href={PLANS_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
                   Compare plans
                 </Link>
               </Button>
@@ -128,7 +128,7 @@ export function UpgradeDialog() {
             </>
           ) : !isAgent ? (
             <Button asChild>
-              <Link href={BILLING_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
+              <Link href={PLANS_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
                 {isOwner ? "View billing" : "See plans"}
               </Link>
             </Button>
