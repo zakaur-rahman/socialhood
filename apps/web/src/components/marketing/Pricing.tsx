@@ -2,7 +2,7 @@ import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-import { ENTERPRISE, PLAN_NAME, formatPrice } from "@/lib/copy";
+import { ENTERPRISE, PLAN_NAME, PRICE_TAX_NOTE, formatPrice } from "@/lib/copy";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
@@ -193,6 +193,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
             </dl>
           </details>
           <div className="price-notes">
+            <p>{PRICE_TAX_NOTE}</p>
             <p>
               Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees, which Meta
               charges directly to your business.

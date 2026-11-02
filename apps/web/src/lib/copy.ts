@@ -402,6 +402,9 @@ export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Creator
  */
 export const PLANNED_PRICE_USD: Record<"pro" | "max", number> = { pro: 14, max: 29 };
 
+/** C-172: Dodo adds tax at checkout (prices are tax exclusive), so a listed price says so. */
+export const PRICE_TAX_NOTE = "Prices are in US dollars. Tax is added at checkout where it applies.";
+
 /** "$14 a month when we launch" */
 export function plannedPriceLabel(plan: "pro" | "max"): string {
   return `$${PLANNED_PRICE_USD[plan]} a month when we launch`;

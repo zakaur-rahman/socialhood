@@ -442,6 +442,12 @@ describe("plan hero and quotas (C-066)", () => {
 });
 
 describe("the Usage and Billing tabs (C-171)", () => {
+  it("says tax is added at checkout (C-172)", async () => {
+    nav.search = "tab=billing";
+    setup();
+    expect(await screen.findByText(/Tax is added at checkout where it applies\./)).toBeInTheDocument();
+  });
+
   it("?tab=billing opens Billing; Usage is the default", async () => {
     nav.search = "tab=billing";
     setup();

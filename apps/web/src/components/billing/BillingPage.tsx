@@ -50,7 +50,7 @@ import {
   priceOf,
   type MeterView,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { PLAN_NAME, PRICE_TAX_NOTE, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -201,7 +201,7 @@ export function BillingPage() {
                   Compare plans
                 </h2>
                 <p className="text-sm text-fg-secondary">
-                  What each plan includes. Contacts are unlimited on every plan.{billingOpen(state) ? "" : " Paid plans are coming soon."}
+                  What each plan includes. Contacts are unlimited on every plan. {PRICE_TAX_NOTE}{billingOpen(state) ? "" : " Paid plans are coming soon."}
                 </p>
               </div>
               <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
