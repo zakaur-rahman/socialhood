@@ -80,7 +80,7 @@ describe("the legal config renders only what is set", () => {
     expect(screen.queryByText("Proprietor")).not.toBeInTheDocument();
     expect(screen.queryByText("Grievance officer")).not.toBeInTheDocument();
     expect(screen.queryByText(/Effective/)).not.toBeInTheDocument();
-    expect(screen.getByText("Last updated 2 November 2026")).toBeInTheDocument();
+    expect(screen.getByText("Last updated 3 November 2026")).toBeInTheDocument();
     expect(container.textContent).not.toMatch(PLACEHOLDER);
     expect(governingLawClause(EMPTY)).toBeNull();
   });
