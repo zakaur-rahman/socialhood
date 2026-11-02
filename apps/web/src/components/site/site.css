@@ -3030,3 +3030,20 @@ body:has(.site) {
   }
 }
 /* ==== end C-168 mcp highlight ==== */
+
+/* ==== C-173 plan cards ==== */
+/* Four even cards (Free, Creator, Business, Agency): the number and "a month" share a line that never
+   breaks inside the number, and a label like "when we launch" sits on the line below (the .sub). The
+   cards keep their six shared rows (C-157), so prices and buttons share one baseline across the row. */
+@layer components {
+  .site .plans {
+    & .plan > .price.num { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); white-space: nowrap; min-width: 0; }
+    & .plan > .price.num small { white-space: nowrap; }
+    & .plan > .price.soon, & .plan > .price.ask { white-space: normal; }
+    & .plan > .sub { align-self: start; }
+    & .plan > .btn { align-self: end; }
+  }
+  .site .need-more { margin: var(--space-6) 0 0; font-size: var(--fs-body-sm); color: var(--s-text-3); }
+  .site .need-more .tlink { display: inline; min-height: 0; }
+}
+/* ==== end C-173 plan cards ==== */

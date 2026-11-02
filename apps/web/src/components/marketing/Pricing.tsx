@@ -2,7 +2,7 @@ import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-import { ENTERPRISE, PLAN_NAME, PRICE_TAX_NOTE, formatPrice } from "@/lib/copy";
+import { AGENCY, AGENCY_AI_CREDITS, NEED_MORE, PLAN_NAME, PRICE_TAX_NOTE, formatPrice } from "@/lib/copy";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS, SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
@@ -34,14 +34,18 @@ function PriceLine({ card, pricing }: { card: PlanCard; pricing: PricingData }) 
     return (
       <>
         {card.planned ? (
+          // C-173: the number and "a month" on one line, "when we launch" on the line below.
           <p className="price num" data-testid={`planned-price-${card.plan}`}>
             {card.planned.amount}
-            <small> a month when we launch</small>
+            <small> a month</small>
           </p>
         ) : (
           <p className="price soon">Coming soon</p>
         )}
-        <p className="sub">{card.name} isn&apos;t available to buy yet. Start on Free today and upgrade when it opens.</p>
+        <p className="sub">
+          {card.planned ? "Planned price, when we launch. " : ""}
+          {card.name} isn&apos;t available to buy yet. Start on Free today and upgrade when it opens.
+        </p>
       </>
     );
   }
@@ -108,21 +112,28 @@ function PlanCardView({ card, pricing, main }: { card: PlanCard; pricing: Pricin
   );
 }
 
-/** C-172: Enterprise is a "Contact us" card: no plan key, no checkout, only the plan table's rows. */
-function EnterpriseCard() {
+/**
+ * C-173: Agency is a card, not a plan yet: its price, a "Coming soon" tag and a Contact us link; no
+ * plan key, no checkout, no sign-up link. The lines are the same key lines the other cards show.
+ */
+function AgencyCard() {
   return (
-    <li className="plan" aria-labelledby="plan-enterprise" data-testid="plan-enterprise">
+    <li className="plan" aria-labelledby="plan-agency" data-testid="plan-agency">
       <div className="plan-top">
-        <h3 id="plan-enterprise">{ENTERPRISE.name}</h3>
+        <h3 id="plan-agency">{AGENCY.name}</h3>
+        <span className="tag t-plain">{AGENCY.soon}</span>
       </div>
-      <p className="for">{ENTERPRISE.tagline}</p>
-      <p className="price num">{ENTERPRISE.price}</p>
-      <p className="sub">{ENTERPRISE.from}</p>
-      <CtaLink href={ENTERPRISE.href} prefetch={false} variant="secondary">
-        {ENTERPRISE.cta}
+      <p className="for">{AGENCY.tagline}</p>
+      <p className="price num" data-testid="price-agency">
+        {AGENCY.price}
+        <small> {AGENCY.priceNote}</small>
+      </p>
+      <p className="sub">{AGENCY.note}</p>
+      <CtaLink href={AGENCY.href} prefetch={false} variant="secondary">
+        {AGENCY.cta}
       </CtaLink>
-      <ul className="limits" aria-label={`${ENTERPRISE.name} includes`}>
-        {ENTERPRISE.lines.map((feature) => (
+      <ul className="limits" aria-label={`${AGENCY.name} includes`}>
+        {AGENCY.lines.map((feature) => (
           <li key={feature}>
             <Check className="size-4" strokeWidth={2.4} aria-hidden />
             <span>{feature}</span>
@@ -134,14 +145,14 @@ function EnterpriseCard() {
 }
 
 /**
- * Free, Creator and Business from GET /v1/billing/plans (lib/marketing/plans.ts), then the Enterprise
- * "Contact us" card (C-172), in the site's plan cards (C-155). Prices come only from the API; a
+ * Free, Creator and Business from GET /v1/billing/plans (lib/marketing/plans.ts), then the Agency
+ * card (C-173: coming soon, Contact us), in the site's plan cards (C-155). Prices come only from the API; a
  * paid plan that isn't on sale (billing off, C-149; Business until its product is set) shows its
  * planned price, labelled "when we launch", and says it can't be bought yet. The plan to start on
  * is the outlined one: Creator when it is on sale, Free otherwise.
  */
 export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; headingLevel?: 1 | 2 }) {
-  const { free, pro } = pricing.credits;
+  const { free, pro, max } = pricing.credits;
   const cards = pricing.plans;
   const proOnSale = pricing.plans.some((card) => card.plan === "pro" && card.available);
   const Heading = headingLevel === 1 ? "h1" : "h2";
@@ -164,8 +175,15 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
           {cards.map((card) => (
             <PlanCardView key={card.plan} card={card} pricing={pricing} main={proOnSale ? card.plan === "pro" : card.plan === "free"} />
           ))}
-          <EnterpriseCard />
+          <AgencyCard />
         </ul>
+        <p className="need-more" data-testid="need-more">
+          {NEED_MORE.text}{" "}
+          <a href={NEED_MORE.href} className="tlink">
+            {NEED_MORE.cta}
+          </a>
+          .
+        </p>
         {/* Under the cards, one stack on the cards' edges (C-157 organize): the credits disclosure as wide as
             the plan grid, then the fine print and the link to every limit. */}
         <div className="price-foot">
@@ -176,7 +194,9 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
             </summary>
             <p>
               AI features use credits from your monthly allowance
-              {free !== null && pro !== null ? `: ${count.format(free)} on ${PLAN_NAME.free} and ${count.format(pro)} on ${PLAN_NAME.pro}` : ""}.
+              {free !== null && pro !== null && max !== null
+                ? `: ${count.format(free)} on ${PLAN_NAME.free}, ${count.format(pro)} on ${PLAN_NAME.pro}, ${count.format(max)} on ${PLAN_NAME.max} and ${count.format(AGENCY_AI_CREDITS)} on ${AGENCY.name} (coming soon)`
+                : ""}.
               Credits reset at the start of each billing period, and you&apos;re notified at 80% and 100%.
             </p>
             <p>

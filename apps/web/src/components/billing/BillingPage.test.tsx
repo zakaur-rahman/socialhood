@@ -102,7 +102,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/billing?tab=billing", { scroll: false });
     const plans = await screen.findByRole("list", { name: "Plans" });
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
-    expect(cards).toHaveLength(4); // Free, Creator, Business and Enterprise (C-172)
+    expect(cards).toHaveLength(4); // Free, Creator, Business and Agency (C-172, C-173)
     expect(cards[0]).toHaveAttribute("aria-current", "true");
     expect(cards[1]).toHaveTextContent("₹999 a month");
     expect(cards[1]).toHaveTextContent("25 active automations");
@@ -132,13 +132,13 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     const plans = await screen.findByRole("list", { name: "Plans" });
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
     expect(cards[1]).toHaveTextContent("Coming soon");
-    expect(cards[1]).toHaveTextContent("$14");
-    expect(cards[1]).toHaveTextContent("a month when we launch");
+    expect(cards[1]).toHaveTextContent("$15");
+    expect(cards[1]).toHaveTextContent("when we launch");
     expect(cards[1]).toHaveTextContent("25 active automations");
     expect(within(cards[1]).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("C-172: with billing off the paid plans show their planned prices, and Enterprise is a Contact us card with no checkout", async () => {
+  it("C-172: with billing off the paid plans show their planned prices, and Agency is a Coming soon card with a Contact us link and no checkout", async () => {
     nav.search = "tab=billing";
     setup({
       billing: { ...free, billing_available: false, prices: [] },
@@ -148,21 +148,23 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     const cards = within(plans).getAllByRole("listitem").filter((li) => li.parentElement === plans);
     expect(cards).toHaveLength(4);
     expect(cards[1]).toHaveTextContent("Creator");
-    expect(within(cards[1]).getByTestId("planned-price-pro")).toHaveTextContent("$14");
-    expect(cards[1]).toHaveTextContent("a month when we launch");
+    expect(within(cards[1]).getByTestId("planned-price-pro")).toHaveTextContent("$15");
+    expect(cards[1]).toHaveTextContent("when we launch");
     expect(cards[2]).toHaveTextContent("Business");
-    expect(within(cards[2]).getByTestId("planned-price-max")).toHaveTextContent("$29");
-    expect(cards[2]).toHaveTextContent("a month when we launch");
+    expect(within(cards[2]).getByTestId("planned-price-max")).toHaveTextContent("$30");
+    expect(cards[2]).toHaveTextContent("when we launch");
 
-    const enterprise = within(plans).getByTestId("plan-enterprise");
-    expect(enterprise).toHaveTextContent("Enterprise");
-    expect(enterprise).toHaveTextContent("Contact us");
-    expect(enterprise).toHaveTextContent("from $99 a month");
-    expect(within(enterprise).getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "mailto:support@amplychat.com");
-    expect(within(enterprise).queryByRole("button")).not.toBeInTheDocument();
+    const agency = within(plans).getByTestId("plan-agency");
+    expect(agency).toHaveTextContent("Agency");
+    expect(agency).toHaveTextContent("Coming soon");
+    expect(agency).toHaveTextContent("$70");
+    expect(agency).toHaveTextContent("12,000 AI credits a month");
+    expect(agency).not.toHaveTextContent(/Enterprise|from \$99/);
+    expect(within(agency).getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "mailto:support@amplychat.com");
+    expect(within(agency).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("C-172: with billing on, Creator shows its Dodo price instead of the planned one; Business still shows the planned $29", async () => {
+  it("C-172: with billing on, Creator shows its Dodo price instead of the planned one; Business still shows the planned $30", async () => {
     nav.search = "tab=billing";
     setup();
     const plans = await screen.findByRole("list", { name: "Plans" });
@@ -170,12 +172,12 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(cards[1]).toHaveTextContent("₹999 a month");
     expect(cards[1]).not.toHaveTextContent("when we launch");
     expect(within(cards[1]).queryByTestId("planned-price-pro")).not.toBeInTheDocument();
-    expect(cards[2]).toHaveTextContent("$29");
-    expect(cards[2]).toHaveTextContent("a month when we launch");
-    // Enterprise has no checkout even when billing is on.
-    const enterprise = within(plans).getByTestId("plan-enterprise");
-    expect(within(enterprise).queryByRole("button")).not.toBeInTheDocument();
-    expect(within(enterprise).getByRole("link", { name: "Contact us" })).toBeInTheDocument();
+    expect(cards[2]).toHaveTextContent("$30");
+    expect(cards[2]).toHaveTextContent("when we launch");
+    // Agency has no checkout even when billing is on.
+    const agency = within(plans).getByTestId("plan-agency");
+    expect(within(agency).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(agency).getByRole("link", { name: "Contact us" })).toBeInTheDocument();
   });
 
   it("C-149: a billing_unavailable answer to checkout says paid plans aren't available", async () => {

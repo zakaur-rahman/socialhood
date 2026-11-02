@@ -257,7 +257,7 @@ export const FOR_BUSINESSES: SolutionPage = {
       name: "Established",
       who: "Several brands or numbers, and a bigger team.",
       plan: "max",
-      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, the public API and API keys. Enterprise, for high volume and agencies, is a card on the pricing page: contact us.`,
+      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, the public API and API keys. Agency, for agencies and people managing several brands, is a card on the pricing page: coming soon, contact us.`,
     },
   ],
   faq: [
