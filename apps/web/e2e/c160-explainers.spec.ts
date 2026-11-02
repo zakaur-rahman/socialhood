@@ -64,7 +64,7 @@ test.describe("C-160 explainer pages", () => {
   test("features: the bento cells link to their pages and details", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/features");
-    await expect(page.locator("ul.bento > li")).toHaveCount(15);
+    await expect(page.locator("ul.bento > li")).toHaveCount(16);
     await page.locator("#f-ask").getByRole("link").click();
     await expect(page).toHaveURL(/#d-ask$/);
     const nav = page.getByRole("navigation", { name: "Feature groups" });
