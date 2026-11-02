@@ -34,6 +34,7 @@ test.describe("C-172 plans", () => {
       await page.goto("/pricing");
       const sideways = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(sideways, `pricing at ${width}`).toBeLessThanOrEqual(0);
+      await page.screenshot({ path: `test-results/e2e/c173-pricing-${width}.png`, fullPage: true });
     }
   });
 });
