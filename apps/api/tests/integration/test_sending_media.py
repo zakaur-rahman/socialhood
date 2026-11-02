@@ -19,6 +19,7 @@ from socialhood.platforms.sandbox import outbox
 from socialhood.repositories import inbox
 from socialhood.services import sending
 from tests.support.api import Clerk
+from tests.support.automation_api import set_plan
 from tests.support.inbox import make_account, make_asset, make_thread, make_workspace
 from tests.support.sending import (
     Setup,
@@ -138,6 +139,7 @@ async def test_a_sticker_goes_on_its_own(
 
 async def whatsapp_conversation(engine: AsyncEngine) -> tuple[uuid.UUID, uuid.UUID]:
     wid = await make_workspace(engine)
+    await set_plan(engine, str(wid), "pro")  # WhatsApp isn't on Free (C-172)
     account = await make_account(
         engine, wid, platform="whatsapp", platform_account_id="1098765432101"
     )

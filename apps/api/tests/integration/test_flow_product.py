@@ -220,7 +220,7 @@ async def test_saving_a_product_step_needs_the_plan(ws: Ws, engine: AsyncEngine)
     free = await ws.call("PUT", f"/automations/{draft['id']}/flow", json=one_step(kurta.id))
     assert free.status_code == 402
     assert (free.json()["code"], free.json()["entitlement"]) == ("entitlement_required", "commerce")
-    assert free.json()["detail"] == "Sending products is part of Pro."
+    assert free.json()["detail"] == "Sending products is part of Creator and Business."
 
     await set_plan(engine, ws.wid, "pro")
     saved = await ws.ok("PUT", f"/automations/{draft['id']}/flow", json=one_step(kurta.id))

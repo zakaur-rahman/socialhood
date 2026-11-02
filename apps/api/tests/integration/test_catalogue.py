@@ -67,7 +67,7 @@ async def test_free_reads_but_cannot_write(
         "entitlement_required",
         "commerce",
     )
-    assert refused.json()["detail"] == "The product catalogue is part of Pro."
+    assert refused.json()["detail"] == "The product catalogue is part of Creator and Business."
     # What exists is still shown after a downgrade.
     made = await make_product(engine, workspace_id=free.wid)
     assert [p["name"] for p in (await free.ok("GET", "/products"))["items"]] == ["Cotton kurta"]

@@ -568,7 +568,7 @@ async def test_the_list_shows_every_source_and_the_usage(ws: Ws, engine: AsyncEn
     assert listed["usage"] == {"characters_used": 3 + 100 + 6, "characters_limit": 200_000}
 
     await set_plan(engine, ws.wid, "pro")
-    assert (await ws.ok("GET", "/knowledge-sources"))["usage"]["characters_limit"] == 5_000_000
+    assert (await ws.ok("GET", "/knowledge-sources"))["usage"]["characters_limit"] == 1_000_000
 
 
 async def test_the_knowledge_characters_limit(
