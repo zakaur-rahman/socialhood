@@ -332,12 +332,12 @@ describe("the pricing page", () => {
     vi.unstubAllGlobals();
   });
 
-  it("has metadata and a literal hourly revalidate", () => {
+  it("has metadata and a literal five-minute revalidate", () => {
     expect(pricingMetadata.title).toBe("Pricing");
     expect(pricingMetadata.alternates?.canonical).toBe("/pricing");
     expect(PUBLIC_PATHS).toContain("/pricing");
-    expect(revalidate).toBe(3600);
-    expect(readFileSync(join(__dirname, "pricing", "page.tsx"), "utf8")).toMatch(/export const revalidate = 3600;/);
+    expect(revalidate).toBe(300);
+    expect(readFileSync(join(__dirname, "pricing", "page.tsx"), "utf8")).toMatch(/export const revalidate = 300;/);
   });
 
   it("shows Dodo's price with the new entitlements and the full limits table", async () => {
@@ -348,13 +348,13 @@ describe("the pricing page", () => {
     const pro = within(screen.getByRole("heading", { level: 3, name: "Creator" }).closest("li") as HTMLElement);
     expect(pro.getByText("₹999")).toBeInTheDocument();
     expect(pro.getByText("2 team members")).toBeInTheDocument();
-    expect(pro.getByText("Product catalogue")).toBeInTheDocument();
-    // API keys and the Zapier app are Business only.
-    expect(pro.queryByText("API keys and the Zapier app")).toBeNull();
+    expect(pro.getByText("100 scheduled posts a month")).toBeInTheDocument();
+    // API keys and Zapier are Business only.
+    expect(pro.queryByText("API keys and Zapier")).toBeNull();
     const business = within(screen.getByRole("heading", { level: 3, name: "Business" }).closest("li") as HTMLElement);
-    expect(business.getByText("API keys and the Zapier app")).toBeInTheDocument();
+    expect(business.getByText("API keys and Zapier")).toBeInTheDocument();
     expect(business.getByText("3 team members")).toBeInTheDocument();
-    expect(screen.getByTestId("plan-enterprise")).toHaveTextContent("Contact us");
+    expect(screen.getByTestId("plan-agency")).toHaveTextContent("Contact us");
 
     const broadcasts = screen.getByRole("row", { name: /WhatsApp broadcast recipients a month/ });
     expect(broadcasts).toHaveTextContent("Not included");
@@ -369,8 +369,8 @@ describe("the pricing page", () => {
     vi.stubGlobal("fetch", vi.fn(plansFetch({ detail: "down" }, 503)));
     const { container } = render(await PricingPage());
     // No real price, only the planned ones (never an offer in structured data).
-    expect(screen.getByTestId("planned-price-pro")).toHaveTextContent("$14 a month when we launch");
-    expect(screen.getByTestId("planned-price-max")).toHaveTextContent("$29 a month when we launch");
+    expect(screen.getByTestId("planned-price-pro")).toHaveTextContent(/^\$15 a month/);
+    expect(screen.getByTestId("planned-price-max")).toHaveTextContent(/^\$30 a month/);
     expect(screen.getByRole("table", { name: "Accounts and team" })).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/₹\s?\d/);
   });

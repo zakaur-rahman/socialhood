@@ -217,19 +217,27 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
 
 // ---- the plan comparison (the public GET /v1/billing/plans)
 
+/**
+ * C-173: the key lines of a plan card, the same on the dashboard and the marketing pages: channels,
+ * members, automations, credits, posts, knowledge, then one more (API keys and Zapier where the plan
+ * has them, else the AI mode). Six or seven lines, in this order; the full table has the rest.
+ */
 const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => string | null }[] = [
   { key: "channels_total", label: (v) => (typeof v === "number" ? `${v} channels in total (Instagram, Facebook, web chat)` : null) },
-  { key: "whatsapp", label: (v) => (v === true ? "WhatsApp" : null) },
+  {
+    key: "accounts_per_platform",
+    label: (v) =>
+      typeof v !== "number"
+        ? null
+        : v === 1
+          ? "1 each of Instagram, WhatsApp, Facebook and web chat"
+          : `${v} each of Instagram, WhatsApp and Facebook; 1 web chat`,
+  },
   { key: "members", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "team member" : "team members"}` : null) },
-  { key: "public_api", label: (v) => (v === true ? "API keys and Zapier" : null) },
-  { key: "accounts_per_platform", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "account" : "accounts"} per platform` : null) },
   { key: "active_automations", label: (v) => (v === null ? "Unlimited automations" : typeof v === "number" ? `${fmt(v)} active automations` : null) },
   { key: "ai_credits_monthly", label: (v) => (typeof v === "number" ? `${fmt(v)} AI credits a month` : null) },
   { key: "scheduled_posts_monthly", label: (v) => (v === null ? "Unlimited scheduled posts" : typeof v === "number" ? `${fmt(v)} scheduled posts a month` : null) },
   { key: "knowledge_characters", label: (v) => (typeof v === "number" ? `${compact(v)} characters of knowledge` : null) },
-  { key: "ai_modes", label: (v) => (Array.isArray(v) ? (v.includes("auto") ? "AI Auto mode" : "AI suggestions") : null) },
-  { key: "ai_reply_automations", label: (v) => (v === true ? "AI replies in automations" : null) },
-  { key: "message_history_days", label: (v) => (v === null ? "Full message history" : typeof v === "number" ? `${v} days of message history` : null) },
 ];
 
 const number = new Intl.NumberFormat("en-US");
@@ -237,12 +245,17 @@ const compactNumber = new Intl.NumberFormat("en-US", { notation: "compact", maxi
 const fmt = (n: number) => number.format(n);
 const compact = (n: number) => compactNumber.format(n);
 
-/** The lines a plan card lists, from the plan's entitlements. */
+/** The lines a plan card lists, from the plan's entitlements (C-173: six, and a seventh below). */
 export function planHighlights(entitlements: EntitlementValue[]): string[] {
-  return HIGHLIGHTS.flatMap(({ key, label }) => {
+  const lines = HIGHLIGHTS.flatMap(({ key, label }) => {
+    if (key === "accounts_per_platform" && typeof entitlements.find((e) => e.key === "channels_total")?.value === "number") return [];
     const item = entitlements.find((e) => e.key === key);
     if (!item) return [];
     const text = label(item.value);
     return text ? [text] : [];
   });
+  const value = (key: string) => entitlements.find((e) => e.key === key)?.value;
+  if (value("public_api") === true) lines.push("API keys and Zapier");
+  else if (Array.isArray(value("ai_modes"))) lines.push((value("ai_modes") as string[]).includes("auto") ? "AI Auto mode and suggestions" : "AI suggestions only");
+  return lines;
 }

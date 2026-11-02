@@ -92,7 +92,7 @@ export default async function AiInfoPage() {
         <>
           3 each of Instagram, WhatsApp and Facebook, 3 team members, 50 active automations, 5,000 AI credits a month, 300
           scheduled posts a month, 5M characters of knowledge, and everything in Creator plus API keys, Zapier and the public
-          API. Enterprise is for high volume and agencies: contact us.
+          API. Agency is for agencies and people managing several brands. It is not on sale yet: contact us.
         </>
       ),
     },

@@ -1,28 +1,29 @@
 import { expect, test } from "./support/fixtures";
 
 /**
- * C-172: the four plans on the pricing page. Free, Creator and Business cards, then Enterprise as a
- * "Contact us" card with a mailto link and no checkout. A paid plan shows either its real price (billing
+ * C-172: the four plans on the pricing page. Free, Creator and Business cards, then Agency (C-173: renamed
+ * from Enterprise) as a "Coming soon" card at $70 a month with a Contact us mailto link and no checkout. A paid plan shows either its real price (billing
  * on) or the planned one labelled "when we launch" (billing off). No ranking words, no sideways scroll.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("C-172 plans", () => {
-  test("/pricing lists Free, Creator, Business and the Enterprise contact card", async ({ page }) => {
+  test("/pricing lists Free, Creator, Business and the Agency card", async ({ page }) => {
     await page.goto("/pricing");
     const plans = page.getByRole("list", { name: "Plans" });
-    for (const name of ["Free", "Creator", "Business", "Enterprise"]) {
+    for (const name of ["Free", "Creator", "Business", "Agency"]) {
       await expect(plans.getByRole("heading", { name, level: 3 })).toBeVisible();
     }
-    const enterprise = page.getByTestId("plan-enterprise");
-    await expect(enterprise).toContainText("Contact us");
-    await expect(enterprise).toContainText("from $99 a month");
-    await expect(enterprise.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "mailto:support@amplychat.com");
-    await expect(enterprise.getByRole("link", { name: /start/i })).toHaveCount(0);
+    const agency = page.getByTestId("plan-agency");
+    await expect(agency).toContainText("Coming soon");
+    await expect(agency).toContainText("$70");
+    await expect(agency.getByRole("link", { name: "Contact us" })).toHaveAttribute("href", "mailto:support@amplychat.com");
+    await expect(agency.getByRole("link", { name: /start/i })).toHaveCount(0);
+    await expect(page.locator("main")).not.toContainText(/Enterprise|from \$99/);
 
     for (const plan of ["pro", "max"] as const) {
       const planned = page.getByTestId(`planned-price-${plan}`);
-      if (await planned.count()) await expect(planned.first()).toContainText(plan === "pro" ? "$14" : "$29");
+      if (await planned.count()) await expect(planned.first()).toContainText(plan === "pro" ? "$15" : "$30");
     }
     await expect(page.locator("main")).not.toContainText(/cheapest|#1/i);
   });

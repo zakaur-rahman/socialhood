@@ -336,8 +336,8 @@ describe("the landing page", () => {
     );
     const { container } = render(await HomePage());
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByTestId("planned-price-pro")).toHaveTextContent("$14 a month when we launch");
-    expect(pricing.getByTestId("planned-price-max")).toHaveTextContent("$29 a month when we launch");
+    expect(pricing.getByTestId("planned-price-pro")).toHaveTextContent(/^\$15 a month/);
+    expect(pricing.getByTestId("planned-price-max")).toHaveTextContent(/^\$30 a month/);
     expect(pricing.getByText("3 active automations")).toBeInTheDocument();
     // A site deployed without the API reads the same: no "couldn't load" notice, no blanks or "null".
     expect(pricing.queryByText(/couldn't be loaded/)).toBeNull();
@@ -356,12 +356,12 @@ describe("the landing page", () => {
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
     expect(pricing.getByRole("heading", { level: 3, name: "Creator" })).toBeInTheDocument();
     expect(pricing.getByRole("heading", { level: 3, name: "Business" })).toBeInTheDocument();
-    expect(pricing.getByRole("heading", { level: 3, name: "Enterprise" })).toBeInTheDocument();
+    expect(pricing.getByRole("heading", { level: 3, name: "Agency" })).toBeInTheDocument();
     expect(pricing.getByText(/Business isn't available to buy yet/)).toBeInTheDocument();
   });
 
-  it("is revalidated hourly and has its own title, description and canonical URL", () => {
-    expect(revalidate).toBe(3600);
+  it("is revalidated every five minutes and has its own title, description and canonical URL", () => {
+    expect(revalidate).toBe(300);
     expect(metadata.title).toEqual({ absolute: "Amplychat · AI inbox for Instagram, WhatsApp and web chat" });
     expect(metadata.alternates?.canonical).toBe("/");
     expect(metadata.openGraph).toMatchObject({ url: "/", siteName: "Amplychat" });

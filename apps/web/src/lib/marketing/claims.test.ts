@@ -6,7 +6,7 @@ import { render } from "@testing-library/react";
 import { createElement } from "react";
 
 import { Pricing } from "@/components/marketing/Pricing";
-import { ENTERPRISE, PLAN_NAME, PLANNED_PRICE_USD, plannedPriceLabel } from "@/lib/copy";
+import { AGENCY, PLAN_NAME, PLANNED_PRICE_USD, plannedPriceLabel } from "@/lib/copy";
 import { plansFixture } from "@/test/plans";
 
 import { CONNECT_AI_FAQ, PLAN_ROWS } from "./connect-ai";
@@ -19,7 +19,7 @@ import { FOR_BUSINESSES, FOR_CREATORS } from "./solutions";
 /**
  * Content rules for the plan names and prices (C-172): the marketing copy never ranks us. "Cheapest",
  * "best" and "#1" are claims we can't back, so none may appear in the pricing, plan, solution, FAQ
- * or comparison copy, including the Creator, Business and Enterprise strings.
+ * or comparison copy, including the Creator, Business and Agency strings.
  */
 const CLAIMS = /\bcheapest\b|\bbest\b|#\s?1\b|\bnumber one\b/i;
 /** Feature names and plain verbs that use the word without ranking anything. */
@@ -42,14 +42,14 @@ describe("the claim words stay out of the marketing copy (C-172)", () => {
     expect(claims("Best posting times, and which posts did best")).toEqual([]);
   });
 
-  it("the plan names, planned prices and the Enterprise card make no claim", () => {
+  it("the plan names, planned prices and the Agency card make no claim", () => {
     const strings = [
       ...Object.values(PLAN_NAME),
       plannedPriceLabel("pro"),
       plannedPriceLabel("max"),
-      ...Object.values(ENTERPRISE).flat(),
+      ...Object.values(AGENCY).flat(),
     ];
-    expect(PLANNED_PRICE_USD).toEqual({ pro: 14, max: 29 });
+    expect(PLANNED_PRICE_USD).toEqual({ pro: 15, max: 30 });
     expect(claims(strings.join("\n"))).toEqual([]);
   });
 

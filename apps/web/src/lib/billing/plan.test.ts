@@ -124,6 +124,7 @@ describe("prices and plans", () => {
     expect(
       planHighlights([
         { key: "accounts_per_platform", value: 3 },
+        { key: "members", value: 3 },
         { key: "active_automations", value: null },
         { key: "ai_credits_monthly", value: 5000 },
         { key: "knowledge_characters", value: 5_000_000 },
@@ -131,11 +132,12 @@ describe("prices and plans", () => {
         { key: "ai_reply_automations", value: false },
       ]),
     ).toEqual([
-      "3 accounts per platform",
+      "3 each of Instagram, WhatsApp and Facebook; 1 web chat",
+      "3 team members",
       "Unlimited automations",
       "5,000 AI credits a month",
       "5M characters of knowledge",
-      "AI Auto mode",
+      "AI Auto mode and suggestions",
     ]);
   });
 });

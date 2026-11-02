@@ -396,44 +396,54 @@ export type PlanName = "free" | "pro" | "max";
 export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Creator", max: "Business" };
 
 /**
- * C-172: what the paid plans will cost, shown only while billing is off (the real price from the
- * API replaces it once it is on) so a visitor, and Dodo's reviewer, can see what customers will pay.
- * Never used in structured data (JSON-LD offers) while the plans aren't on sale. Whole US dollars.
+ * C-172, C-173: what the paid plans will cost, shown only while billing is off (the real price from
+ * the API replaces it once it is on) so a visitor, and Dodo's reviewer, can see what customers will
+ * pay. Never used in structured data (JSON-LD offers) while the plans aren't on sale. Whole US dollars.
  */
-export const PLANNED_PRICE_USD: Record<"pro" | "max", number> = { pro: 14, max: 29 };
+export const PLANNED_PRICE_USD: Record<"pro" | "max", number> = { pro: 15, max: 30 };
 
 /** C-172: Dodo adds tax at checkout (prices are tax exclusive), so a listed price says so. */
 export const PRICE_TAX_NOTE = "Prices are in US dollars. Tax is added at checkout where it applies.";
 
-/** "$14 a month when we launch" */
+/** "$15 a month when we launch" */
 export function plannedPriceLabel(plan: "pro" | "max"): string {
   return `$${PLANNED_PRICE_USD[plan]} a month when we launch`;
 }
 
+/** "$15": the planned price alone, for a card's big number. */
+export function plannedAmount(plan: "pro" | "max"): string {
+  return `$${PLANNED_PRICE_USD[plan]}`;
+}
+
 /**
- * C-172: Enterprise is a card with a "Contact us" link, not a plan: no plan key, no checkout, no
- * entitlements in the API. It lists only the plan table's rows and "for high volume and agencies".
+ * C-173: Agency (renamed from Enterprise, C-172) is a card, not a plan yet: no plan key, no checkout,
+ * no entitlements in the API until billing step 2. It shows its price, a "Coming soon" tag and a
+ * "Contact us" link. Nothing about uptime guarantees, dedicated support or SSO is promised.
  */
-export const ENTERPRISE = {
-  name: "Enterprise",
-  tagline: "For high volume and agencies.",
-  price: "Contact us",
-  from: "from $99 a month",
+export const AGENCY_PRICE_USD = 70;
+export const AGENCY_AI_CREDITS = 12000;
+export const AGENCY = {
+  name: "Agency",
+  tagline: "For agencies and people managing several brands.",
+  price: `$${AGENCY_PRICE_USD}`,
+  priceNote: "a month",
+  soon: "Coming soon",
+  note: "Not on sale yet. Contact us if you're interested.",
   cta: "Contact us",
   href: `mailto:${SUPPORT_EMAIL}`,
   lines: [
-    "10 or more channels",
+    "10 each of Instagram, WhatsApp and Facebook; 1 web chat",
+    "10 team members",
     "Unlimited active automations",
-    "25,000 or more AI credits a month",
+    `${AGENCY_AI_CREDITS.toLocaleString("en-US")} AI credits a month`,
     "Unlimited scheduled posts",
-    "AI replies: Auto and suggestions",
-    "10 or more team members",
-    "50 million or more characters of knowledge",
-    "Claude, ChatGPT and Codex (MCP): full access",
-    "API keys and Zapier",
-    "Full message history",
+    "50M characters of knowledge",
+    "Full MCP, API keys, Zapier and message history",
   ],
 } as const;
+
+/** C-173: the quiet line under the plans. */
+export const NEED_MORE = { text: "Need more?", cta: "Contact us", href: `mailto:${SUPPORT_EMAIL}` } as const;
 
 function counted(n: number, one: string, many: string): string {
   return `${count.format(n)} ${n === 1 ? one : many}`;

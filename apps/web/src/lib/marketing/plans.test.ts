@@ -2,18 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import { plansFetch, plansFixture } from "@/test/plans";
 
-import { FALLBACK_ENTITLEMENTS, buildPricing, decimalAmount, fetchPlans, planFeatures } from "./plans";
+import { PLANS_REVALIDATE_SECONDS, buildPricing, decimalAmount, fetchPlans } from "./plans";
 
 const API = "https://api.socialhood.test";
 
-describe("fetchPlans (GET /v1/billing/plans, server-side, hourly)", () => {
+describe("fetchPlans (GET /v1/billing/plans, server-side, every five minutes)", () => {
   it("reads the plan list and caches it for an hour", async () => {
     const fetcher = vi.fn(plansFetch(plansFixture()));
     const plans = await fetchPlans(`${API}/`, fetcher as unknown as typeof fetch);
     expect(plans?.map((p) => p.plan)).toEqual(["free", "pro", "max"]);
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit & { next?: { revalidate?: number } }];
     expect(url).toBe(`${API}/v1/billing/plans`);
-    expect(init.next?.revalidate).toBe(3600);
+    expect(init.next?.revalidate).toBe(300);
+    expect(PLANS_REVALIDATE_SECONDS).toBe(300);
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -39,16 +40,16 @@ describe("buildPricing", () => {
     expect(pro).toMatchObject({ plan: "pro", price: "₹999", offer: { price: "999.00", currency: "INR" }, trialDays: 7 });
     expect(max).toMatchObject({ plan: "max", name: "Business", available: false });
     expect(max.features).toContain("5,000 AI credits a month");
-    expect(max.features).toContain("API keys and the Zapier app");
+    expect(max.features).toContain("API keys and Zapier");
     expect(pro.name).toBe("Creator");
-    expect(pricing.credits).toEqual({ free: 200, pro: 1500 });
+    expect(pricing.credits).toEqual({ free: 200, pro: 1500, max: 5000 });
   });
 
   it("a Pro plan Dodo couldn't price has no price, never a made-up one", () => {
     const pro = buildPricing(plansFixture({ proPrice: null }).items).plans[1];
     expect(pro.price).toBeNull();
     expect(pro.offer).toBeNull();
-    expect(pro.features.length).toBeGreaterThan(5);
+    expect(pro.features.length).toBeGreaterThanOrEqual(6);
   });
 
   it("without the API: the features from the product guide and no prices at all", () => {
@@ -68,53 +69,36 @@ describe("buildPricing", () => {
   });
 });
 
-describe("planFeatures", () => {
-  it("phrases the entitlements as the product guide does", () => {
-    expect(planFeatures(FALLBACK_ENTITLEMENTS.free)).toEqual([
-      "2 channels in total, from Instagram, Facebook and web chat",
-      "No WhatsApp",
+describe("the card lines (C-173)", () => {
+  it("each plan lists six or seven key lines, in the dashboard's wording", () => {
+    const [free, pro, max] = buildPricing(null).plans;
+    expect(free.features).toEqual([
+      "2 channels in total (Instagram, Facebook, web chat)",
       "1 team member",
-      "AI replies: Off and Suggest",
-      "200 AI credits a month",
       "3 active automations",
-      "200,000 characters of knowledge",
+      "200 AI credits a month",
       "10 scheduled posts a month",
-      "20 pending scheduled messages",
-      "90 days of message history",
-      "Comment analysis on your 5 latest posts per account",
-      "Read and draft from Claude, ChatGPT and Codex (MCP)",
+      "200K characters of knowledge",
+      "AI suggestions only",
     ]);
-    expect(planFeatures(FALLBACK_ENTITLEMENTS.pro)).toEqual([
-      "1 Instagram, 1 WhatsApp, 1 Facebook and 1 web chat",
+    expect(pro.features).toEqual([
+      "1 each of Instagram, WhatsApp, Facebook and web chat",
       "2 team members",
-      "AI replies: Off, Suggest and Auto",
-      "AI replies inside automations",
-      "1,500 AI credits a month",
       "25 active automations",
-      "1,000,000 characters of knowledge",
+      "1,500 AI credits a month",
       "100 scheduled posts a month",
-      "500 pending scheduled messages",
-      "Unlimited message history",
-      "Comment analysis on all posts",
-      "Claude, ChatGPT and Codex, with scheduling (MCP)",
-      "Google Sheets sync",
-      "Product catalogue",
+      "1M characters of knowledge",
+      "AI Auto mode and suggestions",
     ]);
-    expect(planFeatures(FALLBACK_ENTITLEMENTS.max)).toEqual(
-      expect.arrayContaining([
-        "3 each of Instagram, WhatsApp and Facebook, and web chat",
-        "3 team members",
-        "5,000 AI credits a month",
-        "50 active automations",
-        "5,000,000 characters of knowledge",
-        "300 scheduled posts a month",
-        "API keys and the Zapier app",
-      ]),
-    );
-  });
-
-  it("leaves out keys it doesn't know", () => {
-    expect(planFeatures([{ key: "video_minutes", value: 5 }])).toEqual([]);
+    expect(max.features).toEqual([
+      "3 each of Instagram, WhatsApp and Facebook; 1 web chat",
+      "3 team members",
+      "50 active automations",
+      "5,000 AI credits a month",
+      "300 scheduled posts a month",
+      "5M characters of knowledge",
+      "API keys and Zapier",
+    ]);
   });
 });
 

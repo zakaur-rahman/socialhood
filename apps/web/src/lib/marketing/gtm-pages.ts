@@ -20,6 +20,8 @@
  * - Money: no price of ours is written anywhere; ours comes from Dodo through the plan list.
  */
 
+import { plannedAmount } from "@/lib/copy";
+
 import table from "./plan-table.json";
 
 export type Status = "yes" | "soon" | "approval" | "no" | "not-found";
@@ -355,7 +357,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "How it is priced",
-        ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts. Planned: Creator at $14 a month and Business at $29 once billing opens, with contacts unlimited." },
+        ours: { status: "yes", text: `Flat plans. Limits are on features, never on contacts. Planned: Creator at ${plannedAmount("pro")} a month and Business at ${plannedAmount("max")} once billing opens, with contacts unlimited.` },
         // source: Manychat help centre "Pro plan" and "Active Contacts", read 2026-10-29: plans from 2 March 2026 billed by active contacts a month; Pro $39 a month on monthly billing for 2,500 active contacts; prices can vary by region. Replaces the third-party guides (Chatarmin, Layer3 Labs, DMChamp, 2026-10-22).
         theirs: { status: "yes", text: "By active contacts a month, on plans introduced on 2 March 2026. Pro is $39 a month for 2,500 active contacts on monthly billing." },
       },

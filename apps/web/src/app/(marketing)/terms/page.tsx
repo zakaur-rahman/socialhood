@@ -93,7 +93,7 @@ function sections(): LegalSection[] {
           <ul>
             <li>
               <strong>Free</strong> costs nothing and needs no card. <strong>Creator</strong> and <strong>Business</strong> are monthly subscriptions.{" "}
-              <strong>Enterprise</strong> is arranged by contacting us. What each plan includes and costs is shown on our{" "}
+              <strong>Agency</strong> is not on sale yet; contact us if you are interested. What each plan includes and costs is shown on our{" "}
               <Link href="/pricing">pricing page</Link> and in the app. Paid plans aren&apos;t on sale yet; the trial and billing
               terms below apply once it is.
             </li>
