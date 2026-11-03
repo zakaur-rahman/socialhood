@@ -36,7 +36,7 @@ describe("the landing page", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders every section in order, with the plan list's prices", async () => {
+  it("renders every section in order, and reads the plan list for its structured data", async () => {
     const fetcher = vi.fn(plansFetch(plansFixture()));
     vi.stubGlobal("fetch", fetcher);
     const { container } = render(await HomePage());
@@ -57,7 +57,6 @@ describe("the landing page", () => {
       "Who it's for",
       "Everything your customer conversations need",
       "Set up in three steps",
-      "Start free, upgrade when you grow",
       "Common questions",
       "Ready to take control of every conversation?",
     ]);
