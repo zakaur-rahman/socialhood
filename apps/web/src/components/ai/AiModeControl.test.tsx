@@ -125,7 +125,7 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
     // Straight to checkout (F-15).
     await user.click(await within(upgrade).findByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
-    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ plan: "pro" });
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ plan: "pro", period: "month" });
     assign.mockRestore();
   });
 
