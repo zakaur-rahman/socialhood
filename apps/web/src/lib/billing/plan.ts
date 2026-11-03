@@ -5,6 +5,7 @@
  */
 import type { BillingPrice, BillingState, EntitlementValue, PlanOffer, UsageMeter } from "@/lib/api/types";
 import { PLAN_NAME, billingCopy, formatPrice, plannedPrice, pricePerPeriod, shortDate, type PlanName } from "@/lib/copy";
+import table from "@/lib/marketing/plan-table.json";
 import { dayKey } from "@/lib/tz";
 
 const DAY_MS = 86_400_000;
@@ -250,7 +251,7 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
  * has them, else the AI mode). Six or seven lines, in this order; the full table has the rest.
  */
 const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => string | null }[] = [
-  { key: "channels_total", label: (v) => (typeof v === "number" ? `${v} channels in total (Instagram, Facebook, web chat)` : null) },
+  { key: "channels_total", label: (v) => (typeof v === "number" ? `Any ${v} of Instagram, Facebook or web chat` : null) },
   {
     key: "accounts_per_platform",
     label: (v) =>
@@ -262,7 +263,11 @@ const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => st
   },
   { key: "members", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "team member" : "team members"}` : null) },
   { key: "active_automations", label: (v) => (v === null ? "Unlimited automations" : typeof v === "number" ? `${fmt(v)} active automations` : null) },
-  { key: "ai_credits_monthly", label: (v) => (typeof v === "number" ? `${fmt(v)} AI credits a month` : null) },
+  {
+    key: "ai_credits_monthly",
+    label: (v) =>
+      typeof v === "number" ? `${fmt(v)} AI credits a month, up to about ${fmt(Math.floor(v / table.credit_costs.auto_reply))} AI replies` : null,
+  },
   { key: "scheduled_posts_monthly", label: (v) => (v === null ? "Unlimited scheduled posts" : typeof v === "number" ? `${fmt(v)} scheduled posts a month` : null) },
   { key: "knowledge_characters", label: (v) => (typeof v === "number" ? `${compact(v)} characters of knowledge` : null) },
 ];

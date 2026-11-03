@@ -70,7 +70,7 @@ export default async function AiInfoPage() {
       plan: "free" as const,
       body: (
         <>
-          2 channels in total from Instagram, Facebook and website chat (no WhatsApp), 1 seat, 3 active automations, 200 AI
+          Any 2 of Instagram, Facebook or website chat (no WhatsApp), 1 seat, 3 active automations, 200 AI
           credits a month, 10 scheduled posts a month, AI suggestions only (no Auto mode), 200K characters of knowledge, 90
           days of message history, and MCP with reading and drafts.
         </>

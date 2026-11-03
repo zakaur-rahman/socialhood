@@ -141,7 +141,7 @@ export const FOR_CREATORS: SolutionPage = {
       name: "Just starting",
       who: "One account and a few link drops a week.",
       plan: "free",
-      body: `${E.channels_total.free} channels in total from Instagram, Facebook and web chat, ${E.active_automations.free} automations on at once, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and comment analysis on your ${E.comment_intelligence_posts.free} latest posts.`,
+      body: `Any ${E.channels_total.free} of Instagram, Facebook or web chat, ${E.active_automations.free} automations on at once, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and comment analysis on your ${E.comment_intelligence_posts.free} latest posts.`,
     },
     {
       name: "Growing",
@@ -245,7 +245,7 @@ export const FOR_BUSINESSES: SolutionPage = {
       name: "Just starting",
       who: "One person answering, on Instagram, Facebook or website chat.",
       plan: "free",
-      body: `${E.channels_total.free} channels in total (no WhatsApp), ${E.members.free} seat, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and website chat for up to ${E.widget_conversations_daily.free} conversations a day.`,
+      body: `Any ${E.channels_total.free} of Instagram, Facebook or web chat (no WhatsApp), ${E.members.free} seat, AI suggestions with ${n(E.ai_credits_monthly.free)} credits a month, and website chat for up to ${E.widget_conversations_daily.free} conversations a day.`,
     },
     {
       name: "Growing",

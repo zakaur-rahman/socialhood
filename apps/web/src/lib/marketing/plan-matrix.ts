@@ -49,7 +49,7 @@ export const MATRIX: MatrixGroup[] = [
         key: "channels_total",
         label: "Channels in total",
         format: { kind: "total" },
-        note: "Free: 2 from Instagram, Facebook and web chat. Paid plans limit accounts per platform instead.",
+        note: "Free: any 2 of Instagram, Facebook or web chat. Paid plans limit accounts per platform instead.",
       },
       { key: "whatsapp", label: "WhatsApp", format: { kind: "flag" } },
       {

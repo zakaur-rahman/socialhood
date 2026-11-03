@@ -195,7 +195,7 @@ export const STAGES: Stage[] = [
       "A polite follow nudge can come after the link, never a condition for getting it.",
       // platforms/buckets.py (FAQ_BAN_RISK).
       "Replies are queued to stay within Instagram's sending limits, at most 750 private replies an hour for each account.",
-      feature("Sequences, and broadcasts soon").body,
+      feature("Follow-up sequences").body,
     ],
     wide: true,
     link: { label: "Every automation type, with Meta's rules for each", href: "/automations" },
@@ -378,10 +378,9 @@ export const BENTO: Cell[] = [
   },
   {
     id: "sequences",
-    title: feature("Sequences, and broadcasts soon").title,
+    title: feature("Follow-up sequences").title,
     icon: Timer,
     size: "s",
-    status: "soon",
     href: "#d-automations",
     body: "Timed follow-ups that stop when they reply. WhatsApp broadcasts are coming soon.",
   },

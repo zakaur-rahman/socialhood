@@ -39,7 +39,7 @@ describe("buildPricing", () => {
     expect(free).toMatchObject({ plan: "free", price: null, available: true });
     expect(pro).toMatchObject({ plan: "pro", price: "₹999", offer: { price: "999.00", currency: "INR" }, trialDays: 7 });
     expect(max).toMatchObject({ plan: "max", name: "Business", available: false });
-    expect(max.features).toContain("5,000 AI credits a month");
+    expect(max.features).toContain("5,000 AI credits a month, up to about 2,500 AI replies");
     expect(max.features).toContain("API keys and Zapier");
     expect(pro.name).toBe("Creator");
     expect(pricing.credits).toEqual({ free: 200, pro: 1500, max: 5000, agency: 12_000 });
@@ -68,7 +68,7 @@ describe("buildPricing", () => {
       "10 each of Instagram, WhatsApp and Facebook; 1 web chat",
       "10 team members",
       "Unlimited automations",
-      "12,000 AI credits a month",
+      "12,000 AI credits a month, up to about 6,000 AI replies",
       "Unlimited scheduled posts",
       "50M characters of knowledge",
       "API keys and Zapier",
@@ -87,10 +87,10 @@ describe("the card lines (C-173)", () => {
   it("each plan lists six or seven key lines, in the dashboard's wording", () => {
     const [free, pro, max] = buildPricing(null).plans;
     expect(free.features).toEqual([
-      "2 channels in total (Instagram, Facebook, web chat)",
+      "Any 2 of Instagram, Facebook or web chat",
       "1 team member",
       "3 active automations",
-      "200 AI credits a month",
+      "200 AI credits a month, up to about 100 AI replies",
       "10 scheduled posts a month",
       "200K characters of knowledge",
       "AI suggestions only",
@@ -99,7 +99,7 @@ describe("the card lines (C-173)", () => {
       "1 each of Instagram, WhatsApp, Facebook and web chat",
       "2 team members",
       "25 active automations",
-      "1,500 AI credits a month",
+      "1,500 AI credits a month, up to about 750 AI replies",
       "100 scheduled posts a month",
       "1M characters of knowledge",
       "AI Auto mode and suggestions",
@@ -108,7 +108,7 @@ describe("the card lines (C-173)", () => {
       "3 each of Instagram, WhatsApp and Facebook; 1 web chat",
       "3 team members",
       "50 active automations",
-      "5,000 AI credits a month",
+      "5,000 AI credits a month, up to about 2,500 AI replies",
       "300 scheduled posts a month",
       "5M characters of knowledge",
       "API keys and Zapier",

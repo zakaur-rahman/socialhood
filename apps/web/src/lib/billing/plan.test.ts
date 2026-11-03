@@ -177,7 +177,7 @@ describe("prices and plans", () => {
       "3 each of Instagram, WhatsApp and Facebook; 1 web chat",
       "3 team members",
       "Unlimited automations",
-      "5,000 AI credits a month",
+      "5,000 AI credits a month, up to about 2,500 AI replies",
       "5M characters of knowledge",
       "AI Auto mode and suggestions",
     ]);

@@ -36,7 +36,7 @@ describe("the pricing section (C-155 layout)", () => {
     const free = within(card("Free"));
     expect(free.getByText("No card needed")).toBeInTheDocument();
     expect(free.getByText("₹0")).toBeInTheDocument();
-    expect(free.getByText("2 channels in total (Instagram, Facebook, web chat)")).toBeInTheDocument();
+    expect(free.getByText("Any 2 of Instagram, Facebook or web chat")).toBeInTheDocument();
     expect(free.queryByText(/WhatsApp/)).toBeNull();
     expect(free.getByRole("link", { name: "Start free" })).toHaveAttribute("href", "/sign-up");
 

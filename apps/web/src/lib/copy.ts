@@ -467,7 +467,7 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
   },
   channels_total: {
     limitTitle: "Channel limit reached",
-    includes: (n) => `${counted(n, "channel", "channels")} in total`,
+    includes: (n) => `any ${count.format(n)} of Instagram, Facebook or web chat`,
     unlimited: "channels",
   },
   knowledge_characters: {
