@@ -9581,12 +9581,25 @@ Step 1 of 2 (web only, no API or database change). Owner decisions, 2026-11-03:
 The owner can't record a video yet and asked for a code-built demo on the landing page, then for a true
 replica of the inbox, with switching between platforms and accounts, scheduling, and more speed.
 `components/marketing/landing/ProductDemo.tsx`, right after the hero, on paper, so How it works stays the
-first night band. The story runs about 20 s and rests until 23 s before it loops (`productDemo` in
+first night band. The story runs about 21.5 s and rests until 23 s before it loops (`productDemo` in
 `landing-motion.ts`). No new dependency or client island.
 
 **What each beat is checked against.**
-- The frame: `AppSidebar` and `shell/nav.ts` (imported for the real labels and icons; expanded from 1280 px
-  and icons below, the app's inbox rule), `InboxShell`, `ListHeader` (`CHIP_VIEWS`, pinned by a test).
+- The frame (owner: the right panel, not the left sidebar): the list, the thread and the details panel of
+  `InboxShell`, with `ListHeader` (`CHIP_VIEWS`, pinned by a test). No app sidebar at any width.
+- The details panel: `DetailsPanel`, in its order. Customer (Open in …, avatar, handle, Customer since, Linked
+  account, Started from via `entryLabel`, the lead score `Meter`, View contact, and `Attention`'s "Needs you: asked
+  for a person"); Assigned to; Latest message (`AnalysisDetails`, Add answer); Summary (`SummarySection`'s empty
+  state and Summarise). It follows the open conversation. "Not analysed yet" until the AI reads, then the analysis
+  and Maya's lead score; Sam's analysis and the alert come with the handover. It shows from 1280 px, where the app's
+  details are inline (`layout === "wide"`); below that the app's are a closed sheet, so the demo has none.
+- Assign it to a teammate: `AssigneeMenu` in the thread header ("Assigned to", Nobody, each member with their open
+  conversations), the toast "Assigned", then the header's and the row's `AssigneeAvatar` and the panel's name.
+  Needs you stays on: only a reply clears it. Members need a paid plan (`plans.py` `members`: 1, 2, 3), and the
+  caption says so.
+- The filters open a conversation: whenever the list changes, its top conversation opens, so the thread and the
+  panel match the list. **The app doesn't do this:** its open conversation stays until you pick another. The owner
+  asked for it, because the mismatch read as a mistake.
 - A DM arrives: `ConversationRow` (68 and 90 px rows, the selection bar), "Pick a conversation" (`lib/copy.ts`).
 - The AI reads and drafts: `AnalysisChips` (intent, sentiment, priority), `rowBadges` ("Lead 72/100"),
   `SuggestionCard` ("Drafting a reply…", then the whole draft, "From: Menu", "5 drafts left", Draft again,
@@ -9614,11 +9627,15 @@ first night band. The story runs about 20 s and rests until 23 s before it loops
   the thread starts with the automation's message. It is the one piece of UI here the inbox doesn't have.
 - **Colours are the app's light theme** (`--app-*` in the block, the app's own tokens read at `:root`). A member
   on dark, or on the app's frosted panels and grain, sees those instead.
-- **The list pane is 388 px wide at 1280 px and up,** so the strip's labels fit. The app's default is 320 px
-  (resizable, 260 to 560), where they truncate; below 1280 px the demo is 300 px and they truncate too. The
+- **The list pane is 360 px and the details 300 px at 1280 px and up,** so the strip's labels fit and the thread
+  keeps its room. The app's defaults are 320 and 320 (resizable, 260 to 560 and 280 to 480), where the labels truncate; below 1280 px the demo is 300 px and they truncate too. The
   strip's segments size to their labels here; the app's share the width equally.
-- **Left out:** the details panel (the app opens it from 1440 px), the sidebar's credits meter, account card and
-  unread badge, Notifications, the Needs reply count, the date picker's calendar and the time list (the popover
+- **The details panel from 1280 px:** the app can show it inline from there but opens it by default from 1440 px,
+  and only with a conversation open; the demo keeps its empty column before the first one, so nothing shifts.
+- **The panel's content is clipped at the frame's foot** where the app would scroll it (Summary, mostly).
+- **The frame's height comes from the viewport,** so the list and thread clip where the app's fill a taller window.
+- **Left out:** the app's sidebar (owner's call), topics in the analysis, the follow status, the menu's availability
+  item, the Needs reply count, the date picker's calendar and the time list (the popover
   shows the chosen values), the public comment reply and follow nudge, the disclosure line, and any draft Auto
   may hold under its banner. The Select's menu is drawn wider than the app's 128 px trigger, as Radix does.
 - **Row heights:** Maya's row is 90 px from when it arrives; the app makes it 90 when the Lead badge appears.
@@ -9629,16 +9646,24 @@ first night band. The story runs about 20 s and rests until 23 s before it loops
   components' classes and labels.
 
 **Faster.** Each old beat is about 30% quicker. To fit the new ones in about 20 s: "The AI reads it" and "drafts"
-are one caption, the draft appears whole (5087d4f2), and the rest went from 5.6 s to 2.8 s.
+are one caption, the draft appears whole (5087d4f2), and the rest went from 5.6 s to 1.5 s.
 
 **Rules kept.** Labelled "Example, with made-up data". One labelled picture for assistive tech (`role="img"`,
 like the hero's), with the steps as plain captions and no live region. `MotionToggle` outside the picture. Off
 screen, a hidden tab or the pause control stop the clock, and it resumes where it stopped. Only opacity and
 transforms move, and every part keeps its box.
-- **Judgment call:** no script or reduced motion shows everything finished, one thing under the other, so that
-  frame is taller than the playing one. That's a CSS media query choice made before first paint (`scripting`,
-  `prefers-reduced-motion`), so it never shifts. It shows the open account menu, the schedule popover and the
-  Scheduled card in flow, and Maya's draft with its sent reply, which the app wouldn't show at once.
+- **The steps are controls.** The captions are plain text from the server, and the script swaps each for a button
+  with the same box, so nothing shifts and no-script stays plain. A jump replays the timeline from its start (`seek`),
+  so a step looks the same however it was reached; a test compares every step, played and jumped to. Playing, it goes to
+  the step's start and plays on; paused, it shows the step's finished state and stays paused.
+- **Judgment call on reduced motion:** with a script it now gets the playing frame, still, on the story's end, and the
+  steps show each finished state with no animation. Without a script everything is laid out finished, one thing under
+  the other (taller, chosen by a media query before first paint, so it never shifts). That frame shows the open menus,
+  the popover and the Scheduled card in flow, and Maya's draft with its sent reply, which the app wouldn't show at once.
+- **The fit.** The frame's height is `clamp(460px, 100svh - 290px, 640px)`, fixed once set, so the band from heading
+  to steps fits under the 64 px header at 1366×768 (669 of 704 px, with the short-window type), 1440×900 (833 of
+  836) and 1920×1080 (863 of 1016). On a phone the frame fits (570 of 748 at 375×812); the eight steps take a
+  second screen.
 - The pointer's target is read when it's sent there (one `getBoundingClientRect` a beat, not in a frame). A
   target with no box is skipped, so the same timeline serves the wide layout, where the back arrow is hidden.
 

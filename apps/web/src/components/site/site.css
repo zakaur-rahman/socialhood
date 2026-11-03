@@ -3062,36 +3062,25 @@ body:has(.site) {
   --app-warning: var(--color-warning); --app-warning-soft: var(--color-warning-soft); --app-danger-fg: var(--color-danger-fg); --app-danger-soft: var(--color-danger-soft);
   --app-success: var(--color-success); --app-overlay: var(--color-overlay); --app-shadow: var(--shadow-glow);
 }
+/* No script can pin the page light, as THEME_INIT_SCRIPT does: the --app-* values follow the root's scheme. */
+@media (scripting: none) {
+  :root:has(.site) { color-scheme: light; }
+}
 @layer components {
   .site .pd {
-    --pd-h: 720px;
-    & .pd-stage { margin: var(--space-head) 0 0; min-width: 0; }
+    --pd-h: clamp(460px, calc(100svh - 290px), 640px);
+    & .pd-stage { margin: var(--space-6) 0 0; min-width: 0; }
     & .pd-win { position: relative; background: var(--app-canvas); border: 1px solid var(--rule); border-radius: var(--r-xl); box-shadow: var(--shadow-panel); overflow: hidden; color: var(--app-fg); font-size: var(--fs-label); line-height: 1.4; }
     & .pd-win p { margin: 0; }
-    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: auto; min-height: 44px; margin-top: var(--space-3); }
+    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: auto; min-height: 44px; margin-top: var(--space-2); }
     & .pd-cap .motion-toggle { flex: none; }
     & .pd-topbar { display: none; }
 
-    /* ---- the frame: the sidebar card and the inbox card on the canvas (AppShell, InboxFrame) */
-    & .pd-body { display: flex; gap: var(--space-4); padding: var(--space-3); }
-    & .pd-inbox { flex: 1; min-width: 0; display: grid; grid-template-columns: 388px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--app-panel); border: 1px solid var(--app-line); border-radius: var(--r-md); overflow: hidden; }
+    /* ---- the frame: the inbox's three panes (InboxShell) */
+    & .pd-body { display: flex; }
+    & .pd-inbox { flex: 1; min-width: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); background: var(--app-panel); overflow: hidden; }
 
-    /* ---- AppSidebar */
-    & .pd-side { flex: 0 0 232px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: var(--space-3) var(--space-2); background: var(--app-panel); border: 1px solid var(--app-line); border-radius: var(--r-md); }
-    & .pd-side-top { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-1); }
     & .pd-logo { flex: none; width: 32px; height: 32px; border-radius: var(--r-sm); }
-    & .pd-side-brand b { display: block; font-size: var(--fs-label); font-weight: 600; }
-    & .pd-side-brand small, & .pd-ask small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
-    & .pd-ask { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); padding: 6px; border: 1px solid var(--app-brand-line); border-radius: var(--r-md); background: var(--app-brand-soft); }
-    & .pd-ask b { display: block; font-size: var(--fs-label); font-weight: 600; white-space: nowrap; }
-    & .pd-ask-ico { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--app-gradient); color: var(--app-on-brand); }
-    & .pd-side-nav { flex: 1; min-height: 0; overflow: hidden; margin-top: var(--space-1); }
-    & .pd-side-label { margin: var(--space-3) 0 var(--space-1); padding: 0 var(--space-3); font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); white-space: nowrap; }
-    & .pd-side-row { position: relative; display: flex; align-items: center; gap: var(--space-3); height: 34px; padding: 0 var(--space-3); border-radius: var(--r-sm); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; }
-    & .pd-side-row svg { flex: none; }
-    & .pd-side-on { background: var(--app-raised); color: var(--app-fg); }
-    & .pd-side-on::before { content: ""; position: absolute; inset: var(--space-2) auto var(--space-2) 0; width: 2px; border-radius: 999px; background: var(--app-brand); }
-    & .pd-side-foot { flex: none; margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--app-line-subtle); }
 
     /* ---- the list pane: PlatformStrip, ListHeader */
     & .pd-list { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--app-line); background: var(--app-panel); }
@@ -3099,7 +3088,7 @@ body:has(.site) {
     & .pd-track { display: flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--r-sm); background: var(--app-field); }
     & .pd-seg { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 28px; padding: var(--space-1) var(--space-2); border-radius: var(--r-xs); font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
     & .pd-seg > i:not(.pd-count) { flex: none; width: 8px; height: 8px; border-radius: 50%; }
-    & .pd-strip .pd-seg { flex: 1 1 auto; }
+    & .pd-strip .pd-seg { flex: 1 1 auto; padding-inline: 6px; }
     & .pd-seg-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     & [data-strip="all"] [data-seg="all"], & [data-strip="instagram"] [data-seg="instagram"], & [data-strip="whatsapp"] [data-seg="whatsapp"],
     & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-raised); color: var(--app-brand-fg); }
@@ -3142,16 +3131,19 @@ body:has(.site) {
     & .pd-mark svg { width: 10px; height: 10px; }
     & .pd-row-main { position: relative; flex: 1; min-width: 0; }
     & .pd-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
-    & .pd-row-top b { font-weight: 600; color: var(--app-fg-2); }
+    & .pd-row-top b { flex: 1; min-width: 0; font-weight: 600; color: var(--app-fg-2); }
     & .pd-row-top time { font-size: var(--fs-micro); color: var(--app-fg-2); }
     & .pd-row-line { display: flex; align-items: center; gap: var(--space-2); margin-top: 2px; }
     & .pd-swap { display: grid; min-width: 0; }
     & .pd-swap > * { grid-area: 1 / 1; min-width: 0; }
     & .pd-row-text { flex: 1; color: var(--app-fg-2); }
     & .pd-row-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    & .pd-unread .pd-row-top b, & .pd-unread .pd-row-text { color: var(--app-fg); }
-    & .pd-unread .pd-row-text { font-weight: 500; }
-    & .pd-unread .pd-row-top time { font-weight: 500; color: var(--app-brand-fg); }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg); }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-text { font-weight: 500; }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-top time { font-weight: 500; color: var(--app-brand-fg); }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg-2); }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-text { font-weight: 400; }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-top time { font-weight: 400; color: var(--app-fg-2); }
     & .pd-unread-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--app-brand); }
     & .pd-badges { display: flex; gap: var(--space-1); margin-top: var(--space-1); overflow: hidden; }
 
@@ -3251,6 +3243,47 @@ body:has(.site) {
     & .pd-toast { display: none; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--app-overlay); border: 1px solid var(--app-line); border-radius: var(--r-sm); box-shadow: var(--shadow-note); font-weight: 500; white-space: nowrap; }
     & .pd-toast svg { color: var(--app-success); }
 
+    /* ---- DetailsPanel: the customer, who has it, the latest message, the summary */
+    & .pd-panel-toggle { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--app-brand-soft); color: var(--app-brand-fg); }
+    & .pd-details { min-width: 0; min-height: 0; overflow: hidden; background: var(--app-panel); border-left: 1px solid var(--app-line); }
+    & .pd-det { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); min-height: 0; overflow: hidden; }
+    & .pd-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 24px; margin-bottom: var(--space-2); }
+    & .pd-sec-h h3 { margin: 0; font-family: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); }
+    & .pd-link { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); font-weight: 500; color: var(--app-brand-fg); white-space: nowrap; }
+    & .pd-inset { min-width: 0; padding: var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); }
+    & .pd-det-who { display: flex; align-items: center; gap: var(--space-3); }
+    & .pd-det-who b { display: block; font-weight: 600; }
+    & .pd-det-who small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; padding-top: var(--space-3); border-top: 1px solid var(--app-line); }
+    & .pd-dl-wide { grid-column: 1 / -1; }
+    & .pd-dl dt { font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-dl dd { margin: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    & .pd-meter { margin-top: var(--space-3); }
+    & .pd-meter-h { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-meter-bar { display: block; height: 6px; margin-top: var(--space-1); border-radius: 999px; background: var(--app-raised); overflow: hidden; }
+    & .pd-meter-bar i { display: block; height: 100%; border-radius: 999px; background: var(--app-brand); }
+    & .pd-btn-full { display: flex; width: 100%; margin-top: var(--space-3); }
+    & .pd-sec:nth-child(2) .pd-btn-full { margin-top: 0; }
+    & .pd-btn-between { justify-content: space-between; }
+    & .pd-btn-between .pd-swap > span { display: inline-flex; align-items: center; gap: var(--space-2); }
+    & .pd-btn-xs { flex: none; height: 24px; padding: 0 var(--space-2); font-size: var(--fs-micro); }
+    & .pd-attn { display: flex; align-items: center; gap: var(--space-2); margin-top: 6px !important; padding: var(--space-2) var(--space-3); border-radius: var(--r-sm); background: var(--app-danger-soft); color: var(--app-danger-fg); font-weight: 500; }
+    & .pd-attn svg { flex: none; }
+    & .pd-det-wait { color: var(--app-fg-2); }
+    & .pd-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-3); margin: 0; }
+    & .pd-kv dt { color: var(--app-fg-2); }
+    & .pd-kv dd { margin: 0; justify-self: end; }
+    & .pd-b-warn { background: var(--app-warning-soft); color: var(--app-warning); }
+    & .pd-correct { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2) !important; padding-top: var(--space-2); border-top: 1px solid var(--app-line); font-size: var(--fs-micro); color: var(--app-fg-2); }
+
+    /* ---- AssigneeMenu, AssigneeAvatar */
+    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: 10px; font-style: normal; font-weight: 600; }
+    & .pd-assign { padding: var(--space-1); }
+    & .pd-assign-h { padding: var(--space-1) var(--space-2); font-size: var(--fs-micro); font-weight: 600; color: var(--app-fg-2); }
+    & .pd-opt-2 { height: 40px; }
+    & .pd-opt-2 small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-opt .pd-assign-check { opacity: 1; }
+
     /* ---- ScheduledCard */
     & .pd-panel-sched { padding: var(--space-3); }
     & .pd-card { display: block; padding: var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); background: var(--app-field); }
@@ -3262,20 +3295,22 @@ body:has(.site) {
     & .pd-card-acts { display: flex; gap: var(--space-1); margin-left: auto; }
 
     /* ---- the captions: plain text; the current one takes the ink and the rule above it */
-    & .pd-steps { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-5) 0 0; padding: 0; list-style: none; }
-    & .pd-steps li { padding-top: var(--space-2); border-top: 2px solid var(--rule); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
-    & .pd-steps li.on { border-color: var(--iris); color: var(--ink); font-weight: 500; }
+    & .pd-steps { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+    & .pd-step { display: block; width: 100%; min-height: 32px; margin: 0; padding: var(--space-2) 0 0; border: 0; border-top: 2px solid var(--rule); border-radius: 0; background: none; font: inherit; font-size: var(--fs-caption); line-height: var(--lh-caption); text-align: left; color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+    & button.pd-step { cursor: pointer; }
+    @media (hover: hover) { & button.pd-step:hover { border-color: var(--ink-3); color: var(--ink); } }
+    & .pd-steps li.on .pd-step { border-color: var(--iris); color: var(--ink); font-weight: 500; }
 
     /* ---- the pointer: only where it plays */
     & .pd-cursor { display: none; }
 
-    /* ---- no script or reduced motion: everything finished, one thing under the other */
-    @media (scripting: none), (prefers-reduced-motion: reduce) {
+    /* ---- no script: everything finished, one thing under the other */
+    @media (scripting: none) {
       & .pd-before { display: none !important; }
       & [data-acct-show]:not([data-acct-show="all"]) { display: none; }
       & .pd-inbox { align-items: start; }
-      & .pd-side { align-self: flex-start; }
-      & .pd-conv + .pd-conv { border-top: 1px solid var(--app-line); }
+      & .pd-conv + .pd-conv, & .pd-det + .pd-det { border-top: 1px solid var(--app-line); }
+      & .pd-assign { margin: 0 var(--space-4) var(--space-3); }
       & .pd-log { justify-content: flex-start; min-height: 0; }
       & .pd-cell { display: flex; flex-direction: column; gap: var(--space-3); }
       & .pd-panel-sched { border-top: 1px solid var(--app-line); }
@@ -3284,7 +3319,7 @@ body:has(.site) {
     }
 
     /* ---- where it plays: the frame holds one size, the parts share their boxes */
-    @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    @media (scripting: enabled) {
       & .pd-body { height: var(--pd-h); }
       & .pd-panes { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
       & .pd-panes > * { grid-area: 1 / 1; min-width: 0; min-height: 0; }
@@ -3292,7 +3327,9 @@ body:has(.site) {
       & .pd-cell > * { grid-area: 1 / 1; min-width: 0; }
       /* The sent reply stands above the chip's room, so the chip never covers it. */
       & .pd-cell .pd-out { margin-bottom: 40px; }
-      & .pd-panel-stack { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      & .pd-panel-stack, & .pd-details { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      & .pd-details > * { grid-area: 1 / 1; }
+      & .pd-assign { position: absolute; top: 60px; right: var(--space-4); width: 224px; }
       & .pd-panel-stack > .pd-panel { grid-area: 1 / 1; min-height: 0; transition: opacity var(--dur-fast) var(--ease); }
       & [data-tab="chats"] .pd-panel-sched, & [data-tab="scheduled"] .pd-panel-chats { opacity: 0; }
 
@@ -3310,12 +3347,12 @@ body:has(.site) {
       & .pd-toast { display: flex; position: absolute; right: var(--space-4); bottom: var(--space-4); z-index: 4; }
 
       /* Before the script arrives: the finished Maya conversation, the rest waiting in their boxes. */
-      & .pd-before, & .pd-float, & .pd-conv:not(.pd-first), & .pd-bar { opacity: 0; }
+      & .pd-before, & .pd-float, & .pd-conv:not(.pd-first), & .pd-det:not(.pd-det-first), & .pd-bar { opacity: 0; }
 
       /* The script owns every part from here: off until the timeline turns it on. */
       & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease); }
       & [data-live] [data-p].on { opacity: 1; translate: none; }
-      & [data-live] .pd-conv, & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-count, & [data-live] .pd-unread-dot, & [data-live] .pd-b[data-p], & [data-live] .pd-status > * { translate: none; }
+      & [data-live] .pd-conv, & [data-live] .pd-det, & [data-live] .pd-det [data-p], & [data-live] .pd-who-av, & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-count, & [data-live] .pd-unread-dot, & [data-live] .pd-b[data-p], & [data-live] .pd-status > * { translate: none; }
       & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
       & [data-live] .pd-row.on { translate: none; }
       & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-medium) var(--ease-swap) infinite alternate; }
@@ -3324,30 +3361,40 @@ body:has(.site) {
       & .pd-cursor.on { opacity: 1; }
       & .pd-cursor svg { display: block; fill: var(--ink); stroke: var(--sheet); stroke-width: 1.5; filter: drop-shadow(0 1px 2px var(--ink-strike)); }
       & .pd-ring { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; background: var(--iris-hit); opacity: 0; }
+      /* A jump lands at once. Reduced motion: never anything but that, and no pointer. */
+      & [data-seek], & [data-seek] * { transition: none !important; }
+      @media (prefers-reduced-motion: reduce) {
+        & [data-demo], & [data-demo] * { transition: none !important; animation: none !important; }
+        & .pd-cursor { display: none; }
+      }
     }
 
-    /* ---- narrower than the app's 1280 px inbox rule: the sidebar is icons */
+    /* ---- narrower than 1280 px the app's details are a sheet, closed: the list and the thread */
     @media (width < 1280px) {
-      & .pd-side { flex-basis: 64px; }
-      & .pd-side-text, & .pd-side-label { display: none; }
-      & .pd-side-row { justify-content: center; padding: 0; }
-      & .pd-ask { justify-content: center; padding: 3px; }
-      & .pd-side-top { justify-content: center; }
       & .pd-inbox { grid-template-columns: 300px minmax(0, 1fr); }
+      & .pd-details { display: none !important; }
+      & .pd-panel-toggle { background: none; color: var(--app-fg-2); }
     }
     @media (width <= 1060px) { /* site-wide */
       & .pd-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
+    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). */
+    @media (height < 820px) and (width > 760px) { /* site-nav */
+      padding-top: var(--space-6);
+      padding-bottom: var(--space-6);
+      & .pd-stage { margin-top: var(--space-3); }
+      & .h2 { font-size: var(--fs-h3); line-height: var(--lh-h3); }
+      & .lede { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+    }
 
     /* ---- a phone, as the app's: the top bar, then the list or the conversation, never both */
     @media (width <= 760px) { /* site-nav */
-      --pd-h: 640px;
+      --pd-h: clamp(500px, calc(100svh - 300px), 640px);
       & .pd-topbar { display: flex; align-items: center; gap: var(--space-3); height: 56px; padding: 0 var(--space-4); background: var(--app-panel); border-bottom: 1px solid var(--app-line); }
       & .pd-topbar b { flex: 1; font-size: var(--fs-body); font-weight: 600; }
       & .pd-topbar svg { color: var(--app-fg-2); }
-      & .pd-side, & .pd-list-title > b { display: none; }
-      & .pd-body { padding: 0; }
-      & .pd-inbox { grid-template-columns: minmax(0, 1fr); border: 0; border-radius: 0; }
+      & .pd-list-title > b { display: none; }
+      & .pd-inbox { grid-template-columns: minmax(0, 1fr); }
       & .pd-list { border-right: 0; }
       & .pd-list-tools { margin-left: auto; }
       & .pd-chips-row { flex-wrap: nowrap; overflow: hidden; }
@@ -3358,13 +3405,12 @@ body:has(.site) {
       & .pd-composer { padding: var(--space-2) var(--space-3); }
       & .pd-comp-tools { gap: var(--space-2); }
       & .pd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+      @media (scripting: enabled) {
         & .pd-inbox { display: grid; }
         & .pd-inbox > * { grid-area: 1 / 1; min-width: 0; min-height: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
         & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-medium)); }
         & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-medium))); }
-        & .pd-toast { top: var(--space-3); right: auto; bottom: auto; left: 50%; transform: translateX(-50%); position: fixed; display: none; }
-        & [data-live] .pd-toast { display: flex; position: absolute; top: calc(-1 * var(--pd-h) + var(--space-3)); }
+        & .pd-toast { top: var(--space-3); right: auto; bottom: auto; left: 50%; transform: translateX(-50%); }
         /* A tap, not a mouse. */
         & .pd-cursor svg { display: none; }
         & .pd-cursor::after { content: ""; position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border: 2px solid var(--on-ink); border-radius: 50%; background: var(--ink-shade); }

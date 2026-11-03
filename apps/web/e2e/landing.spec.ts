@@ -176,6 +176,19 @@ test.describe("landing page", () => {
     const count = await shown();
     await page.waitForTimeout(2_500);
     expect(await shown()).toBe(count);
+
+    // The steps are buttons: paused, a click shows that step's finished state and stays paused.
+    const step = demo.locator(".pd-steps button").nth(3);
+    await step.click();
+    await expect(step).toHaveAttribute("aria-current", "step");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(demo.locator('[data-p="maya-chip"].on')).toHaveCount(1);
+    // From the keyboard too, and backwards: the later state goes.
+    const first = demo.locator(".pd-steps button").first();
+    await first.focus();
+    await page.keyboard.press("Enter");
+    await expect(first).toHaveAttribute("aria-current", "step");
+    await expect(demo.locator('[data-p="maya-chip"].on')).toHaveCount(0);
   });
 
   test("the hero's scattered inbox sorts as the page scrolls, and the headline never moves (C-157 motion)", async ({ page }) => {

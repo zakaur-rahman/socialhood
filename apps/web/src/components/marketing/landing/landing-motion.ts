@@ -19,7 +19,7 @@
  * - Your AI assistant (C-168): the example chat plays once as it scrolls in from below (aiApps).
  * - A day in your inbox (C-175): one story loops while on screen, with a pause control (productDemo).
  *
- * With `prefers-reduced-motion: reduce` only the two controls work and the scenes stay as rendered.
+ * With `prefers-reduced-motion: reduce` only the controls work (the demo's steps too) and the scenes stay still.
  */
 import { bindMotionControl, type MotionControl } from "@/components/site/motion-control";
 
@@ -45,8 +45,8 @@ export function startLandingMotion(root: ParentNode = document): Cleanup {
   const cleanups: Cleanup[] = [];
   cleanups.push(modes(root, reduce));
   cleanups.push(comments(root, reduce));
+  cleanups.push(productDemo(root, reduce));
   if (!reduce) {
-    cleanups.push(productDemo(root));
     cleanups.push(aiApps(root));
     cleanups.push(hero(root));
     cleanups.push(decide(root));
@@ -822,16 +822,17 @@ type DemoState = { strip?: string; acct?: string; tab?: string; view?: string };
 type DemoBeat = { at: number; step?: number; on?: string[]; off?: string[]; list?: string[]; state?: DemoState; to?: string; click?: true };
 
 const DEMO_ALL = ["maya", "theo", "nina", "ria", "lena", "leo", "visitor"];
+const open = (id: string) => [`sel-${id}`, `conv-${id}`, `det-${id}`];
 
-/** The story (ProductDemo.tsx), about 20 s, then a rest; the first beat is the scene's start. */
+/** The story (ProductDemo.tsx), about 21.5 s, then a rest; the first beat is the scene's start. */
 export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
-  { at: 0, step: 0, on: ["pick"], list: DEMO_ALL.slice(1), state: { strip: "all", acct: "all", tab: "chats", view: "list" } },
+  { at: 0, step: 0, on: ["pick", "theo-dot", "nina-dot"], list: DEMO_ALL.slice(1), state: { strip: "all", acct: "all", tab: "chats", view: "list" } },
   // 1. A DM arrives, and the row opens.
   { at: 400, on: ["maya-row-q", "maya-dot"], list: DEMO_ALL },
   { at: 1000, to: "row-maya" },
-  { at: 1350, click: true, on: ["sel-maya", "conv-maya", "maya-ph"], off: ["pick", "maya-dot"], state: { view: "thread" } },
+  { at: 1350, click: true, on: [...open("maya"), "maya-ph", "det-maya-wait"], off: ["pick", "maya-dot"], state: { view: "thread" } },
   // 2. The AI reads it and drafts.
-  { at: 1700, step: 1, on: ["maya-tags", "maya-lead"] },
+  { at: 1700, step: 1, on: ["maya-tags", "maya-lead", "det-maya-lead", "det-maya-analysis", "det-maya-add"], off: ["det-maya-wait"] },
   { at: 2200, on: ["maya-bar", "maya-drafting"] },
   { at: 2900, on: ["maya-words", "maya-source"], off: ["maya-drafting"] },
   // 3. You press Send.
@@ -850,7 +851,8 @@ export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
   { at: 8900, click: true, state: { tab: "scheduled" } },
   { at: 9800, to: "tab-chats" },
   { at: 10050, click: true, state: { tab: "chats" } },
-  // 5. Switch platform and account: the Select shows on a platform with two accounts.
+  // 5. Switch platform and account: the Select shows on a platform with two accounts, and each new
+  // list opens its top conversation, so the thread and the panel always match the list.
   { at: 10400, step: 4, to: "seg-instagram" },
   { at: 10700, click: true, list: ["maya", "theo", "ria", "lena"], state: { strip: "instagram" } },
   { at: 11300, to: "acct" },
@@ -860,25 +862,30 @@ export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
   { at: 12700, to: "acct" },
   { at: 12900, click: true, on: ["menu"] },
   { at: 13150, to: "opt-pune" },
-  { at: 13400, click: true, off: ["menu"], list: ["theo", "lena"], state: { acct: "pune" } },
+  { at: 13400, click: true, on: [...open("theo"), "det-theo-analysis", "det-theo-add"], off: ["menu", ...open("maya"), "theo-dot"], list: ["theo", "lena"], state: { acct: "pune" } },
   { at: 14000, to: "seg-whatsapp" },
-  { at: 14250, click: true, list: ["nina", "leo"], state: { strip: "whatsapp", acct: "all" } },
+  { at: 14250, click: true, on: [...open("nina"), "det-nina-analysis", "det-nina-add"], off: [...open("theo"), "nina-dot"], list: ["nina", "leo"], state: { strip: "whatsapp", acct: "all" } },
   { at: 14800, to: "seg-all" },
-  { at: 15050, click: true, list: DEMO_ALL, state: { strip: "all" } },
+  { at: 15050, click: true, on: open("maya"), off: open("nina"), list: DEMO_ALL, state: { strip: "all" } },
   // 6. A comment becomes a DM: the opening with its button, their tap, then the link.
   { at: 15600, step: 5, on: ["ana-row-open"], list: ["ana", ...DEMO_ALL] },
   { at: 16000, to: "row-ana" },
-  { at: 16300, click: true, on: ["sel-ana", "conv-ana", "ana-comment"], off: ["sel-maya", "conv-maya"], state: { view: "thread" } },
+  { at: 16300, click: true, on: [...open("ana"), "ana-comment", "det-ana-wait"], off: open("maya"), state: { view: "thread" } },
   { at: 16800, on: ["ana-open"] },
-  { at: 17700, on: ["ana-tap", "ana-window"] },
+  { at: 17700, on: ["ana-tap", "ana-window", "det-ana-analysis", "det-ana-add"], off: ["det-ana-wait"] },
   { at: 18300, on: ["ana-link", "ana-row-link"], off: ["ana-row-open"] },
   // 7. The tricky one comes to you.
   { at: 18900, step: 6, to: "back-ana" },
   { at: 19100, click: true, state: { view: "list" } },
-  { at: 19200, on: ["sam-row-auto"], list: ["sam", "ana", ...DEMO_ALL] },
+  { at: 19200, on: ["sam-row-auto", "sam-dot"], list: ["sam", "ana", ...DEMO_ALL] },
   { at: 19500, to: "row-sam" },
-  { at: 19750, click: true, on: ["sel-sam", "conv-sam"], off: ["sel-ana", "conv-ana"], state: { view: "thread" } },
-  { at: 20200, on: ["sam-banner", "sam-need", "sam-row-need", "need-count"] },
+  { at: 19750, click: true, on: [...open("sam"), "det-sam-wait", "sam-assign-none", "det-sam-nobody"], off: [...open("ana"), "sam-dot"], state: { view: "thread" } },
+  { at: 20200, on: ["sam-banner", "sam-need", "sam-row-need", "need-count", "det-sam-need", "det-sam-analysis", "det-sam-add"], off: ["det-sam-wait"] },
+  // 8. Assign it to a teammate.
+  { at: 20700, step: 7, to: "assign" },
+  { at: 20950, click: true, on: ["assign-menu"] },
+  { at: 21200, to: "opt-priya" },
+  { at: 21450, click: true, on: ["assign-toast", "sam-assign-who", "sam-row-who", "det-sam-who"], off: ["assign-menu", "sam-assign-none", "det-sam-nobody"] },
   // The rest, before it loops.
   { at: 23000 },
 ];
@@ -887,10 +894,11 @@ export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
  * The inbox story (ProductDemo.tsx). The server drew its finished state; `data-live` (site.css) hides
  * every named part in its own box, and the timeline turns them on, so nothing moves the layout. It
  * runs while the scene is on screen, the tab is visible and the pause control isn't pressed, and picks
- * up where it stopped. Layout is read only where the pointer is sent. Not called with
- * `prefers-reduced-motion: reduce`.
+ * up where it stopped. The captions become buttons here: a jump replays the timeline from its start
+ * (`seek`), so a step looks the same however it was reached. Paused, or with reduced motion (which
+ * starts paused, on the story's end, with nothing moving), a jump shows the step's finished state.
  */
-export function productDemo(root: ParentNode): Cleanup {
+export function productDemo(root: ParentNode, reduce = false): Cleanup {
   const scene = root.querySelector<HTMLElement>("[data-demo]");
   const scope = scene?.closest<HTMLElement>("[data-motion-scope]");
   const win = scene?.querySelector<HTMLElement>(".pd-win");
@@ -905,11 +913,16 @@ export function productDemo(root: ParentNode): Cleanup {
   const homes = rows.map((row) => row.style.getPropertyValue("--y"));
   const home: DemoState = { strip: stage.dataset.strip, acct: stage.dataset.acct, tab: stage.dataset.tab, view: stage.dataset.view };
   const steps = [...scope.querySelectorAll<HTMLElement>("[data-demo-steps] li")];
+  const captions = steps.map((li) => li.firstElementChild as HTMLElement);
   const control = bindMotionControl(scope);
+  const LAST = PRODUCT_DEMO_TIMELINE.length - 2;
+  const startOf = (step: number) => PRODUCT_DEMO_TIMELINE.findIndex((beat) => beat.step === step);
+  const endOf = (step: number) => (step === steps.length - 1 ? LAST : startOf(step + 1) - 1);
   let index = 0;
   let clock = 0;
   let resumedAt = 0;
   let timer: number | undefined;
+  let settle: number | undefined;
   let armed = false;
   let onScreen = false;
   let aimed = false;
@@ -927,6 +940,12 @@ export function productDemo(root: ParentNode): Cleanup {
     }
     for (const row of rows) row.classList.toggle("on", ids.includes(row.dataset.row ?? ""));
   };
+  const light = (step: number) =>
+    steps.forEach((el, i) => {
+      el.classList.toggle("on", i === step);
+      if (i === step) el.firstElementChild?.setAttribute("aria-current", "step");
+      else el.firstElementChild?.removeAttribute("aria-current");
+    });
   /** A target with no box (the back arrow on a wide screen, where the list is always there) is skipped. */
   const aim = (name: string) => {
     const box = stage.querySelector(`[data-at="${name}"]`)?.getBoundingClientRect();
@@ -936,23 +955,49 @@ export function productDemo(root: ParentNode): Cleanup {
     pointer.classList.add("on");
     pointer.style.transform = `translate(${box.left + box.width / 2 - origin.left}px, ${box.top + box.height / 2 - origin.top}px)`;
   };
-  const apply = ({ step, on, off, list, state, to, click }: DemoBeat) => {
-    if (to) aim(to);
-    if (click && aimed) ring?.animate?.([{ opacity: 0.7, transform: "scale(0.4)" }, { opacity: 0, transform: "scale(1)" }], { duration: 350 });
+  /** The state a beat changes: everything but the pointer. */
+  const change = ({ step, on, off, list, state }: DemoBeat) => {
     toggle(off, false);
     toggle(on, true);
     if (list) showList(list);
     if (state) Object.assign(stage.dataset, state);
-    if (step !== undefined) steps.forEach((el, i) => el.classList.toggle("on", i === step));
+    if (step !== undefined) light(step);
+  };
+  const apply = (beat: DemoBeat) => {
+    if (beat.to) aim(beat.to);
+    if (beat.click && aimed) ring?.animate?.([{ opacity: 0.7, transform: "scale(0.4)" }, { opacity: 0, transform: "scale(1)" }], { duration: 350 });
+    change(beat);
   };
   const begin = () => {
     parts.forEach((el) => el.classList.remove("on"));
     // A row not yet in the story waits at the top, ready to slide in.
     rows.forEach((row) => row.style.setProperty("--y", "0px"));
     pointer.classList.remove("on");
-    apply(PRODUCT_DEMO_TIMELINE[0]);
+    change(PRODUCT_DEMO_TIMELINE[0]);
     index = 1;
     clock = 0;
+  };
+  const arm = () => {
+    if (armed) return;
+    armed = true;
+    stage.dataset.live = "";
+  };
+  /** Every beat up to `last`, from the start, at once; the pointer waits where the last of them sent it. */
+  const seek = (last: number) => {
+    arm();
+    stage.dataset.seek = "";
+    begin();
+    let aimAt: string | undefined;
+    for (let i = 1; i <= last; i += 1) {
+      const beat = PRODUCT_DEMO_TIMELINE[i];
+      change(beat);
+      aimAt = beat.to ?? aimAt;
+    }
+    if (aimAt && !reduce) aim(aimAt);
+    index = last + 1;
+    clock = PRODUCT_DEMO_TIMELINE[last].at;
+    window.clearTimeout(settle);
+    settle = window.setTimeout(() => delete stage.dataset.seek, 50);
   };
   const run = () => {
     if (timer !== undefined || !armed || !onScreen || document.hidden || control.paused) return;
@@ -974,34 +1019,59 @@ export function productDemo(root: ParentNode): Cleanup {
     timer = undefined;
     clock += performance.now() - resumedAt;
   };
+  const jump = (step: number) => {
+    halt();
+    seek(control.paused ? endOf(step) : startOf(step));
+    run();
+  };
+
+  // The captions become controls now; each keeps the plain caption's box, so nothing shifts.
+  const buttons = steps.map((li, step) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pd-step";
+    button.textContent = li.textContent;
+    button.addEventListener("click", () => jump(step));
+    li.replaceChildren(button);
+    return button;
+  });
+
   const unsubscribe = control.subscribe((paused) => (paused ? halt() : run()));
   const onVisibility = () => (document.hidden ? halt() : run());
   document.addEventListener("visibilitychange", onVisibility);
-  const observer = new IntersectionObserver(
-    (entries) => {
-      onScreen = entries[entries.length - 1].isIntersecting;
-      if (!armed) {
-        armed = true;
-        stage.dataset.live = "";
-        begin();
-      }
-      if (onScreen) run();
-      else halt();
-    },
-    { threshold: 0.25 },
-  );
-  observer.observe(stage);
+  const observer = reduce
+    ? null
+    : new IntersectionObserver(
+        (entries) => {
+          onScreen = entries[entries.length - 1].isIntersecting;
+          if (!armed) {
+            arm();
+            begin();
+          }
+          if (onScreen) run();
+          else halt();
+        },
+        { threshold: 0.25 },
+      );
+  observer?.observe(stage);
+  if (reduce) seek(LAST);
 
   return () => {
-    observer.disconnect();
+    observer?.disconnect();
     document.removeEventListener("visibilitychange", onVisibility);
     halt();
+    window.clearTimeout(settle);
     unsubscribe();
     control.destroy();
     delete stage.dataset.live;
+    delete stage.dataset.seek;
     Object.assign(stage.dataset, home);
     parts.forEach((el) => el.classList.remove("on"));
-    steps.forEach((el) => el.classList.remove("on"));
+    steps.forEach((el, i) => {
+      el.classList.remove("on");
+      el.replaceChildren(captions[i]);
+    });
+    buttons.length = 0;
     rows.forEach((row, i) => row.style.setProperty("--y", homes[i]));
     pointer.classList.remove("on");
     pointer.style.transform = "";
