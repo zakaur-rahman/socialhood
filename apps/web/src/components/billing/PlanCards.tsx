@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
 import { TRIAL_DAYS, canStartCheckout, planHighlights } from "@/lib/billing/plan";
-import { ENTERPRISE, PLAN_NAME, billingCopy, formatPrice, plannedPriceLabel } from "@/lib/copy";
+import { AGENCY, PLAN_NAME, billingCopy, formatPrice, plannedAmount } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 const TAGLINE: Record<PlanOffer["plan"], string> = {
@@ -21,8 +21,8 @@ const TAGLINE: Record<PlanOffer["plan"], string> = {
 /**
  * UX-SCR-07: the plans side by side, from the public GET /v1/billing/plans (C-049). The current
  * plan is marked; the owner of a Free workspace can start the trial or upgrade from Pro's card.
- * Business starts a checkout too once its product is set (C-172). Enterprise is a "Contact us" card,
- * not a plan. C-066: columns from tablets up, the current plan highlighted.
+ * Business starts a checkout too once its product is set (C-172). Agency is a "Coming soon" card with
+ * a Contact us link (C-173), not a plan. C-066: columns from tablets up, the current plan highlighted.
  */
 export function PlanCards({
   plans,
@@ -105,8 +105,9 @@ export function PlanCards({
                 // C-149, C-172: not on sale (no billing on this server yet, or Business without its
                 // product): the planned price, labelled as planned.
                 <>
-                  <span data-testid={`planned-price-${offer.plan}`}>{plannedPriceLabel(offer.plan).split(" ")[0]}</span>
-                  <span className="text-sm font-normal text-fg-secondary"> a month when we launch</span>
+                  <span data-testid={`planned-price-${offer.plan}`}>{plannedAmount(offer.plan)}</span>
+                  <span className="text-sm font-normal text-fg-secondary"> a month</span>
+                  <span className="block text-sm font-normal text-fg-secondary">when we launch</span>
                 </>
               ) : (
                 <span className="text-base font-normal text-fg-secondary">Price shown at checkout</span>
@@ -140,16 +141,19 @@ export function PlanCards({
           </Card>
         );
       })}
-      <Card asChild padding="roomy" className="relative flex flex-col" data-testid="plan-enterprise">
+      <Card asChild padding="roomy" className="relative flex flex-col" data-testid="plan-agency">
         <li>
           <div className="flex items-center justify-between gap-2">
-            <h3 className={SECTION_TITLE}>{ENTERPRISE.name}</h3>
+            <h3 className={SECTION_TITLE}>{AGENCY.name}</h3>
+            <Badge size="md">{AGENCY.soon}</Badge>
           </div>
-          <p className="text-xs text-fg-secondary">{ENTERPRISE.tagline}</p>
-          <p className={cn("mt-4", KPI)}>{ENTERPRISE.price}</p>
-          <p className="text-sm text-fg-secondary">{ENTERPRISE.from}</p>
+          <p className="text-xs text-fg-secondary">{AGENCY.tagline}</p>
+          <p className={cn("mt-4", KPI)}>
+            {AGENCY.price}
+            <span className="text-sm font-normal text-fg-secondary"> {AGENCY.priceNote}</span>
+          </p>
           <ul className="mt-5 flex-1 space-y-2 border-t border-line-subtle pt-5 text-sm">
-            {ENTERPRISE.lines.map((line) => (
+            {AGENCY.lines.map((line) => (
               <li key={line} className="flex items-start gap-2">
                 <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />
                 <span>{line}</span>
@@ -157,7 +161,7 @@ export function PlanCards({
             ))}
           </ul>
           <Button asChild variant="secondary" size="lg" className="mt-5 w-full">
-            <a href={ENTERPRISE.href}>{ENTERPRISE.cta}</a>
+            <a href={AGENCY.href}>{AGENCY.cta}</a>
           </Button>
         </li>
       </Card>

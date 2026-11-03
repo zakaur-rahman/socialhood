@@ -7,9 +7,10 @@ import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { pageMetadata, softwareApplicationJsonLd } from "@/lib/marketing/seo";
 import { PRICING_PATH } from "@/lib/marketing/gtm-pages";
 
-// ISR like the landing page: Dodo's prices are read at build and at most once an hour. Segment
+// ISR like the landing page: the plans and Dodo's prices are read at build and at most every five
+// minutes (C-173), so a release that changes plans doesn't show stale limits for an hour. Segment
 // config must be a literal, so this equals PLANS_REVALIDATE_SECONDS.
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export const metadata = pageMetadata({
   title: "Pricing",

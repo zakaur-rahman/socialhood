@@ -1,6 +1,6 @@
 /**
  * The pricing page's comparison table (GR-37): every plan limit in billing/plans.py, grouped and
- * worded for a visitor (C-172: Free, Creator and Business; Enterprise is a card on the pricing page, not a column). The numbers are never typed here. They come from plan-table.json, which is
+ * worded for a visitor (C-172: Free, Creator and Business; Agency is a card on the pricing page, not a column). The numbers are never typed here. They come from plan-table.json, which is
  * exported from the API's ENTITLEMENTS and checked against it by tests/unit/test_marketing_plan_table.py,
  * and plan-matrix.test.ts checks that every entitlement in the file has a row below (or is left out
  * on purpose), so a new limit can't ship without the page deciding how to say it.

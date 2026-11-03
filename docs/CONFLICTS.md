@@ -9558,3 +9558,20 @@ Creator was first given as $10; the owner corrected it to $14 before anything wa
 - **Copy.** Every page was checked against the table. "Pro and Max" became "Creator and Business" except API keys and Zapier (Business) and WhatsApp (not on Free). Comparisons with ManyChat use only its dated source (ManyChat Pro $39 a month on monthly billing for 2,500 active contacts) and the planned prices, with "planned". No page says "cheapest", "best" or "#1" (`lib/marketing/claims.test.ts`). The changelog's past entries are history and were left. Legal: `terms`, `privacy`, `refunds` (plan names only) and `shipping` bumped to 2026-11-02 in `lib/legal.ts`.
 - **Usage page.** Free shows a "channels" tile ("1 of 2 channels") instead of per-platform tiles, and no WhatsApp tile unless a WhatsApp account already exists.
 - **Supersedes** the plan numbers of PD-1 (seats), PD-6 (API for Pro and Max) and the Max-is-R2 note.
+
+## C-173 · Plan cards and prices
+
+Step 1 of 2 (web only, no API or database change). Owner decisions, 2026-11-03:
+
+| | Free | Creator | Business | Agency |
+|---|---|---|---|---|
+| Price a month | $0 | $15 | $30 | $70 |
+| AI credits a month | 200 | 1,500 | 5,000 | 12,000 |
+
+- **Prices.** `PLANNED_PRICE_USD` is 15 and 30 (was 14 and 29); the ManyChat comparison line reads them through `plannedAmount()`. With billing on, real prices still come from the API (Dodo).
+- **Enterprise is now Agency** (`AGENCY` in `lib/copy.ts`, was `ENTERPRISE`): "$70 a month", a "Coming soon" tag, a Contact us `mailto:` link (support address), no checkout, no plan key. "From $99" is gone. Nothing about uptime, dedicated support or SSO. Agency's 12,000 credits is `AGENCY_AI_CREDITS`, since Agency isn't in the API yet. Under the plans: "Need more? Contact us." Claims about Enterprise on third parties' plans (Claude Team and Enterprise, ChatGPT Enterprise) are unchanged. `terms` mentions Agency by name; its legal date was not bumped.
+- **Shorter cards.** One list for the dashboard and the marketing pages, `planHighlights` in `lib/billing/plan.ts`: channels, members, automations, AI credits, scheduled posts, knowledge, then API keys and Zapier (Business) or the AI mode. Six or seven lines per card; the full table stays under the cards on `/pricing`, and the landing links to it. `planFeatures` and its 14-line list were removed. Free's cards no longer list message history or "No WhatsApp"; the table has them.
+- **Layout.** A planned price is "$15 a month" on one line (never breaking inside the number), with "Planned price, when we launch." on the line below. CSS is in the `C-173 plan cards` block at the end of `site.css`. Checked at 375, 768, 1024, 1280 and 1440: no sideways scroll, equal card heights per row, price and button rows aligned.
+- **How AI credits work** names all four plans: Free, Creator and Business from the plan data, Agency from the constant.
+- **Stale plans after a deploy.** `PLANS_REVALIDATE_SECONDS` and the `revalidate` of `/pricing` and the landing are 300 (was 3600); the segment value stays a literal (a test reads the source).
+- **Not done here.** Six-month billing and an Agency plan key and checkout are step 2. On a phone the cards without a button keep an empty button row, a small gap.

@@ -16,8 +16,8 @@ import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
 
-// ISR: the plan list (prices from Dodo) is read at build and again at most once an hour.
-export const revalidate = 3600;
+// ISR: the plan list (prices from Dodo) is read at build and again at most every five minutes (C-173). Must stay a literal.
+export const revalidate = 300;
 
 export const metadata = pageMetadata({
   title: `${SITE_NAME} · ${SITE_TITLE_LINE}`,

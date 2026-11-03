@@ -1,7 +1,7 @@
 /**
  * The landing page's pricing, from the public GET /v1/billing/plans (C-049): §1.7 entitlements
- * from billing/plans.py and paid prices from Dodo. Read on the server and revalidated hourly (the
- * API caches Dodo's prices for an hour too). A price is never written here: when the API can't be
+ * from billing/plans.py and paid prices from Dodo. Read on the server and revalidated every five minutes (the
+ * API caches Dodo's prices for an hour). A price is never written here: when the API can't be
  * reached, or Dodo gave it no price, the page lists the plan's features and says the price is
  * shown at sign-up. While billing is off (C-172) a paid plan shows its planned price from one
  * constant (copy.ts PLANNED_PRICE_USD), labelled "when we launch"; that figure is never an offer
@@ -10,11 +10,17 @@
 import { z } from "zod";
 
 import type { EntitlementValue } from "@/lib/api/types";
-import { PLAN_NAME, formatPrice, plannedPriceLabel } from "@/lib/copy";
+import { planHighlights } from "@/lib/billing/plan";
+import { PLAN_NAME, formatPrice, plannedAmount, plannedPriceLabel } from "@/lib/copy";
 
 import table from "./plan-table.json";
 
-export const PLANS_REVALIDATE_SECONDS = 3600;
+/**
+ * C-173: five minutes, not an hour. The site builds before a release's API goes live, so a release
+ * that changed the plans showed the old limits beside the new prices for up to an hour. The segment
+ * `revalidate` on /pricing and the landing equals this (it must stay a literal there).
+ */
+export const PLANS_REVALIDATE_SECONDS = 300;
 const TIMEOUT_MS = 5000;
 
 type PlanName = "free" | "pro" | "max";
@@ -43,7 +49,7 @@ const PlanListBody = z.object({ items: z.array(Offer) });
 export type PlanOfferBody = z.infer<typeof Offer>;
 
 /**
- * GET /v1/billing/plans on the server, cached for an hour. Null when the API is unset, down, slow
+ * GET /v1/billing/plans on the server, cached for five minutes. Null when the API is unset, down, slow
  * (5 s), answers with an error or with a body that isn't a plan list.
  */
 export async function fetchPlans(
@@ -71,9 +77,9 @@ export type PlanCard = {
   plan: PlanName;
   name: string;
   tagline: string;
-  /** "$14" or "₹999" from Dodo through the API; null when there is none to show. */
+  /** "$15" or "₹999" from Dodo through the API; null when there is none to show. */
   price: string | null;
-  /** C-172: "$14 a month when we launch", for a paid plan that isn't on sale and has no real price. */
+  /** C-172: "$15 a month when we launch", for a paid plan that isn't on sale and has no real price. */
   planned: { amount: string; label: string } | null;
   /** The same price for structured data: a decimal amount and its ISO currency. */
   offer: { price: string; currency: string } | null;
@@ -88,7 +94,7 @@ export type Pricing = {
   source: "api" | "fallback";
   plans: PlanCard[];
   /** Monthly AI credits per plan, for the credits explainer. */
-  credits: { free: number | null; pro: number | null };
+  credits: { free: number | null; pro: number | null; max: number | null };
 };
 
 const TAGLINE: Record<PlanName, string> = {
@@ -100,97 +106,7 @@ const TAGLINE: Record<PlanName, string> = {
 /** C-172: the planned price shown while a paid plan isn't on sale. */
 function planned(plan: PlanName): PlanCard["planned"] {
   if (plan === "free") return null;
-  return { amount: plannedPriceLabel(plan).split(" ")[0], label: plannedPriceLabel(plan) };
-}
-
-const count = new Intl.NumberFormat("en-US");
-
-function plural(n: number, one: string, many: string): string {
-  return `${count.format(n)} ${n === 1 ? one : many}`;
-}
-
-type Line = (value: EntitlementValue["value"]) => string | null;
-
-/** Each §1.7 entitlement as a line on the plan card, in the product guide's order. */
-const LINES: { key: string; line: Line }[] = [
-  // C-172: Free counts channels in total; the paid plans count accounts per platform.
-  {
-    key: "channels_total",
-    line: (v) => (typeof v === "number" ? `${count.format(v)} channels in total, from Instagram, Facebook and web chat` : null),
-  },
-  {
-    key: "accounts_per_platform",
-    line: (v) =>
-      typeof v !== "number"
-        ? null
-        : v === 1
-          ? "1 Instagram, 1 WhatsApp, 1 Facebook and 1 web chat"
-          : `${count.format(v)} each of Instagram, WhatsApp and Facebook, and web chat`,
-  },
-  { key: "whatsapp", line: (v) => (v === false ? "No WhatsApp" : null) },
-  { key: "members", line: (v) => (typeof v === "number" ? plural(v, "team member", "team members") : null) },
-  {
-    key: "ai_modes",
-    line: (v) => (Array.isArray(v) ? (v.includes("auto") ? "AI replies: Off, Suggest and Auto" : "AI replies: Off and Suggest") : null),
-  },
-  { key: "ai_reply_automations", line: (v) => (v === true ? "AI replies inside automations" : null) },
-  { key: "ai_credits_monthly", line: (v) => (typeof v === "number" ? `${count.format(v)} AI credits a month` : null) },
-  {
-    key: "active_automations",
-    line: (v) => (v === null ? "Unlimited active automations" : typeof v === "number" ? plural(v, "active automation", "active automations") : null),
-  },
-  {
-    key: "knowledge_characters",
-    line: (v) => (typeof v === "number" ? `${count.format(v)} characters of knowledge` : null),
-  },
-  {
-    key: "scheduled_posts_monthly",
-    line: (v) => (v === null ? "Unlimited scheduled posts" : typeof v === "number" ? `${plural(v, "scheduled post", "scheduled posts")} a month` : null),
-  },
-  {
-    key: "pending_scheduled_messages",
-    line: (v) =>
-      v === null ? "Unlimited scheduled messages" : typeof v === "number" ? plural(v, "pending scheduled message", "pending scheduled messages") : null,
-  },
-  {
-    key: "message_history_days",
-    line: (v) => (v === null ? "Unlimited message history" : typeof v === "number" ? `${plural(v, "day", "days")} of message history` : null),
-  },
-  {
-    key: "comment_intelligence_posts",
-    line: (v) =>
-      v === null
-        ? "Comment analysis on all posts"
-        : typeof v === "number"
-          ? `Comment analysis on your ${plural(v, "latest post", "latest posts")} per account`
-          : null,
-  },
-  // C-168: what AI apps may do over MCP (ai_connections' highest level).
-  {
-    key: "ai_connections",
-    line: (v) =>
-      Array.isArray(v)
-        ? v.includes("full")
-          ? "Claude, ChatGPT and Codex, with scheduling (MCP)"
-          : v.includes("read_drafts")
-            ? "Read and draft from Claude, ChatGPT and Codex (MCP)"
-            : null
-        : null,
-  },
-  { key: "public_api", line: (v) => (v === true ? "API keys and the Zapier app" : null) },
-  { key: "sheets_sync", line: (v) => (v === true ? "Google Sheets sync" : null) },
-  { key: "commerce", line: (v) => (v === true ? "Product catalogue" : null) },
-];
-
-/** The plan card's feature lines from its entitlements; unknown keys are left out. */
-export function planFeatures(entitlements: EntitlementValue[]): string[] {
-  const channelsTotal = typeof entitlements.find((entry) => entry.key === "channels_total")?.value === "number";
-  return LINES.flatMap(({ key, line }) => {
-    if (key === "accounts_per_platform" && channelsTotal) return []; // the total says it for Free
-    const item = entitlements.find((entry) => entry.key === key);
-    const text = item ? line(item.value) : null;
-    return text ? [text] : [];
-  });
+  return { amount: plannedAmount(plan), label: plannedPriceLabel(plan) };
 }
 
 function numberOf(entitlements: EntitlementValue[], key: string): number | null {
@@ -230,7 +146,7 @@ function fallbackCard(plan: PlanName): PlanCard {
     planned: planned(plan),
     offer: null,
     trialDays: plan === "pro" ? FALLBACK_TRIAL_DAYS : 0,
-    features: planFeatures(FALLBACK_ENTITLEMENTS[plan]),
+    features: planHighlights(FALLBACK_ENTITLEMENTS[plan]),
     available: plan === "free",
   };
 }
@@ -257,7 +173,7 @@ function cardFrom(offer: PlanOfferBody): PlanCard {
     offer: price ? { price: decimalAmount(price.amount_minor, price.currency), currency: price.currency } : null,
     trialDays: offer.trial_days,
     // A paid plan lists what it will include even while it isn't on sale (C-149: no billing yet).
-    features: planFeatures(offer.entitlements),
+    features: planHighlights(offer.entitlements),
     available: offer.available,
   };
 }
@@ -273,12 +189,14 @@ export function buildPricing(offers: PlanOfferBody[] | null): Pricing {
       credits: {
         free: numberOf(FALLBACK_ENTITLEMENTS.free, "ai_credits_monthly"),
         pro: numberOf(FALLBACK_ENTITLEMENTS.pro, "ai_credits_monthly"),
+        max: numberOf(FALLBACK_ENTITLEMENTS.max, "ai_credits_monthly"),
       },
     };
   }
   const byPlan = new Map(offers.map((offer) => [offer.plan, offer]));
   const free = byPlan.get("free");
   const pro = byPlan.get("pro");
+  const max = byPlan.get("max");
   return {
     source: "api",
     plans: ORDER.map((plan) => {
@@ -288,6 +206,7 @@ export function buildPricing(offers: PlanOfferBody[] | null): Pricing {
     credits: {
       free: numberOf(free?.entitlements ?? FALLBACK_ENTITLEMENTS.free, "ai_credits_monthly"),
       pro: numberOf(pro?.entitlements ?? FALLBACK_ENTITLEMENTS.pro, "ai_credits_monthly"),
+      max: numberOf(max?.entitlements ?? FALLBACK_ENTITLEMENTS.max, "ai_credits_monthly"),
     },
   };
 }
