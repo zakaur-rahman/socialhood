@@ -27,7 +27,9 @@ on 2026-09-30:
 - create_portal_session: POST /customers/{customer_id}/customer-portal/session?return_url= ->
   {link}.
 - get_product_price: GET /products/{id} -> price {type: recurring_price, price (minor units),
-  currency, payment_frequency_interval (Month), trial_period_days}; cached for 1 h by the caller.
+  currency, payment_frequency_count, payment_frequency_interval, trial_period_days}; 1 Month is
+  monthly, 6 Month is six-monthly (C-174: from docs.dodopayments.com, not recorded from a live
+  call). The caller caches it for 1 h.
 
 Recorded test-mode responses (anonymised) are in tests/fixtures/dodo/.
 """
@@ -122,7 +124,7 @@ class ProductPrice:
     product_id: str
     amount_minor: int
     currency: str  # ISO 4217
-    interval: Literal["month"]
+    interval: Literal["month", "six_month"]
     trial_period_days: int = 0
 
 

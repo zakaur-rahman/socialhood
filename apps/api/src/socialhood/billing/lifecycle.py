@@ -436,7 +436,8 @@ async def apply_snapshot(
         if plan is None:
             return Applied(False, f"product {snapshot.product_id} is not a plan we sell")
         wanted = S.TRIALING if snapshot.in_trial(now) else S.ACTIVE
-        if sub.plan != plan or sub.status != wanted:
+        # The product too: Creator monthly to Creator six-month keeps the plan, not the price.
+        if sub.plan != plan or sub.status != wanted or sub.dodo_product_id != snapshot.product_id:
             await _grant(session, sub, snapshot, plan, "subscription.active", at=now)
         else:
             _period(sub, snapshot)

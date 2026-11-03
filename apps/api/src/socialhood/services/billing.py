@@ -37,11 +37,14 @@ from socialhood.billing.entitlements import allows, count_channels
 from socialhood.billing.plans import (
     ENTITLEMENTS,
     PAID_PLANS,
+    PERIODS,
     PLANS,
     TRIAL_DAYS,
     entitlement,
     is_available,
+    offer_for_product,
     product_for,
+    trial_days_for,
 )
 from socialhood.billing.usage import live_used, period_used
 from socialhood.errors import ApiError, FieldError
@@ -72,8 +75,8 @@ log = get_logger(__name__)
 
 PRICE_TTL_S = 3600  # TR-BIL-06: prices cached for 1 h
 PRICE_FAILURE_TTL_S = 60
-# Display names of the stored plan keys (C-172): pro is Creator, max is Business.
-PLAN_NAMES = {"free": "Free", "pro": "Creator", "max": "Business"}
+# Display names of the stored plan keys (C-172, C-174): pro is Creator, max is Business.
+PLAN_NAMES = {"free": "Free", "pro": "Creator", "max": "Business", "agency": "Agency"}
 DODO_UNAVAILABLE = "The payment provider didn't answer. Try again in a moment."
 NOT_CONFIGURED = "Payments aren't set up yet."
 FREE_PLAN = "You're on the Free plan."
@@ -130,17 +133,25 @@ async def _price(redis: Redis | None, dodo: DodoClient, product_id: str) -> Prod
 
 async def plan_prices(
     redis: Redis | None, dodo: DodoClient, settings: Settings
-) -> dict[str, BillingPrice]:
-    """Each paid plan's monthly price from its Dodo product, when Dodo gives one (none, and no
-    call to Dodo, while billing is off)."""
-    prices: dict[str, BillingPrice] = {}
+) -> dict[tuple[str, str], BillingPrice]:
+    """Each (plan, period) on sale and its price from the Dodo product, when Dodo gives one (none,
+    and no call to Dodo, while billing is off). A plan without its monthly product has none, and a
+    product that doesn't bill the way its setting says is left out, never sold as that period."""
+    prices: dict[tuple[str, str], BillingPrice] = {}
     if not settings.billing_enabled:
         return prices
     for plan in PAID_PLANS:
-        product = product_for(plan, settings)
-        price = await _price(redis, dodo, product) if product else None
-        if price is not None:
-            prices[plan] = BillingPrice(
+        if not is_available(plan, settings):
+            continue
+        for period in PERIODS:
+            product = product_for(plan, settings, period)
+            price = await _price(redis, dodo, product) if product else None
+            if price is None:
+                continue
+            if price.interval != period:
+                log.warning("dodo_product_wrong_period", plan=plan, period=period)
+                continue
+            prices[(plan, period)] = BillingPrice(
                 plan=plan,
                 amount_minor=price.amount_minor,
                 currency=price.currency,
@@ -158,7 +169,8 @@ async def plan_list(redis: Redis | None, dodo: DodoClient, settings: Settings) -
         items=[
             PlanOffer(
                 plan=plan,
-                price=prices.get(plan),
+                price=prices.get((plan, "month")),
+                six_month_price=prices.get((plan, "six_month")),
                 trial_days=TRIAL_DAYS[plan],
                 entitlements=entitlements_of(plan),
                 available=plan == "free" or (on_sale and is_available(plan, settings)),
@@ -176,12 +188,14 @@ async def billing_state(
     workspace: Workspace,
     *,
     now: datetime,
-    prices: dict[str, BillingPrice] | None = None,
+    prices: dict[tuple[str, str], BillingPrice] | None = None,
     billing_available: bool,
+    settings: Settings,
 ) -> BillingState:
     """The current workspace's billing state (its session's workspace scope)."""
     sub = await subscriptions.current(session)
     plan = sub.plan if sub is not None else Plan.FREE
+    bought = offer_for_product(sub.dodo_product_id, settings) if sub is not None else None
     credits = await quota(session, now=now)
     posts_used, posts_limit = await period_used(
         session, "scheduled_posts_monthly", today=now.date()
@@ -246,6 +260,7 @@ async def billing_state(
         grace_until=sub.grace_until if sub is not None else None,
         trial_eligible=not await workspaces.trial_used_by_owner(session, workspace),
         prices=list((prices or {}).values()),
+        current_price=(prices or {}).get(bought) if bought and plan != Plan.FREE else None,
         billing_available=billing_available,
         entitlements=entitlements_of(plan),
         usage=meters,
@@ -290,25 +305,30 @@ async def start_checkout(
     dodo: DodoClient,
     settings: Settings,
 ) -> CheckoutSession:
-    """TR-BIL-01: Dodo's hosted checkout for ``body.plan``. The return URL changes nothing by
-    itself (FR-BIL-02): the plan changes with Dodo's signed webhook."""
+    """TR-BIL-01: Dodo's hosted checkout for ``body.plan`` and ``body.period``. The return URL
+    changes nothing by itself (FR-BIL-02): the plan changes with Dodo's signed webhook."""
     require_billing(settings)
+    name = PLAN_NAMES.get(body.plan, body.plan.capitalize())
     if not is_available(body.plan, settings):
-        name = PLAN_NAMES.get(body.plan, body.plan.capitalize())
         raise ApiError(
             "validation_error",
             errors=[FieldError("plan", f"{name} isn't available yet.")],
+        )
+    if product_for(body.plan, settings, body.period) is None:
+        raise ApiError(
+            "validation_error",
+            errors=[FieldError("period", f"{name} isn't available every 6 months yet.")],
         )
     sub = await subscriptions.current(session)
     if sub is not None and sub.plan != Plan.FREE and sub.status in LIVE_STATUSES:
         raise ApiError(
             "conflict", "This workspace already has a paid plan. Change it in Manage billing."
         )
-    product = product_for(body.plan, settings)
+    product = product_for(body.plan, settings, body.period)
     if product is None:
         raise ApiError("service_unavailable", NOT_CONFIGURED)
     eligible = not await workspaces.trial_used_by_owner(session, ctx.workspace)
-    trial_days = TRIAL_DAYS[body.plan] if eligible else 0
+    trial_days = trial_days_for(body.plan, body.period) if eligible else 0
     params = CheckoutParams(
         product_id=product,
         customer_email=ctx.user.email,
@@ -324,7 +344,7 @@ async def start_checkout(
     except DodoError as error:
         log.warning("dodo_checkout_failed", status=error.status, retryable=error.retryable)
         raise ApiError("service_unavailable", DODO_UNAVAILABLE) from error
-    log.info("billing_checkout_started", plan=body.plan, trial=trial_days > 0)
+    log.info("billing_checkout_started", plan=body.plan, period=body.period, trial=trial_days > 0)
     return CheckoutSession(checkout_url=checkout.checkout_url, trial=trial_days > 0)
 
 
