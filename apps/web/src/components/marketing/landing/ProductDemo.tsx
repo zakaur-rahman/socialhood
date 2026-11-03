@@ -146,11 +146,7 @@ function MayaThread() {
               </p>
               <p className="pd-words" {...part("maya-words")}>
                 <b>AI draft: </b>
-                {DRAFT.split(" ").map((word, i) => (
-                  <span key={i} className="w" style={{ "--n": i } as CSSProperties}>
-                    {word}{" "}
-                  </span>
-                ))}
+                {DRAFT}
               </p>
             </div>
             <X className="pd-x size-3.5" aria-hidden />

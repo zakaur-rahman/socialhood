@@ -3174,8 +3174,6 @@ body:has(.site) {
       & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-slow) var(--ease), translate var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease); }
       & [data-live] .pd-row.on { translate: none; }
       & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-words { translate: none; }
-      & [data-live] .pd-words .w { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
-      & [data-live] .pd-words.on .w { opacity: 1; transition-delay: calc(var(--n) * var(--dur-stagger) * 2); }
       /* The pointer comes up from the composer to Send, and the click shows as one ring. */
       & [data-live] .pd-cursor { translate: -72px 72px; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-entrance) var(--ease); }
       & [data-live] .pd-cursor.on { translate: none; }

@@ -9597,8 +9597,7 @@ the first night band. One app window plays one story of about 21 s and rests unt
   shown in Auto), `ESCALATION_LABEL` ("Needs you: asked for a person"), `rowBadges` ("Auto replies").
 
 **Where the story simplifies the product, for the owner to check.**
-- **The draft's words appear one by one, as the brief asked and as How it works already does.** The app
-  doesn't stream: it shows "Drafting a reply…", then the whole draft. The demo shows that state first.
+- **The draft appears whole, as in the app:** "Drafting a reply…", then the full draft. The app doesn't stream.
 - **The comment card in the thread is the story's own.** In the app, comments live on the Comments page and
   the thread starts with the automation's message. It is the one piece of UI here the inbox doesn't have.
 - **There is no "Replied" label.** The row shows it the way the app does, with "You: " before the preview.
