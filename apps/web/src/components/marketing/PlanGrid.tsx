@@ -153,7 +153,7 @@ export function PlanGrid({ pricing }: { pricing: PricingData }) {
       {cards.some((card) => card.sixMonth) ? (
         <ToggleGroup
           aria-label="Billing period"
-          className="plan-period"
+          className="plan-period w-full sm:w-64"
           value={period}
           onValueChange={(value) => value && setPeriod(value as Period)}
         >

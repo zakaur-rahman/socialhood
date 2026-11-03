@@ -3051,7 +3051,9 @@ body:has(.site) {
 /* ==== C-174 ==== */
 /* The Monthly / 6 months switch above the plan cards. */
 @layer components {
-  .site .plan-period { display: inline-flex; width: fit-content; margin: var(--space-head) 0 0; }
+  .site .plan-period { margin: var(--space-head) 0 0; }
   .site .plan-period + .plans { margin-top: var(--space-6); }
+  /* Four plan columns: on a phone the table scrolls in its box rather than its chips touching. */
+  .site .ctable-box .ctable.mtable-l { min-width: 42rem; }
 }
 /* ==== end C-174 ==== */
