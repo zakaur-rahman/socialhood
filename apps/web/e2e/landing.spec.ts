@@ -164,6 +164,10 @@ test.describe("landing page", () => {
     await demo.locator("[data-demo]").scrollIntoViewIfNeeded();
     await expect(demo.locator("[data-demo][data-live]")).toHaveCount(1, { timeout: 15_000 });
     await expect(demo.locator(".pd-steps li.on")).toHaveCount(1);
+    // The platform filter changes the list, and the account Select comes with a platform that has two accounts.
+    await expect(demo.locator('[data-demo][data-strip="instagram"]')).toHaveCount(1, { timeout: 20_000 });
+    await expect(demo.locator('[data-row="nina"]')).not.toHaveClass(/\bon\b/);
+    await expect(demo.locator(".pd-acct")).toHaveCSS("opacity", "1");
     const toggle = demo.getByRole("button", { name: "Pause the example" });
     await expect(toggle).toBeVisible();
     await toggle.click();

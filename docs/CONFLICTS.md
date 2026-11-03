@@ -9578,44 +9578,69 @@ Step 1 of 2 (web only, no API or database change). Owner decisions, 2026-11-03:
 
 ## C-175 · Product demo
 
-The owner can't record a video yet and asked for a code-built demo on the landing page.
-`components/marketing/landing/ProductDemo.tsx`, right after the hero, on paper, so How it works stays
-the first night band. One app window plays one story of about 21 s and rests until 26 s before it loops
-(`productDemo` in `landing-motion.ts`). No new dependency or client island.
+The owner can't record a video yet and asked for a code-built demo on the landing page, then for a true
+replica of the inbox, with switching between platforms and accounts, scheduling, and more speed.
+`components/marketing/landing/ProductDemo.tsx`, right after the hero, on paper, so How it works stays the
+first night band. The story runs about 20 s and rests until 23 s before it loops (`productDemo` in
+`landing-motion.ts`). No new dependency or client island.
 
 **What each beat is checked against.**
-- A DM arrives: `ConversationRow` (avatar with `PlatformGlyph`, the 2 px selection bar). The empty pane
-  is the app's "Pick a conversation".
-- The AI reads it: `AnalysisChips` (intent and sentiment under the message), `rowBadges` ("Lead 72/100").
-- The draft: `SuggestionCard` ("AI draft:", "Drafting a reply…", "From: Price list", Draft again,
-  Insert, Send).
+- The frame: `AppSidebar` and `shell/nav.ts` (imported for the real labels and icons; expanded from 1280 px
+  and icons below, the app's inbox rule), `InboxShell`, `ListHeader` (`CHIP_VIEWS`, pinned by a test).
+- A DM arrives: `ConversationRow` (68 and 90 px rows, the selection bar), "Pick a conversation" (`lib/copy.ts`).
+- The AI reads and drafts: `AnalysisChips` (intent, sentiment, priority), `rowBadges` ("Lead 72/100"),
+  `SuggestionCard` ("Drafting a reply…", then the whole draft, "From: Menu", "5 drafts left", Draft again,
+  Insert, Send; `MAX_REGENERATIONS` is 5).
 - You stay in control: `SuggestionSlot` send, `MessageBubble` status icons, `previewPrefix` ("You: ").
+- Schedule a message: `Composer` (the clock is "Schedule message", it needs text), `SchedulePanel` ("Window
+  closes Tomorrow 17:26", Date, Time, "Times are in Asia/Kolkata.", Schedule), `checkSchedule` (18:30 is at
+  least 2 minutes away and 5 minutes before the window closes; 18:30 is also `defaultSchedule` at 17:26), the
+  toast "Scheduled for Today 18:30", `ScheduledChip` ("1 scheduled · Today 18:30"), the Scheduled tab's count and
+  `ScheduledCard` (Today 18:30, Scheduled, Edit, Cancel). A scheduled message is not in the thread until sent;
+  the chip above the composer is what the app shows there.
+- Switch platform and account: `PlatformStrip` (All and connected platforms, so no Facebook here), then
+  `ListHeader`'s account Select, which shows only on a platform with more than one account ("All accounts",
+  `@cafe_mumbai`, `@cafe_pune`); changing platform clears the account (`changePlatform`). Two accounts on one
+  platform need Business (`plans.py` `accounts_per_platform`: 1, 1, 3), and the caption under the frame says so.
 - A comment becomes a DM: `services/automations/actions.py` `opens_first` and the comment template's
-  `confirm_first=True` (the opening with one quick reply, the message after the tap), `MessageBubble`
-  ("Automation · …"), `previewPrefix` ("Automation: ").
+  `confirm_first=True`, `MessageBubble` ("Automation · …", the quick reply), `previewPrefix` ("Automation: ").
 - The tricky one: `ai/policy.py` and `escalationBanner` ("AI didn't reply: customer asked for a person",
-  shown in Auto), `ESCALATION_LABEL` ("Needs you: asked for a person"), `rowBadges` ("Auto replies").
+  shown in Auto), `ThreadHeader` ("Needs you: asked for a person"), `rowBadges` ("Auto replies").
+- A phone: `MobileNav`'s top bar, then the list or the conversation with its back arrow (`showList`,
+  `showThread`), the chips in one clipped row, and the toast at the top (`sonner.tsx`). A dot stands for a tap.
 
-**Where the story simplifies the product, for the owner to check.**
-- **The draft appears whole, as in the app:** "Drafting a reply…", then the full draft. The app doesn't stream.
+**Where it still differs from the app, for the owner to check.**
 - **The comment card in the thread is the story's own.** In the app, comments live on the Comments page and
   the thread starts with the automation's message. It is the one piece of UI here the inbox doesn't have.
-- **There is no "Replied" label.** The row shows it the way the app does, with "You: " before the preview.
-- Left out: the public comment reply and the follow nudge (both real, both optional), the disclosure line,
-  the details panel, Facebook (no mark in the story, so nothing to qualify), and the draft that Auto may
-  still hold under the escalation banner.
-- Sam's conversation is in Auto (Creator and Business), because the banner is Auto's; Maya's is in Suggest.
+- **Colours are the app's light theme** (`--app-*` in the block, the app's own tokens read at `:root`). A member
+  on dark, or on the app's frosted panels and grain, sees those instead.
+- **The list pane is 388 px wide at 1280 px and up,** so the strip's labels fit. The app's default is 320 px
+  (resizable, 260 to 560), where they truncate; below 1280 px the demo is 300 px and they truncate too. The
+  strip's segments size to their labels here; the app's share the width equally.
+- **Left out:** the details panel (the app opens it from 1440 px), the sidebar's credits meter, account card and
+  unread badge, Notifications, the Needs reply count, the date picker's calendar and the time list (the popover
+  shows the chosen values), the public comment reply and follow nudge, the disclosure line, and any draft Auto
+  may hold under its banner. The Select's menu is drawn wider than the app's 128 px trigger, as Radix does.
+- **Row heights:** Maya's row is 90 px from when it arrives; the app makes it 90 when the Lead badge appears.
+- **Before the tap,** ana.wears' window chip is hidden; the app would show the window's state then.
+- **Sam's conversation is in Auto (Creator and Business),** because the banner is Auto's; Maya's is in Suggest.
+- **The date in the popover is fixed** (Fri 6 Nov 2026), as it's made-up data.
+- **Not compared against a live screenshot:** the signed-in app needs a login, so this was built from the
+  components' classes and labels.
 
-**Rules kept.** Labelled "Example, with made-up data". One labelled picture for assistive tech
-(`role="img"`, like the hero's), with the steps as plain captions and no live region. `MotionToggle`
-outside the picture. Off screen, a hidden tab or the pause control stop the clock, and it resumes where it
-stopped. Only opacity and transforms move, and every part keeps its box.
-- **Judgment call:** no script or reduced motion shows the three conversations finished, one under the
-  other, so that frame is taller than the playing one. That's a CSS media query choice made before first
-  paint (`scripting`, `prefers-reduced-motion`), so it never shifts. Maya's draft and its sent reply both
-  show there, which the app wouldn't show at once, so that one still frame tells the whole beat.
-- The list slides rows by transform inside a fixed list; on a phone it is clipped to the one row that just
-  arrived. The window chip goes at 900 px and below, the AI mode badge and Draft again on a phone.
+**Faster.** Each old beat is about 30% quicker. To fit the new ones in about 20 s: "The AI reads it" and "drafts"
+are one caption, the draft appears whole (5087d4f2), and the rest went from 5.6 s to 2.8 s.
+
+**Rules kept.** Labelled "Example, with made-up data". One labelled picture for assistive tech (`role="img"`,
+like the hero's), with the steps as plain captions and no live region. `MotionToggle` outside the picture. Off
+screen, a hidden tab or the pause control stop the clock, and it resumes where it stopped. Only opacity and
+transforms move, and every part keeps its box.
+- **Judgment call:** no script or reduced motion shows everything finished, one thing under the other, so that
+  frame is taller than the playing one. That's a CSS media query choice made before first paint (`scripting`,
+  `prefers-reduced-motion`), so it never shifts. It shows the open account menu, the schedule popover and the
+  Scheduled card in flow, and Maya's draft with its sent reply, which the app wouldn't show at once.
+- The pointer's target is read when it's sent there (one `getBoundingClientRect` a beat, not in a frame). A
+  target with no box is skipped, so the same timeline serves the wide layout, where the back arrow is hidden.
 
 ### C-175 (pricing off the homepage)
 
