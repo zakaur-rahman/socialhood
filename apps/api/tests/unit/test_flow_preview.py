@@ -108,7 +108,7 @@ def test_exit_labels_follow_the_successors() -> None:
 
 
 def test_the_free_plan_caps_the_steps_and_every_plan_can_branch() -> None:
-    assert ENTITLEMENTS["flow_steps"] == {"free": 5, "pro": 50, "max": 50}
+    assert ENTITLEMENTS["flow_steps"] == {"free": 5, "pro": 50, "max": 50, "agency": 50}
     assert flow_store.step_cap("free") == 5
     five = flow(*[send(f"s{i}", next=f"s{i + 1}") for i in range(4)], send("s4"))
     flow_store.check_step_cap(five, "free")
