@@ -38,6 +38,7 @@ from socialhood.billing.plans import (
     ENTITLEMENTS,
     PAID_PLANS,
     PERIODS,
+    PLAN_NAMES,
     PLANS,
     TRIAL_DAYS,
     entitlement,
@@ -75,8 +76,6 @@ log = get_logger(__name__)
 
 PRICE_TTL_S = 3600  # TR-BIL-06: prices cached for 1 h
 PRICE_FAILURE_TTL_S = 60
-# Display names of the stored plan keys (C-172, C-174): pro is Creator, max is Business.
-PLAN_NAMES = {"free": "Free", "pro": "Creator", "max": "Business", "agency": "Agency"}
 DODO_UNAVAILABLE = "The payment provider didn't answer. Try again in a moment."
 NOT_CONFIGURED = "Payments aren't set up yet."
 FREE_PLAN = "You're on the Free plan."

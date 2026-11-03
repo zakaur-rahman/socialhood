@@ -19,6 +19,14 @@ if TYPE_CHECKING:
 
     from socialhood.settings import Settings
 
+# Display names of the stored plan keys (C-172, C-174): pro is Creator, max is Business.
+PLAN_NAMES: dict[str, str] = {
+    "free": "Free",
+    "pro": "Creator",
+    "max": "Business",
+    "agency": "Agency",
+}
+
 Plan = Literal["free", "pro", "max", "agency"]
 # Lowest to highest: lifecycle._rank reads a move down this order as a downgrade.
 PLANS: tuple[Plan, ...] = ("free", "pro", "max", "agency")

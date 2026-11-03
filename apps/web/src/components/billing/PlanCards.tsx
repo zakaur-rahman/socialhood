@@ -68,7 +68,8 @@ export function PlanCards({
   const mayPay = isOwner && canStartCheckout(billing);
   return (
     <div className="space-y-4">
-      {plans.data.items.some((offer) => sixMonthOffer(offer)) ? (
+      {/* Only once something six-month can really be bought; a switch that changes nothing just confuses. */}
+      {plans.data.items.some((offer) => sixMonthOffer(offer)?.planned === false) ? (
         <ToggleGroup
           aria-label="Billing period"
           className="sm:w-64"

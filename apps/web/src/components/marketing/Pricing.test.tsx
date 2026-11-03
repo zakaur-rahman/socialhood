@@ -117,16 +117,10 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
     expect(json).not.toMatch(/\b30\b|\b15\b/);
   });
 
-  it("C-174: the 6 months switch: planned prices while nothing is on sale, no trial, never in structured data", async () => {
-    const user = userEvent.setup();
+  it("C-174: no 6 months switch until something six-month is on sale, and never in structured data", () => {
     render(<Pricing pricing={buildPricing(null)} />);
     expect(card("Creator")).toHaveTextContent("$15 a month");
-    await user.click(screen.getByRole("radio", { name: "6 months" }));
-    expect(card("Creator")).toHaveTextContent("$81 every 6 months");
-    expect(card("Creator")).toHaveTextContent("($13.50 a month), save 10%. Planned price, when we launch.");
-    expect(card("Business")).toHaveTextContent("($25.50 a month), save 15%");
-    expect(card("Agency")).toHaveTextContent("$315 every 6 months");
-    expect(card("Agency")).toHaveTextContent("($52.50 a month), save 25%");
+    expect(screen.queryByRole("radio", { name: "6 months" })).not.toBeInTheDocument();
     expect(JSON.stringify(softwareApplicationJsonLd(buildPricing(null)))).not.toMatch(/81|153|315/);
   });
 
@@ -143,6 +137,9 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
     expect(card("Business")).toHaveTextContent("($26.67 a month), save 11%. Cancel anytime.");
     expect(card("Creator")).toHaveTextContent("₹999 a month");
     expect(card("Creator")).not.toHaveTextContent("every 6 months");
+    // Not on sale at all: the planned six-month price, labelled.
+    expect(card("Agency")).toHaveTextContent("$315 every 6 months");
+    expect(card("Agency")).toHaveTextContent("($52.50 a month), save 25%");
     expect(within(card("Creator")).getByText("7-day free trial")).toBeInTheDocument();
     expect(within(card("Creator")).getByRole("link", { name: "Start free, then try Creator" })).toBeInTheDocument();
   });

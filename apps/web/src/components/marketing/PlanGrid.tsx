@@ -150,7 +150,8 @@ export function PlanGrid({ pricing }: { pricing: PricingData }) {
   const proOnSale = cards.some((card) => card.plan === "pro" && card.available);
   return (
     <>
-      {cards.some((card) => card.sixMonth) ? (
+      {/* Only once something six-month can really be bought; a switch that changes nothing just confuses. */}
+      {cards.some((card) => card.sixMonth?.planned === false) ? (
         <ToggleGroup
           aria-label="Billing period"
           className="plan-period w-full sm:w-64"

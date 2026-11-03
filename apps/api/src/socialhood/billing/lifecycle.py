@@ -49,7 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.billing.dodo import DodoError, DodoSubscription
 from socialhood.billing.dodo_http import parse_datetime, parse_subscription
 from socialhood.billing.downgrade import DowngradeReport, apply_downgrade
-from socialhood.billing.plans import PLANS, plan_for_product
+from socialhood.billing.plans import PLAN_NAMES, PLANS, plan_for_product
 from socialhood.billing.usage import PERIOD_KEYS, anchor_day, apply_plan_limits
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.billing import PaymentStatus, Plan, Subscription, SubscriptionStatus
@@ -282,7 +282,7 @@ async def _notify(
     old_status: str,
     report: DowngradeReport | None,
 ) -> None:
-    name = sub.plan.capitalize()
+    name = PLAN_NAMES[sub.plan]
     sub_ref = sub.dodo_subscription_id or "none"
     was_live = old_plan != Plan.FREE and old_status in LIVE_STATUSES
     if (
@@ -328,7 +328,7 @@ async def _payment_problem(session: AsyncSession, sub: Subscription) -> None:
         type="payment_problem",
         severity="critical",
         title="Payment failed",
-        body=f"Update your payment method{grace} to keep {sub.plan.capitalize()}.",
+        body=f"Update your payment method{grace} to keep {PLAN_NAMES[sub.plan]}.",
         link=BILLING_LINK,
         dedupe_key=f"payment_problem:{sub.dodo_subscription_id}:{period}",
     )

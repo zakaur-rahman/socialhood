@@ -142,10 +142,21 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(posts("/billing/checkout")[0].body).toEqual({ plan: "agency", period: "six_month" });
   });
 
+  it("C-174: no 6 months switch until something six-month is on sale", async () => {
+    nav.search = "tab=billing";
+    setup();
+    await screen.findByRole("list", { name: "Plans" });
+    expect(screen.queryByRole("radio", { name: "6 months" })).not.toBeInTheDocument();
+  });
+
   it("C-174: under 6 months, a plan with no six-month product keeps its monthly price and trial button", async () => {
     const user = userEvent.setup();
     nav.search = "tab=billing";
-    setup(); // Creator on sale monthly only; Business and Agency aren't on sale
+    const list = planList({ businessOnSale: true });
+    const six = { plan: "max", amount_minor: 15_300, currency: "USD", interval: "six_month" };
+    // Only Business has a six-month product; Creator is monthly only and Agency isn't on sale.
+    const items = list.items.map((offer: { plan: string }) => (offer.plan === "max" ? { ...offer, six_month_price: six } : offer));
+    setup({ handlers: { "GET /v1/billing/plans": () => json({ ...list, items }) } });
     const plans = await screen.findByRole("list", { name: "Plans" });
     await user.click(screen.getByRole("radio", { name: "6 months" }));
 
