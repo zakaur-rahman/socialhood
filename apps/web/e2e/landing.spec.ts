@@ -84,7 +84,7 @@ test.describe("landing page", () => {
       expect(draft).toEqual({ background: "rgba(0, 0, 0, 0)", display: "block" });
 
       // Sections in order (C-157): a night band every two or three sections, Security early, the
-      // connections inside Features, the setup steps as the bridge into Pricing.
+      // connections inside Features, the setup steps before the FAQ (the plans are on /pricing).
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
@@ -97,7 +97,6 @@ test.describe("landing page", () => {
         "who-its-for",
         "features",
         "setup",
-        "pricing",
         "faq",
         "cta-title",
       ]);
@@ -338,17 +337,18 @@ test.describe("landing page", () => {
       expect(same(row.map((c) => c.status))).toBe(true);
     }
 
-    // Pricing: plan cards of one height, with their buttons and lists starting at one height.
-    await bring("section#pricing .plans");
-    expect(same(await bottoms("section#pricing .plan"))).toBe(true);
-    expect(same(await tops("section#pricing .plan > .btn"))).toBe(true);
-    expect(same(await tops("section#pricing .plan > .limits"))).toBe(true);
-
     // FAQ: the heading block stays in view beside the long list.
     await bring("section#faq");
     await page.evaluate(() => window.scrollTo(0, document.querySelector("#faq")!.getBoundingClientRect().top + window.scrollY + 240));
     const faqHead = await page.locator("section#faq .faq-head").evaluate((el) => el.getBoundingClientRect().top);
     expect(faqHead).toBeGreaterThan(0);
+
+    // Pricing has its own page: plan cards of one height, with their buttons and lists starting at one height.
+    await page.goto("/pricing");
+    await bring("section#pricing .plans");
+    expect(same(await bottoms("section#pricing .plan"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .btn"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .limits"))).toBe(true);
   });
 
   test("on a phone How it works plays once by itself, with a pause control", async ({ page }) => {

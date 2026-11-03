@@ -9616,3 +9616,11 @@ stopped. Only opacity and transforms move, and every part keeps its box.
   show there, which the app wouldn't show at once, so that one still frame tells the whole beat.
 - The list slides rows by transform inside a fixed list; on a phone it is clipped to the one row that just
   arrived. The window chip goes at 900 px and below, the AI mode badge and Draft again on a phone.
+
+### C-175 (pricing off the homepage)
+
+Owner: pricing has its own page, so the homepage no longer shows it. The plan list is still fetched, for the
+structured data's offers and the closer's trial perk. The rhythm holds: Security (night), Who it's for,
+Features, the setup steps (night), the FAQ, the closer (night), so a night band every two or three sections.
+Nothing on the page pointed down to pricing; the header's link goes to `/pricing`. `Pricing.tsx` is untouched
+(another branch is changing it), so its `headingLevel === 2` branch is unused for now.
