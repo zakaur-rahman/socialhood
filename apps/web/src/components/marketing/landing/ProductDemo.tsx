@@ -36,6 +36,7 @@ import type { Platform } from "@/lib/api/types";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 
 import { DEFAULT_KEYWORD, DM_SCRIPT, SOURCES } from "./data";
+import { LogoMark } from "../primitives";
 
 /*
  * C-175: a replica of the signed-in inbox, playing one story. Recreated as markup with the app's own
@@ -205,7 +206,7 @@ function Sidebar() {
   return (
     <div className="pd-side">
       <div className="pd-side-top">
-        <span className="pd-logo bg-shell-gradient" />
+        <LogoMark className="pd-logo" />
         <span className="pd-side-text pd-side-brand">
           <b>Amplychat</b>
           <small>Cafe</small>
@@ -611,7 +612,7 @@ export function ProductDemo() {
         <figure className="pd-stage" data-demo="" data-strip="all" data-acct="all" data-tab="chats" data-view="list">
           <div className="pd-win" data-ui="" role="img" aria-label={PRODUCT_DEMO_LABEL}>
             <div className="pd-topbar" aria-hidden>
-              <span className="pd-logo bg-shell-gradient" />
+              <LogoMark className="pd-logo" />
               <b>Inbox</b>
               <Menu className="size-5" />
             </div>
