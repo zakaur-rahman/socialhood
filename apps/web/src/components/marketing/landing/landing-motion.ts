@@ -17,6 +17,7 @@
  *   it holds; the keyword field changes what the automation listens for.
  * - Modes: the Off, Suggest and Auto switch.
  * - Your AI assistant (C-168): the example chat plays once as it scrolls in from below (aiApps).
+ * - A day in your inbox (C-175): one story loops while on screen, with a pause control (productDemo).
  *
  * With `prefers-reduced-motion: reduce` only the two controls work and the scenes stay as rendered.
  */
@@ -45,6 +46,7 @@ export function startLandingMotion(root: ParentNode = document): Cleanup {
   cleanups.push(modes(root, reduce));
   cleanups.push(comments(root, reduce));
   if (!reduce) {
+    cleanups.push(productDemo(root));
     cleanups.push(aiApps(root));
     cleanups.push(hero(root));
     cleanups.push(decide(root));
@@ -806,5 +808,136 @@ export function aiApps(root: ParentNode): Cleanup {
     delete stage.dataset.mhOk;
     button?.classList.remove("press");
     steps.forEach((el) => el.classList.remove("on"));
+  };
+}
+
+// ---------------------------------------------------------------- a day in your inbox (C-175)
+
+/** One moment of the story: ms from its start, the caption it lights, the parts it turns on and off, where rows move. */
+type DemoBeat = { at: number; step?: number; on?: string[]; off?: string[]; slots?: Record<string, number> };
+
+/** The story (ProductDemo.tsx), about 23 s, then a rest; the first beat is the scene's start. */
+export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
+  { at: 0, step: 0, on: ["pick", "row-nina", "row-visitor"], slots: { nina: 0, visitor: 1 } },
+  // 1. A DM arrives, and the row opens.
+  { at: 700, on: ["row-maya", "maya-row-q"], slots: { maya: 0, nina: 1, visitor: 2 } },
+  { at: 2000, on: ["sel-maya", "conv-maya"], off: ["pick"] },
+  // 2. The AI reads it.
+  { at: 3300, step: 1, on: ["maya-tags"] },
+  { at: 3900, on: ["maya-lead"] },
+  // 3. It drafts from your knowledge.
+  { at: 5100, step: 2, on: ["maya-bar", "maya-drafting"] },
+  { at: 6200, on: ["maya-words"], off: ["maya-drafting"] },
+  { at: 8100, on: ["maya-source"] },
+  // 4. You press Send.
+  { at: 9200, step: 3, on: ["maya-cursor"] },
+  { at: 10400, on: ["maya-click"] },
+  { at: 10700, on: ["maya-out", "maya-sending", "maya-row-you"], off: ["maya-bar", "maya-row-q"] },
+  { at: 11400, on: ["maya-sent"], off: ["maya-sending"] },
+  // 5. A comment becomes a DM: the opening with its button, their tap, then the link.
+  { at: 12800, step: 4, on: ["row-ana", "ana-row-open"], off: ["sel-maya"], slots: { ana: 0, maya: 1, nina: 2, visitor: 3 } },
+  { at: 13300, on: ["sel-ana", "conv-ana", "ana-comment"], off: ["conv-maya"] },
+  { at: 14500, on: ["ana-open"] },
+  { at: 16000, on: ["ana-tap"] },
+  { at: 17000, on: ["ana-link", "ana-row-link"], off: ["ana-row-open"] },
+  // 6. The tricky one comes to you.
+  { at: 18600, step: 5, on: ["row-sam"], off: ["sel-ana"], slots: { sam: 0, ana: 1, maya: 2, nina: 3, visitor: 4 } },
+  { at: 19200, on: ["sel-sam", "conv-sam", "sam-row-auto"], off: ["conv-ana"] },
+  { at: 20400, on: ["sam-banner", "sam-need", "sam-row-need", "need-count"] },
+  // The rest, before it loops.
+  { at: 26000 },
+];
+
+/**
+ * The inbox story (ProductDemo.tsx). The server drew its finished state; `data-live` (site.css) hides
+ * every named part in its own box, and the timeline turns them on, so nothing moves the layout. It
+ * runs while the scene is on screen, the tab is visible and the pause control isn't pressed, and picks
+ * up where it stopped. Not called with `prefers-reduced-motion: reduce`.
+ */
+export function productDemo(root: ParentNode): Cleanup {
+  const scene = root.querySelector<HTMLElement>("[data-demo]");
+  const scope = scene?.closest<HTMLElement>("[data-motion-scope]");
+  if (!scene || !scope) return () => {};
+  const stage = scene;
+  const parts = [...stage.querySelectorAll<HTMLElement>("[data-p]")];
+  const rows = [...stage.querySelectorAll<HTMLElement>("[data-row]")];
+  const homes = rows.map((row) => row.style.getPropertyValue("--slot"));
+  const steps = [...scope.querySelectorAll<HTMLElement>("[data-demo-steps] li")];
+  const control = bindMotionControl(scope);
+  let index = 0;
+  let clock = 0;
+  let resumedAt = 0;
+  let timer: number | undefined;
+  let armed = false;
+  let onScreen = false;
+
+  const toggle = (names: string[] | undefined, on: boolean) => {
+    for (const el of parts) if (names?.includes(el.dataset.p ?? "")) el.classList.toggle("on", on);
+  };
+  const apply = ({ step, on, off, slots }: DemoBeat) => {
+    toggle(off, false);
+    toggle(on, true);
+    for (const row of rows) {
+      const slot = slots?.[row.dataset.row ?? ""];
+      if (slot !== undefined) row.style.setProperty("--slot", String(slot));
+    }
+    if (step !== undefined) steps.forEach((el, i) => el.classList.toggle("on", i === step));
+  };
+  const begin = () => {
+    parts.forEach((el) => el.classList.remove("on"));
+    // A row not yet in the story waits at the top, ready to slide in.
+    rows.forEach((row) => row.style.setProperty("--slot", "0"));
+    apply(PRODUCT_DEMO_TIMELINE[0]);
+    index = 1;
+    clock = 0;
+  };
+  const run = () => {
+    if (timer !== undefined || !armed || !onScreen || document.hidden || control.paused) return;
+    resumedAt = performance.now();
+    timer = window.setTimeout(fire, Math.max(0, PRODUCT_DEMO_TIMELINE[index].at - clock));
+  };
+  const fire = () => {
+    timer = undefined;
+    const beat = PRODUCT_DEMO_TIMELINE[index];
+    clock = beat.at;
+    apply(beat);
+    index += 1;
+    if (index === PRODUCT_DEMO_TIMELINE.length) begin();
+    run();
+  };
+  const halt = () => {
+    if (timer === undefined) return;
+    window.clearTimeout(timer);
+    timer = undefined;
+    clock += performance.now() - resumedAt;
+  };
+  const unsubscribe = control.subscribe((paused) => (paused ? halt() : run()));
+  const onVisibility = () => (document.hidden ? halt() : run());
+  document.addEventListener("visibilitychange", onVisibility);
+  const observer = new IntersectionObserver(
+    (entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      if (!armed) {
+        armed = true;
+        stage.dataset.live = "";
+        begin();
+      }
+      if (onScreen) run();
+      else halt();
+    },
+    { threshold: 0.25 },
+  );
+  observer.observe(stage);
+
+  return () => {
+    observer.disconnect();
+    document.removeEventListener("visibilitychange", onVisibility);
+    halt();
+    unsubscribe();
+    control.destroy();
+    delete stage.dataset.live;
+    parts.forEach((el) => el.classList.remove("on"));
+    steps.forEach((el) => el.classList.remove("on"));
+    rows.forEach((row, i) => row.style.setProperty("--slot", homes[i]));
   };
 }

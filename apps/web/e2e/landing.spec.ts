@@ -88,6 +88,7 @@ test.describe("landing page", () => {
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
+        "product-demo",
         "how-it-works",
         "automations",
         "modes",
@@ -155,6 +156,23 @@ test.describe("landing page", () => {
     expect(await automations.locator("[data-comments] .cmt").allTextContents()).toEqual(count);
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("the product demo plays on screen, and its pause control stops it (C-175)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const demo = page.locator("section#product-demo");
+    await demo.locator("[data-demo]").scrollIntoViewIfNeeded();
+    await expect(demo.locator("[data-demo][data-live]")).toHaveCount(1, { timeout: 15_000 });
+    await expect(demo.locator(".pd-steps li.on")).toHaveCount(1);
+    const toggle = demo.getByRole("button", { name: "Pause the example" });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(demo).toHaveAttribute("data-motion-paused", "");
+    const shown = () => demo.locator("[data-p].on").count();
+    const count = await shown();
+    await page.waitForTimeout(2_500);
+    expect(await shown()).toBe(count);
   });
 
   test("the hero's scattered inbox sorts as the page scrolls, and the headline never moves (C-157 motion)", async ({ page }) => {

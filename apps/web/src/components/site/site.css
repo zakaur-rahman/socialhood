@@ -3047,3 +3047,160 @@ body:has(.site) {
   .site .need-more .tlink { display: inline; min-height: 0; }
 }
 /* ==== end C-173 plan cards ==== */
+
+/* ==== C-175 product demo ==== */
+/* The app window (ProductDemo.tsx): the list on the left, the conversation on the right, drawn with
+   the app's layout in the site's tokens. Every moving part keeps its box, so the frame's height is
+   fixed where it plays. With no script or reduced motion the conversations simply follow each other,
+   finished, and the frame takes their height. */
+@layer components {
+  .site .pd {
+    --pd-row: 86px;
+    --pd-body: calc(56px + 5 * var(--pd-row));
+    & .pd-stage { margin: var(--space-head) 0 0; min-width: 0; }
+    & .pd-win { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-xl); box-shadow: var(--shadow-panel); overflow: hidden; }
+    & .pd-body { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); }
+    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; margin-top: var(--space-3); }
+
+    /* ---- the list */
+    & .pd-list { border-right: 1px solid var(--rule-2); min-width: 0; }
+    & .pd-list-h { display: flex; align-items: center; gap: var(--space-1); height: 56px; padding: 0 var(--space-3); }
+    & .pd-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+    & .pd-chip-on { background: var(--ink); color: var(--on-ink); }
+    & .pd-chip b { font-weight: 600; color: var(--wait); }
+    & .pd-rows { position: relative; height: calc(5 * var(--pd-row)); margin: 0; padding: 0; list-style: none; overflow: hidden; }
+    & .pd-row {
+      position: absolute; inset: 0 0 auto; height: var(--pd-row); display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4);
+      transform: translateY(calc(var(--slot, 0) * var(--pd-row)));
+    }
+    & .pd-sel { position: absolute; inset: 0; background: var(--paper); }
+    & .pd-sel::before { content: ""; position: absolute; inset: var(--space-2) auto var(--space-2) 0; width: 2px; border-radius: 999px; background: var(--ink); }
+    & .pd-av { position: relative; flex: 0 0 40px; width: 40px; height: 40px; }
+    & .pd-mark { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; color: var(--on-ink); box-shadow: 0 0 0 2px var(--sheet); }
+    & .pd-mark svg { width: 10px; height: 10px; }
+    & .pd-row-main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    & .pd-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-label); }
+    & .pd-row-top b { font-weight: 600; color: var(--ink); }
+    & .pd-row-top time { font-size: var(--fs-micro); color: var(--ink-3); }
+    & .pd-swap { display: grid; min-width: 0; }
+    & .pd-swap > * { grid-area: 1 / 1; min-width: 0; }
+    & .pd-row-text { font-size: var(--fs-label); color: var(--ink-2); }
+    & .pd-row-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    & .pd-badges { display: flex; gap: var(--space-1); margin-top: 2px; }
+    & .pd-badges .tag { height: 20px; }
+
+    /* ---- the conversation */
+    & .pd-panes { position: relative; min-width: 0; background: var(--paper); }
+    & .pd-pick { display: grid; place-items: center; margin: 0; font-size: var(--fs-label); color: var(--ink-3); }
+    & .pd-conv { display: flex; flex-direction: column; min-width: 0; height: var(--pd-body); }
+    & .pd-head { display: flex; align-items: center; gap: var(--space-3); height: 64px; flex: none; padding: 0 var(--space-4); background: var(--sheet); border-bottom: 1px solid var(--rule-2); }
+    & .pd-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    & .pd-who-top { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+    & .pd-who-top b { font-size: var(--fs-body-sm); font-weight: 600; color: var(--ink); white-space: nowrap; }
+    & .pd-id { display: flex; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); color: var(--ink-3); white-space: nowrap; }
+    & .pd-glyph { width: 12px; height: 12px; flex: none; }
+    & .pd-c-instagram { color: var(--ig); }
+    & .pd-c-whatsapp { color: var(--wa); }
+    & .pd-mode { flex: none; }
+    & .pd-log { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-3); padding: var(--space-4); }
+    & .pd-log p { margin: 0; }
+    & .pd-in { align-self: flex-start; max-width: 85%; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+    & .pd-out { justify-self: end; align-self: flex-end; max-width: 85%; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+    & .pd-bub { padding: var(--space-2) var(--space-3); border-radius: var(--r-lg); font-size: var(--fs-label); line-height: 1.5; }
+    & .pd-in .pd-bub { background: var(--sheet); border: 1px solid var(--rule-2); border-bottom-left-radius: var(--r-xs); color: var(--ink); }
+    & .pd-out .pd-bub { background: var(--ink); border-bottom-right-radius: var(--r-xs); color: var(--on-ink); }
+    & .pd-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+    & .pd-dot { width: 6px; height: 6px; margin-right: var(--space-1); border-radius: 50%; background: var(--ink-3); }
+    & .pd-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); color: var(--ink-3); }
+    & .pd-by { display: inline-flex; align-items: center; gap: 2px; margin-left: var(--space-1); font-weight: 500; color: var(--iris-ink); }
+    & .pd-status { width: 14px; height: 14px; }
+    & .pd-quick { display: block; width: fit-content; margin-top: var(--space-2); padding: 2px var(--space-3); border: 1px solid var(--on-ink); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; }
+    & .pd-url { display: block; margin-top: var(--space-1); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+    & .pd-comment { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); align-self: stretch; padding: var(--space-2) var(--space-3); border: 1px solid var(--rule-2); border-radius: var(--r-md); background: var(--sheet); font-size: var(--fs-caption); color: var(--ink-3); }
+    & .pd-comment b { font-weight: 600; color: var(--ink); }
+    & .pd-comment mark { padding: 0 var(--space-1); border-radius: var(--r-xs); background: var(--iris-soft); color: var(--iris-ink); font-weight: 600; }
+    & .pd-banner { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--r-md); background: var(--wait-soft); color: var(--wait); font-size: var(--fs-label); font-weight: 500; }
+    & .pd-banner svg { flex: none; }
+
+    /* The suggestion bar (components/ai/SuggestionCard.tsx). */
+    & .pd-bar { padding: var(--space-2) var(--space-3); border: 1px solid var(--iris-wash-line); border-radius: var(--r-md); background: var(--iris-mist); }
+    & .pd-bar-top { display: flex; align-items: flex-start; gap: var(--space-2); }
+    & .pd-spark { flex: none; margin-top: 3px; color: var(--iris-ink); }
+    & .pd-x { flex: none; margin-top: 3px; color: var(--ink-3); }
+    & .pd-draft { flex: 1; font-size: var(--fs-label); line-height: 1.5; color: var(--ink); }
+    & .pd-draft b { font-weight: 500; color: var(--iris-ink); }
+    & .pd-drafting { color: var(--ink-3); }
+    & .pd-bar-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding-left: var(--space-5); }
+    & .pd-acts { display: flex; align-items: center; gap: var(--space-1); margin-left: auto; }
+    & .pd-act { position: relative; display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-2); border-radius: var(--r-sm); font-size: var(--fs-micro); font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+    & .pd-act-line { background: var(--sheet); border: 1px solid var(--rule); }
+    & .pd-act-main { background: var(--ink); color: var(--on-ink); }
+    & .pd-cursor { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; color: var(--ink); fill: var(--sheet); filter: drop-shadow(0 1px 2px var(--ink-strike)); }
+    & .pd-click { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; margin: -14px; border-radius: 50%; background: var(--iris-hit); }
+
+    /* The composer. */
+    & .pd-composer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex: none; margin: 0 var(--space-4) var(--space-4); height: 44px; padding: 0 var(--space-2) 0 var(--space-3); border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--sheet); font-size: var(--fs-label); color: var(--ink-3); }
+    & .pd-send-empty { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-2); border-radius: var(--r-sm); background: var(--paper-2); font-size: var(--fs-micro); font-weight: 500; }
+
+    /* ---- the captions: plain text; the current one takes the ink and the rule above it */
+    & .pd-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-5) 0 0; padding: 0; list-style: none; }
+    & .pd-steps li { padding-top: var(--space-2); border-top: 2px solid var(--rule); font-size: var(--fs-label); line-height: var(--lh-label); color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+    & .pd-steps li.on { border-color: var(--iris); color: var(--ink); font-weight: 500; }
+
+    /* ---- no script or reduced motion: everything finished, one conversation under the other */
+    @media (scripting: none), (prefers-reduced-motion: reduce) {
+      & .pd-before { display: none; }
+      & .pd-conv { height: auto; }
+      & .pd-conv + .pd-conv { border-top: 1px solid var(--rule); }
+      & .pd-log { justify-content: flex-start; }
+      & .pd-cell { display: flex; flex-direction: column; gap: var(--space-3); }
+    }
+
+    /* ---- where it plays: the frame holds one size, the parts share their boxes */
+    @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+      & .pd-body { height: var(--pd-body); }
+      & .pd-panes { display: grid; }
+      & .pd-panes > * { grid-area: 1 / 1; min-width: 0; }
+      & .pd-cell { display: grid; align-items: end; }
+      & .pd-cell > * { grid-area: 1 / 1; min-width: 0; }
+
+      /* Before the script arrives: the finished Maya conversation, the rest waiting in their boxes. */
+      & .pd-before, & .pd-conv:not(.pd-first), & .pd-bar { opacity: 0; }
+
+      /* The script owns every part from here: off until the timeline turns it on. */
+      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-slow) var(--ease), translate var(--dur-slow) var(--ease); }
+      & [data-live] [data-p].on { opacity: 1; translate: none; }
+      & [data-live] .pd-conv { translate: none; transition-duration: var(--dur-fast); }
+      & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-slow) var(--ease), translate var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease); }
+      & [data-live] .pd-row.on { translate: none; }
+      & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-words { translate: none; }
+      & [data-live] .pd-words .w { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+      & [data-live] .pd-words.on .w { opacity: 1; transition-delay: calc(var(--n) * var(--dur-stagger) * 2); }
+      /* The pointer comes up from the composer to Send, and the click shows as one ring. */
+      & [data-live] .pd-cursor { translate: -72px 72px; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-entrance) var(--ease); }
+      & [data-live] .pd-cursor.on { translate: none; }
+      & [data-live] .pd-click { translate: none; transform: scale(var(--scale-medium)); transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+      & [data-live] .pd-click.on { transform: none; }
+      & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-entrance) var(--ease-swap) infinite alternate; }
+    }
+
+    /* ---- a phone: the conversation, and the list collapsed to the row that just arrived */
+    @media (width <= 760px) { /* site-nav */
+      --pd-row: 92px;
+      & .pd-body { grid-template-columns: minmax(0, 1fr); }
+      & .pd-list { border-right: 0; border-bottom: 1px solid var(--rule-2); }
+      & .pd-list-h, & .pd-act-far, & .pd-window, & .pd-mode { display: none; }
+      & .pd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      & .pd-who-top { flex-wrap: wrap; column-gap: var(--space-2); }
+      & .pd-who-top .tag { height: 20px; }
+      & .pd-head { height: 72px; }
+      @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+        --pd-body: 500px;
+        & .pd-body { height: calc(var(--pd-row) + var(--pd-body)); }
+        & .pd-rows { height: var(--pd-row); }
+      }
+    }
+  }
+}
+@keyframes pd-shimmer { from { opacity: 0.45; } to { opacity: 1; } }
+/* ==== end C-175 product demo ==== */

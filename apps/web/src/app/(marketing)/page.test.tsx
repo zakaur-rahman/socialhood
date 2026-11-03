@@ -48,6 +48,7 @@ describe("the landing page", () => {
     expect(h1).toHaveAccessibleName(HERO_TITLE);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "See a day in your inbox",
       "AI replies from your own knowledge",
       "Comment LINK, get the link in a DM",
       "Off, Suggest or Auto, for each account",
@@ -62,8 +63,10 @@ describe("the landing page", () => {
     ]);
     // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
     // C-168: the AI assistant band (MCP) is paper, between Modes and Security, so the paper run there is three.
+    // C-175: the product demo is paper, between the hero and How it works, the first night band.
     expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
       "hero",
+      "product-demo",
       "how-it-works",
       "automations",
       "modes",
