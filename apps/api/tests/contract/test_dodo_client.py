@@ -227,6 +227,32 @@ async def test_the_product_price_is_the_monthly_recurring_price(dodo: HttpDodoCl
 
 
 @respx.mock
+async def test_the_product_price_reads_a_six_month_product(dodo: HttpDodoClient) -> None:
+    """C-174: payment_frequency_count 6, "Month". Shaped from Dodo's docs, not a live call."""
+    product = fixture("product_pro_six_month.json")
+    respx.get(f"{BASE}/products/{PRO}").mock(return_value=httpx.Response(200, json=product))
+    price = await dodo.get_product_price(PRO)
+    assert (price.amount_minor, price.currency) == (8100, "USD")
+    assert (price.interval, price.trial_period_days) == ("six_month", 0)
+
+
+@respx.mock
+@pytest.mark.parametrize(("count", "unit"), [(3, "Month"), (12, "Month"), (6, "Week"), (1, "Year")])
+async def test_any_other_billing_cycle_is_refused(
+    dodo: HttpDodoClient, count: int, unit: str
+) -> None:
+    product = fixture("product_pro.json")
+    product["price"] = {
+        **product["price"],
+        "payment_frequency_count": count,
+        "payment_frequency_interval": unit,
+    }
+    respx.get(f"{BASE}/products/{PRO}").mock(return_value=httpx.Response(200, json=product))
+    with pytest.raises(DodoError, match="six-monthly"):
+        await dodo.get_product_price(PRO)
+
+
+@respx.mock
 async def test_a_yearly_price_is_refused(dodo: HttpDodoClient) -> None:
     product = fixture("product_pro.json")
     product["price"] = {**product["price"], "payment_frequency_interval": "Year"}

@@ -47,10 +47,9 @@ import {
   canStartCheckout,
   meterViews,
   planStatus,
-  priceOf,
   type MeterView,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, PRICE_TAX_NOTE, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { PLAN_NAME, PRICE_TAX_NOTE, billingCopy, limitText, planIncludes, pricePerPeriod } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -234,7 +233,7 @@ function CurrentPlan({
   const name = PLAN_NAME[billing.plan];
   const periodEnd = billing.status === "trialing" ? (billing.trial_ends_at ?? billing.current_period_end) : billing.current_period_end;
   const endsOn = periodEnd ? billingDate(periodEnd, workspace.timezone) : null;
-  const price = priceOf(billing.plan, billing);
+  const price = billing.current_price;
   const mayCheckout = canStartCheckout(billing);
   // C-149: a Free workspace on a server without billing is told why there's no upgrade.
   const notOnSale = canCheckout(billing) && !billingOpen(billing);
@@ -342,7 +341,7 @@ function CurrentPlan({
               <AlertDialogHeader>
                 <AlertDialogTitle>Resume {name}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {`${name} renews${endsOn ? ` on ${endsOn}` : ""}${price ? ` at ${pricePerMonth(price)}` : ""}, and the workspace keeps its limits.`}
+                  {`${name} renews${endsOn ? ` on ${endsOn}` : ""}${price ? ` at ${pricePerPeriod(price)}` : ""}, and the workspace keeps its limits.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

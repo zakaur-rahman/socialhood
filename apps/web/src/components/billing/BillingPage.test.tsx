@@ -36,7 +36,7 @@ const free = billingState({
   ],
 });
 
-const pro = billingState({ current_period_end: "2026-10-31T18:30:00Z", prices: [inr] });
+const pro = billingState({ current_period_end: "2026-10-31T18:30:00Z", prices: [inr], current_price: inr });
 
 function setup({
   billing = free,
@@ -114,7 +114,78 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
 
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
-    expect(posts("/billing/checkout")[0].body).toEqual({ plan: "pro" });
+    expect(posts("/billing/checkout")[0].body).toEqual({ plan: "pro", period: "month" });
+  });
+
+  it("C-174: the 6 months switch shows the total and monthly equivalent, and checks out that period with no trial", async () => {
+    const user = userEvent.setup();
+    const assign = vi.spyOn(browser, "assign").mockImplementation(() => undefined);
+    nav.search = "tab=billing";
+    const { posts } = setup({
+      handlers: { "GET /v1/billing/plans": () => json(planList({ sixMonth: true, businessOnSale: true, agencyOnSale: true })) },
+    });
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    await user.click(screen.getByRole("radio", { name: "6 months" }));
+
+    const creator = within(plans).getByTestId("plan-pro");
+    expect(creator).toHaveTextContent("$81 every 6 months");
+    expect(creator).toHaveTextContent("($13.50 a month)");
+    expect(within(creator).queryByRole("button", { name: /trial/i })).not.toBeInTheDocument();
+    const agency = within(plans).getByTestId("plan-agency");
+    expect(agency).toHaveTextContent("$315 every 6 months");
+    expect(agency).toHaveTextContent("($52.50 a month), save 25%");
+    expect(agency).not.toHaveTextContent("Coming soon");
+    expect(within(agency).queryByRole("link", { name: "Contact us" })).not.toBeInTheDocument();
+
+    await user.click(within(agency).getByRole("button", { name: "Upgrade to Agency" }));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(posts("/billing/checkout")[0].body).toEqual({ plan: "agency", period: "six_month" });
+  });
+
+  it("C-174: no 6 months switch until something six-month is on sale", async () => {
+    nav.search = "tab=billing";
+    setup();
+    await screen.findByRole("list", { name: "Plans" });
+    expect(screen.queryByRole("radio", { name: "6 months" })).not.toBeInTheDocument();
+  });
+
+  it("C-174: under 6 months, a plan with no six-month product keeps its monthly price and trial button", async () => {
+    const user = userEvent.setup();
+    nav.search = "tab=billing";
+    const list = planList({ businessOnSale: true });
+    const six = { plan: "max", amount_minor: 15_300, currency: "USD", interval: "six_month" };
+    // Only Business has a six-month product; Creator is monthly only and Agency isn't on sale.
+    const items = list.items.map((offer: { plan: string }) => (offer.plan === "max" ? { ...offer, six_month_price: six } : offer));
+    setup({ handlers: { "GET /v1/billing/plans": () => json({ ...list, items }) } });
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    await user.click(screen.getByRole("radio", { name: "6 months" }));
+
+    const creator = within(plans).getByTestId("plan-pro");
+    expect(creator).toHaveTextContent("₹999 a month");
+    expect(creator).not.toHaveTextContent("every 6 months");
+    expect(within(creator).getByRole("button", { name: "Start 7-day trial" })).toBeInTheDocument();
+    // Not on sale: the planned six-month price, labelled, with no way to buy it.
+    const agency = within(plans).getByTestId("plan-agency");
+    expect(agency).toHaveTextContent("$315 every 6 months");
+    expect(agency).toHaveTextContent("when we launch");
+    expect(within(agency).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(agency).getByRole("link", { name: "Contact us" })).toBeInTheDocument();
+  });
+
+  it("C-174: the current plan shows what was bought; a reset date stays monthly on six-month billing", async () => {
+    const six = { plan: "pro" as const, amount_minor: 8100, currency: "USD", interval: "six_month" as const };
+    setup({
+      billing: billingState({
+        current_period_end: "2027-04-30T18:30:00Z",
+        prices: [inr, six],
+        current_price: six,
+        usage: [{ metric: "ai_credits", used: 120, limit: 1500, period_end: "2026-11-01" }],
+      }),
+    });
+    const current = await screen.findByRole("region", { name: "Creator" });
+    expect(current).toHaveTextContent("$81 every 6 months");
+    expect(current).not.toHaveTextContent("₹999");
+    expect(screen.getByText("Resets on 1 Nov")).toBeInTheDocument();
   });
 
   it("C-149: without billing on the server, Free says paid plans aren't on sale and offers no checkout", async () => {

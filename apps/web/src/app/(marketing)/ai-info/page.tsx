@@ -64,13 +64,13 @@ const CLAIMS = [
 /** /ai-info (C-156): a plain fact sheet for AI assistants; llms.txt points here. C-159: fact cards. */
 export default async function AiInfoPage() {
   const pricing = buildPricing(await fetchPlans());
-  const card = (plan: "free" | "pro" | "max") => pricing.plans.find((item) => item.plan === plan);
+  const card = (plan: "free" | "pro" | "max" | "agency") => pricing.plans.find((item) => item.plan === plan);
   const plans = [
     {
       plan: "free" as const,
       body: (
         <>
-          2 channels in total from Instagram, Facebook and website chat (no WhatsApp), 1 seat, 3 active automations, 200 AI
+          Any 2 of Instagram, Facebook or website chat (no WhatsApp), 1 seat, 3 active automations, 200 AI
           credits a month, 10 scheduled posts a month, AI suggestions only (no Auto mode), 200K characters of knowledge, 90
           days of message history, and MCP with reading and drafts.
         </>
@@ -92,7 +92,9 @@ export default async function AiInfoPage() {
         <>
           3 each of Instagram, WhatsApp and Facebook, 3 team members, 50 active automations, 5,000 AI credits a month, 300
           scheduled posts a month, 5M characters of knowledge, and everything in Creator plus API keys, Zapier and the public
-          API. Agency is for agencies and people managing several brands. It is not on sale yet: contact us.
+          API. Agency is for agencies and people managing several brands: 10 each of Instagram, WhatsApp and Facebook, 10 team
+          members, unlimited automations and scheduled posts, 12,000 AI credits a month and 50M characters of knowledge.{" "}
+          {card("agency")?.available ? "It is on our pricing page." : "It is not on sale yet: contact us."}
         </>
       ),
     },

@@ -6,7 +6,7 @@ import { MATRIX, NOT_SHOWN, PLAN_TABLE_KEYS, TRIAL_DAYS, rowCell, type PlanKey }
 import table from "./plan-table.json";
 import { FALLBACK_ENTITLEMENTS } from "./plans";
 
-const PLANS: PlanKey[] = ["free", "pro", "max"];
+const PLANS: PlanKey[] = ["free", "pro", "max", "agency"];
 const rows = MATRIX.flatMap((group) => group.rows);
 const row = (key: string) => {
   const found = rows.find((entry) => entry.key === key);
@@ -23,40 +23,40 @@ describe("the pricing page's plan table (GR-37)", () => {
     expect(rows.length).toBe(shown.size);
   });
 
-  it("is the file the API's unit test checks against plans.py: three plans and the trial", () => {
-    expect(table.plans).toEqual(["free", "pro", "max"]);
-    expect(TRIAL_DAYS).toEqual({ free: 0, pro: 7, max: 0 });
+  it("is the file the API's unit test checks against plans.py: four plans and the trial", () => {
+    expect(table.plans).toEqual(["free", "pro", "max", "agency"]);
+    expect(TRIAL_DAYS).toEqual({ free: 0, pro: 7, max: 0, agency: 0 });
     // The landing page's offline fallback reads the same file, so it can't drift either.
     expect(FALLBACK_ENTITLEMENTS.pro.find((entry) => entry.key === "members")?.value).toBe(table.entitlements.members.pro);
   });
 
   it("words the owner's decisions: seats (PD-1), broadcasts (PD-4), API and Sheets (PD-6), widget (PD-7), commerce (PD-8)", () => {
-    expect(cells("members")).toEqual(["1", "2", "3"]);
-    expect(cells("broadcast_recipients_monthly")).toEqual(["Not included", "2,500", "2,500"]);
-    expect(cells("public_api")).toEqual(["Not included", "Not included", "Included"]);
-    expect(cells("sheets_sync")).toEqual(["Not included", "Included", "Included"]);
-    expect(cells("widget_remove_branding")).toEqual(["Not included", "Included", "Included"]);
-    expect(cells("commerce")).toEqual(["Not included", "Included", "Included"]);
+    expect(cells("members")).toEqual(["1", "2", "3", "10"]);
+    expect(cells("broadcast_recipients_monthly")).toEqual(["Not included", "2,500", "2,500", "25,000"]);
+    expect(cells("public_api")).toEqual(["Not included", "Not included", "Included", "Included"]);
+    expect(cells("sheets_sync")).toEqual(["Not included", "Included", "Included", "Included"]);
+    expect(cells("widget_remove_branding")).toEqual(["Not included", "Included", "Included", "Included"]);
+    expect(cells("commerce")).toEqual(["Not included", "Included", "Included", "Included"]);
     expect(rowCell(row("catalogue_products"), "free")).toBe("Not included");
   });
 
   it("C-172: channels in total and WhatsApp (Free 2 and none; Creator and Business per platform with WhatsApp)", () => {
-    expect(cells("channels_total")).toEqual(["2", "Per platform", "Per platform"]);
-    expect(cells("whatsapp")).toEqual(["Not included", "Included", "Included"]);
-    expect(cells("accounts_per_platform")).toEqual(["1", "1", "3"]);
+    expect(cells("channels_total")).toEqual(["2", "Per platform", "Per platform", "Per platform"]);
+    expect(cells("whatsapp")).toEqual(["Not included", "Included", "Included", "Included"]);
+    expect(cells("accounts_per_platform")).toEqual(["1", "1", "3", "10"]);
     expect(cells("public_api")[1]).toBe("Not included"); // Creator has no API keys or Zapier
     expect(cells("public_api")[2]).toBe("Included"); // Business does
   });
 
   it("reads unlimited, days, modes and analysed posts in plain words", () => {
-    expect(cells("active_automations")).toEqual(["3", "25", "50"]);
-    expect(cells("comment_intelligence_posts")).toEqual(["Latest 5", "All posts", "All posts"]);
-    expect(cells("message_history_days")).toEqual(["90 days", "Unlimited", "Unlimited"]);
-    expect(cells("ai_modes")).toEqual(["Off, Suggest", "Off, Suggest, Auto", "Off, Suggest, Auto"]);
+    expect(cells("active_automations")).toEqual(["3", "25", "50", "Unlimited"]);
+    expect(cells("comment_intelligence_posts")).toEqual(["Latest 5", "All posts", "All posts", "All posts"]);
+    expect(cells("message_history_days")).toEqual(["90 days", "Unlimited", "Unlimited", "Unlimited"]);
+    expect(cells("ai_modes")).toEqual(["Off, Suggest", "Off, Suggest, Auto", "Off, Suggest, Auto", "Off, Suggest, Auto"]);
   });
 
   it("C-168: shows what AI apps may do on each plan, and keeps their daily caps for /developers/mcp", () => {
-    expect(cells("ai_connections")).toEqual(["Read and drafts", "Full", "Full"]);
+    expect(cells("ai_connections")).toEqual(["Read and drafts", "Full", "Full", "Full"]);
     expect(row("ai_connections").label).toBe("Connect Claude, ChatGPT and Codex (MCP)");
     expect(row("ai_connections").note).toMatch(/never send messages/);
     expect(NOT_SHOWN).not.toContain("ai_connections");

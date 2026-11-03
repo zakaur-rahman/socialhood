@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from socialhood.settings import REQUIRED_IN_PRODUCTION, ConfigurationError, Settings
+from socialhood.settings import (
+    BILLING_SETTINGS,
+    REQUIRED_IN_PRODUCTION,
+    ConfigurationError,
+    Settings,
+)
 
 BASE = {
     "database_url": "postgresql+asyncpg://u:p@db/x",
@@ -93,6 +98,22 @@ def test_production_with_every_dodo_setting_has_billing() -> None:
     values = complete_production()
     values.update({name: "x" for name in BILLING})
     assert make(**values).billing_enabled
+
+
+def test_the_six_month_and_agency_products_are_optional() -> None:
+    """C-174: production keeps starting and selling with only today's values."""
+    values = complete_production()
+    values.update({name: "x" for name in BILLING})
+    settings = make(**values)
+    assert settings.billing_enabled
+    for name in (
+        "dodo_product_pro_six_month",
+        "dodo_product_max_six_month",
+        "dodo_product_agency_monthly",
+        "dodo_product_agency_six_month",
+    ):
+        assert getattr(settings, name) is None
+        assert name not in BILLING_SETTINGS
 
 
 @pytest.mark.parametrize("missing", BILLING)

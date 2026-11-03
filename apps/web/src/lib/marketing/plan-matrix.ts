@@ -1,6 +1,6 @@
 /**
  * The pricing page's comparison table (GR-37): every plan limit in billing/plans.py, grouped and
- * worded for a visitor (C-172: Free, Creator and Business; Agency is a card on the pricing page, not a column). The numbers are never typed here. They come from plan-table.json, which is
+ * worded for a visitor (C-174: Free, Creator, Business and Agency). The numbers are never typed here. They come from plan-table.json, which is
  * exported from the API's ENTITLEMENTS and checked against it by tests/unit/test_marketing_plan_table.py,
  * and plan-matrix.test.ts checks that every entitlement in the file has a row below (or is left out
  * on purpose), so a new limit can't ship without the page deciding how to say it.
@@ -11,8 +11,8 @@
  */
 import table from "./plan-table.json";
 
-export type PlanKey = "free" | "pro" | "max";
-export const MATRIX_PLANS: PlanKey[] = ["free", "pro", "max"];
+export type PlanKey = "free" | "pro" | "max" | "agency";
+export const MATRIX_PLANS: PlanKey[] = ["free", "pro", "max", "agency"];
 
 export type EntitlementKey = keyof typeof table.entitlements;
 type Raw = number | boolean | string[] | null;
@@ -49,7 +49,7 @@ export const MATRIX: MatrixGroup[] = [
         key: "channels_total",
         label: "Channels in total",
         format: { kind: "total" },
-        note: "Free: 2 from Instagram, Facebook and web chat. Creator and Business limit accounts per platform instead.",
+        note: "Free: any 2 of Instagram, Facebook or web chat. Paid plans limit accounts per platform instead.",
       },
       { key: "whatsapp", label: "WhatsApp", format: { kind: "flag" } },
       {

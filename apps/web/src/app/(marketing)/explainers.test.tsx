@@ -128,7 +128,7 @@ describe("/features (C-160)", () => {
     for (const id of ["inbox", "replies"]) expect(container.querySelector(`#f-${id}.bx-xl .bx-vis [data-ui]`), id).not.toBeNull();
     expect(container.querySelector("#f-comments.bx-l .bx-vis")).not.toBeNull();
     expect(container.querySelector("#f-facebook [data-status='approval']")).toHaveTextContent("With Meta's approval");
-    expect(container.querySelector("#f-sequences [data-status='soon']")).toHaveTextContent("Coming soon");
+    expect(container.querySelector("#f-sequences [data-status]")).toBeNull(); // built today; only broadcasts are soon
     expect(container.querySelector("#f-catalogue [data-status='pro']")).toHaveTextContent("Creator and Business");
   });
 

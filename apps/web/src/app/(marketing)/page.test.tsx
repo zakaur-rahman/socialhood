@@ -152,7 +152,7 @@ describe("the landing page", () => {
       { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
       {
         title: "Automate the repetitive work",
-        items: ["Scheduling, Reels and Stories", "Sequences, and broadcasts soon", "Work from Claude, ChatGPT and Codex"],
+        items: ["Scheduling, Reels and Stories", "Follow-up sequences", "Work from Claude, ChatGPT and Codex"],
       },
       {
         title: "Understand and grow",

@@ -83,7 +83,7 @@ export const FAQ_AUTO_REPLY: FaqItem = {
 
 export const FAQ_ACCOUNTS: FaqItem = {
   question: "Can I connect more than one Instagram account?",
-  answer: "Yes. Free connects 2 channels in total from Instagram, Facebook and web chat, with no WhatsApp. Creator connects 1 each of Instagram, WhatsApp, Facebook and web chat, and Business connects 3 each of Instagram, WhatsApp and Facebook.",
+  answer: "Yes. Free connects any 2 of Instagram, Facebook or web chat, with no WhatsApp. Creator connects 1 each of Instagram, WhatsApp, Facebook and web chat, and Business connects 3 each of Instagram, WhatsApp and Facebook.",
 };
 
 export const FAQ_24_HOURS: FaqItem = {

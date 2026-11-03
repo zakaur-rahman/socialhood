@@ -525,6 +525,7 @@ docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KE
 - `SENTRY_DSN`
 - `DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY`: all three or none
 - `DODO_PRODUCT_MAX_MONTHLY`
+- `DODO_PRODUCT_PRO_SIX_MONTH`, `DODO_PRODUCT_MAX_SIX_MONTH`, `DODO_PRODUCT_AGENCY_MONTHLY`, `DODO_PRODUCT_AGENCY_SIX_MONTH` (C-174): each optional, and not part of the all-or-none set. A plan or period is on sale once its id is set; Agency needs its monthly id. Restart `api` and `worker` after adding one.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`
 

@@ -703,7 +703,7 @@ function EmptyAutomations({
 }: {
   templates: Parameters<typeof TemplateCard>[0]["template"][];
   loading: boolean;
-  plan: "free" | "pro" | "max";
+  plan: "free" | "pro" | "max" | "agency";
   starting: boolean;
   onUse: (choice: Choice) => void;
   onBrowse: () => void;
