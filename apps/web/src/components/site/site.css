@@ -3060,7 +3060,7 @@ body:has(.site) {
     & .pd-stage { margin: var(--space-head) 0 0; min-width: 0; }
     & .pd-win { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-xl); box-shadow: var(--shadow-panel); overflow: hidden; }
     & .pd-body { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); }
-    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; margin-top: var(--space-3); }
+    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: auto; min-height: 44px; margin-top: var(--space-3); }
 
     /* ---- the list */
     & .pd-list { border-right: 1px solid var(--rule-2); min-width: 0; }
@@ -3123,7 +3123,7 @@ body:has(.site) {
     & .pd-banner svg { flex: none; }
 
     /* The suggestion bar (components/ai/SuggestionCard.tsx). */
-    & .pd-bar { padding: var(--space-2) var(--space-3); border: 1px solid var(--iris-wash-line); border-radius: var(--r-md); background: var(--iris-mist); }
+    & .pd-bar { padding: var(--space-2) var(--space-3); border: 1px solid var(--iris-wash-line); border-radius: var(--r-md); background: var(--iris-soft); }
     & .pd-bar-top { display: flex; align-items: flex-start; gap: var(--space-2); }
     & .pd-spark { flex: none; margin-top: 3px; color: var(--iris-ink); }
     & .pd-x { flex: none; margin-top: 3px; color: var(--ink-3); }
@@ -3184,18 +3184,22 @@ body:has(.site) {
       & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-entrance) var(--ease-swap) infinite alternate; }
     }
 
+    @media (width <= 900px) { /* site-md: the header keeps "Needs you", as the app does when narrow */
+      & .pd-window { display: none; }
+    }
+
     /* ---- a phone: the conversation, and the list collapsed to the row that just arrived */
     @media (width <= 760px) { /* site-nav */
       --pd-row: 92px;
       & .pd-body { grid-template-columns: minmax(0, 1fr); }
       & .pd-list { border-right: 0; border-bottom: 1px solid var(--rule-2); }
-      & .pd-list-h, & .pd-act-far, & .pd-window, & .pd-mode { display: none; }
+      & .pd-list-h, & .pd-act-far, & .pd-mode { display: none; }
       & .pd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       & .pd-who-top { flex-wrap: wrap; column-gap: var(--space-2); }
       & .pd-who-top .tag { height: 20px; }
       & .pd-head { height: 72px; }
       @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-        --pd-body: 500px;
+        --pd-body: 520px;
         & .pd-body { height: calc(var(--pd-row) + var(--pd-body)); }
         & .pd-rows { height: var(--pd-row); }
       }

@@ -9575,3 +9575,45 @@ Step 1 of 2 (web only, no API or database change). Owner decisions, 2026-11-03:
 - **How AI credits work** names all four plans: Free, Creator and Business from the plan data, Agency from the constant.
 - **Stale plans after a deploy.** `PLANS_REVALIDATE_SECONDS` and the `revalidate` of `/pricing` and the landing are 300 (was 3600); the segment value stays a literal (a test reads the source).
 - **Not done here.** Six-month billing and an Agency plan key and checkout are step 2. On a phone the cards without a button keep an empty button row, a small gap.
+
+## C-175 · Product demo
+
+The owner can't record a video yet and asked for a code-built demo on the landing page.
+`components/marketing/landing/ProductDemo.tsx`, right after the hero, on paper, so How it works stays
+the first night band. One app window plays one story of about 21 s and rests until 26 s before it loops
+(`productDemo` in `landing-motion.ts`). No new dependency or client island.
+
+**What each beat is checked against.**
+- A DM arrives: `ConversationRow` (avatar with `PlatformGlyph`, the 2 px selection bar). The empty pane
+  is the app's "Pick a conversation".
+- The AI reads it: `AnalysisChips` (intent and sentiment under the message), `rowBadges` ("Lead 72/100").
+- The draft: `SuggestionCard` ("AI draft:", "Drafting a reply…", "From: Price list", Draft again,
+  Insert, Send).
+- You stay in control: `SuggestionSlot` send, `MessageBubble` status icons, `previewPrefix` ("You: ").
+- A comment becomes a DM: `services/automations/actions.py` `opens_first` and the comment template's
+  `confirm_first=True` (the opening with one quick reply, the message after the tap), `MessageBubble`
+  ("Automation · …"), `previewPrefix` ("Automation: ").
+- The tricky one: `ai/policy.py` and `escalationBanner` ("AI didn't reply: customer asked for a person",
+  shown in Auto), `ESCALATION_LABEL` ("Needs you: asked for a person"), `rowBadges` ("Auto replies").
+
+**Where the story simplifies the product, for the owner to check.**
+- **The draft's words appear one by one, as the brief asked and as How it works already does.** The app
+  doesn't stream: it shows "Drafting a reply…", then the whole draft. The demo shows that state first.
+- **The comment card in the thread is the story's own.** In the app, comments live on the Comments page and
+  the thread starts with the automation's message. It is the one piece of UI here the inbox doesn't have.
+- **There is no "Replied" label.** The row shows it the way the app does, with "You: " before the preview.
+- Left out: the public comment reply and the follow nudge (both real, both optional), the disclosure line,
+  the details panel, Facebook (no mark in the story, so nothing to qualify), and the draft that Auto may
+  still hold under the escalation banner.
+- Sam's conversation is in Auto (Creator and Business), because the banner is Auto's; Maya's is in Suggest.
+
+**Rules kept.** Labelled "Example, with made-up data". One labelled picture for assistive tech
+(`role="img"`, like the hero's), with the steps as plain captions and no live region. `MotionToggle`
+outside the picture. Off screen, a hidden tab or the pause control stop the clock, and it resumes where it
+stopped. Only opacity and transforms move, and every part keeps its box.
+- **Judgment call:** no script or reduced motion shows the three conversations finished, one under the
+  other, so that frame is taller than the playing one. That's a CSS media query choice made before first
+  paint (`scripting`, `prefers-reduced-motion`), so it never shifts. Maya's draft and its sent reply both
+  show there, which the app wouldn't show at once, so that one still frame tells the whole beat.
+- The list slides rows by transform inside a fixed list; on a phone it is clipped to the one row that just
+  arrived. The window chip goes at 900 px and below, the AI mode badge and Draft again on a phone.

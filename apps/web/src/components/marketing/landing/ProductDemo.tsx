@@ -26,7 +26,7 @@ export const PRODUCT_DEMO_STEPS = [
   "A DM arrives",
   "The AI reads it",
   "It drafts from your knowledge",
-  "You press Send",
+  "You stay in control",
   "A comment becomes a DM",
   "The tricky one comes to you",
 ];
@@ -232,7 +232,7 @@ function SamThread() {
 
 /**
  * "See a day in your inbox" (C-175), between the hero and How it works: one app window, an inbox list
- * and the open conversation, plays one story about 23 s long and rests before it loops
+ * and the open conversation, plays one story about 21 s long and rests before it loops
  * (landing-motion.ts, productDemo; only opacity and transform move, and every box keeps its size).
  * Under the frame, the story's steps as plain captions, and its pause control (MotionToggle).
  * With no script, or `prefers-reduced-motion`, site.css lays the three conversations out one under

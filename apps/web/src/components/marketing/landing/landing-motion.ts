@@ -816,7 +816,7 @@ export function aiApps(root: ParentNode): Cleanup {
 /** One moment of the story: ms from its start, the caption it lights, the parts it turns on and off, where rows move. */
 type DemoBeat = { at: number; step?: number; on?: string[]; off?: string[]; slots?: Record<string, number> };
 
-/** The story (ProductDemo.tsx), about 23 s, then a rest; the first beat is the scene's start. */
+/** The story (ProductDemo.tsx), about 21 s, then a rest; the first beat is the scene's start. */
 export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
   { at: 0, step: 0, on: ["pick", "row-nina", "row-visitor"], slots: { nina: 0, visitor: 1 } },
   // 1. A DM arrives, and the row opens.
