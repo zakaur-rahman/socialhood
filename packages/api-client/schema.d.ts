@@ -13,8 +13,9 @@ export interface paths {
         };
         /**
          * List Billing Plans
-         * @description Public, no sign-in: Free, Creator and Business (``available: false`` until a paid
-         *     plan's product is set) with their §1.7 entitlements and Dodo prices (cached 1 h; null when
+         * @description Public, no sign-in: Free, Creator, Business and Agency (``available: false`` until a paid
+         *     plan's monthly product is set; ``six_month_price`` once its six-month product is set too) with
+         *     their §1.7 entitlements and Dodo prices (cached 1 h; null when
          *     Dodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same
          *     numbers as GET …/billing. While billing isn't set up on this server (C-149) the paid plans
          *     are ``available: false`` without prices.
@@ -1165,7 +1166,8 @@ export interface paths {
          * @description Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge
          *     characters, active automations, pending scheduled messages and connected accounts per
          *     platform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo
-         *     (cached 1 h; a price Dodo can't give now is left out). ``billing_available`` is false while
+         *     (cached 1 h; a price Dodo can't give now is left out), and ``current_price``, what the
+         *     workspace actually bought. ``billing_available`` is false while
          *     billing isn't set up on this server (C-149): no prices, and no checkout.
          */
         get: operations["get_billing"];
@@ -1211,10 +1213,11 @@ export interface paths {
         put?: never;
         /**
          * Create Billing Checkout
-         * @description F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to
-         *     /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial
-         *     only when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan
-         *     (active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo
+         * @description F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,
+         *     returning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the
+         *     7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace
+         *     already has a paid plan (active, trialing or on hold): the portal changes it. 422 while the
+         *     plan's or period's Dodo product isn't set. 503 when Dodo
          *     doesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes
          *     until Dodo's signed webhook arrives.
          */
@@ -6799,14 +6802,14 @@ export interface components {
             currency: string;
             /**
              * Interval
-             * @constant
+             * @enum {string}
              */
-            interval: "month";
+            interval: "month" | "six_month";
             /**
              * Plan
              * @enum {string}
              */
-            plan: "pro" | "max";
+            plan: "pro" | "max" | "agency";
         };
         /** BillingState */
         BillingState: {
@@ -6816,6 +6819,7 @@ export interface components {
             cancel_at_period_end: boolean;
             /** Current Period End */
             current_period_end?: string | null;
+            current_price?: components["schemas"]["BillingPrice"] | null;
             /** Entitlements */
             entitlements: components["schemas"]["EntitlementValue"][];
             /** Grace Until */
@@ -6824,7 +6828,7 @@ export interface components {
              * Plan
              * @enum {string}
              */
-            plan: "free" | "pro" | "max";
+            plan: "free" | "pro" | "max" | "agency";
             /** Prices */
             prices: components["schemas"]["BillingPrice"][];
             /**
@@ -7402,15 +7406,21 @@ export interface components {
         };
         /**
          * CheckoutRequest
-         * @description POST …/billing/checkout (F-15). "max" (Business) is refused with 422 until its Dodo product
+         * @description POST …/billing/checkout (F-15). A plan or period is refused with 422 until its Dodo product
          *     is set.
          */
         CheckoutRequest: {
             /**
+             * Period
+             * @default month
+             * @enum {string}
+             */
+            period: "month" | "six_month";
+            /**
              * Plan
              * @enum {string}
              */
-            plan: "pro" | "max";
+            plan: "pro" | "max" | "agency";
         };
         /**
          * CheckoutSession
@@ -10899,7 +10909,8 @@ export interface components {
         /**
          * PlanOffer
          * @description One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)
-         *     and, for a paid plan, its price from Dodo (cached 1 h; null when Dodo can't be reached).
+         *     and, for a paid plan, its monthly price from Dodo (cached 1 h; null when Dodo can't be reached).
+         *     ``six_month_price`` is set only while the plan's six-month product is on sale and priced.
          */
         PlanOffer: {
             /** Available */
@@ -10910,8 +10921,9 @@ export interface components {
              * Plan
              * @enum {string}
              */
-            plan: "free" | "pro" | "max";
+            plan: "free" | "pro" | "max" | "agency";
             price?: components["schemas"]["BillingPrice"] | null;
+            six_month_price?: components["schemas"]["BillingPrice"] | null;
             /** Trial Days */
             trial_days: number;
         };
@@ -14368,7 +14380,7 @@ export interface components {
              * Plan
              * @enum {string}
              */
-            plan: "free" | "pro" | "max";
+            plan: "free" | "pro" | "max" | "agency";
             /** Reply Language */
             reply_language: string;
             /**
@@ -14428,7 +14440,7 @@ export interface components {
              * Plan
              * @enum {string}
              */
-            plan: "free" | "pro" | "max";
+            plan: "free" | "pro" | "max" | "agency";
             /**
              * Role
              * @enum {string}

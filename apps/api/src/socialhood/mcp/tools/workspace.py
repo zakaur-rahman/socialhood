@@ -37,7 +37,7 @@ class WorkspaceInfo(BaseModel):
     id: uuid.UUID
     name: str
     timezone: str
-    plan: str  # free, pro, max
+    plan: str  # free, pro, max, agency
 
 
 class MemberInfo(BaseModel):

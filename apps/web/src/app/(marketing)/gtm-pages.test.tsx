@@ -110,7 +110,7 @@ describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
 
 describe("the content rules (GR-37)", () => {
   it("never claims a ranking, and puts no price of ours on a page except the planned ones", () => {
-    const planned = new Set(Object.values(PLANNED_PRICE_USD).map((amount) => `$${amount}`));
+    const planned = new Set(Object.values(PLANNED_PRICE_USD).flatMap((amount) => [`$${amount.month}`, `$${amount.six_month}`]));
     for (const page of GTM_PAGES) {
       expect(JSON.stringify(page)).not.toMatch(/\bthe best\b|\bcheapest\b|#1|number one|market leader|\bleading\b|best[- ]in[- ]class/i);
       for (const row of page.compare?.rows ?? []) {
@@ -359,7 +359,7 @@ describe("the pricing page", () => {
     const broadcasts = screen.getByRole("row", { name: /WhatsApp broadcast recipients a month/ });
     expect(broadcasts).toHaveTextContent("Not included");
     expect(broadcasts).toHaveTextContent("2,500");
-    expect(broadcasts).not.toHaveTextContent("25,000");
+    expect(broadcasts).toHaveTextContent("25,000"); // Agency (C-174)
     expect(broadcasts).toHaveTextContent(/Coming soon: broadcasts open after our review of consent rules/);
     expect(screen.getByRole("row", { name: /Remove Powered by Amplychat/ })).toHaveTextContent("Not included");
     expect(screen.getByText(/Catalogue and sequence limits are our current proposals and may change/)).toBeInTheDocument();

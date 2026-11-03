@@ -35,6 +35,7 @@ class Plan(StrEnum):
     FREE = "free"
     PRO = "pro"
     MAX = "max"
+    AGENCY = "agency"
 
 
 class SubscriptionStatus(StrEnum):

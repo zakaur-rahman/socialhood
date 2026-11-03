@@ -92,19 +92,20 @@ function sections(): LegalSection[] {
         <>
           <ul>
             <li>
-              <strong>Free</strong> costs nothing and needs no card. <strong>Creator</strong> and <strong>Business</strong> are monthly subscriptions.{" "}
-              <strong>Agency</strong> is not on sale yet; contact us if you are interested. What each plan includes and costs is shown on our{" "}
+              <strong>Free</strong> costs nothing and needs no card. <strong>Creator</strong>, <strong>Business</strong> and <strong>Agency</strong> are
+              subscriptions, paid monthly or every six months where our pricing page offers it. Until Agency is offered there, contact us if you are
+              interested. What each plan includes and costs is shown on our{" "}
               <Link href="/pricing">pricing page</Link> and in the app. Paid plans aren&apos;t on sale yet; the trial and billing
               terms below apply once it is.
             </li>
             <li>
-              <strong>Trial.</strong> Creator starts with a 7-day free trial, once per workspace. A card is needed to start it.
+              <strong>Trial.</strong> Monthly Creator starts with a 7-day free trial, once per workspace. A card is needed to start it.
               Unless you cancel before the trial ends, Creator continues as a paid subscription and your card is charged.
             </li>
             <li>
               <strong>Payments.</strong> Dodo Payments is the merchant of record for our subscriptions: it runs checkout,
               takes the payment, charges any tax that applies and issues your invoice, and its own terms apply to the
-              payment. The price is shown in the app and at checkout. You pay in advance for each monthly period, and the
+              payment. The price is shown in the app and at checkout. You pay in advance for each monthly or six-month period, and the
               subscription renews automatically until you cancel.
             </li>
             <li>
@@ -122,8 +123,8 @@ function sections(): LegalSection[] {
               so older messages are deleted.
             </li>
             <li>
-              <strong>AI credits.</strong> AI features use credits from a monthly allowance that resets at the start of each
-              billing period. Unused credits don&apos;t carry over. When they run out, AI features pause until they reset or
+              <strong>AI credits.</strong> AI features use credits from a monthly allowance that resets every month, including on
+              plans paid every six months. Unused credits don&apos;t carry over. When they run out, AI features pause until they reset or
               you upgrade.
             </li>
             <li>
@@ -136,7 +137,7 @@ function sections(): LegalSection[] {
             </li>
           </ul>
           <p>
-            Refunds are covered by our <Link href="/refunds">Refund and Cancellation Policy</Link>.
+            Refunds are covered by our <Link href="/refunds">Refund and Cancellation Policy</Link>. Six-month plans: ask within 30 days of paying and we&apos;ll refund the full payment. After 30 days we don&apos;t refund part of the period, and your plan stays active until it ends. Consumer rights in your country still apply.
           </p>
         </>
       ),
@@ -371,7 +372,7 @@ export default function TermsPage() {
       summary={
         <>
           <p>
-            The short version: Free is free; Creator and Business are monthly, Creator starts with a 7-day trial (card required), and you can cancel
+            The short version: Free is free; paid plans are monthly or every six months, monthly Creator starts with a 7-day trial (card required), and you can cancel
             anytime, keeping your plan until the end of the period you&apos;ve paid for. {N} is delivered online; nothing is
             shipped.
           </p>

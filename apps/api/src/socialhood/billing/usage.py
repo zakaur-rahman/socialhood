@@ -2,10 +2,11 @@
 
 Monthly allowances (ai_credits_monthly, scheduled_posts_monthly) are stored in usage_counters, one
 row per period. A period runs from the subscription's ``billing_anchor_day`` to the same day next
-month (repositories/usage.period_for): on a paid plan that is the day Dodo's current period
-started, so allowances reset when Dodo bills; on Free it is the workspace's creation day (§1.7
-"Credits reset on the subscription's billing anchor day (Free: the workspace creation day each
-month)"). Days 29 to 31 count as the 28th so every month has one.
+month (repositories/usage.period_for): on a paid plan that is the day of the month Dodo's current
+period started; on Free it is the workspace's creation day (§1.7 "Credits reset on the
+subscription's billing anchor day (Free: the workspace creation day each month)"). Days 29 to 31
+count as the 28th so every month has one. Periods come from the anchor day alone, never from
+current_period_end, so six-month plans (C-174) reset monthly with no Dodo event in between.
 
 A plan change (billing/lifecycle.py) moves the anchor, then gives the current period's counters
 the new plan's limits (F-15: "resets usage_counters limits for the new plan in the current

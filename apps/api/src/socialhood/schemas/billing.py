@@ -12,8 +12,9 @@ from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
-PlanName = Literal["free", "pro", "max"]
-PaidPlanName = Literal["pro", "max"]
+PlanName = Literal["free", "pro", "max", "agency"]
+PaidPlanName = Literal["pro", "max", "agency"]
+BillingPeriodName = Literal["month", "six_month"]
 SubscriptionStatusName = Literal["free", "trialing", "active", "on_hold", "expired"]
 PaymentStatusName = Literal["succeeded", "failed", "refunded", "pending"]
 
@@ -22,7 +23,7 @@ class BillingPrice(ResponseModel):
     plan: PaidPlanName
     amount_minor: int
     currency: str
-    interval: Literal["month"]
+    interval: BillingPeriodName
 
 
 class EntitlementValue(ResponseModel):
@@ -48,7 +49,10 @@ class BillingState(ResponseModel):
     # C-149: false while billing isn't set up on this server: paid plans aren't on sale, so the
     # UI offers no checkout or trial (the workspace stays on Free).
     billing_available: bool
+    # Every plan and period on sale; six-month prices have interval "six_month".
     prices: list[BillingPrice]
+    # What this workspace actually bought (its Dodo product), when Dodo can give the price.
+    current_price: BillingPrice | None = None
     entitlements: list[EntitlementValue]
     usage: list[UsageMeter]
 
@@ -57,10 +61,11 @@ class BillingState(ResponseModel):
 
 
 class CheckoutRequest(RequestModel):
-    """POST …/billing/checkout (F-15). "max" (Business) is refused with 422 until its Dodo product
+    """POST …/billing/checkout (F-15). A plan or period is refused with 422 until its Dodo product
     is set."""
 
     plan: PaidPlanName
+    period: BillingPeriodName = "month"
 
 
 class CheckoutSession(ResponseModel):
@@ -69,7 +74,7 @@ class CheckoutSession(ResponseModel):
     Dodo's signed webhook arrives (FR-BIL-02)."""
 
     checkout_url: str
-    trial: bool  # the checkout starts the 7-day trial (TR-BIL-05)
+    trial: bool  # the checkout starts the 7-day trial (TR-BIL-05; monthly Creator only)
 
 
 class PortalSession(ResponseModel):
@@ -80,15 +85,19 @@ class PortalSession(ResponseModel):
 
 class PlanOffer(ResponseModel):
     """One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)
-    and, for a paid plan, its price from Dodo (cached 1 h; null when Dodo can't be reached)."""
+    and, for a paid plan, its monthly price from Dodo (cached 1 h; null when Dodo can't be reached).
+    ``six_month_price`` is set only while the plan's six-month product is on sale and priced."""
 
     plan: PlanName
     price: BillingPrice | None = None
+    six_month_price: BillingPrice | None = None
     trial_days: int = Field(
         ge=0
     )  # 7 for Creator (pro), once per workspace and owner email (FR-BIL-03)
     entitlements: list[EntitlementValue]
-    available: bool  # false while billing is off (C-149), and for Business until its product is set
+    available: (
+        bool  # false while billing is off (C-149), and for a plan until its monthly product is set
+    )
 
 
 class PlanList(ResponseModel):

@@ -5724,14 +5724,18 @@
             "type": "string"
           },
           "interval": {
-            "const": "month",
+            "enum": [
+              "month",
+              "six_month"
+            ],
             "title": "Interval",
             "type": "string"
           },
           "plan": {
             "enum": [
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
@@ -5768,6 +5772,16 @@
             ],
             "title": "Current Period End"
           },
+          "current_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BillingPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "entitlements": {
             "items": {
               "$ref": "#/components/schemas/EntitlementValue"
@@ -5791,7 +5805,8 @@
             "enum": [
               "free",
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
@@ -7379,12 +7394,22 @@
       },
       "CheckoutRequest": {
         "additionalProperties": false,
-        "description": "POST \u2026/billing/checkout (F-15). \"max\" (Business) is refused with 422 until its Dodo product\nis set.",
+        "description": "POST \u2026/billing/checkout (F-15). A plan or period is refused with 422 until its Dodo product\nis set.",
         "properties": {
+          "period": {
+            "default": "month",
+            "enum": [
+              "month",
+              "six_month"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
           "plan": {
             "enum": [
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
@@ -17246,7 +17271,7 @@
         "type": "object"
       },
       "PlanOffer": {
-        "description": "One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)\nand, for a paid plan, its price from Dodo (cached 1 h; null when Dodo can't be reached).",
+        "description": "One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)\nand, for a paid plan, its monthly price from Dodo (cached 1 h; null when Dodo can't be reached).\n``six_month_price`` is set only while the plan's six-month product is on sale and priced.",
         "properties": {
           "available": {
             "title": "Available",
@@ -17263,12 +17288,23 @@
             "enum": [
               "free",
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
           },
           "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BillingPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "six_month_price": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/BillingPrice"
@@ -27245,7 +27281,8 @@
             "enum": [
               "free",
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
@@ -27417,7 +27454,8 @@
             "enum": [
               "free",
               "pro",
-              "max"
+              "max",
+              "agency"
             ],
             "title": "Plan",
             "type": "string"
@@ -27461,7 +27499,7 @@
   "paths": {
     "/v1/billing/plans": {
       "get": {
-        "description": "Public, no sign-in: Free, Creator and Business (``available: false`` until a paid\nplan's product is set) with their \u00a71.7 entitlements and Dodo prices (cached 1 h; null when\nDodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same\nnumbers as GET \u2026/billing. While billing isn't set up on this server (C-149) the paid plans\nare ``available: false`` without prices.",
+        "description": "Public, no sign-in: Free, Creator, Business and Agency (``available: false`` until a paid\nplan's monthly product is set; ``six_month_price`` once its six-month product is set too) with\ntheir \u00a71.7 entitlements and Dodo prices (cached 1 h; null when\nDodo can't be reached), for the /pricing page and the upgrade dialog's comparison. The same\nnumbers as GET \u2026/billing. While billing isn't set up on this server (C-149) the paid plans\nare ``available: false`` without prices.",
         "operationId": "list_billing_plans",
         "responses": {
           "200": {
@@ -32311,7 +32349,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
-        "description": "Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge\ncharacters, active automations, pending scheduled messages and connected accounts per\nplatform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo\n(cached 1 h; a price Dodo can't give now is left out). ``billing_available`` is false while\nbilling isn't set up on this server (C-149): no prices, and no checkout.",
+        "description": "Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge\ncharacters, active automations, pending scheduled messages and connected accounts per\nplatform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo\n(cached 1 h; a price Dodo can't give now is left out), and ``current_price``, what the\nworkspace actually bought. ``billing_available`` is false while\nbilling isn't set up on this server (C-149): no prices, and no checkout.",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -32419,7 +32457,7 @@
     },
     "/v1/w/{wid}/billing/checkout": {
       "post": {
-        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\ndoesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,\nreturning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the\n7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace\nalready has a paid plan (active, trialing or on hold): the portal changes it. 422 while the\nplan's or period's Dodo product isn't set. 503 when Dodo\ndoesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
         "operationId": "create_billing_checkout",
         "parameters": [
           {

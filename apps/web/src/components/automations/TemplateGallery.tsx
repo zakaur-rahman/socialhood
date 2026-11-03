@@ -80,7 +80,7 @@ export function TemplateGallery({
   accounts: SocialAccount[];
   /** Opened from an empty-state card: go straight to the account question. */
   initialChoice?: Choice;
-  plan: "free" | "pro" | "max";
+  plan: "free" | "pro" | "max" | "agency";
   /** Where focus goes on close when what opened it isn't on this page (a link from Home). */
   returnFocusFallback?: () => HTMLElement | null;
 }) {

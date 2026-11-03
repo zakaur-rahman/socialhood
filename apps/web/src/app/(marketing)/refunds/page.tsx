@@ -27,7 +27,7 @@ const SECTIONS: LegalSection[] = [
       <ul>
         <li>The Free plan costs nothing, so there is nothing to refund.</li>
         <li>
-          Creator starts with a 7-day free trial, once per workspace. A card is needed to start it, but you aren&apos;t charged
+          Monthly Creator starts with a 7-day free trial, once per workspace. A card is needed to start it, but you aren&apos;t charged
           during the trial. Cancel before it ends (Settings → Billing) and you won&apos;t be charged at all.
         </li>
       </ul>
@@ -52,11 +52,11 @@ const SECTIONS: LegalSection[] = [
   },
   {
     id: "subscriptions",
-    title: "Refunds for paid subscriptions",
+    title: "Refunds for monthly plans",
     body: (
       <>
         <p>
-          Creator and Business are paid monthly, in advance. Because you keep full access for the period you&apos;ve paid for, we don&apos;t
+          Monthly plans are paid in advance. Because you keep full access for the period you&apos;ve paid for, we don&apos;t
           refund:
         </p>
         <ul>
@@ -66,6 +66,15 @@ const SECTIONS: LegalSection[] = [
         </ul>
         <p>If you think a renewal shouldn&apos;t have happened, write to us anyway and we&apos;ll look at it.</p>
       </>
+    ),
+  },
+  {
+    id: "six-month-plans",
+    title: "Refunds for six-month plans",
+    body: (
+      <p>
+        Six-month plans: ask within 30 days of paying and we&apos;ll refund the full payment. After 30 days we don&apos;t refund part of the period, and your plan stays active until it ends. Consumer rights in your country still apply. Email {mail} to ask.
+      </p>
     ),
   },
   {
@@ -132,7 +141,8 @@ export default function RefundsPage() {
       summary={
         <p>
           Cancel anytime in Settings → Billing and keep your plan until the end of the period you&apos;ve paid for. We don&apos;t
-          refund partial periods or unused credits, but we always refund billing mistakes. Questions about a charge? Email{" "}
+          refund partial periods or unused credits, except that six-month plans can be refunded in full within 30 days of paying,
+          and we always refund billing mistakes. Questions about a charge? Email{" "}
           {mail}.
         </p>
       }
