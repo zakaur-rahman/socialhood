@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import type { EntitlementValue } from "@/lib/api/types";
-import { planHighlights } from "@/lib/billing/plan";
+import { planHighlights, sixMonthOffer, type SixMonthOffer } from "@/lib/billing/plan";
 import { PLAN_NAME, formatPrice, plannedAmount, plannedPriceLabel } from "@/lib/copy";
 
 import table from "./plan-table.json";
@@ -23,22 +23,23 @@ import table from "./plan-table.json";
 export const PLANS_REVALIDATE_SECONDS = 300;
 const TIMEOUT_MS = 5000;
 
-type PlanName = "free" | "pro" | "max";
+type PlanName = "free" | "pro" | "max" | "agency";
 
 const Entitlement = z.object({
   key: z.string(),
   value: z.union([z.number(), z.boolean(), z.array(z.string()), z.null()]),
 });
 
+const Price = z.object({
+  amount_minor: z.number().int().nonnegative(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  interval: z.string(),
+});
+
 const Offer = z.object({
-  plan: z.enum(["free", "pro", "max"]),
-  price: z
-    .object({
-      amount_minor: z.number().int().nonnegative(),
-      currency: z.string().regex(/^[A-Z]{3}$/),
-      interval: z.string(),
-    })
-    .nullish(),
+  plan: z.enum(["free", "pro", "max", "agency"]),
+  price: Price.nullish(),
+  six_month_price: Price.nullish(),
   trial_days: z.number().int().nonnegative(),
   entitlements: z.array(Entitlement),
   available: z.boolean(),
@@ -85,8 +86,10 @@ export type PlanCard = {
   offer: { price: string; currency: string } | null;
   trialDays: number;
   features: string[];
-  /** False while the plan can't be bought (billing off, or Business without its product): "Coming soon". */
+  /** False while the plan can't be bought (billing off, or no monthly product): "Coming soon". */
   available: boolean;
+  /** C-174: the card under "6 months"; null keeps the monthly price. Never in structured data. */
+  sixMonth: SixMonthOffer | null;
 };
 
 export type Pricing = {
@@ -94,13 +97,14 @@ export type Pricing = {
   source: "api" | "fallback";
   plans: PlanCard[];
   /** Monthly AI credits per plan, for the credits explainer. */
-  credits: { free: number | null; pro: number | null; max: number | null };
+  credits: Record<PlanName, number | null>;
 };
 
 const TAGLINE: Record<PlanName, string> = {
   free: "To get started.",
   pro: "For creators and small businesses.",
   max: "For growing businesses with a team.",
+  agency: "For agencies and people managing several brands.",
 };
 
 /** C-172: the planned price shown while a paid plan isn't on sale. */
@@ -119,7 +123,7 @@ function numberOf(entitlements: EntitlementValue[], key: string): number | null 
  * used only when the API can't be reached, so the page still lists what each plan includes. Never
  * a price.
  */
-function fromTable(plan: "free" | "pro" | "max"): EntitlementValue[] {
+function fromTable(plan: PlanName): EntitlementValue[] {
   return Object.entries(table.entitlements).map(([key, byPlan]) => ({
     key,
     value: (byPlan as Record<string, EntitlementValue["value"]>)[plan],
@@ -130,6 +134,7 @@ export const FALLBACK_ENTITLEMENTS: Record<PlanName, EntitlementValue[]> = {
   free: fromTable("free"),
   pro: fromTable("pro"),
   max: fromTable("max"),
+  agency: fromTable("agency"),
 };
 
 /** FR-BIL-03: Creator's (pro) trial, once per workspace; used only in the fallback. */
@@ -148,6 +153,7 @@ function fallbackCard(plan: PlanName): PlanCard {
     trialDays: plan === "pro" ? FALLBACK_TRIAL_DAYS : 0,
     features: planHighlights(FALLBACK_ENTITLEMENTS[plan]),
     available: plan === "free",
+    sixMonth: sixMonthOffer({ plan, available: plan === "free" }),
   };
 }
 
@@ -175,39 +181,23 @@ function cardFrom(offer: PlanOfferBody): PlanCard {
     // A paid plan lists what it will include even while it isn't on sale (C-149: no billing yet).
     features: planHighlights(offer.entitlements),
     available: offer.available,
+    sixMonth: sixMonthOffer(offer),
   };
 }
 
-const ORDER: PlanName[] = ["free", "pro", "max"];
+const ORDER: PlanName[] = ["free", "pro", "max", "agency"];
 
-/** The three plan cards from the API's plan list, or from the fallback when there is none. */
+/** The plan cards from the API's plan list, or from the fallback when there is none. */
 export function buildPricing(offers: PlanOfferBody[] | null): Pricing {
-  if (!offers) {
-    return {
-      source: "fallback",
-      plans: ORDER.map(fallbackCard),
-      credits: {
-        free: numberOf(FALLBACK_ENTITLEMENTS.free, "ai_credits_monthly"),
-        pro: numberOf(FALLBACK_ENTITLEMENTS.pro, "ai_credits_monthly"),
-        max: numberOf(FALLBACK_ENTITLEMENTS.max, "ai_credits_monthly"),
-      },
-    };
-  }
-  const byPlan = new Map(offers.map((offer) => [offer.plan, offer]));
-  const free = byPlan.get("free");
-  const pro = byPlan.get("pro");
-  const max = byPlan.get("max");
+  const byPlan = new Map(offers?.map((offer) => [offer.plan, offer]));
+  const credits = (plan: PlanName) => numberOf(byPlan.get(plan)?.entitlements ?? FALLBACK_ENTITLEMENTS[plan], "ai_credits_monthly");
   return {
-    source: "api",
+    source: offers ? "api" : "fallback",
     plans: ORDER.map((plan) => {
       const offer = byPlan.get(plan);
       return offer ? cardFrom(offer) : fallbackCard(plan);
     }),
-    credits: {
-      free: numberOf(free?.entitlements ?? FALLBACK_ENTITLEMENTS.free, "ai_credits_monthly"),
-      pro: numberOf(pro?.entitlements ?? FALLBACK_ENTITLEMENTS.pro, "ai_credits_monthly"),
-      max: numberOf(max?.entitlements ?? FALLBACK_ENTITLEMENTS.max, "ai_credits_monthly"),
-    },
+    credits: { free: credits("free"), pro: credits("pro"), max: credits("max"), agency: credits("agency") },
   };
 }
 

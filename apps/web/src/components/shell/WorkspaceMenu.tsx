@@ -26,7 +26,7 @@ import { WORKSPACE_HOME_HREF, WORKSPACE_SETTINGS_HREF } from "./nav";
 
 export type SidebarWorkspace = { name: string; slug: string; plan: Plan; role: Role };
 
-export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Creator", max: "Business" };
+export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Creator", max: "Business", agency: "Agency" };
 
 /**
  * The plan as a Badge: `sm` (11 px, the type floor), `tag` corners and the `brand` (info) tone for

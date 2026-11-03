@@ -85,7 +85,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
-    expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "pro" });
+    expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "pro", period: "month" });
     // Nothing is granted here: the plan changes when Dodo's webhook arrives.
     expect(within(dialog).getByRole("button", { name: "Start 7-day trial" })).toBeDisabled();
   });
@@ -111,7 +111,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(dialog).not.toHaveTextContent("Try Creator free");
     await user.click(await within(dialog).findByRole("button", { name: "Upgrade to Business" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
-    expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "max" });
+    expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "max", period: "month" });
   });
 
   it("an ordinary 402 offers Creator and the trial, not Business", async () => {

@@ -49,7 +49,11 @@ describe("the claim words stay out of the marketing copy (C-172)", () => {
       plannedPriceLabel("max"),
       ...Object.values(AGENCY).flat(),
     ];
-    expect(PLANNED_PRICE_USD).toEqual({ pro: 15, max: 30 });
+    expect(PLANNED_PRICE_USD).toEqual({
+      pro: { month: 15, six_month: 81 },
+      max: { month: 30, six_month: 153 },
+      agency: { month: 70, six_month: 315 },
+    });
     expect(claims(strings.join("\n"))).toEqual([]);
   });
 

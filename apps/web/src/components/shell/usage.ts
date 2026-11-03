@@ -24,7 +24,7 @@ export const USAGE_WARNING = 0.8;
 
 /**
  * The sidebar's usage card. Agents never see it; an unlimited plan has nothing to show. Upgrade is
- * offered to owners and admins on Free, or from 80 % of the credits (never on Max, the top plan):
+ * offered to owners and admins on Free, or from 80 % of the credits (never on Business or Agency, which have no self-serve plan change yet):
  * a paying customer under 80 % sees only the meter.
  */
 export function usageView(usage: CreditsUsage | undefined, role: Role): UsageView {
@@ -34,7 +34,7 @@ export function usageView(usage: CreditsUsage | undefined, role: Role): UsageVie
   const tone: UsageTone = ratio >= 1 ? "danger" : ratio >= USAGE_WARNING ? "warning" : "normal";
   // Rounded down, so 99.6 % is not shown as 100 % while credits remain.
   const percent = Math.min(100, Math.max(0, Math.floor(ratio * 100)));
-  const upgrade = usage.plan !== "max" && (usage.plan === "free" || ratio >= USAGE_WARNING);
+  const upgrade = usage.plan !== "max" && usage.plan !== "agency" && (usage.plan === "free" || ratio >= USAGE_WARNING);
   return { kind: "meter", used: usage.used, limit: usage.limit, percent, tone, upgrade };
 }
 

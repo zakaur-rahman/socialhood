@@ -4,7 +4,7 @@
  * from Dodo's signed webhook as usage.updated (C-049).
  */
 import type { BillingPrice, BillingState, EntitlementValue, PlanOffer, UsageMeter } from "@/lib/api/types";
-import { PLAN_NAME, billingCopy, pricePerMonth, shortDate, type PlanName } from "@/lib/copy";
+import { PLAN_NAME, billingCopy, formatPrice, plannedPrice, pricePerPeriod, shortDate, type PlanName } from "@/lib/copy";
 import { dayKey } from "@/lib/tz";
 
 const DAY_MS = 86_400_000;
@@ -22,17 +22,44 @@ export function daysUntil(iso: string, now: Date = new Date()): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY_MS));
 }
 
-/** The paid plan's price, from GET …/billing (F-15) or the public plan list. */
+/** The paid plan's monthly price, from GET …/billing (F-15) or the public plan list. */
 export function priceOf(
   plan: PlanName,
   billing: BillingState | undefined,
   plans?: PlanOffer[] | undefined,
 ): BillingPrice | null {
   return (
-    billing?.prices.find((price) => price.plan === plan) ??
+    billing?.prices.find((price) => price.plan === plan && price.interval === "month") ??
     plans?.find((offer) => offer.plan === plan)?.price ??
     null
   );
+}
+
+type Money = { amount_minor: number; currency: string };
+
+/** A six-month card's price: "$81" and "($13.50 a month), save 10%". */
+export type SixMonthOffer = { total: string; note: string; planned: boolean };
+
+/**
+ * C-174: what a plan's six-month card shows: Dodo's price when it is on sale; the planned price while
+ * the plan isn't on sale at all; null (keep the monthly price, no six-month button) when the plan is
+ * on sale monthly with no six-month price.
+ */
+export function sixMonthOffer(offer: {
+  plan: PlanName;
+  available: boolean;
+  price?: Money | null;
+  six_month_price?: Money | null;
+}): SixMonthOffer | null {
+  if (offer.plan === "free") return null;
+  const planned = !offer.six_month_price;
+  if (planned && offer.available) return null;
+  const six = offer.six_month_price ?? plannedPrice(offer.plan, "six_month");
+  const month = planned ? plannedPrice(offer.plan, "month") : offer.price;
+  const perMonth = formatPrice({ amount_minor: Math.round(six.amount_minor / 6), currency: six.currency });
+  const save =
+    month && month.currency === six.currency ? Math.round((1 - six.amount_minor / (6 * month.amount_minor)) * 100) : 0;
+  return { total: formatPrice(six), note: `(${perMonth} a month)${save > 0 ? `, save ${save}%` : ""}`, planned };
 }
 
 export function entitlementOf(entitlements: EntitlementValue[] | undefined, key: string): EntitlementValue["value"] | undefined {
@@ -74,8 +101,8 @@ export type PlanStatus = {
 export function planStatus(billing: BillingState, timeZone: string, now: Date = new Date()): PlanStatus {
   const name = PLAN_NAME[billing.plan];
   const date = (iso: string | null | undefined) => (iso ? billingDate(iso, timeZone, now) : null);
-  const price = priceOf(billing.plan, billing);
-  const perMonth = price ? pricePerMonth(price) : null;
+  // What this workspace bought, not the plan's monthly price (C-174).
+  const perMonth = billing.current_price ? pricePerPeriod(billing.current_price) : null;
 
   switch (billing.status) {
     case "trialing": {

@@ -3,16 +3,58 @@ import { describe, expect, it } from "vitest";
 import { formatPrice, inferEntitlement, planIncludes, planOffers, upgradeCopy } from "@/lib/copy";
 import { billingState } from "@/test/api";
 
-import { billingOpen, canCheckout, canStartCheckout, daysUntil, meterViews, planHighlights, planStatus, priceOf } from "./plan";
+import { billingOpen, canCheckout, canStartCheckout, daysUntil, meterViews, planHighlights, planStatus, priceOf, sixMonthOffer } from "./plan";
 
 const now = new Date("2026-09-30T06:00:00Z");
 const tz = "Asia/Kolkata";
 const inr = { plan: "pro" as const, amount_minor: 99_900, currency: "INR", interval: "month" as const };
 
+describe("six-month prices (C-174)", () => {
+  const six = { plan: "pro" as const, amount_minor: 8100, currency: "USD", interval: "six_month" as const };
+
+  it("the current plan's line is what was bought, not the plan's monthly price", () => {
+    const status = planStatus(
+      billingState({ current_period_end: "2027-04-01T00:00:00Z", prices: [inr, six], current_price: six }),
+      tz,
+      now,
+    );
+    expect(status.line).toBe("Renews on 1 Apr 2027 · $81 every 6 months");
+    expect(planStatus(billingState({ prices: [inr, six], current_price: null }), tz, now).line).not.toMatch(/₹|\$/);
+  });
+
+  it("priceOf stays the monthly price with six-month prices in the list", () => {
+    expect(priceOf("pro", billingState({ prices: [six, inr] }))).toEqual(inr);
+    expect(priceOf("pro", billingState({ prices: [six] }))).toBeNull();
+  });
+
+  it("the card: Dodo's price, the planned one off sale, none when on sale without a six-month price", () => {
+    const month = { amount_minor: 1500, currency: "USD" };
+    expect(sixMonthOffer({ plan: "pro", available: true, price: month, six_month_price: six })).toEqual({
+      total: "$81",
+      note: "($13.50 a month), save 10%",
+      planned: false,
+    });
+    expect(sixMonthOffer({ plan: "max", available: false })).toEqual({
+      total: "$153",
+      note: "($25.50 a month), save 15%",
+      planned: true,
+    });
+    expect(sixMonthOffer({ plan: "agency", available: false })?.note).toBe("($52.50 a month), save 25%");
+    expect(sixMonthOffer({ plan: "pro", available: true, price: month })).toBeNull();
+    expect(sixMonthOffer({ plan: "free", available: true })).toBeNull();
+  });
+
+  it("no saving is claimed without a monthly price in the same currency", () => {
+    const rupees = { amount_minor: 99_900, currency: "INR" };
+    expect(sixMonthOffer({ plan: "pro", available: true, price: rupees, six_month_price: six })?.note).toBe("($13.50 a month)");
+    expect(sixMonthOffer({ plan: "pro", available: true, six_month_price: six })?.note).toBe("($13.50 a month)");
+  });
+});
+
 describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
   it("trial: days left and what follows", () => {
     const status = planStatus(
-      billingState({ status: "trialing", trial_ends_at: "2026-10-03T06:00:00Z", prices: [inr] }),
+      billingState({ status: "trialing", trial_ends_at: "2026-10-03T06:00:00Z", prices: [inr], current_price: inr }),
       tz,
       now,
     );
@@ -35,7 +77,7 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
   });
 
   it("active: renewal date and price", () => {
-    const status = planStatus(billingState({ current_period_end: "2026-10-31T18:30:00Z", prices: [inr] }), tz, now);
+    const status = planStatus(billingState({ current_period_end: "2026-10-31T18:30:00Z", prices: [inr], current_price: inr }), tz, now);
     expect(status.line).toBe("Renews on 1 Nov · ₹999 a month"); // midnight in Kolkata
     expect(status.cancellable).toBe(true);
     expect(status.resumable).toBe(false);
@@ -115,7 +157,7 @@ describe("prices and plans", () => {
   });
 
   it("the Pro price comes from the billing state, else the plan list", () => {
-    expect(priceOf("pro", billingState({ prices: [inr] }))).toEqual(inr);
+    expect(priceOf("pro", billingState({ prices: [inr], current_price: inr }))).toEqual(inr);
     expect(priceOf("pro", billingState({ prices: [] }), [{ plan: "pro", available: true, entitlements: [], price: inr, trial_days: 7 }])).toEqual(inr);
     expect(priceOf("pro", billingState({ prices: [] }))).toBeNull();
   });

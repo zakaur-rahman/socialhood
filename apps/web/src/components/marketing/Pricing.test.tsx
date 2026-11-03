@@ -1,11 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { buildPricing } from "@/lib/marketing/plans";
 import { softwareApplicationJsonLd } from "@/lib/marketing/seo";
 import { plansFixture } from "@/test/plans";
 
-import { PRICE_AT_SIGN_UP, Pricing } from "./Pricing";
+import { PRICE_AT_SIGN_UP } from "./PlanGrid";
+import { Pricing } from "./Pricing";
 
 function card(name: string) {
   return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
@@ -115,12 +117,60 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
     expect(json).not.toMatch(/\b30\b|\b15\b/);
   });
 
+  it("C-174: the 6 months switch: planned prices while nothing is on sale, no trial, never in structured data", async () => {
+    const user = userEvent.setup();
+    render(<Pricing pricing={buildPricing(null)} />);
+    expect(card("Creator")).toHaveTextContent("$15 a month");
+    await user.click(screen.getByRole("radio", { name: "6 months" }));
+    expect(card("Creator")).toHaveTextContent("$81 every 6 months");
+    expect(card("Creator")).toHaveTextContent("($13.50 a month), save 10%. Planned price, when we launch.");
+    expect(card("Business")).toHaveTextContent("($25.50 a month), save 15%");
+    expect(card("Agency")).toHaveTextContent("$315 every 6 months");
+    expect(card("Agency")).toHaveTextContent("($52.50 a month), save 25%");
+    expect(JSON.stringify(softwareApplicationJsonLd(buildPricing(null)))).not.toMatch(/81|153|315/);
+  });
+
+  it("C-174: Dodo's six-month price when on sale; a plan with none keeps its monthly price and button", async () => {
+    const user = userEvent.setup();
+    const six = { amount_minor: 16_000, currency: "USD", interval: "six_month" };
+    const month = { amount_minor: 3000, currency: "USD", interval: "month" };
+    const items = plansFixture().items.map((offer) =>
+      offer.plan === "max" ? { ...offer, available: true, price: month, six_month_price: six } : offer,
+    );
+    render(<Pricing pricing={buildPricing(items)} />);
+    await user.click(screen.getByRole("radio", { name: "6 months" }));
+    expect(card("Business")).toHaveTextContent("$160 every 6 months");
+    expect(card("Business")).toHaveTextContent("($26.67 a month), save 11%. Cancel anytime.");
+    expect(card("Creator")).toHaveTextContent("₹999 a month");
+    expect(card("Creator")).not.toHaveTextContent("every 6 months");
+    expect(within(card("Creator")).getByText("7-day free trial")).toBeInTheDocument();
+    expect(within(card("Creator")).getByRole("link", { name: "Start free, then try Creator" })).toBeInTheDocument();
+  });
+
+  it("C-174: Agency on sale is a normal card: its price, no Coming soon, and the credits line drops it", () => {
+    const month = { amount_minor: 7000, currency: "USD", interval: "month" };
+    const items = plansFixture().items.map((offer) => (offer.plan === "agency" ? { ...offer, available: true, price: month } : offer));
+    render(<Pricing pricing={buildPricing(items)} />);
+    const agency = within(screen.getByTestId("plan-agency"));
+    expect(agency.getByText("$70")).toHaveTextContent(/^\$70 a month$/);
+    expect(agency.queryByText("Coming soon")).toBeNull();
+    expect(agency.queryByRole("link", { name: "Contact us" })).toBeNull();
+    expect(agency.getByRole("link", { name: "Start free" })).toBeInTheDocument();
+    expect(screen.getByText(/12,000 on Agency\./)).toBeInTheDocument();
+  });
+
+  it("C-174: with every plan on sale monthly and no six-month product, there is no switch", () => {
+    const items = plansFixture().items.map((offer) => ({ ...offer, available: true }));
+    render(<Pricing pricing={buildPricing(items)} />);
+    expect(screen.queryByRole("radio", { name: "6 months" })).toBeNull();
+  });
+
   it("the Agency card: $70 a month, Coming soon, Contact us mails support, and has no checkout", () => {
     render(<Pricing pricing={buildPricing(billingOff())} />);
     const agency = within(screen.getByTestId("plan-agency"));
     expect(agency.getByRole("heading", { level: 3, name: "Agency" })).toBeInTheDocument();
     expect(agency.getByText("Coming soon")).toBeInTheDocument();
-    expect(agency.getByTestId("price-agency")).toHaveTextContent(/^\$70 a month$/);
+    expect(agency.getByTestId("planned-price-agency")).toHaveTextContent(/^\$70 a month$/);
     const links = agency.getAllByRole("link");
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveTextContent("Contact us");

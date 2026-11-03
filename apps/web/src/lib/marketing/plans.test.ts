@@ -10,7 +10,7 @@ describe("fetchPlans (GET /v1/billing/plans, server-side, every five minutes)", 
   it("reads the plan list and caches it for an hour", async () => {
     const fetcher = vi.fn(plansFetch(plansFixture()));
     const plans = await fetchPlans(`${API}/`, fetcher as unknown as typeof fetch);
-    expect(plans?.map((p) => p.plan)).toEqual(["free", "pro", "max"]);
+    expect(plans?.map((p) => p.plan)).toEqual(["free", "pro", "max", "agency"]);
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit & { next?: { revalidate?: number } }];
     expect(url).toBe(`${API}/v1/billing/plans`);
     expect(init.next?.revalidate).toBe(300);
@@ -42,7 +42,7 @@ describe("buildPricing", () => {
     expect(max.features).toContain("5,000 AI credits a month");
     expect(max.features).toContain("API keys and Zapier");
     expect(pro.name).toBe("Creator");
-    expect(pricing.credits).toEqual({ free: 200, pro: 1500, max: 5000 });
+    expect(pricing.credits).toEqual({ free: 200, pro: 1500, max: 5000, agency: 12_000 });
   });
 
   it("a Pro plan Dodo couldn't price has no price, never a made-up one", () => {
@@ -55,10 +55,24 @@ describe("buildPricing", () => {
   it("without the API: the features from the product guide and no prices at all", () => {
     const pricing = buildPricing(null);
     expect(pricing.source).toBe("fallback");
-    expect(pricing.plans.map((card) => card.price)).toEqual([null, null, null]);
-    expect(pricing.plans.map((card) => card.offer)).toEqual([null, null, null]);
+    expect(pricing.plans.map((card) => card.price)).toEqual([null, null, null, null]);
+    expect(pricing.plans.map((card) => card.offer)).toEqual([null, null, null, null]);
     expect(pricing.plans[1].trialDays).toBe(7);
     expect(pricing.plans[2].available).toBe(false);
+  });
+
+  it("C-174: Agency's card lines come from its entitlements", () => {
+    const agency = buildPricing(null).plans[3];
+    expect(agency).toMatchObject({ plan: "agency", name: "Agency", available: false, trialDays: 0 });
+    expect(agency.features).toEqual([
+      "10 each of Instagram, WhatsApp and Facebook; 1 web chat",
+      "10 team members",
+      "Unlimited automations",
+      "12,000 AI credits a month",
+      "Unlimited scheduled posts",
+      "50M characters of knowledge",
+      "API keys and Zapier",
+    ]);
   });
 
   it("the fallback lists exactly what the API's plans list", () => {
