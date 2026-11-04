@@ -79,7 +79,11 @@ async def test_trial_email_hashes_are_kept_3_years(
                 {"k": key, "at": NOW - timedelta(days=age)},
             )
     assert (await run(maker))["trial_emails"] == 1
-    assert await ids(engine, "SELECT email_hash FROM trial_emails") == {"new"}
+    kept = await ids(
+        engine, "SELECT email_hash FROM trial_emails"
+    )  # other tests' hashes may remain
+    assert "new" in kept
+    assert "old" not in kept
 
 
 async def test_notifications_are_kept_90_days(

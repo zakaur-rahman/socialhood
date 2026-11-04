@@ -13204,6 +13204,7 @@
           },
           "status": {
             "enum": [
+              "awaiting_approval",
               "pending",
               "processing",
               "ready",
@@ -23464,6 +23465,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "awaiting_approval",
                   "pending",
                   "processing",
                   "ready",
@@ -40178,6 +40180,70 @@
           }
         },
         "summary": "Update Knowledge Source",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
+    "/v1/w/{wid}/knowledge-sources/{source_id}/approve": {
+      "post": {
+        "description": "A person approves what an AI app added: it is read in and the AI starts using it. A source\nthat isn't waiting for approval is returned as it is.",
+        "operationId": "approve_knowledge_source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Approve Knowledge Source",
         "tags": [
           "knowledge"
         ]

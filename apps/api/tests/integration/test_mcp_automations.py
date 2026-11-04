@@ -549,6 +549,7 @@ async def test_update_refuses_a_live_comments_automation(
         account_id=setup.account_id,
         trigger="comment_keyword",
         comment_surface="live",
+        status="draft",
     )
     refused = error_of(
         await call(
@@ -600,7 +601,8 @@ async def test_confirming_needs_a_valid_token_for_exactly_those_arguments(
     # The first call of the owner's report: live with no preview.
     await refused({**args, "confirmed": True})
     await refused({**args, "confirmed": True, "confirmation_token": "wrong"})
-    await refused({**args, "confirmed": True, "confirmation_token": good[:-1] + "0"})
+    tampered = good[:-1] + ("1" if good.endswith("0") else "0")
+    await refused({**args, "confirmed": True, "confirmation_token": tampered})
     await refused({**args, "confirmed": True, "confirmation_token": "99999999999.é"})
     # Changed arguments need a new preview, whichever one changed.
     changed = {"confirmed": True, "confirmation_token": good}
