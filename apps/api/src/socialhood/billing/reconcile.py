@@ -9,6 +9,11 @@ which finds the subscriptions across workspaces (the tenant bypass is allowed in
   downgrade effects (FR-BIL-06).
 - Otherwise Dodo's answer is mirrored (a cancelled subscription whose period has ended goes to
   Free); when Dodo can't be reached, nothing changes until the next run.
+- Dodo answering that it has no such subscription isn't an outage, but it is also what a wrong
+  key or environment looks like, so one answer changes nothing. The run (jobs/tasks/billing.py)
+  sets the plan to Free only after MISSING_RUNS runs in a row, while the API key can read one of
+  our products and only a few subscriptions are affected. When most are, it raises an alert and
+  a person decides (docs/ops/deploy-vm.md, "Going live with Dodo").
 """
 
 from __future__ import annotations
@@ -27,11 +32,32 @@ from socialhood.settings import Settings
 
 log = get_logger(__name__)
 
+MISSING_RUNS = 4  # a day, at one run every 6 hours
+MANY_MISSING = 3
+
 
 @dataclass(frozen=True)
 class Reconciled:
     drift: bool
     detail: str | None = None
+    missing: bool = False  # Dodo answered that it has no such subscription
+
+
+def too_many_missing(missing: int, checked: int) -> bool:
+    """Most of the paid workspaces at once: more likely the wrong key or environment."""
+    return missing >= MANY_MISSING and missing * 2 > checked
+
+
+async def dodo_key_works(dodo: DodoClient, settings: Settings) -> bool:
+    """Whether this key, in this environment, can read a product we sell."""
+    product = settings.dodo_product_pro_monthly
+    if not product:
+        return False
+    try:
+        await dodo.get_product_price(product)
+    except DodoError:
+        return False
+    return True
 
 
 async def reconcile_one(
@@ -61,6 +87,8 @@ async def reconcile_one(
             why = "has no such subscription" if error.not_found else "didn't answer"
             return Reconciled(applied.changed, f"grace ended; Dodo {why}")
         log.warning("billing_reconcile_skipped", status=error.status, retryable=error.retryable)
+        if error.not_found:
+            return Reconciled(False, "Dodo has no such subscription", missing=True)
         return Reconciled(False, "Dodo didn't answer")
     if grace_over and snapshot.status != "active":
         applied = await lifecycle.expire_now(session, now=now, reason="grace ended")

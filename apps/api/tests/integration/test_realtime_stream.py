@@ -146,6 +146,31 @@ async def test_the_stream_sends_retry_then_entries_in_order(redis: Redis) -> Non
     await until_closed(redis, wid)
 
 
+async def test_a_hidden_event_type_is_skipped(redis: Redis) -> None:
+    wid = uuid.uuid4()
+    start = await stream.start_position(redis, stream_key(wid), None)
+    reader = stream.connect(get_settings().redis_url, wid)
+    body = stream.event_stream(
+        reader,
+        wid,
+        start,
+        is_disconnected=never(),
+        hidden=stream.PUBLISHING_EVENTS,
+        block_ms=5_000,
+    )
+
+    async with asyncio.timeout(TIMEOUT_S):
+        assert await anext(body) == "retry: 3000\n\n"
+        await published(redis, wid, 1, "scheduled_post.updated")
+        [shown] = await published(redis, wid, 1, "message.created")
+        chunk = await anext(body)
+        await body.aclose()
+
+    assert parse(chunk)["id"] == shown
+    assert parse(chunk)["event"] == "message.created"
+    await until_closed(redis, wid)
+
+
 async def test_an_idle_stream_pings_and_ends_when_the_client_leaves(redis: Redis) -> None:
     wid = uuid.uuid4()
     left = asyncio.Event()

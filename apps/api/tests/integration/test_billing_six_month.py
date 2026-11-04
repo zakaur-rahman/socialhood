@@ -28,7 +28,7 @@ from socialhood.services.webhook_handlers import dodo as dodo_handler
 from socialhood.settings import Settings
 from tests.support.api import Clerk, sign_in
 from tests.support.billing import MAX_PRODUCT, PRO_PRODUCT, set_subscription
-from tests.support.dodo import send, subscription
+from tests.support.dodo import checkout_metadata, send, subscription
 
 pytestmark = pytest.mark.usefixtures("queue")
 
@@ -137,7 +137,7 @@ async def test_checkout_sells_each_plan_and_period_with_a_trial_on_monthly_creat
     [params] = fake_dodo.checkouts
     assert params.product_id == product
     assert params.trial_period_days == (7 if wants_trial else 0)
-    assert dict(params.metadata) == {"workspace_id": owner.wid}
+    assert dict(params.metadata) == checkout_metadata(owner.wid)
 
 
 async def test_checkout_period_defaults_to_monthly_and_rejects_anything_else(

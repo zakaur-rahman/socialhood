@@ -337,6 +337,9 @@ async def _complete(
 
 # ---------------------------------------------------------------- import from a public link
 
+IMPORT_URL_MAX = 500
+IMPORT_QUERY_MAX = 200
+IMPORT_TOO_LONG = "This link is too long to import. Upload the file with start_media_upload."
 IMPORT_TYPES = {
     "image/jpeg",
     "image/png",
@@ -361,6 +364,23 @@ def _refused(error: ssrf.FetchError) -> ApiError:
     return ApiError(code, error.message)
 
 
+def check_import_link(url: str) -> str:
+    """The host of a link that may be imported, with no network: a preview must not reach it. The
+    length is limited because the address itself reaches whoever runs that host, so it isn't a
+    place for much text. Drive and Dropbox direct links fit; a long signed link doesn't."""
+    if not url.lower().startswith("https://"):
+        raise ApiError(
+            "validation_error", errors=[FieldError("url", "Use an https:// link to the file.")]
+        )
+    try:
+        parsed = ssrf.check_url(url)
+    except ssrf.FetchError as error:
+        raise _refused(error) from error
+    if len(url) > IMPORT_URL_MAX or len(parsed.query) > IMPORT_QUERY_MAX:
+        raise ApiError("validation_error", errors=[FieldError("url", IMPORT_TOO_LONG)])
+    return parsed.host
+
+
 async def import_url(
     session: AsyncSession,
     cloudinary: Cloudinary,
@@ -379,10 +399,7 @@ async def import_url(
     and size first (nothing is stored for a refused link), then storage fetches the final
     address, then the library's rules (format, size and length as stored)."""
     await check_daily(redis, plan, workspace_id, now)
-    if not url.lower().startswith("https://"):
-        raise ApiError(
-            "validation_error", errors=[FieldError("url", "Use an https:// link to the file.")]
-        )
+    check_import_link(url)
     try:
         probed = await ssrf.probe(url, resolve=resolve)
     except ssrf.FetchError as error:

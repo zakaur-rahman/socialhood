@@ -827,3 +827,52 @@ async def test_the_settings_say_when_they_changed(site: Site) -> None:
     assert (
         abs((datetime.now(UTC) - datetime.fromisoformat(saved["updated_at"])).total_seconds()) < 60
     )
+
+
+# ---------------------------------------------------------------- what a visitor can spend
+
+
+async def test_past_the_ai_cap_a_message_is_kept_for_the_team(
+    site: Site, redis: Redis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[bool] = []
+    real = chat.ingest.ingest
+
+    async def spy(*args: Any, **kwargs: Any) -> Any:
+        calls.append(kwargs["ai"])
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(chat.ingest, "ingest", spy)
+    visitor = await site.visit()
+    assert (await visitor.send("First question")).status_code == 200
+    await fill(redis, "widget_ai_visitor", visitor.id)
+    assert (await visitor.send("Second question")).status_code == 200
+
+    assert calls == [True, False]
+    assert [m["text"] for m in await visitor.messages()] == ["First question", "Second question"]
+
+
+async def test_the_email_form_counts_against_the_daily_chat_cap(
+    site: Site, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(plans.ENTITLEMENTS["widget_conversations_daily"], "free", 1)
+    await site.settings(email_capture="optional")
+    first, second = await site.visit(), await site.visit()
+
+    assert (await first.email("one@shop.example")).status_code == 200
+    assert (await second.email("two@shop.example")).status_code == 429
+    assert (await first.email("one.again@shop.example")).status_code == 200  # known visitor
+
+
+async def test_widget_consent_is_recorded_as_not_confirmed(site: Site) -> None:
+    await site.settings(
+        email_capture="optional",
+        marketing_consent_enabled=True,
+        marketing_consent_text="Send me offers",
+    )
+    visitor = await site.visit()
+    assert (await visitor.email(marketing_consent=True)).status_code == 200
+
+    [row] = await site.rows("SELECT status, evidence FROM contact_consents")
+    assert row["status"] == "granted"
+    assert row["evidence"]["address_confirmed"] is False

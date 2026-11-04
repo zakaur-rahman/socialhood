@@ -98,21 +98,27 @@ class Cloudinary:
         resource_type: ResourceType,
         timestamp: int | None = None,
         tags: str | None = None,
+        public_id: str | None = None,
     ) -> dict[str, Any]:
         """Parameters for a signed direct upload from the browser (TR-MED-01). ``tags`` is signed
         too, so the upload carries it and nothing else can: an AI app's one-time ticket
-        (mcp/tools/media.py) is the tag ``mcp_upload_{id}``."""
+        (mcp/tools/media.py) is the tag ``mcp_upload_{id}``. ``public_id`` (the file's name inside
+        ``folder``) is signed as well, so sending the same signature again replaces that one file
+        instead of storing another."""
         self._require()
         ts = timestamp or int(time.time())
         signed: dict[str, Any] = {"folder": folder, "timestamp": ts}
         if tags:
             signed["tags"] = tags
+        if public_id:
+            signed["public_id"] = public_id
         return {
             "cloud_name": self.cloud,
             "api_key": self.api_key,
             "timestamp": ts,
             "folder": folder,
             **({"tags": tags} if tags else {}),
+            **({"public_id": public_id} if public_id else {}),
             "signature": sign(signed, self.secret),
             "upload_url": f"{API}/{self.cloud}/{resource_type}/upload",
         }

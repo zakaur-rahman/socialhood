@@ -5,7 +5,9 @@
 - **Resume** turns back on an automation that **was live before**. A draft that never went live is
   refused ("Activate it in Amplychat first"): a first activation stays a human decision in the
   app. Resuming runs the app's own activation (its validation and the plan's active-automation
-  limit), and restarts a private-reply queue it held, as the app does.
+  limit), and restarts a private-reply queue it held, as the app does. It messages customers
+  again, so it is previewed first (mcp/confirmations.py): the activation runs in a savepoint and
+  is rolled back.
 
 Neither uses the dedupe window: the two undo each other, so an identical resend a minute later
 must run, not replay the earlier result. Each call is idempotent by itself (pausing a paused
@@ -19,14 +21,27 @@ import uuid
 from pydantic import Field
 
 from socialhood.errors import ApiError
+from socialhood.mcp import confirmations
 from socialhood.mcp.context import ToolCall
-from socialhood.mcp.registry import Access, WriteInput, WriteOutput, registry, tool
+from socialhood.mcp.registry import (
+    Access,
+    ConfirmedInput,
+    WriteInput,
+    WriteOutput,
+    registry,
+    tool,
+)
 from socialhood.models.automations import AutomationStatus
 from socialhood.models.identity import Role
+from socialhood.realtime import events
 from socialhood.services.automations import definitions, queue
 
 
 class AutomationIdInput(WriteInput):
+    automation_id: uuid.UUID = Field(description="From list_automations.")
+
+
+class ResumeAutomationInput(ConfirmedInput):
     automation_id: uuid.UUID = Field(description="From list_automations.")
 
 
@@ -35,6 +50,7 @@ class AutomationStateResult(WriteOutput):
     name: str
     status: str  # draft, active, paused
     changed: bool
+    next_step: str | None = None
     dashboard_url: str | None = None
 
 
@@ -87,16 +103,18 @@ async def pause_automation(call: ToolCall, args: AutomationIdInput) -> Automatio
     description=(
         "Turn a paused automation back on. Only an automation that was live before can be "
         "resumed; a draft that never went live is activated in Amplychat. It is checked and "
-        "limited as when activating in the app. Part of Creator and Business."
+        "limited as when activating in the app. Once on, it messages the people who match, so "
+        "it is previewed first: show the member the preview and call again only after they "
+        "agree, with confirmed true and its confirmation_token. Part of Creator and Business."
     ),
-    input_model=AutomationIdInput,
+    input_model=ResumeAutomationInput,
     output_model=AutomationStateResult,
     scope="automations:write",
     access=Access.WRITE,
     min_role=Role.ADMIN,
     open_world=True,
 )
-async def resume_automation(call: ToolCall, args: AutomationIdInput) -> AutomationStateResult:
+async def resume_automation(call: ToolCall, args: ResumeAutomationInput) -> AutomationStateResult:
     current = await definitions.get_or_404(call.session, args.automation_id, for_update=True)
     url = call.dashboard_url(f"automations/{current.id}")
     if current.status == AutomationStatus.ACTIVE:
@@ -110,6 +128,10 @@ async def resume_automation(call: ToolCall, args: AutomationIdInput) -> Automati
         )
     if current.activated_at is None:
         raise ApiError("conflict", NEVER_LIVE + (f" {url}" if url else ""))
+    if args.confirmed:
+        confirmations.require(call, args, args.confirmation_token)
+    was = current.status
+    savepoint = None if args.confirmed else await call.session.begin_nested()
     automation = await definitions.activate(
         call.session,
         current.id,
@@ -117,6 +139,22 @@ async def resume_automation(call: ToolCall, args: AutomationIdInput) -> Automati
         disclosure=call.workspace.automation_disclosure,
         now=call.now,
     )
+    if savepoint is not None:
+        result = AutomationStateResult(
+            summary=f"Preview: “{automation.name}” would go live again and message the people who "
+            "match. Nothing is changed yet",
+            automation_id=automation.id,
+            name=automation.name,
+            status=was,
+            changed=False,
+            preview=True,
+            confirmation_token=confirmations.issue(call, args),
+            next_step=confirmations.next_step("resume it"),
+            dashboard_url=url,
+        )
+        await savepoint.rollback()
+        events.discard(call.session)
+        return result
     call.note("automation.resumed", "automation", automation.id)
     account_id, workspace_id = automation.social_account_id, call.workspace.id
     waiting = bool(account_id) and await queue.automation_waiting(call.session, automation.id)

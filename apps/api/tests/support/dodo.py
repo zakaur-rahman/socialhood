@@ -18,7 +18,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.models.platform import WebhookStatus
+from socialhood.security.signatures import sign_checkout_workspace
 from socialhood.services.webhook_processing import process_event
+from tests.support.api import TOKEN_KEY
 from tests.support.billing import PRO_PRODUCT, dodo_event, post_dodo_event
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "dodo"
@@ -31,6 +33,14 @@ def fixture(name: str) -> dict[str, Any]:
 
 def iso(at: datetime) -> str:
     return at.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def checkout_metadata(workspace_id: uuid.UUID | str | None) -> dict[str, str]:
+    """What our checkout sets, as Dodo copies it onto its events."""
+    if not workspace_id:
+        return {}
+    wid = str(workspace_id)
+    return {"workspace_id": wid, "workspace_sig": sign_checkout_workspace(wid, [TOKEN_KEY])}
 
 
 def subscription(
@@ -62,7 +72,7 @@ def subscription(
             "next_billing_date": iso(period_end or start + timedelta(days=30)),
             "trial_period_days": trial_period_days,
             "cancel_at_next_billing_date": cancel_at_next_billing_date,
-            "metadata": {"workspace_id": str(workspace_id)} if workspace_id else {},
+            "metadata": checkout_metadata(workspace_id),
         }
     )
     data["customer"] = {**data["customer"], "customer_id": customer_id}
@@ -92,7 +102,7 @@ def payment(
             "total_amount": total_amount,
             "currency": currency,
             "created_at": iso(datetime.now(UTC)),
-            "metadata": {"workspace_id": str(workspace_id)} if workspace_id else {},
+            "metadata": checkout_metadata(workspace_id),
         }
     )
     data.update(values)

@@ -6,8 +6,11 @@
   customer (§6.5). The reply window is checked as in the inbox, so a draft that could not be sent
   is refused with the window's own words.
 - ``add_knowledge`` adds a note or an FAQ through the knowledge service, counting toward the
-  plan's characters of knowledge (402 past it). Ingestion runs in the background after the
-  commit.
+  plan's characters of knowledge (402 past it). AI replies are written from it, so it is previewed
+  first (mcp/confirmations.py): the first call runs the service in a savepoint and rolls it back.
+  Ingestion runs in the background after the commit.
+
+Customers' names stay out of summaries and errors here: those are read as Amplychat's own words.
 """
 
 from __future__ import annotations
@@ -17,13 +20,20 @@ from typing import Literal
 
 from pydantic import Field
 
-from socialhood.agent.tools.common import contact_name
 from socialhood.errors import ApiError, FieldError
+from socialhood.mcp import confirmations
 from socialhood.mcp.context import ToolCall
-from socialhood.mcp.registry import Access, WriteInput, WriteOutput, registry, tool
+from socialhood.mcp.registry import (
+    Access,
+    ConfirmedInput,
+    WriteInput,
+    WriteOutput,
+    registry,
+    tool,
+)
 from socialhood.mcp.tools.common import agent_tool, moment
 from socialhood.models.identity import Role
-from socialhood.repositories import inbox
+from socialhood.realtime import events
 from socialhood.schemas.knowledge import KnowledgeSourceCreate
 from socialhood.services import conversations
 from socialhood.services.knowledge import sources
@@ -53,10 +63,10 @@ class DraftReplyResult(WriteOutput):
     conversation_id: uuid.UUID
     saved: bool  # false when Amplychat couldn't draft one from the knowledge
     draft_id: uuid.UUID | None = None
-    reply: str | None = None  # the saved draft
+    reply_text: str | None = None  # the saved draft
     sent: bool = False  # always false: nothing is sent
     window: str | None = None  # when the reply window closes
-    missing_info: str | None = None
+    missing_info_text: str | None = None
     dashboard_url: str | None = None
 
 
@@ -82,8 +92,6 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
             errors=[FieldError("text", "Send either text or use_knowledge: true, not both.")],
         )
     conv = await conversations.get_or_404(call.session, args.conversation_id)
-    contact = await inbox.get_contact(call.session, conv.contact_id)
-    name = contact_name(contact)
     human_agent = call.settings.ig_human_agent_enabled and conv.platform in (
         "instagram",
         "facebook",
@@ -94,11 +102,11 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
     if not may_send(window, "human"):
         raise ApiError(
             "reply_window_closed",
-            f"{name}'s reply window is closed. {WINDOW_CLOSED_COPY.get(conv.platform, '')}".strip(),
+            f"The reply window is closed. {WINDOW_CLOSED_COPY.get(conv.platform, '')}".strip(),
         )
     target = await conversations.latest_customer_message(call.session, conv.id)
     if target is None:
-        raise ApiError("conflict", f"{name} hasn't sent a message to reply to yet.")
+        raise ApiError("conflict", "The customer hasn't sent a message to reply to yet.")
     url = call.dashboard_url(f"inbox/{conv.id}")
     closes = moment(call, window.closes_at) if window.closes_at else None
     text = args.text
@@ -106,10 +114,10 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
         found = await agent_tool(call, "draft_reply", {"conversation_id": conv.id})
         if not found.can_answer or not found.text:
             return DraftReplyResult(
-                summary=f"Couldn't draft a reply to {name} from the knowledge base",
+                summary="Couldn't draft a reply from the knowledge base",
                 conversation_id=conv.id,
                 saved=False,
-                missing_info=found.missing_info,
+                missing_info_text=found.missing_info,
                 window=closes,
                 dashboard_url=url,
             )
@@ -119,11 +127,11 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
     row = await suggestions.save_draft(call.session, conv, target, text.strip(), source="mcp")
     call.note("reply.drafted", "conversation", conv.id, suggestion_id=str(row.id))
     return DraftReplyResult(
-        summary=f"Saved a draft reply to {name}. It is not sent: a member sends it in Amplychat",
+        summary="Saved a draft reply. It is not sent: a member sends it in Amplychat",
         conversation_id=conv.id,
         saved=True,
         draft_id=row.id,
-        reply=row.reply_text,
+        reply_text=row.reply_text,
         window=closes,
         dashboard_url=url,
     )
@@ -132,7 +140,7 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
 # ---------------------------------------------------------------- add_knowledge
 
 
-class AddKnowledgeInput(WriteInput):
+class AddKnowledgeInput(ConfirmedInput):
     type: Literal["text", "faq"] = Field(
         description="text: a note with a title; faq: a customer question and its answer."
     )
@@ -146,13 +154,15 @@ class AddKnowledgeInput(WriteInput):
 
 
 class AddKnowledgeResult(WriteOutput):
-    source_id: uuid.UUID
+    source_id: uuid.UUID | None = None  # none on a preview
     type: str
     title: str
     status: str  # pending: it is being read into the knowledge base
     characters: int
     characters_used: int
     characters_limit: int | None = None
+    body_text: str | None = None  # a preview's words, to show the member
+    next_step: str | None = None
     dashboard_url: str | None = None
 
 
@@ -164,7 +174,9 @@ class AddKnowledgeResult(WriteOutput):
         "Add a note (title and text) or an FAQ (question and answer) to the knowledge base that "
         "Amplychat's AI replies from. It counts toward the plan's characters of knowledge. It "
         "shows under Knowledge in Amplychat, where it can be edited or removed. It is read in "
-        "the background and is searchable within a minute."
+        "the background and is searchable within a minute. Customers can receive what it says, "
+        "so it is previewed first: show the member the preview and call again only after they "
+        "agree, with confirmed true and its confirmation_token."
     ),
     input_model=AddKnowledgeInput,
     output_model=AddKnowledgeResult,
@@ -177,15 +189,12 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
     body = KnowledgeSourceCreate(
         type=args.type, title=args.title, question=args.question, body=args.body
     )
+    if args.confirmed:
+        confirmations.require(call, args, args.confirmation_token)
+    savepoint = None if args.confirmed else await call.session.begin_nested()
     source = await sources.create(call.session, body, user_id=call.principal.user_id)
-    call.note("knowledge.created", "knowledge_source", source.id, type=args.type)
-
-    async def ingest() -> None:
-        await sources.enqueue_ingest(source)
-
-    call.after_commit.append(ingest)
     used = await sources.usage(call.session)
-    return AddKnowledgeResult(
+    result = AddKnowledgeResult(
         summary=f"Added “{source.title}” to the knowledge base",
         source_id=source.id,
         type=source.type,
@@ -196,3 +205,24 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
         characters_limit=used.characters_limit,
         dashboard_url=call.dashboard_url("knowledge"),
     )
+    if savepoint is not None:
+        await savepoint.rollback()
+        events.discard(call.session)
+        return result.model_copy(
+            update={
+                "summary": "Preview: this would be added to the knowledge base that AI replies "
+                "are written from. Nothing is added yet",
+                "source_id": None,
+                "body_text": args.body,
+                "preview": True,
+                "confirmation_token": confirmations.issue(call, args),
+                "next_step": confirmations.next_step("add it"),
+            }
+        )
+    call.note("knowledge.created", "knowledge_source", source.id, type=args.type)
+
+    async def ingest() -> None:
+        await sources.enqueue_ingest(source)
+
+    call.after_commit.append(ingest)
+    return result

@@ -8,7 +8,6 @@ test environments it needs ``Authorization: Bearer {METRICS_TOKEN}`` so it is no
 
 from __future__ import annotations
 
-import hmac
 from typing import Literal
 
 from fastapi import APIRouter, Request
@@ -16,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from socialhood.errors import ApiError
+from socialhood.security.signatures import same_text
 from socialhood.settings import Settings
 
 router = APIRouter(include_in_schema=False)
@@ -42,7 +42,7 @@ async def readyz(request: Request) -> Ready:
     if not settings.is_local:
         expected = settings.metrics_token.get_secret_value() if settings.metrics_token else ""
         supplied = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
-        if not expected or not hmac.compare_digest(expected, supplied):
+        if not expected or not same_text(expected, supplied):
             raise ApiError("not_found")
 
     checks: dict[str, str] = {}

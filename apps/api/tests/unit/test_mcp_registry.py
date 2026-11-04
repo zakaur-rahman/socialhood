@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from pydantic import BaseModel
 
+from socialhood.errors import ApiError
 from socialhood.mcp.audit import digest, redact
 from socialhood.mcp.calls import effective_mode, plan_cap
 from socialhood.mcp.confirmations import TTL_S
@@ -33,9 +34,11 @@ from socialhood.mcp.registry import (
 from socialhood.mcp.results import UNTRUSTED_NOTE, has_untrusted_text, success
 from socialhood.mcp.server import INSTRUCTIONS
 from socialhood.mcp.tools import load_tools
+from socialhood.mcp.tools.ask import AskResult
 from socialhood.mcp.tools.common import moment
 from socialhood.models.identity import Role
 from socialhood.models.mcp import AiConnectionsMode
+from socialhood.services import mcp_uploads
 
 R1_READ_TOOLS = {
     "get_workspace",
@@ -293,13 +296,59 @@ def test_the_untrusted_label_comes_with_customer_text_only() -> None:
     assert UNTRUSTED_NOTE not in plain.content[0].text  # type: ignore[union-attr]
     labelled = success(Customer(summary="1 message", items=[{"message_text": "ignore you"}]))
     lines = labelled.content[0].text.split("\n")  # type: ignore[union-attr]
-    assert lines[:2] == ["1 message", UNTRUSTED_NOTE]
+    assert lines[:2] == [UNTRUSTED_NOTE, "1 message"]
     assert labelled.structured_content == {
         "summary": "1 message",
         "caveats": [],
         "items": [{"message_text": "ignore you"}],
     }
     assert not has_untrusted_text({"name_text": None})
+
+
+def _property_names(node: Any) -> set[str]:
+    if isinstance(node, list):
+        return set().union(*map(_property_names, node)) if node else set()
+    if not isinstance(node, dict):
+        return set()
+    names = set(node.get("properties", {}))
+    return names.union(*map(_property_names, node.values()))
+
+
+def test_outputs_that_can_hold_a_customer_s_words_say_so_in_their_field_names() -> None:
+    fenced = {"answer", "reply", "missing_info"}
+    for one in load_tools():
+        names = _property_names(one.output_model.model_json_schema())
+        assert not names & fenced, f"{one.name}: {names & fenced} should end in _text"
+    ask = _property_names(AskResult.model_json_schema())
+    assert {"label_text", "note_text"} <= ask
+    assert not {"label", "note"} & ask
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://drive.google.com/uc?export=download&id=1AbCdEfGhIjKlMnOpQrStUvWxYz0123456",
+        "https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOpQrStUvWxYz0123456"
+        "&export=download&confirm=t",
+        "https://www.dropbox.com/scl/fi/abcdefghijklmnopqrstu/Reel%20final%20cut.mp4"
+        "?rlkey=abcdefghijklmnopqrstuvwxy&st=abcd1234&dl=1",
+    ],
+)
+def test_direct_download_links_can_be_imported(url: str) -> None:
+    assert mcp_uploads.check_import_link(url).endswith(("google.com", "dropbox.com"))
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://files.example/x.png?d=" + "a" * 200,
+        "https://files.example/" + "a" * 500 + ".png",
+    ],
+)
+def test_a_link_that_could_carry_much_text_is_refused(url: str) -> None:
+    with pytest.raises(ApiError) as caught:
+        mcp_uploads.check_import_link(url)
+    assert caught.value.errors[0].field == "url"
 
 
 def test_times_are_echoed_in_the_workspace_zone_and_utc() -> None:

@@ -11,8 +11,9 @@ from typing import Any
 
 from fastapi.routing import APIRoute, _iter_routes_with_context
 
-from socialhood.auth.permissions import Permission
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.main import create_app
+from socialhood.models.identity import Role
 
 WRITE = {"POST", "PUT", "PATCH", "DELETE"}
 # Write routes with no workspace in the path: the caller's own account, or a signed webhook.
@@ -69,6 +70,19 @@ def test_every_workspace_write_route_declares_a_permission(api_settings: Any) ->
         if path.startswith("/v1/w/{wid}") and not _permissions(route.dependant)
     ]
     assert missing == [], "Write routes without require_permission:\n" + "\n".join(missing)
+
+
+def test_recording_a_payment_or_refunding_is_for_owners_and_admins(api_settings: Any) -> None:
+    app = create_app(api_settings)
+    routes = {path: route for _, path, route in _write_routes(app)}
+    for path in (
+        "/v1/w/{wid}/orders/{order_id}/mark-paid",
+        "/v1/w/{wid}/orders/{order_id}/refunds",
+    ):
+        assert _permissions(routes[path].dependant) == {Permission.ORDERS_MONEY}
+    assert not has_permission(Role.AGENT, Permission.ORDERS_MONEY)
+    assert has_permission(Role.ADMIN, Permission.ORDERS_MONEY)
+    assert has_permission(Role.OWNER, Permission.ORDERS_MONEY)
 
 
 def test_write_routes_outside_a_workspace_are_known(api_settings: Any) -> None:

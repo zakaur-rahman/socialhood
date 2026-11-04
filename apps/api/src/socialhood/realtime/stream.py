@@ -13,7 +13,8 @@
 Every open stream blocks in XREAD on its own Redis connection, so long reads never take
 connections from the shared pool, and the connection is closed when the client goes away. A stream
 ends after ``MAX_STREAM_S``; the client reconnects with Last-Event-ID and a fresh token, which
-rechecks its membership.
+rechecks its membership, so a removed member stops receiving within that time. ``hidden`` event
+types are skipped, for a member whose role can't read what they carry.
 """
 
 from __future__ import annotations
@@ -37,8 +38,9 @@ log = get_logger(__name__)
 BLOCK_MS = 15_000  # one XREAD; a read that returns nothing is followed by a ping
 BATCH = 100
 RETRY_MS = 3_000
-MAX_STREAM_S = 30 * 60
+MAX_STREAM_S = 5 * 60
 ORIGIN = "0-0"  # before every stream entry
+PUBLISHING_EVENTS = frozenset({"scheduled_post.updated"})  # whole posts, for publishing.manage
 PING = ": ping\n\n"
 # Cache-Control no-transform keeps proxies from compressing the stream ("never compressed").
 HEADERS = {"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"}
@@ -114,6 +116,7 @@ async def event_stream(
     start: Start,
     *,
     is_disconnected: Callable[[], Awaitable[bool]],
+    hidden: frozenset[str] = frozenset(),
     block_ms: int = BLOCK_MS,
     max_duration_s: float = MAX_STREAM_S,
 ) -> AsyncIterator[str]:
@@ -135,6 +138,8 @@ async def event_stream(
                 continue
             for entry_id, fields in entries:
                 cursor = entry_id
+                if fields.get("type") in hidden:
+                    continue
                 yield format_event(
                     entry_id, fields.get("type", "message"), fields.get("data", "{}")
                 )

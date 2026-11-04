@@ -14,6 +14,7 @@ export const PERMISSION = {
   manageKnowledge: "knowledge.manage",
   manageSettings: "settings.manage",
   manageBilling: "billing.manage",
+  moveOrderMoney: "orders.money",
   readAudit: "audit.read",
   readMembers: "members.read",
   inviteMembers: "members.invite",

@@ -35,7 +35,7 @@ from tests.support.suggestions import answer, cannot
 
 DISCLOSURE = "Sent automatically"
 INSTRUCTIONS = "Mention the Diwali sale on every cake."
-REPLY = "Shipping is free over ₹999."
+REPLY = "Shipping is free on big orders."
 
 
 @pytest.fixture(autouse=True)
@@ -211,6 +211,38 @@ async def test_an_invented_link_escalates_as_blocked_output(
     run = await world.run_row()
     assert (run["result"], run["error_code"]) == ("escalated", "output_blocked")
     assert await outbound(world) == []
+
+
+async def test_a_reply_with_no_source_or_instructions_is_not_sent(
+    world: World, fake_ai: FakeProvider
+) -> None:
+    await ai_automation(world, ai_instructions=None)
+    thread = await make_thread(
+        world.engine,
+        workspace_id=world.wid,
+        account_id=world.account_id,
+        texts=("shipping deals please",),
+    )
+    fake_ai.respond("suggest", answer("Yes, free delivery for you!", used=()))
+    await world.run("dm", thread.message_ids[0])
+    run = await world.run_row()
+    assert (run["result"], run["error_code"]) == ("escalated", "out_of_knowledge")
+    assert await outbound(world) == []
+
+
+async def test_a_number_only_the_instructions_hold_may_be_sent(
+    world: World, fake_ai: FakeProvider
+) -> None:
+    await ai_automation(world, ai_instructions="Mention 20% off this week.")
+    thread = await make_thread(
+        world.engine,
+        workspace_id=world.wid,
+        account_id=world.account_id,
+        texts=("shipping deals please",),
+    )
+    fake_ai.respond("suggest", answer("Shipping is free, and 20% off this week!", used=()))
+    await world.run("dm", thread.message_ids[0])
+    assert (await world.run_row())["result"] == "sent"
 
 
 async def test_a_retried_job_finishes_a_draft_it_started(

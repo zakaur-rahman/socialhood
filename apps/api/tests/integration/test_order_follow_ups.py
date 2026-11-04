@@ -15,8 +15,10 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.auth.invitations import FakeInvitationSender, use_invitation_sender
 from socialhood.models.platform import WebhookStatus
 from socialhood.razorpay.fake import FakeRazorpay
+from tests.integration.test_assignment import join
 from tests.integration.test_orders import (
     order_in_chat,
     paid_event,
@@ -117,6 +119,20 @@ def link_event(
 
 
 # ---------------------------------------------------------------- part payments
+
+
+async def test_an_agent_cant_record_a_payment_or_refund(ws: Ws, engine: AsyncEngine) -> None:
+    await set_plan(engine, ws.wid, "max")  # room for a second member
+    await upi_ready(ws)
+    order, _ = await order_in_chat(ws, engine)
+    with use_invitation_sender(FakeInvitationSender()):
+        sam = await join(ws, "sam@example.com", "agent")
+    for path, body in (("mark-paid", {}), ("refunds", {"reason": "Return"})):
+        assert (
+            await sam.call("POST", f"/orders/{order['id']}/{path}", json=body)
+        ).status_code == 403
+    assert (await sam.ok("GET", f"/orders/{order['id']}"))["amount_paid_minor"] == 0
+    assert (await ws.ok("POST", f"/orders/{order['id']}/mark-paid", json={}))["status"] == "paid"
 
 
 async def test_a_upi_order_is_paid_in_parts_by_hand(ws: Ws, engine: AsyncEngine) -> None:

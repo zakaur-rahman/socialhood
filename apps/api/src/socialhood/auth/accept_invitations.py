@@ -5,7 +5,9 @@ When someone signs in, GET /v1/me calls ``accept_for_user``. If a pending, unexp
 names their email, we ask Clerk for their profile and join them only when that email is verified
 there: an address typed into a sign-up form and never confirmed must not open a workspace. They
 join with the invited role; the invitation becomes accepted; their last workspace becomes the
-new one, so they land there. A Clerk outage skips the step and the next /me tries again.
+new one, so they land there. A Clerk outage skips the step and the next /me tries again. A
+workspace already at its plan's ``members`` limit (after a downgrade) takes nobody new: the
+invitation stays pending until a seat is free or it expires.
 """
 
 from __future__ import annotations
@@ -18,10 +20,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.clerk import ClerkClient, ClerkUnavailable
+from socialhood.billing.plans import entitlement
 from socialhood.db.tenancy import tenant_bypass_scope
+from socialhood.models.billing import Subscription
 from socialhood.models.identity import Role, User, Workspace, WorkspaceMember, WorkspaceStatus
 from socialhood.models.team import AuditEvent, InvitationStatus, WorkspaceInvitation
 from socialhood.observability.logging import get_logger
+from socialhood.repositories import workspaces
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -43,6 +48,23 @@ async def _pending_for(
             .order_by(WorkspaceInvitation.created_at)
         )
         return list(rows.all())
+
+
+async def _seat_free(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
+    """Holds the workspace's seat lock (services/team.py) until the transaction ends."""
+    await workspaces.lock_limit(session, "members", workspace_id)
+    plan = await session.scalar(
+        select(Subscription.plan).where(Subscription.workspace_id == workspace_id)
+    )
+    limit = entitlement(plan or "free", "members")
+    if limit is None:
+        return True
+    members = await session.scalar(
+        select(func.count())
+        .select_from(WorkspaceMember)
+        .where(WorkspaceMember.workspace_id == workspace_id)
+    )
+    return int(members or 0) < limit
 
 
 async def accept_for_user(
@@ -80,6 +102,9 @@ async def accept_for_user(
                 )
             )
             if already is None:
+                if not await _seat_free(session, workspace_id):
+                    log.info("invitation_accept_no_seat", workspace_id=str(workspace_id))
+                    continue
                 session.add(
                     WorkspaceMember(
                         workspace_id=workspace_id, user_id=user.id, role=Role(invitation.role).value

@@ -2,10 +2,10 @@
 
 - Success: ``structuredContent`` is the output model as JSON, and the text copy is its summary
   then the same JSON (the spec's recommendation for clients that read only ``content``).
-- Customer-written text (messages, comments, names) travels only in fields whose names end in
-  ``_text``. When a result carries any, the text copy says once, before the JSON, that those
-  fields are third-party content. That label is the only text of ours near customer text; it is
-  never put in a tool's description.
+- Customer-written text (messages, comments, names), and what a model wrote after reading it,
+  travels only in fields whose names end in ``_text``. When a result carries any, the text copy
+  opens by saying once that those fields are third-party content. That label is the only text of
+  ours near customer text; it is never put in a tool's description.
 - Error: ``isError: true`` with one JSON object ``{"error": {...}}``: the app's own error code
   and plain-words message (``ApiError``), field errors the model can fix and retry with, when to
   retry, and for a plan limit the entitlement and an informational plans link (no checkout,
@@ -45,9 +45,8 @@ def success(output: ToolOutput, *, extra: dict[str, Any] | None = None) -> types
     structured = output.model_dump(mode="json")
     if extra:
         structured.update(extra)
-    lines = [output.summary]
-    if has_untrusted_text(structured):
-        lines.append(UNTRUSTED_NOTE)
+    lines = [UNTRUSTED_NOTE] if has_untrusted_text(structured) else []
+    lines.append(output.summary)
     lines.append(json.dumps(structured, ensure_ascii=False, separators=(",", ":")))
     return types.CallToolResult(
         content=[types.TextContent(type="text", text="\n".join(lines))],

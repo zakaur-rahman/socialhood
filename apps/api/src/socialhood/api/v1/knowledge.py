@@ -41,7 +41,12 @@ async def list_knowledge_sources(ctx: Admin, session: Session) -> KnowledgeSourc
     return await sources.list_sources(session)
 
 
-@router.post("/knowledge-sources", status_code=201, operation_id="create_knowledge_source")
+@router.post(
+    "/knowledge-sources",
+    status_code=201,
+    operation_id="create_knowledge_source",
+    dependencies=[ratelimit.KNOWLEDGE_INGEST],
+)
 async def create_knowledge_source(
     request: Request, body: KnowledgeSourceCreate, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:
@@ -71,7 +76,11 @@ async def get_knowledge_source(
     return await sources.get(session, source_id)
 
 
-@router.patch("/knowledge-sources/{source_id}", operation_id="update_knowledge_source")
+@router.patch(
+    "/knowledge-sources/{source_id}",
+    operation_id="update_knowledge_source",
+    dependencies=[ratelimit.KNOWLEDGE_INGEST],
+)
 async def update_knowledge_source(
     source_id: uuid.UUID, body: KnowledgeSourcePatch, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:
@@ -185,7 +194,11 @@ async def exclude_site_path(
     return out
 
 
-@router.post("/knowledge-sources/{source_id}/recrawl", operation_id="recrawl_site")
+@router.post(
+    "/knowledge-sources/{source_id}/recrawl",
+    operation_id="recrawl_site",
+    dependencies=[ratelimit.KNOWLEDGE_INGEST],
+)
 async def recrawl_site(
     source_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:

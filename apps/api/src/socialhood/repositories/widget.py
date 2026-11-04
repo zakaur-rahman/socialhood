@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.connections import SocialAccount
-from socialhood.models.inbox import Conversation, Direction, Message, MessageStatus
+from socialhood.models.inbox import Contact, Conversation, Direction, Message, MessageStatus
 from socialhood.models.widget import WidgetSettings
 from socialhood.repositories.base import scoped_update
 
@@ -50,6 +50,17 @@ async def count_conversations_since(
         select(func.count())
         .select_from(Conversation)
         .where(Conversation.social_account_id == account_id, Conversation.created_at >= since)
+    )
+    return int(count or 0)
+
+
+async def count_contacts_since(
+    session: AsyncSession, account_id: uuid.UUID, since: datetime
+) -> int:
+    count = await session.scalar(
+        select(func.count())
+        .select_from(Contact)
+        .where(Contact.social_account_id == account_id, Contact.first_seen_at >= since)
     )
     return int(count or 0)
 

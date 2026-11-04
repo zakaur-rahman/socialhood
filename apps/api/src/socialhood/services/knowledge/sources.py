@@ -27,12 +27,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
+from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import KnowledgeSource as SourceRow
 from socialhood.models.ai import KnowledgeStatus, KnowledgeType
 from socialhood.models.media import MediaAsset
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import knowledge as repo
+from socialhood.repositories import workspaces
 from socialhood.schemas.knowledge import (
     KnowledgeSource,
     KnowledgeSourceCreate,
@@ -358,6 +360,7 @@ async def _check_quota(
     limit = entitlement(await current_plan(session), "knowledge_characters")
     if limit is None:
         return
+    await workspaces.lock_limit(session, "knowledge_characters", require_workspace())
     used = await repo.characters_used(session, exclude=exclude)
     if used + adding > limit or (adding == 0 and used >= limit):
         raise quota_error(

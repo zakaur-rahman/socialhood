@@ -88,7 +88,11 @@ const PAID = order({
 
 function setup(current: Order, handlers: Record<string, (call: Call, params: Record<string, string>) => Response> = {}) {
   return renderWithApi(<OrderSheet order={current} limits={LIMITS} onOpenChange={() => undefined} />, {
-    handlers: { "GET /v1/w/:wid/social-accounts/:aid/templates": () => json({ items: [] }), ...handlers },
+    handlers: {
+      "GET /v1/w/:wid/permissions": () => json({ role: "owner", permissions: ["orders.money"] }),
+      "GET /v1/w/:wid/social-accounts/:aid/templates": () => json({ items: [] }),
+      ...handlers,
+    },
   });
 }
 
@@ -99,6 +103,20 @@ beforeEach(() => {
 });
 
 describe("an order's money and shipping (GR-32 follow-ups)", () => {
+  it("hides recording a payment and refunding from a member who can't do them", async () => {
+    const agent = { "GET /v1/w/:wid/permissions": () => json({ role: "agent", permissions: ["inbox.reply"] }) };
+    const paying = setup(order(), agent);
+    const sheet = await screen.findByRole("dialog");
+    await within(sheet).findByText(/an owner or admin marks the order paid/);
+    expect(within(sheet).queryByRole("button", { name: "Mark as paid" })).not.toBeInTheDocument();
+    paying.unmount();
+
+    setup(PAID, agent);
+    const paid = await screen.findByRole("dialog");
+    expect(within(paid).getByRole("button", { name: "Mark as shipped" })).toBeInTheDocument();
+    expect(within(paid).queryByRole("button", { name: "Refund" })).not.toBeInTheDocument();
+  });
+
   it("records a part payment by amount and says what it recorded", async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];
@@ -109,7 +127,7 @@ describe("an order's money and shipping (GR-32 follow-ups)", () => {
       },
     });
     const sheet = await screen.findByRole("dialog");
-    expect(within(sheet).getByRole("button", { name: "Mark as paid" })).toBeInTheDocument();
+    expect(await within(sheet).findByRole("button", { name: "Mark as paid" })).toBeInTheDocument();
     await user.type(within(sheet).getByLabelText(/Amount received/), "500");
     await user.type(within(sheet).getByLabelText(/Payment reference/), "UTR 1");
     await user.click(within(sheet).getByRole("button", { name: "Record payment" }));
@@ -122,7 +140,7 @@ describe("an order's money and shipping (GR-32 follow-ups)", () => {
     const bodies: unknown[] = [];
     setup(order(), { "POST /v1/w/:wid/orders/:order_id/mark-paid": (call) => (bodies.push(call.body), json(order())) });
     const sheet = await screen.findByRole("dialog");
-    await user.type(within(sheet).getByLabelText(/Amount received/), "five hundred");
+    await user.type(await within(sheet).findByLabelText(/Amount received/), "five hundred");
     expect(within(sheet).getByText("Enter an amount, like 500 or 499.50.")).toBeInTheDocument();
     await user.click(within(sheet).getByRole("button", { name: "Mark as paid" }));
     expect(bodies).toEqual([]);
@@ -176,8 +194,8 @@ describe("an order's money and shipping (GR-32 follow-ups)", () => {
       },
     });
     const sheet = await screen.findByRole("dialog");
-    expect(within(sheet).getByText(/Up to ₹1,598\.00/)).toBeInTheDocument();
-    const button = within(sheet).getByRole("button", { name: "Refund" });
+    expect(await within(sheet).findByText(/Up to ₹1,598\.00/)).toBeInTheDocument();
+    const button = await within(sheet).findByRole("button", { name: "Refund" });
     expect(button).toBeDisabled();
     await user.type(within(sheet).getByLabelText("Reason"), "Damaged in transit");
     await user.click(button);

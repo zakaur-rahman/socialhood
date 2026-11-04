@@ -41,6 +41,11 @@ def per_ip(name: str) -> Callable[..., Awaitable[None]]:
 SENDS = Depends(per_workspace("sends"))
 # 20 a minute per workspace: requests that call the model.
 AI = Depends(per_workspace("ai"))
+# 120 an hour per workspace: anything that queues knowledge for embedding.
+KNOWLEDGE_INGEST = Depends(per_workspace("knowledge_ingest"))
+# 200 an hour and 1000 a day per workspace: signatures for direct uploads.
+UPLOAD_SIGNATURE = Depends(per_workspace("upload_signature"))
+UPLOAD_SIGNATURE_DAY = Depends(per_workspace("upload_signature_day"))
 # 30 a minute per IP: public OAuth callbacks.
 OAUTH_CALLBACK = Depends(per_ip("oauth_callback"))
 # 60 a minute per IP: the other routes without sign-in (webhooks excepted).

@@ -2,18 +2,29 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from socialhood.models.agent import AgentPolicy
 from socialhood.models.ai import AiSettings
-from socialhood.models.billing import Plan, Subscription, SubscriptionStatus
+from socialhood.models.billing import Plan, Subscription, SubscriptionStatus, TrialEmail
 from socialhood.models.identity import Role, User, Workspace, WorkspaceMember, WorkspaceStatus
+
+
+async def lock_limit(session: AsyncSession, name: str, workspace_id: uuid.UUID) -> None:
+    """Serialise one plan limit's check-then-add in the workspace until the transaction ends, so
+    requests at once can't all pass the same count."""
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"limit:{name}:{workspace_id}"},
+    )
 
 
 async def get(session: AsyncSession, workspace_id: uuid.UUID) -> Workspace | None:
@@ -73,10 +84,33 @@ async def transfer_ownership(
     )
 
 
+def trial_email_hash(email: str) -> str:
+    return hashlib.sha256(email.strip().lower().encode()).hexdigest()
+
+
+async def _owner_email(session: AsyncSession, workspace: Workspace) -> str | None:
+    return await session.scalar(select(User.email).where(User.id == workspace.owner_user_id))
+
+
+async def remember_trial_email(session: AsyncSession, workspace: Workspace, at: datetime) -> None:
+    """A hash of the owner's email, kept through account deletion so that signing up again with it
+    doesn't bring the trial back."""
+    email = await _owner_email(session, workspace)
+    if email:
+        await session.execute(
+            insert(TrialEmail)
+            .values(email_hash=trial_email_hash(email), used_at=at)
+            .on_conflict_do_nothing()
+        )
+
+
 async def trial_used_by_owner(session: AsyncSession, workspace: Workspace) -> bool:
-    """TR-BIL-05: this workspace, or any workspace whose owner has its owner's email, has used a
-    trial."""
+    """TR-BIL-05: this workspace, or any workspace whose owner has its owner's email (now or before
+    it was deleted), has used a trial."""
     if workspace.trial_used_at is not None:
+        return True
+    email = await _owner_email(session, workspace)
+    if email and await session.get(TrialEmail, trial_email_hash(email)) is not None:
         return True
     owner = aliased(User)
     other_owner = aliased(User)

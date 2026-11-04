@@ -74,21 +74,23 @@ class AskRunInput(ToolInput):
 class CitationOut(BaseModel):
     number: int  # [n] in the answer
     kind: str
-    label: str
+    label_text: str  # can quote a customer
     id: uuid.UUID
 
 
 class ActionLink(BaseModel):
-    label: str
+    label_text: str  # can name a customer
     dashboard_url: str | None = None
-    note: str | None = None
+    note_text: str | None = None
 
 
 class AskResult(ToolOutput):
     ask_run_id: uuid.UUID
     status: str  # queued, running, succeeded, partial, failed, cancelled, expired
     finished: bool
-    answer: str | None = None  # markdown; its numbers come from Amplychat's services
+    # Markdown. Its numbers come from Amplychat's services; its words from a model that read
+    # customers' messages, so it is labelled like them.
+    answer_text: str | None = None
     citations: list[CitationOut] = Field(default_factory=list)
     action_links: list[ActionLink] = Field(default_factory=list)  # screens in Amplychat
     credits_used: int = 0
@@ -130,9 +132,9 @@ async def _snapshot(call: ToolCall, run_id: uuid.UUID) -> AskResult:
     for card in out.action_cards:
         links.append(
             ActionLink(
-                label=card.label,
+                label_text=card.label,
                 dashboard_url=call.dashboard_url(card.route),
-                note=card.note,
+                note_text=card.note,
             )
         )
     summary = {
@@ -147,9 +149,9 @@ async def _snapshot(call: ToolCall, run_id: uuid.UUID) -> AskResult:
         ask_run_id=out.id,
         status=status.value,
         finished=finished,
-        answer=out.answer,
+        answer_text=out.answer,
         citations=[
-            CitationOut(number=i, kind=r.kind, label=r.label, id=r.id)
+            CitationOut(number=i, kind=r.kind, label_text=r.label, id=r.id)
             for i, r in enumerate(out.answer_refs, start=1)
         ],
         action_links=links,

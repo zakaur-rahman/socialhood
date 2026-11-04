@@ -4,13 +4,16 @@ for knowledge are limited to those formats, up to 10 MB, when they are registere
 
 from __future__ import annotations
 
+import io
 import uuid
+import zipfile
 
 import pytest
 
 from socialhood.errors import ApiError
 from socialhood.media.cloudinary import StoredResource
 from socialhood.services import media_assets
+from socialhood.services.knowledge import extract
 from socialhood.services.knowledge.chunking import split_text
 from socialhood.services.knowledge.extract import ExtractError, file_text, web_page
 from tests.support.knowledge import make_docx, make_pdf
@@ -62,6 +65,60 @@ def test_docx_headings_paragraphs_and_tables() -> None:
 def test_a_broken_docx_fails_plainly() -> None:
     with pytest.raises(ExtractError, match="Word document"):
         file_text(b"PK\x03\x04 not a zip", "docx")
+
+
+def _zip_with(*parts: tuple[str, bytes]) -> bytes:
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in parts:
+            archive.writestr(name, content)
+    return out.getvalue()
+
+
+@pytest.fixture
+def parser_must_not_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    def refuse(_: object) -> None:
+        pytest.fail("python-docx was given the file")
+
+    monkeypatch.setattr(extract.docx, "Document", refuse)
+
+
+@pytest.mark.usefixtures("parser_must_not_run")
+def test_a_word_file_that_inflates_too_far_is_refused_before_it_is_parsed() -> None:
+    big = extract.MAX_DOCX_PART_BYTES + 1
+    bombs = [
+        _zip_with(("word/document.xml", b"0" * big)),
+        _zip_with(*((f"word/part{i}.xml", b"0" * (big - 2)) for i in range(3))),
+    ]
+    for data in bombs:
+        assert len(data) < 1024 * 1024  # small enough to pass the upload limit
+        with pytest.raises(ExtractError, match="Word document"):
+            file_text(data, "docx")
+
+
+@pytest.mark.usefixtures("parser_must_not_run")
+def test_a_tightly_compressed_part_and_a_false_size_are_refused() -> None:
+    with pytest.raises(ExtractError, match="Word document"):
+        file_text(_zip_with(("word/document.xml", b"0" * (2 * 1024 * 1024))), "docx")
+
+    data = bytearray(_zip_with(("word/document.xml", b"0" * 5000)))
+    size_field = data.index(b"PK") + 24  # the directory's uncompressed size
+    data[size_field : size_field + 4] = (10).to_bytes(4, "little")
+    with pytest.raises(ExtractError, match="Word document"):
+        file_text(bytes(data), "docx")
+
+
+def test_isolated_reading_gives_the_same_text_and_the_same_reasons() -> None:
+    data = make_docx([("h1", "Shipping"), ("p", "We ship in 3-5 days.")])
+    assert extract.file_text_isolated(data, "docx") == file_text(data, "docx")
+    with pytest.raises(ExtractError, match="Couldn't read this PDF"):
+        extract.file_text_isolated(b"%PDF-1.7 this is not really a pdf", "pdf")
+
+
+def test_isolated_reading_stops_at_its_time_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(extract, "ISOLATED_TIMEOUT_S", 0.001)
+    with pytest.raises(ExtractError, match="too complex"):
+        extract.file_text_isolated(make_pdf(["Shipping"]), "pdf")
 
 
 def test_text_and_markdown_files() -> None:

@@ -19,7 +19,7 @@ from socialhood.mcp.tools import ask
 from socialhood.services.knowledge import sources
 from tests.support.automation_api import set_plan
 from tests.support.automations import make_automation
-from tests.support.mcp import connect, error_of, make_key, structured
+from tests.support.mcp import confirm, connect, error_of, make_key, structured
 from tests.support.sending import Setup, clean_outbox
 
 SCOPES = ("replies:draft", "knowledge:write", "knowledge:read", "automations:write", "ask")
@@ -67,7 +67,8 @@ async def test_draft_reply_saves_a_suggestion_and_never_sends(
         )
     )
     assert (first["saved"], first["sent"]) == (True, False)
-    assert first["reply"] == "Yes, we ship to Pune!"
+    assert first["reply_text"] == "Yes, we ship to Pune!"
+    assert "Priya" not in first["summary"]
     assert first["dashboard_url"].endswith(f"/inbox/{setup.conversation_id}")
     [pending] = await rows(engine, "SELECT * FROM reply_suggestions WHERE status = 'pending'")
     assert pending["reply_text"] == "Yes, we ship to Pune!"
@@ -162,7 +163,7 @@ async def test_add_knowledge_text_and_faq(
     mcp_app: FastAPI, key: str, engine: AsyncEngine, ingested: list[uuid.UUID]
 ) -> None:
     note = structured(
-        await call(
+        await confirm(
             mcp_app,
             key,
             "add_knowledge",
@@ -177,7 +178,7 @@ async def test_add_knowledge_text_and_faq(
     assert note["characters"] == 35
     assert note["characters_used"] == 35
     faq = structured(
-        await call(
+        await confirm(
             mcp_app,
             key,
             "add_knowledge",
@@ -192,10 +193,24 @@ async def test_add_knowledge_text_and_faq(
     assert len(audit) == 2
     # An identical resend inside the window is the first result, not a second source.
     args = {"type": "text", "title": "Returns", "body": "Returns within 7 days."}
-    first = structured(await call(mcp_app, key, "add_knowledge", args))
-    again = structured(await call(mcp_app, key, "add_knowledge", args))
+    first = structured(await confirm(mcp_app, key, "add_knowledge", args))
+    again = structured(await confirm(mcp_app, key, "add_knowledge", args))
     assert again == {**first, "duplicate_of_previous_call": True}
     assert len(await rows(engine, "SELECT 1 FROM knowledge_sources")) == 3
+
+
+async def test_add_knowledge_changes_nothing_until_confirmed(
+    mcp_app: FastAPI, key: str, engine: AsyncEngine, ingested: list[uuid.UUID]
+) -> None:
+    args = {"type": "faq", "question": "How do I pay?", "body": "By UPI."}
+    preview = structured(await call(mcp_app, key, "add_knowledge", args))
+    assert (preview["preview"], preview["source_id"]) == (True, None)
+    assert preview["body_text"] == "By UPI."
+    assert await rows(engine, "SELECT 1 FROM knowledge_sources") == []
+    assert ingested == []
+    refused = error_of(await call(mcp_app, key, "add_knowledge", {**args, "confirmed": True}))
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    assert await rows(engine, "SELECT 1 FROM knowledge_sources") == []
 
 
 async def test_add_knowledge_counts_toward_the_plan_and_needs_the_fields(
@@ -247,8 +262,29 @@ async def test_pause_and_resume_an_automation(
     assert (paused["status"], paused["changed"]) == ("paused", True)
     again = structured(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
     assert (again["status"], again["changed"]) == ("paused", False)
-    resumed = structured(
+    preview = structured(
         await call(mcp_app, key, "resume_automation", {"automation_id": automation})
+    )
+    assert (preview["preview"], preview["status"], preview["changed"]) == (True, "paused", False)
+    [row] = await rows(engine, "SELECT status FROM automations")
+    assert row["status"] == "paused"
+    refused = error_of(
+        await call(
+            mcp_app, key, "resume_automation", {"automation_id": automation, "confirmed": True}
+        )
+    )
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    resumed = structured(
+        await call(
+            mcp_app,
+            key,
+            "resume_automation",
+            {
+                "automation_id": automation,
+                "confirmed": True,
+                "confirmation_token": preview["confirmation_token"],
+            },
+        )
     )
     assert (resumed["status"], resumed["changed"]) == ("active", True)
     live = structured(await call(mcp_app, key, "resume_automation", {"automation_id": automation}))
@@ -322,7 +358,7 @@ async def test_ask_returns_a_run_to_collect(
 ) -> None:
     question = {"question": "What are people asking in my DMs this week?"}
     first = structured(await call(mcp_app, key, "ask_amplychat", question))
-    assert (first["status"], first["finished"], first["answer"]) == ("queued", False, None)
+    assert (first["status"], first["finished"], first["answer_text"]) == ("queued", False, None)
     assert "get_ask_answer" in first["next_step"]
     [run] = await rows(engine, "SELECT * FROM agent_runs")
     assert str(run["id"]) == first["ask_run_id"]
@@ -343,7 +379,7 @@ async def test_ask_returns_a_run_to_collect(
         await call(mcp_app, key, "get_ask_answer", {"ask_run_id": first["ask_run_id"]})
     )
     assert (done["status"], done["finished"], done["credits_used"]) == ("succeeded", True, 3)
-    assert done["answer"] == "Mostly shipping [1]."
+    assert done["answer_text"] == "Mostly shipping [1]."
     missing = error_of(
         await call(mcp_app, key, "get_ask_answer", {"ask_run_id": str(uuid.uuid4())})
     )

@@ -3,18 +3,22 @@ mocked with respx on the same router as the fake Clerk."""
 
 from __future__ import annotations
 
+import time
 import uuid
 from typing import Any
 from urllib.parse import parse_qsl
 
 import httpx
 import pytest
+from fastapi import FastAPI
 from pydantic import SecretStr
+from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from socialhood.media.cloudinary import sign
-from socialhood.services.media_assets import delivery_url
+from socialhood.jobs.tasks.purge import clean_signed_uploads
+from socialhood.media.cloudinary import Cloudinary, sign
+from socialhood.services.media_assets import SIGNED_UPLOADS_KEY, delivery_url
 from socialhood.settings import Settings
 from tests.support.api import Clerk, sign_in
 
@@ -82,7 +86,10 @@ async def test_the_signature_is_for_the_workspace_folder(
     assert body["cloud_name"] == CLOUD
     assert body["api_key"] == API_KEY
     assert body["upload_url"] == f"https://api.cloudinary.com/v1_1/{CLOUD}/image/upload"
-    expected = sign({"folder": body["folder"], "timestamp": body["timestamp"]}, API_SECRET)
+    expected = sign(
+        {"folder": body["folder"], "public_id": body["public_id"], "timestamp": body["timestamp"]},
+        API_SECRET,
+    )
     assert body["signature"] == expected
     assert API_SECRET not in response.text
 
@@ -312,3 +319,37 @@ async def test_only_post_videos_are_rendered_ahead(client: httpx.AsyncClient, cl
         )
         assert (await register(client, headers, wid, public_id, kind)).status_code == 201
     assert explicit.call_count == 0
+
+
+async def test_a_file_signed_for_and_never_registered_is_deleted_after_a_day(
+    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, redis: Redis
+) -> None:
+    headers, wid = await owner(client, clerk)
+    signed = await client.post(
+        f"/v1/w/{wid}/media-assets/upload-signature",
+        json={"resource_type": "image", "purpose": "message"},
+        headers=headers,
+    )
+    kept = await client.post(
+        f"/v1/w/{wid}/media-assets/upload-signature",
+        json={"resource_type": "image", "purpose": "message"},
+        headers=headers,
+    )
+    stray = f"{signed.json()['folder']}/{signed.json()['public_id']}"
+    held = f"{kept.json()['folder']}/{kept.json()['public_id']}"
+    clerk.router.get(f"{RESOURCES}/image/upload/{held}").respond(200, json=resource(held))
+    assert (await register(client, headers, wid, held, "image")).status_code == 201
+    destroyed = clerk.router.post(f"https://api.cloudinary.com/v1_1/{CLOUD}/image/destroy").respond(
+        200, json={"result": "ok"}
+    )
+    storage = Cloudinary(app.state.http, app.state.settings)
+
+    early = await clean_signed_uploads(app.state.sessionmaker, redis, storage)
+    assert early == {"deleted": 0, "failed": 0}
+
+    later = await clean_signed_uploads(
+        app.state.sessionmaker, redis, storage, now=time.time() + 90_000
+    )
+    assert later == {"deleted": 1, "failed": 0}
+    assert stray.encode() in destroyed.calls.last.request.content.replace(b"%2F", b"/")
+    assert await redis.zcard(SIGNED_UPLOADS_KEY) == 0

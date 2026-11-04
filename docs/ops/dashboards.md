@@ -52,8 +52,8 @@ middleware). Tests: `tests/unit/test_metrics.py` and `tests/integration/test_obs
 
 Also in TR-OPS-01 but not exported yet: token-bucket waits by account and bucket (they would need
 a label per account; the platform-call metric shows `platform_rate_limited` by endpoint instead),
-and AI spend against `AI_DAILY_SPEND_LIMIT_USD` (the global spend guard is not built; token counts
-per model are exported so spend can be derived once prices are fixed).
+and AI spend against `AI_DAILY_SPEND_LIMIT_USD` (the global spend guard in `ai/metering.py` keeps its
+counter in Valkey and alerts through Sentry at 80% and 100%; token counts per model are exported).
 
 ## Dashboard
 
