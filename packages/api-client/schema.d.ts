@@ -13771,6 +13771,8 @@ export interface components {
             cloud_name: string;
             /** Folder */
             folder: string;
+            /** Public Id */
+            public_id?: string | null;
             /** Signature */
             signature: string;
             /** Timestamp */
@@ -13780,6 +13782,8 @@ export interface components {
         };
         /** UploadSignatureRequest */
         UploadSignatureRequest: {
+            /** Extension */
+            extension?: string | null;
             /**
              * Purpose
              * @enum {string}

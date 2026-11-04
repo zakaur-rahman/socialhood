@@ -218,13 +218,15 @@ _REFUSED_EXIT = 3  # stdout holds the reason, for the parent to pass on
 
 
 def _limit_memory() -> None:
+    if sys.platform == "win32":
+        return  # shortcut: no cap on Windows and macOS, which only run this in development
     try:
         import resource
 
         with open("/proc/self/statm", encoding="ascii") as statm:
             used = int(statm.read().split()[0]) * resource.getpagesize()
     except (ImportError, OSError):
-        return  # shortcut: no cap on Windows and macOS, which only run this in development
+        return
     cap = used + ISOLATED_MEMORY_BYTES
     resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
 

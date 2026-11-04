@@ -37,6 +37,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 from procrastinate import BaseRetryStrategy, RetryDecision
 from procrastinate.jobs import Job
@@ -398,8 +399,11 @@ async def clean_signed_uploads(
     deleted from storage and then forgotten. Returns the files deleted and those left for the next
     run."""
     cutoff = (time.time() if now is None else now) - UNREGISTERED_AFTER_S
-    entries = await redis.zrangebyscore(
-        media_assets.SIGNED_UPLOADS_KEY, "-inf", cutoff, start=0, num=UNREGISTERED_BATCH
+    entries: list[str] = cast(
+        list[str],
+        await redis.zrangebyscore(
+            media_assets.SIGNED_UPLOADS_KEY, "-inf", cutoff, start=0, num=UNREGISTERED_BATCH
+        ),
     )
     counts = {"deleted": 0, "failed": 0}
     for entry in entries:

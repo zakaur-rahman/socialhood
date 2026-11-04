@@ -64,7 +64,7 @@ async def _seat_free(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
         .select_from(WorkspaceMember)
         .where(WorkspaceMember.workspace_id == workspace_id)
     )
-    return int(members or 0) < limit
+    return bool(int(members or 0) < limit)
 
 
 async def accept_for_user(

@@ -25426,6 +25426,17 @@
             "title": "Folder",
             "type": "string"
           },
+          "public_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Id"
+          },
           "signature": {
             "title": "Signature",
             "type": "string"
@@ -25453,6 +25464,19 @@
       "UploadSignatureRequest": {
         "additionalProperties": false,
         "properties": {
+          "extension": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "pattern": "^[A-Za-z0-9]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extension"
+          },
           "purpose": {
             "enum": [
               "post",
