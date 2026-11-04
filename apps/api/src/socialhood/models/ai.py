@@ -153,6 +153,7 @@ class KnowledgeType(StrEnum):
 
 
 class KnowledgeStatus(StrEnum):
+    AWAITING_APPROVAL = "awaiting_approval"  # an AI app added it: unread until a person approves
     PENDING = "pending"
     PROCESSING = "processing"
     READY = "ready"

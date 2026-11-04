@@ -5,6 +5,9 @@ queues ingest_knowledge_source(id, version) at once (bulk lane, queueing lock kb
 so an edit is searchable well within 60 s (FR-KB-02). Every edit adds 1 to the version, and the
 job ignores a version that is no longer current. Nothing here commits.
 
+A person approves what AI apps add: such a source is stored ``awaiting_approval``, stays that way
+through edits, and isn't read in, embedded or used until ``approve`` makes it ``pending``.
+
 What each type needs: an FAQ a question and an answer (``body``; its title is the question); a
 note a title and a body; a web page a public http(s) address (checked again, with DNS, when it is
 fetched); a file an uploaded PDF, DOCX, TXT or MD asset up to 10 MB; a site (GR-35) a
@@ -152,8 +155,10 @@ async def create(
     *,
     user_id: uuid.UUID,
     allow_private: bool = False,
+    needs_approval: bool = False,
 ) -> SourceRow:
-    """Store a pending source (and answer its gap); the caller commits, then enqueue_ingest."""
+    """Store a pending source (and answer its gap); the caller commits, then enqueue_ingest. With
+    ``needs_approval`` it waits for ``approve`` instead, and nothing is to be enqueued."""
     kind = KnowledgeType(body.type)
     sent = _sent(body, exclude={"type"})
     if kind is KnowledgeType.FAQ:
@@ -183,7 +188,7 @@ async def create(
         title = short_title(body.title or file_name(asset) or "File")
         source = SourceRow(type=kind, title=title, file_asset_id=asset.id)
     await _check_quota(session, adding=chars)
-    source.status = KnowledgeStatus.PENDING
+    source.status = KnowledgeStatus.AWAITING_APPROVAL if needs_approval else KnowledgeStatus.PENDING
     source.char_count = chars
     source.created_by_user_id = user_id
     session.add(source)
@@ -243,8 +248,22 @@ async def update(
             await _check_quota(session, adding=chars, exclude=source.id)
         source.char_count = chars
     source.version += 1
-    source.status = KnowledgeStatus.PENDING
     source.error = None
+    waiting = source.status == KnowledgeStatus.AWAITING_APPROVAL
+    if not waiting:
+        source.status = KnowledgeStatus.PENDING
+    await session.flush()
+    await session.refresh(source)
+    return source, not waiting
+
+
+async def approve(session: AsyncSession, source_id: uuid.UUID) -> tuple[SourceRow, bool]:
+    """A person approves a waiting source; returns it and whether it must now be ingested. A source
+    that isn't waiting is left as it is."""
+    source = await _get_or_404(session, source_id, for_update=True)
+    if source.status != KnowledgeStatus.AWAITING_APPROVAL:
+        return source, False
+    source.status = KnowledgeStatus.PENDING
     await session.flush()
     await session.refresh(source)
     return source, True

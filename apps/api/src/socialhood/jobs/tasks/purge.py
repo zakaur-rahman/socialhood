@@ -76,6 +76,7 @@ OAUTH_CODES_KEPT = timedelta(days=1)
 OAUTH_TOKENS_KEPT = timedelta(days=1)
 MCP_CONNECTIONS_KEPT = timedelta(days=90)
 DCR_CLIENTS_UNUSED = timedelta(days=30)
+TRIAL_EMAILS_KEPT = timedelta(days=3 * 365)  # stated in the Privacy Policy
 AI_USAGE_KEPT_MONTHS = 13
 FINISHED_JOBS_KEPT_HOURS = 30 * 24
 
@@ -272,6 +273,10 @@ async def purge_expired_rows(
         (
             "oauth_clients",
             lambda s: retention.unused_dcr_clients_before(s, now - DCR_CLIENTS_UNUSED, limit=batch),
+        ),
+        (
+            "trial_emails",
+            lambda s: retention.trial_emails_before(s, now - TRIAL_EMAILS_KEPT, limit=batch),
         ),
     ]
     for rule, delete in rules:

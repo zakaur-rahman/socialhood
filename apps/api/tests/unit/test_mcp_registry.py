@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -14,6 +15,7 @@ import pytest
 from pydantic import BaseModel
 
 from socialhood.errors import ApiError
+from socialhood.mcp import tools as mcp_tools
 from socialhood.mcp.audit import digest, redact
 from socialhood.mcp.calls import effective_mode, plan_cap
 from socialhood.mcp.confirmations import TTL_S
@@ -72,16 +74,15 @@ R1_WRITE_TOOLS = {
     "draft_reply",
     "add_knowledge",
     "pause_automation",
-    "resume_automation",
     "ask_amplychat",
     "get_ask_answer",
 }
 
 
-def test_r1_ships_the_design_s_25_tools_and_c169_s_3() -> None:
+def test_the_catalogue_is_27_tools() -> None:
     registry = load_tools()
     everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS
-    assert len(everything) == 28
+    assert len(everything) == 27
     assert {t.name for t in registry} == everything
     assert [t.name for t in registry] == sorted(everything)  # deterministic tools/list
 
@@ -98,9 +99,8 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         "draft_reply": ("replies:draft", Role.AGENT, Access.DRAFT, False, False),
         "add_knowledge": ("knowledge:write", Role.ADMIN, Access.WRITE, False, False),
         "pause_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, False),
-        "resume_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
-        "create_automation": ("automations:create", Role.ADMIN, Access.WRITE, False, True),
-        "update_automation": ("automations:create", Role.ADMIN, Access.WRITE, True, True),
+        "create_automation": ("automations:create", Role.ADMIN, Access.WRITE, False, False),
+        "update_automation": ("automations:create", Role.ADMIN, Access.WRITE, True, False),
         "list_instagram_posts": ("posts:read", Role.AGENT, Access.READ, False, False),
         "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
         "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
@@ -120,6 +120,19 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
     assert registry.get("create_post").dedupe_window_s == TTL_S  # type: ignore[union-attr]
     assert registry.get("create_automation").dedupe_window_s == TTL_S  # type: ignore[union-attr]
     assert registry.get("update_automation").dedupe_window_s is None  # type: ignore[union-attr]
+
+
+def test_no_tool_can_turn_an_automation_on() -> None:
+    """A person turns automations on in the dashboard: no tool takes a switch or reaches the
+    app's activation."""
+    registry = load_tools()
+    assert registry.get("resume_automation") is None
+    for name in ("create_automation", "update_automation"):
+        fields = registry.get(name).definition().input_schema["properties"]  # type: ignore[union-attr]
+        assert "turn_on" not in fields, name
+    tools_dir = Path(mcp_tools.__file__).parent
+    for source in tools_dir.glob("*.py"):
+        assert "activate(" not in source.read_text(encoding="utf-8"), source.name
 
 
 def test_every_tool_follows_the_conventions() -> None:

@@ -126,9 +126,9 @@ def _comment_automation(arguments: Mapping[str, str] | None) -> str:
         "confirmed first and show me the preview: the post, the keywords, the opening and the "
         "DM people get, any overlap with live automations and what it still needs, fixing "
         "anything with me. Create it with confirmed: true and the preview's "
-        "confirmation_token only after I say yes, and with "
-        "turn_on: true only if I ask for it to go live, because it then messages everyone who "
-        "matches. Remind me that I can pause it with pause_automation."
+        "confirmation_token only after I say yes. It is saved off, so give me its "
+        "dashboard_url: I review it and turn it on in Amplychat. Once it's on, you can pause it "
+        "with pause_automation."
     )
 
 

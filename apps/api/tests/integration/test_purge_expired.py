@@ -69,6 +69,19 @@ async def test_webhook_events_are_kept_30_days(
     assert await ids(engine, "SELECT dedupe_key FROM webhook_events") == {"new-1", "new-2"}
 
 
+async def test_trial_email_hashes_are_kept_3_years(
+    engine: AsyncEngine, maker: async_sessionmaker[Any]
+) -> None:
+    async with engine.begin() as conn:
+        for key, age in (("old", 3 * 365 + 1), ("new", 3 * 365 - 1)):
+            await conn.execute(
+                text("INSERT INTO trial_emails (email_hash, used_at) VALUES (:k, :at)"),
+                {"k": key, "at": NOW - timedelta(days=age)},
+            )
+    assert (await run(maker))["trial_emails"] == 1
+    assert await ids(engine, "SELECT email_hash FROM trial_emails") == {"new"}
+
+
 async def test_notifications_are_kept_90_days(
     engine: AsyncEngine, maker: async_sessionmaker[Any]
 ) -> None:

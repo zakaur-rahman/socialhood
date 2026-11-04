@@ -1,5 +1,5 @@
-"""C-165 phase B: draft_reply (never sends), add_knowledge, pause/resume_automation, ask_amplychat
-and get_ask_answer, and the two prompts, through the SDK client against the mounted app."""
+"""C-165 phase B: draft_reply (never sends), add_knowledge, pause_automation, ask_amplychat and
+get_ask_answer, and the two prompts, through the SDK client against the mounted app."""
 
 from __future__ import annotations
 
@@ -14,9 +14,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.agent import orchestrator
+from socialhood.ai.fake import FakeProvider
 from socialhood.billing.plans import ENTITLEMENTS
+from socialhood.db.engine import make_sessionmaker
 from socialhood.mcp.tools import ask
-from socialhood.services.knowledge import sources
+from socialhood.services.knowledge import ingest, sources
 from tests.support.automation_api import set_plan
 from tests.support.automations import make_automation
 from tests.support.mcp import confirm, connect, error_of, make_key, structured
@@ -174,7 +176,12 @@ async def test_add_knowledge_text_and_faq(
             },
         )
     )
-    assert (note["type"], note["status"], note["title"]) == ("text", "pending", "Opening hours")
+    assert (note["type"], note["status"], note["title"]) == (
+        "text",
+        "awaiting_approval",
+        "Opening hours",
+    )
+    assert note["dashboard_url"].endswith("/knowledge")
     assert note["characters"] == 35
     assert note["characters_used"] == 35
     faq = structured(
@@ -187,7 +194,7 @@ async def test_add_knowledge_text_and_faq(
     )
     assert faq["type"] == "faq"
     assert faq["title"] == "Do you deliver?"
-    assert ingested == [uuid.UUID(note["source_id"]), uuid.UUID(faq["source_id"])]  # after commit
+    assert ingested == []  # a person approves it first
     assert len(await rows(engine, "SELECT 1 FROM knowledge_sources")) == 2
     audit = await rows(engine, "SELECT 1 FROM audit_events WHERE action = 'knowledge.created'")
     assert len(audit) == 2
@@ -249,10 +256,76 @@ async def test_add_knowledge_counts_toward_the_plan_and_needs_the_fields(
     assert free["code"] == "entitlement_required"
 
 
-# ---------------------------------------------------------------- pause and resume
+async def test_added_knowledge_is_unused_until_a_person_approves_it(
+    client: httpx.AsyncClient,
+    mcp_app: FastAPI,
+    key: str,
+    setup: Setup,
+    engine: AsyncEngine,
+    ingested: list[uuid.UUID],
+    fake_ai: FakeProvider,
+) -> None:
+    args = {"type": "text", "title": "Returns", "body": "Returns within 7 days of delivery."}
+    note = structured(await confirm(mcp_app, key, "add_knowledge", args))
+    source_id = note["source_id"]
+    # The real ingest job, as if it were queued anyway: nothing is read in or embedded.
+    maker = make_sessionmaker(engine)
+    async with httpx.AsyncClient() as http:
+        await ingest.ingest_source(
+            maker,
+            http,
+            workspace_id=uuid.UUID(setup.wid),
+            source_id=uuid.UUID(source_id),
+            version=1,
+            will_retry=False,
+        )
+    assert await rows(engine, "SELECT 1 FROM knowledge_chunks") == []
+    [row] = await rows(engine, "SELECT status FROM knowledge_sources")
+    assert row["status"] == "awaiting_approval"
+    found = structured(await call(mcp_app, key, "search_knowledge", {"query": "returns delivery"}))
+    assert found["passages"] == []
+
+    # An edit in the dashboard doesn't count as approval, and queues nothing.
+    edited = await client.patch(
+        f"/v1/w/{setup.wid}/knowledge-sources/{source_id}",
+        json={"body": "Returns within 10 days of delivery."},
+        headers=setup.headers,
+    )
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["status"] == "awaiting_approval"
+    assert ingested == []
+
+    approved = await client.post(
+        f"/v1/w/{setup.wid}/knowledge-sources/{source_id}/approve", headers=setup.headers
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "pending"
+    assert ingested == [uuid.UUID(source_id)]
+    [audit] = await rows(engine, "SELECT 1 FROM audit_events WHERE action = 'knowledge.approved'")
+    assert audit
+    async with httpx.AsyncClient() as http:
+        await ingest.ingest_source(
+            maker,
+            http,
+            workspace_id=uuid.UUID(setup.wid),
+            source_id=uuid.UUID(source_id),
+            version=approved.json()["version"],
+            will_retry=False,
+        )
+    found = structured(await call(mcp_app, key, "search_knowledge", {"query": "returns delivery"}))
+    assert [p["source_id"] for p in found["passages"]] == [source_id]
+    # Approving twice changes nothing and queues nothing.
+    again = await client.post(
+        f"/v1/w/{setup.wid}/knowledge-sources/{source_id}/approve", headers=setup.headers
+    )
+    assert again.status_code == 200
+    assert ingested == [uuid.UUID(source_id)]
 
 
-async def test_pause_and_resume_an_automation(
+# ---------------------------------------------------------------- pause
+
+
+async def test_pause_an_automation(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
     automation = str(
@@ -262,45 +335,13 @@ async def test_pause_and_resume_an_automation(
     assert (paused["status"], paused["changed"]) == ("paused", True)
     again = structured(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
     assert (again["status"], again["changed"]) == ("paused", False)
-    preview = structured(
-        await call(mcp_app, key, "resume_automation", {"automation_id": automation})
-    )
-    assert (preview["preview"], preview["status"], preview["changed"]) == (True, "paused", False)
-    [row] = await rows(engine, "SELECT status FROM automations")
-    assert row["status"] == "paused"
-    refused = error_of(
-        await call(
-            mcp_app, key, "resume_automation", {"automation_id": automation, "confirmed": True}
-        )
-    )
-    assert refused["field_errors"][0]["field"] == "confirmation_token"
-    resumed = structured(
-        await call(
-            mcp_app,
-            key,
-            "resume_automation",
-            {
-                "automation_id": automation,
-                "confirmed": True,
-                "confirmation_token": preview["confirmation_token"],
-            },
-        )
-    )
-    assert (resumed["status"], resumed["changed"]) == ("active", True)
-    live = structured(await call(mcp_app, key, "resume_automation", {"automation_id": automation}))
-    assert live["changed"] is False
-    # An identical pause a minute later still runs: there is no dedupe window to replay.
-    second = structured(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
-    assert second["status"] == "paused"
-    assert second["duplicate_of_previous_call"] is False
-    actions = [
-        r["action"]
-        for r in await rows(engine, "SELECT action FROM audit_events ORDER BY created_at")
-    ]
-    assert actions == ["automation.paused", "automation.resumed", "automation.paused"]
+    # An identical pause later still runs: there is no dedupe window to replay.
+    assert again["duplicate_of_previous_call"] is False
+    actions = [r["action"] for r in await rows(engine, "SELECT action FROM audit_events")]
+    assert actions == ["automation.paused"]
 
 
-async def test_a_never_live_automation_cannot_be_resumed(
+async def test_pausing_a_draft_changes_nothing(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
     draft = str(
@@ -312,10 +353,6 @@ async def test_a_never_live_automation_cannot_be_resumed(
             activated_at=None,
         )
     )
-    error = error_of(await call(mcp_app, key, "resume_automation", {"automation_id": draft}))
-    assert (error["code"] == "conflict" and "Activate" in error["message"]) or "activate" in error[
-        "message"
-    ]
     nothing = structured(await call(mcp_app, key, "pause_automation", {"automation_id": draft}))
     assert nothing["changed"] is False
     missing = error_of(

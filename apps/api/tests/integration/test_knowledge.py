@@ -28,9 +28,12 @@ from socialhood.ai.provider import AIError, EmbedKind
 from socialhood.billing.plans import ENTITLEMENTS
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
+from socialhood.models.identity import Workspace
 from socialhood.security import ssrf
 from socialhood.services.knowledge import ingest
+from socialhood.services.knowledge.answer import try_question
 from socialhood.services.knowledge.retrieval import retrieve
+from socialhood.services.suggestions import drafting, knowledge_port
 from tests.support.ai import make_source
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
@@ -654,6 +657,42 @@ async def test_retrieval_keeps_similar_chunks_of_ready_sources_in_this_workspace
     assert hits[0][1] >= 0.6
     assert await search(maker, str(a), "refund policy for damaged cakes") == []  # below 0.60
     assert await search(maker, str(a), "   ") == []
+
+
+async def test_every_retrieval_path_leaves_out_a_source_waiting_for_approval(
+    engine: AsyncEngine,
+    maker: async_sessionmaker[AsyncSession],
+    clean_db: None,
+    fake_ai: FakeProvider,
+) -> None:
+    """Chunks are stored here only to prove the read filter: approval is what makes a source ready.
+    Auto replies, suggestions, the widget and automation AI replies all draft through
+    ``retrieve_knowledge``; Ask and MCP search through ``retrieve``."""
+    from tests.support.inbox import make_workspace
+
+    wid = await make_workspace(engine)
+    question, reply = "What is the refund phone?", "Call 9876543210 for refunds."
+    await make_source(
+        engine, workspace_id=wid, question=question, body=reply, status="awaiting_approval"
+    )
+
+    assert await search(maker, str(wid), question) == []
+    with workspace_scope(wid):
+        async with maker() as session:
+            assert await knowledge_port.retrieve_knowledge(session, question) == []
+            assert await drafting.knowledge_mentioning(session, ["9876543210"]) == []
+            found = await try_question(
+                session, maker, workspace=await session.get(Workspace, wid), question=question
+            )
+            assert (found.can_answer, found.sources) == (False, [])
+    # The same source approved and read in is found on each of them.
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE knowledge_sources SET status = 'ready'"))
+    assert [title for title, _ in await search(maker, str(wid), question)] == [question]
+    with workspace_scope(wid):
+        async with maker() as session:
+            assert len(await knowledge_port.retrieve_knowledge(session, question)) == 1
+            assert await drafting.knowledge_mentioning(session, ["9876543210"]) != []
 
 
 async def test_retrieval_returns_at_most_six_of_the_eight_nearest(

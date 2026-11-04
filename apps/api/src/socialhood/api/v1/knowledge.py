@@ -94,6 +94,26 @@ async def update_knowledge_source(
     return out
 
 
+@router.post(
+    "/knowledge-sources/{source_id}/approve",
+    operation_id="approve_knowledge_source",
+    dependencies=[ratelimit.KNOWLEDGE_INGEST],
+)
+async def approve_knowledge_source(
+    source_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
+) -> KnowledgeSource:
+    """A person approves what an AI app added: it is read in and the AI starts using it. A source
+    that isn't waiting for approval is returned as it is."""
+    source, approved = await sources.approve(session, source_id)
+    out = await sources.view(session, source)
+    if approved:
+        await audit.record(session, ctx, "knowledge.approved", "knowledge_source", source_id)
+    await session.commit()
+    if approved:
+        await sources.enqueue_ingest(source)
+    return out
+
+
 @router.delete(
     "/knowledge-sources/{source_id}", status_code=204, operation_id="delete_knowledge_source"
 )

@@ -87,6 +87,22 @@ export function useUpdateKnowledgeSource(wid: string) {
   });
 }
 
+/** A person approves what an AI app added: it is read in and the AI starts using it. */
+export function useApproveKnowledgeSource(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<KnowledgeSource, Error, string>({
+    mutationFn: (id) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/knowledge-sources/{source_id}/approve", { params: { path: { wid, source_id: id } } }),
+      ),
+    onSuccess: (source) => {
+      patchSources(queryClient, wid, (items) => items.map((item) => (item.id === source.id ? source : item)));
+      void queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) });
+    },
+  });
+}
+
 export function useDeleteKnowledgeSource(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();

@@ -512,6 +512,10 @@ function sections(): LegalSection[] {
                   </td>
                 </tr>
                 <tr>
+                  <td>A scrambled form (a hash) of the email of an owner who started a free trial, not stored with your name or account</td>
+                  <td>3 years from the trial, even if you delete your account, so each email gets the trial once</td>
+                </tr>
+                <tr>
                   <td>
                     A workspace&apos;s data: conversations, comments, contacts, consent records, orders, knowledge,
                     automations, posts, media and settings

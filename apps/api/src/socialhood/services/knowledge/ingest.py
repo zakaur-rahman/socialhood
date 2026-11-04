@@ -151,6 +151,8 @@ async def _begin(
             return None
         if source.status in (KnowledgeStatus.READY, KnowledgeStatus.FAILED):
             return None  # this version is done (a repeated job)
+        if source.status == KnowledgeStatus.AWAITING_APPROVAL:
+            return None  # read in, and paid for, once a person approves it
         kind = KnowledgeType(source.type)
         asset = await repo.get_asset(session, source.file_asset_id)
         work = _Work(

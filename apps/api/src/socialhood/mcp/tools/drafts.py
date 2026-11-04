@@ -6,9 +6,9 @@
   customer (§6.5). The reply window is checked as in the inbox, so a draft that could not be sent
   is refused with the window's own words.
 - ``add_knowledge`` adds a note or an FAQ through the knowledge service, counting toward the
-  plan's characters of knowledge (402 past it). AI replies are written from it, so it is previewed
-  first (mcp/confirmations.py): the first call runs the service in a savepoint and rolls it back.
-  Ingestion runs in the background after the commit.
+  plan's characters of knowledge (402 past it). It is previewed first (mcp/confirmations.py): the
+  first call runs the service in a savepoint and rolls it back. A person approves what AI apps add
+  on the Knowledge page; only then is it read in and used for AI replies.
 
 Customers' names stay out of summaries and errors here: those are read as Amplychat's own words.
 """
@@ -157,7 +157,7 @@ class AddKnowledgeResult(WriteOutput):
     source_id: uuid.UUID | None = None  # none on a preview
     type: str
     title: str
-    status: str  # pending: it is being read into the knowledge base
+    status: str  # awaiting_approval: unused until a person approves it in the dashboard
     characters: int
     characters_used: int
     characters_limit: int | None = None
@@ -171,12 +171,12 @@ class AddKnowledgeResult(WriteOutput):
     name="add_knowledge",
     title="Add to the knowledge base",
     description=(
-        "Add a note (title and text) or an FAQ (question and answer) to the knowledge base that "
-        "Amplychat's AI replies from. It counts toward the plan's characters of knowledge. It "
-        "shows under Knowledge in Amplychat, where it can be edited or removed. It is read in "
-        "the background and is searchable within a minute. Customers can receive what it says, "
-        "so it is previewed first: show the member the preview and call again only after they "
-        "agree, with confirmed true and its confirmation_token."
+        "Draft a note (title and text) or an FAQ (question and answer) for the knowledge base "
+        "that Amplychat's AI replies from. It counts toward the plan's characters of knowledge. "
+        "It waits under Knowledge in Amplychat until a person approves it, and until then AI "
+        "replies and search don't use it. It is previewed first: show the member the preview and "
+        "call again only after they agree, with confirmed true and its confirmation_token. Then "
+        "give them the dashboard_url to approve it."
     ),
     input_model=AddKnowledgeInput,
     output_model=AddKnowledgeResult,
@@ -192,10 +192,12 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
     if args.confirmed:
         confirmations.require(call, args, args.confirmation_token)
     savepoint = None if args.confirmed else await call.session.begin_nested()
-    source = await sources.create(call.session, body, user_id=call.principal.user_id)
+    source = await sources.create(
+        call.session, body, user_id=call.principal.user_id, needs_approval=True
+    )
     used = await sources.usage(call.session)
     result = AddKnowledgeResult(
-        summary=f"Added “{source.title}” to the knowledge base",
+        summary=f"Added “{source.title}”, waiting for approval. AI replies don't use it yet",
         source_id=source.id,
         type=source.type,
         title=source.title,
@@ -203,6 +205,7 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
         characters=source.char_count,
         characters_used=used.characters_used,
         characters_limit=used.characters_limit,
+        next_step="A person reads and approves it under Knowledge in Amplychat.",
         dashboard_url=call.dashboard_url("knowledge"),
     )
     if savepoint is not None:
@@ -210,8 +213,8 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
         events.discard(call.session)
         return result.model_copy(
             update={
-                "summary": "Preview: this would be added to the knowledge base that AI replies "
-                "are written from. Nothing is added yet",
+                "summary": "Preview: this would wait under Knowledge for a person to approve it. "
+                "Nothing is added yet",
                 "source_id": None,
                 "body_text": args.body,
                 "preview": True,
@@ -220,9 +223,4 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
             }
         )
     call.note("knowledge.created", "knowledge_source", source.id, type=args.type)
-
-    async def ingest() -> None:
-        await sources.enqueue_ingest(source)
-
-    call.after_commit.append(ingest)
     return result

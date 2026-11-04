@@ -18,7 +18,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from socialhood.models.agent import FINAL_RUN_STATUSES, AgentRun
 from socialhood.models.automations import StoryMention
-from socialhood.models.billing import AiUsageEvent, Subscription
+from socialhood.models.billing import AiUsageEvent, Subscription, TrialEmail
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
 from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
@@ -134,6 +134,10 @@ async def unused_dcr_clients_before(session: AsyncSession, cutoff: datetime, *, 
         func.coalesce(OAuthClient.last_used_at, OAuthClient.created_at) < cutoff,
         ~held,
     )
+
+
+async def trial_emails_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    return await _delete(session, TrialEmail.email_hash, limit, TrialEmail.used_at < cutoff)
 
 
 async def agent_runs_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
