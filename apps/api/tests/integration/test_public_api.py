@@ -459,6 +459,22 @@ async def test_get_and_update_a_contact_including_custom_fields(
     ).status_code == 404
 
 
+async def test_accounts_list_every_connected_platform(
+    client: httpx.AsyncClient, setup: Setup, engine: AsyncEngine
+) -> None:
+    for platform in ("whatsapp", "facebook", "web"):
+        await make_account(engine, setup.wid, platform=platform, username=platform)
+    key, _ = await make_key(client, setup, "contacts:read")
+    accounts = await client.get("/public/v1/accounts", headers=bearer(key))
+    assert accounts.status_code == 200
+    assert {a["platform"] for a in accounts.json()["items"]} == {
+        "instagram",
+        "whatsapp",
+        "facebook",
+        "web",
+    }
+
+
 async def test_create_a_contact_on_a_whatsapp_account(
     client: httpx.AsyncClient, setup: Setup, engine: AsyncEngine
 ) -> None:
