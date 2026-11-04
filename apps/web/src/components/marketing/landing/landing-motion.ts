@@ -1026,14 +1026,13 @@ export function productDemo(root: ParentNode, reduce = false): Cleanup {
   };
 
   // The captions become controls now; each keeps the plain caption's box, so nothing shifts.
-  const buttons = steps.map((li, step) => {
+  steps.forEach((li, step) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pd-step";
     button.textContent = li.textContent;
     button.addEventListener("click", () => jump(step));
     li.replaceChildren(button);
-    return button;
   });
 
   const unsubscribe = control.subscribe((paused) => (paused ? halt() : run()));
@@ -1071,7 +1070,6 @@ export function productDemo(root: ParentNode, reduce = false): Cleanup {
       el.classList.remove("on");
       el.replaceChildren(captions[i]);
     });
-    buttons.length = 0;
     rows.forEach((row, i) => row.style.setProperty("--y", homes[i]));
     pointer.classList.remove("on");
     pointer.style.transform = "";

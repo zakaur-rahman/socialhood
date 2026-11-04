@@ -88,8 +88,8 @@ export function ApiKeysSection() {
   const [adding, setAdding] = useState(false);
   const [shown, setShown] = useState<string | null>(null);
   const items = keys.data?.items ?? [];
-  // C-172: API keys are Business only (stored plan max).
-  const free = workspace.plan !== "max";
+  // C-172, C-174: API keys are on Business (stored plan max) and Agency.
+  const free = workspace.plan !== "max" && workspace.plan !== "agency";
 
   return (
     <SettingsCard

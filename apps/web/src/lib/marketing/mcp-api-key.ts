@@ -1,6 +1,6 @@
 /**
  * /developers/mcp/api-key (C-165): connect an AI app with an Amplychat API key instead of signing
- * in. Facts: a key needs the public_api entitlement (Business only, billing/plans.py, PD-6); the key
+ * in. Facts: a key needs the public_api entitlement (Business and Agency, billing/plans.py, PD-6); the key
  * acts as the member who made it with their current role (docs/architecture/mcp/03-phase-a.md);
  * the MCP scopes are schemas/api_keys.py; limits are mcp/calls.py via security/ratelimit.py.
  */
@@ -126,7 +126,7 @@ export const KEY_PLAN_ROWS = PLAN_ROWS.filter((row) => /a day|API key/.test(row.
 export const API_KEY_FAQ = [
   {
     question: "Which plan do I need for an API key?",
-    answer: "Business. Making a key is part of the public API, which is Business only. On Free and Creator, connect by signing in instead.",
+    answer: "Business or Agency. Making a key is part of the public API, which comes with those two plans. On Free and Creator, connect by signing in instead.",
   },
   {
     question: "Can I change a key's scopes?",

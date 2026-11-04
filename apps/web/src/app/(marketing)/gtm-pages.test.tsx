@@ -349,7 +349,7 @@ describe("the pricing page", () => {
     expect(pro.getByText("₹999")).toBeInTheDocument();
     expect(pro.getByText("2 team members")).toBeInTheDocument();
     expect(pro.getByText("100 scheduled posts a month")).toBeInTheDocument();
-    // API keys and Zapier are Business only.
+    // API keys and Zapier are on Business and Agency.
     expect(pro.queryByText("API keys and Zapier")).toBeNull();
     const business = within(screen.getByRole("heading", { level: 3, name: "Business" }).closest("li") as HTMLElement);
     expect(business.getByText("API keys and Zapier")).toBeInTheDocument();
