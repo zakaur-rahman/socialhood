@@ -84,11 +84,11 @@ export function WorkspaceMenu({
       <LogoMark />
       <span aria-hidden={collapsed} className={cn("flex min-w-0 flex-1 items-center gap-2.5 whitespace-nowrap", sidebarFadeClass(!collapsed))}>
           <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">Amplychat</span>
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold">Amplychat</span>
+              <span className="min-w-0 truncate text-xs text-fg-secondary">{workspace.name}</span>
               <PlanBadge plan={workspace.plan} />
             </span>
-            <span className="block truncate text-xs text-fg-secondary">{workspace.name}</span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-fg-secondary" aria-hidden />
       </span>

@@ -109,7 +109,8 @@ for (const size of SIZES) {
       // The Preview walks one branch at a time: pick "Prices" at the button fork.
       const preview = page.getByRole("tabpanel", { name: "Preview" });
       await expect(preview).toContainText("Here's the guide.");
-      await preview.getByRole("combobox", { name: "Branch 2" }).selectOption({ label: "Taps Prices" });
+      await preview.getByRole("combobox", { name: "Branch 2" }).click();
+      await page.getByRole("option", { name: "Taps Prices" }).click();
       await expect(preview).toContainText("Prices start at 499.");
       await expect(preview).not.toContainText("Here's the guide.");
 

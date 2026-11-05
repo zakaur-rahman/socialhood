@@ -159,7 +159,7 @@ function Meter({
               strokeDasharray={circumference}
               strokeDashoffset={circumference * (1 - share)}
               className={cn(
-                "transition-[stroke-dashoffset] duration-500 ease-standard motion-reduce:transition-none",
+                "mark-forced transition-[stroke-dashoffset] duration-500 ease-standard motion-reduce:transition-none",
                 ARC[tone]
               )}
             />
@@ -201,7 +201,7 @@ function Meter({
           <div
             data-slot="meter-fill"
             className={cn(
-              "h-full rounded-full transition-[width] duration-500 ease-standard motion-reduce:transition-none",
+              "mark-forced h-full rounded-full transition-[width] duration-500 ease-standard motion-reduce:transition-none",
               FILL[tone]
             )}
             style={{ width: `${share * 100}%` }}

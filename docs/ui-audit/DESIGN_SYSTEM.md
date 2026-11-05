@@ -53,7 +53,8 @@ System rules that follow from the audits:
 |---|---|---|---|
 | `canvas` | `#000000` | App background, thread area, marketing | Keep |
 | `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; the sidebar card inside the phone drawer (the drawer itself is `canvas`, UI-041) | Keep; drawer Change (COL-010), applied (C-071), then UI-041 |
-| `field` | `#1D1D1D` | **Every** text field, select trigger and textarea; incoming bubbles; segmented tracks | Keep; Input and SelectTrigger move onto it (CMP-011) |
+| `field` | `#1D1D1D` | Incoming bubbles, segmented tracks, quiet insets, composer shells | Keep; fields moved to `field-input` (2026-11-05) |
+| `field-input` | light `#FFFFFF`; dark the same as `field` | **Every** text field, select trigger and textarea; focus still turns it `raised` | **Owner decision** (2026-11-05): white fields on light, dark unchanged |
 | `raised` | `#2A2A2A` | Selected row, active segment, secondary button, skeleton, meter track | Keep |
 | `raised-hover` | `#333333` | Hover on `raised` (secondary button) | Keep |
 | `overlay` | `#262626` | Popovers, menus, select content, dialogs, sheets, toasts, tooltip | **Owner D-12**, applied (C-071), through `--popover` |
@@ -221,7 +222,7 @@ composited on their real surface.
 | `danger-fg` on panel / danger-soft over panel | 8.68 / 7.42 | Errors |
 | `warning`, `success` on panel / on their soft fill | 7.28, 7.23 / 5.56, 5.57 | Status text |
 | `brand` focus outline on canvas / panel / field / overlay / raised / raised-hover | 5.79 / 4.54 / 4.65 / 4.17 / 3.96 / 3.48 | Focus |
-| `line-control` on every surface | 3.42–3.79 | Control edges (D-01); a field draws it over its own fill (`#777777`): 3.70 on panel, 3.40 on overlay, 3.22 on raised |
+| `line-control` on every surface | 3.42–3.79 | Control edges (D-01); a field draws it over its own fill (`#777777`): 3.70 on panel, 3.40 on overlay, 3.22 on raised. On the light theme's white `field-input` it is 3.91; `contrast.test.ts` holds it to 3:1 or more |
 | `brand` (checkbox checked, switch on) on panel / overlay / raised / raised-hover | 4.54 / 4.17 / 3.96 / 3.48 | State fills (C-071; `brand-strong` is 2.96 on raised) |
 
 **Never:** text on `brand` (3.63:1), `danger` as text (4.38:1), `fg-disabled` as readable text
@@ -460,6 +461,8 @@ get one.
   `glass-card`, `glass-float`, `glass-raised` and `glass-outline` (C-128), which bundle the frost
   colour with the blur and fall back to a solid surface under `prefers-reduced-transparency`. No
   call-site `backdrop-blur-*`. The marketing site header's blur is a separate, intentional exception.
+- **No texture on panes (owner, 2026-11-05).** The sidebar's film grain is gone; panes are the glass
+  surface and a hairline. A pane gets no grain, noise or image overlay.
 - **Elevation belongs to the primitive.** No call-site `shadow-*` or `bg-panel` on overlay content.
 - **`box-shadow` for other jobs** only as a named utility in `globals.css`: the crop box's
   `shadow-crop-mask` (`media-scrim` at 60%, clipped by its stage; C-073). Not a `--shadow-*` token,

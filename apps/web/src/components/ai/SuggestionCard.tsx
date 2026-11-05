@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 /** Longer drafts start clamped to two lines with "More" (UX-INB-08). */
 const LONG_REPLY = 160;
-/** On phones the bar is one line, so anything past about a line of text can be opened with "More" (UI-051). */
+/** On phones the bar is two lines, so anything past about a line of text can be opened with "More" (UI-051). */
 const PHONE_LINE = 40;
 
 export type SuggestionActions = {
@@ -147,7 +147,7 @@ function ReadyBar({
           <p
             className={cn(
               "text-sm whitespace-pre-wrap break-words text-fg",
-              !expanded && (long ? "line-clamp-1 sm:line-clamp-2" : phoneLong && "line-clamp-1 sm:line-clamp-none"),
+              !expanded && (long ? "line-clamp-2" : phoneLong && "line-clamp-2 sm:line-clamp-none"),
             )}
             data-testid="draft-text"
           >
@@ -194,9 +194,10 @@ function ReadyBar({
           </Tooltip>
         ) : null}
         <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-          <span className="text-2xs text-fg-secondary tabular-nums">
+          <span className="text-2xs text-fg-secondary tabular-nums max-sm:basis-full max-sm:text-right">
             {left > 0 ? `${left} ${left === 1 ? "draft" : "drafts"} left` : "No drafts left"}
           </span>
+          <span className="flex items-center gap-1.5">
           <DisabledReason reason={left <= 0 ? "No more drafts for this message" : null}>
             <Button variant="ghost" size="sm" disabled={left <= 0} loading={busy} onClick={actions.onRegenerate}>
               <RefreshCw aria-hidden /> Draft again
@@ -214,6 +215,7 @@ function ReadyBar({
           <Button size="sm" variant={composerHasText ? "secondary" : "default"} disabled={!canSend || !text} onClick={actions.onSend}>
             <SendHorizontal aria-hidden /> Send
           </Button>
+          </span>
         </span>
       </div>
     </section>

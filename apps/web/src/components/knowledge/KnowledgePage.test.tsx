@@ -223,10 +223,34 @@ describe("Knowledge an AI app added", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("The AI never used it.");
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(within(dialog).getByText("Reject “Returns”?")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.path === "/v1/w/w1/knowledge-sources/ai1")).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Rejected “Returns”"));
     await waitFor(() => expect(state.sources).toEqual([]));
     await waitFor(() => expect(screen.queryByText(/Added by an AI app/)).not.toBeInTheDocument());
+  });
+
+  it("prints an FAQ's question once, and not when it is the title", async () => {
+    setup({ sources: [{ ...waiting(), type: "faq", title: "Is COD available?", question: "Is COD available?" }] });
+    await screen.findByText(/Added by an AI app/);
+    expect(screen.getAllByText("Is COD available?")).toHaveLength(1);
+  });
+
+  it("cuts a long text short with Show all, so nothing is approved unseen", async () => {
+    const user = userEvent.setup();
+    setup({ sources: [{ ...waiting(), body: "Long policy text. ".repeat(40) }] });
+    const body = await screen.findByRole("group", { name: "Content of Returns" });
+    expect(body).toHaveClass("max-h-32");
+    await user.click(screen.getByRole("button", { name: "Show all of Returns" }));
+    expect(body).not.toHaveClass("max-h-32");
+    expect(screen.queryByRole("button", { name: "Show all of Returns" })).not.toBeInTheDocument();
+  });
+
+  it("shows a short text whole, with no Show all", async () => {
+    setup({ sources: [waiting()] });
+    await screen.findByRole("group", { name: "Content of Returns" });
+    expect(screen.queryByRole("button", { name: /^Show all/ })).not.toBeInTheDocument();
   });
 
   it("a failed Approve says why and leaves the row", async () => {

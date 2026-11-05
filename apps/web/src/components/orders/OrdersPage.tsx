@@ -79,7 +79,7 @@ export function OrdersPage() {
                   id="order-filter"
                   value={filter}
                   onChange={(event) => setFilter(event.target.value as Filter)}
-                  className="h-9 rounded-lg border border-line-strong bg-field px-2 text-sm"
+                  className="h-9 rounded-lg border border-line-strong bg-field-input px-2 text-sm"
                 >
                   {FILTERS.map((item) => (
                     <option key={item.value} value={item.value}>

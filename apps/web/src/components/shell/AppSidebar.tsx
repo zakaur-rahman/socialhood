@@ -112,17 +112,11 @@ export function AppSidebar({
       data-ready="false"
       className={cn(
         "group/sb relative h-full rounded-xl border border-line glass-pane",
-        collapsed ? "w-16" : "w-[232px]",
+        collapsed ? "w-16" : "w-58",
         "motion-safe:data-[ready=true]:transition-[width] motion-safe:data-[ready=true]:duration-slow motion-safe:data-[ready=true]:ease-standard",
         className,
       )}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-xl bg-repeat opacity-(--grain-opacity)"
-        style={{ backgroundImage: "url(/grain.jpg)" }}
-      />
-
       {/* Owner, 2026-10-25: the toggle is an icon on the card's right edge, centred, half over the
           border; the label and the Ctrl/⌘ [ shortcut are in its tooltip. z-40 keeps it above the
           page's sticky headers, which it overlaps by half its width. */}

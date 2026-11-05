@@ -94,7 +94,8 @@ export function PlanCards({
               tone={isCurrent ? "brand" : "default"}
               // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
               // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
-              className={cn("relative flex flex-col", !isCurrent && !offer.available && "border-line-subtle bg-panel-glass")}
+              // Five shared rows (name, tagline, price, limits, button), so the rule under the price lines up.
+              className={cn("relative row-span-5 grid grid-rows-subgrid gap-y-0", !isCurrent && !offer.available && "border-line-subtle bg-panel-glass")}
               data-testid={`plan-${offer.plan}`}
             >
               <li aria-current={isCurrent ? "true" : undefined}>
@@ -142,7 +143,7 @@ export function PlanCards({
                     <span className="text-base font-normal text-fg-secondary">Price shown at checkout</span>
                   )}
                 </p>
-                <ul className="mt-5 flex-1 space-y-2 border-t border-line-subtle pt-5 text-sm">
+                <ul className="mt-5 space-y-2 border-t border-line-subtle pt-5 text-sm">
                   {highlights.map((line) => (
                     <li key={line} className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />

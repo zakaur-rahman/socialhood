@@ -125,7 +125,7 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
         <select
           value={accountId}
           onChange={(event) => setChosen(event.target.value)}
-          className="h-9 w-full rounded-lg border border-line-strong bg-field px-2 text-sm"
+          className="h-9 w-full rounded-lg border border-line-strong bg-field-input px-2 text-sm"
         >
           {numbers.map((account) => (
             <option key={account.id} value={account.id}>

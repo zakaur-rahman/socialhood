@@ -100,7 +100,7 @@ export function ListHeader({
 
   return (
     <div className="space-y-3 border-b border-line glass-pane px-3 pt-3 pb-2.5">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className={cn(PANE_TITLE, "sr-only md:not-sr-only")}>Inbox</h1>
         <div className="ml-auto flex items-center gap-1">
           {onShortcuts ? (

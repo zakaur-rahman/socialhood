@@ -20,7 +20,8 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   // Surfaces
   canvas: { use: "App and thread background", swatch: "bg-canvas" },
   panel: { use: "Cards, sidebar, list pane, headers, composer bar, the phone drawer", swatch: "bg-panel" },
-  field: { use: "Inputs, incoming bubbles, segmented track", swatch: "bg-field" },
+  field: { use: "Incoming bubbles, segmented track, quiet insets", swatch: "bg-field" },
+  "field-input": { use: "Text fields and select triggers: white on light", swatch: "bg-field-input" },
   raised: { use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
   "raised-hover": { use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
   overlay: { use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },

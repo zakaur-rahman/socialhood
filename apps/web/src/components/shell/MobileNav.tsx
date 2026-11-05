@@ -4,6 +4,7 @@ import { PANE_TITLE } from "@/styles/tokens";
 import { Menu } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 
+import { LogoMark } from "@/components/marketing/primitives";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
         STATIC_WHEN_SHORT,
       )}
     >
-      <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" aria-hidden />
+      <LogoMark />
       <p className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>{title}</p>
       {ask}
       <Sheet open={open} onOpenChange={setOpen}>

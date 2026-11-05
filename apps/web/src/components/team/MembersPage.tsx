@@ -40,7 +40,7 @@ import {
 import type { TeamInvitableRole, TeamInvitation, TeamMember, TeamSeats } from "@/lib/api/types";
 import { PERMISSION, useCan } from "@/lib/permissions";
 import { toastError } from "@/lib/toast-error";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const ROLE_LABEL = { owner: "Owner", admin: "Admin", agent: "Agent" } as const;
@@ -142,7 +142,7 @@ export function MembersPage() {
                       </p>
                       {member.name ? <p className="truncate text-sm text-fg-secondary">{member.email}</p> : null}
                       <p className="text-xs text-fg-secondary">
-                        {member.last_seen_at ? `Last active ${relativeTime(member.last_seen_at)}` : "Not active yet"}
+                        {member.last_seen_at ? `Last active ${timeAgo(member.last_seen_at)}` : "Not active yet"}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">

@@ -47,7 +47,8 @@
   /* Surfaces: Midnight, a charcoal with a cool indigo cast (C-128). The ladder is canvas < field < panel < overlay < raised. */
   --color-canvas: light-dark(#F5F6FB, #131520);        /* app and thread background */
   --color-panel: light-dark(#FFFFFF, #1B1E2A);         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
-  --color-field: light-dark(#F0F1F8, #181B26);         /* inputs, incoming bubbles, segmented track */
+  --color-field: light-dark(#F0F1F8, #181B26);         /* incoming bubbles, segmented track, quiet insets */
+  --color-field-input: light-dark(#FFFFFF, #181B26);   /* what you type in: text fields and select triggers */
   --color-raised: light-dark(#E8EAF5, #252937);        /* selected row, active segment, focused input, secondary button */
   --color-raised-hover: light-dark(#DEE1F0, #2E3343);
   --color-overlay: light-dark(#FFFFFF, #222633);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
@@ -398,9 +399,16 @@
 @utility duration-normal { --tw-duration: var(--motion-normal); transition-duration: var(--motion-normal); }
 @utility duration-slow { --tw-duration: var(--motion-slow); transition-duration: var(--motion-slow); }
 
-/* Marks drawn only as a background (a selected bar, an unread or usage dot) vanish in forced
-   colours; this gives them the system highlight. */
-@utility mark-forced { @media (forced-colors: active) { background-color: Highlight; } }
+/* Marks drawn only as a background or a stroke (a selected bar, an unread or usage dot, a meter's
+   fill) vanish in forced colours; this gives them the system highlight. */
+@utility mark-forced { @media (forced-colors: active) { background-color: Highlight; stroke: Highlight; } }
+/* The same for a chosen segment, tab or chip, whose only cue is its fill. A fill, not a border, so
+   nothing changes size and the focus outline stays its own. */
+@utility selected-forced {
+  @media (forced-colors: active) {
+    &:is([aria-checked="true"], [aria-pressed="true"], [aria-selected="true"]) { background-color: Highlight; color: HighlightText; }
+  }
+}
 
 /* Increased contrast: lines and secondary text step up one level. */
 @media (prefers-contrast: more) {
@@ -476,14 +484,6 @@
 :root { color-scheme: dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="system"] { color-scheme: light dark; }
-
-/* The grain over the sidebar and the auth panel is a dark-theme texture: its opacity is a
-   variable, and it is off on light, and under System when the OS is light. */
-:root { --grain-opacity: 0.05; }
-:root[data-theme="light"] { --grain-opacity: 0; }
-@media (prefers-color-scheme: light) {
-  :root[data-theme="system"] { --grain-opacity: 0; }
-}
 
 :root {
   /* shadcn/ui semantic variables mapped onto the tokens. Nothing hand-written uses these names:
@@ -710,6 +710,7 @@
   --color-panel: var(--color-sheet);
   --color-overlay: var(--color-sheet);
   --color-field: var(--color-paper);
+  --color-field-input: var(--color-paper);
   --color-raised: var(--color-paper-deep);
   --color-raised-hover: var(--color-rule-subtle);
   --color-fg: var(--color-ink);
@@ -739,6 +740,7 @@
   --color-panel: var(--color-night-raised);
   --color-overlay: var(--color-night-raised);
   --color-field: var(--color-night-raised);
+  --color-field-input: var(--color-night-raised);
   --color-raised: var(--color-night-high);
   --color-fg: var(--color-night-ink);
   --color-fg-secondary: var(--color-night-ink-secondary);

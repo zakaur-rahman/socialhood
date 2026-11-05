@@ -111,7 +111,7 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
                   id="product-filter"
                   value={filter}
                   onChange={(event) => setFilter(event.target.value as Filter)}
-                  className="h-9 rounded-lg border border-line-strong bg-field px-2 text-sm"
+                  className="h-9 rounded-lg border border-line-strong bg-field-input px-2 text-sm"
                 >
                   <option value="all">All products</option>
                   <option value="active">Offered to customers</option>

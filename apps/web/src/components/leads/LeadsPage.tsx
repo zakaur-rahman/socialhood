@@ -23,6 +23,8 @@ import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } f
 import { coldDayOptions, LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
+import { minWidth } from "@/lib/breakpoints";
+import { useMediaQuery } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 import { ITEM_TITLE } from "@/styles/tokens";
@@ -41,6 +43,7 @@ const SEARCH_DEBOUNCE_MS = 250;
  * control to move the stage. Admins choose how many quiet days make a lead cold.
  */
 export function LeadsPage() {
+  const roomy = useMediaQuery(minWidth("md"), true);
   const { id: wid, role } = useCurrentWorkspace();
   const admin = role !== "agent";
   const [filters, setFilters] = useState<ContactFilters>(EMPTY_FILTERS);
@@ -76,7 +79,7 @@ export function LeadsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput
             label="Search leads"
-            placeholder="Name, @username, email or phone"
+            placeholder={roomy ? "Name, @username, email or phone" : "Search leads"}
             value={text}
             onChange={(event) => setText(event.target.value)}
             className="min-w-48 flex-1 sm:max-w-96"

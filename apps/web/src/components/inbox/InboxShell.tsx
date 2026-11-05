@@ -57,9 +57,9 @@ function liveAccounts(accounts: SocialAccount[]): SocialAccount[] {
 }
 
 const LIST_WIDTH: Record<InboxLayout, string> = {
-  wide: "w-[320px]",
-  desktop: "w-[320px]",
-  tablet: "w-[300px]",
+  wide: "w-80",
+  desktop: "w-80",
+  tablet: "w-75",
   phone: "w-full",
 };
 

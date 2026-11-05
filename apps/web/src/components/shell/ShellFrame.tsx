@@ -89,7 +89,7 @@ export function ShellSkeleton() {
         <div
           aria-hidden
           data-testid="shell-skeleton-sidebar"
-          className={cn("h-full rounded-xl border border-line glass-pane", sidebar.collapsed ? "w-16" : "w-[232px]")}
+          className={cn("h-full rounded-xl border border-line glass-pane", sidebar.collapsed ? "w-16" : "w-58")}
         />
       }
     >

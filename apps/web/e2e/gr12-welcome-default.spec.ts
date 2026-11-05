@@ -79,6 +79,7 @@ test.describe("GR-12 welcome and default replies", () => {
     await page.goto(`/w/${workspace.slug}/automations/${draft.id}`);
     await page.getByRole("radio", { name: "First message (welcome)" }).click();
     await expect(page.getByText(/the first time they DM this account/)).toBeVisible();
+    await page.getByRole("button", { name: "Change trigger" }).click();
     await page.getByRole("radio", { name: "Any other message (default reply)" }).click();
     await expect(page.getByText(/only while AI replies are Off/)).toBeVisible();
   });

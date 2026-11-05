@@ -78,9 +78,15 @@ function Media({ asset, className }: { asset: AssetInfo; className?: string }) {
   return <img src={asset.thumbnail_url ?? asset.url} alt="" className={cn("size-full object-cover", className)} />;
 }
 
-function NoMedia({ children = "Add a photo or video to see the preview." }: { children?: ReactNode }) {
+function NoMedia({
+  children = "Add a photo or video to see the preview.",
+  className,
+}: {
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-fg-secondary">
+    <div className={cn("flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-fg-secondary", className)}>
       <ImageIcon className="size-6" aria-hidden />
       {children}
     </div>
@@ -289,19 +295,20 @@ function StoryPreview({
   const name = account?.username ?? account?.display_name ?? "your.account";
   return (
     <div>
-      <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
-        {asset ? <Media asset={asset} /> : <NoMedia>Add one photo or video to see the Story.</NoMedia>}
-        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-chip to-transparent p-3" aria-hidden>
-          <div className="h-0.5 w-full rounded-full bg-line-strong">
-            <div className="h-full w-1/3 rounded-full bg-fg" />
+      {/* A phone screen over a photo: dark and with white text in either theme. */}
+      <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-media-scrim">
+        {asset ? <Media asset={asset} /> : <NoMedia className="text-on-brand">Add one photo or video to see the Story.</NoMedia>}
+        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-chip to-transparent p-3 text-on-brand" aria-hidden>
+          <div className="h-0.5 w-full rounded-full bg-on-brand-soft">
+            <div className="h-full w-1/3 rounded-full bg-on-brand" />
           </div>
           <div className="flex items-center gap-2">
             <AccountPicture account={account} identity={identity} size={24} />
             <span className="truncate text-sm font-semibold">{name}</span>
-            <span className="text-xs text-fg-secondary">Now</span>
+            <span className="text-xs">Now</span>
           </div>
         </div>
-        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-full border border-line-strong px-3 py-2 text-sm text-fg-secondary" aria-hidden>
+        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-full border border-on-brand-soft bg-media-chip px-3 py-2 text-sm text-on-brand" aria-hidden>
           <span className="flex-1">Send message</span>
           <Heart className="size-4" />
           <Send className="size-4" />
@@ -447,9 +454,10 @@ function ReelPreview({
 }) {
   const name = account?.username ?? account?.display_name ?? "your.account";
   return (
-    <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
-      {asset ? <Media asset={extras?.coverUrl ? { ...asset, resource_type: "image", url: extras.coverUrl, thumbnail_url: extras.coverUrl } : asset} /> : <NoMedia />}
-      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-(image:--gradient-media-fade) p-3 pr-12">
+    <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-media-scrim">
+      {asset ? <Media asset={extras?.coverUrl ? { ...asset, resource_type: "image", url: extras.coverUrl, thumbnail_url: extras.coverUrl } : asset} /> : <NoMedia className="text-on-brand" />}
+      {/* The eased fade is faint at its top, so it starts well above the account name. */}
+      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-(image:--gradient-media-fade) p-3 pt-16 pr-12 text-on-brand">
         <div className="flex items-center gap-2">
           <AccountPicture account={account} identity={identity} size={24} />
           <span className="truncate text-sm font-semibold">
@@ -457,15 +465,15 @@ function ReelPreview({
           </span>
         </div>
         {caption.trim() ? (
-          <p className="line-clamp-2 text-sm break-words" data-testid="reel-caption">
+          <p className="line-clamp-2 text-sm break-words [&_span]:text-on-brand" data-testid="reel-caption">
             <RichCaption text={caption} />
           </p>
         ) : null}
-        <p className="flex items-center gap-1 text-xs text-fg-secondary">
+        <p className="flex items-center gap-1 text-xs">
           <Music2 className="size-3" aria-hidden /> {extras?.audioName ? extras.audioName : "Original audio"}
         </p>
       </div>
-      <div className="absolute right-2 bottom-4 flex flex-col items-center gap-4 text-fg" aria-hidden>
+      <div className="absolute right-2 bottom-4 flex flex-col items-center gap-4 text-on-brand" aria-hidden>
         <Heart className="size-5" />
         <MessageCircle className="size-5" />
         <Send className="size-5" />

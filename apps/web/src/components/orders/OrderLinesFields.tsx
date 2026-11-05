@@ -113,7 +113,7 @@ export function OrderLinesFields({
               <select
                 value={line.productId}
                 onChange={(event) => patchLine(line.key, { productId: event.target.value, variantId: "" })}
-                className="h-9 w-full rounded-lg border border-line-strong bg-field px-2 text-sm"
+                className="h-9 w-full rounded-lg border border-line-strong bg-field-input px-2 text-sm"
               >
                 <option value="">Choose a product</option>
                 {products.map((item) => (
@@ -129,7 +129,7 @@ export function OrderLinesFields({
                 <select
                   value={line.variantId}
                   onChange={(event) => patchLine(line.key, { variantId: event.target.value })}
-                  className="h-9 w-full rounded-lg border border-line-strong bg-field px-2 text-sm"
+                  className="h-9 w-full rounded-lg border border-line-strong bg-field-input px-2 text-sm"
                 >
                   <option value="">Choose a variant</option>
                   {product.variants.map((variant) => (

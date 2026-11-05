@@ -207,11 +207,11 @@ function Body({
           Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.
         </Alert>
       ) : null}
+      <KnowledgeApprovalBanner count={waiting} slug={slug} />
       {showChecklist ? (
         <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
       ) : null}
       <AccountHealth accounts={data.accounts_needing_attention} slug={slug} canManage={canManage} />
-      <KnowledgeApprovalBanner count={waiting} slug={slug} />
 
       <div aria-busy={switching} className="group/overview space-y-6" data-testid="overview">
         {switching ? (

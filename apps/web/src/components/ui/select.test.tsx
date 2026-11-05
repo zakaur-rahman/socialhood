@@ -52,7 +52,7 @@ describe("Select (UI-013)", () => {
     render(<TimeZone />);
     const trigger = screen.getByRole("combobox", { name: "Time zone" });
     expect(trigger).toHaveClass(
-      "bg-field",
+      "bg-field-input",
       "border",
       "border-line-control",
       "rounded-lg",

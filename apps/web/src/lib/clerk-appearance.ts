@@ -126,10 +126,10 @@ function appearanceWithoutBase(theme: Theme) {
       profileSectionItemList: { borderColor: "var(--color-line) !important" },
       header: { borderColor: "var(--color-line) !important" },
       pageScrollBox: { borderColor: "var(--color-line) !important" },
-      // Fields, on the app's field recipe: `field` fill, the 40% control edge, `rounded-lg`, and the
+      // Fields, on the app's field recipe: `field-input` fill, the control edge, `rounded-lg`, and the
       // brand edge on a raised fill when focused.
       formFieldInput: {
-        backgroundColor: "var(--color-field)",
+        backgroundColor: "var(--color-field-input)",
         border: "1px solid var(--color-line-control) !important",
         borderRadius: "var(--radius-lg)",
         boxShadow: "none !important",

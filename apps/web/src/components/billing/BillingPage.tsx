@@ -306,9 +306,11 @@ function CurrentPlan({
               <h2 id="plan-title" className={PAGE_TITLE}>
                 {status.plan}
               </h2>
-              <Badge tone={status.badge.tone} size="md">
-                {status.badge.label}
-              </Badge>
+              {status.badge.label !== status.plan ? (
+                <Badge tone={status.badge.tone} size="md">
+                  {status.badge.label}
+                </Badge>
+              ) : null}
             </div>
             <p className={cn("text-sm", status.badge.tone === "danger" ? "text-danger-fg" : "text-fg-secondary")}>
               {status.line}
@@ -381,7 +383,7 @@ function Usage({ billing }: { billing: BillingState }) {
   const meters = meterViews(billing.usage, workspace.timezone);
   const metered = new Set(meters.map((meter) => ENTITLEMENT_FOR_METRIC[meter.metric] ?? meter.metric));
   const others = billing.entitlements.flatMap((item) =>
-    typeof item.value === "number" && !metered.has(item.key) ? [limitText(item.key, item.value)] : [],
+    typeof item.value === "number" && item.value > 0 && !metered.has(item.key) ? [limitText(item.key, item.value)] : [],
   ).filter((line): line is string => Boolean(line));
   if (meters.length === 0 && others.length === 0) return null;
   return (

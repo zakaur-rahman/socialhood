@@ -22,7 +22,7 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
  *   a DisabledReason wrapper around it, which says why (a disabled button swallows the click).
  */
 const segmentVariants = cva(
-  "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10",
+  "selected-forced inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10",
   {
     variants: {
       size: {
@@ -50,7 +50,7 @@ type ToggleGroupVariant = "segmented" | "chips"
  * pointers), selected `brand-soft` with `brand-fg` text and a `brand-line` edge. They ignore `size`.
  */
 const chipClass =
-  "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-line px-3 text-xs font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard hover:bg-hover hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 aria-checked:border-brand-line aria-pressed:border-brand-line aria-checked:bg-brand-soft aria-pressed:bg-brand-soft aria-checked:text-brand-fg aria-pressed:text-brand-fg"
+  "selected-forced inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-line px-3 text-xs font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard hover:bg-hover hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 aria-checked:border-brand-line aria-pressed:border-brand-line aria-checked:bg-brand-soft aria-pressed:bg-brand-soft aria-checked:text-brand-fg aria-pressed:text-brand-fg"
 
 const ToggleGroupContext = React.createContext<{ variant: ToggleGroupVariant; size: SegmentSize }>({
   variant: "segmented",

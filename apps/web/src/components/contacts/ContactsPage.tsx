@@ -18,6 +18,8 @@ import type { ContactListItem, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
 import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
+import { minWidth } from "@/lib/breakpoints";
+import { useMediaQuery } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +52,7 @@ function saveBlob(blob: Blob, name: string): void {
  * on a phone. It fills the width of the screen.
  */
 export function ContactsPage() {
+  const roomy = useMediaQuery(minWidth("md"), true);
   const { id: wid, role } = useCurrentWorkspace();
   const admin = role !== "agent";
   const params = useSearchParams();
@@ -123,7 +126,7 @@ export function ContactsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput
             label="Search contacts"
-            placeholder="Name, @username, email or phone"
+            placeholder={roomy ? "Name, @username, email or phone" : "Search contacts"}
             value={text}
             onChange={(event) => setText(event.target.value)}
             className="min-w-48 flex-1 sm:max-w-96"

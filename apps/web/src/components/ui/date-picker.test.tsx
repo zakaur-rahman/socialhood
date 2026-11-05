@@ -52,7 +52,7 @@ describe("DatePicker", () => {
     const trigger = screen.getByLabelText("Send on");
     expect(trigger).toHaveRole("button");
     expect(trigger).toHaveTextContent("Mon 28 Sep 2026");
-    expect(trigger).toHaveClass("bg-field", "border-line-control", "rounded-lg");
+    expect(trigger).toHaveClass("bg-field-input", "border-line-control", "rounded-lg");
   });
 
   it("opens a calendar on the chosen month, and choosing a day sets the same YYYY-MM-DD string and closes it", async () => {

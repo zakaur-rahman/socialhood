@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SearchInput } from "@/components/ui/search-input";
 import {
   Select,
@@ -427,25 +428,49 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       title="Automations"
       actions={
         <>
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
           </Button>
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
           </Button>
           {broadcastsOn ? (
-            <Button asChild variant="secondary" size="lg">
+            <Button asChild variant="secondary" size="lg" className="max-md:hidden">
               <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
             </Button>
           ) : availability.isPending ? (
             // Holds the button's place until the flag is known, so the header doesn't re-wrap.
-            <Button variant="secondary" size="lg" className="pointer-events-none invisible" aria-hidden tabIndex={-1}>
+            <Button variant="secondary" size="lg" className="pointer-events-none invisible max-md:hidden" aria-hidden tabIndex={-1}>
               Broadcasts
             </Button>
           ) : null}
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/sequences` as Route}>Sequences</Link>
           </Button>
+          {/* Phones: the same four links in one menu, so the list starts higher up. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="lg" className="md:hidden">
+                More
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
+              </DropdownMenuItem>
+              {broadcastsOn ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/sequences` as Route}>Sequences</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
           </Button>

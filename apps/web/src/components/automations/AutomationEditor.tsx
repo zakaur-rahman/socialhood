@@ -308,7 +308,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             aria-invalid={nameError ? true : undefined}
             // The page title, edited in place: no field look until hovered or focused, then the
             // global focus outline; 40 px on touch like every control (DESIGN_SYSTEM §8.4).
-            className="-mx-1 w-full rounded-md bg-transparent px-1 text-2xl font-semibold tracking-tight hover:bg-hover focus:bg-field pointer-coarse:min-h-10"
+            className="-mx-1 w-full rounded-md bg-transparent px-1 text-2xl font-semibold tracking-tight hover:bg-hover focus:bg-field-input pointer-coarse:min-h-10"
           />
           {nameError ? <p className="text-xs text-danger-fg">{nameError}</p> : null}
         </div>
@@ -350,8 +350,8 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </Alert>
       ) : null}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1 xl:max-w-[720px]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
+        <div className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1">
           {server.queue.waiting > 0 ? (
             <QueueBanner queue={server.queue} order={draft.surge_order} onOrderChange={(order) => change({ surge_order: order })} />
           ) : null}
@@ -601,7 +601,7 @@ function EditorSkeleton() {
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-7 w-64" />
       </div>
-      <div className="max-w-[720px] space-y-4 pl-8">
+      <div className="space-y-4 pl-8 xl:w-2/3">
         {Array.from({ length: 4 }, (_, i) => (
           <Card key={i} padding="roomy" className="space-y-3">
             <Skeleton className="h-3 w-20" />

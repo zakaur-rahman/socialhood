@@ -38,7 +38,7 @@ function ratio(a: Rgb, b: Rgb): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const SURFACES = ["canvas", "panel", "field", "raised", "raised-hover", "overlay"] as const;
+const SURFACES = ["canvas", "panel", "field", "field-input", "raised", "raised-hover", "overlay"] as const;
 
 function suite(theme: Theme, floor: { secondary: number; brandFg: number }) {
   const token = (name: string): Rgba => parse(colorValue(name, theme));
@@ -104,6 +104,11 @@ describe("the light palette's order", () => {
     expect(l("canvas")).toBeLessThan(l("panel"));
     expect(l("raised")).toBeLessThan(l("field"));
     expect(l("raised-hover")).toBeLessThan(l("raised"));
+  });
+
+  it("has white input fields on light, and the dark theme's fields stay one colour", () => {
+    expect(colorValue("field-input", "light").toLowerCase()).toBe("#ffffff");
+    expect(colorValue("field-input", "dark")).toBe(colorValue("field", "dark"));
   });
 });
 

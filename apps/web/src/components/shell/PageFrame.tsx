@@ -69,7 +69,8 @@ export function PageFrame({
       <div ref={header} className={cn(STICKY_PAGE_HEADER, "mb-6 pt-4 md:pt-6")}>
         {back ? <BackLink {...back} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h1 className={cn("min-w-0 break-words", PAGE_TITLE)}>{title}</h1>
+          {/* On a phone the top bar already names the page: the heading stays for screen readers. */}
+          <h1 className={cn("min-w-0 break-words max-md:sr-only", PAGE_TITLE)}>{title}</h1>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
       </div>

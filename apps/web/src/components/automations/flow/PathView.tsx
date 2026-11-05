@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FlowPreviewStep } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
-
-import { NativeSelect } from "./NativeSelect";
 
 /**
  * The choices after picking `exit` at the `fork`th fork (0-based): the earlier forks keep what they
@@ -42,17 +42,21 @@ export function PathView({
           <li key={step.step_id} data-testid="path-step" data-kind={step.kind} className="space-y-2">
             <StepBubbles step={step} image={imageNote?.has(step.step_id) ?? false} />
             {forkNumber > 0 ? (
-              <NativeSelect
-                label={`Branch ${forkNumber}`}
-                value={String(step.picked ?? 0)}
-                onChange={(value) => onChoose(forkNumber - 1, Number(value))}
-              >
-                {exits.map((exit, index) => (
-                  <option key={index} value={index}>
-                    {exit}
-                  </option>
-                ))}
-              </NativeSelect>
+              <div className="space-y-1.5">
+                <Label id={`${step.step_id}-branch`}>Branch {forkNumber}</Label>
+                <Select value={String(step.picked ?? 0)} onValueChange={(value) => onChoose(forkNumber - 1, Number(value))}>
+                  <SelectTrigger aria-labelledby={`${step.step_id}-branch`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exits.map((exit, index) => (
+                      <SelectItem key={index} value={String(index)}>
+                        {exit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : null}
           </li>
         );

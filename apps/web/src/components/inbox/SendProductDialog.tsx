@@ -238,7 +238,7 @@ export function SendProductDialog({
               <select
                 value={single}
                 onChange={(event) => setSingle(event.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-line-strong bg-field px-2 text-sm"
+                className="mt-1 h-9 w-full rounded-lg border border-line-strong bg-field-input px-2 text-sm"
               >
                 <option value="">Choose a product</option>
                 {options.map((option) => (

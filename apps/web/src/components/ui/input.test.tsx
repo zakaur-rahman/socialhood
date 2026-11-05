@@ -11,7 +11,7 @@ describe("Input", () => {
     render(<Input aria-label="Name" />);
     const input = screen.getByRole("textbox", { name: "Name" });
     expect(input).toHaveClass(
-      "bg-field",
+      "bg-field-input",
       "border-line-control",
       "rounded-lg",
       "px-3",

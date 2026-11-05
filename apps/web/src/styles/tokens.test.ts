@@ -72,7 +72,7 @@ const rootAliases = blocks(/:root/)
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .matchAll(/--([a-z-]+):/g);
 // `--motion-*` are durations and `--gradient-*` gradients, not colour aliases.
-const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-") && !name.startsWith("grain-"));
+const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-"));
 const themeInline = blocks(/@theme inline/).join("\n");
 /** Every `--color-*` declared in `@theme` (the palette lock, `--color-*`, is not a token). */
 const themeColorNames = [...blocks(/@theme/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
