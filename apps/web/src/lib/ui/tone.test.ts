@@ -36,7 +36,7 @@ describe("the tone map (lib/ui/tone)", () => {
   });
 
   it("keeps the colours the old maps drew (the hover tint and the status colours at 15%), so nothing moves", () => {
-    expect(token("hover")).toBe("rgb(214 219 255 / 0.05)");
+    expect(token("hover")).toBe("rgb(235 235 245 / 0.05)");
     expect(token("brand-soft")).toBe(alpha(token("brand")!, 0.15));
     expect(token("success-soft")).toBe(alpha(token("success")!, 0.15));
     expect(token("warning-soft")).toBe(alpha(token("warning")!, 0.15));

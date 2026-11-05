@@ -113,7 +113,7 @@ function CalendarDayButton({ className, day, modifiers, ...props }: React.Compon
       data-selected={chosen ? "true" : undefined}
       className={cn(
         "flex size-full items-center justify-center rounded-md text-sm font-normal text-fg tabular-nums transition-colors duration-fast hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
-        modifiers.today && "font-semibold text-brand-fg",
+        modifiers.today && "font-semibold text-fg",
         modifiers.outside && "text-fg-secondary",
         modifiers.disabled && "pointer-events-none text-fg-disabled line-through opacity-60",
         middle && "rounded-none hover:bg-brand-soft-hover",

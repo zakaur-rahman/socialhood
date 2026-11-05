@@ -173,7 +173,7 @@ export function SendProductDialog({
           {list ? (
             <div className="space-y-3">
               {sections.map((section, index) => (
-                <fieldset key={section.key} className="space-y-2 rounded-lg border border-line p-3">
+                <fieldset key={section.key} className="space-y-2 rounded-lg bg-field p-3">
                   <legend className="px-1 text-sm font-medium">Section {index + 1}</legend>
                   <div className="flex items-end gap-2">
                     <label className="flex-1 text-sm">

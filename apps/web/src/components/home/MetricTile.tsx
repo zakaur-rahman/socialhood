@@ -38,10 +38,14 @@ type Props = {
   /** Something drawn inside the card under the number (a chart); it sits at the bottom, so the
    * charts of a row line up. */
   children?: ReactNode;
+  /** A cell of a band with dividers (Home's MetricTiles) instead of a card of its own. */
+  cell?: boolean;
 };
 
+const CELL = "flex h-full flex-col bg-panel p-4";
+
 /** UX-SCR-01: one metric on a Card, the number in text-2xl semibold tabular-nums. */
-export function MetricTile({ label, value, badge, hint, trend, href, children }: Props) {
+export function MetricTile({ label, value, badge, hint, trend, href, children, cell = false }: Props) {
   const body = (
     <>
       <p className="flex items-center justify-between gap-2 text-xs text-fg-secondary">
@@ -68,6 +72,22 @@ export function MetricTile({ label, value, badge, hint, trend, href, children }:
       {children ? <div className="mt-auto pt-3">{children}</div> : null}
     </>
   );
+  if (cell) {
+    return href ? (
+      // The band clips, so the focus outline is drawn inside the cell (§8.3).
+      <Link
+        href={href}
+        data-testid="metric-tile"
+        className={cn(CELL, "hover:bg-raised focus-visible:-outline-offset-2 motion-safe:transition-[background-color] motion-safe:duration-fast")}
+      >
+        {body}
+      </Link>
+    ) : (
+      <div data-testid="metric-tile" className={CELL}>
+        {body}
+      </div>
+    );
+  }
   if (href) {
     return (
       // An interactive card: the `line-strong` edge on hover (DESIGN_SYSTEM §1.2). Focus is the global

@@ -62,7 +62,7 @@ describe("ConversationRow (UX-INB-04)", () => {
     const row = renderRow({}, true);
     expect(row).toHaveAttribute("aria-current", "page");
     expect(row.className).toContain("bg-raised");
-    expect(screen.getByTestId("row-accent")).toHaveClass("bg-brand", "w-0.5", "inset-y-2", "left-0", "rounded-full");
+    expect(screen.getByTestId("row-accent")).toHaveClass("bg-fg", "w-0.5", "inset-y-2", "left-0", "rounded-full");
   });
 
   it("not selected: no selection bar; hover and inset focus from the tokens", () => {

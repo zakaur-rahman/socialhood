@@ -6,7 +6,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
 /**
- * The one button (DESIGN_SYSTEM §8.2–§8.4). `default` is the primary: the brand gradient, one per
+ * The one button (DESIGN_SYSTEM §8.2–§8.4). `default` is the primary: the solid accent, one per
  * view region (D-10). Focus is the global `:focus-visible` outline (2 px brand, offset 2 px), so
  * there is no `outline-none` and no ring here. Heights follow the control ladder on fine pointers
  * (24/28/32/36/40) and are at least 40 px on coarse pointers, whatever the viewport width.
@@ -16,10 +16,10 @@ const buttonRecipe = cva(
   {
     variants: {
       variant: {
-        default: "bg-brand-gradient text-on-brand shadow-button-primary hover:brightness-110 active:brightness-95",
-        secondary: "glass-raised text-fg shadow-button-secondary hover:bg-raised-hover aria-expanded:bg-raised-hover",
+        default: "bg-brand-strong text-on-brand hover:brightness-110 active:brightness-95",
+        secondary: "bg-raised text-fg hover:bg-raised-hover aria-expanded:bg-raised-hover",
         outline:
-          "border-line-strong glass-outline shadow-highlight hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
+          "border-line-strong hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         ghost: "hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         // AI actions and a pressed toggle: the AI pill's brand-soft (DESIGN_SYSTEM §1.4, the selected
         // chip's colours), brand-fg text 7.21:1, a step stronger on hover and while its menu is open.

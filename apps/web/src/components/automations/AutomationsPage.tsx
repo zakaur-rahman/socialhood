@@ -65,7 +65,6 @@ import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
-import { KPI } from "@/styles/tokens";
 
 import { AccountGroup, type GroupActions } from "./AccountGroup";
 import { AgentDraftDialog } from "./AgentDraftDialog";
@@ -618,7 +617,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           <div
             role="region"
             aria-label="Selected automations"
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-line bg-brand-soft px-4 py-2 text-sm"
+            className="flex flex-wrap items-center gap-3 rounded-xl bg-raised px-4 py-2 text-sm"
           >
             <span className="font-medium tabular-nums">{selectedIds.length} selected</span>
             <Button size="sm" variant="secondary" onClick={pauseSelected} disabled={bulkPause.isPending}>
@@ -683,21 +682,25 @@ function SummaryStrip({
       hint: summary?.waiting ? (eta ? `All sent in ${eta}` : "In the private-reply queue") : "Nobody waiting",
     },
   ];
+  // One line, so the automations come first; it wraps on a narrow screen, where the hints are for
+  // screen readers only.
   return (
-    <section aria-label="Last 7 days" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {figures.map((figure) => (
-        <Card key={figure.label}>
-          <p className="text-xs text-fg-secondary">{figure.label}</p>
-          {loading ? (
-            <Skeleton className="mt-2 h-7 w-16" />
-          ) : (
-            <p className={cn("mt-1", KPI)}>
-              {figure.value === undefined ? "—" : formatCount(figure.value)}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-fg-secondary">{figure.hint}</p>
-        </Card>
-      ))}
+    <section aria-label="Last 7 days">
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        {figures.map((figure) => (
+          <div key={figure.label} className="flex items-baseline gap-1.5">
+            <dt className="text-fg-secondary">{figure.label}</dt>
+            <dd className="flex items-baseline gap-1.5">
+              {loading ? (
+                <Skeleton className="h-3.5 w-8 self-center" />
+              ) : (
+                <span className="font-semibold tabular-nums">{figure.value === undefined ? "—" : formatCount(figure.value)}</span>
+              )}
+              <span className="text-xs text-fg-secondary max-md:sr-only">{figure.hint}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

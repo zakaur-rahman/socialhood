@@ -292,12 +292,11 @@ function CurrentPlan({
   );
 
   return (
-    <Card asChild padding="roomy" tone="brand" className="space-y-4 bg-glow-brand">
+    <Card asChild padding="roomy" className="space-y-4">
     <section aria-labelledby="plan-title">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-start gap-4">
-          {/* A decorative icon tile: the decor gradient (DESIGN_SYSTEM §1.9); the shell gradient is the logo's and Upgrade's. */}
-          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-gradient-decor text-on-brand">
+          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-raised text-fg-secondary">
             <CreditCard className="size-6" />
           </span>
           <div className="min-w-0 space-y-1">
@@ -447,7 +446,7 @@ function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: str
           <span
             aria-hidden
             className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-brand-fg [&_svg]:size-4",
+              "grid size-8 shrink-0 place-items-center rounded-lg text-fg-secondary [&_svg]:size-4",
               METER_ICON_BG[meter.metric],
             )}
           >

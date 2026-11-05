@@ -489,7 +489,7 @@ function TapFirst({
         <div className="space-y-1.5">
           <Label htmlFor="automation-tap-first">
             Tap first{" "}
-            <Badge tone="brand">Recommended</Badge>
+            <Badge tone="neutral">Recommended</Badge>
           </Label>
           <p id="automation-tap-first-hint" className="text-xs text-fg-secondary">
             {networkName(platform)} allows one text-only reply to a comment until the person answers. Once they tap the button or

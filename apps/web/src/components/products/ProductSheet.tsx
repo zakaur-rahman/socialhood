@@ -389,7 +389,7 @@ function ProductForm({
         {values.variants.map((variant, index) => {
           const at = `variants.${index}`;
           return (
-            <fieldset key={variant.key} className="space-y-3 rounded-lg border border-line p-3">
+            <fieldset key={variant.key} className="space-y-3 rounded-lg bg-field p-3">
               <legend className="px-1 text-xs text-fg-secondary">Variant {index + 1}</legend>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field id={`variant-${variant.key}-title`} invalid={Boolean(errors[`${at}.title`])}>

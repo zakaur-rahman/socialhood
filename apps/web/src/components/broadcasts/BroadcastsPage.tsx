@@ -86,7 +86,7 @@ export function BroadcastsPage() {
             </p>
           </Card>
         ) : (
-          <Alert tone="brand" variant="outline">
+          <Alert tone="neutral" variant="outline">
             <AlertTitle>Broadcasts are part of Creator and Business</AlertTitle>
             <AlertDescription>
               Send a WhatsApp template to everyone in a segment who agreed to hear from you.{" "}

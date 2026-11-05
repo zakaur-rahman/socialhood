@@ -37,7 +37,7 @@ export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Creator", 
  */
 export function PlanBadge({ plan, className }: { plan: Plan; className?: string }) {
   return (
-    <Badge tone="brand" size="sm" shape="tag" className={className}>
+    <Badge tone="neutral" size="sm" shape="tag" className={className}>
       {PLAN_LABEL[plan]}
     </Badge>
   );
@@ -112,7 +112,7 @@ export function WorkspaceMenu({
         <DropdownMenuItem aria-current="true" className="gap-2 py-1.5">
           <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
           <PlanBadge plan={workspace.plan} />
-          <Check className="text-brand-fg" aria-hidden />
+          <Check aria-hidden />
         </DropdownMenuItem>
         {others.map((other) => (
           <DropdownMenuItem key={other.slug} asChild className="gap-2 py-1.5">

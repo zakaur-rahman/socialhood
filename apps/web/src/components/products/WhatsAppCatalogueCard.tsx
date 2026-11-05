@@ -61,7 +61,7 @@ export function WhatsAppCatalogueCard({ wid }: { wid: string }) {
 function ConnectionBadge({ status }: { status: WaCatalogueStatus }) {
   if (!status.connected) return <Badge tone="neutral">Not connected</Badge>;
   if (status.status === "needs_reconnect") return <Badge tone="danger">Needs attention</Badge>;
-  if (status.syncing) return <Badge tone="brand">Syncing</Badge>;
+  if (status.syncing) return <Badge tone="neutral">Syncing</Badge>;
   return <Badge tone="success">Connected</Badge>;
 }
 

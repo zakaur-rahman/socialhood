@@ -44,7 +44,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
       data-slot="tabs-trigger"
       className={cn(
         segmentVariants({ size }),
-        "aria-selected:bg-raised aria-selected:text-brand-fg",
+        "aria-selected:bg-raised aria-selected:text-fg",
         className
       )}
       {...props}

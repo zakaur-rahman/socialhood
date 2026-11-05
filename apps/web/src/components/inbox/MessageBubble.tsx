@@ -43,7 +43,7 @@ const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; c
   sending: { icon: LoaderCircle, label: "Sending", className: "motion-safe:animate-spin" },
   sent: { icon: Check, label: "Sent" },
   delivered: { icon: CheckCheck, label: "Delivered" },
-  read: { icon: CheckCheck, label: "Read", className: "text-brand-fg" },
+  read: { icon: CheckCheck, label: "Read", className: "text-fg" },
   failed: { icon: AlertCircle, label: "Failed" },
 };
 
@@ -108,7 +108,7 @@ export function MessageBubble({
     sticker && "px-0 py-0",
     !outbound && !sticker && "rounded-bl-md border border-line-subtle bg-field text-fg",
     outbound && "rounded-br-md",
-    outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-on-brand",
+    outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-strong text-on-brand",
     outbound && nativeApp && !failed && !pending && !sticker && "bg-raised text-fg",
     // Sending: the solid brand fill, no dimming (DESIGN_SYSTEM: no opacity on a container); the
     // spinner in the meta row says it hasn't gone yet.

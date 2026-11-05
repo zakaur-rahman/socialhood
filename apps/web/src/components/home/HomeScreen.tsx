@@ -78,7 +78,7 @@ export function HomeScreen() {
           <p className="mt-1 text-sm text-fg-secondary" data-testid="home-subtitle">
             {channelsLine(data.platforms_connected)}
             <span aria-hidden> · </span>
-            <span className="text-brand-fg tabular-nums">
+            <span className="tabular-nums">
               {rangeHeading(data)} · {formatSpan(data.current.since, data.current.until)}
             </span>
           </p>

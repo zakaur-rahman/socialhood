@@ -112,11 +112,11 @@ export function WeekView({
           const isToday = day === today;
           return (
             <div key={day} className="flex items-center justify-center gap-1 border-l border-line px-1 py-2 text-xs">
-              <span className={isToday ? "text-brand-fg" : "text-fg-secondary"}>{p.weekday}</span>
+              <span className={isToday ? "text-fg" : "text-fg-secondary"}>{p.weekday}</span>
               <span
                 className={cn(
                   "grid min-w-6 place-items-center rounded-full px-1 text-sm font-semibold tabular-nums",
-                  isToday && "bg-brand-soft text-brand-fg",
+                  isToday && "bg-raised text-fg",
                 )}
               >
                 {p.day}
@@ -193,7 +193,7 @@ function DayColumn({
       data-day={day}
       role="group"
       aria-label={p.long}
-      className={cn("relative border-l border-line", isToday && "bg-brand-soft")}
+      className={cn("relative border-l border-line", isToday && "bg-hover")}
     >
       {Array.from({ length: ROWS }, (_, row) => {
         const open = row >= firstOpenRow;

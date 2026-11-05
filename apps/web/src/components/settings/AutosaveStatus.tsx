@@ -15,7 +15,7 @@ export function AutosaveStatus({ saving, saved }: { saving: boolean; saved: bool
     <p role="status" aria-live="polite" className="flex items-center gap-1.5 text-sm text-fg-secondary empty:hidden">
       {saving ? (
         <>
-          <Spinner className="text-brand-fg" />
+          <Spinner />
           Saving…
         </>
       ) : saved ? (

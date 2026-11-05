@@ -28,28 +28,28 @@ const THREADS_LIMITS: PaneWidthLimits = { fallback: 272, min: 220, max: 440 };
 export function AskPage() {
   const workspace = useCurrentWorkspace();
   const now = useNow();
-  const [threadsWidth, setThreadsWidth, resetThreadsWidth] = usePaneWidth("ask-threads", THREADS_LIMITS);
+  const [threadsWidth, setThreadsWidth, resetThreadsWidth, threadsLimits] = usePaneWidth("ask-threads", THREADS_LIMITS);
   const admin = workspace.role !== "agent";
   const focus = () => document.getElementById(PAGE_COMPOSER_ID)?.focus();
 
   return (
     // Fills what <main> has left under any banner (data-shell-fill, AppShell's ShellFrame).
     <div
-      className="flex min-h-0 flex-1 overflow-hidden bg-canvas md:m-4 md:rounded-xl md:border md:border-line"
+      className="flex min-h-0 flex-1 overflow-hidden bg-canvas md:m-4 md:rounded-xl"
       data-testid="ask-page"
       data-shell-fill
     >
       <aside
         aria-label="Thread history"
-        className="relative hidden w-(--pane-w) max-w-[40%] shrink-0 flex-col border-r border-line glass-pane lg:flex"
+        className="relative hidden w-(--pane-w) max-w-[40%] shrink-0 flex-col border-r border-line bg-panel lg:flex"
         style={{ "--pane-w": `${threadsWidth}px` } as CSSProperties}
       >
         <ResizeHandle
           edge="end"
           label="Resize the thread history"
           value={threadsWidth}
-          min={THREADS_LIMITS.min}
-          max={THREADS_LIMITS.max}
+          min={threadsLimits.min}
+          max={threadsLimits.max}
           onChange={setThreadsWidth}
           onReset={resetThreadsWidth}
         />

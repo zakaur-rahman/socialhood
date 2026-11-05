@@ -178,7 +178,7 @@ export function AutomationRow({
             ) : null}
             {status ? <span className="text-xs text-fg-secondary">{status}</span> : null}
             {queue ? (
-              <Badge tone="brand" className="tabular-nums">
+              <Badge tone="neutral" className="tabular-nums">
                 <Clock aria-hidden />
                 {queue}
               </Badge>

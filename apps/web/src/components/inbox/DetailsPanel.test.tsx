@@ -46,7 +46,7 @@ describe("DetailsPanel surfaces", () => {
     const customer = await screen.findByRole("region", { name: "Customer" });
     const group = customer.querySelector('[data-slot="card-inset"]');
     expect(group).toHaveAttribute("data-padding", "compact");
-    expect(group).toHaveClass("rounded-lg", "border-line");
+    expect(group).toHaveClass("rounded-lg", "bg-field");
     expect(group).not.toHaveClass("bg-field/60");
     const meter = customer.querySelector('[data-slot="meter"]');
     expect(meter).toHaveAttribute("data-kind", "slot");

@@ -46,9 +46,9 @@ function appearanceWithoutBase(theme: Theme) {
         // Solid primary buttons (Continue, Save): flat. Clerk's top shine (white 11%) took the label
         // to 4.67:1 and its hover lightens the fill; hover is the fill at 90%, as the
         // destructive fill's is (DESIGN_SYSTEM §8.3), so the label gets more contrast, not less.
-        // They wear the app's primary: the brand gradient (Button `default`), brighter on hover.
+        // They wear the app's primary: the solid accent (Button `default`), brighter on hover.
         '&[data-variant="solid"][data-color="primary"]': {
-          backgroundImage: "var(--gradient-brand)",
+          backgroundColor: "var(--color-brand-strong)",
           color: "var(--color-on-brand)",
           boxShadow: "none",
           "&::after": { display: "none" },

@@ -23,8 +23,9 @@ inconsistent, inaccessible or unmaintainable. Every addition has a reason and a 
 ## 0. Principles and system rules
 
 The spec's principles (§4.1) stand: the inbox is the product; AI sits beside the work; one accent
-for what the business sends and for primary actions; say what happened; calm density (flat
-surfaces, 1 px hairlines, almost no shadows, a 16 px gutter, one type family).
+for primary actions, AI moments and what the business sends; say what happened; calm density (solid
+surfaces separated by a surface step and space, lines only where they mean something, almost no
+shadows, a 16 px gutter, one type family).
 
 System rules that follow from the audits:
 
@@ -51,19 +52,19 @@ System rules that follow from the audits:
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `canvas` | `#000000` | App background, thread area, marketing | Keep |
-| `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; the sidebar card inside the phone drawer (the drawer itself is `canvas`, UI-041) | Keep; drawer Change (COL-010), applied (C-071), then UI-041 |
-| `field` | `#1D1D1D` | Incoming bubbles, segmented tracks, quiet insets, composer shells | Keep; fields moved to `field-input` (2026-11-05) |
+| `canvas` | `#141416` (light `#F5F6FB`) | App background, thread area | Change: near-neutral (partly reverses C-128) |
+| `panel` | `#1E1E21` (light `#FFFFFF`) | Cards, sidebar, panes, headers, composer bar; the sidebar card inside the phone drawer (the drawer itself is `canvas`, UI-041) | Keep; drawer Change (COL-010), applied (C-071), then UI-041 |
+| `field` | `#19191C` (light `#F0F1F8`) | Incoming bubbles, segmented tracks, composer shells, quiet insets (`CardInset`: a group inside a card) | Keep; fields moved to `field-input` (2026-11-05) |
 | `field-input` | light `#FFFFFF`; dark the same as `field` | **Every** text field, select trigger and textarea; focus still turns it `raised` | **Owner decision** (2026-11-05): white fields on light, dark unchanged |
-| `raised` | `#2A2A2A` | Selected row, active segment, secondary button, skeleton, meter track | Keep |
-| `raised-hover` | `#333333` | Hover on `raised` (secondary button) | Keep |
-| `overlay` | `#262626` | Popovers, menus, select content, dialogs, sheets, toasts, tooltip | **Owner D-12**, applied (C-071), through `--popover` |
-| `hover` | `rgb(255 255 255 / 0.05)` | Hover fill on any surface; neutral chip fill | **Add** (today's `bg-white/5`) |
-| `pressed` | `rgb(255 255 255 / 0.10)` | Pressed or open (`aria-expanded`, `data-state=open`) fill | **Add** (today's `bg-white/10`) |
+| `raised` | `#28282C` (light `#E8EAF5`) | Selected row, active segment, secondary button, skeleton, meter track | Keep |
+| `raised-hover` | `#2F2F34` (light `#DEE1F0`) | Hover on `raised` (secondary button) | Keep |
+| `overlay` | `#242428` (light `#FFFFFF`) | Popovers, menus, select content, dialogs, sheets, toasts, tooltip | **Owner D-12**, applied (C-071), through `--popover` |
+| `hover` | `rgb(235 235 245 / 0.05)` (light ink 5%) | Hover fill on any surface; neutral chip fill | **Add** (today's `bg-white/5`) |
+| `pressed` | `rgb(235 235 245 / 0.10)` (light ink 9%); also the count badge's fill | Pressed or open (`aria-expanded`, `data-state=open`) fill | **Add** (today's `bg-white/10`) |
 | `scrim` | `rgb(0 0 0 / 0.60)` | Modal and drawer backdrop | **Add** (UX-SH-02's value; Ask panel and Clerk use it) |
 | `media-scrim` | `#000000` | Overlays on photos and video only, with an opacity modifier (`bg-media-scrim/60`); stays dark in any theme | **Add** |
 
-Elevation reads by lightness: canvas → panel → raised for in-page structure, `overlay` for things
+Every surface is solid: no frost, blur or page glow. Elevation reads by lightness: canvas → panel → raised for in-page structure, `overlay` for things
 that float (D-12). Hover is an overlay so it works on any surface; selected stays `raised` plus a
 bar, so the two are told apart (§5).
 
@@ -71,39 +72,41 @@ bar, so the two are told apart (§5).
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `line` | white 10% | Card, pane and list edges; inset-panel edges | Keep |
-| `line-subtle` | white 5% | Row dividers inside a card | Keep |
-| `line-strong` | white 20% | Hover edge on interactive cards; dashed placeholders; outline button edge | Keep |
-| `line-control` | `rgb(255 255 255 / 0.40)` | Edges that identify a control: checkbox, radio, switch; text fields and selects through `--input` | **Owner D-01**, applied (C-071) |
+| `line` | near-white 10% (light ink 10%) | Where a line means something: table and list rows, the edges between panes in one frame. **Not around cards** | Change |
+| `line-subtle` | near-white 6% (light ink 6%) | Row dividers inside a card | Keep |
+| `line-strong` | near-white 22% (light ink 24%) | Hover edge on interactive cards; **selected tiles, chips and the current plan**; dashed placeholders; outline button edge | Change |
+| `line-control` | `rgb(235 235 245 / 0.45)` (light ink 55%) | Edges that identify a control: checkbox, radio, switch; text fields and selects through `--input` | **Owner D-01**, applied (C-071) |
 | `--ring` (alias) | `brand` | The focus outline | Keep |
 
-`line-control` is white 40%, not a solid grey, because it must pass 3:1 on every surface a control
-sits on: 3.66 (canvas), 3.79 (panel), 3.76 (field), 3.68 (overlay), 3.58 (raised), 3.42
-(raised-hover). The solid greys proposed in the audits fail somewhere: `#71717A` is 2.97:1 on
-raised, `#6B6B6B` 2.84:1 on overlay. It also belongs with the other white-alpha lines, so a light
-theme swaps it with them.
+`line-control` is translucent, not a solid grey, because it must pass 3:1 on every surface a control
+sits on: 3.57 (raised-hover) to 4.00 (canvas) on dark, 3.61 to 3.91 on light. `contrast.test.ts` holds it.
 
 ### 1.3 Text
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `fg` | `#FFFFFF` | Primary text | Keep |
-| `fg-secondary` | `#9B9CA0` | Secondary and meta text, timestamps, hints; **placeholders** | Keep; placeholders **Owner D-06**, applied (C-071) |
-| `fg-disabled` | `#71717A` | Disabled controls only (exempt from contrast) | Keep; no placeholders (D-06, C-071) |
-| `on-brand` | `#FFFFFF` | Text and icons on the brand gradient, `brand-strong`, `danger-fill`, platform fills and avatars | **Add** (replaces 108 `text-white`) |
+| `fg` | `#F4F4F5` (light `#14161F`) | Primary text | Keep |
+| `fg-secondary` | `#ABABB3` (light `#585C73`) | Secondary and meta text, timestamps, hints; **placeholders** | Keep; placeholders **Owner D-06**, applied (C-071) |
+| `fg-disabled` | `#73737C` (light `#A3A6B8`) | Disabled controls only (exempt from contrast) | Keep; no placeholders (D-06, C-071) |
+| `on-brand` | `#FFFFFF` | Text and icons on `brand-strong`, `danger-fill`, platform fills and avatars | **Add** (replaces 108 `text-white`) |
 
 ### 1.4 Brand
 
+**The signature: one solid accent, and it means a main action or an AI moment** (Ask Amplychat, AI draft,
+AI labels), plus what the business sends (outgoing bubbles), links, and the focus outline. Everything
+else stays neutral: selected rows, segments, chips and tiles, the info-style badges and notices, today
+in a calendar, meters, icon tiles, unread dots, count badges. The hue is unchanged from C-128.
+
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `brand` | `#567FF8` | **Non-text marks only:** focus outline, unread dot, selection bar, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, an identity ring (§1.7), decorative gradient end. Never behind text. | Keep (rule tightened) |
-| `brand-strong` | `#4467E6` | Solid brand fills that carry text or a glyph: a filled segment, the skip link, Clerk's primary, `--primary`; the gradient's end stop | **Add** (an existing value: white on it is 4.85:1) |
-| `brand-deep` | `#20338A` | Gradient start | Keep |
-| `brand-fg` | `#9DB5FF` | Brand text and icons on dark: links, active segment text, AI labels; an identity ring (§1.7) | Keep |
-| `brand-soft` | brand 15% | Chips, the AI pill, selected cards; the **info** tone; the `soft` Button | Keep |
+| `brand` | `#6D6AF5` (light `#5B57EA`) | **Non-text marks only:** focus outline, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, an identity ring (§1.7). Never behind text. | Keep (rule tightened) |
+| `brand-strong` | `#5550E0` | **The accent fill**, solid: primary buttons, the logo tile, Upgrade, outgoing bubbles, the skip link, Clerk's primary, `--primary`. White on it is 5.82:1 | Change: replaces the gradients |
+| `brand-deep` | `#2B2585` | The logo's bars; an identity stop (§1.7) | Change |
+| `brand-fg` | `#B5B3FF` (light `#4640C8`) | Accent text and icons: links, AI labels; an identity ring (§1.7) | Change: no longer active segments |
+| `brand-soft` | brand 15% (light 12%) | AI moments: the AI pill, the Ask card, AI chips; the `brand` tone; the `soft` Button | Change: no longer selected cards or chips |
 | `brand-soft-hover` | brand 25% | Hover and open on a `brand-soft` control: the `soft` Button (as `raised-hover` is to `raised`) | **Add** (the AI trigger's existing hover, C-073) |
-| `brand-line` | brand 35% | Brand borders (active filter chip, the `soft` Button's edge) | Keep |
-| `shell-1`, `shell-2` | `#3352CC`, `#1C2D70` | The logo tile and Upgrade (UX-SH-01; `bg-shell-gradient` stays theirs); one identity pair (§1.7, D-13) | Keep (scoped) |
+| `brand-line` | brand 35% (light 40%) | The `soft` Button's edge and the Ask card's | Change |
+| `shell-1`, `shell-2` | `#4B44C9`, `#231E6B` | The public site's logo tile (`--gradient-shell`, §1.14), the app icons and the share image; one identity pair (§1.7, D-13) | Change (scoped) |
 
 ### 1.5 Status
 
@@ -115,7 +118,7 @@ theme swaps it with them.
 | `danger-fill` | `#C53030` | Destructive button fill and failed bubble, with `on-brand` | Keep |
 | `success-soft`, `warning-soft`, `danger-soft` | 15% of the base colour | Chip, banner and callout fills; the destructive menu highlight | **Add** (the majority value today; the spec already names warning and danger soft) |
 
-There is no separate info token: the **info** tone is `brand-soft` with `brand-fg`.
+There is no separate info token. Notices and badges that aren't about AI use the `neutral` tone; `brand` (`brand-soft` with `brand-fg`) is for AI moments.
 
 ### 1.6 Platform
 
@@ -169,20 +172,17 @@ and highest points, and the numbers in text beside it. A second hue is an owner 
 
 ### 1.9 Gradients
 
-Four gradients, each with one job; stops reference tokens (no hex in `@utility`). No new gradients.
+**The app's fills are solid.** A gradient is not a primary button, a bubble, a badge, a meter, a tile or
+a page background; `bg-brand-gradient`, `bg-brand-gradient-decor`, `bg-shell-gradient`, the glows and
+the ambient light are gone. What remains:
 
-| Utility | Stops | Allowed on | Text on it |
-|---|---|---|---|
-| `bg-brand-gradient` | `brand-deep → brand-strong` | Primary buttons, outgoing bubbles, count badges | `on-brand` (4.85:1 or more) |
-| `bg-brand-gradient-decor` | `brand-deep → brand` | Meters, progress fills, decorative icon tiles | Icons only, never text |
-| `bg-shell-gradient` | `shell-1 → shell-2` | Logo tile and Upgrade only | `on-brand` |
-| `bg-glow-brand` | radial `brand-soft → transparent` | One per view at most: the marketing hero and the plan hero | Any |
+| Name | Stops | Job |
+|---|---|---|
+| `bg-instagram-logo-gradient` | the platform's logo colours | Instagram's logo tile; never under text |
+| `--gradient-shell` | `shell-1 → shell-2` | The public site's logo tile only (§1.14) |
+| `--gradient-media-fade` | `media-heavy → transparent` | The fade over a photo |
 
-Marks under 12 px (dots, bars) are solid `brand`, never a gradient.
-
-The marketing site may also draw radial glows as arbitrary `bg-[radial-gradient(…)]` built only from
-token variables (`var(--color-brand-soft)`, `var(--color-brand-fg)`): the hero, the automation
-showcase, the lazy illustrations and the moving border (DS-13). App screens use `bg-glow-brand` only.
+Identity avatars keep their own gradient stops (§1.7, D-13).
 
 ### 1.10 shadcn alias map
 
@@ -214,16 +214,16 @@ composited on their real surface.
 
 | Pair | Ratio | Use |
 |---|---|---|
-| `fg` on canvas / panel / field / overlay / raised | 21.0 / 16.5 / 16.9 / 15.1 / 14.4 | Primary text |
-| `fg-secondary` on canvas / panel / field / overlay / raised / raised-hover | 7.66 / 6.01 / 6.15 / 5.52 / 5.23 / 4.61 | Secondary text, placeholders (D-06) |
-| `brand-fg` on panel / overlay / raised / brand-soft over panel | 8.23 / 7.56 / 7.17 / 6.83 | Links, active segments, chips |
+| `fg` on canvas / panel / field / overlay / raised | 16.74 / 15.13 / 15.96 / 14.07 / 13.36 | Primary text |
+| `fg-secondary` on canvas / panel / field / overlay / raised / raised-hover | 8.07 / 7.29 / 7.69 / 6.78 / 6.44 / 5.84 | Secondary text, placeholders (D-06) |
+| `brand-fg` on panel / overlay / raised / brand-soft over panel | 8.60 / 7.99 / 7.59 / 7.26 | Links, active segments, chips |
 | `brand-fg` on brand-soft-hover over panel; brand-soft / brand-soft-hover over raised | 5.86; 5.94 / 5.17 | The `soft` Button on hover or open; in a focused composer (C-073) |
-| `on-brand` on gradient start / end, `brand-strong`, `danger-fill`, `instagram` | 11.04 / 4.85 / 4.85 / 5.47 / 6.04 | Buttons, bubbles, badges |
+| `on-brand` on `brand-strong`, `danger-fill`, `instagram` | 5.82 / 5.47 / 6.04 | Buttons, bubbles |
 | `danger-fg` on panel / danger-soft over panel | 8.68 / 7.42 | Errors |
 | `warning`, `success` on panel / on their soft fill | 7.28, 7.23 / 5.56, 5.57 | Status text |
-| `brand` focus outline on canvas / panel / field / overlay / raised / raised-hover | 5.79 / 4.54 / 4.65 / 4.17 / 3.96 / 3.48 | Focus |
-| `line-control` on every surface | 3.42–3.79 | Control edges (D-01); a field draws it over its own fill (`#777777`): 3.70 on panel, 3.40 on overlay, 3.22 on raised. On the light theme's white `field-input` it is 3.91; `contrast.test.ts` holds it to 3:1 or more |
-| `brand` (checkbox checked, switch on) on panel / overlay / raised / raised-hover | 4.54 / 4.17 / 3.96 / 3.48 | State fills (C-071; `brand-strong` is 2.96 on raised) |
+| `brand` focus outline on canvas / panel / field / overlay / raised / raised-hover | 4.41 / 3.98 / 4.20 / 3.70 / 3.52 / 3.19 | Focus |
+| `line-control` on every surface | 3.57–4.00 | Control edges (D-01). On the light theme's white `field-input` it is 3.91; `contrast.test.ts` holds it to 3:1 or more |
+| `brand` (checkbox checked, switch on) on panel / overlay / raised / raised-hover | 3.98 / 3.70 / 3.52 / 3.19 | State fills (C-071; `brand-strong` is 2.96 on raised) |
 
 **Never:** text on `brand` (3.63:1), `danger` as text (4.38:1), `fg-disabled` as readable text
 (3.41:1), platform colours as text (Instagram 2.73:1), `brand` text on `raised` (3.96:1), opacity
@@ -238,7 +238,7 @@ Each differing colour is one `light-dark(LIGHT, DARK)` token, so a token cannot 
    (`--color-*: initial` before our tokens), so `bg-red-500` or `text-white` no longer compile.
 2. States are overlays (`hover`, `pressed`, `scrim`) that a light theme redefines as black alpha.
 3. Text on coloured fills uses `on-brand`, never `text-white`.
-4. Gradient stops are `var()`.
+4. Gradient stops, where a gradient is left (§1.9), are `var()`.
 5. No `dark:` variants in app code or in restyled primitives: the theme lives in the token values.
    (The `dark` custom variant from C-002 stays for library code that needs it.)
 6. Allowed literals: `media-scrim` overlays on media; the values that consumers can't read as
@@ -254,7 +254,7 @@ with no component edits. It is not planned for R1.
 **The palette is locked (C-075).** `--color-*: initial` opens `@theme`, so Tailwind's default
 colours generate no CSS; white and black exist only as `fg`, `on-brand`, `canvas` and
 `media-scrim`. `styles/design-lint.test.ts` names any default colour, `text-[…]`, `rounded-[…]`
-(except `rounded-[inherit]`), `ring-ring/50`, `bg-brand-gradient` on a Button, or bare
+(except `rounded-[inherit]`), `ring-ring/50`, `bg-brand-strong` on a Button, or bare
 `outline-none` without a `focus-visible:` replacement in the source. Consumers that can't read
 CSS variables (Clerk, the OG image, the manifest, the viewport) take values from `colorValue()` in
 `tokens.ts`, and `tokens.test.ts` rejects literals there.
@@ -315,6 +315,15 @@ The primitives' follow-ups (C-073), additions with no new pixel except where C-0
 ```
 
 Motion durations, the reduced-motion safety net and the base-layer rules are in §2 and §7.
+
+### 1.14 The public site keeps its own look
+
+The public site (`.site`) has its own palette (C-155), and the tokens it shares are re-pointed in the
+`.site` block. What it takes from the app's primitives is pinned there too, so changing the app's skin
+doesn't touch it: the primary fill (`brand-strong` is `ink` there), the logo tile's gradient, a Card's
+`rule` edge and drop, the primary and secondary Buttons' shadows and the secondary's fill, and the chosen
+segment's `brand-fg` text. `tokens.test.ts` holds these. A primitive that newly appears on a public page
+needs the same check.
 
 ---
 
@@ -427,15 +436,16 @@ stretched link); the design lint allows it and no other arbitrary radius (DS-16)
 
 | Use | Width | Colour |
 |---|---|---|
-| Card, pane and list edges | 1 px | `line` |
+| Card | none | A solid `panel`, told from the page by the surface step and the space around it; a transparent border keeps the box size |
+| Edges between panes in one frame, list and table rows | 1 px | `line` |
 | Row dividers inside a card | 1 px | `line-subtle` (the card's own edges stay `line`) |
-| Inset panel (a group inside a card) | 1 px | `line`, or a `raised` fill; never `line-subtle` on `field/60` |
+| Inset panel (a group inside a card) | none | A `field` fill (`CardInset`): no box-in-a-box |
 | Text field, select, checkbox, radio at rest | 1 px | `--input` = `line-control` (D-01); a checked checkbox is its `brand` fill |
 | Outline button | 1 px | `line-strong` |
 | Hover on an interactive card | 1 px | `line-strong` |
 | Focus | 2 px outline | `ring` (brand), see §8.3; fields also turn their border `ring` |
-| Selected tile | 2 px | `brand` |
-| **Selection bar** (selected row, active nav item) | 2 px | `brand` on the leading edge, inset 8 px, rounded; one implementation |
+| Selected tile, chip, the current plan | 1 px | `line-strong`, with a `raised` fill |
+| **Selection bar** (selected row, active nav item) | 2 px | `fg` on the leading edge, inset 8 px, rounded; one implementation |
 | Status edge on a card (post status, danger card) | `border-l-2` | the status colour |
 | Invalid | 1 px | `danger` (one name, not `destructive`) |
 | Disabled | — | keep the border; the control is `opacity-50` |
@@ -446,23 +456,22 @@ stretched link); the design lint allows it and no other arbitrary radius (DS-16)
 
 ## 6. Elevation and shadows
 
-On near-black, depth comes from a lighter surface, a hairline and a strong, wide shadow; Tailwind's
+On a dark canvas, depth comes from a lighter surface and, for what floats, a hairline and a strong, wide shadow; Tailwind's
 10% shadows don't register (SHD-002). Spec §4.1 ("almost no shadows") holds: only things that float
 get one.
 
 | Level | Surface | Edge and shadow | Use | Status |
 |---|---|---|---|---|
-| 0 Flat | `panel` on `canvas` | `border-line`, no shadow | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
+| 0 Flat | `panel` on `canvas` | no edge; `shadow-surface` (none on dark, a hair of drop on light) | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
 | 1 Floating | `overlay` | a 1 px `line` ring (`ring-1 ring-line`; the toast: a `line-strong` border) plus `shadow-floating`, a dark drop shadow | Popovers, menus, selects, tooltip, toasts, the jump-to-latest pill, drag previews, the sticky save bar | **Owner D-12**, applied (C-071) |
 | 2 Overlay | `overlay` (the phone drawer: `canvas`, with the sidebar card on `panel`, UI-041) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
 | Marketing glow | — | `shadow-brand/10–25` | Marketing pages only | Keep (not in the app) |
 
-- **Blur only through the glass utilities.** Backdrop blur in the app comes from `glass-pane`,
-  `glass-card`, `glass-float`, `glass-raised` and `glass-outline` (C-128), which bundle the frost
-  colour with the blur and fall back to a solid surface under `prefers-reduced-transparency`. No
-  call-site `backdrop-blur-*`. The marketing site header's blur is a separate, intentional exception.
-- **No texture on panes (owner, 2026-11-05).** The sidebar's film grain is gone; panes are the glass
-  surface and a hairline. A pane gets no grain, noise or image overlay.
+- **No blur and no frost.** C-128's glass is gone from the app: surfaces are solid, floating layers
+  included, so nothing depends on what sits behind them and no reduced-transparency fallback is needed.
+  No `backdrop-blur-*`. The marketing site's header is its own, intentional exception.
+- **No texture on panes (owner, 2026-11-05).** The sidebar's film grain is gone; panes are a solid
+  surface. A pane gets no grain, noise or image overlay.
 - **Elevation belongs to the primitive.** No call-site `shadow-*` or `bg-panel` on overlay content.
 - **`box-shadow` for other jobs** only as a named utility in `globals.css`: the crop box's
   `shadow-crop-mask` (`media-scrim` at 60%, clipped by its stage; C-073). Not a `--shadow-*` token,
@@ -550,7 +559,7 @@ and one safety net in `globals.css`:
 
 | Family | Canonical | Variants and props | Replaces (source) | Status |
 |---|---|---|---|---|
-| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`); a ghost may take `text-fg-secondary` for a tertiary action (the muted ghost: its hover and open turn `fg`, so no variant is needed; DS-7, C-076), but an AI action is `soft`, never a `text-brand-fg` override · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
+| Button | `ui/button` | `variant`: **`default` = primary** (solid `brand-strong`, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`); a ghost may take `text-fg-secondary` for a tertiary action (the muted ghost: its hover and open turn `fg`, so no variant is needed; DS-7, C-076), but an AI action is `soft`, never a `text-brand-fg` override · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
 | Disabled reason | `ui/disabled-reason` (focusable wrapper with Tooltip and `sr-only` text) | `reason` | `title` on disabled controls (CMP-010) | Add |
 | Spinner | `ui/spinner` | `size`. A loading Button uses `loading`, never a `<Spinner>` child. A status-icon map (a message sending, a step running, a checkout waiting) may keep `LoaderCircle` with `motion-safe:animate-spin` (DS-14) | 36 `Loader2`/`LoaderCircle` with mixed rules (MOT-006) | Add |
 | Text field | `ui/input` | `size` (`sm`, `default`, `lg`, `xl`); native `type="date"`/`"time"` allowed (D-04), focused at every stop, the picker button included (§8.3, C-073) | 17 raw inputs; two looks (CMP-011) | Change |
@@ -570,8 +579,8 @@ and one safety net in `globals.css`:
 | Dropdown menu | `ui/dropdown-menu` | item `variant="destructive"` (`danger-fg`) · content `min-w-48 w-auto` | per-site widths and labels | Change |
 | Tooltip | `ui/tooltip` (level 1 surface on `rounded-md`, an arrow with the same fill and edge) | — | native `title` on meaningful elements (D15) | Change; colour **Owner D-03**, applied (UI-017; C-069) |
 | Toaster | `ui/sonner` | `position` by width; action toasts last 10 s or more | bare `<Toaster>` | Add |
-| Badge | `ui/badge` | `tone`: `neutral` (`hover` fill), `brand` (info), `success`, `warning`, `danger` (soft fills), `count` (brand gradient, `on-brand`), `media` (`media-scrim` at 70% with `on-brand`, for labels on photos and video, with `shape="tag"`; UI-075) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
-| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`, `CardBleed`) | `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` · exposes its padding (`--card-padding`) so `CardBleed` runs a table or row list to the edges · `CardInset` `padding`: `standard` 16 px (form groups), `compact` 12 px (rows) | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
+| Badge | `ui/badge` | `tone`: `neutral` (`hover` fill; notices and labels), `brand` (AI moments), `success`, `warning`, `danger` (soft fills), `count` (`pressed` fill, `fg`), `media` (`media-scrim` at 70% with `on-brand`, for labels on photos and video, with `shape="tag"`; UI-075) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
+| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`, `CardBleed`) | Solid `panel`, no edge (§5). `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` (a `line-strong` edge: the current plan) · exposes its padding (`--card-padding`) so `CardBleed` runs a table or row list to the edges · `CardInset` `padding`: `standard` 16 px (form groups), `compact` 12 px (rows) | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
 | Alert | `ui/alert` | `tone` · `variant`: `soft`, `outline` · one action (`Button secondary size="sm"`) | BannerSlot internals, 17 callouts, 4 tinted actions (D8, D9) | Add |
 | Meter | `ui/meter` (`role="meter"`) | `kind`: `consumable` (warning at 80%, danger at 100%), `slot` (neutral "All used" at 100%) | UsageMeter, QuotaTile, UsageCard, ScheduleRail, LeadScore (D5) | Add |
 | Progress | `ui/progress` (`role="progressbar"`) | — | upload and analysis bars (D5) | Add |
@@ -589,7 +598,7 @@ and one safety net in `globals.css`:
 | **Hover** | Neutral controls and rows `bg-hover`; on `raised`, `bg-raised-hover`; primary `brightness-110`; destructive `danger-fill/90`; links underline. Tailwind 4's `hover:` already applies only to devices that hover. |
 | **Pressed / open** | `bg-pressed` for `aria-expanded` and `data-state=open`; primary `active:brightness-95`. |
 | **Focus** | One recipe: the global `:focus-visible` outline (2 px `ring`, offset 2 px). Primitives don't remove it (`outline-none`, `outline-hidden`) and don't add a ring halo. A bare `outline-none` is allowed only on a programmatic focus target (`tabIndex={-1}`: the skip link's `<main>`, a heading focused after navigation), on the dialog, alert dialog and popover content that Radix focuses on open, and with a `focus-visible:` replacement; the design lint enforces this (C-075, DS-12). Inside clipping containers (menu items, segmented tracks, scrolling rows) the outline is inset: `focus-visible:-outline-offset-2`. Text fields also turn their border `ring`. A wrapper whose inner element takes focus (the composers) shows the outline with `has-[:focus-visible]:`. Native date and time fields hold a picker button that takes focus while the field matches only `:focus-within`, so Input draws the same outline, `ring` border and `raised` fill from `focus-within:` for those types (C-073). A soft halo is allowed only beside the outline, never instead of it. |
-| **Selected** | Rows and nav: `bg-raised` + the selection bar, `aria-current`. Segments: `bg-raised text-brand-fg`, `aria-pressed`/`aria-selected`. Chips: `bg-brand-soft text-brand-fg border-brand-line`. A toggle Button while pressed (`aria-pressed`): `variant="soft"`, the chip's colours. Tiles: 2 px `brand` border. |
+| **Selected** | Rows and nav: `bg-raised` + the selection bar, `aria-current`. Segments: `bg-raised text-fg`, `aria-pressed`/`aria-selected`. Chips: `bg-raised text-fg border-line-strong`. A toggle Button while pressed (`aria-pressed`): `variant="soft"`, the chip's colours. Tiles: `line-strong` border on `raised`. Forced colours: `selected-forced` and `mark-forced`; an icon takes its row's colour, since an SVG keeps a colour set on itself there. |
 | **Disabled** | `opacity-50`. A control disabled for a reason is wrapped in `DisabledReason`. Exception: the composers' Send while empty keeps UX-INB-07's neutral look (`bg-raised text-fg-disabled`), as a Button state, not hand-rolled. |
 | **Loading** | Buttons: `loading` (Spinner, `aria-busy`, disabled, width kept). Lists and cards: skeletons shaped like the content. Pages: PageSkeleton inside the shell. |
 | **Invalid** | `aria-invalid` → `border-danger`; the message `text-xs text-danger-fg` linked by Field through `aria-describedby`. |
@@ -628,12 +637,14 @@ and one safety net in `globals.css`:
 - **No RadioGroup yet**: the three native radio cards pass (visible focus, labelled). Add it when a
   new radio list appears. Their unchecked edge is the browser's (`accent-brand`, `color-scheme:
   dark`) and hasn't been measured against 3:1 on `panel` (DS-15); measure it when RadioGroup comes.
-- **No share bar**: Home's top-intents card draws its ranked bars by hand (`bg-brand-gradient-decor`
+- **No share bar**: Home's top-intents card draws its ranked bars by hand (the categorical series
   with an inline width). It is the only one; it becomes a Meter or Progress kind if a second
   appears (DS-9).
 - **No Calendar, Command, ScrollArea or Separator yet** (D-04 for Calendar; Command when the
   timezone picker needs search).
 - **No new info, chart or tint colour tokens** (§1.5, §1.8).
+- **No stat-tile rows** on working pages: Automations' figures are one line (`dl`) above the list; Home's
+  four are one band with dividers (`MetricTile cell`), its links and Attention badge unchanged.
 
 ---
 
@@ -645,7 +656,10 @@ and one safety net in `globals.css`:
 - **Resizable panes (UI-078):** the inbox list (260–560 px) and details (280–480), the Ask page's
   thread history (220–440) and the Ask panel (360–720) resize with `ResizeHandle` (drag, ← and →,
   Shift for 64 px, Home and End, double-click to reset); the width is remembered per device by
-  `usePaneWidth`. Hidden below `md`, where phones keep one pane.
+  `usePaneWidth`. The limits are written for a 16 px root and scale with the root font size in the
+  browser; the server renders them as written. Hidden below `md`, where phones keep one pane.
+- **Inbox filters:** the view chips collapse into one select on a short window (`max-height: 40rem`,
+  which follows the browser's font size, so large text counts as short).
 
 - **Breakpoints:** `md` 768 (top bar and drawer below it), `lg` 1024 (sidebar expands; three-column
   dashboards), `xl` 1280 (inbox details inline; settings two columns), `wide` 1440 (inbox details

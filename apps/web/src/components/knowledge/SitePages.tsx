@@ -52,7 +52,7 @@ function PageStatusChip({ page }: { page: SitePage }) {
   // Read, but its text is still being turned into knowledge.
   if (page.status === "done" && (page.ingest_status === "pending" || page.ingest_status === "processing")) {
     return (
-      <Badge tone="brand" size="md">
+      <Badge tone="neutral" size="md">
         <Spinner size="xs" /> Processing
       </Badge>
     );

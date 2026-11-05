@@ -118,7 +118,7 @@ function InboxFrame({ children, className }: { children: ReactNode; className?: 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden glass-pane md:m-4 md:rounded-xl md:border md:border-line",
+        "flex min-h-0 flex-1 overflow-hidden bg-panel md:m-4 md:rounded-xl",
         className,
       )}
       data-testid="inbox"
@@ -141,8 +141,8 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const layout = useInboxLayout();
   const now = useNow();
   const resizable = layout === "desktop" || layout === "wide";
-  const [listWidth, setListWidth, resetListWidth] = usePaneWidth("inbox-list", LIST_LIMITS);
-  const [detailsWidth, setDetailsWidth, resetDetailsWidth] = usePaneWidth("inbox-details", DETAILS_LIMITS);
+  const [listWidth, setListWidth, resetListWidth, listLimits] = usePaneWidth("inbox-list", LIST_LIMITS);
+  const [detailsWidth, setDetailsWidth, resetDetailsWidth, detailsLimits] = usePaneWidth("inbox-details", DETAILS_LIMITS);
 
   // ---- filters (FR-INB-01)
   const platforms = useMemo(
@@ -343,7 +343,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
             aria-label="Conversation list"
             data-pane="list"
             className={cn(
-              "relative flex shrink-0 flex-col border-r border-line glass-pane",
+              "relative flex shrink-0 flex-col border-r border-line bg-panel",
               resizable ? "w-(--pane-w) max-w-[45%]" : LIST_WIDTH[layout],
               layout === "phone" && "border-r-0",
             )}
@@ -354,8 +354,8 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 edge="end"
                 label="Resize the conversation list"
                 value={listWidth}
-                min={LIST_LIMITS.min}
-                max={LIST_LIMITS.max}
+                min={listLimits.min}
+                max={listLimits.max}
                 onChange={setListWidth}
                 onReset={resetListWidth}
               />
@@ -440,15 +440,15 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
           <aside
             aria-label="Details"
             data-pane="details"
-            className="relative w-(--pane-w) max-w-[40%] shrink-0 border-l border-line glass-pane"
+            className="relative w-(--pane-w) max-w-[40%] shrink-0 border-l border-line bg-panel"
             style={paneWidth(detailsWidth)}
           >
             <ResizeHandle
               edge="start"
               label="Resize the details panel"
               value={detailsWidth}
-              min={DETAILS_LIMITS.min}
-              max={DETAILS_LIMITS.max}
+              min={detailsLimits.min}
+              max={detailsLimits.max}
               onChange={setDetailsWidth}
               onReset={resetDetailsWidth}
             />

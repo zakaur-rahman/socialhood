@@ -564,7 +564,7 @@ function QueueBanner({
 }) {
   return (
     <Alert
-      tone="brand"
+      tone="neutral"
       icon={<Clock />}
       action={
         <DropdownMenu>

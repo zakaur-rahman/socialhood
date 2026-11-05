@@ -91,7 +91,7 @@ export function OrdersPage() {
             </div>
 
             {!entitled ? (
-              <Alert tone="brand" className="mt-4">
+              <Alert tone="neutral" className="mt-4">
                 Orders and payment requests are part of Creator and Business. You can see what is here, but making orders needs Creator or Business.{" "}
                 {manager ? (
                   <button type="button" className="underline underline-offset-4" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>

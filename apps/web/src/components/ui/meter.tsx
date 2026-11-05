@@ -41,7 +41,7 @@ function meterTone(level: MeterLevel, kind: MeterKind): Tone {
 
 // Status colours straight from the tokens (UI-016's tone map isn't on develop yet). The bar is the
 // decor gradient (§1.9); the ring's 3 px arc is a mark under 12 px, so it is solid brand.
-const FILL: Record<Tone, string> = { normal: "bg-brand-gradient-decor", warning: "bg-warning", danger: "bg-danger" }
+const FILL: Record<Tone, string> = { normal: "bg-fg-secondary", warning: "bg-warning", danger: "bg-danger" }
 const ARC: Record<Tone, string> = { normal: "stroke-brand", warning: "stroke-warning", danger: "stroke-danger" }
 const FIGURE: Record<Tone, string> = { normal: "text-fg-secondary", warning: "text-warning", danger: "text-danger-fg" }
 

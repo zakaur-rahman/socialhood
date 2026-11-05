@@ -79,7 +79,7 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
     >
       {/* The selection bar (DESIGN_SYSTEM §5): 2 px brand on the leading edge, inset 8 px, rounded. */}
       {selected ? (
-        <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-brand mark-forced" data-testid="row-accent" aria-hidden />
+        <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-fg mark-forced" data-testid="row-accent" aria-hidden />
       ) : null}
       <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
@@ -98,7 +98,7 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
             <time
               dateTime={item.last_message_at}
               title={timeZone ? formatDayTime(item.last_message_at, timeZone, now) : undefined}
-              className={cn("shrink-0 text-xs tabular-nums", unread ? "font-medium text-brand-fg" : "text-fg-secondary")}
+              className={cn("shrink-0 text-xs tabular-nums", unread ? "font-medium text-fg" : "text-fg-secondary")}
             >
               {relativeTime(item.last_message_at, now)}
             </time>
@@ -118,7 +118,7 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
             </span>
           </span>
           {unread ? (
-            <span className="size-2 shrink-0 rounded-full bg-brand mark-forced" role="img" aria-label="unread" />
+            <span className="size-2 shrink-0 rounded-full bg-fg mark-forced" role="img" aria-label="unread" />
           ) : null}
         </span>
         {badges.length > 0 ? (

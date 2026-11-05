@@ -21,7 +21,7 @@ const css = readFileSync(join(SRC, "styles", "globals.css"), "utf8").replace(/\/
 
 /** Every `--color-*` in globals.css, `@theme` and `@theme inline` alike: the colours a class may name. */
 const COLOUR_NAMES = new Set([...css.matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]).filter((name) => name !== "*"));
-/** Utilities globals.css defines itself (`bg-brand-gradient`, `duration-fast` …) and the shadow and size theme names. */
+/** Utilities globals.css defines itself (`mask-fade-x`, `duration-fast` …) and the shadow and size theme names. */
 const DEFINED_UTILITIES = new Set([
   ...[...css.matchAll(/@utility ([a-z0-9-]+)/g)].map((m) => m[1]),
   ...[...css.matchAll(/--shadow-([a-z0-9-]+):/g)].map((m) => `shadow-${m[1]}`),
@@ -205,11 +205,11 @@ function scan(): Hit[] {
       }
     });
     if (!literalOnly) {
-      // A Button already wears the gradient (variant `default`); restating it on a call site hides
+      // A Button already wears the fill (variant `default`); restating it on a call site hides
       // the variant it actually renders.
-      for (const match of text.matchAll(/<Button\b[^>]*?\bbg-brand-gradient(?![\w-])/g)) {
+      for (const match of text.matchAll(/<Button\b[^>]*?\bbg-brand-strong(?![\w-])/g)) {
         const line = text.slice(0, match.index).split("\n").length;
-        hits.push({ file: name, line, text: "bg-brand-gradient", rule: "bg-brand-gradient on Button: use the default variant", id: "button-gradient" });
+        hits.push({ file: name, line, text: "bg-brand-strong", rule: "bg-brand-strong on Button: use the default variant", id: "button-gradient" });
       }
     }
   };
@@ -290,7 +290,7 @@ describe("design lint (UI-070, C-127)", () => {
     expect(find("undefined-token", `className="hover:text-fg-muted data-[open]:border-edge"`)).toEqual(["text-fg-muted", "border-edge"]);
     for (const good of [
       "bg-panel", "bg-panel-glass", "text-fg-secondary", "border-line-subtle", "border-t border-b-2 border-dashed border-l-danger", "ring-1 ring-line ring-offset-2 ring-offset-panel",
-      "text-sm text-2xs text-md text-center text-balance", "shadow-floating shadow-glow shadow-xl", "bg-brand-gradient bg-glow-brand-top bg-linear-to-t from-media-heavy to-transparent",
+      "text-sm text-2xs text-md text-center text-balance", "shadow-floating shadow-glow shadow-xl", "bg-brand-strong bg-instagram-logo-gradient bg-linear-to-t from-media-heavy to-transparent",
       "outline-2 outline-offset-2 outline-brand", "fill-current stroke-line-strong divide-y divide-line", "bg-clip-padding bg-repeat",
     ]) {
       expect(find("undefined-token", `"${good}"`), good).toEqual([]);
@@ -299,7 +299,7 @@ describe("design lint (UI-070, C-127)", () => {
     for (const bad of ["bg-[#fff]", "text-[rgb(1,2,3)]", "shadow-[0_0_4px_red]", "from-[oklch(0.5_0.1_20)]", "bg-[radial-gradient(circle,var(--color-brand),transparent)]", "border-[color:red]"]) {
       expect(find("arbitrary-colour", `"${bad}"`).length, bad).toBeGreaterThan(0);
     }
-    for (const good of ["bg-[url(/grain.jpg)]", "bg-brand-gradient", "w-[320px]", "[mask-image:linear-gradient(to_top,white,transparent)]"]) {
+    for (const good of ["bg-[url(/photo.jpg)]", "bg-brand-strong", "w-[320px]", "[mask-image:linear-gradient(to_top,white,transparent)]"]) {
       expect(find("arbitrary-colour", `"${good}"`), good).toEqual([]);
     }
     // Literals, in code.
@@ -313,7 +313,7 @@ describe("design lint (UI-070, C-127)", () => {
     for (const bad of [`style={{ color: "red" }}`, `style={{ backgroundColor: "#111" }}`, `<path fill="#fff" />`, `style={{ boxShadow: "0 1px red" }}`]) {
       expect(find("inline-colour", bad).length, bad).toBeGreaterThan(0);
     }
-    for (const good of [`style={{ color: "var(--color-fg)" }}`, `<path fill="currentColor" />`, `style={{ backgroundImage: "url(/grain.jpg)" }}`, `style={{ background: colorValue("canvas") }}`, `stroke="none"`]) {
+    for (const good of [`style={{ color: "var(--color-fg)" }}`, `<path fill="currentColor" />`, `style={{ backgroundImage: "url(/photo.jpg)" }}`, `style={{ background: colorValue("canvas") }}`, `stroke="none"`]) {
       expect(find("inline-colour", good), good).toEqual([]);
     }
     // shadcn aliases anywhere.
@@ -364,7 +364,7 @@ describe("design lint (UI-070, C-127)", () => {
     expect(COLOUR_NAMES.has("panel")).toBe(true);
     expect(COLOUR_NAMES.has("popover")).toBe(true); // @theme inline
     expect(COLOUR_NAMES.has("surface")).toBe(false);
-    expect(DEFINED_UTILITIES.has("bg-brand-gradient")).toBe(true);
+    expect(DEFINED_UTILITIES.has("bg-instagram-logo-gradient")).toBe(true);
     expect(DEFINED_UTILITIES.has("shadow-glow")).toBe(true);
   });
 });

@@ -212,7 +212,7 @@ export function CommentRow({
           ) : null}
           {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
           {/* GR-01: a comment on a live broadcast. */}
-          {comment.is_live ? <Badge tone="brand">Live</Badge> : null}
+          {comment.is_live ? <Badge tone="neutral">Live</Badge> : null}
           {comment.hidden ? (
             <Badge>
               <EyeOff aria-hidden /> Hidden
@@ -227,7 +227,7 @@ export function CommentRow({
         </p>
 
         {comment.public_reply ? (
-          <div className="mt-2 border-l-2 border-brand-line pl-3" data-testid="public-reply">
+          <div className="mt-2 border-l-2 border-line-strong pl-3" data-testid="public-reply">
             <p className="text-xs text-fg-secondary">
               Your public reply · {when(comment.public_reply.replied_at, now)}
             </p>

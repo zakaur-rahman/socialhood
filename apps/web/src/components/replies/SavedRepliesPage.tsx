@@ -94,7 +94,7 @@ export function SavedRepliesPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-0.5">
                   <p className="flex min-w-0 items-baseline gap-2 text-sm">
-                    <span className="shrink-0 font-semibold text-brand-fg">/{reply.shortcut}</span>
+                    <span className="shrink-0 font-semibold text-fg-secondary">/{reply.shortcut}</span>
                     <span className="truncate font-medium">{reply.title}</span>
                   </p>
                   <p className="whitespace-pre-wrap break-words text-sm text-fg-secondary">{reply.body}</p>

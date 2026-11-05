@@ -111,7 +111,7 @@ function StepBubbles({ step, image }: { step: FlowPreviewStep; image: boolean })
 function Mine({ children }: { children: ReactNode }) {
   return (
     <div className="flex justify-end">
-      <div className="bg-brand-gradient max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-sm text-on-brand">
+      <div className="bg-brand-strong max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-sm text-on-brand">
         {children}
       </div>
     </div>

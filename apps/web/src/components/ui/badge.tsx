@@ -22,7 +22,7 @@ const badgeVariants = cva(
     variants: {
       tone: {
         ...TONE_CLASS,
-        count: "bg-brand-gradient text-on-brand tabular-nums",
+        count: "bg-pressed text-fg tabular-nums",
         // Labels laid on a photo or video (a file type, "Cover", a position): white on the media
         // scrim, readable over any picture (RG-02).
         media: "bg-media-chip text-on-brand",

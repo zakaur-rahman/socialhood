@@ -121,7 +121,7 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
             </div>
 
             {!entitled ? (
-              <Alert tone="brand" className="mt-4">
+              <Alert tone="neutral" className="mt-4">
                 The product catalogue is part of Creator and Business. You can see what is here, but adding, importing and syncing products
                 need Creator or Business.{" "}
                 {canUpgrade ? (

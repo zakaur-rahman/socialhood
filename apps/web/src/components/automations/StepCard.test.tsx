@@ -8,7 +8,7 @@ function node(step: string) {
 }
 
 describe("StepCard (UX-SCR-03)", () => {
-  it("complete: brand node, announced as complete", () => {
+  it("complete: a filled node, announced as complete", () => {
     render(
       <StepCard id="when" label="When" state="complete">
         <p>Body</p>
@@ -16,7 +16,7 @@ describe("StepCard (UX-SCR-03)", () => {
     );
     const section = screen.getByRole("region", { name: "When, complete" });
     expect(section).toHaveAttribute("data-state", "complete");
-    expect(node("when")).toHaveClass("bg-brand");
+    expect(node("when")).toHaveClass("bg-fg-secondary");
     expect(screen.getByText("Body")).toBeInTheDocument();
   });
 

@@ -19,7 +19,7 @@ import { type ReactNode, useEffect, useRef } from "react";
  * that build their own header (Home, Schedule, the post composer) use it too.
  */
 export const STICKY_PAGE_HEADER =
-  "glass-pane sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
+  "bg-panel sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
 
 /** The "‹ Parent" link above a child page's title (D-16). Replaces the old Breadcrumb landmark. */
 export function BackLink({ href, label }: { href: Route; label: string }) {

@@ -126,7 +126,7 @@ export function StatusChip({ source, className }: { source: KnowledgeSource; cla
   }
   if (isProcessing(source)) {
     return (
-      <Badge tone="brand" size="md" className={className}>
+      <Badge tone="neutral" size="md" className={className}>
         <Spinner size="xs" /> Processing
       </Badge>
     );
