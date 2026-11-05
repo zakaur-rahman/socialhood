@@ -24,10 +24,11 @@ export const STICKY_PAGE_HEADER =
 /**
  * A list's search and filter row, which stays in view just under the sticky page header while the
  * list scrolls (owner, 2026-11-06). On the page's canvas, bleeding over its padding like the header;
- * z-20 like the header, above the rows' own z-10 parts (avatar badges, row controls).
+ * z-20 like the header, above the rows' own z-10 parts (avatar badges, row controls). The padding
+ * keeps rows off it while stuck; -mt-2 takes it back on top, so the gap under the header stays 24 px.
  */
 export const STICKY_PAGE_TOOLBAR =
-  "bg-canvas sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-20 -mx-4 px-4 py-2 md:top-(--page-header-h) md:-mx-6 md:px-6";
+  "bg-canvas sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-20 -mx-4 -mt-2 px-4 py-2 md:top-(--page-header-h) md:-mx-6 md:px-6";
 
 /**
  * The header's height, as --page-header-h on the page, so a sticky bar inside the page (a list's
