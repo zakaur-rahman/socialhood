@@ -54,7 +54,7 @@ export function UsageCard({
             <button
               type="button"
               onClick={() => upgradeDialog.open(creditsUpgrade(used, limit))}
-              className="bg-shell-gradient flex h-6 shrink-0 items-center rounded-md px-2.5 text-xs font-medium text-on-brand hover:brightness-110 motion-safe:transition-[filter] pointer-coarse:h-10"
+              className="bg-brand-strong flex h-6 shrink-0 items-center rounded-md px-2.5 text-xs font-medium text-on-brand hover:brightness-110 motion-safe:transition-[filter] pointer-coarse:h-10"
             >
               Upgrade
             </button>

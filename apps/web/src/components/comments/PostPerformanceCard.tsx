@@ -102,7 +102,7 @@ function Figures({
             {performance.age === "lifetime" ? "Lifetime figures" : `Figures ${atAge(performance.age)} after posting`} ·
             Read <time dateTime={performance.captured_at}>{formatDayTime(performance.captured_at, timeZone, now)}</time>
           </p>
-          {younger ? <p className="text-xs text-brand-fg">{younger}</p> : null}
+          {younger ? <p className="text-xs text-fg-secondary">{younger}</p> : null}
           <dl className="grid grid-cols-2 gap-2">
             {figures.map((figure) => (
               <CardInset
@@ -175,7 +175,7 @@ function Comparison({ comparison }: { comparison: PostComparison }) {
       <p className="text-xs text-fg-secondary" data-testid="baseline">
         {baselineText(comparison)}
       </p>
-      {younger ? <p className="text-xs text-brand-fg">{younger}</p> : null}
+      {younger ? <p className="text-xs text-fg-secondary">{younger}</p> : null}
       <ul className="divide-y divide-line-subtle" aria-label="Difference from the median">
         {comparison.metrics.map((row) => (
           <MetricRow key={row.metric} row={row} baselineSize={comparison.baseline_size} />

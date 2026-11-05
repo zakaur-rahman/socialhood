@@ -31,6 +31,7 @@ import {
 import { usePost } from "@/lib/api/queries";
 import type { ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
+import { plural } from "@/lib/copy";
 import { initial } from "@/lib/inbox/format";
 import { captionLine, POST_STATUS } from "@/lib/schedule/format";
 import { IDENTITY_FILL } from "@/lib/ui/identity";
@@ -322,7 +323,7 @@ function PeekResults({ wid, postId }: { wid: string; postId: string }) {
   const comments = post.data.comments_count;
   return (
     <span className="tabular-nums">
-      {likes === null || likes === undefined ? "Likes hidden" : `${formatCount(likes)} likes`} · {formatCount(comments ?? 0)} comments
+      {likes === null || likes === undefined ? "Likes hidden" : `${formatCount(likes)} ${plural(likes, "like", "likes")}`} · {formatCount(comments ?? 0)} {plural(comments ?? 0, "comment", "comments")}
     </span>
   );
 }

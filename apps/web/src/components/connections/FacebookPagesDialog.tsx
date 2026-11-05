@@ -118,7 +118,7 @@ function PageRow({ page, checked, onChange }: { page: FacebookPageOption; checke
         className={cn(
           "flex min-h-14 items-center gap-3 rounded-lg border border-line px-3 py-2",
           page.can_connect ? "cursor-pointer" : "cursor-not-allowed",
-          checked && "border-brand-line bg-brand-soft",
+          checked && "border-line-strong bg-raised",
         )}
       >
         <Checkbox
@@ -130,7 +130,7 @@ function PageRow({ page, checked, onChange }: { page: FacebookPageOption; checke
         />
         <Avatar size="default">
           {page.picture_url ? <AvatarImage src={page.picture_url} alt="" /> : null}
-          <AvatarFallback className="bg-brand-soft text-brand-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="bg-raised text-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
         </Avatar>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{name}</span>

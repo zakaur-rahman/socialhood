@@ -26,6 +26,7 @@ type Props = {
   accountModes?: Record<string, AiMode>;
   /** The list's filters in the address (`?view=...`), carried to the conversation so Back keeps them. */
   query?: string;
+  timeZone?: string;
 };
 
 /** The conversation rows with cursor pagination; arrow keys move between rows (UX-A11Y-02). */
@@ -39,6 +40,7 @@ export function ConversationList({
   fetchNextPage,
   accountModes = {},
   query = "",
+  timeZone,
 }: Props) {
   const aiModeOf = (item: ConversationListItem) => effectiveAiMode(item, accountModes[item.social_account_id]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,6 +82,7 @@ export function ConversationList({
       href={`/w/${slug}/inbox/${item.id}${query}` as Route}
       selected={item.id === selectedId}
       now={now}
+      timeZone={timeZone}
       aiMode={aiModeOf(item)}
     />
   );
@@ -124,7 +127,7 @@ export function RowSkeletons({ count = 8 }: { count?: number }) {
   return (
     <div role="status" aria-busy="true" aria-label="Loading conversations">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex h-[68px] items-center gap-3 px-4 py-3">
+        <div key={i} className="flex h-[4.25rem] items-center gap-3 px-4 py-3">
           <Skeleton className="size-10 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-1/3" />

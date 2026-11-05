@@ -1,11 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { clampWidth, usePaneWidth } from "./use-pane-width";
 
 const LIMITS = { fallback: 320, min: 260, max: 560 };
 
-afterEach(() => window.localStorage.clear());
+afterEach(() => {
+  window.localStorage.clear();
+  document.documentElement.style.fontSize = "";
+});
 
 describe("usePaneWidth (UI-078)", () => {
   it("starts at the fallback and remembers a new width per device", () => {
@@ -31,6 +35,25 @@ describe("usePaneWidth (UI-078)", () => {
     act(() => result.current[1](480));
     act(() => result.current[2]());
     expect(result.current[0]).toBe(320);
+  });
+
+  it("scales the limits and the fallback with the root font size", () => {
+    document.documentElement.style.fontSize = "32px";
+    window.localStorage.setItem("socialhood:pane-width:test-d", "300");
+    const { result } = renderHook(() => usePaneWidth("test-d", LIMITS));
+    expect(result.current[3]).toEqual({ fallback: 640, min: 520, max: 1120 });
+    expect(result.current[0]).toBe(520);
+    act(() => result.current[2]());
+    expect(result.current[0]).toBe(640);
+  });
+
+  it("renders the limits as written on the server, whatever the root font size", () => {
+    document.documentElement.style.fontSize = "32px";
+    function Pane() {
+      const [width] = usePaneWidth("test-e", LIMITS);
+      return <i>{width}</i>;
+    }
+    expect(renderToString(<Pane />)).toContain("320");
   });
 
   it("clampWidth rounds and keeps a value inside the limits", () => {

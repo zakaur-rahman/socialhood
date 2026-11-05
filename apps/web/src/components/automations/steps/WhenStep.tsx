@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -95,6 +98,26 @@ export function WhenStep({
 
   const setTrigger = (value: TriggerName) => change(triggerPatch(draft, value));
 
+  // A chosen trigger is one row. The list stays open when there is none, when it has a problem, and
+  // when the account can't use it, because then the next thing to do is choose another.
+  const current = TRIGGERS.find((item) => item.value === draft.trigger);
+  const [picking, setPicking] = useState(false);
+  const unusable = platform === "facebook" && current !== undefined && Boolean(FACEBOOK_UNAVAILABLE[current.value]);
+  const listOpen = picking || !current || Boolean(triggerError) || unusable;
+
+  // The control that had focus goes away on each switch, so focus moves to the one that replaces it.
+  const triggerArea = useRef<HTMLDivElement>(null);
+  const moveFocus = useRef(false);
+  useEffect(() => {
+    if (!moveFocus.current) return;
+    moveFocus.current = false;
+    triggerArea.current?.querySelector<HTMLElement>("[role=radio][data-state=on], [data-trigger-change]")?.focus();
+  }, [listOpen]);
+  const showList = (open: boolean) => {
+    moveFocus.current = true;
+    setPicking(open);
+  };
+
   return (
     <StepCard id="when" label="When" state={state} errors={[accountError, triggerError].filter(Boolean) as string[]}>
       <div className="space-y-5">
@@ -143,32 +166,61 @@ export function WhenStep({
           )}
         </div>
 
-        {/* A container: the triggers sit in a row only when the step is wide enough for their
-            labels (about 640 px, "Instagram comment keyword" …); narrower, they stack, and five
-            wrap onto a second row. Measured from
-            the step, not the window, because the editor's side panel and the sidebar take a share. */}
-        <div className="@container space-y-2">
+        {/* A container: the open list takes two columns only when the step is wide enough for their
+            labels. Measured from the step, not the window, because the editor's side panel and the
+            sidebar take a share. */}
+        <div ref={triggerArea} className="@container space-y-2">
           <p id="automation-trigger-label" className="text-sm font-medium">
             Trigger
           </p>
-          <ToggleGroup
-            aria-labelledby="automation-trigger-label"
-            aria-describedby="automation-trigger-hint"
-            value={draft.trigger ?? ""}
-            onValueChange={(value) => setTrigger(value as TriggerName)}
-            className="flex-col @2xl:flex-row @2xl:flex-wrap"
-          >
-            {TRIGGERS.map(({ value, icon: Icon }) => (
-              <ToggleGroupItem
-                key={value}
-                value={value}
-                disabled={platform === "facebook" && Boolean(FACEBOOK_UNAVAILABLE[value])}
+          {listOpen ? (
+            <ToggleGroup
+              aria-labelledby="automation-trigger-label"
+              aria-describedby="automation-trigger-hint"
+              value={draft.trigger ?? ""}
+              onValueChange={(value) => {
+                setTrigger(value as TriggerName);
+                showList(false);
+              }}
+              className="grid @2xl:grid-cols-2"
+            >
+              {TRIGGERS.map(({ value, icon: Icon }) => (
+                <ToggleGroupItem
+                  key={value}
+                  value={value}
+                  disabled={platform === "facebook" && Boolean(FACEBOOK_UNAVAILABLE[value])}
+                  // A single group ignores a click on its chosen item, so this is how to keep it.
+                  onClick={() => {
+                    if (value === draft.trigger) showList(false);
+                  }}
+                  className="justify-start"
+                >
+                  <Icon className="size-4" aria-hidden />
+                  {triggerLabel(value, platform)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          ) : current ? (
+            <CardInset
+              padding="compact"
+              role="group"
+              aria-labelledby="automation-trigger-label"
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <current.icon className="size-4 shrink-0" aria-hidden />
+              <span className="min-w-0 flex-1">{triggerLabel(current.value, platform)}</span>
+              <Button
+                data-trigger-change
+                variant="secondary"
+                size="sm"
+                aria-label="Change trigger"
+                aria-describedby="automation-trigger-hint"
+                onClick={() => showList(true)}
               >
-                <Icon className="size-4" aria-hidden />
-                {triggerLabel(value, platform)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+                Change
+              </Button>
+            </CardInset>
+          ) : null}
           <p id="automation-trigger-hint" className="text-xs text-fg-secondary">
             {hint}
           </p>

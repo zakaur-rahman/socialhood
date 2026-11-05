@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { AiMode, ConversationListItem, MessageKind } from "@/lib/api/types";
 import { assigneeName } from "@/lib/inbox/assignee";
 import { contactName, previewPrefix, previewText, rowBadges } from "@/lib/inbox/format";
+import { formatDayTime } from "@/lib/tz";
 import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -25,15 +26,22 @@ const KIND_ICON: Partial<Record<MessageKind, LucideIcon>> = {
   share: Share2,
 };
 
-/** Row heights, fixed so the virtualised list can place rows without measuring (TR-FE-08). */
+/** Row heights at a 16 px root, fixed so the virtualised list can place rows without measuring (TR-FE-08). */
 export const ROW_HEIGHT = 68;
 export const ROW_HEIGHT_WITH_BADGES = 90;
+
+/** The rows are sized in rem (4.25 and 5.625), so the list scales its pixel heights by the root font size. */
+function rootScale(): number {
+  return typeof document === "undefined" ? 1 : parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 || 1;
+}
 
 type Props = {
   item: ConversationListItem;
   href: Route;
   selected: boolean;
   now: Date;
+  /** The workspace timezone, for the full time shown on hover. */
+  timeZone?: string;
   /** The AI mode that applies (the conversation's own, else its account's): "Auto replies" badge. */
   aiMode?: AiMode | null;
   index?: number;
@@ -43,11 +51,11 @@ type Props = {
 
 /** How tall a row is: two lines, or three with badges. */
 export function rowHeight(item: ConversationListItem, now: Date, aiMode: AiMode | null = null): number {
-  return rowBadges(item, now, aiMode).length > 0 ? ROW_HEIGHT_WITH_BADGES : ROW_HEIGHT;
+  return (rowBadges(item, now, aiMode).length > 0 ? ROW_HEIGHT_WITH_BADGES : ROW_HEIGHT) * rootScale();
 }
 
 /** UX-INB-04, restyled (C-063): one conversation, as a link (v1 rows were unfocusable divs). */
-export function ConversationRow({ item, href, selected, now, aiMode = null, index, onNavigate, ref }: Props) {
+export function ConversationRow({ item, href, selected, now, timeZone, aiMode = null, index, onNavigate, ref }: Props) {
   const name = contactName(item.contact, item.platform);
   const unread = item.unread_count > 0;
   const prefix = previewPrefix(item);
@@ -64,14 +72,14 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
       data-index={index}
       data-conversation-row={item.id}
       className={cn(
-        "relative flex items-start gap-3 px-4 py-3 hover:bg-hover focus-visible:-outline-offset-2",
-        badges.length > 0 ? "h-[90px]" : "h-[68px]",
+        "relative flex items-start gap-3 px-4 py-3 hover:bg-hover active:bg-pressed focus-visible:-outline-offset-2",
+        badges.length > 0 ? "h-[5.625rem]" : "h-[4.25rem]",
         selected && "bg-raised hover:bg-raised",
       )}
     >
       {/* The selection bar (DESIGN_SYSTEM §5): 2 px brand on the leading edge, inset 8 px, rounded. */}
       {selected ? (
-        <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-brand" data-testid="row-accent" aria-hidden />
+        <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-fg mark-forced" data-testid="row-accent" aria-hidden />
       ) : null}
       <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
@@ -89,7 +97,8 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
           {item.last_message_at ? (
             <time
               dateTime={item.last_message_at}
-              className={cn("shrink-0 text-xs tabular-nums", unread ? "font-medium text-brand-fg" : "text-fg-secondary")}
+              title={timeZone ? formatDayTime(item.last_message_at, timeZone, now) : undefined}
+              className={cn("shrink-0 text-xs tabular-nums", unread ? "font-medium text-fg" : "text-fg-secondary")}
             >
               {relativeTime(item.last_message_at, now)}
             </time>
@@ -109,7 +118,7 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
             </span>
           </span>
           {unread ? (
-            <span className="size-2 shrink-0 rounded-full bg-brand" role="img" aria-label="unread" />
+            <span className="size-2 shrink-0 rounded-full bg-fg mark-forced" role="img" aria-label="unread" />
           ) : null}
         </span>
         {badges.length > 0 ? (

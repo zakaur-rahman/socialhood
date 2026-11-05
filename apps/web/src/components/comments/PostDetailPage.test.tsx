@@ -136,7 +136,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     setup({ comments: [{ ...priya, is_live: true }, kabir] });
     const live = await screen.findByText("Live");
     expect(live).toHaveAttribute("data-slot", "badge");
-    expect(live).toHaveAttribute("data-tone", "brand");
+    expect(live).toHaveAttribute("data-tone", "neutral");
     expect(screen.getAllByText("Live")).toHaveLength(1);
   });
 

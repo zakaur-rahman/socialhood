@@ -28,12 +28,14 @@ import uuid
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import KnowledgeSource as SourceRow
 from socialhood.models.ai import KnowledgeStatus, KnowledgeType
+from socialhood.models.identity import Role
 from socialhood.models.media import MediaAsset
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import knowledge as repo
@@ -90,6 +92,13 @@ async def usage(session: AsyncSession) -> KnowledgeUsage:
     return KnowledgeUsage(
         characters_used=await repo.characters_used(session), characters_limit=limit
     )
+
+
+async def waiting_count(session: AsyncSession, role: Role) -> int:
+    """Sources waiting for a person to approve them; 0 for a role that can't approve them."""
+    if not has_permission(role, Permission.KNOWLEDGE_MANAGE):
+        return 0
+    return await repo.count_awaiting_approval(session)
 
 
 async def list_sources(session: AsyncSession) -> KnowledgeSourceList:

@@ -15,19 +15,11 @@ export function PlatformGlyph({ platform, className }: { platform: Platform; cla
 
 /**
  * The platforms' own logo colours (C-135), for a badge or tile that holds the glyph alone. They are
- * lighter than `PLATFORM_BG`, so never put text on them (the darkened fills below pass 4.5:1).
+ * lighter than the platform fill tokens, so never put text on them.
  */
 export const PLATFORM_LOGO_BG: Record<Platform, string> = {
   instagram: "bg-instagram-logo-gradient",
   whatsapp: "bg-whatsapp-logo",
   facebook: "bg-facebook-logo",
-  web: "bg-web",
-};
-
-/** Background utility per platform, for fills with text on them (tokens --color-instagram, --color-whatsapp, --color-facebook, --color-web). */
-export const PLATFORM_BG: Record<Platform, string> = {
-  instagram: "bg-instagram",
-  whatsapp: "bg-whatsapp",
-  facebook: "bg-facebook",
   web: "bg-web",
 };

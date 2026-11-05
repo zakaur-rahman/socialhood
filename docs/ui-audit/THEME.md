@@ -91,7 +91,6 @@ Consumers that can't use CSS variables:
 | Manifest, OG image, icons | Dark on purpose (the installed app opens on the default; the site is dark) |
 | Global error page | Dark: the stylesheet isn't loaded, the theme is unknown |
 | Sonner | Follows with no `theme` prop: every toast colour is a token class |
-| Grain over the sidebar and auth panel | `--grain-opacity` is 0 on light (and System on a light OS) |
 | Avatar edge | A `line` ring, no blend mode |
 
 Light values, measured (WCAG): `fg` on panel 18.0, `fg-secondary` 5.05 (raised-hover) to 6.58 (panel),
@@ -114,7 +113,8 @@ the base changes the shade.
 |---|---|
 | `canvas` | App and thread background, the page behind everything |
 | `panel` | Cards, sidebar, list pane, headers, composer bar, phone drawer |
-| `field` | Inputs, incoming bubbles, the segmented track, dialog footers |
+| `field` | Incoming bubbles, the segmented track, dialog footers |
+| `field-input` | Text fields and select triggers: white on light, the same as `field` on dark |
 | `raised` | Selected row, active segment, focused input, secondary button |
 | `raised-hover` | Hover on raised surfaces |
 | `overlay` | What floats: popovers, menus, select options, dialogs, sheets, toasts |
@@ -295,7 +295,7 @@ Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated fil
   `shell-2`) are the logo tile: change them separately, then run `node scripts/generate-icons.mjs`
   to redraw the app icons.
 - **Background and cards.** `--color-canvas` is the page, `--color-panel` cards and the sidebar,
-  `--color-field` inputs, `--color-raised` selected and focused states, `--color-overlay` what
+  `--color-field-input` text fields, `--color-raised` selected and focused states, `--color-overlay` what
   floats. Keep the order canvas < field/panel < overlay < raised so the ladder still reads; the glass
   and veil shades follow `panel` and `canvas`.
 - **Borders and dividers.** `--color-line` (cards), `--color-line-subtle` (dividers),

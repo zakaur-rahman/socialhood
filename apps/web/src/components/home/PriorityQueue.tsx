@@ -10,16 +10,16 @@ import { Card, CardAction, CardBleed, CardDescription, CardHeader, CardTitle } f
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PriorityConversation } from "@/lib/api/types";
 import { contactName, ESCALATION_LABEL, PLATFORM_LABEL } from "@/lib/inbox/format";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 
-import { agoLabel, formatCount } from "./format";
+import { formatCount } from "./format";
 import { queueState } from "./rules";
 
 function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: string; now: Date }) {
   const name = contactName(item.contact, item.platform);
   const handle = item.contact.username && item.contact.username !== name ? item.contact.username : null;
   const state = queueState(item);
-  const when = item.last_customer_message_at ? agoLabel(relativeTime(item.last_customer_message_at, now)) : null;
+  const when = item.last_customer_message_at ? timeAgo(item.last_customer_message_at, now) : null;
   return (
     <li data-testid="queue-row" className="flex flex-col gap-3 px-(--card-padding) py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">

@@ -66,7 +66,7 @@ describe("The Ask page (FR-AGT-01)", () => {
     expect(screen.getByRole("list", { name: "Suggested questions" })).toBeInTheDocument();
     await user.click(items[1]);
     expect(items[1]).toHaveAttribute("aria-current", "true");
-    expect(items[1]).toHaveClass("bg-raised", "before:w-0.5", "before:bg-brand");
+    expect(items[1]).toHaveClass("bg-raised", "before:w-0.5", "before:bg-fg");
     expect(await screen.findByText("Your top post had 4,120 reach.")).toBeInTheDocument();
     expect(useAskStore.getState().threads.w1).toBe("t1");
 

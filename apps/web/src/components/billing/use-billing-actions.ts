@@ -39,8 +39,10 @@ export function useStartCheckout(wid: string) {
   const checkout = useCheckout(wid);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<PaidPlan | null>(null);
   const start = (plan: PaidPlan = "pro", period: BillingPeriod = "month") => {
     setError(null);
+    setChosen(plan);
     checkout.mutate({ plan, period }, {
       onSuccess: (session) => {
         setLeaving(true);
@@ -49,7 +51,7 @@ export function useStartCheckout(wid: string) {
       onError: (failure) => setError(checkoutErrorMessage(failure)),
     });
   };
-  return { start, pending: checkout.isPending || leaving, error, clearError: () => setError(null) };
+  return { start, pending: checkout.isPending || leaving, plan: chosen, error, clearError: () => setError(null) };
 }
 
 /** FR-BIL-04 Manage billing: Dodo's customer portal in a new tab. */

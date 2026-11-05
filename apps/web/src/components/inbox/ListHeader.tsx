@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { InboxCounts, InboxView, SocialAccount } from "@/lib/api/types";
+import { useMediaQuery } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { PANE_TITLE } from "@/styles/tokens";
 
@@ -47,6 +48,13 @@ function countText(count: number): string {
 }
 
 /**
+ * When the view chips collapse into one control: a tall list of chips on a short window (rem in a
+ * media query follows the browser's font size, so large text counts as a short window). At 200% on a
+ * 900 px screen the chips had pushed the first conversation to the bottom.
+ */
+const SHORT_ON_ROOM = "(max-height: 40rem)";
+
+/**
  * UX-INB-03, re-arranged (C-063): "Inbox" with the Chats | Scheduled tabs, a full-width search
  * (debounced, server-side) with the account filter beside it, and the view chips. The Tabs root
  * and the two panels are InboxShell's, which renders the lists the tabs swap.
@@ -81,6 +89,7 @@ export function ListHeader({
   accountId: string | null;
   onAccountChange: (id: string | null) => void;
 }) {
+  const collapseViews = useMediaQuery(SHORT_ON_ROOM, false);
   const [text, setText] = useState(search);
   const [synced, setSynced] = useState(search);
   if (search !== synced) {
@@ -99,8 +108,8 @@ export function ListHeader({
   }, [text, search, onSearchChange]);
 
   return (
-    <div className="space-y-3 border-b border-line glass-pane px-3 pt-3 pb-2.5">
-      <div className="flex items-center justify-between gap-2">
+    <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className={cn(PANE_TITLE, "sr-only md:not-sr-only")}>Inbox</h1>
         <div className="ml-auto flex items-center gap-1">
           {onShortcuts ? (
@@ -164,6 +173,24 @@ export function ListHeader({
               </Select>
             ) : null}
           </div>
+          {collapseViews ? (
+            <Select value={view} onValueChange={(value) => onViewChange(value as InboxView)}>
+              <SelectTrigger aria-label="Views" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHIP_VIEWS.map((option) => {
+                  const count = counts && COUNTED[option.value] ? (counts[COUNTED[option.value]!] ?? 0) : 0;
+                  return (
+                    <SelectItem key={option.value} value={option.value}>
+                      {count > 0 ? `${option.label}, ${countText(count)}` : option.label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          ) : (
+          <>
           {/* From md the chips wrap onto as many rows as they need; below it they stay one row that scrolls
               sideways, with the right edge fading out so a cut-off chip reads as "more" (UI-052). */}
           <div className="mask-fade-x -mx-3 overflow-x-auto pe-7 ps-3 scroll-pe-7 [scrollbar-width:none] md:mask-none md:overflow-visible md:pe-3">
@@ -194,6 +221,8 @@ export function ListHeader({
               })}
             </ToggleGroup>
           </div>
+          </>
+          )}
         </>
       ) : null}
     </div>

@@ -45,7 +45,7 @@ export function InstagramOnlyNotice({
   }
   return (
     <Alert
-      tone="brand"
+      tone="neutral"
       icon={<Info />}
       data-testid="instagram-only-notice"
       action={

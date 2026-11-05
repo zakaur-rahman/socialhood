@@ -86,7 +86,7 @@ export function SaveBar({
           <p role="status" aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm font-medium">
             {saving ? (
               <>
-                <Spinner className="text-brand-fg" />
+                <Spinner />
                 Saving…
               </>
             ) : dirty ? (

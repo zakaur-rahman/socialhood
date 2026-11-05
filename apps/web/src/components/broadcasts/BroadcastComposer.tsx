@@ -207,7 +207,7 @@ export function BroadcastComposer() {
   if (!availability.data.plan_allowed) {
     return (
       <PageFrame title="New broadcast" back={back}>
-        <Alert tone="brand" variant="outline">
+        <Alert tone="neutral" variant="outline">
           <AlertDescription>
             Broadcasts are part of Creator and Business.{" "}
             <Link href={`/w/${workspace.slug}/settings/billing?tab=billing` as Route} className="text-brand-fg underline-offset-4 hover:underline">
@@ -458,7 +458,7 @@ export function VariableRow({
 }) {
   const options = [...BUILT_IN_FIELDS, ...customFields];
   return (
-    <fieldset className="space-y-2 rounded-lg border border-line p-3">
+    <fieldset className="space-y-2 rounded-lg bg-field p-3">
       <legend className={`${ITEM_TITLE} px-1`}>Variable {number}</legend>
       <ToggleGroup
         aria-label={`Variable ${number} comes from`}

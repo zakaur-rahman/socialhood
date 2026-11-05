@@ -102,7 +102,7 @@ export function AccountPicker({
                   onClick={() => onToggle(account.id)}
                   className={cn(
                     "inline-flex min-h-10 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium transition-[color,background-color,border-color] duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-50",
-                    isSelected ? "border-brand bg-brand-soft text-fg" : "border-line text-fg-secondary hover:bg-hover hover:text-fg",
+                    isSelected ? "border-line-strong bg-raised text-fg" : "border-line text-fg-secondary hover:bg-hover hover:text-fg",
                     isSelected && reason && "border-danger",
                   )}
                 >
@@ -113,7 +113,7 @@ export function AccountPicker({
                       Facebook Page
                     </span>
                   ) : null}
-                  {isSelected ? <Check className="size-4 text-brand-fg" aria-hidden /> : null}
+                  {isSelected ? <Check className="size-4" aria-hidden /> : null}
                 </button>
                 {reason ? (
                   <span id={reasonId} className="px-2 text-xs text-fg-secondary">

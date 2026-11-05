@@ -52,7 +52,7 @@ export function StepCard({
         data-node={state}
         className={cn(
           "absolute top-6 -left-[25px] size-2.5 rounded-full ring-2 ring-canvas",
-          state === "complete" && "bg-brand",
+          state === "complete" && "bg-fg-secondary",
           state === "error" && "bg-danger",
           state === "incomplete" && "bg-raised-hover",
         )}

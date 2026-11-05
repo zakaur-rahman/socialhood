@@ -50,7 +50,7 @@ describe("Tabs", () => {
     expect(screen.getByRole("tab", { name: "Stats" })).toHaveFocus()
   })
 
-  it("looks like the segmented control: raised brand-text segment on a field track, no shadow", () => {
+  it("looks like the segmented control: raised segment on a field track, no shadow", () => {
     render(<Panel />)
     expect(screen.getByRole("tablist")).toHaveClass("grid", "auto-cols-fr", "grid-flow-col", "gap-1", "rounded-lg", "bg-field", "p-1")
     const tab = screen.getByRole("tab", { name: "Preview" })
@@ -58,8 +58,8 @@ describe("Tabs", () => {
     expect(tab).toHaveClass(
       "rounded-md",
       "text-fg-secondary",
-      "aria-selected:bg-raised",
-      "aria-selected:text-brand-fg",
+      "aria-selected:bg-segment",
+      "aria-selected:text-fg",
       "whitespace-nowrap",
       "min-h-8",
       "text-sm",

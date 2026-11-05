@@ -109,7 +109,8 @@ for (const size of SIZES) {
       // The Preview walks one branch at a time: pick "Prices" at the button fork.
       const preview = page.getByRole("tabpanel", { name: "Preview" });
       await expect(preview).toContainText("Here's the guide.");
-      await preview.getByRole("combobox", { name: "Branch 2" }).selectOption({ label: "Taps Prices" });
+      await preview.getByRole("combobox", { name: "Branch 2" }).click();
+      await page.getByRole("option", { name: "Taps Prices" }).click();
       await expect(preview).toContainText("Prices start at 499.");
       await expect(preview).not.toContainText("Here's the guide.");
 
@@ -231,6 +232,7 @@ test.describe("GR-13 reorder and errors", () => {
     for (let added = 0; added < 3; added += 1) {
       await editor.getByRole("button", { name: "Add step", exact: true }).click();
       await page.getByRole("menuitem", { name: /^Delay/ }).click();
+      await expect(editor.getByTestId("flow-count")).toContainText(`${added + 3} of 5`);
     }
     await expect(editor.getByTestId("flow-count")).toContainText("5 of 5");
     await expect(editor.getByText(/Your plan includes 5 steps in a flow/).first()).toBeVisible();

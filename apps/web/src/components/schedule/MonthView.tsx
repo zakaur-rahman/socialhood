@@ -136,7 +136,7 @@ function MonthCell({
         aria-label={`Show the week of ${shortDay(day)}`}
         className={cn(
           "grid size-7 place-items-center self-start rounded-full text-xs font-semibold tabular-nums hover:bg-hover",
-          isToday ? "bg-brand-soft text-brand-fg" : inMonth ? "text-fg" : "text-fg-secondary",
+          isToday ? "bg-raised text-fg" : inMonth ? "text-fg" : "text-fg-secondary",
         )}
       >
         {p.day}

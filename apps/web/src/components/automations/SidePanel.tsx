@@ -14,8 +14,9 @@ import { StatsPane } from "./StatsPane";
 type Tab = "preview" | "test" | "runs" | "stats";
 
 /**
- * UX-SCR-03 right panel: Preview, Test, Runs and Stats. At ≥ 1280 px it is a 340 px sticky column;
- * below that the editor places it above the steps. A tab's content mounts (and loads) when opened.
+ * UX-SCR-03 right panel: Preview, Test, Runs and Stats. At ≥ 1280 px it is a sticky column beside
+ * the steps, a third of the width and at least 340 px; below that the editor places it after them.
+ * A tab's content mounts (and loads) when opened.
  */
 export function SidePanel({
   wid,

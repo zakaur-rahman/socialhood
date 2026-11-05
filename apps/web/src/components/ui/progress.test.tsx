@@ -34,7 +34,7 @@ describe("Progress (UI-022)", () => {
     render(<Progress aria-label="Uploading" value={100} />);
     expect(screen.getByRole("progressbar")).toHaveClass("h-1.5", "w-full", "rounded-full", "bg-raised", "overflow-hidden");
     expect(fill()).toHaveClass(
-      "bg-brand-gradient-decor",
+      "bg-fg-secondary",
       "rounded-full",
       "transition-[width]",
       "duration-normal",

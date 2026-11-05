@@ -179,7 +179,7 @@ function FlowBody({
           {draft.capMessage}
         </Alert>
       ) : atCap ? (
-        <Alert tone="brand">
+        <Alert tone="neutral">
           Your plan includes {env.cap} steps in a flow. Upgrade to add more.
         </Alert>
       ) : null}
@@ -252,13 +252,13 @@ function OpaqueFlow({ wid, automationId, definition }: { wid: string; automation
   const reset = useResetFlow(wid, automationId);
   return (
     <div className="space-y-3" data-testid="flow-opaque">
-      <Alert tone="brand" icon={<ListTree />}>
+      <Alert tone="neutral" icon={<ListTree />}>
         This flow was built outside the editor and has a shape the editor can&apos;t show yet. It runs as saved. To
         edit it here, start again from one message.
       </Alert>
       <ol className="space-y-2">
         {definition.steps.map((step, index) => (
-          <li key={step.id} className="rounded-lg border border-line px-3 py-2 text-sm">
+          <li key={step.id} className="rounded-lg bg-field px-3 py-2 text-sm">
             <span className="tabular-nums text-fg-secondary">{index + 1}</span>{" "}
             <span className="font-medium">{step.type === "randomize" ? "split" : step.type.replace("_", " ")}</span>
             {"text" in step && step.text ? <span className="text-fg-secondary"> · {step.text}</span> : null}

@@ -183,7 +183,7 @@ export function BillingPage() {
               Usage
               {usageRanOut(state, workspace.timezone) ? (
                 <>
-                  <span aria-hidden className="ml-1.5 size-1.5 rounded-full bg-danger" data-testid="usage-ran-out" />
+                  <span aria-hidden className="ml-1.5 size-1.5 rounded-full bg-danger mark-forced" data-testid="usage-ran-out" />
                   <span className="sr-only"> (a limit has run out)</span>
                 </>
               ) : null}
@@ -257,7 +257,12 @@ function CurrentPlan({
     <div className="flex flex-wrap gap-2 md:justify-end">
       {notOnSale ? <p className="text-sm text-fg-secondary">{billingCopy.paidPlansSoon}</p> : null}
       {mayCheckout ? (
-        <Button size="lg" loading={checkout.pending} onClick={() => checkout.start("pro")}>
+        <Button
+          size="lg"
+          loading={checkout.pending && checkout.plan === "pro"}
+          disabled={checkout.pending && checkout.plan !== "pro"}
+          onClick={() => checkout.start("pro")}
+        >
           {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
         </Button>
       ) : null}
@@ -287,12 +292,11 @@ function CurrentPlan({
   );
 
   return (
-    <Card asChild padding="roomy" tone="brand" className="space-y-4 bg-glow-brand">
+    <Card asChild padding="roomy" className="space-y-4">
     <section aria-labelledby="plan-title">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-start gap-4">
-          {/* A decorative icon tile: the decor gradient (DESIGN_SYSTEM §1.9); the shell gradient is the logo's and Upgrade's. */}
-          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-gradient-decor text-on-brand">
+          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-raised text-fg-secondary">
             <CreditCard className="size-6" />
           </span>
           <div className="min-w-0 space-y-1">
@@ -301,9 +305,11 @@ function CurrentPlan({
               <h2 id="plan-title" className={PAGE_TITLE}>
                 {status.plan}
               </h2>
-              <Badge tone={status.badge.tone} size="md">
-                {status.badge.label}
-              </Badge>
+              {status.badge.label !== status.plan ? (
+                <Badge tone={status.badge.tone} size="md">
+                  {status.badge.label}
+                </Badge>
+              ) : null}
             </div>
             <p className={cn("text-sm", status.badge.tone === "danger" ? "text-danger-fg" : "text-fg-secondary")}>
               {status.line}
@@ -376,7 +382,7 @@ function Usage({ billing }: { billing: BillingState }) {
   const meters = meterViews(billing.usage, workspace.timezone);
   const metered = new Set(meters.map((meter) => ENTITLEMENT_FOR_METRIC[meter.metric] ?? meter.metric));
   const others = billing.entitlements.flatMap((item) =>
-    typeof item.value === "number" && !metered.has(item.key) ? [limitText(item.key, item.value)] : [],
+    typeof item.value === "number" && item.value > 0 && !metered.has(item.key) ? [limitText(item.key, item.value)] : [],
   ).filter((line): line is string => Boolean(line));
   if (meters.length === 0 && others.length === 0) return null;
   return (
@@ -440,7 +446,7 @@ function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: str
           <span
             aria-hidden
             className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-brand-fg [&_svg]:size-4",
+              "grid size-8 shrink-0 place-items-center rounded-lg text-fg-secondary [&_svg]:size-4",
               METER_ICON_BG[meter.metric],
             )}
           >

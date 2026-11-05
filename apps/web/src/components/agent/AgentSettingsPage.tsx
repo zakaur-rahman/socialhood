@@ -113,7 +113,7 @@ function CreditsStat() {
   if (!credits || typeof credits.limit !== "number") return null;
   const count = new Intl.NumberFormat("en-US");
   return (
-    <div className="rounded-lg border border-line px-4 py-2.5 text-right">
+    <div className="rounded-lg bg-field px-4 py-2.5 text-right">
       <p className={EYEBROW}>AI credits</p>
       <p className="text-sm tabular-nums">
         <span className="text-lg font-semibold text-brand-fg">{count.format(credits.used)}</span>
@@ -210,7 +210,7 @@ export function RunHistory() {
     content = (
       <ul aria-busy="true" aria-label="Loading runs" className="space-y-2">
         {Array.from({ length: 4 }, (_, i) => (
-          <li key={i} className="space-y-2 rounded-xl border border-line p-4">
+          <li key={i} className="space-y-2 rounded-xl bg-field p-4">
             <Skeleton className="h-3 w-2/3" />
             <Skeleton className="h-3 w-1/3" />
           </li>

@@ -78,13 +78,13 @@ describe("Composer (UX-INB-07)", () => {
     expect(send).toHaveAttribute("data-slot", "button");
     expect(send).toHaveAttribute("data-size", "default");
     expect(send).toHaveAttribute("data-variant", "secondary");
-    expect(send).toHaveClass("glass-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
+    expect(send).toHaveClass("bg-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
     expect(send).not.toHaveClass("disabled:opacity-50");
 
     await user.type(textbox(), "Yes");
     expect(send).toBeEnabled();
     expect(send).toHaveAttribute("data-variant", "default");
-    expect(send).toHaveClass("bg-brand-gradient", "text-on-brand", "motion-safe:animate-in", "motion-safe:zoom-in-95");
+    expect(send).toHaveClass("bg-brand-strong", "text-on-brand", "motion-safe:animate-in", "motion-safe:zoom-in-95");
     expect(send).not.toHaveClass("disabled:opacity-100");
   });
 

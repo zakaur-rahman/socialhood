@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRefreshSummary } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
 import { toastError } from "@/lib/toast-error";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
@@ -21,9 +21,7 @@ const NONE = "none";
 
 /** "Updated just now", "Updated 5m ago", "Updated 12 Mar". */
 export function updatedLabel(iso: string, now: Date): string {
-  const when = relativeTime(iso, now);
-  if (when === "now") return "Updated just now";
-  return /^\d+[mhd]$/.test(when) ? `Updated ${when} ago` : `Updated ${when}`;
+  return `Updated ${timeAgo(iso, now)}`;
 }
 
 /**

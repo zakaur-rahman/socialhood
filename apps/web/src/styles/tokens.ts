@@ -20,9 +20,11 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   // Surfaces
   canvas: { use: "App and thread background", swatch: "bg-canvas" },
   panel: { use: "Cards, sidebar, list pane, headers, composer bar, the phone drawer", swatch: "bg-panel" },
-  field: { use: "Inputs, incoming bubbles, segmented track", swatch: "bg-field" },
+  field: { use: "Incoming bubbles, segmented track, quiet insets", swatch: "bg-field" },
+  "field-input": { use: "Text fields and select triggers: white on light", swatch: "bg-field-input" },
   raised: { use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
   "raised-hover": { use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
+  segment: { use: "The chosen segment or tab, on its field track", swatch: "bg-segment" },
   overlay: { use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },
   // States: overlays, so they work on any surface
   hover: { use: "Hover fill on any surface; neutral chip fill", swatch: "bg-hover" },
@@ -33,19 +35,9 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "media-chip": { use: "A label or button on a photo: count chips, captions", swatch: "bg-media-chip" },
   "media-heavy": { use: "Text over a photo: upload progress, the end of a caption fade", swatch: "bg-media-heavy" },
   "canvas-veil": { use: "A dimmed cell or inset: days outside the month, a card in a flow", swatch: "bg-canvas-veil" },
-  "panel-glass": { use: "Marketing cards over the page glow", swatch: "bg-panel-glass" },
+  "panel-glass": { use: "A marketing card's quieter fill", swatch: "bg-panel-glass" },
   "panel-veil": { use: "The floating marketing nav over scrolled content", swatch: "bg-panel-veil" },
-  // Glass (C-128): a surface token at a set strength; the glass-* utilities add the blur
-  "panel-frost": { use: "Work panes on glass: sidebar, inbox panes, headers, composer bar (82% panel, light blur)", swatch: "bg-panel-frost" },
-  "card-glass": { use: "Cards on glass (68% panel, medium blur)", swatch: "bg-card-glass" },
-  "overlay-frost": { use: "What floats on glass: menus, popovers, selects, dialogs, sheets, toasts (86% overlay, strong blur)", swatch: "bg-overlay-frost" },
-  "raised-frost": { use: "The secondary button on glass (72% raised)", swatch: "bg-raised-frost" },
-  "frost-outline": { use: "The outline button on glass (45% panel)", swatch: "bg-frost-outline" },
-  "ambient-1": { use: "The ambient light's top-left glow, behind the glass", swatch: "bg-ambient-1" },
-  "ambient-2": { use: "The ambient light's top-right glow", swatch: "bg-ambient-2" },
-  "ambient-3": { use: "The ambient light's bottom pool", swatch: "bg-ambient-3" },
   // Lines
-  "line-glass": { use: "A card's edge on glass, quieter than line", swatch: "bg-line-glass" },
   line: { use: "Borders", swatch: "bg-line" },
   "line-subtle": { use: "Faint borders", swatch: "bg-line-subtle" },
   "line-strong": { use: "Emphasised borders", swatch: "bg-line-strong" },
@@ -55,20 +47,20 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "fg-secondary": { use: "Secondary and meta text, timestamps, placeholders (D-06)", swatch: "bg-fg-secondary" },
   "fg-disabled": { use: "Disabled controls only", swatch: "bg-fg-disabled" },
   "fg-hover": { use: "Hover on the inverse button (bg-fg)", swatch: "bg-fg-hover" },
-  "on-brand": { use: "Text and icons on the brand gradient, brand-strong, danger-fill, platform fills", swatch: "bg-on-brand" },
+  "on-brand": { use: "Text and icons on brand-strong, danger-fill, platform fills", swatch: "bg-on-brand" },
   "on-brand-soft": { use: "A quiet fill on a brand bubble: image and button previews", swatch: "bg-on-brand-soft" },
   "on-brand-line": { use: "An edge on a brand bubble", swatch: "bg-on-brand-line" },
   "on-brand-line-strong": { use: "A chip edge on a brand bubble", swatch: "bg-on-brand-line-strong" },
   // Brand
-  brand: { use: "Non-text marks: focus ring, dots, selection bar, switch on, checkbox checked", swatch: "bg-brand" },
-  "brand-strong": { use: "Solid brand fills that carry text; the gradient's end", swatch: "bg-brand-strong" },
-  "brand-deep": { use: "Gradient start", swatch: "bg-brand-deep" },
-  "brand-fg": { use: "Brand-coloured text and icons on dark", swatch: "bg-brand-fg" },
-  "brand-soft": { use: "Soft brand fills; the info tone", swatch: "bg-brand-soft" },
+  brand: { use: "Non-text marks: focus ring, switch on, checkbox checked, a chart's single series", swatch: "bg-brand" },
+  "brand-strong": { use: "The one accent fill: main buttons, the logo tile, outgoing bubbles", swatch: "bg-brand-strong" },
+  "brand-deep": { use: "The logo's bars; an identity stop", swatch: "bg-brand-deep" },
+  "brand-fg": { use: "Accent text and icons: links, AI labels", swatch: "bg-brand-fg" },
+  "brand-soft": { use: "Soft accent fills: AI moments; the brand tone", swatch: "bg-brand-soft" },
   "brand-soft-hover": { use: "Hover and open on brand-soft: the soft button (C-073)", swatch: "bg-brand-soft-hover" },
   "brand-line": { use: "Brand borders", swatch: "bg-brand-line" },
-  "shell-1": { use: "Logo tile and upgrade button", swatch: "bg-shell-1" },
-  "shell-2": { use: "Logo tile and upgrade button", swatch: "bg-shell-2" },
+  "shell-1": { use: "The public site's logo tile, the app icons, one identity pair", swatch: "bg-shell-1" },
+  "shell-2": { use: "The public site's logo tile, the app icons, one identity pair", swatch: "bg-shell-2" },
   // Status
   success: { use: "Success", swatch: "bg-success" },
   warning: { use: "Warning", swatch: "bg-warning" },
@@ -141,6 +133,7 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "avatar-4": { use: "Demo avatar tint", swatch: "bg-avatar-4" },
   "avatar-5": { use: "Demo avatar tint", swatch: "bg-avatar-5" },
   "avatar-6": { use: "Demo avatar tint", swatch: "bg-avatar-6" },
+  "site-control": { use: "The secondary button's fill on the public site's paper", swatch: "bg-site-control" },
 };
 
 /**
@@ -151,11 +144,11 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
  */
 export const themeInvariant: Record<string, string> = {
   "media-scrim": "Black over photos and video, dark in any theme",
-  "on-brand": "White on the brand gradient, brand-strong, danger-fill and platform fills, in both themes",
-  "brand-strong": "The gradient's end and the primary fill: white on it is 5.82:1 in both themes",
-  "brand-deep": "The gradient's start",
-  "shell-1": "The logo tile's own gradient; the icons are drawn from it",
-  "shell-2": "The logo tile's own gradient; the icons are drawn from it",
+  "on-brand": "White on brand-strong, danger-fill and platform fills, in both themes",
+  "brand-strong": "The primary fill: white on it is 5.82:1 in both themes",
+  "brand-deep": "The logo's bars and an identity stop, on white or under white text in both themes",
+  "shell-1": "The public logo's own gradient; the icons are drawn from it",
+  "shell-2": "The public logo's own gradient; the icons are drawn from it",
   "danger-fill": "The failed bubble and the destructive button carry white text: 5.47:1 in both themes",
   instagram: "A third party's brand colour",
   whatsapp: "A third party's brand colour",
@@ -208,6 +201,7 @@ export const themeInvariant: Record<string, string> = {
   "avatar-4": "The public site's own palette (C-155): the same whatever the app theme",
   "avatar-5": "The public site's own palette (C-155): the same whatever the app theme",
   "avatar-6": "The public site's own palette (C-155): the same whatever the app theme",
+  "site-control": "The public site's own palette (C-155): the same whatever the app theme",
 };
 
 /** The colour tokens, in the order of globals.css, with their values from the generated file. */
@@ -238,16 +232,9 @@ export const chartAliases = chartMeta.map((entry) => ({
   token: (tokenValues.colorAliases as Record<string, string>)[entry.name],
 }));
 
-/** DESIGN_SYSTEM §1.9: four gradients, each with one job, plus the marketing top glow; the stops are tokens. */
+/** DESIGN_SYSTEM §1.9: the app's fills are solid; the one gradient utility left is a platform's logo. The stops are tokens. */
 const gradientMeta = [
-  { name: "bg-brand-gradient", key: "brand", use: "Primary buttons, outgoing bubbles, count badges; on-brand text" },
-  { name: "bg-brand-gradient-decor", key: "brand-decor", use: "Meters, progress fills, decorative icon tiles; never under text" },
-  { name: "bg-shell-gradient", key: "shell", use: "Logo tile and Upgrade only" },
   { name: "bg-instagram-logo-gradient", key: "instagram-logo", use: "Instagram's logo tile (Add account); never under text" },
-  { name: "bg-glow-brand", key: "glow-brand", use: "One per view at most: the plan hero" },
-  { name: "bg-ambient", key: "ambient", use: "The light behind the glass, fixed on the body; not for components" },
-  { name: "bg-glow-brand-top", key: "glow-brand-top", use: "The marketing glow at the top of a section: the hero, the illustration cards" },
-  { name: "bg-glow-brand-centre", key: "glow-brand-centre", use: "A round marketing glow behind one object: the hero's hub" },
 ] as const;
 export const gradientUtilities = gradientMeta.map(({ name, key, use }) => ({
   name,
@@ -279,14 +266,14 @@ export const shadowTokens = shadowMeta.map((entry) => ({
   light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));
 
-/** The glass family (C-128): a top highlight, a soft drop, the buttons' inner light and glow. */
-const glassShadowMeta = [
-  { name: "shadow-glass", use: "Glass cards: a top highlight and a soft drop (C-128)", sample: "bg-card-glass ring-1 ring-line-glass shadow-glass" },
-  { name: "shadow-highlight", use: "The outline button: the top highlight alone", sample: "bg-frost-outline ring-1 ring-line shadow-highlight" },
-  { name: "shadow-button-primary", use: "The primary button: an inner highlight and an indigo glow", sample: "bg-brand-gradient shadow-button-primary" },
-  { name: "shadow-button-secondary", use: "The secondary button: an inset edge and the highlight", sample: "bg-raised-frost shadow-button-secondary" },
+/** The card's hair of drop, and what the public site's shared primitives keep (the .site pins in globals.css). */
+const surfaceShadowMeta = [
+  { name: "shadow-surface", use: "A card: no drop on dark, a hair on light", sample: "bg-panel shadow-surface" },
+  { name: "shadow-site-card", use: "A shared Card on the public site", sample: "bg-sheet shadow-site-card" },
+  { name: "shadow-site-button-primary", use: "The primary Button on the public site", sample: "bg-ink text-sheet shadow-site-button-primary" },
+  { name: "shadow-site-button-secondary", use: "The secondary Button on the public site", sample: "bg-site-control text-ink shadow-site-button-secondary" },
 ] as const;
-export const glassShadows = glassShadowMeta.map((entry) => ({
+export const surfaceShadows = surfaceShadowMeta.map((entry) => ({
   ...entry,
   value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
   light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],

@@ -75,6 +75,12 @@ describe("FunnelView", () => {
     expect(within(items[1]).getByText("Answers").nextElementSibling?.textContent).toBe("6");
   });
 
+  it("shows a step's message with its fields filled in, not the raw token", () => {
+    render(<FunnelView funnel={funnel({ steps: [step({ text: "Hi {first_name|there}!" })] })} />);
+    expect(screen.getByText("Hi Priya!")).toBeInTheDocument();
+    expect(screen.queryByText(/first_name/)).toBeNull();
+  });
+
   it("tells you when link tracking is off and a step has a link", () => {
     render(<FunnelView funnel={funnel({ links_tracked: false, steps: [step({ link_buttons: 1 })] })} />);
     expect(screen.getByTestId("links-untracked")).toHaveTextContent("Link tracking is off");

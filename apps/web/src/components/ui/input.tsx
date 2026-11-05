@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
  * - colour transitions only (never `outline-color`: the focus ring appears at once).
  */
 const fieldControlClass =
-  "w-full min-w-0 rounded-lg border border-line-control bg-field px-3 text-sm text-fg max-md:text-base placeholder:text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:border-brand focus-visible:bg-raised disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger"
+  "w-full min-w-0 rounded-lg border border-line-control bg-field-input px-3 text-sm text-fg max-md:text-base placeholder:text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:border-brand focus-visible:bg-raised disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger"
 
 /** Heights on the control ladder (DESIGN_SYSTEM §8.4); 40 px on coarse pointers at every size. */
 const inputVariants = cva(

@@ -13,7 +13,7 @@ import type {
   TemplateCategory,
   TriggerName,
 } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { formatDayTime, zonedParts } from "@/lib/tz";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -196,9 +196,7 @@ export function statusText(
 /** "12m ago", "just now", "No runs yet". */
 export function lastRunText(iso: string | null | undefined, now: Date = new Date()): string {
   if (!iso) return "No runs yet";
-  const relative = relativeTime(iso, now);
-  if (relative === "now") return "just now";
-  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : relative;
+  return timeAgo(iso, now);
 }
 
 export function cooldownText(hours: number): string {

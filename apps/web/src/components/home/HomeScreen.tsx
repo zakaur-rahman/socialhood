@@ -13,7 +13,7 @@ import { Alert, AlertAction } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
+import { useInboxCounts, useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
 import type { Overview } from "@/lib/api/types";
 import { errorMessage, greeting } from "@/lib/copy";
 import { gapPrefill } from "@/lib/knowledge/prefill";
@@ -28,6 +28,7 @@ import { AccountHealth } from "./AccountHealth";
 import { Checklist } from "./Checklist";
 import { markAllSetShown, useAllSetPhase } from "./checklist-state";
 import { channelsConnected, channelsLine, formatSpan, periodLabel, periodPhrase, rangeHeading } from "./format";
+import { KnowledgeApprovalBanner } from "./KnowledgeApprovalBanner";
 import { KnowledgeGapBanner } from "./KnowledgeGapBanner";
 import { MetricTiles, MetricTilesSkeleton } from "./MetricTiles";
 import { PriorityQueue, PriorityQueueSkeleton } from "./PriorityQueue";
@@ -77,7 +78,7 @@ export function HomeScreen() {
           <p className="mt-1 text-sm text-fg-secondary" data-testid="home-subtitle">
             {channelsLine(data.platforms_connected)}
             <span aria-hidden> · </span>
-            <span className="text-brand-fg tabular-nums">
+            <span className="tabular-nums">
               {rangeHeading(data)} · {formatSpan(data.current.since, data.current.until)}
             </span>
           </p>
@@ -193,6 +194,7 @@ function Body({
     if (showAllSet && phase === "fresh") markAllSetShown(workspaceId);
   }, [showAllSet, phase, workspaceId]);
   const showChecklist = !data.checklist.dismissed && !(allDone && phase === "past");
+  const waiting = useInboxCounts(workspaceId).data?.knowledge_waiting ?? 0;
   return (
     <div className="space-y-6">
       {staleError ? (
@@ -205,6 +207,7 @@ function Body({
           Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.
         </Alert>
       ) : null}
+      <KnowledgeApprovalBanner count={waiting} slug={slug} />
       {showChecklist ? (
         <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
       ) : null}

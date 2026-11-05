@@ -19,7 +19,7 @@ import { type ReactNode, useEffect, useRef } from "react";
  * that build their own header (Home, Schedule, the post composer) use it too.
  */
 export const STICKY_PAGE_HEADER =
-  "glass-pane sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
+  "bg-panel sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
 
 /** The "‹ Parent" link above a child page's title (D-16). Replaces the old Breadcrumb landmark. */
 export function BackLink({ href, label }: { href: Route; label: string }) {
@@ -69,7 +69,8 @@ export function PageFrame({
       <div ref={header} className={cn(STICKY_PAGE_HEADER, "mb-6 pt-4 md:pt-6")}>
         {back ? <BackLink {...back} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h1 className={cn("min-w-0 break-words", PAGE_TITLE)}>{title}</h1>
+          {/* On a phone the top bar already names the page: the heading stays for screen readers. */}
+          <h1 className={cn("min-w-0 break-words max-md:sr-only", PAGE_TITLE)}>{title}</h1>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
       </div>

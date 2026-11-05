@@ -155,35 +155,7 @@ export function AutomationRow({
     >
     <li ref={rowRef} data-automation={automation.id}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-3 md:flex-nowrap">
-        {/* Revealed on hover only with a mouse: on touch the checkbox and the handle always show (UI-ISS-057). */}
-        <div
-          className={cn(
-            "relative z-10 hidden items-center md:order-1 md:flex",
-            !selecting &&
-              "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:focus-within:opacity-100",
-          )}
-        >
-          <Checkbox
-            checked={selected}
-            onCheckedChange={(value) => onSelectedChange(value === true)}
-            aria-label={`Select ${name}`}
-          />
-        </div>
-
-        {reorder ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Reorder ${name}`}
-            aria-describedby={reorder.hintId}
-            {...reorder.handleProps}
-            className="relative z-10 order-first cursor-grab touch-none text-fg-secondary focus-visible:opacity-100 active:cursor-grabbing md:order-2 md:pointer-fine:opacity-0 md:pointer-fine:group-hover/row:opacity-100"
-          >
-            <GripVertical aria-hidden />
-          </Button>
-        ) : null}
-
-        <div className="relative z-10 order-3 flex items-center md:order-3">
+        <div className="relative z-10 order-3 flex items-center md:order-1">
           <Switch
             checked={active}
             disabled={statusPending}
@@ -192,7 +164,7 @@ export function AutomationRow({
           />
         </div>
 
-        <div className="order-2 min-w-0 flex-1 md:order-4">
+        <div className="order-2 min-w-0 flex-1 md:order-2">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <Link
               href={href}
@@ -206,7 +178,7 @@ export function AutomationRow({
             ) : null}
             {status ? <span className="text-xs text-fg-secondary">{status}</span> : null}
             {queue ? (
-              <Badge tone="brand" className="tabular-nums">
+              <Badge tone="neutral" className="tabular-nums">
                 <Clock aria-hidden />
                 {queue}
               </Badge>
@@ -240,6 +212,36 @@ export function AutomationRow({
             ) : null}
           </div>
         </div>
+
+        {/* Revealed on hover only with a mouse: on touch the checkbox and the handle always show (UI-ISS-057).
+            They sit after the name, whose column stretches, so their hidden space never reads as a gap
+            and nothing moves when they appear. */}
+        <div
+          className={cn(
+            "relative z-10 hidden items-center md:order-3 md:flex",
+            !selecting &&
+              "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:focus-within:opacity-100",
+          )}
+        >
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(value) => onSelectedChange(value === true)}
+            aria-label={`Select ${name}`}
+          />
+        </div>
+
+        {reorder ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Reorder ${name}`}
+            aria-describedby={reorder.hintId}
+            {...reorder.handleProps}
+            className="relative z-10 order-first cursor-grab touch-none text-fg-secondary focus-visible:opacity-100 active:cursor-grabbing md:order-4 md:pointer-fine:opacity-0 md:pointer-fine:group-hover/row:opacity-100"
+          >
+            <GripVertical aria-hidden />
+          </Button>
+        ) : null}
 
         <div className="order-last flex w-full items-center gap-4 md:order-5 md:w-auto">
           <div className="flex items-center gap-2">

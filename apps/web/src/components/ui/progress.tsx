@@ -42,7 +42,7 @@ function Progress({ value, max = 100, valueText, className, ...props }: Progress
     >
       <div
         data-slot="progress-fill"
-        className="bg-brand-gradient-decor h-full rounded-full transition-[width] duration-normal ease-standard motion-reduce:transition-none"
+        className="bg-fg-secondary h-full rounded-full transition-[width] duration-normal ease-standard motion-reduce:transition-none"
         style={{ width: `${(done / total) * 100}%` }}
       />
     </div>

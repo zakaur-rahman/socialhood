@@ -40,6 +40,7 @@ type State = {
   test?: KnowledgeTestResult;
   testFails?: () => Response;
   permissions?: string[];
+  approve?: () => Response | Promise<Response>;
 };
 
 function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<MediaAsset>) {
@@ -100,6 +101,7 @@ function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<Me
         "GET /v1/w/:wid/permissions": () =>
           json({ role: "admin", permissions: state.permissions ?? ["knowledge.manage"] }),
         "POST /v1/w/:wid/knowledge-sources/:id/approve": (_, p) => {
+          if (state.approve) return state.approve();
           const approved = { ...state.sources.find((s) => s.id === p.id)!, status: "pending" as const };
           state.sources = state.sources.map((s) => (s.id === p.id ? approved : s));
           return json(approved);
@@ -156,7 +158,7 @@ describe("Knowledge an AI app added", () => {
     const { state, calls } = setup({ sources: [waiting()] });
     expect(await screen.findByText(/Added by an AI app/)).toBeInTheDocument();
     expect(screen.getByText("Returns within 7 days.")).toBeInTheDocument();
-    expect(screen.getAllByText("Needs approval").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Waiting for approval").length).toBeGreaterThan(0);
     expect(screen.queryByText("Processing")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Returns" })).toBeInTheDocument();
 
@@ -168,10 +170,94 @@ describe("Knowledge an AI app added", () => {
     expect(toast.success).toHaveBeenCalledWith("Approved “Returns”");
   });
 
-  it("offers Approve only to roles that manage knowledge", async () => {
+  it("offers Approve, Reject and the count only to roles that manage knowledge", async () => {
     setup({ sources: [waiting()], permissions: ["inbox.reply"] });
     expect(await screen.findByText(/Added by an AI app/)).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("button", { name: "Approve Returns" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Reject Returns" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("waiting-count")).not.toBeInTheDocument();
+  });
+
+  it("puts waiting sources first and counts them", async () => {
+    setup({
+      sources: [
+        knowledgeSource({ id: "s1", title: "Shipping" }),
+        waiting(),
+        { ...waiting(), id: "ai2", title: "Hours" },
+      ],
+    });
+    expect(await screen.findByTestId("waiting-count")).toHaveTextContent("2 from AI apps are waiting for approval.");
+    const table = screen.getByRole("table", { name: "Knowledge sources" });
+    const names = within(table)
+      .getAllByRole("button", { name: /^Delete / })
+      .map((button) => button.getAttribute("aria-label"));
+    expect(names).toEqual(["Delete Returns", "Delete Hours", "Delete Shipping"]);
+  });
+
+  it("Approve is a secondary button, and the content is a labelled, focusable region of readable width", async () => {
+    setup({ sources: [waiting()] });
+    expect(await screen.findByRole("button", { name: "Approve Returns" })).toHaveAttribute("data-variant", "secondary");
+    const body = screen.getByRole("group", { name: "Content of Returns" });
+    expect(body).toHaveAttribute("tabindex", "0");
+    expect(body).toHaveClass("max-w-prose");
+  });
+
+  it("Approve shows it is loading while it is pending", async () => {
+    let resolve!: (response: Response) => void;
+    const pending = new Promise<Response>((done) => (resolve = done));
+    setup({ sources: [waiting()], approve: () => pending });
+    const approve = await screen.findByRole("button", { name: "Approve Returns" });
+    await userEvent.setup().click(approve);
+    await waitFor(() => expect(approve).toHaveAttribute("aria-busy", "true"));
+    expect(screen.getByRole("button", { name: "Reject Returns" })).toBeDisabled();
+    resolve(json({ ...waiting(), status: "pending" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Approved “Returns”"));
+  });
+
+  it("Reject removes it after confirming, through the delete route", async () => {
+    const user = userEvent.setup();
+    const { state, calls } = setup({ sources: [waiting()] });
+    const reject = await screen.findByRole("button", { name: "Reject Returns" });
+    expect(reject).toHaveAttribute("data-variant", "destructive-ghost");
+    await user.click(reject);
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("The AI never used it.");
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    expect(within(dialog).getByText("Reject “Returns”?")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.path === "/v1/w/w1/knowledge-sources/ai1")).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Rejected “Returns”"));
+    await waitFor(() => expect(state.sources).toEqual([]));
+    await waitFor(() => expect(screen.queryByText(/Added by an AI app/)).not.toBeInTheDocument());
+  });
+
+  it("prints an FAQ's question once, and not when it is the title", async () => {
+    setup({ sources: [{ ...waiting(), type: "faq", title: "Is COD available?", question: "Is COD available?" }] });
+    await screen.findByText(/Added by an AI app/);
+    expect(screen.getAllByText("Is COD available?")).toHaveLength(1);
+  });
+
+  it("cuts a long text short with Show all, so nothing is approved unseen", async () => {
+    const user = userEvent.setup();
+    setup({ sources: [{ ...waiting(), body: "Long policy text. ".repeat(40) }] });
+    const body = await screen.findByRole("group", { name: "Content of Returns" });
+    expect(body).toHaveClass("max-h-32");
+    await user.click(screen.getByRole("button", { name: "Show all of Returns" }));
+    expect(body).not.toHaveClass("max-h-32");
+    expect(screen.queryByRole("button", { name: "Show all of Returns" })).not.toBeInTheDocument();
+  });
+
+  it("shows a short text whole, with no Show all", async () => {
+    setup({ sources: [waiting()] });
+    await screen.findByRole("group", { name: "Content of Returns" });
+    expect(screen.queryByRole("button", { name: /^Show all/ })).not.toBeInTheDocument();
+  });
+
+  it("a failed Approve says why and leaves the row", async () => {
+    setup({ sources: [waiting()], approve: () => problem(500, "internal", "Something went wrong.") });
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Approve Returns" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Approve Returns" })).toBeEnabled();
   });
 
   it("offers no Approve on a source a person added", async () => {
@@ -515,7 +601,7 @@ describe("Questions the AI couldn't answer (FR-KB-06, F-17)", () => {
     setup({ gaps: [knowledgeGap({ last_seen_at: hoursAgo(2.5) })] });
     const card = await screen.findByRole("region", { name: "Questions the AI couldn't answer" });
     expect(within(card).getByText("shipping to uae")).toBeInTheDocument();
-    expect(within(card).getByText("Asked 14 times · last 2h ago")).toBeInTheDocument();
+    expect(within(card).getByText("Asked 14 times · most recently 2h ago")).toBeInTheDocument();
     expect(within(card).getByText("“Do you ship to Dubai?”")).toBeInTheDocument();
     const brandVoice = screen.getByRole("region", { name: "Brand voice" });
     expect(card.compareDocumentPosition(brandVoice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -48,7 +48,7 @@ describe("Badge", () => {
       </Badge>
     )
     const badge = screen.getByText("3")
-    expect(badge).toHaveClass("bg-brand-gradient", "text-on-brand", "tabular-nums", "h-5", "min-w-5", "px-1.5", "text-xs", "rounded-full")
+    expect(badge).toHaveClass("bg-pressed", "text-fg", "tabular-nums", "h-5", "min-w-5", "px-1.5", "text-xs", "rounded-full")
     expect(badge).not.toHaveClass("px-2")
     expect(classes(badge).filter((c) => c === "text-white" || c.startsWith("bg-hover"))).toEqual([])
   })

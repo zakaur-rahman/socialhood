@@ -211,7 +211,7 @@ export function FiltersSheet({
             <fieldset className="space-y-3">
               <legend className="mb-1 text-sm font-medium">Custom fields</legend>
               {filters.fields.map((row, index) => (
-                <div key={index} className="space-y-2 rounded-lg border border-line p-3" data-testid="field-filter">
+                <div key={index} className="space-y-2 rounded-lg bg-field p-3" data-testid="field-filter">
                   <div className="flex items-center gap-2">
                     <Select value={row.key || ANY} onValueChange={(v) => setFieldRow(index, { key: v === ANY ? "" : v })}>
                       <SelectTrigger aria-label="Field" className="min-w-0 flex-1">

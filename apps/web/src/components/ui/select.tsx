@@ -42,7 +42,7 @@ function SelectValue({
 
 /**
  * The trigger is built on Input (DESIGN_SYSTEM §8.2), so a select beside an Input on one card looks
- * the same: ui/input's `inputVariants` gives the `field` surface, the `line-control` edge, focus as the
+ * the same: ui/input's `inputVariants` gives the `field-input` surface, the `line-control` edge, focus as the
  * global outline plus a `ring` border, `aria-invalid` in `danger`, Input's text sizes and the
  * control ladder's heights (40 px on coarse pointers at every size). On top: as wide as its value,
  * room for the chevron, and the placeholder colour. A call site's height or width class still

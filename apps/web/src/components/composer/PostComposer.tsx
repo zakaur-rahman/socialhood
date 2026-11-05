@@ -839,7 +839,7 @@ function Composer({
                 role="region"
                 aria-label="Post actions"
                 className={cn(
-                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:glass-pane",
+                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
                   BOTTOM_BAR,
                 )}
               >

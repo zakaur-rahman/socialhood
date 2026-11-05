@@ -65,14 +65,14 @@ describe("the theme choice (C-129)", () => {
   it("points every theme-color meta at the canvas of the theme, dropping its media query", () => {
     const meta = document.createElement("meta");
     meta.name = "theme-color";
-    meta.content = "#131520";
+    meta.content = "#141416";
     meta.media = "(prefers-color-scheme: dark)";
     document.head.append(meta);
     applyThemeColor("light");
     expect(meta.content).toBe("#F5F6FB");
     expect(meta.hasAttribute("media")).toBe(false);
     applyThemeColor("dark");
-    expect(meta.content).toBe("#131520");
+    expect(meta.content).toBe("#141416");
   });
 });
 

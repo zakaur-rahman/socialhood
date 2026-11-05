@@ -46,7 +46,7 @@ function contrast(a: string, b: string): number {
 describe("Tooltip (UI-017, D-03)", () => {
   it("is dark like the other floating surfaces: overlay, fg text, the line ring and the floating shadow", async () => {
     await open();
-    expect(content()).toHaveClass("glass-float", "text-fg", "ring-1", "ring-line", "shadow-floating", "rounded-md", "text-xs");
+    expect(content()).toHaveClass("bg-overlay", "text-fg", "ring-1", "ring-line", "shadow-floating", "rounded-md", "text-xs");
     // The same edge and shadow as Popover, DropdownMenu and Select.
     for (const c of ["ring-1", "ring-line", "shadow-floating"]) expect(FLOATING_SURFACE.split(" ")).toContain(c);
     const list = classes(content());
