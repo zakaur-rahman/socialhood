@@ -26,12 +26,13 @@ export type Banner = {
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
  * AI credits exhausted, trial ending), drawn with Alert (DESIGN_SYSTEM §8.2): one action each, danger
  * banners announced at once, critical states cannot be dismissed. They sit in `<main>`'s flow and keep
- * their height; a full-height frame below takes the rest.
+ * their height; a full-height frame below takes the rest. On the page header's band colour, edge to
+ * edge, so the banner and the header read as one top bar (owner, 2026-11-06).
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   return (
-    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6">
+    <div className="shrink-0 space-y-2 bg-panel px-4 pt-4 md:px-6">
       {banners.map((banner) => (
         // The Alert is the live region: `alert` for danger (payment on hold), `status` otherwise.
         <Alert
