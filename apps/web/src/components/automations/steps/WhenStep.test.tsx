@@ -72,7 +72,7 @@ describe("When's trigger", () => {
   });
 
   it("stays open while the trigger has a problem", () => {
-    renderWithApi(<Harness trigger="dm_keyword" errors={{ trigger: ["Choose a trigger."] }} />);
+    renderWithApi(<Harness trigger="dm_keyword" errors={{ trigger: "Choose a trigger." }} />);
     expect(screen.getByRole("radio", { name: "Instagram DM keyword" })).toBeInTheDocument();
   });
 });
