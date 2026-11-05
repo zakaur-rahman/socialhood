@@ -449,7 +449,7 @@ function ReelPreview({
   return (
     <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
       {asset ? <Media asset={extras?.coverUrl ? { ...asset, resource_type: "image", url: extras.coverUrl, thumbnail_url: extras.coverUrl } : asset} /> : <NoMedia />}
-      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-media-heavy to-transparent p-3 pr-12">
+      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-(image:--gradient-media-fade) p-3 pr-12">
         <div className="flex items-center gap-2">
           <AccountPicture account={account} identity={identity} size={24} />
           <span className="truncate text-sm font-semibold">

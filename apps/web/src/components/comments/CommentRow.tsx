@@ -27,7 +27,7 @@ import type { Platform, PostComment } from "@/lib/api/types";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { SENTIMENT_DOT, SENTIMENT_LABEL } from "@/lib/ai/format";
 import { authorHandle, authorName, commentActionError } from "@/lib/comments/format";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +40,7 @@ import { CommentComposer, type ComposerKind } from "./CommentComposer";
 const ACTION = "text-fg-secondary";
 
 function when(iso: string, now: Date): string {
-  const relative = relativeTime(iso, now);
-  if (relative === "now") return "just now";
-  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : relative;
+  return timeAgo(iso, now);
 }
 
 /**

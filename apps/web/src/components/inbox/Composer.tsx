@@ -23,7 +23,7 @@ import { clearSearchOnEscape } from "@/lib/inbox/search-escape";
 import { insertReply, matchReplies, slashToken } from "@/lib/inbox/saved-replies";
 import { useInboxStore } from "@/lib/inbox/store";
 import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -360,7 +360,7 @@ export function Composer({
                 ? composerCopy.disconnected(accountHandle)
                 : composerCopy.needsReconnect(accountHandle)
               : mode === "closed"
-                ? composerCopy.closed(firstName(name), lastInboundAt ? `${relativeTime(lastInboundAt, now)} ago` : null)
+                ? composerCopy.closed(firstName(name), lastInboundAt ? timeAgo(lastInboundAt, now) : null)
                 : composerCopy.templateOnly}
           </AlertDescription>
         </Alert>

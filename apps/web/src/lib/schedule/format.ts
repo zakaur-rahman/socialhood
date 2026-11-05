@@ -11,7 +11,7 @@ import type {
   ScheduledPostView,
   SocialAccount,
 } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
+import { errorMessage, plural } from "@/lib/copy";
 import type { Tone } from "@/lib/inbox/format";
 import { type Identity, identityAt } from "@/lib/ui/identity";
 
@@ -89,7 +89,7 @@ export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "ass
     case "image":
       return "Image";
     default:
-      return post.asset_count > 0 ? `${post.asset_count} files` : "No media yet";
+      return post.asset_count > 0 ? `${post.asset_count} ${plural(post.asset_count, "file", "files")}` : "No media yet";
   }
 }
 

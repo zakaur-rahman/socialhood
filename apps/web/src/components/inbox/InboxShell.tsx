@@ -419,6 +419,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                     fetchNextPage={() => void conversations.fetchNextPage()}
                     accountModes={accountModes}
                     query={listQuery}
+                    timeZone={workspace.timezone}
                   />
                 )}
               </TabsContent>

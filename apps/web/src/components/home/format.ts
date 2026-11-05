@@ -190,12 +190,6 @@ export function formatSpan(since: string, until: string): string {
   return `${sd} ${month(sm)} ${sy}–${ud} ${month(um)} ${uy}`;
 }
 
-/** "12m ago", "just now", "3d ago", "28 Sep": how long ago the customer wrote. */
-export function agoLabel(relative: string): string {
-  if (relative === "now") return "just now";
-  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : relative;
-}
-
 /** Whole-number shares for a legend: "57%"; "—" when nothing was analysed. */
 export function formatShare(value: number | null | undefined): string {
   return value === null || value === undefined ? DASH : `${Math.round(value)}%`;

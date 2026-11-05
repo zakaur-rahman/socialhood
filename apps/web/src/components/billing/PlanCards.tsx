@@ -37,7 +37,7 @@ export function PlanCards({
   plans: { data?: { items: PlanOffer[] }; isPending: boolean; isError: boolean; refetch: () => unknown };
   billing: BillingState;
   isOwner: boolean;
-  checkout: { start: (plan: PaidPlan, period?: BillingPeriod) => void; pending: boolean };
+  checkout: { start: (plan: PaidPlan, period?: BillingPeriod) => void; pending: boolean; plan?: PaidPlan | null };
 }) {
   const [period, setPeriod] = useState<BillingPeriod>("month");
   if (plans.isPending) {
@@ -156,7 +156,8 @@ export function PlanCards({
                     variant="secondary"
                     size="lg"
                     className="mt-5 w-full"
-                    loading={checkout.pending}
+                    loading={checkout.pending && checkout.plan === offer.plan}
+                    disabled={checkout.pending && checkout.plan !== offer.plan}
                     onClick={() => checkout.start(offer.plan as PaidPlan, six ? "six_month" : "month")}
                   >
                     {!six && billing.trial_eligible && offer.trial_days > 0

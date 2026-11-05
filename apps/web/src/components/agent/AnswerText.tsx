@@ -49,7 +49,7 @@ export function AnswerText({ answer, refs, slug, onNavigate, className }: Props)
 
   return (
     <div
-      className={cn("space-y-4 text-md break-words text-fg", className)}
+      className={cn("space-y-4 text-md break-words text-fg [&>p]:max-w-prose [&>ul]:max-w-prose", className)}
       data-testid="answer"
     >
       {blocks.map((block, index) => (

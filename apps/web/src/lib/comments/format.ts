@@ -139,7 +139,7 @@ export function formatCount(n: number): string {
 
 /** "Analysing 12,400 of 58,000 comments" (FR-CMT-02). */
 export function analysingText(stats: Pick<CommentStats, "analysed" | "total">): string {
-  return `Analysing ${formatCount(stats.analysed)} of ${formatCount(stats.total)} comments`;
+  return `Analysing ${formatCount(stats.analysed)} of ${plural(stats.total, "comment", "comments")}`;
 }
 
 export function plural(n: number, one: string, many: string): string {

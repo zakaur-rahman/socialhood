@@ -79,7 +79,7 @@ export function FunnelView({ funnel }: { funnel: AutomationFunnel }) {
             key={step.step_id}
             data-testid="funnel-step"
             data-step={step.step_id}
-            className={cn("rounded-lg border border-line p-3", step.reached === 0 && "opacity-70")}
+            className={cn("rounded-lg border p-3", step.reached === 0 ? "border-line-subtle" : "border-line")}
           >
             <p className="text-sm font-medium">
               <span className="text-fg-secondary tabular-nums">{index + 1}. </span>

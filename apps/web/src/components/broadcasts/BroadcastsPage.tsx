@@ -15,6 +15,7 @@ import { Meter } from "@/components/ui/meter";
 import { useBroadcastAvailability, useBroadcasts } from "@/lib/api/queries";
 import type { Broadcast } from "@/lib/api/types";
 import { BROADCAST_STATUS, formatCount, formatMoney, reached } from "@/lib/broadcasts/format";
+import { plural } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { META } from "@/styles/tokens";
@@ -155,7 +156,7 @@ function BroadcastRow({ broadcast, slug, timeZone }: { broadcast: Broadcast; slu
       </p>
       {broadcast.status === "draft" || broadcast.status === "scheduled" ? null : (
         <p className="text-sm tabular-nums">
-          {formatCount(broadcast.audience_size)} people · {formatCount(reached(c))} sent · {formatCount(c.delivered + c.read)}{" "}
+          {formatCount(broadcast.audience_size)} {plural(broadcast.audience_size, "person", "people")} · {formatCount(reached(c))} sent · {formatCount(c.delivered + c.read)}{" "}
           delivered · {formatCount(c.read)} read · {formatCount(c.failed)} failed
           {c.replied > 0 ? ` · ${formatCount(c.replied)} replied` : ""}
         </p>

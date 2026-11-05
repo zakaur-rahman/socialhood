@@ -99,6 +99,7 @@ export function useApproveKnowledgeSource(wid: string) {
     onSuccess: (source) => {
       patchSources(queryClient, wid, (items) => items.map((item) => (item.id === source.id ? source : item)));
       void queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) });
+      void queryClient.invalidateQueries({ queryKey: keys.inboxCounts(wid) });
     },
   });
 }
@@ -114,6 +115,7 @@ export function useDeleteKnowledgeSource(wid: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) }),
         queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
+        queryClient.invalidateQueries({ queryKey: keys.inboxCounts(wid) }),
       ]);
     },
   });

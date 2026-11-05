@@ -34,6 +34,8 @@ type Props = {
   unreadCount?: number;
   /** Comments waiting for a reply (GET …/comments/counts). */
   commentsCount?: number;
+  /** Sources waiting for approval; the API sends 0 to roles that can't approve them. */
+  knowledgeCount?: number;
   userName?: string | null;
   userEmail?: string | null;
   /** The AI credits meter from the billing state (usage.ts). */
@@ -70,6 +72,7 @@ export function AppSidebar({
   onToggleCollapsed,
   unreadCount = 0,
   commentsCount = 0,
+  knowledgeCount = 0,
   userName,
   userEmail,
   credits,
@@ -89,6 +92,7 @@ export function AppSidebar({
   const badges: Record<string, Badge> = {
     inbox: { count: unreadCount, label: "unread" },
     comments: { count: commentsCount, label: commentsCount === 1 ? "needs a reply" : "need a reply" },
+    knowledge: { count: knowledgeCount, label: "waiting for approval" },
   };
   const collapseHint = shortcutHint(modifier, "[");
   // Transitions switch on after the first paint, so a restored state shows at once and only later
@@ -130,7 +134,7 @@ export function AppSidebar({
               onClick={onToggleCollapsed}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               aria-keyshortcuts={COLLAPSE_SHORTCUT_ARIA}
-              className="absolute top-1/2 -right-3 z-40 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-line glass-float text-fg-secondary shadow-glass transition-colors duration-fast hover:border-line-strong hover:text-fg"
+              className="absolute top-1/2 -right-3 z-40 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-line glass-float text-fg-secondary shadow-glass transition-colors duration-fast hover:border-line-strong hover:text-fg after:absolute after:content-[''] pointer-coarse:after:-inset-2"
             >
               <ChevronLeft
                 className={cn(

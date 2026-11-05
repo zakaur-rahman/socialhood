@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useExcludeSitePath, useRecrawlSite, useRemoveSitePage, useSitePages, useUpdateKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeSource, SiteCrawlInfo, SitePage, SitePageStatus } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -165,11 +165,11 @@ export function SitePages({ site, now }: { site: KnowledgeSource; now: Date }) {
           <ul className="flex flex-wrap gap-2">
             {info.excluded_paths.map((value) => (
               <li key={value}>
-                <Badge tone="neutral" size="md" className="gap-1 pr-1">
+                <Badge tone="neutral" size="md" className="gap-1 overflow-visible pr-1">
                   {value}
                   <button
                     type="button"
-                    className="grid size-4 place-items-center rounded-full hover:bg-hover pointer-coarse:size-6"
+                    className="relative grid size-4 place-items-center rounded-full hover:bg-hover pointer-coarse:size-6 after:absolute after:-inset-1 after:content-[''] pointer-coarse:after:-inset-3"
                     aria-label={`Stop excluding ${value}`}
                     onClick={() => stopExcluding(value)}
                   >
@@ -227,7 +227,7 @@ export function SitePages({ site, now }: { site: KnowledgeSource; now: Date }) {
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <PageStatusChip page={page} />
                       {page.last_crawled_at ? (
-                        <span className="text-xs text-fg-secondary">Read {relativeTime(page.last_crawled_at, now)} ago</span>
+                        <span className="text-xs text-fg-secondary">Read {timeAgo(page.last_crawled_at, now)}</span>
                       ) : null}
                     </div>
                     {page.error && (page.status === "failed" || page.status === "skipped" || page.status === "gone") ? (

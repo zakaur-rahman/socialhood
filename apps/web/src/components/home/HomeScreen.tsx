@@ -13,7 +13,7 @@ import { Alert, AlertAction } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
+import { useInboxCounts, useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
 import type { Overview } from "@/lib/api/types";
 import { errorMessage, greeting } from "@/lib/copy";
 import { gapPrefill } from "@/lib/knowledge/prefill";
@@ -28,6 +28,7 @@ import { AccountHealth } from "./AccountHealth";
 import { Checklist } from "./Checklist";
 import { markAllSetShown, useAllSetPhase } from "./checklist-state";
 import { channelsConnected, channelsLine, formatSpan, periodLabel, periodPhrase, rangeHeading } from "./format";
+import { KnowledgeApprovalBanner } from "./KnowledgeApprovalBanner";
 import { KnowledgeGapBanner } from "./KnowledgeGapBanner";
 import { MetricTiles, MetricTilesSkeleton } from "./MetricTiles";
 import { PriorityQueue, PriorityQueueSkeleton } from "./PriorityQueue";
@@ -193,6 +194,7 @@ function Body({
     if (showAllSet && phase === "fresh") markAllSetShown(workspaceId);
   }, [showAllSet, phase, workspaceId]);
   const showChecklist = !data.checklist.dismissed && !(allDone && phase === "past");
+  const waiting = useInboxCounts(workspaceId).data?.knowledge_waiting ?? 0;
   return (
     <div className="space-y-6">
       {staleError ? (
@@ -209,6 +211,7 @@ function Body({
         <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
       ) : null}
       <AccountHealth accounts={data.accounts_needing_attention} slug={slug} canManage={canManage} />
+      <KnowledgeApprovalBanner count={waiting} slug={slug} />
 
       <div aria-busy={switching} className="group/overview space-y-6" data-testid="overview">
         {switching ? (

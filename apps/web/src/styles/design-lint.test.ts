@@ -152,7 +152,7 @@ const RULES: Rule[] = [
   { id: "arbitrary-text", rule: "an arbitrary text size or colour: use a type role or a token", find: (line) => all(/(?<![\w-])text-\[[^\]]*\]/g, line) },
   { id: "arbitrary-radius", rule: "an arbitrary radius: use the radius scale", find: (line) => all(/(?<![\w-])rounded(?:-[a-z]{1,2})?-\[(?!inherit\])[^\]]*\]/g, line) },
   { id: "bare-rounded", rule: "a bare `rounded` (4 px): use rounded-sm", find: (line) => all(/(?<![\w-])rounded(?![\w-])/g, line) },
-  { id: "dark-variant", rule: "a dark: variant: the app is dark only; the tokens are the dark values", find: (line) => all(/(?<![\w-])dark:[\w-[]/g, line) },
+  { id: "dark-variant", rule: "a dark: variant: the theme lives in the tokens (light-dark pairs); a dark: variant would bypass them", find: (line) => all(/(?<![\w-])dark:[\w-[]/g, line) },
   { id: "ring-ring-alpha", rule: "the translucent shadcn ring: focus is the outline (DESIGN_SYSTEM §8.3)", find: (line) => all(/(?<![\w-])ring-ring\/\d+/g, line) },
 ];
 

@@ -64,6 +64,7 @@ import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { KPI } from "@/styles/tokens";
 
 import { AccountGroup, type GroupActions } from "./AccountGroup";
 import { AgentDraftDialog } from "./AgentDraftDialog";
@@ -665,7 +666,7 @@ function SummaryStrip({
           {loading ? (
             <Skeleton className="mt-2 h-7 w-16" />
           ) : (
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
+            <p className={cn("mt-1", KPI)}>
               {figure.value === undefined ? "—" : formatCount(figure.value)}
             </p>
           )}

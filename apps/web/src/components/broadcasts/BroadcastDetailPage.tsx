@@ -48,6 +48,7 @@ import {
   percent,
   reached,
 } from "@/lib/broadcasts/format";
+import { plural } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -183,7 +184,7 @@ export function BroadcastDetailPage({ id }: { id: string }) {
                 aria-labelledby="broadcast-progress"
                 value={handedOver}
                 max={Math.max(1, b.audience_size)}
-                valueText={`${formatCount(handedOver)} of ${formatCount(b.audience_size)} people`}
+                valueText={`${formatCount(handedOver)} of ${formatCount(b.audience_size)} ${plural(b.audience_size, "person", "people")}`}
               />
             </div>
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6" data-testid="counts">

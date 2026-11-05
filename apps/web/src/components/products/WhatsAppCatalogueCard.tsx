@@ -22,13 +22,12 @@ import {
   useWaCatalogue,
 } from "@/lib/api/queries";
 import type { WaCatalogueStatus } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 function ago(iso: string): string {
-  const short = relativeTime(iso);
-  return short === "now" ? "just now" : `${short} ago`;
+  return timeAgo(iso);
 }
 
 /**

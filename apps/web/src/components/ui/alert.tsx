@@ -178,7 +178,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
   return (
     <div
       data-slot="alert-description"
-      className={cn("group-data-[variant=outline]/alert:text-fg-secondary", className)}
+      className={cn("max-w-prose group-data-[variant=outline]/alert:text-fg-secondary", className)}
       {...props}
     />
   )

@@ -23,6 +23,7 @@ from socialhood.schemas.inbox import (
     PlatformName,
 )
 from socialhood.services import conversations as service
+from socialhood.services.knowledge import sources as knowledge_sources
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["inbox"])
 
@@ -63,7 +64,9 @@ async def list_conversations(
 
 @router.get("/conversations/counts", operation_id="get_inbox_counts")
 async def get_inbox_counts(ctx: AnyMember, session: Session) -> InboxCounts:
-    return await service.inbox_counts(session, ctx.user.id)
+    counts = await service.inbox_counts(session, ctx.user.id)
+    counts.knowledge_waiting = await knowledge_sources.waiting_count(session, ctx.role)
+    return counts
 
 
 @router.get("/conversations/{conversation_id}", operation_id="get_conversation")

@@ -126,7 +126,8 @@
   --color-linkedin: #1E40AF;
   --color-web: #0F766E;  /* the website chat widget (GR-28): 5.5:1 with on-brand */
   /* The platforms' own logo colours, for logo tiles only (Add account): the fills above are
-     darkened so white text on them passes 4.5:1; a logo tile carries no text. */
+     darkened for white text (most pass 4.5:1; WhatsApp green is lower, so keep its text large
+     or bold); a logo tile carries no text. */
   --color-instagram-logo-1: #F58529;
   --color-instagram-logo-2: #DD2A7B;
   --color-instagram-logo-3: #8134AF;
@@ -316,6 +317,15 @@
     radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%),
     radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%),
     radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%);
+  /* An eased fade from the photo scrim into the picture, rising from the bottom edge: more stops
+     than a two-colour fade, so the edge doesn't show as a band over a photo. */
+  --gradient-media-fade: linear-gradient(to top,
+    var(--color-media-heavy) 0%,
+    color-mix(in srgb, var(--color-media-heavy) 74%, transparent) 19%,
+    color-mix(in srgb, var(--color-media-heavy) 38%, transparent) 47%,
+    color-mix(in srgb, var(--color-media-heavy) 13%, transparent) 73%,
+    color-mix(in srgb, var(--color-media-heavy) 2%, transparent) 91%,
+    transparent 100%);
 }
 @utility bg-brand-gradient { background-image: var(--gradient-brand); }
 @utility bg-brand-gradient-decor { background-image: var(--gradient-brand-decor); }
@@ -324,7 +334,7 @@
 @utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
 @utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
 @utility bg-glow-brand-centre { background-image: var(--gradient-glow-brand-centre); }
-@utility bg-ambient { background-image: var(--gradient-ambient); }
+@utility bg-ambient { background-image: var(--gradient-ambient); }
 
 /* Glass surfaces (C-128): a frost colour and a blur, bundled. Work panes get a light blur, cards
    and the secondary and outline buttons a medium one, what floats a strong one. Under
@@ -387,6 +397,15 @@
 @utility duration-fast { --tw-duration: var(--motion-fast); transition-duration: var(--motion-fast); }
 @utility duration-normal { --tw-duration: var(--motion-normal); transition-duration: var(--motion-normal); }
 @utility duration-slow { --tw-duration: var(--motion-slow); transition-duration: var(--motion-slow); }
+
+/* Marks drawn only as a background (a selected bar, an unread or usage dot) vanish in forced
+   colours; this gives them the system highlight. */
+@utility mark-forced { @media (forced-colors: active) { background-color: Highlight; } }
+
+/* Increased contrast: lines and secondary text step up one level. */
+@media (prefers-contrast: more) {
+  :root { --color-line: var(--color-line-control); --color-line-subtle: var(--color-line); --color-fg-secondary: var(--color-fg); }
+}
 
 /* A row that scrolls sideways fades out at its trailing edge, so options past the edge read as
    more to scroll to (RSP-012; the sidebar's bottom fade, turned sideways). Give the row the same

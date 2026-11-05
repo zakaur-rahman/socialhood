@@ -16,7 +16,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { useContactCount, useContacts, useExportContacts } from "@/lib/api/queries";
 import type { ContactListItem, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
@@ -319,7 +319,7 @@ function ContactRow({
           {item.lead_score ?? "None"}
         </span>
         <span className="text-xs text-fg-secondary">
-          {item.last_activity_at ? (relativeTime(item.last_activity_at) === "now" ? "Just now" : `${relativeTime(item.last_activity_at)} ago`) : "None"}
+          {item.last_activity_at ? timeAgo(item.last_activity_at) : "None"}
         </span>
       </button>
     </li>

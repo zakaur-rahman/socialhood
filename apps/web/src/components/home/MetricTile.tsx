@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { KPI } from "@/styles/tokens";
 
 import type { Trend } from "./format";
 
@@ -51,7 +52,7 @@ export function MetricTile({ label, value, badge, hint, trend, href, children }:
         {/* While another period loads the old number stays, in the secondary colour: opacity on text
             would break its contrast. HomeScreen's overview group is `aria-busy` then. */}
         <span
-          className="text-2xl font-semibold tabular-nums group-aria-busy/overview:text-fg-secondary"
+          className={cn(KPI, "group-aria-busy/overview:text-fg-secondary")}
           data-testid="metric-value"
         >
           {value}

@@ -447,7 +447,8 @@ export const tokenValues = {
     "glow-brand": "radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%)",
     "glow-brand-top": "radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%)",
     "glow-brand-centre": "radial-gradient(closest-side, var(--color-brand-soft), transparent)",
-    "ambient": "radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%), radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%), radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%)"
+    "ambient": "radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%), radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%), radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%)",
+    "media-fade": "linear-gradient(to top, var(--color-media-heavy) 0%, color-mix(in srgb, var(--color-media-heavy) 74%, transparent) 19%, color-mix(in srgb, var(--color-media-heavy) 38%, transparent) 47%, color-mix(in srgb, var(--color-media-heavy) 13%, transparent) 73%, color-mix(in srgb, var(--color-media-heavy) 2%, transparent) 91%, transparent 100%)"
   },
   "shadcn": {
     "background": "canvas",

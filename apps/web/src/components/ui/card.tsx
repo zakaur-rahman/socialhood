@@ -94,7 +94,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="card-description"
-      className={cn("text-xs text-fg-secondary group-data-[padding=roomy]/card:text-sm", className)}
+      className={cn("max-w-prose text-xs text-fg-secondary group-data-[padding=roomy]/card:text-sm", className)}
       {...props}
     />
   )

@@ -15,7 +15,7 @@ import type { AccountStatus, AiMode, Plan, SocialAccount, SocialAccountPatch } f
 import { accountStatusLabel } from "@/lib/copy";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import type { Tone } from "@/lib/ui/tone";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 
@@ -65,9 +65,7 @@ export type AccountBusy = {
 
 /** "Last synced 3h ago", or on a date once it's a week old. */
 export function lastSyncedText(iso: string, now: Date): string {
-  const when = relativeTime(iso, now);
-  if (when === "now") return "Last synced just now";
-  return /^\d+[mhd]$/.test(when) ? `Last synced ${when} ago` : `Last synced on ${when}`;
+  return `Last synced ${timeAgo(iso, now)}`;
 }
 
 /**

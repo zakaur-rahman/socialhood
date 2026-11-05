@@ -191,6 +191,15 @@ describe("badges", () => {
     expect(screen.getByTestId("comments-badge")).toHaveTextContent("1");
   });
 
+  it("Knowledge shows the sources waiting for approval, and nothing for zero", () => {
+    const { rerender } = renderSidebar({ knowledgeCount: 2 });
+    expect(screen.getByRole("link", { name: "Knowledge, 2 waiting for approval" })).toHaveAttribute("href", "/w/aria/knowledge");
+    expect(screen.getByTestId("knowledge-badge")).toHaveTextContent("2");
+    rerender({ knowledgeCount: 0 });
+    expect(screen.queryByTestId("knowledge-badge")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Knowledge" })).toBeInTheDocument();
+  });
+
   it("caps the pill at 99+ and the rail's corner badge at 9+, and shows nothing for zero", () => {
     const { rerender } = renderSidebar({ unreadCount: 0, commentsCount: 250 });
     expect(screen.queryByTestId("inbox-badge")).not.toBeInTheDocument();

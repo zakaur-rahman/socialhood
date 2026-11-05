@@ -9,5 +9,15 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return then.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return then.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: then.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
+/** Sentence-ready form of `relativeTime`: "just now", "5m ago", "on 12 Mar". */
+export function timeAgo(iso: string, now: Date = new Date()): string {
+  const r = relativeTime(iso, now);
+  return r === "now" ? "just now" : /^\d+[mhd]$/.test(r) ? `${r} ago` : `on ${r}`;
 }

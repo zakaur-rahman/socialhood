@@ -119,7 +119,7 @@ describe("Meter (UI-022)", () => {
     render(<Meter label="WhatsApp accounts" kind="slot" value={3} max={1} unit="accounts" />);
     const meter = screen.getByRole("meter", { name: "WhatsApp accounts" });
     expect(meter).toHaveAttribute("aria-valuenow", "1");
-    expect(meter).toHaveAttribute("aria-valuetext", "3 of 1 accounts");
+    expect(meter).toHaveAttribute("aria-valuetext", "3 of 1 account");
     expect(slot("meter-fill")).toHaveStyle({ width: "100%" });
   });
 

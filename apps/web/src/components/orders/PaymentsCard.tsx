@@ -22,7 +22,7 @@ import {
   useSaveUpi,
 } from "@/lib/api/queries";
 import type { PaymentSettings } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 
 /**
@@ -130,7 +130,7 @@ function RazorpaySection({ wid, settings }: { wid: string; settings: PaymentSett
             )}
             <p className="text-xs text-fg-secondary">
               {settings.webhook_seen_at
-                ? `Last event received ${relativeTime(settings.webhook_seen_at) === "now" ? "just now" : `${relativeTime(settings.webhook_seen_at)} ago`}.`
+                ? `Last event received ${timeAgo(settings.webhook_seen_at)}.`
                 : "No event received yet. Without the webhook, paid links don't mark orders paid."}
             </p>
           </div>

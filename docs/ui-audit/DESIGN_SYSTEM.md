@@ -1,4 +1,4 @@
-# Social Hood design system: the target
+# Amplychat design system: the target
 
 The one system the eight UI audits reconcile into. It starts from what exists (BUILD_SPEC §4,
 `apps/web/src/styles/globals.css`, `components/ui/*`) and changes only what an audit found
@@ -8,7 +8,7 @@ inconsistent, inaccessible or unmaintainable. Every addition has a reason and a 
   [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) (who builds what) and
   [AGENT_CONTEXT.md](AGENT_CONTEXT.md) (the condensed rules for implementing agents). Evidence and
   measurements stay in the area audits, linked by ID.
-- **Theme:** dark only (D13, C-002), built so that a light theme is a token swap later (§1.12).
+- **Theme:** dark by default (D13, C-002), with a light theme as a token swap (§1.12, C-129).
 - **Status markers** used in every table:
   - **Keep:** exists today and stays as is.
   - **Add:** new, with no visible change (it names a value already in use, or is a utility). Logged
@@ -229,7 +229,9 @@ composited on their real surface.
 modifiers on text tokens (`fg-secondary/70` is 3.64:1), or `opacity-*` on a container to "dim" its
 text.
 
-### 1.12 Ready for a light theme (without building one)
+### 1.12 Light theme (built in C-129)
+
+Each differing colour is one `light-dark(LIGHT, DARK)` token, so a token cannot exist in one theme only; the rules below keep it that way.
 
 1. Every colour is a token. After the area sweeps, the default palette is switched off
    (`--color-*: initial` before our tokens), so `bg-red-500` or `text-white` no longer compile.
@@ -454,9 +456,10 @@ get one.
 | 2 Overlay | `overlay` (the phone drawer: `canvas`, with the sidebar card on `panel`, UI-041) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
 | Marketing glow | — | `shadow-brand/10–25` | Marketing pages only | Keep (not in the app) |
 
-- **No blur.** Backdrop blur is not used to separate layers in the app (it costs a full-viewport
-  re-render on every animation frame and does nothing behind a 60% scrim or a 95% surface). The
-  marketing site header's blur is the one exception (intentional, with a fallback).
+- **Blur only through the glass utilities.** Backdrop blur in the app comes from `glass-pane`,
+  `glass-card`, `glass-float`, `glass-raised` and `glass-outline` (C-128), which bundle the frost
+  colour with the blur and fall back to a solid surface under `prefers-reduced-transparency`. No
+  call-site `backdrop-blur-*`. The marketing site header's blur is a separate, intentional exception.
 - **Elevation belongs to the primitive.** No call-site `shadow-*` or `bg-panel` on overlay content.
 - **`box-shadow` for other jobs** only as a named utility in `globals.css`: the crop box's
   `shadow-crop-mask` (`media-scrim` at 60%, clipped by its stage; C-073). Not a `--shadow-*` token,

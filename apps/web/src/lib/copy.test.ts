@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./api/errors";
 import {
+  plural,
   CONNECT_ERRORS,
   completeConnectResult,
   connectResult,
@@ -11,7 +12,7 @@ import {
   whatsappConnected,
   whatsappConnectError,
 } from "./copy";
-import { relativeTime } from "./time";
+import { relativeTime, timeAgo } from "./time";
 
 function result(query: string, username?: string) {
   return connectResult(new URLSearchParams(query), username);
@@ -173,5 +174,27 @@ describe("relativeTime", () => {
     ["2026-09-26T12:00:00Z", "2d"],
   ])("%s → %s", (iso, expected) => {
     expect(relativeTime(iso, now)).toBe(expected);
+  });
+});
+
+describe("timeAgo", () => {
+  const now = new Date("2026-09-28T12:00:00Z");
+  it("reads as a phrase for minutes and days", () => {
+    expect(timeAgo("2026-09-28T11:59:30Z", now)).toBe("just now");
+    expect(timeAgo("2026-09-28T11:55:00Z", now)).toBe("5m ago");
+    expect(timeAgo("2026-09-26T12:00:00Z", now)).toBe("2d ago");
+  });
+  it("gives a date without a year this year, and with one before", () => {
+    expect(timeAgo("2026-03-12T12:00:00Z", now)).toMatch(/^on .*Mar/);
+    expect(timeAgo("2026-03-12T12:00:00Z", now)).not.toContain("2026");
+    expect(timeAgo("2025-03-12T12:00:00Z", now)).toContain("2025");
+  });
+});
+
+describe("plural", () => {
+  it("picks the singular for one and the plural otherwise", () => {
+    expect(plural(1, "like", "likes")).toBe("like");
+    expect(plural(0, "like", "likes")).toBe("likes");
+    expect(plural(2, "person", "people")).toBe("people");
   });
 });

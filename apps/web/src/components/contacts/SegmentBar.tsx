@@ -66,7 +66,7 @@ export function SegmentBar({ filters, onApply }: { filters: ContactFilters; onAp
               <button
                 type="button"
                 aria-label={`Delete the ${segment.name} segment`}
-                className="mr-1 inline-flex size-6 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:size-8"
+                className="relative mr-1 inline-flex size-6 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:size-8 after:absolute after:content-[''] pointer-coarse:after:-inset-1"
                 onClick={() => setRemoving(segment)}
               >
                 <X className="size-3" aria-hidden />

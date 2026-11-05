@@ -35,7 +35,7 @@ import {
 } from "@/lib/api/queries";
 import type { ShopifyStatus } from "@/lib/api/types";
 import { browser } from "@/lib/billing/browser";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -113,8 +113,7 @@ function useShopifyReturn(wid: string) {
 }
 
 function ago(iso: string): string {
-  const short = relativeTime(iso);
-  return short === "now" ? "just now" : `${short} ago`;
+  return timeAgo(iso);
 }
 
 function ConnectionBadge({ status }: { status: ShopifyStatus }) {

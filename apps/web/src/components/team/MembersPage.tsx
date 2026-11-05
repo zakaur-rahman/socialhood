@@ -51,7 +51,10 @@ const ROLE_HELP: Record<TeamInvitableRole, string> = {
 
 function seatSummary(seats: TeamSeats): string {
   const pending = seats.pending_invitations;
-  const used = `${seats.members} of ${seats.limit ?? "unlimited"} seat${seats.limit === 1 ? "" : "s"} used`;
+  const used =
+    seats.limit === null
+      ? `${seats.members} seat${seats.members === 1 ? "" : "s"} used · no limit`
+      : `${seats.members} of ${seats.limit} seat${seats.limit === 1 ? "" : "s"} used`;
   return pending > 0 ? `${used}, plus ${pending} pending invitation${pending === 1 ? "" : "s"}.` : `${used}.`;
 }
 

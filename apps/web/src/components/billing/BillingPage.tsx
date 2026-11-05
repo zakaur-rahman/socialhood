@@ -183,7 +183,7 @@ export function BillingPage() {
               Usage
               {usageRanOut(state, workspace.timezone) ? (
                 <>
-                  <span aria-hidden className="ml-1.5 size-1.5 rounded-full bg-danger" data-testid="usage-ran-out" />
+                  <span aria-hidden className="ml-1.5 size-1.5 rounded-full bg-danger mark-forced" data-testid="usage-ran-out" />
                   <span className="sr-only"> (a limit has run out)</span>
                 </>
               ) : null}
@@ -257,7 +257,12 @@ function CurrentPlan({
     <div className="flex flex-wrap gap-2 md:justify-end">
       {notOnSale ? <p className="text-sm text-fg-secondary">{billingCopy.paidPlansSoon}</p> : null}
       {mayCheckout ? (
-        <Button size="lg" loading={checkout.pending} onClick={() => checkout.start("pro")}>
+        <Button
+          size="lg"
+          loading={checkout.pending && checkout.plan === "pro"}
+          disabled={checkout.pending && checkout.plan !== "pro"}
+          onClick={() => checkout.start("pro")}
+        >
           {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
         </Button>
       ) : null}

@@ -636,6 +636,27 @@ async def test_the_knowledge_characters_limit(
 # ---------------------------------------------------------------- retrieval (TR-AI-08)
 
 
+async def test_the_waiting_count_is_this_workspaces_and_only_for_who_can_approve(
+    ws: Ws, engine: AsyncEngine
+) -> None:
+    from tests.support.inbox import make_workspace
+
+    other = await make_workspace(engine)
+    await make_source(engine, workspace_id=ws.wid, status="awaiting_approval", chunks=False)
+    await make_source(engine, workspace_id=ws.wid, question="Ready?", chunks=False)
+    await make_source(engine, workspace_id=other, status="awaiting_approval", chunks=False)
+
+    assert (await ws.ok("GET", "/conversations/counts"))["knowledge_waiting"] == 1
+
+    await set_plan(engine, ws.wid, "max")  # a seat for the agent
+    await ws.ok("POST", "/invitations", 201, json={"email": "sam@example.com", "role": "agent"})
+    sam_id = ws.clerk.add(email="sam@example.com")
+    me = await ws.client.get("/v1/me", headers=ws.clerk.headers(sam_id))
+    assert me.status_code == 200, me.text
+    sam = Ws(ws.client, ws.clerk, sam_id, ws.wid, me.json()["id"], ws.account_id)
+    assert (await sam.ok("GET", "/conversations/counts"))["knowledge_waiting"] == 0
+
+
 async def test_retrieval_keeps_similar_chunks_of_ready_sources_in_this_workspace(
     engine: AsyncEngine, maker: async_sessionmaker[AsyncSession], clean_db: None
 ) -> None:

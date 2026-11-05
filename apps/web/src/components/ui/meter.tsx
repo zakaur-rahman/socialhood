@@ -112,7 +112,8 @@ function Meter({
   const limit = typeof max === "number" && max > 0 ? max : null
   const level = meterLevel(value, limit, kind)
   const tone = meterTone(level, kind)
-  const units = unit ? ` ${unit}` : ""
+  // A limit of one reads "1 of 1 member"; units are plural nouns.
+  const units = unit ? ` ${limit === 1 ? unit.replace(/s$/, "") : unit}` : ""
   const text =
     valueText ?? (limit ? `${count.format(value)} of ${count.format(limit)}${units}` : `${count.format(value)}${units} · no limit`)
   const share = limit ? Math.min(1, Math.max(0, value / limit)) : 0

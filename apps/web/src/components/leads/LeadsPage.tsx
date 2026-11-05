@@ -21,7 +21,7 @@ import { useContacts, useLeadSettings, useLeadSummary, useSetLeadStage, useUpdat
 import type { ContactListItem, LeadStage, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
 import { coldDayOptions, LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
@@ -239,7 +239,7 @@ function StageColumn({
 function LeadCard({ item, onOpen }: { item: ContactListItem; onOpen: () => void }) {
   const { id: wid, slug } = useCurrentWorkspace();
   const move = useSetLeadStage(wid);
-  const last = item.last_activity_at ? relativeTime(item.last_activity_at) : null;
+  const last = item.last_activity_at ? timeAgo(item.last_activity_at) : null;
   return (
     <li data-testid="lead-card" className={cn(cardVariants(), "space-y-2 p-3")}>
       <div className="flex items-start gap-3">
@@ -249,7 +249,7 @@ function LeadCard({ item, onOpen }: { item: ContactListItem; onOpen: () => void 
             {item.name}
           </button>
           <p className="truncate text-xs text-fg-secondary">
-            {[item.lead_score !== null && item.lead_score !== undefined ? `Score ${item.lead_score}` : null, last ? (last === "now" ? "Active just now" : `Active ${last} ago`) : null]
+            {[item.lead_score !== null && item.lead_score !== undefined ? `Score ${item.lead_score}` : null, last ? `Active ${last}` : null]
               .filter(Boolean)
               .join(" · ") || "No activity yet"}
           </p>
