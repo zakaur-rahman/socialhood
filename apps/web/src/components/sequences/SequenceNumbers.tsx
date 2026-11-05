@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
 import { useSequenceAnalytics } from "@/lib/api/queries";
 import type { SequenceAnalytics } from "@/lib/api/types";
+import { plural } from "@/lib/copy";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { CARD_TITLE, ITEM_TITLE, META } from "@/styles/tokens";
 
@@ -77,7 +78,7 @@ export function SequenceNumbers({ sequenceId }: { sequenceId: string }) {
           <Figure
             label="Replied"
             value={percent(stats.reply_rate)}
-            note={`${stats.replied} of ${stats.sent} messages, within ${stats.window_hours} hours`}
+            note={`${stats.replied} of ${stats.sent} ${plural(stats.sent, "message", "messages")}, within ${stats.window_hours} hours`}
           />
         </dl>
         <dl className="grid grid-cols-3 gap-4">

@@ -4,6 +4,7 @@ representative routes; the audit log; the routes under tenancy."""
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -349,3 +350,38 @@ async def test_another_workspace_cannot_see_or_touch_invitations(
     assert (await other.call("POST", f"/invitations/{created['id']}/resend")).status_code == 404
     cross = await client.get(f"/v1/w/{ws.wid}/members", headers=other.headers)
     assert cross.status_code == 404
+
+
+# ---------------------------------------------------------------- seats under load and downgrade
+
+
+async def test_invitations_sent_at_once_stop_at_the_seat_limit(ws: Ws, engine: AsyncEngine) -> None:
+    await set_plan(engine, ws.wid, "pro")  # two seats: the owner and one more
+    answers = await asyncio.gather(
+        *(
+            ws.client.post(
+                f"/v1/w/{ws.wid}/invitations",
+                json={"email": f"p{i}@example.com", "role": "agent"},
+                headers=ws.headers,
+            )
+            for i in range(5)
+        )
+    )
+    assert sorted(a.status_code for a in answers) == [201, 402, 402, 402, 402]
+
+
+async def test_after_a_downgrade_members_stay_and_nobody_new_joins(
+    ws: Ws, engine: AsyncEngine
+) -> None:
+    member = await join(ws, "kept@example.com")
+    await invite(ws, "late@example.com")
+    await set_plan(engine, ws.wid, "free")
+
+    assert ws.wid in await workspace_ids(ws, member)
+    person = await sign_in_invited(ws, "late@example.com")
+    assert ws.wid not in await workspace_ids(ws, person)
+    [waiting] = (await ws.ok("GET", "/invitations"))["items"]
+    assert waiting["status"] == "pending"
+
+    await set_plan(engine, ws.wid, "max")
+    assert ws.wid in await workspace_ids(ws, person)  # the next /v1/me joins them

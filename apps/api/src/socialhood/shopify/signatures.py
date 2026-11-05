@@ -16,6 +16,8 @@ import hashlib
 import hmac
 from collections.abc import Mapping
 
+from socialhood.security.signatures import same_text
+
 
 def sign_webhook(raw: bytes, secret: str) -> str:
     return base64.b64encode(hmac.new(secret.encode(), raw, hashlib.sha256).digest()).decode()
@@ -24,7 +26,7 @@ def sign_webhook(raw: bytes, secret: str) -> str:
 def verify_webhook(raw: bytes, header: str | None, secret: str) -> bool:
     if not header or not secret:
         return False
-    return hmac.compare_digest(sign_webhook(raw, secret), header.strip())
+    return same_text(sign_webhook(raw, secret), header.strip())
 
 
 def sign_query(params: Mapping[str, str], secret: str) -> str:
@@ -36,4 +38,4 @@ def verify_query(params: Mapping[str, str], secret: str) -> bool:
     given = params.get("hmac")
     if not given or not secret:
         return False
-    return hmac.compare_digest(sign_query(params, secret), given)
+    return same_text(sign_query(params, secret), given)

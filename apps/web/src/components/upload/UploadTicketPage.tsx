@@ -115,11 +115,11 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
             event.target.value = "";
           }}
         />
-        <Button type="button" disabled={progress !== null} onClick={() => input.current?.click()}>
+        <Button type="button" className="tabular-nums" disabled={progress !== null} onClick={() => input.current?.click()}>
           {progress === null ? "Choose a file" : `Uploading ${Math.round(progress * 100)}%`}
         </Button>
         {problem ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-sm text-danger-fg">
             {problem}
           </p>
         ) : null}

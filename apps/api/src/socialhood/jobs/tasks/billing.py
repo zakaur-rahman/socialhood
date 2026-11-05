@@ -8,7 +8,8 @@
   TR-TEN-04), then for each calls ``billing.reconcile.reconcile_one`` in that workspace's scope
   with ``billing.registry.get_dodo``: drift is corrected and logged, and a subscription past
   grace_until still on hold goes to Free (with the downgrade effects). A Dodo error skips that
-  workspace until the next run.
+  workspace until the next run, except that a subscription Dodo says it doesn't have goes to Free
+  once ``_settle_missing`` is sure of it.
 
 - cancel_orphan_subscription(subscription_id): bulk lane, queueing lock
   ``dodo_cancel:{subscription_id}``, queued by the Dodo webhook handler for a live subscription
@@ -31,9 +32,15 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from socialhood.billing import lifecycle
 from socialhood.billing.dodo import DodoClient, DodoError
 from socialhood.billing.orphans import cancel_orphan
-from socialhood.billing.reconcile import reconcile_one
+from socialhood.billing.reconcile import (
+    MISSING_RUNS,
+    dodo_key_works,
+    reconcile_one,
+    too_many_missing,
+)
 from socialhood.billing.registry import get_dodo
 from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
 from socialhood.jobs.app import BULK, app
@@ -48,6 +55,7 @@ from socialhood.settings import Settings
 log = get_logger(__name__)
 
 TIMEOUT_S = 300
+MISSING_KEY_TTL_S = 13 * 3600  # over two runs: a run that finds it lets the count lapse
 
 
 async def _paid_workspaces(session: AsyncSession) -> list[uuid.UUID]:
@@ -71,6 +79,7 @@ async def reconcile_all(
 ) -> dict[str, int]:
     now = now or datetime.now(UTC)
     counts = {"checked": 0, "corrected": 0, "failed": 0}
+    missing: list[uuid.UUID] = []
     async with sessionmaker() as session:
         workspace_ids = await _paid_workspaces(session)
     for workspace_id in workspace_ids:
@@ -89,8 +98,60 @@ async def reconcile_all(
                     log.exception("billing_reconcile_failed", workspace_id=str(workspace_id))
                     continue
         counts["corrected"] += int(result.drift)
+        if result.missing:
+            missing.append(workspace_id)
+    if missing and redis is not None and settings is not None:
+        counts["corrected"] += await _settle_missing(
+            sessionmaker, dodo, redis, settings, missing, checked=counts["checked"], now=now
+        )
     log.info("billing_reconcile_run", **counts)
     return counts
+
+
+async def _settle_missing(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    dodo: DodoClient,
+    redis: Redis,
+    settings: Settings,
+    missing: list[uuid.UUID],
+    *,
+    checked: int,
+    now: datetime,
+) -> int:
+    """Free for the subscriptions Dodo has said it doesn't have for MISSING_RUNS runs in a row.
+    Returns how many."""
+    if too_many_missing(len(missing), checked):
+        log.error(
+            "alert",
+            kind="billing_many_subscriptions_missing",
+            detail=f"Dodo has no record of {len(missing)} of {checked} paid subscriptions",
+        )
+        return 0
+    if not await dodo_key_works(dodo, settings):
+        log.warning("billing_missing_skipped", reason="the Dodo key can't read our product")
+        return 0
+    expired = 0
+    for workspace_id in missing:
+        key = f"billing:missing:{workspace_id}"
+        try:
+            runs = await redis.incr(key)
+            await redis.expire(key, MISSING_KEY_TTL_S)
+        except Exception as error:
+            log.warning("billing_missing_uncounted", error=type(error).__name__)
+            return expired
+        if runs < MISSING_RUNS:
+            continue
+        with workspace_scope(workspace_id):
+            async with sessionmaker() as session:
+                await lifecycle.expire_now(session, now=now, reason="Dodo has no such subscription")
+                await commit_and_publish(session, redis)
+        log.error(
+            "alert",
+            kind="billing_subscription_missing",
+            detail=f"workspace {workspace_id} moved to Free: Dodo has no such subscription",
+        )
+        expired += 1
+    return expired
 
 
 class DodoRetry(BaseRetryStrategy):

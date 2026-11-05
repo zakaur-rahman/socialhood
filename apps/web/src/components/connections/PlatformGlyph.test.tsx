@@ -5,7 +5,7 @@ import { filterCounts, matchesSearch, visibleAccounts } from "@/components/conne
 import { account } from "@/test/api";
 
 import { FacebookGlyph } from "./FacebookGlyph";
-import { PLATFORM_BG, PLATFORM_LOGO_BG, PlatformGlyph } from "./PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "./PlatformGlyph";
 
 describe("PlatformGlyph (GR-29)", () => {
   it("draws the Facebook mark for a Page, decorative", () => {
@@ -21,12 +21,6 @@ describe("PlatformGlyph (GR-29)", () => {
     const instagram = render(<PlatformGlyph platform="instagram" />).container.innerHTML;
     const whatsapp = render(<PlatformGlyph platform="whatsapp" />).container.innerHTML;
     expect(new Set([facebook, instagram, whatsapp]).size).toBe(3);
-  });
-
-  it("fills with the existing facebook colour token", () => {
-    expect(PLATFORM_BG.facebook).toBe("bg-facebook");
-    expect(PLATFORM_BG.instagram).toBe("bg-instagram");
-    expect(PLATFORM_BG.whatsapp).toBe("bg-whatsapp");
   });
 
   it("has the platforms' logo colours for badges that hold the glyph alone (C-135)", () => {
@@ -70,9 +64,5 @@ describe("PlatformGlyph (GR-28)", () => {
       return html;
     });
     expect(new Set(marks).size).toBe(3);
-  });
-
-  it("fills each platform's badge from its own token", () => {
-    expect(PLATFORM_BG).toEqual({ instagram: "bg-instagram", whatsapp: "bg-whatsapp", facebook: "bg-facebook", web: "bg-web" });
   });
 });

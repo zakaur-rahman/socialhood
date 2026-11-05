@@ -19,7 +19,7 @@ export function NotFoundPage({ children, className }: { children: ReactNode; cla
     >
       <NotFoundIllustration className="w-full max-w-xs sm:max-w-sm" />
       <p className="text-sm font-medium text-brand-fg">Error 404</p>
-      <h1 className="text-balance text-2xl font-semibold sm:text-3xl">We can&apos;t find that page</h1>
+      <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">We can&apos;t find that page</h1>
       <p className="max-w-md text-balance text-fg-secondary">
         The link may be mistyped, or the page may have moved or been deleted. These will get you going again.
       </p>

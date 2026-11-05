@@ -10,6 +10,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, CanReply, Session
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.schemas.inbox import (
@@ -29,16 +30,22 @@ def _cloudinary(request: Request) -> Cloudinary:
     return Cloudinary(request.app.state.http, request.app.state.settings)
 
 
-@router.post("/media-assets/upload-signature", operation_id="create_upload_signature")
+@router.post(
+    "/media-assets/upload-signature",
+    operation_id="create_upload_signature",
+    dependencies=[ratelimit.UPLOAD_SIGNATURE, ratelimit.UPLOAD_SIGNATURE_DAY],
+)
 async def create_upload_signature(
     request: Request, body: UploadSignatureRequest, ctx: CanReply, session: Session
 ) -> UploadSignature:
     """Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}."""
-    return media_assets.upload_signature(
+    return await media_assets.upload_signature(
         _cloudinary(request),
+        request.app.state.redis,
         ctx.workspace_id,
         purpose=body.purpose,
         resource_type=body.resource_type,
+        extension=body.extension,
     )
 
 

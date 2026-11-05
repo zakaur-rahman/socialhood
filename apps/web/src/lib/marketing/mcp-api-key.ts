@@ -28,10 +28,10 @@ export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "comments:read", body: "Read post comments, their topics and sentiment." },
   { scope: "analytics:read", body: "Read post and account analytics." },
   { scope: "knowledge:read", body: "Search the knowledge base." },
-  { scope: "knowledge:write", body: "Add a text note or a website to the knowledge base." },
+  { scope: "knowledge:write", body: "Draft a note or a question and answer for a person to approve." },
   { scope: "automations:read", body: "Read automations and their runs." },
-  { scope: "automations:write", body: "Pause and resume automations." },
-  { scope: "automations:create", body: "Create and change keyword automations, and turn new ones on. Creator and Business." },
+  { scope: "automations:write", body: "Pause automations." },
+  { scope: "automations:create", body: "Draft and change keyword automations for a person to turn on. Creator and Business." },
   { scope: "ask", body: "Ask Amplychat's own assistant (uses AI credits)." },
 ];
 

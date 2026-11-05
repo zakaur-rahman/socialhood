@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from redis.exceptions import RedisError
 
 from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.errors import ApiError
 from socialhood.realtime import stream
 from socialhood.realtime.events import stream_key
@@ -42,9 +43,14 @@ async def stream_events(
     # The stream stays open for minutes: give the database connection back now.
     await session.close()
     reader = stream.connect(request.app.state.settings.redis_url, ctx.workspace_id)
+    sees_posts = has_permission(ctx.role, Permission.PUBLISHING_MANAGE)
     return StreamingResponse(
         stream.event_stream(
-            reader, ctx.workspace_id, start, is_disconnected=request.is_disconnected
+            reader,
+            ctx.workspace_id,
+            start,
+            is_disconnected=request.is_disconnected,
+            hidden=frozenset() if sees_posts else stream.PUBLISHING_EVENTS,
         ),
         media_type="text/event-stream",
         headers=stream.HEADERS,

@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SearchInput } from "@/components/ui/search-input";
 import {
   Select,
@@ -426,25 +427,49 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       title="Automations"
       actions={
         <>
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
           </Button>
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
           </Button>
           {broadcastsOn ? (
-            <Button asChild variant="secondary" size="lg">
+            <Button asChild variant="secondary" size="lg" className="max-md:hidden">
               <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
             </Button>
           ) : availability.isPending ? (
             // Holds the button's place until the flag is known, so the header doesn't re-wrap.
-            <Button variant="secondary" size="lg" className="pointer-events-none invisible" aria-hidden tabIndex={-1}>
+            <Button variant="secondary" size="lg" className="pointer-events-none invisible max-md:hidden" aria-hidden tabIndex={-1}>
               Broadcasts
             </Button>
           ) : null}
-          <Button asChild variant="secondary" size="lg">
+          <Button asChild variant="secondary" size="lg" className="max-md:hidden">
             <Link href={`/w/${workspace.slug}/sequences` as Route}>Sequences</Link>
           </Button>
+          {/* Phones: the same four links in one menu, so the list starts higher up. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="lg" className="md:hidden">
+                More
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
+              </DropdownMenuItem>
+              {broadcastsOn ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem asChild>
+                <Link href={`/w/${workspace.slug}/sequences` as Route}>Sequences</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
           </Button>
@@ -592,7 +617,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           <div
             role="region"
             aria-label="Selected automations"
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-line bg-brand-soft px-4 py-2 text-sm"
+            className="flex flex-wrap items-center gap-3 rounded-xl bg-raised px-4 py-2 text-sm"
           >
             <span className="font-medium tabular-nums">{selectedIds.length} selected</span>
             <Button size="sm" variant="secondary" onClick={pauseSelected} disabled={bulkPause.isPending}>
@@ -657,21 +682,25 @@ function SummaryStrip({
       hint: summary?.waiting ? (eta ? `All sent in ${eta}` : "In the private-reply queue") : "Nobody waiting",
     },
   ];
+  // One line, so the automations come first; it wraps on a narrow screen, where the hints are for
+  // screen readers only.
   return (
-    <section aria-label="Last 7 days" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {figures.map((figure) => (
-        <Card key={figure.label}>
-          <p className="text-xs text-fg-secondary">{figure.label}</p>
-          {loading ? (
-            <Skeleton className="mt-2 h-7 w-16" />
-          ) : (
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {figure.value === undefined ? "—" : formatCount(figure.value)}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-fg-secondary">{figure.hint}</p>
-        </Card>
-      ))}
+    <section aria-label="Last 7 days">
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        {figures.map((figure) => (
+          <div key={figure.label} className="flex items-baseline gap-1.5">
+            <dt className="text-fg-secondary">{figure.label}</dt>
+            <dd className="flex items-baseline gap-1.5">
+              {loading ? (
+                <Skeleton className="h-3.5 w-8 self-center" />
+              ) : (
+                <span className="font-semibold tabular-nums">{figure.value === undefined ? "—" : formatCount(figure.value)}</span>
+              )}
+              <span className="text-xs text-fg-secondary max-md:sr-only">{figure.hint}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

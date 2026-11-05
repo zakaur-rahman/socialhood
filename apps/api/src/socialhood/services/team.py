@@ -4,7 +4,9 @@ Rules (C-106):
 - Roles: owner, admin, agent. Owners invite admins or agents; admins invite agents only. Only
   owners change a role, remove a member or move ownership.
 - Seats: the plan's ``members`` limit counts members plus pending invitations that haven't
-  expired. Inviting past it is a 402 ``quota_exceeded`` naming ``members``.
+  expired. Inviting past it is a 402 ``quota_exceeded`` naming ``members``. A workspace above the
+  limit after a downgrade keeps its members, who keep their access; nobody new joins until it is
+  back under (auth/accept_invitations.py leaves their invitation pending).
 - An invitation is one row per workspace and email while pending. Clerk sends the email and holds
   the secret link; we keep no token. A person who already has an account gets a plain email from
   us instead (Clerk refuses to invite a known address) and joins the next time they sign in.
@@ -274,6 +276,7 @@ async def invite(
             raise ApiError("conflict", ALREADY_INVITED)
         existing.status = InvitationStatus.REVOKED  # an expired one makes way for a new one
         await session.flush()
+    await workspaces.lock_limit(session, "members", ctx.workspace_id)
     await _require_seat(session, now)
     invitation = WorkspaceInvitation(
         workspace_id=ctx.workspace_id,
@@ -316,6 +319,7 @@ async def resend(
         raise ApiError("conflict", "That invitation was already used or revoked.")
     _may_manage(ctx, invitation)
     if effective_status(invitation, now) == "expired":
+        await workspaces.lock_limit(session, "members", ctx.workspace_id)
         await _require_seat(session, now)  # an expired invitation held no seat
     if invitation.clerk_invitation_id:
         try:

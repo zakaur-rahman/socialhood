@@ -10,7 +10,13 @@ counts. Or ``failed`` with the reason in plain words, and no chunks.
 
 No transaction is open while a page, a file or the model is awaited. The source row is locked
 and its version re-checked before anything is written, so an edit made during ingestion wins: the
-older job's result is dropped and the newer job does the work.
+older job's result is dropped and the newer job does the work. A page's or file's length is only
+known once it is read, so knowledge_characters is checked again there, under the workspace's lock:
+jobs running side by side can't all fit in the same room.
+
+Embedding costs us money and no credits, so a workspace may embed EMBED_DAILY_PLAN_MULTIPLE times
+its plan's knowledge_characters in a day, whichever way the sources got here (the app, an AI app or
+a crawl). Past it a source fails with a reason and can be tried again tomorrow.
 
 Transient failures (timeouts, 5xx, a retryable AI error) raise ``RetryLater`` while the job has
 attempts left, leaving the source ``processing``; on the final attempt they mark it failed
@@ -27,6 +33,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 import httpx
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.ai.provider import AIError
@@ -36,6 +43,7 @@ from socialhood.db.tenancy import workspace_scope
 from socialhood.models.ai import EMBED_DIM, KnowledgeChunk, KnowledgeStatus, KnowledgeType
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import knowledge as repo
+from socialhood.repositories import workspaces
 from socialhood.security import ssrf
 from socialhood.services.knowledge import extract
 from socialhood.services.knowledge.chunking import split_faq, split_text, with_title
@@ -48,6 +56,10 @@ EMBED_BATCH = 100  # TR-AI-08
 DOWNLOAD_TIMEOUT_S = 30.0
 GENERIC_FAILURE = "Couldn't process this source. Try again in a few minutes."
 DOWNLOAD_FAILED = "Couldn't download the file from storage. Upload it again."
+EMBED_DAILY_PLAN_MULTIPLE = 5
+EMBED_LIMIT_REACHED = "You've processed a lot of knowledge today. Try this source again tomorrow."
+# Their length is only known after reading; an FAQ's or note's was checked when it was saved.
+COUNTED_ONCE_READ = (KnowledgeType.URL, KnowledgeType.FILE, KnowledgeType.PAGE)
 
 IngestOutcome = Literal["ready", "failed", "stale"]
 
@@ -93,6 +105,7 @@ async def ingest_source(
     version: int,
     will_retry: bool,
     now: datetime | None = None,
+    redis: Redis | None = None,
 ) -> IngestOutcome:
     """Ingest ``version`` of the source; "stale" when it is gone, newer, or already done."""
     with workspace_scope(workspace_id):
@@ -102,6 +115,9 @@ async def ingest_source(
         try:
             prepared = await _prepare(sessionmaker, http, source_id, work)
             contents = [with_title(prepared.title, body) for body in prepared.bodies]
+            await _spend_embed_budget(
+                sessionmaker, redis, workspace_id, sum(map(len, contents)), now or datetime.now(UTC)
+            )
             vectors = await _embed(contents)
         except _Transient as failure:
             if will_retry:
@@ -115,7 +131,14 @@ async def ingest_source(
             log.exception("knowledge_ingest_crashed", source_id=str(source_id))
             return await _fail(sessionmaker, source_id, version, work, GENERIC_FAILURE)
         return await _store(
-            sessionmaker, source_id, version, prepared, contents, vectors, now or datetime.now(UTC)
+            sessionmaker,
+            source_id,
+            version,
+            work,
+            prepared,
+            contents,
+            vectors,
+            now or datetime.now(UTC),
         )
 
 
@@ -128,6 +151,8 @@ async def _begin(
             return None
         if source.status in (KnowledgeStatus.READY, KnowledgeStatus.FAILED):
             return None  # this version is done (a repeated job)
+        if source.status == KnowledgeStatus.AWAITING_APPROVAL:
+            return None  # read in, and paid for, once a person approves it
         kind = KnowledgeType(source.type)
         asset = await repo.get_asset(session, source.file_asset_id)
         work = _Work(
@@ -169,7 +194,7 @@ async def _prepare(
         if not work.file_url or not work.file_format:
             raise _Failed("The file is missing. Upload it again.")
         data = await _download(http, work.file_url, work.file_format)
-        text = await _extract(extract.file_text, data, work.file_format)
+        text = await _extract(extract.file_text_isolated, data, work.file_format)
     await _check_quota(sessionmaker, source_id, len(text))
     return _prepared(title, text, len(text))
 
@@ -228,16 +253,47 @@ async def _check_quota(
 ) -> None:
     """A page or file whose text would pass knowledge_characters fails (§1.7)."""
     async with sessionmaker() as session:
+        refusal = await _over_quota(session, source_id, chars)
+    if refusal is not None:
+        raise _Failed(refusal)
+
+
+async def _over_quota(session: AsyncSession, source_id: uuid.UUID, chars: int) -> str | None:
+    limit = entitlement(await current_plan(session), "knowledge_characters")
+    if limit is None:
+        return None
+    used = await repo.characters_used(session, exclude=source_id)
+    if used + chars <= limit:
+        return None
+    left = max(limit - used, 0)
+    return (
+        f"This source has {chars:,} characters, more than the {left:,} left on your plan. "
+        "Remove other sources or upgrade."
+    )
+
+
+async def _spend_embed_budget(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis | None,
+    workspace_id: uuid.UUID,
+    chars: int,
+    now: datetime,
+) -> None:
+    """Count ``chars`` against the workspace's day. Valkey being down lets it through, like every
+    other limit (security/ratelimit.py)."""
+    if redis is None:
+        return
+    async with sessionmaker() as session:
         limit = entitlement(await current_plan(session), "knowledge_characters")
-        if limit is None:
-            return
-        used = await repo.characters_used(session, exclude=source_id)
-    if used + chars > limit:
-        left = max(limit - used, 0)
-        raise _Failed(
-            f"This source has {chars:,} characters, more than the {left:,} left on your plan. "
-            "Remove other sources or upgrade."
-        )
+    key = f"kb_embed:{workspace_id}:{now:%Y%m%d}"
+    try:
+        used = await redis.incrby(key, chars)
+        await redis.expire(key, 2 * 86_400)
+    except Exception as error:
+        log.warning("knowledge_embed_budget_unavailable", error=type(error).__name__)
+        return
+    if limit is not None and used > limit * EMBED_DAILY_PLAN_MULTIPLE:
+        raise _Failed(EMBED_LIMIT_REACHED)
 
 
 async def _embed(contents: Sequence[str]) -> list[list[float]]:
@@ -264,6 +320,7 @@ async def _store(
     sessionmaker: async_sessionmaker[AsyncSession],
     source_id: uuid.UUID,
     version: int,
+    work: _Work,
     prepared: _Prepared,
     contents: Sequence[str],
     vectors: Sequence[list[float]],
@@ -274,6 +331,12 @@ async def _store(
         source = await repo.get_source(session, source_id, for_update=True)
         if source is None or source.version != version:
             return "stale"  # edited or deleted meanwhile: the newer job decides
+        if work.kind in COUNTED_ONCE_READ:
+            await workspaces.lock_limit(session, "knowledge_characters", source.workspace_id)
+            refusal = await _over_quota(session, source_id, prepared.char_count)
+            if refusal is not None:
+                await session.rollback()
+                return await _fail(sessionmaker, source_id, version, work, refusal)
         chunks = [
             KnowledgeChunk(
                 source_id=source_id,

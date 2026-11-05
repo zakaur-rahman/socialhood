@@ -37,7 +37,7 @@ export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Creator", 
  */
 export function PlanBadge({ plan, className }: { plan: Plan; className?: string }) {
   return (
-    <Badge tone="brand" size="sm" shape="tag" className={className}>
+    <Badge tone="neutral" size="sm" shape="tag" className={className}>
       {PLAN_LABEL[plan]}
     </Badge>
   );
@@ -84,11 +84,11 @@ export function WorkspaceMenu({
       <LogoMark />
       <span aria-hidden={collapsed} className={cn("flex min-w-0 flex-1 items-center gap-2.5 whitespace-nowrap", sidebarFadeClass(!collapsed))}>
           <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">Amplychat</span>
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold">Amplychat</span>
+              <span className="min-w-0 truncate text-xs text-fg-secondary">{workspace.name}</span>
               <PlanBadge plan={workspace.plan} />
             </span>
-            <span className="block truncate text-xs text-fg-secondary">{workspace.name}</span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-fg-secondary" aria-hidden />
       </span>
@@ -112,7 +112,7 @@ export function WorkspaceMenu({
         <DropdownMenuItem aria-current="true" className="gap-2 py-1.5">
           <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
           <PlanBadge plan={workspace.plan} />
-          <Check className="text-brand-fg" aria-hidden />
+          <Check aria-hidden />
         </DropdownMenuItem>
         {others.map((other) => (
           <DropdownMenuItem key={other.slug} asChild className="gap-2 py-1.5">

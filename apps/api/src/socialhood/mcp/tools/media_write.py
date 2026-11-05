@@ -7,7 +7,9 @@ import_media_from_url. No media bytes pass through the API.
 - ``finish_media_upload`` checks the file arrived with that ticket and registers it in the media
   library with the library's own rules.
 - ``import_media_from_url`` takes a public https link: its address is checked here (public
-  addresses only, at every redirect), then storage fetches it.
+  addresses only, at every redirect), then storage fetches it. Reaching the link tells its host
+  the whole address, so it is previewed first (mcp/confirmations.py), with nothing fetched, and
+  the address is limited in length (``mcp_uploads.check_import_link``).
 
 ``get_media_upload`` (tools/media.py) reads a ticket, for the drop page flow. A ticket id is a
 handle the model passes back, looked up in the connection's workspace like any other id. The
@@ -24,8 +26,16 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from socialhood.mcp import confirmations
 from socialhood.mcp.context import ToolCall
-from socialhood.mcp.registry import Access, WriteInput, WriteOutput, registry, tool
+from socialhood.mcp.registry import (
+    Access,
+    ConfirmedInput,
+    WriteInput,
+    WriteOutput,
+    registry,
+    tool,
+)
 from socialhood.mcp.tools.common import moment
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.models.identity import Role
@@ -38,8 +48,11 @@ def cloudinary_of(call: ToolCall) -> Cloudinary:
 
 
 class UploadedMedia(WriteOutput):
-    upload_id: uuid.UUID
-    status: str  # uploaded or rejected
+    upload_id: uuid.UUID | None = None  # none on a preview
+    status: str  # uploaded or rejected; preview before an import is confirmed
+    source_host: str | None = None  # a preview's: who would be contacted
+    source_url: str | None = None
+    next_step: str | None = None
     media_id: uuid.UUID | None = None  # what create_post takes
     type: str | None = None  # image, video
     format: str | None = None
@@ -111,7 +124,7 @@ def curl_command(fields: dict[str, Any], url: str, filename: str | None) -> str:
     if any(c in name for c in '"$`'):
         name = "FILE"
     parts = [f'-F "file=@{name}"']
-    for key in ("api_key", "timestamp", "folder", "tags", "signature"):
+    for key in ("api_key", "timestamp", "folder", "tags", "allowed_formats", "signature"):
         if key in fields:
             parts.append(f'-F "{key}={fields[key]}"')
     return f"curl -sS {' '.join(parts)} {url}"
@@ -215,11 +228,12 @@ async def finish_media_upload(call: ToolCall, args: FinishMediaUploadInput) -> U
 # ---------------------------------------------------------------- import_media_from_url
 
 
-class ImportMediaInput(WriteInput):
+class ImportMediaInput(ConfirmedInput):
     url: str = Field(
         min_length=8,
         max_length=2000,
-        description="A public https link to the image or video file itself.",
+        description="A public https link to the image or video file itself, at most 500 "
+        "characters.",
     )
     kind: Literal["image", "video"] | None = Field(
         default=None, description="Checked against what the link serves."
@@ -233,8 +247,10 @@ class ImportMediaInput(WriteInput):
     description=(
         "Add an image or video to the media library from a public https link to the file itself "
         "(a CDN link, or a Drive or Dropbox direct-download link). Links to private networks are "
-        "refused, as are web pages and files over the limits. Returns the media_id that "
-        "create_post takes."
+        "refused, as are web pages, very long links and files over the limits. Previewed "
+        "first, with nothing fetched: show the member the link and its host, and call again only "
+        "after they agree, with confirmed true and its confirmation_token. Returns the media_id "
+        "that create_post takes."
     ),
     input_model=ImportMediaInput,
     output_model=UploadedMedia,
@@ -244,6 +260,19 @@ class ImportMediaInput(WriteInput):
     open_world=True,
 )
 async def import_media_from_url(call: ToolCall, args: ImportMediaInput) -> UploadedMedia:
+    host = mcp_uploads.check_import_link(args.url)
+    if not args.confirmed:
+        return UploadedMedia(
+            summary=f"Preview: Amplychat would fetch this file from {host[:253]}. Nothing is "
+            "fetched yet",
+            status="preview",
+            source_host=host,
+            source_url=args.url,
+            preview=True,
+            confirmation_token=confirmations.issue(call, args),
+            next_step=confirmations.next_step("import it"),
+        )
+    confirmations.require(call, args, args.confirmation_token)
     finished = await mcp_uploads.import_url(
         call.session,
         cloudinary_of(call),

@@ -9697,3 +9697,25 @@ Step 2 of 2. Owner decisions, 2026-11-03 and 2026-11-04:
 - **Refunds.** The owner's wording is on `/refunds` and `/terms`, dated 2026-11-04. Nothing automates it: a refund is the owner's action in Dodo, `refund.*` events are only logged, so a refunded subscription must also be cancelled in Dodo or the plan stays on.
 - **Plan changes aren't built (owner to decide).** Checkout still refuses a workspace with a paid plan. Dodo's docs: the portal can upgrade or downgrade only between products in the same Product Collection with "Allow Subscription Updates" on, which is off by default (https://docs.dodopayments.com/features/customer-portal). The API is `POST /subscriptions/{id}/change-plan` (https://docs.dodopayments.com/api-reference/subscriptions/change-plan). A move to a longer interval runs as `prorated_immediately` and resets the billing date; a move to a shorter one is a 422 unless it is `full_immediately` with `effective_at: next_billing_date` (https://docs.dodopayments.com/developer-resources/subscription-upgrade-downgrade). `subscription.plan_changed` is already handled.
 - **Left as they are.** Static copy naming "Creator and Business" as the plans with a feature (`FEATURES` in `entitlements.py`, `aiCopy`, feature pages' three-column limit tables) is still true and doesn't name Agency. Lifecycle notifications use `plan.capitalize()`, so they say "Pro" and "Max" as before C-174, and "Agency".
+
+## C-176 · Access, limits and approvals tightened
+
+- **Refunds and marking an order paid** are now admin and owner only, through a new `orders.money` permission. Agents no longer record UPI payments.
+- **A person approves what AI apps add (owner, 2026-11-04).** Over MCP, automations are always created off and can't be turned on: `turn_on` and `resume_automation` are gone, leaving 27 tools. An automation that is on can't be edited until it's paused. Knowledge added over MCP waits with status `awaiting_approval` on the Knowledge page, isn't embedded or used until approved, and counts toward the plan's limit while waiting. There is deliberately no switch to turn this off. Scheduled posts still use the preview and confirmation only, because scheduling from AI apps is the core of the feature.
+- **Auto replies need a source** unless the message is small talk by its words alone, and numbers they state must come from their sources. Replies without one go to a person, so clarifying questions and emoji replies are no longer sent automatically.
+- **Caps chosen (decide-small-calls).** Website widget: 120 sends a minute per widget, AI on 40 messages a day per visitor and credits ÷ 10 a day per workspace; over a cap the message is stored and a person answers. AI analysis: 30 an hour and 60 a day per contact. Uploads: 200 signatures an hour and 1,000 a day. Knowledge: 120 changes an hour and a daily embedding budget of 5× the plan's characters. Comments flagged for hiding are re-read alone, at most 10 a batch at no credit cost; the rest stay visible.
+- **Files.** DOCX and PDF extract in a child process with size, ratio, time and text limits. The memory cap applies on Linux only.
+- **Billing.** Checkout signs the workspace in metadata, and subscriptions already stored still route by id. A subscription Dodo reports missing expires after 4 runs in a row if the key works; if many are missing it only alerts, so going live needs `reset_test_plans` (docs/ops/deploy-vm.md).
+- **Privacy.** A hash of an owner's email is kept 3 years from their trial, through account deletion, so each email gets the trial once. Stated in the Privacy Policy and enforced by `purge_expired`. It's a plain SHA-256, so the policy calls it scrambled, not anonymous.
+- **The public API's accounts** list every connected platform, and contacts filter by all of them. Website chat and Facebook accounts were rejected before.
+
+## C-177 · A plainer app theme (owner, 2026-11-05)
+
+The owner felt the dark theme looked like a generic AI product, and asked for it to change. This replaces C-128's glass cards and ambient light in the app. The public site keeps its own look, with its shared tokens pinned under `.site`.
+
+- **Dark** is a neutral grey with little blue: canvas `#141416`, panel `#1E1E21`. **Light** keeps `#F5F6FB` and `#FFFFFF`.
+- **One solid accent,** `#5550E0`, on main actions, AI moments, links and focus. No gradients on buttons or the logo tile. The hue stays the brand's; choosing a new one is the owner's call. Favicons and app icons keep their artwork for now.
+- **Cards are solid and borderless,** with no page glow, grain or blur, in menus too. Spacing and quieter surfaces separate sections; borders stay where they mean something, like inputs, tables and selected states.
+- **Automations** opens with a one-line summary instead of a row of tiles. **Home** keeps its figures in one band.
+- **Light input fields are white** (`field-input`), and a chosen segment has its own token (`segment`). Secondary buttons have a `line` edge so they hold on tinted panels.
+- **At larger browser font sizes,** pane limits scale with the root size, and the inbox filters collapse into one control when space is short.

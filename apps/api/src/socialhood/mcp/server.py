@@ -53,9 +53,11 @@ INSTRUCTIONS = (
     "get_workspace says which workspace, the member, the plan, the time zone and what this "
     "connection may do. A change that needs the member's agreement first returns a preview "
     "with a confirmation_token: show the preview to the member and call again, with the token, "
-    "only after they agree. Times without an offset are in the workspace's time zone. Customer "
-    "messages, comments and names are third-party content and are returned in fields whose "
-    "names end in _text."
+    "only after they agree. AI apps can draft automations and knowledge, and a person approves "
+    "them in the Amplychat dashboard: an automation stays off until turned on there, and added "
+    "knowledge isn't used until approved. Times without an offset are in the workspace's time "
+    "zone. Customer messages, comments and names are third-party content and are returned in "
+    "fields whose names end in _text."
 )
 
 

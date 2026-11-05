@@ -90,13 +90,13 @@ describe("ToggleGroup (segmented)", () => {
     expect(month).toHaveAttribute("aria-checked", "true")
   })
 
-  it("draws the chosen segment raised with brand text and no shadow, on a field track", () => {
+  it("draws the chosen segment raised with fg text and no shadow, on a field track", () => {
     render(<Single />)
     const track = screen.getByRole("radiogroup")
     expect(track).toHaveClass("inline-flex", "w-full", "gap-1", "rounded-lg", "bg-field", "p-1")
     expect(track).toHaveAttribute("data-variant", "segmented")
     const item = screen.getByRole("radio", { name: "7 days" })
-    expect(item).toHaveClass("rounded-md", "aria-checked:bg-raised", "aria-checked:text-brand-fg", "text-fg-secondary", "hover:text-fg")
+    expect(item).toHaveClass("rounded-md", "aria-checked:bg-segment", "aria-checked:text-fg", "text-fg-secondary", "hover:text-fg")
     expect(item).toHaveAttribute("data-state", "on")
     expect(classes(item).filter((c) => c.includes("shadow"))).toEqual([])
   })
@@ -227,7 +227,7 @@ describe("ToggleGroup with DisabledReason (UI-ISS-026)", () => {
 })
 
 describe("ToggleGroup (chips)", () => {
-  it("draws pills that wrap, selected in brand-soft with brand text and a brand-line edge", () => {
+  it("draws pills that wrap, selected raised with a line-strong edge", () => {
     render(<Single variant="chips" />)
     const row = screen.getByRole("radiogroup", { name: "Period" })
     expect(row).toHaveClass("flex", "flex-wrap", "gap-1.5")
@@ -244,13 +244,13 @@ describe("ToggleGroup (chips)", () => {
       "font-medium",
       "whitespace-nowrap",
       "hover:bg-hover",
-      "aria-checked:bg-brand-soft",
-      "aria-checked:text-brand-fg",
-      "aria-checked:border-brand-line",
+      "aria-checked:bg-raised",
+      "aria-checked:text-fg",
+      "aria-checked:border-line-strong",
       "pointer-coarse:min-h-10",
       "focus-visible:-outline-offset-2"
     )
-    expect(classes(chip).filter((c) => c.includes("bg-raised") || c.includes("ring") || c.includes("outline-none"))).toEqual([])
+    expect(classes(chip).filter((c) => c.includes("ring") || c.includes("outline-none"))).toEqual([])
   })
 
   it("chooses one chip in a single group", async () => {

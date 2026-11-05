@@ -620,3 +620,64 @@ async def test_no_path_but_a_signed_event_grants_pro(
     counts = await reconcile_all(owner.app.state.sessionmaker, fake_dodo)
     assert counts["checked"] == 0  # only paid subscriptions are reconciled
     assert ((await owner.sub())["plan"], (await owner.sub())["status"]) == ("free", "free")
+
+
+# ---------------------------------------------------------------- proof of our checkout
+
+
+async def test_metadata_our_checkout_didnt_sign_grants_nothing(owner: Owner) -> None:
+    data = subscription(owner.wid, subscription_id="sub_link")
+    data["metadata"] = {"workspace_id": owner.wid}
+    row = await owner.event("subscription.active", data)
+
+    assert (row["status"], row["last_error"]) == ("ignored", "no workspace for this event")
+    assert (await owner.sub())["plan"] == "free"
+    assert await orphan_cancels(owner) == []
+
+
+async def test_a_subscription_already_stored_keeps_working_without_a_signature(
+    owner: Owner,
+) -> None:
+    await make_pro(owner)
+    data = subscription(owner.wid, status="on_hold")
+    data["metadata"] = {"workspace_id": owner.wid}
+    row = await owner.event("subscription.on_hold", data)
+
+    assert (row["status"], str(row["workspace_id"])) == ("processed", owner.wid)
+
+
+async def test_a_second_trial_grants_nothing_and_is_cancelled(owner: Owner) -> None:
+    async with owner.engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE workspaces SET trial_used_at = now() WHERE id = :w"), {"w": owner.wid}
+        )
+    started = ago(minutes=1)
+    row = await owner.event(
+        "subscription.active",
+        subscription(owner.wid, trial_period_days=7, created_at=started, period_start=started),
+    )
+
+    assert (row["status"], row["last_error"]) == ("ignored", "the trial has already been used")
+    assert (await owner.sub())["plan"] == "free"
+    assert [job["args"] for job in await orphan_cancels(owner)] == [
+        {"subscription_id": "sub_test_1"}
+    ]
+
+
+async def test_the_trial_is_remembered_by_email_after_the_account_is_gone(
+    owner: Owner, client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    started = ago(minutes=1)
+    await owner.event(
+        "subscription.active",
+        subscription(owner.wid, trial_period_days=7, created_at=started, period_start=started),
+    )
+    async with owner.engine.begin() as conn:
+        await conn.execute(text("DELETE FROM workspaces WHERE id = :w"), {"w": owner.wid})
+        await conn.execute(text("DELETE FROM users WHERE lower(email) = 'owner@example.com'"))
+
+    again_id, again = await sign_in(client, clerk, email="Owner@Example.com")
+    response = await client.get(
+        f"/v1/w/{again['workspaces'][0]['id']}/billing", headers=clerk.headers(again_id)
+    )
+    assert response.json()["trial_eligible"] is False

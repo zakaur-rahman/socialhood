@@ -48,7 +48,7 @@ describe("Meter (UI-022)", () => {
     const meter = screen.getByRole("meter", { name: "Scheduled posts" });
     expect(meter).toHaveClass("h-1.5", "rounded-full", "bg-raised", "overflow-hidden");
     const fill = slot("meter-fill");
-    expect(fill).toHaveClass("bg-brand-gradient-decor", "rounded-full", "motion-reduce:transition-none");
+    expect(fill).toHaveClass("bg-fg-secondary", "rounded-full", "motion-reduce:transition-none");
     expect(fill).toHaveStyle({ width: "30%" });
     expect(slot("meter")).toHaveAttribute("data-level", "normal");
     expect(slot("meter-value")).toHaveClass("text-fg-secondary");
@@ -96,7 +96,7 @@ describe("Meter (UI-022)", () => {
     const root = slot("meter");
     expect(root).toHaveAttribute("data-kind", "slot");
     expect(root).toHaveAttribute("data-level", "full");
-    expect(slot("meter-fill")).toHaveClass("bg-brand-gradient-decor");
+    expect(slot("meter-fill")).toHaveClass("bg-fg-secondary");
     expect(slot("meter-fill")).not.toHaveClass("bg-danger");
     expect(slot("meter-value")).toHaveClass("text-fg-secondary");
     expect(screen.getByText("All used")).toBeVisible();
@@ -109,7 +109,7 @@ describe("Meter (UI-022)", () => {
   it("says All used for a full slot even without a message, and never warns it at 80%", () => {
     const { rerender } = render(<Meter label="Active automations" kind="slot" value={4} max={5} />);
     expect(slot("meter")).toHaveAttribute("data-level", "normal");
-    expect(slot("meter-fill")).toHaveClass("bg-brand-gradient-decor");
+    expect(slot("meter-fill")).toHaveClass("bg-fg-secondary");
     expect(screen.queryByText("All used")).toBeNull();
     rerender(<Meter label="Active automations" kind="slot" value={5} max={5} />);
     expect(screen.getByText("All used")).toBeVisible();
@@ -119,7 +119,7 @@ describe("Meter (UI-022)", () => {
     render(<Meter label="WhatsApp accounts" kind="slot" value={3} max={1} unit="accounts" />);
     const meter = screen.getByRole("meter", { name: "WhatsApp accounts" });
     expect(meter).toHaveAttribute("aria-valuenow", "1");
-    expect(meter).toHaveAttribute("aria-valuetext", "3 of 1 accounts");
+    expect(meter).toHaveAttribute("aria-valuetext", "3 of 1 account");
     expect(slot("meter-fill")).toHaveStyle({ width: "100%" });
   });
 

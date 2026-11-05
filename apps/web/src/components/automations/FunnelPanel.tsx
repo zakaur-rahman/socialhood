@@ -5,8 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAutomationFunnel } from "@/lib/api/queries";
 import type { AutomationFunnel, FunnelStep, SplitResult } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
+import { renderFields } from "@/lib/automations/render";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
+
+import { SAMPLE_CONTACT } from "./PreviewPane";
 
 /** The figures worth showing for one step: only those that can happen at its kind of step. */
 export function stepFigures(step: FunnelStep): { label: string; value: string }[] {
@@ -79,13 +82,15 @@ export function FunnelView({ funnel }: { funnel: AutomationFunnel }) {
             key={step.step_id}
             data-testid="funnel-step"
             data-step={step.step_id}
-            className={cn("rounded-lg border border-line p-3", step.reached === 0 && "opacity-70")}
+            className={cn("rounded-lg border p-3", step.reached === 0 ? "border-line-subtle" : "border-line")}
           >
             <p className="text-sm font-medium">
               <span className="text-fg-secondary tabular-nums">{index + 1}. </span>
               {step.title}
             </p>
-            {step.text ? <p className="mt-0.5 line-clamp-2 text-xs text-fg-secondary">{step.text}</p> : null}
+            {step.text ? (
+              <p className="mt-0.5 line-clamp-2 text-xs text-fg-secondary">{renderFields(step.text, SAMPLE_CONTACT)}</p>
+            ) : null}
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               {stepFigures(step).map((figure) => (
                 <span key={figure.label}>

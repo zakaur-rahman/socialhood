@@ -76,8 +76,8 @@ describe("ConversationList (UX-INB-04, TR-FE-08)", () => {
     );
     const rows = screen.getAllByRole("link");
     expect(rows.map((row) => row.querySelector('[data-badge="ai"]') !== null)).toEqual([true, false, true]);
-    expect(rows[0]).toHaveClass("h-[90px]");
-    expect(rows[1]).toHaveClass("h-[68px]");
+    expect(rows[0]).toHaveClass("h-[5.625rem]");
+    expect(rows[1]).toHaveClass("h-[4.25rem]");
   });
 
   it("moves focus between rows with the arrow keys (UX-A11Y-02)", async () => {

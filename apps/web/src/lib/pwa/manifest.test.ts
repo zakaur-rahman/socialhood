@@ -12,8 +12,8 @@ describe("web app manifest (TR-FE-09)", () => {
       name: "Amplychat",
       display: "standalone",
       start_url: "/app",
-      background_color: "#131520",
-      theme_color: "#131520",
+      background_color: "#141416",
+      theme_color: "#141416",
     });
   });
 

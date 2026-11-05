@@ -55,7 +55,7 @@ export const MODES: readonly { mode: AiConnectionsMode; label: string; body: str
   {
     mode: "full",
     label: "Full",
-    body: "Reading and drafts, plus scheduling, changing and cancelling posts, uploading media, adding knowledge and creating, changing, pausing or resuming automations. Replies are never sent by an AI app; an automation sends once it's confirmed and on. If a member sets their AI app to always allow these tools, it can confirm without asking them.",
+    body: "Reading and drafts, plus scheduling, changing and cancelling posts, uploading media, drafting knowledge and automations for approval, and pausing automations. Replies are never sent by an AI app. A person approves knowledge and turns automations on in Amplychat. If a member sets their AI app to always allow these tools, it can confirm previews without asking them.",
   },
 ];
 
@@ -70,10 +70,10 @@ export const SCOPE_WORDS: Record<string, string> = {
   "comments:read": "Read comments",
   "analytics:read": "Read analytics",
   "knowledge:read": "Search knowledge",
-  "knowledge:write": "Add knowledge",
+  "knowledge:write": "Draft knowledge for approval",
   "automations:read": "See automations",
-  "automations:write": "Pause and resume automations",
-  "automations:create": "Create and change automations",
+  "automations:write": "Pause automations",
+  "automations:create": "Draft and change automations",
   ask: "Ask Amplychat",
 };
 
@@ -148,7 +148,7 @@ function ModeCard() {
                 htmlFor={id}
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3",
-                  current === option.mode && "border-brand-line bg-brand-soft",
+                  current === option.mode && "border-line-strong bg-raised",
                   !inPlan && "cursor-not-allowed opacity-70",
                 )}
               >

@@ -248,6 +248,7 @@ describe("AutomationEditor steps (UX-SCR-03)", () => {
     await screen.findByRole("textbox", { name: "Message" });
     expect(screen.queryByRole("button", { name: "Add an image" })).toBeNull();
     expect(screen.getByText(/Replies to comments are text and link buttons/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Change trigger" }));
     await user.click(screen.getByRole("radio", { name: "Instagram DM keyword" }));
     expect(screen.getByRole("button", { name: "Add an image" })).toBeInTheDocument();
   });
@@ -264,9 +265,11 @@ describe("AutomationEditor steps (UX-SCR-03)", () => {
     renderEditor();
     await screen.findByRole("textbox", { name: "Automation name" });
     expect(step("posts")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Change trigger" }));
     await user.click(screen.getByRole("radio", { name: "Instagram DM keyword" }));
     expect(step("posts")).toBeNull();
     expect(screen.queryByRole("group", { name: /Reply publicly/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change trigger" }));
     await user.click(screen.getByRole("radio", { name: "Any Instagram comment" }));
     expect(step("keywords")).toBeNull();
     expect(step("posts")).toBeInTheDocument();
@@ -366,6 +369,7 @@ describe("AutomationEditor tap first (FR-AUT-21)", () => {
     await screen.findByRole("textbox", { name: "Message" });
     expect(tapFirstSwitch()).toBeNull();
 
+    await user.click(screen.getByRole("button", { name: "Change trigger" }));
     await user.click(screen.getByRole("radio", { name: "Instagram comment keyword" }));
     expect(tapFirstSwitch()).toBeChecked();
     expect(screen.getByRole("textbox", { name: "Opening message" })).toHaveValue(DEFAULT_OPENING_TEXT);

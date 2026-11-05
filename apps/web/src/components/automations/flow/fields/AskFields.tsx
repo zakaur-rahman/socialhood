@@ -170,7 +170,7 @@ export function AskFields({ node }: { node: AskNode }) {
       </Field>
 
       {env.platform === "facebook" ? null : (
-        <div className="space-y-3 rounded-lg border border-line p-3">
+        <div className="space-y-3 rounded-lg bg-field p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
               <Label htmlFor={`${textId}-consent`}>Ask for marketing consent</Label>

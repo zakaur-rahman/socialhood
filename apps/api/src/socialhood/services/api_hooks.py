@@ -23,8 +23,10 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError
 from socialhood.models.integrations import EndpointStatus, WebhookEndpoint
+from socialhood.repositories import workspaces
 from socialhood.repositories.base import scoped_delete
 from socialhood.schemas.public_hooks import Hook, HookList, HookSubscribe, HookSubscribed
 from socialhood.security.crypto import TokenCipher
@@ -70,6 +72,7 @@ async def subscribe(
     allow_private: bool,
 ) -> HookSubscribed:
     url = _url(body.target_url, allow_private=allow_private)
+    await workspaces.lock_limit(session, "rest_hooks", require_workspace())
     count = await session.scalar(
         select(func.count())
         .select_from(WebhookEndpoint)

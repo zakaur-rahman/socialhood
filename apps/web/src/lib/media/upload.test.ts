@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { ATTACHMENT_RULES, chunkRanges, SINGLE_UPLOAD_MAX_BYTES, STICKER_RULE, resourceTypeFor } from "./upload";
+import { ATTACHMENT_RULES, chunkRanges, SINGLE_UPLOAD_MAX_BYTES, STICKER_RULE, resourceTypeFor, sendToStorage } from "./upload";
 
 const MB = 1024 * 1024;
 
@@ -61,5 +61,39 @@ describe("large video uploads (C-134)", () => {
   it("sends a small file in one request", () => {
     expect(chunkRanges(5)).toEqual([{ start: 0, end: 4 }]);
     expect(SINGLE_UPLOAD_MAX_BYTES).toBe(100 * MB);
+  });
+});
+
+describe("sendToStorage", () => {
+  it("sends the signed file name with the upload", async () => {
+    const sent: FormData[] = [];
+    class FakeXhr {
+      upload = {};
+      status = 200;
+      responseText = '{"public_id":"ws/w/message/abc"}';
+      onload?: () => void;
+      open() {}
+      setRequestHeader() {}
+      send(form: FormData) {
+        sent.push(form);
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    const signature = {
+      api_key: "k",
+      timestamp: 1,
+      folder: "ws/w/message",
+      public_id: "abc",
+      allowed_formats: "png,jpg",
+      signature: "s",
+      upload_url: "https://api.cloudinary.com/v1_1/demo/image/upload",
+      cloud_name: "demo",
+    };
+
+    await expect(sendToStorage(signature, new File(["x"], "a.png"))).resolves.toEqual({ public_id: "ws/w/message/abc" });
+    expect(sent[0].get("public_id")).toBe("abc");
+    expect(sent[0].get("allowed_formats")).toBe("png,jpg");
+    vi.unstubAllGlobals();
   });
 });

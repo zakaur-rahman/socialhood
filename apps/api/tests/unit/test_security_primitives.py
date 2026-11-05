@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import pytest
 
+from socialhood.razorpay import signatures as razorpay
 from socialhood.security.crypto import TokenCipher, new_key
 from socialhood.security.signatures import (
+    checkout_workspace_signed,
     parse_signed_request,
+    sign_checkout_workspace,
     sign_request,
     verify_hub_signature,
 )
 from socialhood.settings import ConfigurationError
+from socialhood.shopify import signatures as shopify
 from tests.support.instagram import hub_signature
 
 
@@ -78,3 +82,24 @@ def test_signed_request_rejects_garbage(value: str | None) -> None:
 def test_signed_request_rejects_another_algorithm() -> None:
     signed = sign_request({"algorithm": "none", "user_id": "1"}, "s")
     assert parse_signed_request(signed, ["s"]) is None
+
+
+def test_non_ascii_signatures_are_refused_not_raised() -> None:
+    assert verify_hub_signature(b"x", "sha256=\u00e9", "s3cret") is False
+    assert razorpay.verify_webhook(b"x", "\u00e9", "s3cret") is False
+    assert shopify.verify_webhook(b"x", "\u00e9", "s3cret") is False
+    assert shopify.verify_query({"hmac": "\u00e9"}, "s3cret") is False
+
+
+def test_signed_request_with_a_non_text_algorithm_is_refused_not_raised() -> None:
+    assert parse_signed_request(sign_request({"algorithm": 1}, "s"), ["s"]) is None
+
+
+def test_a_checkout_signature_names_one_workspace_and_survives_key_rotation() -> None:
+    signature = sign_checkout_workspace("ws-a", ["old"])
+
+    assert checkout_workspace_signed("ws-a", signature, ["new", "old"]) is True
+    assert checkout_workspace_signed("ws-b", signature, ["new", "old"]) is False
+    assert checkout_workspace_signed("ws-a", signature, ["new"]) is False
+    assert checkout_workspace_signed("ws-a", None, ["old"]) is False
+    assert checkout_workspace_signed("ws-a", "\u00e9", ["old"]) is False

@@ -75,8 +75,8 @@ def test_each_key_has_its_own_limit_of_120_a_minute() -> None:
 
 
 def test_the_public_api_is_business_only_and_webhooks_stay_on_every_plan() -> None:
-    assert [entitlement(plan, "public_api") for plan in PLANS] == [False, False, True]
-    assert [entitlement(plan, "webhook_endpoints") for plan in PLANS] == [1, 5, 5]
+    assert [entitlement(plan, "public_api") for plan in PLANS] == [False, False, True, True]
+    assert [entitlement(plan, "webhook_endpoints") for plan in PLANS] == [1, 5, 5, 20]
     assert "public_api" in ENTITLEMENTS
 
 

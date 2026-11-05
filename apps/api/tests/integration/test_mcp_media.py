@@ -106,7 +106,12 @@ async def test_start_returns_a_signed_command_and_the_limits(
     assert fields["folder"] == f"ws/{setup.wid}/post"
     assert fields["tags"] == f"mcp_upload_{upload_id}"
     assert fields["signature"] == sign(
-        {"folder": fields["folder"], "tags": fields["tags"], "timestamp": fields["timestamp"]},
+        {
+            "allowed_formats": fields["allowed_formats"],
+            "folder": fields["folder"],
+            "tags": fields["tags"],
+            "timestamp": fields["timestamp"],
+        },
         SECRET,
     )
     assert SECRET not in str(started)
@@ -114,6 +119,7 @@ async def test_start_returns_a_signed_command_and_the_limits(
     assert curl.startswith("curl -sS")
     assert '-F "file=@reel.mp4"' in curl
     assert f'-F "tags=mcp_upload_{upload_id}"' in curl
+    assert f'-F "allowed_formats={fields["allowed_formats"]}"' in curl
     assert curl.endswith(f"{API}/video/upload")
     assert started["upload_page_url"].endswith(f"/upload/{upload_id}")
     assert started["limits"]["max_duration_s"]["reel"] == 900
@@ -310,7 +316,38 @@ def dns(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]:
 
 
 async def import_url(app: FastAPI, key: str, url: str, **args: Any) -> Any:
-    return await call(app, key, "import_media_from_url", {"url": url, **args})
+    """The preview, then the confirmed call; a preview's refusal is the answer."""
+    first = await call(app, key, "import_media_from_url", {"url": url, **args})
+    if first.is_error:
+        return first
+    token = structured(first)["confirmation_token"]
+    return await call(
+        app,
+        key,
+        "import_media_from_url",
+        {"url": url, **args, "confirmed": True, "confirmation_token": token},
+    )
+
+
+async def test_an_import_preview_reaches_nothing_and_names_the_host(
+    mcp_app: FastAPI,
+    key: str,
+    clerk: Clerk,
+    dns: dict[str, list[str]],
+    engine: AsyncEngine,
+) -> None:
+    route = clerk.router.route(host=PUBLIC_HOST).respond(200)
+    url = "https://cdn.example.com/photo.jpg"
+    preview = structured(await call(mcp_app, key, "import_media_from_url", {"url": url}))
+    assert (preview["preview"], preview["status"]) == (True, "preview")
+    assert preview["source_host"] == "cdn.example.com"
+    assert route.call_count == 0
+    assert await rows(engine, "SELECT 1 FROM mcp_uploads") == []
+    refused = error_of(
+        await call(mcp_app, key, "import_media_from_url", {"url": url, "confirmed": True})
+    )
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    assert route.call_count == 0
 
 
 async def test_an_imported_image_lands_in_the_library(
@@ -463,6 +500,7 @@ async def test_the_upload_page_reads_and_completes_a_ticket(
     assert ticket["upload"]["tags"] == f"mcp_upload_{upload_id}"
     assert ticket["upload"]["signature"] == sign(
         {
+            "allowed_formats": ticket["upload"]["allowed_formats"],
             "folder": ticket["upload"]["folder"],
             "tags": ticket["upload"]["tags"],
             "timestamp": ticket["upload"]["timestamp"],

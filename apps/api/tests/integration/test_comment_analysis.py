@@ -246,6 +246,32 @@ async def test_spam_is_hidden_on_instagram_when_auto_hide_is_on(
     assert updated[str(spam_id)]["analysis"]["is_spam"] is True
 
 
+async def test_only_a_comment_flagged_alone_is_hidden(cw: Comments, fake_ai: FakeProvider) -> None:
+    await cw.execute(
+        "UPDATE social_accounts SET auto_hide_spam = true WHERE id = :id", id=cw.account_id
+    )
+    post = await cw.post()
+    spam_id = await cw.comment("FREE followers, check my bio", post=post)
+    fine_id = await cw.comment("Love the colour", post=post)
+
+    def swayed_in_a_batch(call: FakeCall) -> dict[str, Any]:
+        numbers = comment_ids(call)
+        rules = {"FREE": SPAM} if len(numbers) == 1 else {"FREE": SPAM, "Love": SPAM}
+        return by_text(rules)(call)  # type: ignore[no-any-return]
+
+    fake_ai.respond("comment_analysis", swayed_in_a_batch)
+
+    await cw.analyze()
+
+    spam = await cw.one("SELECT * FROM comments WHERE id = :id", id=spam_id)
+    fine = await cw.one("SELECT * FROM comments WHERE id = :id", id=fine_id)
+    assert [(m.comment_ref, m.action) for m in outbox.MODERATION] == [
+        (spam["platform_comment_id"], "hide")
+    ]
+    assert (spam["hidden"], fine["hidden"]) == (True, False)
+    assert await credits_used(cw) == 1  # the checks cost no credit
+
+
 async def test_a_keyword_comment_is_never_spam_even_when_the_model_says_so(
     cw: Comments, fake_ai: FakeProvider
 ) -> None:

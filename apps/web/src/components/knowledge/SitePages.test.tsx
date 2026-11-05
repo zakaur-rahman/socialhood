@@ -190,7 +190,7 @@ describe("A website's pages (GR-35)", () => {
     expect(within(returns).getByText("The page returned an error (503).")).toBeInTheDocument();
     expect(within(returns).getByText("Failed")).toBeInTheDocument();
     expect(within(items[1]).getByText("Read")).toBeInTheDocument();
-    expect(within(items[1]).getByText(/Read .* ago/)).toBeInTheDocument();
+    expect(within(items[1]).getByText(/Read (on .*| .* ago)/)).toBeInTheDocument();
     expect(within(items.find((li) => li.getAttribute("data-status") === "gone")!).getByText("Gone")).toBeInTheDocument();
     expect(within(items.find((li) => li.getAttribute("data-status") === "excluded")!).getByText("Excluded")).toBeInTheDocument();
     expect(within(items[5]).getByText("Processing")).toBeInTheDocument(); // read, still being built

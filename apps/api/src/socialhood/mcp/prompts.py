@@ -91,7 +91,8 @@ def _schedule(arguments: Mapping[str, str] | None) -> str:
         + "Start with get_workspace and list_accounts. Ask me for anything missing: the accounts, "
         "the media, the caption, a first comment, collaborators and the time. If the media is a "
         "local file, upload it with start_media_upload and finish_media_upload; if it is a public "
-        "link, use import_media_from_url. Call create_post without confirmed first and show me "
+        "link, use import_media_from_url, showing me its preview before confirming. Call "
+        "create_post without confirmed first and show me "
         "the preview: the time in my time zone, the accounts and the checklist, fixing any "
         "failing item with me. Schedule it with confirmed: true and the preview's "
         "confirmation_token only after I say yes."
@@ -125,9 +126,9 @@ def _comment_automation(arguments: Mapping[str, str] | None) -> str:
         "confirmed first and show me the preview: the post, the keywords, the opening and the "
         "DM people get, any overlap with live automations and what it still needs, fixing "
         "anything with me. Create it with confirmed: true and the preview's "
-        "confirmation_token only after I say yes, and with "
-        "turn_on: true only if I ask for it to go live, because it then messages everyone who "
-        "matches. Remind me that I can pause it with pause_automation."
+        "confirmation_token only after I say yes. It is saved off, so give me its "
+        "dashboard_url: I review it and turn it on in Amplychat. Once it's on, you can pause it "
+        "with pause_automation."
     )
 
 

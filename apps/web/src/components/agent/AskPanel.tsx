@@ -76,7 +76,7 @@ export function AskRoot() {
 const PANEL_LIMITS: PaneWidthLimits = { fallback: 420, min: 360, max: 720 };
 
 export function AskPanel() {
-  const [panelWidth, setPanelWidth, resetPanelWidth] = usePaneWidth("ask-panel", PANEL_LIMITS);
+  const [panelWidth, setPanelWidth, resetPanelWidth, panelLimits] = usePaneWidth("ask-panel", PANEL_LIMITS);
   const workspace = useCurrentWorkspace();
   const open = useAskStore((state) => state.open);
   const setOpen = useAskStore((state) => state.setOpen);
@@ -104,8 +104,8 @@ export function AskPanel() {
           edge="start"
           label="Resize the Ask panel"
           value={panelWidth}
-          min={PANEL_LIMITS.min}
-          max={PANEL_LIMITS.max}
+          min={panelLimits.min}
+          max={panelLimits.max}
           onChange={setPanelWidth}
           onReset={resetPanelWidth}
         />

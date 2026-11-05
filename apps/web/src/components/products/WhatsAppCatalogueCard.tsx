@@ -22,13 +22,12 @@ import {
   useWaCatalogue,
 } from "@/lib/api/queries";
 import type { WaCatalogueStatus } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 function ago(iso: string): string {
-  const short = relativeTime(iso);
-  return short === "now" ? "just now" : `${short} ago`;
+  return timeAgo(iso);
 }
 
 /**
@@ -62,7 +61,7 @@ export function WhatsAppCatalogueCard({ wid }: { wid: string }) {
 function ConnectionBadge({ status }: { status: WaCatalogueStatus }) {
   if (!status.connected) return <Badge tone="neutral">Not connected</Badge>;
   if (status.status === "needs_reconnect") return <Badge tone="danger">Needs attention</Badge>;
-  if (status.syncing) return <Badge tone="brand">Syncing</Badge>;
+  if (status.syncing) return <Badge tone="neutral">Syncing</Badge>;
   return <Badge tone="success">Connected</Badge>;
 }
 
@@ -126,7 +125,7 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
         <select
           value={accountId}
           onChange={(event) => setChosen(event.target.value)}
-          className="h-9 w-full rounded-lg border border-line-strong bg-field px-2 text-sm"
+          className="h-9 w-full rounded-lg border border-line-strong bg-field-input px-2 text-sm"
         >
           {numbers.map((account) => (
             <option key={account.id} value={account.id}>

@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The selection bar (DESIGN_SYSTEM §5, §8.3; UI-ISS-053): 2 px `brand` on the leading edge, inset
+ * The selection bar (DESIGN_SYSTEM §5, §8.3; UI-ISS-053): 2 px `fg` on the leading edge, inset
  * 8 px from the top and bottom, rounded. One implementation for the sidebar's active row and Ask's
  * selected thread. It is the row's `::before`, so the row is `relative`.
  */
 export const SELECTION_BAR =
-  "before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand";
+  "before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-fg before:mark-forced";
 
 /** A selected row or nav item (§8.3): `raised`, full-strength text and the selection bar. */
 export const SELECTED_ROW = cn("bg-raised text-fg hover:bg-raised", SELECTION_BAR);
@@ -49,9 +49,12 @@ export function sidebarLabelClass(collapsed: boolean): string {
   return cn("min-w-0 flex-1 overflow-hidden whitespace-nowrap", collapsed ? "text-clip" : "text-ellipsis", sidebarFadeClass(!collapsed));
 }
 
-/** Row icons: 18 px, brand-coloured on the active row. */
-export function sidebarIconClass(active = false): string {
-  return cn("size-4.5 shrink-0", active && "text-brand-fg");
+/**
+ * Row icons: 18 px, in the row's own colour, so forced colours reach them too (an SVG keeps a colour
+ * set on itself there, and a pale tint on the active row is what showed).
+ */
+export function sidebarIconClass(): string {
+  return "size-4.5 shrink-0";
 }
 
 /** A keyboard shortcut hint ("Ctrl K", "⌘["): 11 px (`text-2xs`, the type floor; DESIGN_SYSTEM §2.1). */

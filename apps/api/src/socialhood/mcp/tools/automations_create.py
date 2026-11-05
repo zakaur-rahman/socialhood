@@ -2,9 +2,8 @@
 
 They build the dashboard's simple shape: a comment or DM keyword that sends a DM (text, and
 optionally one link button) and, for comments, optionally a public reply. They go through the
-editor's own services: ``definitions.create`` then ``definitions.update`` (the autosave PUT), and
-``definitions.activate`` to turn one on, so the validation, the plan's ``active_automations``
-limit and the overlap check are the app's, never a second set of rules.
+editor's own services: ``definitions.create`` then ``definitions.update`` (the autosave PUT), so
+the validation and the overlap check are the app's, never a second set of rules.
 
 - **Confirmation.** Nothing changes until the call is repeated with ``confirmed: true`` and the
   preview's ``confirmation_token`` (mcp/confirmations.py), which the server checks; it also binds
@@ -14,15 +13,15 @@ limit and the overlap check are the app's, never a second set of rules.
   first opening the app adds to new comment automations, overlaps with live automations, what
   would stop it going live, and the plan's active automations used and allowed. A preview is
   never stored for replay.
-- **Off by default.** ``turn_on`` activates it through the app's activation, the dashboard's
-  path. A full plan is a refusal that says to pause one or upgrade, and nothing is created.
-  Turning on is the member's decision: the AI app asks, the member confirms, and only then does
-  the automation (not the AI) message the people who match.
+- **Always off.** An AI app drafts the automation; a person reads it and turns it on in the
+  dashboard, and only then does the automation (not the AI) message the people who match. The
+  result links there.
 - **The team is told** (``ai_automation_change``, owners and admins), and the audit log gets the
   line ("Asha via Claude: automation.created").
 - **update_automation** edits only that shape: a flow, an AI reply, an image or another trigger is
-  refused with a link to the editor. It never turns one on or off (pause_automation and
-  resume_automation do), and a live automation must stay complete, as in the editor.
+  refused with a link to the editor. It never turns one on or off, and it refuses an automation
+  that is on: what a live automation sends is what a person approved. Paused or off, it can be
+  changed, and a person turns it on again.
 - ``post`` takes the shared resolver (mcp/tools/common.resolve_post): a post id or “latest”, plus
   “next” (the next post published) and “any”.
 """
@@ -37,7 +36,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSessionTransaction
 
 from socialhood.agent.tools.common import find_account, handle
-from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.mcp import confirmations
@@ -88,9 +86,10 @@ NOT_SIMPLE = (
     "This automation {why}, which AI apps can't edit safely. Edit it in Amplychat's automation "
     "editor."
 )
-FULL = (
-    "Your plan allows {limit} automations on at once and {used} are on. Pause one "
-    "(pause_automation) or upgrade, or create this one turned off."
+LIVE = (
+    "“{name}” is on, and a person approved what it sends, so an AI app can't change it. Pause it "
+    "(pause_automation) to change it from here, then a person turns it back on in Amplychat, or "
+    "edit it in Amplychat."
 )
 WHICH_ACCOUNT = "Several Instagram accounts could run this: {names}. Which one?"
 NO_POST_ON_DM = "A DM keyword answers DMs, not a post. Leave post out."
@@ -135,11 +134,6 @@ class CreateAutomationInput(ConfirmedInput):
         min_length=1,
         max_length=PUBLIC_REPLY_CHARS,
         description="Comment triggers: a public reply to the comment as well.",
-    )
-    turn_on: bool = Field(
-        default=False,
-        description="true: switch it on once created, so it starts messaging people who match. "
-        "false (the default): it is saved off, as a draft.",
     )
 
 
@@ -260,28 +254,6 @@ def _view(call: ToolCall) -> queries.View:
     )
 
 
-async def _activate(call: ToolCall, automation_id: uuid.UUID) -> None:
-    """The app's activation; a full plan is the same 402, in words that say what to do."""
-    try:
-        await definitions.activate(
-            call.session,
-            automation_id,
-            plan=call.plan,
-            disclosure=call.workspace.automation_disclosure,
-            now=call.now,
-        )
-    except ApiError as error:
-        limit = error.plan_limit
-        if error.code != "quota_exceeded" or limit is None:
-            raise
-        if limit.entitlement != "active_automations":
-            raise
-        used = await automations_repo.count_active(call.session, excluding=automation_id)
-        raise quota_error(
-            "active_automations", limit.limit, FULL.format(limit=limit.limit, used=used)
-        ) from error
-
-
 def _post_out(call: ToolCall, item: MediaItem) -> PostOut:
     return PostOut(
         post_id=item.id,
@@ -314,16 +286,14 @@ async def _result(
 ) -> AutomationWriteResult:
     """The automation as the app stores it (``queries.one``), with what activation would still
     find (``flow_store.problems``, the editor's checklist) and the plan's limit."""
-    problems = []
-    if out.status != ACTIVE:
-        automation = await definitions.get_or_404(call.session, out.id)
-        found = await flow_store.problems(
-            call.session,
-            [automation],
-            disclosure=call.workspace.automation_disclosure,
-            now=call.now,
-        )
-        problems = found[automation.id]
+    automation = await definitions.get_or_404(call.session, out.id)
+    found = await flow_store.problems(
+        call.session,
+        [automation],
+        disclosure=call.workspace.automation_disclosure,
+        now=call.now,
+    )
+    problems = found[automation.id]
     account = (
         await social_accounts.get(call.session, out.social_account_id)
         if out.social_account_id
@@ -378,15 +348,13 @@ async def _notify(call: ToolCall, automation: AutomationOut, did: str) -> None:
     user = await call.session.get(User, call.principal.user_id)
     who = (user.name or user.email) if user is not None else "A member"
     app = call.client_name or "An AI app"
-    live = automation.status == ACTIVE
-    title = f"{app} {did} the automation “{automation.name}”" + (", which is on" if live else "")
+    title = f"{app} {did} the automation “{automation.name}”"
     await notifications.notify_admins(
         call.session,
         type=NotificationType.AI_AUTOMATION_CHANGE.value,
         severity=Severity.INFO.value,
         title=title[:200],
-        body=f"{who} asked {app} to do this. Open it to review it"
-        + (" or pause it." if live else " and turn it on when it's ready."),
+        body=f"{who} asked {app} to do this. Open it to review it and turn it on when it's ready.",
         link=f"/automations/{automation.id}",
         dedupe_key=f"mcp-automation:{automation.id}:{did}:{call.call_id}",
     )
@@ -396,6 +364,13 @@ def _confirm_step(then: str) -> str:
     return (
         "Nothing was changed. Show the member this. After they agree, call again with the same "
         f"arguments, confirmed: true and this confirmation_token to {then}."
+    )
+
+
+def _off_step(call: ToolCall, automation_id: uuid.UUID) -> str:
+    url = call.dashboard_url(f"automations/{automation_id}")
+    return "It is off. A person reviews it and turns it on in Amplychat" + (
+        f": {url}" if url else "."
     )
 
 
@@ -452,21 +427,21 @@ def _what(out: AutomationOut) -> str:
     name="create_automation",
     title="Create an automation",
     description=(
-        "Create a keyword automation: when someone comments a keyword on a post (one post, the "
+        "Draft a keyword automation: when someone comments a keyword on a post (one post, the "
         "latest, the next one, or any) or sends it in a DM, Amplychat sends them a DM, with an "
         "optional link button and, for comments, a public reply. It is checked as in the "
         "automation editor. The first call is a preview: the account and post, the messages, "
         "overlaps with live automations, what it still needs and the plan's limit. Show the "
         "member the preview and call again only after they agree, with confirmed true and its "
-        "confirmation_token. It is created off unless turn_on is true; once on, it messages the "
-        "people who match. The team is notified. Part of Creator and Business."
+        "confirmation_token. It is created off: a person reviews it and turns it on in "
+        "Amplychat, from the dashboard_url in the result. The team is notified. Part of Creator "
+        "and Business."
     ),
     input_model=CreateAutomationInput,
     output_model=AutomationWriteResult,
     scope="automations:create",
     access=Access.WRITE,
     min_role=Role.ADMIN,
-    open_world=True,  # once on, it messages real customers
     dedupe_window_s=confirmations.TTL_S,  # as long as a confirmation token lasts
 )
 async def create_automation(call: ToolCall, args: CreateAutomationInput) -> AutomationWriteResult:
@@ -528,16 +503,13 @@ async def create_automation(call: ToolCall, args: CreateAutomationInput) -> Auto
         disclosure=call.workspace.automation_disclosure,
         now=call.now,
     )
-    if args.turn_on:
-        await _activate(call, automation.id)
     out = await queries.one(call.session, automation.id, _view(call))
-    on = "on" if args.turn_on else "off"
     if savepoint is not None:
         result = await _result(
             call,
             out,
             preview=True,
-            summary=f"Preview: “{out.name}” would be created {_what(out)} and saved {on}. "
+            summary=f"Preview: “{out.name}” would be created {_what(out)} and saved off. "
             "Nothing is created yet",
             next_step=_confirm_step("create it"),
             stored=False,
@@ -546,18 +518,13 @@ async def create_automation(call: ToolCall, args: CreateAutomationInput) -> Auto
         await _preview_end(call, savepoint)
         return result
     call.note("automation.created", "automation", out.id, trigger=out.trigger, status=out.status)
-    if args.turn_on:
-        call.note("automation.activated", "automation", out.id)
     await _notify(call, out, "created")
     return await _result(
         call,
         out,
         preview=False,
-        summary=f"Created “{out.name}” {_what(out)}. It is {on}"
-        + ("" if args.turn_on else ", saved as a draft"),
-        next_step="It now messages the people who match. Pause it with pause_automation."
-        if args.turn_on
-        else "It is off. Turn it on in Amplychat when it's ready.",
+        summary=f"Created “{out.name}” {_what(out)}. It is off, saved as a draft",
+        next_step=_off_step(call, out.id),
     )
 
 
@@ -584,13 +551,13 @@ def _not_simple(out: AutomationOut) -> str | None:
     name="update_automation",
     title="Change an automation",
     description=(
-        "Change a keyword automation that sends one DM (the kind create_automation makes): its "
-        "name, keywords, matching, post, DM text, link button or public reply. Only the fields "
-        "sent change. A multi-step flow, an AI reply or another trigger is refused with a link "
-        "to the editor. It doesn't turn the automation on or off (pause_automation and "
-        "resume_automation do), and a live automation has to stay complete. Previewed first: "
-        "show the member the preview and call again only after they agree, with confirmed true "
-        "and its confirmation_token. The team is notified. Part of Creator and Business."
+        "Change a keyword automation that is off and sends one DM (the kind create_automation "
+        "makes): its name, keywords, matching, post, DM text, link button or public reply. Only "
+        "the fields sent change. An automation that is on is refused: pause it first "
+        "(pause_automation), and a person turns it back on in Amplychat. A multi-step flow, an "
+        "AI reply or another trigger is refused with a link to the editor. Previewed first: show "
+        "the member the preview and call again only after they agree, with confirmed true and "
+        "its confirmation_token. The team is notified. Part of Creator and Business."
     ),
     input_model=UpdateAutomationInput,
     output_model=AutomationWriteResult,
@@ -598,12 +565,13 @@ def _not_simple(out: AutomationOut) -> str | None:
     access=Access.WRITE,
     min_role=Role.ADMIN,
     destructive=True,  # it overwrites what was there
-    open_world=True,  # a live automation messages customers with the new text
 )
 async def update_automation(call: ToolCall, args: UpdateAutomationInput) -> AutomationWriteResult:
     await definitions.get_or_404(call.session, args.automation_id, for_update=True)
     current = await queries.one(call.session, args.automation_id, _view(call))
     url = call.dashboard_url(f"automations/{current.id}")
+    if current.status == ACTIVE:
+        raise ApiError("conflict", LIVE.format(name=current.name) + (f" {url}" if url else ""))
     if (why := _not_simple(current)) is not None:
         raise ApiError("conflict", NOT_SIMPLE.format(why=why) + (f" {url}" if url else ""))
     comment = current.trigger == "comment_keyword"
@@ -663,13 +631,10 @@ async def update_automation(call: ToolCall, args: UpdateAutomationInput) -> Auto
         return result
     call.note("automation.updated", "automation", out.id, fields=sorted(changes))
     await _notify(call, out, "changed")
-    live = out.status == ACTIVE
     return await _result(
         call,
         out,
         preview=False,
-        summary=f"Changed “{out.name}”" + ("; it is on, so the change applies now" if live else ""),
-        next_step="Pause it with pause_automation."
-        if live
-        else "It is off. Turn it on in Amplychat when it's ready.",
+        summary=f"Changed “{out.name}”",
+        next_step=_off_step(call, out.id),
     )

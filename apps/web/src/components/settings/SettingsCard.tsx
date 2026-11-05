@@ -57,7 +57,7 @@ export function SettingsCard({
                 aria-hidden
                 className={cn(
                   "grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-5",
-                  tone === "danger" ? "bg-danger-soft text-danger-fg" : "bg-raised text-brand-fg",
+                  tone === "danger" ? "bg-danger-soft text-danger-fg" : "bg-raised text-fg-secondary",
                 )}
               >
                 {icon}

@@ -207,7 +207,7 @@ export function TemplateCard({
     <Card asChild className="flex h-full min-h-44 flex-col">
     <article aria-labelledby={titleId}>
       <div className="flex items-start justify-between gap-2">
-        <span className="bg-brand-gradient-decor grid size-9 place-items-center rounded-lg text-on-brand">
+        <span className="bg-raised grid size-9 place-items-center rounded-lg text-fg-secondary">
           <TemplateIcon name={template.icon} className="size-5" />
         </span>
         {showPro ? <ProBadge /> : null}
@@ -234,7 +234,7 @@ export function TemplateCard({
 }
 
 export function ProBadge() {
-  return <Badge tone="brand">Creator</Badge>;
+  return <Badge tone="neutral">Creator</Badge>;
 }
 
 function AccountQuestion({
@@ -275,7 +275,7 @@ function AccountQuestion({
             key={account.id}
             className={cn(
               "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm",
-              accountId === account.id ? "border-brand bg-brand-soft" : "border-line hover:bg-hover",
+              accountId === account.id ? "border-line-strong bg-raised" : "border-line hover:bg-hover",
             )}
           >
             <input

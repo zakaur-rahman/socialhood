@@ -1,12 +1,18 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { FlowDefinition } from "@/lib/api/types";
 import { toDefinition } from "@/lib/automations/definition";
 import { automation } from "@/test/api";
 
 import { PreviewPane } from "./PreviewPane";
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 function renderPreview(overrides: Parameters<typeof automation>[0] = {}, disclosure: string | null = null) {
   return render(
@@ -163,13 +169,13 @@ describe("PreviewPane with tap first and the follow nudge (FR-AUT-21, FR-AUT-22)
     it("the branch picker follows another way, and the sample name still applies", async () => {
       const user = userEvent.setup();
       renderFlow();
-      const picker = screen.getByRole("combobox", { name: "Branch 1" });
-      expect(within(picker).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      await user.click(screen.getByRole("combobox", { name: "Branch 1" }));
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
         "Taps Guide",
         "Taps Prices",
         "Types an answer",
       ]);
-      await user.selectOptions(picker, "Taps Prices");
+      await user.click(screen.getByRole("option", { name: "Taps Prices" }));
       const preview = screen.getByTestId("preview");
       expect(preview).toHaveTextContent("Prices start at 499.");
       expect(preview).not.toHaveTextContent("Here's the guide");

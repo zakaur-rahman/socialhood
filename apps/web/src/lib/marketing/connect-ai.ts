@@ -112,7 +112,7 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     title: "Knowledge and automations",
-    body: "Search what your knowledge base says and add a note or a question and answer. See automations, pause or resume them, and set up a keyword automation, such as a DM to everyone who comments a word on your last post. You see a preview first, and it messages people once you've confirmed it and it's on.",
+    body: "Search what your knowledge base says, see your automations and pause one at any time. Draft a note, a question and answer, or a keyword automation, such as a DM to everyone who comments a word on your last post. You approve them in Amplychat: knowledge is used and an automation runs only after you do.",
   },
   {
     title: "Ask Amplychat",
@@ -128,8 +128,8 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes" },
   { label: "Schedule, change and cancel posts", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Add knowledge", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Create, change, pause and resume automations", free: "No", pro: "Yes", max: "Yes" },
+  { label: "Draft knowledge for you to approve", free: "No", pro: "Yes", max: "Yes" },
+  { label: "Draft automations for you to turn on, and pause them", free: "No", pro: "Yes", max: "Yes" },
   { label: "Connect with an API key", free: "No", pro: "No", max: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000" },
   { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "100" },
@@ -139,7 +139,11 @@ export const PLAN_ROWS: readonly PlanRow[] = [
 export const SAFETY: readonly Capability[] = [
   {
     title: "Nothing is sent from your inbox without you",
-    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app sends nothing until you've confirmed it and it's on, and you can pause it at any time.",
+    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app sends nothing until you turn it on in Amplychat, and you can pause it at any time.",
+  },
+  {
+    title: "You approve what reaches your customers",
+    body: "AI apps do the drafting and you stay in control. An automation stays off until you turn it on in your dashboard, and new knowledge isn't used until you approve it there. An AI app can't do either for you, and it can't change an automation that's on.",
   },
   {
     title: "A preview first, and posts wait at least 5 minutes",
@@ -166,11 +170,11 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, adding knowledge and creating, changing or pausing automations from an AI app are part of Creator and Business. API keys are on Business and Agency.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, drafting knowledge and automations for you to approve, and pausing automations from an AI app are part of Creator and Business. API keys are on Business and Agency.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",
-    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Creator and Business; once you've confirmed it and it's on, the automation sends the DMs, as one made in the app does.`,
+    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can draft a keyword automation on Creator and Business; once you've turned it on in ${SITE_NAME}, the automation sends the DMs, as one made in the app does.`,
   },
   {
     question: "How do I disconnect an AI app?",

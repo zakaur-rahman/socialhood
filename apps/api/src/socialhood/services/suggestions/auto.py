@@ -49,7 +49,7 @@ from socialhood.repositories import suggestions as repo
 from socialhood.services import business_hours
 from socialhood.services.notifications import notify_admins
 from socialhood.services.reply_window import reply_window
-from socialhood.services.suggestions import drafting, knowledge_port
+from socialhood.services.suggestions import drafting, knowledge_port, small_talk
 from socialhood.settings import get_settings
 
 log = get_logger(__name__)
@@ -201,6 +201,7 @@ async def policy_input(
         min_confidence=settings.auto_min_confidence,
         min_similarity=settings.ai_retrieval_min_sim,
         auto_hours_blocked=await business_hours.auto_blocked(session, acct.id, now),
+        small_talk=small_talk.is_small_talk(msg.text, None),
     )
 
 

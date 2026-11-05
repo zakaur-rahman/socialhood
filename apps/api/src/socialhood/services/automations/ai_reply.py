@@ -6,7 +6,8 @@ in {automation_instructions} ("Instructions from the business for this reply: â€
 (``automation_ai_reply``). The reply goes out like the message action, with the disclosure line
 (the draft is trimmed to leave room for it): a DM through the send pipeline, or a comment's
 private reply through the account's queue. It is sent without a person reading it, so it may
-quote only knowledge and brand settings (the output filter).
+quote only knowledge, brand settings and the instructions (the output filter), and with no
+instructions it must use a knowledge source unless the message is small talk.
 
 When the draft cannot answer from knowledge, or the filter blocks it, the automation sends
 nothing and escalates: the run is ``escalated`` (reason out_of_knowledge or output_blocked), the
@@ -37,7 +38,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from socialhood.ai.metering import QuotaExceeded
+from socialhood.ai.metering import QuotaExceeded, contact_admitted
 from socialhood.ai.provider import AIError
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError
@@ -54,7 +55,7 @@ from socialhood.repositories import inbox, social_accounts
 from socialhood.repositories import ingest as ingest_rows
 from socialhood.services.automations import actions, render, results
 from socialhood.services.notifications import notify_admins
-from socialhood.services.suggestions import drafting, knowledge_port
+from socialhood.services.suggestions import drafting, knowledge_port, small_talk
 from socialhood.services.suggestions.auto import REASON_COPY, escalate
 
 log = get_logger(__name__)
@@ -65,6 +66,12 @@ NO_CREDITS = ("ai_credits_exhausted", "AI credits are used up, so this automatio
 NOT_ON_PLAN = (
     "entitlement_required",
     "AI replies in automations are part of Creator and Business, so this automation sent nothing.",
+)
+
+
+OVER_CONTACT_LIMIT = (
+    "ai_contact_limit",
+    "This person has used their share of AI replies for now, so this automation sent nothing.",
 )
 
 
@@ -115,6 +122,7 @@ async def _draft(
     *,
     brand: drafting.Brand,
     disclosure: str | None,
+    text: str | None,
 ) -> Drafted:
     try:
         result = await drafting.draft(sessionmaker, request, brand=brand)
@@ -124,6 +132,9 @@ async def _draft(
         log.warning("automation_ai_reply_failed", error_code=error.code, ref=str(request.ref_id))
         return Drafted(error=_ai_failed(error))
     if result.can_answer and result.reply:
+        grounded = result.used_chunk_ids or request.instructions
+        if not grounded and not small_talk.is_small_talk(text, None):
+            return Drafted(escalation="out_of_knowledge", draft=result)
         return Drafted(text=render.with_disclosure(result.reply, disclosure), draft=result)
     reason = "output_blocked" if result.blocked is not None else "out_of_knowledge"
     return Drafted(escalation=reason, draft=result)
@@ -169,11 +180,14 @@ async def answer_dm(
             instructions=automation.ai_instructions,
             reserve=_reserve(conv.platform, disclosure),
         )
-    drafted = (
-        await _draft(sessionmaker, request, brand=brand, disclosure=disclosure)
-        if allowed
-        else Drafted(error=NOT_ON_PLAN)
-    )
+    if not allowed:
+        drafted = Drafted(error=NOT_ON_PLAN)
+    elif not await contact_admitted(redis, conv.contact_id, "automation"):
+        drafted = Drafted(error=OVER_CONTACT_LIMIT)
+    else:
+        drafted = await _draft(
+            sessionmaker, request, brand=brand, disclosure=disclosure, text=msg.text
+        )
     return await _settle_dm(sessionmaker, redis, deps, run_id, msg.id, drafted, now=now)
 
 
@@ -350,11 +364,14 @@ async def draft_for_comment(
         instructions=automation.ai_instructions,
         reserve=_reserve(acct.platform, disclosure),
     )
-    drafted = (
-        await _draft(sessionmaker, request, brand=brand, disclosure=disclosure)
-        if allowed
-        else Drafted(error=NOT_ON_PLAN)
-    )
+    if not allowed:
+        drafted = Drafted(error=NOT_ON_PLAN)
+    elif comment.contact_id and not await contact_admitted(redis, comment.contact_id, "automation"):
+        drafted = Drafted(error=OVER_CONTACT_LIMIT)
+    else:
+        drafted = await _draft(
+            sessionmaker, request, brand=brand, disclosure=disclosure, text=comment.text
+        )
     if drafted.text is not None:
         return CommentDraft(text=drafted.text)
     settled = await _settle_comment(

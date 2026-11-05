@@ -7,16 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBleed, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { KnowledgeGap } from "@/lib/api/types";
 import { emptyStates } from "@/lib/copy";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 
 /** At most five rows before "Show all" (UX-SCR-06). */
 export const GAPS_SHOWN = 5;
 
 /** "Asked 14 times · last 2h ago". */
 export function askedLine(gap: KnowledgeGap, now: Date): string {
-  const when = relativeTime(gap.last_seen_at, now);
-  const last = when === "now" ? "just now" : /^\d+[mhd]$/.test(when) ? `${when} ago` : when;
-  return `Asked ${gap.occurrences} ${gap.occurrences === 1 ? "time" : "times"} · last ${last}`;
+  return `Asked ${gap.occurrences} ${gap.occurrences === 1 ? "time" : "times"} · most recently ${timeAgo(gap.last_seen_at, now)}`;
 }
 
 /**

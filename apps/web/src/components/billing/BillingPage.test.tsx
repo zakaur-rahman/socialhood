@@ -142,6 +142,19 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(posts("/billing/checkout")[0].body).toEqual({ plan: "agency", period: "six_month" });
   });
 
+  it("only the chosen plan's card spins; the other upgrade buttons are disabled", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(browser, "assign").mockImplementation(() => undefined);
+    nav.search = "tab=billing";
+    setup({ handlers: { "GET /v1/billing/plans": () => json(planList({ businessOnSale: true, agencyOnSale: true })) } });
+    const plans = await screen.findByRole("list", { name: "Plans" });
+    await user.click(within(plans).getByRole("button", { name: "Upgrade to Business" }));
+    await waitFor(() => expect(within(plans).getByRole("button", { name: "Upgrade to Business" })).toHaveAttribute("aria-busy", "true"));
+    const other = within(plans).getByRole("button", { name: "Upgrade to Agency" });
+    expect(other).toBeDisabled();
+    expect(other).not.toHaveAttribute("aria-busy");
+  });
+
   it("C-174: no 6 months switch until something six-month is on sale", async () => {
     nav.search = "tab=billing";
     setup();
@@ -468,6 +481,24 @@ describe("payment history (C-066)", () => {
 });
 
 describe("plan hero and quotas (C-066)", () => {
+  it("leaves out a chip that repeats the plan's name, and limits of 0", async () => {
+    setup({
+      billing: billingState({
+        plan: "free",
+        status: "free",
+        entitlements: [
+          { key: "active_automations", value: 3 },
+          { key: "catalogue_products", value: 0 },
+        ],
+      }),
+    });
+    const hero = await screen.findByRole("region", { name: "Free" });
+    expect(within(hero).getAllByText("Free")).toHaveLength(1);
+    const others = screen.getByRole("list", { name: "Other limits" });
+    expect(others).toHaveTextContent("3 active automations");
+    expect(within(others).getAllByRole("listitem")).toHaveLength(1);
+  });
+
   it("a meter per metric GET …/billing counts, with its percentage and reset date", async () => {
     setup({
       billing: billingState({

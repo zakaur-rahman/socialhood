@@ -3,9 +3,10 @@
 The rules are in services/orders/: orders.py (making an order from the catalogue, asking for
 payment, paid, cancelled), payments.py (the workspace's own Razorpay keys and UPI address) and
 webhook.py (what Razorpay reports). Any member who can reply may make an order in a conversation,
-send its payment request and mark it paid or cancel it; the payment settings need
-``integrations.manage``. Reading is never refused; making, paying and connecting need ``commerce``
-on the plan (PD-8: Creator and Business, 402 ``entitlement_required`` on Free).
+send its payment request, cancel it or mark it shipped. Recording a payment and refunding need
+``orders.money`` (owners and admins); the payment settings need ``integrations.manage``. Reading
+is never refused; making, paying and connecting need ``commerce`` on the plan (PD-8: Creator and
+Business, 402 ``entitlement_required`` on Free).
 
 A request that names another workspace's conversation, product or order is a 404 before any plan
 check, so nothing reveals what exists.
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.auth.deps import (
     AnyMember,
     CanManageIntegrations,
+    CanMoveOrderMoney,
     CanReply,
     Session,
     WorkspaceContext,
@@ -251,7 +253,7 @@ async def edit_order(
 
 @router.post("/orders/{order_id}/mark-paid", operation_id="mark_order_paid")
 async def mark_order_paid(
-    request: Request, order_id: uuid.UUID, body: MarkPaid, ctx: CanReply, session: Session
+    request: Request, order_id: uuid.UUID, body: MarkPaid, ctx: CanMoveOrderMoney, session: Session
 ) -> OrderOut:
     """A member says a payment arrived: for UPI, which has no webhook. All that is left, or
     ``amount_minor`` of it (the order is then partly paid; send another request for the rest).
@@ -321,7 +323,11 @@ async def fulfil_order(
 
 @router.post("/orders/{order_id}/refunds", operation_id="refund_order")
 async def refund_order(
-    request: Request, order_id: uuid.UUID, body: RefundCreate, ctx: CanReply, session: Session
+    request: Request,
+    order_id: uuid.UUID,
+    body: RefundCreate,
+    ctx: CanMoveOrderMoney,
+    session: Session,
 ) -> OrderOut:
     """Refund an order in full or in part, with a reason. A Razorpay payment is refunded through
     the business's own keys (the refund is pending until Razorpay says it is processed); a UPI

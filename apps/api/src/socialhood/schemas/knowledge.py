@@ -18,7 +18,7 @@ SiteCrawlStatusName = Literal["idle", "queued", "running", "done", "failed"]
 SitePageStatusName = Literal["queued", "done", "failed", "skipped", "gone", "excluded", "removed"]
 ExcludedPath = Annotated[str, StringConstraints(min_length=1, max_length=200)]
 MAX_EXCLUDED_PATHS = 50
-KnowledgeStatusName = Literal["pending", "processing", "ready", "failed"]
+KnowledgeStatusName = Literal["awaiting_approval", "pending", "processing", "ready", "failed"]
 GapStatusName = Literal["open", "answered", "dismissed"]
 
 
@@ -51,7 +51,9 @@ class KnowledgeSource(ResponseModel):
     url: str | None = None
     file_asset_id: uuid.UUID | None = None
     file_name: str | None = None
-    status: KnowledgeStatusName  # Processing (pending, processing), Ready, Failed (FR-KB-02)
+    # Processing (pending, processing), Ready, Failed (FR-KB-02); awaiting_approval: an AI app
+    # added it, and the AI doesn't use it until a person approves it.
+    status: KnowledgeStatusName
     error: str | None = None  # why it failed, in plain words
     version: int
     char_count: int

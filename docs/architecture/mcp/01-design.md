@@ -30,7 +30,7 @@ Competitors already sell this. inro.social offers "an MCP server" on Pro, and In
 3. **Publishing first.** List accounts, then create, update, reschedule and cancel scheduled posts: single image or video, carousel, Reel, Story, caption, first comment, collaborators, time, and "next free slot". Upload or import media, and get best times. Everything is validated by the existing rules in `services/scheduled_posts/rules.py`, the same checklist the composer uses.
 4. **The "edit a video with Claude, then post it" story** works end to end from Claude Code and Codex: the AI edits locally with ffmpeg, uploads straight to our media store, and schedules the post. claude.ai and ChatGPT have a working path too (§5).
 5. **Read tools** for the rest of the product: inbox conversations, a comment summary for a post, an analytics summary, knowledge search, automations, and Ask Amplychat.
-6. **Safe low-risk writes:** add knowledge, pause or resume an automation, and draft a reply (a draft only, never sent).
+6. **Safe low-risk writes:** draft knowledge for a person to approve, pause an automation, and draft a reply (a draft only, never sent).
 7. **The same rules as the app:**
    - tenancy, plan entitlements, quotas (`scheduled_posts_monthly`) and rate limits;
    - roles, so a member can do through MCP only what they could do by hand;
@@ -225,9 +225,9 @@ The existing public API scopes stay. MCP adds:
 | `replies:draft` | Prepare a reply for a member to send in the app | Inbox (view) |
 | `comments:read` | Post comments, topics and sentiment | Insights |
 | `analytics:read` | Post and account analytics | Insights |
-| `knowledge:read`, `knowledge:write` | Search knowledge, and add a text or website source | Knowledge |
-| `automations:read` *(exists)*, `automations:write` | List automations and their stats, and pause or resume one | Automations |
-| `automations:create` (C-169) | Create and change keyword automations, and turn new ones on | Automations |
+| `knowledge:read`, `knowledge:write` | Search knowledge, and draft a note or FAQ for a person to approve | Knowledge |
+| `automations:read` *(exists)*, `automations:write` | List automations and their stats, and pause one | Automations |
+| `automations:create` (C-169) | Draft and change keyword automations for a person to turn on | Automations |
 | `ask` | Ask Amplychat a question (uses AI credits) | Ask |
 | `messages:send` *(exists, R2 on MCP)* | Send a reply (with approval in R2) | — |
 
@@ -250,8 +250,8 @@ The existing public API scopes stay. MCP adds:
   > ✓ See, schedule and change scheduled posts, and upload media for them
   > ✓ Read your inbox conversations and prepare replies (it can't send them)
   > ✓ Read comments and analytics
-  > ✓ Search and add to your knowledge
-  > ✓ See automations and pause or resume them
+  > ✓ Search your knowledge and draft notes for you to approve
+  > ✓ See automations and pause them
   >
   > Claude acts as you, and can't do anything your role (Admin) doesn't allow. You can disconnect it any time in Settings › Connected AI apps. Messages and comments it reads are sent to Claude's provider under their terms.
   >
@@ -351,10 +351,9 @@ Abbreviations: **RO** = `readOnlyHint: true`; **W** = write (`readOnlyHint: fals
 | Tool | Purpose | Inputs → outputs | Backing service | Scope | Plan | Hints |
 |---|---|---|---|---|---|---|
 | `search_knowledge` | What Amplychat's knowledge says about a question | `query` → passages with source names, and gaps | agent `search_knowledge`, `knowledge.retrieval` | `knowledge:read` | all | RO |
-| `add_knowledge` | Add a text note or a website page or site as a knowledge source | `type` = `text` (title, body ≤ 20k chars) / `url` (one page or a site crawl) → `source_id`, status (`processing`), `dashboard_url` | `knowledge.sources` create (the same as `POST /knowledge-sources`), within plan source limits | `knowledge:write` | all (limits per plan) | W, Idem (with a key) |
+| `add_knowledge` | Draft a text note or FAQ, unused until a person approves it on the Knowledge page | `type` = `text` (title, body ≤ 20k chars) / `faq` (question, answer) → `source_id`, status (`awaiting_approval`), `dashboard_url` | `knowledge.sources` create, within plan source limits | `knowledge:write` | all (limits per plan) | W, Idem (with a key) |
 | `list_automations` | Automations with status and recent results | `status?`, `trigger?` → `[{automation_id, name, trigger, status, runs_7d, replies_7d, last_error?}]` | agent `list_automations`, `get_automation_stats` | `automations:read` | all | RO |
 | `pause_automation` | Stop an automation now | `automation_id` → status, `dashboard_url` | `POST /automations/{id}/pause` service | `automations:write` | Pro, Max | W, **D** (it stops customer replies) |
-| `resume_automation` | Turn back on an automation **that was live before** | `automation_id` → status. A draft that has never been live is refused with "Activate it in Amplychat first", plus a link | `activate_automation` service (its validation and plan limits) | `automations:write` | Pro, Max | W, OW |
 
 **Ask Amplychat**
 
@@ -363,7 +362,7 @@ Abbreviations: **RO** = `readOnlyHint: true`; **W** = write (`readOnlyHint: fals
 | `ask_amplychat` | Ask Amplychat's own agent. It has tools and cited, service-computed numbers the outside AI doesn't | `question` (≤ 1,000 chars) → waits up to 25 s: `answer` with citations and `action_cards` (as links), or `ask_run_id` and "still working" | `api/v1/agent.py` run creation, `agent.orchestrator.enqueue_run`. The `ai` rate limit and AI credits | `ask` | all (plan credits) | RO |
 | `get_ask_answer` | Collect a slow Ask answer | `ask_run_id` → as above | `services.agent_runs` | `ask` | all | RO |
 
-That's **25 tools** in R1. The model reads the list on every turn, so we don't add more without a reason.
+That was **25 tools** in R1; with C-169's three, less `resume_automation`, it is **27** today ([04-phase-b.md](04-phase-b.md), "A person approves"). The model reads the list on every turn, so we don't add more without a reason.
 
 ### 4.2 Server instructions and prompts
 
@@ -398,10 +397,10 @@ That's **25 tools** in R1. The model reads the list on every turn, so we don't a
 | Create, schedule or queue a post | **direct** | The member asked in their AI client, and the client shows a confirmation for every non-read-only tool. The post publishes ≥ 5 min later. Owners and admins get an in-app notification ("Claude scheduled a Reel for Fri 6 pm, by Asha") with Cancel. Reversible until publish |
 | Update, reschedule or cancel a post | **direct** (destructive hint: the client always confirms) | Same |
 | Media upload or import | **direct** | Only lands in the library. Nothing is public |
-| Add knowledge | **direct** | Internal. It shows in Knowledge, where it can be removed |
+| Add knowledge | **a person approves it in the dashboard** | Unused until then. It shows in Knowledge, where it can be approved, edited or removed |
 | Pause an automation | **direct** (destructive) | Pausing is the safe direction |
-| Resume a previously live automation | **direct** | It was live before |
-| Create or change a keyword automation, and turn a new one on | **direct, after a preview** (C-169, owner's request; replaces "a first activation stays in the app") | The member asked and confirmed the preview. The app's own activation and plan limit apply, owners and admins are told, and it can be paused. See [04-phase-b.md](04-phase-b.md#c-169-automations-and-instagram-posts) |
+| Turn an automation on | **not from AI apps** | A person does it in the dashboard |
+| Create or change a keyword automation that is off | **direct, after a preview** (C-169); it stays off until a person turns it on in the dashboard, and one that is on is refused | The member asked and confirmed the preview. The app's own activation and plan limit apply, owners and admins are told, and it can be paused. See [04-phase-b.md](04-phase-b.md#c-169-automations-and-instagram-posts) |
 | Draft a reply | not a write | It returns a pre-filled deep link |
 | Send a DM or comment reply | **R2, approval** | It reaches a customer, is irreversible, and carries Meta policy and prompt-injection exfiltration risk (§6.5) |
 | Create or change a flow or segment | **R2, approval** (existing GR-36) | Same as Ask today |
@@ -686,7 +685,7 @@ Staging needs a public HTTPS host for claude.ai and ChatGPT to reach. That's the
 | Phase | Scope | Effort |
 |---|---|---|
 | **0 · Spike** | SDK v2 mounted at `/mcp`, `stateless_http`, the API-key verifier, `get_workspace` and `list_scheduled_posts`; Claude Code and Codex connect; both protocol eras verified | 2–3 days |
-| **R1a · Core tools on API keys** | Principal, tenancy, scopes, modes and limits; 25 tools; dedupe and idempotency; `mcp_tool_calls` audit; owner notifications; the Settings mode switch; media signed upload, URL import and drop page; tests 1–3 | 2–2.5 weeks |
+| **R1a · Core tools on API keys** | Principal, tenancy, scopes, modes and limits; the tools; dedupe and idempotency; `mcp_tool_calls` audit; owner notifications; the Settings mode switch; media signed upload, URL import and drop page; tests 1–3 | 2–2.5 weeks |
 | **R1b · OAuth** | AS endpoints (Authlib), CIMD and DCR, the consent page with workspace picker, grants, tokens and rotation, revocation, the Connected AI apps list; tests 4 | 1.5–2 weeks |
 | **R1c · Launch** | `/developers/mcp` page, privacy policy update, demo workspace, Inspector and real-client e2e, Anthropic and OpenAI submissions (OpenAI org verification) | 1 week, plus review wait |
 | **R1 total** | | **about 5–6 weeks** |

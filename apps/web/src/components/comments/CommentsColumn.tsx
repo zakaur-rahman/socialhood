@@ -146,7 +146,7 @@ export function CommentsColumn({
         {/* The heading and the filters stay in view under the page's sticky header while the
             comments scroll (owner, 2026-10-24). They bleed to the card's edges and top, on the
             work-pane glass, so the comments blur beneath them. */}
-        <div className="glass-pane sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-10 -mx-(--card-padding) -mt-(--card-padding) rounded-t-xl border-b border-line px-(--card-padding) pt-(--card-padding) pb-3 md:top-(--page-header-h)">
+        <div className="bg-panel sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-10 -mx-(--card-padding) -mt-(--card-padding) rounded-t-xl border-b border-line px-(--card-padding) pt-(--card-padding) pb-3 md:top-(--page-header-h)">
           <CardTitle id="post-comments-heading" ref={headingRef} tabIndex={-1} className="mb-3">
             Comments
           </CardTitle>

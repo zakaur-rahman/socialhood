@@ -49,7 +49,7 @@ describe("MessageBubble variants (UX-INB-06)", () => {
   it("shows a heart sticker large, without a bubble", () => {
     const { row } = renderBubble({ ...out, kind: "sticker", text: "❤️", attachments: [] });
     expect(screen.getByRole("img", { name: "Heart sticker" })).toHaveClass("text-5xl");
-    expect(row.querySelector('[data-variant="human"]')).not.toHaveClass("bg-brand-gradient");
+    expect(row.querySelector('[data-variant="human"]')).not.toHaveClass("bg-brand-strong");
   });
 
   it("hides the avatar inside a group", () => {
@@ -59,7 +59,7 @@ describe("MessageBubble variants (UX-INB-06)", () => {
 
   it("you: right, gradient, with the delivery status", () => {
     const { row } = renderBubble({ ...out, status: "delivered" });
-    expect(row.querySelector('[data-variant="human"]')).toHaveClass("bg-brand-gradient", "rounded-br-md");
+    expect(row.querySelector('[data-variant="human"]')).toHaveClass("bg-brand-strong", "rounded-br-md");
     expect(screen.getByRole("img", { name: "Delivered" })).toBeInTheDocument();
   });
 

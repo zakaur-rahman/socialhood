@@ -11,7 +11,7 @@ import type {
   ScheduledPostView,
   SocialAccount,
 } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
+import { errorMessage, plural } from "@/lib/copy";
 import type { Tone } from "@/lib/inbox/format";
 import { type Identity, identityAt } from "@/lib/ui/identity";
 
@@ -89,7 +89,7 @@ export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "ass
     case "image":
       return "Image";
     default:
-      return post.asset_count > 0 ? `${post.asset_count} files` : "No media yet";
+      return post.asset_count > 0 ? `${post.asset_count} ${plural(post.asset_count, "file", "files")}` : "No media yet";
   }
 }
 
@@ -208,7 +208,7 @@ export function firstProblem(error: unknown): string {
 
 export { TOO_SOON_MESSAGE };
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const withCount = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** FR-PUB-14: what a bulk action did, and what it skipped and why. */
 export function bulkResultMessage(
@@ -217,8 +217,8 @@ export function bulkResultMessage(
 ): { message: string; skipped: string | null } {
   const done = action === "delete" ? result.deleted_ids.length : result.updated.length;
   const verb = action === "shift" ? "moved" : action === "unschedule" ? "moved to drafts" : "deleted";
-  const message = `${plural(done, "post")} ${verb}.`;
+  const message = `${withCount(done, "post")} ${verb}.`;
   if (result.skipped.length === 0) return { message, skipped: null };
   const reasons = [...new Set(result.skipped.map((s) => s.message))].join(" ");
-  return { message, skipped: `${plural(result.skipped.length, "post")} skipped. ${reasons}`.trim() };
+  return { message, skipped: `${withCount(result.skipped.length, "post")} skipped. ${reasons}`.trim() };
 }

@@ -17,18 +17,20 @@ decision popover can show all of them; the first failure decides the outcome:
  8  sentiment_score > -0.5                                    escalated · negative_sentiment
  9  the suggestion can answer                                 escalated · out_of_knowledge
  10 confidence >= AUTO_MIN_CONFIDENCE                         escalated · low_confidence
- 11 fact questions use a source >= AI_RETRIEVAL_MIN_SIM       escalated · out_of_knowledge
+ 11 anything but small talk uses a source >= the minimum      escalated · out_of_knowledge
  12 no AI reply to this message yet; < 5 in the last hour     skipped · rate_capped
- 13 the output filter passes (ai/output_filter)               escalated · output_blocked
+ 13 the output filter passes, unattended (ai/output_filter)   escalated · output_blocked
 
 No analysis for the message fails check 6 as low_confidence: Auto never sends without the
 analysis' human, intent and sentiment signals (a P5 decision).
 
 Small talk (C-062): Auto may answer a greeting, thanks or goodbye. Check 11 asks for a knowledge
-source only for FACT_INTENTS, so a small-talk reply (the model's under suggest.v3, or the fixed one
-from services/suggestions/small_talk) is sent when it passes the rest like any reply: confidence
-at least AUTO_MIN_CONFIDENCE, no escalation signal, the rate cap and the output filter. A "Hi,
-what's the price?" is a pricing question and still needs knowledge. Escalation phrases are the
+source unless the caller found the message to be small talk by its words alone (``small_talk``,
+from services/suggestions/small_talk): the analysis' intent is the model's reading of the customer's
+text, so it can't be what lets a reply out without a source. A small-talk reply (the model's under
+suggest.v3, or the fixed one) is sent when it passes the rest like any reply: confidence at least
+AUTO_MIN_CONFIDENCE, no escalation signal, the rate cap and the output filter. An analysis with a
+FACT_INTENT still needs a source, as does "Hi, what's the price?". Escalation phrases are the
 built-in ones below plus the workspace's own (FR-SUG-06), matched as whole words or phrases in
 the message answered, ignoring case.
 """
@@ -112,6 +114,7 @@ class PolicyInput:
     min_similarity: float = 0.60  # AI_RETRIEVAL_MIN_SIM
     # GR-22: the account's hours say Auto works only while closed, and it is open now.
     auto_hours_blocked: bool = False
+    small_talk: bool = False  # the whole message is small talk, by its words alone (check 11)
 
 
 @dataclass(frozen=True)
@@ -247,7 +250,7 @@ def _topic(a: AnalysisFacts | None, text: str, phrases: Sequence[str]) -> Check:
 
 def _grounded(a: AnalysisFacts | None, p: PolicyInput) -> Check:
     intent = a.intent if a is not None else None
-    needs_source = intent in FACT_INTENTS
+    needs_source = intent in FACT_INTENTS or not p.small_talk
     grounded = p.used_sources > 0 and (p.top_similarity or 0.0) >= p.min_similarity
     return Check(
         11,
@@ -266,7 +269,7 @@ def _rate(p: PolicyInput) -> Check:
 
 
 def _output(reply: str | None, allowed: Sequence[str]) -> Check:
-    finding = output_filter.check(reply or "", allowed)
+    finding = output_filter.check(reply or "", allowed, unattended=True)
     return Check(
         13,
         "output_filter",

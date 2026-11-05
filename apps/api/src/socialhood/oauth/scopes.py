@@ -66,7 +66,7 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "Knowledge",
         (
             ("knowledge:read", "Search your knowledge base"),
-            ("knowledge:write", "Add notes and websites to your knowledge base"),
+            ("knowledge:write", "Draft notes and FAQs for you to approve"),
         ),
     ),
     ScopeGroup(
@@ -74,10 +74,10 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "Automations",
         (
             ("automations:read", "See your automations and how they're doing"),
-            ("automations:write", "Pause and resume automations"),
+            ("automations:write", "Pause automations"),
             (
                 "automations:create",
-                "Create and change keyword automations, and turn new ones on, after a preview",
+                "Draft and change keyword automations for you to turn on",
             ),
         ),
     ),

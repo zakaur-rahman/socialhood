@@ -15,7 +15,7 @@ import type { AccountStatus, AiMode, Plan, SocialAccount, SocialAccountPatch } f
 import { accountStatusLabel } from "@/lib/copy";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import type { Tone } from "@/lib/ui/tone";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 
@@ -65,9 +65,7 @@ export type AccountBusy = {
 
 /** "Last synced 3h ago", or on a date once it's a week old. */
 export function lastSyncedText(iso: string, now: Date): string {
-  const when = relativeTime(iso, now);
-  if (when === "now") return "Last synced just now";
-  return /^\d+[mhd]$/.test(when) ? `Last synced ${when} ago` : `Last synced on ${when}`;
+  return `Last synced ${timeAgo(iso, now)}`;
 }
 
 /**
@@ -114,7 +112,7 @@ export function AccountCard({
       <header className="flex items-start gap-3">
         <Avatar size="lg">
           {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
-          <AvatarFallback className="bg-brand-soft text-brand-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="bg-raised text-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
           <AvatarBadge role="img" aria-label={platformName} className={PLATFORM_LOGO_BG[account.platform]}>
             <PlatformGlyph platform={account.platform} />
           </AvatarBadge>
@@ -123,7 +121,7 @@ export function AccountCard({
           <p className="flex min-w-0 items-center gap-2">
             <span className="truncate font-semibold">{name}</span>
             {account.sandbox ? (
-              <Badge tone="brand" shape="tag">
+              <Badge tone="neutral" shape="tag">
                 Sandbox
               </Badge>
             ) : null}

@@ -86,13 +86,13 @@ export const ASKS: readonly Ask[] = [
   },
   {
     prompt: "Add our new return policy to the knowledge base.",
-    result: "It adds a note that your AI replies can use. Your plan's knowledge limit applies.",
+    result: "It drafts a note and it waits on your Knowledge page. You read it and approve it, and then your AI replies can use it. Your plan's knowledge limit applies.",
     plan: "Creator and Business",
   },
   {
     prompt: "When someone comments \"price\" on my last post, DM them the price.",
     result:
-      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it stays off unless you ask for it on. Once it's on, the automation sends the DMs, and your team is told. Ask it to pause the automation whenever you like.",
+      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it's saved off. You review it and turn it on in Amplychat, and then the automation sends the DMs. Your team is told, and you can ask the AI to pause it whenever you like.",
     plan: "Creator and Business",
   },
   {
@@ -119,7 +119,7 @@ export const HOW_STEPS: readonly { title: string; body: string }[] = [
 ];
 
 export const CONFIRM_LINE =
-  "Before a post is scheduled, changed or cancelled, or an automation is created or changed, Amplychat requires a preview, and the AI shows it to you and waits for your yes.";
+  "Before a post is scheduled, changed or cancelled, or an automation is created or changed, Amplychat requires a preview, and the AI shows it to you and waits for your yes. Automations and new knowledge also wait for you to approve them in Amplychat.";
 
 export const MCP_PAGE_FAQ = [
   {
@@ -138,11 +138,11 @@ export const MCP_PAGE_FAQ = [
   },
   {
     question: "Can the AI message my customers?",
-    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also set up a keyword automation: Amplychat requires a preview first, you say yes, and once it's on, the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told. ${ALWAYS_ALLOW_LINE}`,
+    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also draft a keyword automation. It stays off until you turn it on in ${SITE_NAME}, and then the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
   },
   {
     question: "Does this cost extra?",
-    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule posts, add knowledge and create, change or pause automations, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
+    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule posts, draft knowledge and automations for you to approve and pause automations, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
   },
   {
     question: "Can I use it with Cursor or VS Code?",

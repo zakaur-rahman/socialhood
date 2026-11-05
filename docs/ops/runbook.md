@@ -161,6 +161,18 @@ run again. The detail names the task and job id.
   customer asks.
 - `alert_kind:billing_duplicate_subscription`: two checkouts completed at once; the workspace
   keeps the first. Cancel and refund the other one in Dodo's dashboard.
+- `alert_kind:billing_unrouted_payment`: Dodo took a payment or started a subscription that doesn't
+  match any workspace, usually a payment link our checkout didn't make. Nobody got a plan for it.
+  The event is in `webhook_events` (the alert has its id). Look it up in Dodo's dashboard; cancel
+  and refund it unless it is a real customer's, who should go through the app's checkout instead.
+- `alert_kind:billing_trial_already_used`: a subscription started a trial the workspace or its
+  owner's email has already had. No plan was given and it is being cancelled
+  (`cancel_orphan_subscription`). Check that it shows cancelled in Dodo's dashboard.
+- `alert_kind:billing_many_subscriptions_missing`: Dodo says it has no record of most paid
+  subscriptions, and nothing was changed. After a go-live, run the reset in `deploy-vm.md` ("Going
+  live with Dodo"). Otherwise check `DODO_ENVIRONMENT` and `DODO_API_KEY`.
+- `alert_kind:billing_subscription_missing`: Dodo had no record of one subscription for a day, so
+  its workspace moved to Free. If the customer is paying, find them in Dodo's dashboard.
 
 ## API errors
 

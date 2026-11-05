@@ -6,15 +6,25 @@ import base64
 import hashlib
 import hmac
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
 from standardwebhooks.webhooks import Webhook
 
+from socialhood.settings import ConfigurationError
+
 # Standard Webhooks (https://standardwebhooks.com), which Dodo follows: the message id, the Unix
 # timestamp and ``v1,<base64 HMAC-SHA256>`` signatures (space-separated) in these headers.
 STANDARD_WEBHOOK_HEADERS = ("webhook-id", "webhook-timestamp", "webhook-signature")
+
+
+def same_text(expected: str, given: str) -> bool:
+    """Constant-time equality for text from a request. Compares bytes: ``compare_digest`` raises
+    on a non-ASCII str."""
+    return hmac.compare_digest(
+        expected.encode("utf-8", "replace"), given.encode("utf-8", "replace")
+    )
 
 
 def verify_standard_webhook(raw: bytes, headers: Mapping[str, str], secret: str) -> bool:
@@ -49,7 +59,7 @@ def verify_hub_signature(raw: bytes, header: str | None, secret: str) -> bool:
     if not header or not secret or not header.startswith("sha256="):
         return False
     expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, header.removeprefix("sha256="))
+    return same_text(expected, header.removeprefix("sha256="))
 
 
 def _b64url_decode(value: str) -> bytes:
@@ -68,10 +78,10 @@ def parse_signed_request(signed_request: str | None, secrets: list[str]) -> dict
         payload = json.loads(_b64url_decode(payload_part))
     except (ValueError, json.JSONDecodeError):
         return None
-    if (
-        not isinstance(payload, dict)
-        or payload.get("algorithm", "HMAC-SHA256").upper() != "HMAC-SHA256"
-    ):
+    if not isinstance(payload, dict):
+        return None
+    algorithm = payload.get("algorithm", "HMAC-SHA256")
+    if not isinstance(algorithm, str) or algorithm.upper() != "HMAC-SHA256":
         return None
     for secret in secrets:
         if not secret:
@@ -88,3 +98,26 @@ def sign_request(payload: dict[str, Any], secret: str) -> str:
     digest = hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
     signature = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
     return f"{signature}.{body}"
+
+
+# The workspace a Dodo checkout was started for. Dodo copies our metadata onto its events, but a
+# signed event only proves Dodo sent it: anyone can put metadata on a payment link. This value
+# proves our checkout chose the workspace. Newest key signs, every configured key verifies.
+_CHECKOUT_PURPOSE = b"socialhood/dodo-checkout/v1:"
+
+
+def _checkout_mac(workspace_id: str, key: str) -> str:
+    message = _CHECKOUT_PURPOSE + workspace_id.encode()
+    return hmac.new(key.encode(), message, hashlib.sha256).hexdigest()
+
+
+def sign_checkout_workspace(workspace_id: str, keys: Sequence[str]) -> str:
+    if not keys:
+        raise ConfigurationError("TOKEN_ENCRYPTION_KEYS is empty; cannot sign a checkout")
+    return _checkout_mac(workspace_id, keys[0])
+
+
+def checkout_workspace_signed(workspace_id: str, signature: object, keys: Sequence[str]) -> bool:
+    return isinstance(signature, str) and any(
+        same_text(_checkout_mac(workspace_id, key), signature) for key in keys
+    )

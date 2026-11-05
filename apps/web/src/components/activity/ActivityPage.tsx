@@ -18,7 +18,7 @@ import { useActivity, useAutomations, useBroadcastAvailability, useRetryActivity
 import type { ActivityFilters } from "@/lib/api/queries";
 import type { ActivityItem, ActivityKind, ActivityOutcome } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
@@ -174,7 +174,6 @@ export function ActivityPage() {
 function ActivityRow({ item, wid, slug }: { item: ActivityItem; wid: string; slug: string }) {
   const retry = useRetryActivity(wid);
   const outcome = OUTCOME[item.outcome];
-  const ago = relativeTime(item.occurred_at);
   return (
     <li className={cn(cardVariants(), "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between")}>
       <div className="flex min-w-0 gap-3">
@@ -188,7 +187,7 @@ function ActivityRow({ item, wid, slug }: { item: ActivityItem; wid: string; slu
           </div>
           {item.reason ? <p className="text-sm text-fg-secondary">{item.reason}</p> : null}
           <p className="text-xs text-fg-secondary">
-            {[item.account_label, ago === "now" ? "Just now" : `${ago} ago`].filter(Boolean).join(" · ")}
+            {[item.account_label, timeAgo(item.occurred_at)].filter(Boolean).join(" · ")}
           </p>
         </div>
       </div>

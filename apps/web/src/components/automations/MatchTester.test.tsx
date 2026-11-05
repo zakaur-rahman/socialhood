@@ -1,11 +1,17 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { AutomationTestResult } from "@/lib/api/types";
 import { json, renderWithApi, type Call } from "@/test/api";
 
 import { MatchTester } from "./MatchTester";
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 function renderTester(
   result: Omit<AutomationTestResult, "flow_path"> & Partial<Pick<AutomationTestResult, "flow_path">>,
@@ -197,7 +203,8 @@ describe("MatchTester (UX-SCR-03 Test)", () => {
     expect(screen.queryByTestId("test-message")).toBeNull();
     expect(bodies[0]).toMatchObject({ choices: [] });
 
-    await user.selectOptions(within(flow).getByRole("combobox", { name: "Branch 1" }), "Taps Prices");
+    await user.click(within(flow).getByRole("combobox", { name: "Branch 1" }));
+    await user.click(screen.getByRole("option", { name: "Taps Prices" }));
     expect(await within(await screen.findByTestId("test-flow")).findByText("Prices start at 499.")).toBeInTheDocument();
     expect(bodies[1]).toMatchObject({ choices: [1] });
   });

@@ -132,7 +132,7 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     nav.params = { id: "c1" };
     renderShell();
     await screen.findByText("Kabir Shah");
-    expect(pane("list")).toHaveClass("w-[300px]");
+    expect(pane("list")).toHaveClass("w-75");
     expect(pane("thread")).toBeInTheDocument();
     expect(pane("details")).toBeNull();
     // Not resizable on tablets: no handle.

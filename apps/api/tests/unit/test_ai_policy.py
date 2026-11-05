@@ -181,9 +181,11 @@ def test_no_analysis_means_no_auto_reply() -> None:
     assert decision.checks_json[5]["value"] == "no analysis"
 
 
-def test_non_fact_questions_need_no_source() -> None:
+def test_only_small_talk_goes_without_a_source() -> None:
     greeting = AnalysisFacts(intent="greeting", sentiment_score=0.5, needs_human=False)
-    assert failed_checks(replace(PASSING, analysis=greeting, used_sources=0)) == []
+    no_source = replace(PASSING, analysis=greeting, used_sources=0)
+    assert failed_checks(replace(no_source, small_talk=True)) == []
+    assert evaluate(no_source).reason == "out_of_knowledge"  # the intent alone doesn't let it out
     below = replace(PASSING, top_similarity=0.59)
     assert evaluate(below).reason == "out_of_knowledge"
 
@@ -199,6 +201,7 @@ GREETING = replace(
     used_sources=0,
     top_similarity=None,
     allowed_texts=[],
+    small_talk=True,
 )
 
 
@@ -288,6 +291,90 @@ def test_the_output_filter_allows_only_what_knowledge_has(
 ) -> None:
     found = output_filter.check(reply, [KNOWLEDGE])
     assert (None if found is None else (found.kind, found.value)) == finding
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "Pay at evil-shop.xyz/pay",
+        "See bit.do/abc",
+        "Log in at login-brand.ru",
+        "Pay to scammer@ybl",
+        "Go to evil dot com",
+        "Go to evil[dot]xyz",
+        "Go to evil(.)com",
+        "Go to evil\uff0ecom",
+        "Go to evil\u3002com",
+        "Go to evil\u200b.com",
+    ],
+)
+def test_links_and_upi_ids_are_found_in_any_form(reply: str) -> None:
+    assert output_filter.check(reply, [KNOWLEDGE]) is not None
+
+
+@pytest.mark.parametrize(
+    ("reply", "source"),
+    [
+        ("Order at maple-bakery.xyz/menu", "Our menu: https://maple-bakery.xyz/menu"),
+        ("Pay to maple@okaxis", "UPI: maple@okaxis"),
+        ("We open at 10.30 a.m. e.g. on Monday, i.e. weekdays.", "Open 10.30 to 6"),
+        ("We sell polka dot dresses, on the dot.", "dresses"),
+        ("A 3.5kg cake, 1.5L of juice.", "3.5kg cake and 1.5L juice"),
+    ],
+)
+def test_the_business_own_links_and_plain_text_pass(reply: str, source: str) -> None:
+    assert output_filter.check(reply, [source]) is None
+
+
+@pytest.mark.parametrize(
+    ("reply", "number"),
+    [
+        ("Yes, you get 90% off.", "90%"),
+        ("Use code FREE90 at checkout.", "90"),
+        ("It costs ₹500.", "500"),
+        ("Delivery in 24 hours.", "24"),
+        ("Free over 10% of the order.", "10%"),  # the source's 10 is not a percentage
+    ],
+)
+def test_a_reply_nobody_reads_states_only_the_sources_numbers(reply: str, number: str) -> None:
+    found = output_filter.check(reply, ["Open 10 to 6. Free over ₹999."], unattended=True)
+    assert found is not None
+    assert (found.kind, found.value) == ("number", number)
+    assert output_filter.check(reply, ["Open 10 to 6. Free over ₹999."]) is None  # a person reads
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "Free over ₹999.",
+        "Free over Rs 999.00 today.",
+        "Free over ₹९९९.",
+        "It is 1499 and 15 percent off.",
+        "Here are 2 options for you.",
+        "Call +91 98765 43210, or 9876543210.",
+        "Orders ship on 2026-10-02.",
+    ],
+)
+def test_numbers_the_sources_hold_pass_when_nobody_reads(reply: str) -> None:
+    sources = [
+        "Free over ₹999. A cake is ₹1,499, 15% off. Call +91 98765 43210. Next ship: 2026-10-02."
+    ]
+    assert output_filter.check(reply, sources, unattended=True) is None
+
+
+def test_a_long_passage_of_knowledge_is_not_repeated_word_for_word() -> None:
+    long_text = " ".join(f"word{chr(97 + i % 26)}" for i in range(120))
+    found = output_filter.check(long_text[:450], [long_text], unattended=True)
+    assert found is not None
+    assert found.kind == "quote"
+    assert output_filter.check(long_text[:350], [long_text], unattended=True) is None
+    assert output_filter.check(long_text[:450], [long_text]) is None
+
+
+def test_the_policy_checks_the_reply_as_unattended() -> None:
+    facts = replace(PASSING, reply_text="Shipping is 90% off.")
+    assert failed_checks(facts) == [13]
+    assert evaluate(facts).reason == "output_blocked"
 
 
 def test_brand_settings_count_as_a_source() -> None:

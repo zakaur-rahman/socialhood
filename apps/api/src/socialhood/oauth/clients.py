@@ -15,15 +15,17 @@ Two ways a client is known:
   is checked field by field; a client that asks for a secret gets one (only its hash is kept).
 
 Redirect URIs, for both: https (no fragment, no user info), or http on a loopback host
-(``localhost``, ``127.0.0.1``, ``[::1]``) for apps on the member's own computer. Matching is
-exact, except that a loopback redirect matches on any port (RFC 8252 §7.3), which Claude Code
-and Codex need.
+(``localhost``, ``127.0.0.1``, ``[::1]``) for apps on the member's own computer. Registered or
+asked for, a URI must read the same to this server and to a browser (``valid_redirect_uri``).
+Matching is exact, except that a loopback redirect matches on any port (RFC 8252 §7.3), which
+Claude Code and Codex need.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
@@ -49,6 +51,12 @@ LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "[::1]", "::1"})
 GRANT_TYPES = frozenset({"authorization_code", "refresh_token"})
 SECRET_PREFIX = "shs_"  # noqa: S105  (the start of a generated secret)
 
+# A host (name or bracketed IPv6) and an optional port, and nothing else: user info, percent
+# escapes and non-ASCII are read differently by urlsplit and by a browser's URL parser.
+PLAIN_AUTHORITY = re.compile(r"(?:[A-Za-z0-9._-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]*)?")
+# A browser reads a backslash as a slash and drops tabs and newlines; none belongs in a URL.
+MISREAD_CHARS = re.compile(r"[\\\s\x00-\x1f\x7f]")
+
 Fetcher = Callable[..., Awaitable[ssrf.Page]]
 
 
@@ -72,9 +80,18 @@ def _split(uri: str) -> Any:
         return None
 
 
-def is_loopback(uri: str) -> bool:
+def _plain_url(uri: str) -> bool:
+    """Whether this server and a browser are certain to read the same host from ``uri``."""
     parts = _split(uri)
-    return bool(parts) and parts.scheme == "http" and (parts.hostname or "") in _loopback_names()
+    return (
+        parts is not None
+        and not MISREAD_CHARS.search(uri)
+        and PLAIN_AUTHORITY.fullmatch(parts.netloc) is not None
+    )
+
+
+def is_loopback(uri: str) -> bool:
+    return valid_redirect_uri(uri) and bool(_split(uri).scheme == "http")
 
 
 def _loopback_names() -> frozenset[str]:
@@ -82,14 +99,12 @@ def _loopback_names() -> frozenset[str]:
 
 
 def valid_redirect_uri(uri: object) -> bool:
-    """An https URI, or http on a loopback host; no fragment, no user info, at most 2,000
-    characters."""
-    if not isinstance(uri, str) or not uri or len(uri) > MAX_URI_CHARS or uri != uri.strip():
+    """An https URI, or http on a loopback host; no fragment, no user info, nothing a browser
+    could read as another host, at most 2,000 characters."""
+    if not isinstance(uri, str) or not uri or len(uri) > MAX_URI_CHARS or not _plain_url(uri):
         return False
     parts = _split(uri)
-    if parts is None or not parts.netloc or parts.fragment or "#" in uri:
-        return False
-    if parts.username is not None or parts.password is not None:
+    if parts.fragment or "#" in uri:
         return False
     try:
         parts.port  # noqa: B018  (raises for a bad port)
@@ -101,7 +116,10 @@ def valid_redirect_uri(uri: object) -> bool:
 
 
 def redirect_matches(registered: list[str], asked: str) -> bool:
-    """Exact match, or the same loopback URI on another port (RFC 8252 §7.3)."""
+    """Exact match, or the same loopback URI on another port (RFC 8252 §7.3). What is asked must
+    be a valid redirect URI itself, whatever was registered."""
+    if not valid_redirect_uri(asked):
+        return False
     if asked in registered:
         return True
     if not is_loopback(asked):
@@ -130,7 +148,7 @@ def _https_or_none(uri: object) -> str | None:
     if not isinstance(uri, str) or len(uri) > MAX_URI_CHARS:
         return None
     parts = _split(uri)
-    if parts is None or parts.scheme != "https" or not parts.hostname or parts.username:
+    if parts is None or parts.scheme != "https" or not parts.hostname or not _plain_url(uri):
         return None
     return uri
 
@@ -174,7 +192,7 @@ def check_cimd_url(client_id: str) -> None:
     parts = _split(client_id)
     if parts is None or parts.scheme != "https" or not parts.hostname:
         raise ClientError("invalid_client", "A URL client_id must be an https URL.")
-    if parts.username is not None or parts.password is not None or parts.fragment:
+    if not _plain_url(client_id) or parts.fragment:
         raise ClientError("invalid_client", "The client_id URL can't have user info or a fragment.")
     if parts.path in ("", "/") or any(seg in (".", "..") for seg in parts.path.split("/")):
         raise ClientError("invalid_client", "The client_id URL must have a path.")

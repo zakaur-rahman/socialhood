@@ -3,7 +3,7 @@ import { useId } from "react";
 import { SentimentBar, SentimentLegend } from "@/components/comments/SentimentBar";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SentimentSummaryVisual } from "@/lib/api/types";
-import { formatCount } from "@/lib/comments/format";
+import { formatCount, plural } from "@/lib/comments/format";
 
 /**
  * GR-38: comment sentiment as one split bar with the counts, and the top topics when the run found
@@ -40,8 +40,8 @@ export function SentimentSummary({ visual }: { visual: SentimentSummaryVisual })
         )}
         {visual.not_analysed > 0 && analysed > 0 ? (
           <p className="text-xs text-fg-secondary" data-testid="sentiment-pending">
-            {formatCount(visual.not_analysed)} of {formatCount(visual.total)} comments aren&apos;t analysed yet, so
-            they aren&apos;t in the bar.
+            {formatCount(visual.not_analysed)} of {plural(visual.total, "comment", "comments")}{" "}
+            {visual.not_analysed === 1 ? "isn't analysed yet, so it isn't" : "aren't analysed yet, so they aren't"} in the bar.
           </p>
         ) : null}
         {visual.topics.length > 0 ? (
