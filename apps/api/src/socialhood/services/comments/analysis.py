@@ -28,7 +28,10 @@ A batch:
    the batch; a comment that fails alone, or is left when MAX_CALLS_PER_BATCH calls were made, is
    skipped. Another failure after part of the batch was read keeps the rest pending.
 4. Spam is hidden on Instagram when the account's auto-hide is on (FR-CMT-05), before the batch is
-   stored; a refusal leaves the comment visible.
+   stored; a refusal leaves the comment visible. A batch's comments share one call, so a reading
+   there can be swayed by another commenter's text. Before hiding, each flagged comment is read
+   again in a call holding only it, at no credit (at most MAX_HIDE_CHECKS a batch; §1.7's price per
+   comment stands), and only a comment flagged alone is hidden. The rest stay visible.
 5. The analyses are stored (once per comment), the comments marked done, their posts' comment stats
    recounted, and comment.updated and post.updated published. A post with 20 analyses since its
    last summary gets ``summarize_post`` (services/comments/summaries; the 24 h rule is swept
@@ -49,7 +52,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.ai import prompts
-from socialhood.ai.metering import QuotaExceeded, metered
+from socialhood.ai.metering import QuotaExceeded, SpendPaused, metered
 from socialhood.ai.provider import AIError, Turn
 from socialhood.ai.registry import get_provider
 from socialhood.billing.plans import current_plan, entitlement
@@ -79,6 +82,7 @@ BATCH_SIZE = 50  # TR-AI-11
 COMMENTS_PER_CREDIT = 20  # §1.7
 MAX_BATCHES_PER_RUN = 10
 MAX_CALLS_PER_BATCH = 12
+MAX_HIDE_CHECKS = 10
 MAX_OUTPUT_TOKENS = 4096
 TEMPERATURE = 0.0
 TIMEOUT_S = 30.0
@@ -332,6 +336,9 @@ async def analyze_batch(
             return await _finish_skipped(sessionmaker, redis, prepared)
         try:
             read = await _read_all(sessionmaker, settings, workspace_id, prepared, now)
+        except SpendPaused:  # TR-AI-13: they stay pending for when it lifts
+            log.info("comment_analysis_paused", account_id=str(account_id))
+            return BatchRun("quota_exhausted", skipped=prepared.skipped)
         except QuotaExceeded:  # FR-AI-05: skipped, like DMs, so the progress completes
             log.info("comment_analysis_skipped", account_id=str(account_id), reason="quota")
             async with sessionmaker() as session:
@@ -348,7 +355,7 @@ async def analyze_batch(
         async with sessionmaker() as session:
             triggered = await automation_runs.comments_with_runs(session, list(read.by_comment))
         _keywords_are_not_spam(read, triggered)
-        hidden = await _auto_hide(deps, prepared, read.by_comment)
+        hidden = await _auto_hide(sessionmaker, settings, workspace_id, deps, prepared, read, now)
         return await _store(sessionmaker, redis, prepared, read, hidden, now)
 
 
@@ -461,8 +468,11 @@ async def _call(
     batch: _Batch,
     part: list[tuple[str, Comment]],
     now: datetime,
+    *,
+    cost: int | None = None,
 ) -> tuple[CommentReadings, str]:
-    """One metered call for ``part``: 1 credit per 20 comments, rounded up (§1.7)."""
+    """One metered call for ``part``: 1 credit per 20 comments, rounded up (§1.7), unless ``cost``
+    says otherwise."""
     async with metered(
         sessionmaker,
         workspace_id=workspace_id,
@@ -470,7 +480,7 @@ async def _call(
         ref_type="social_account",
         ref_id=batch.acct.id,
         now=now,
-        cost=math.ceil(len(part) / COMMENTS_PER_CREDIT),
+        cost=math.ceil(len(part) / COMMENTS_PER_CREDIT) if cost is None else cost,
     ) as meter:
         result = await get_provider().generate_json(
             task="comment_analysis",
@@ -489,13 +499,53 @@ async def _call(
 # ---------------------------------------------------------------- auto-hide (FR-CMT-05)
 
 
+async def _flagged_alone(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    workspace_id: uuid.UUID,
+    batch: _Batch,
+    read: _Readings,
+    spam: list[Comment],
+    now: datetime,
+) -> list[Comment]:
+    """Of ``spam``, what is still spam read with no other comment in the call (step 4). Its reading
+    replaces the batch's. A failed call stops the checks; unchecked comments are not hidden."""
+    if len(batch.comments) == 1:
+        return spam
+    flagged: list[Comment] = []
+    for comment in spam[:MAX_HIDE_CHECKS]:
+        read.calls += 1
+        try:
+            answer, _ = await _call(
+                sessionmaker, settings, workspace_id, batch, [("1", comment)], now, cost=0
+            )
+        except (AIError, QuotaExceeded) as error:
+            log.info(
+                "comment_hide_check_failed",
+                account_id=str(batch.acct.id),
+                error_code=getattr(error, "code", ""),
+            )
+            break
+        read.by_comment[comment.id] = answer.items[0]
+        if _is_spam(answer.items[0]):
+            flagged.append(comment)
+    return flagged
+
+
 async def _auto_hide(
-    deps: PlatformDeps, batch: _Batch, readings: dict[uuid.UUID, CommentReading]
+    sessionmaker: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    workspace_id: uuid.UUID,
+    deps: PlatformDeps,
+    batch: _Batch,
+    read: _Readings,
+    now: datetime,
 ) -> set[uuid.UUID]:
     """Hide the batch's spam on Instagram when the account's auto-hide is on; returns the comments
     hidden. A refusal is logged and the comment stays visible; a temporary error or a broken
     connection stops hiding for this batch."""
     acct = batch.acct
+    readings = read.by_comment
     spam = [
         c for c in batch.comments if c.id in readings and _is_spam(readings[c.id]) and not c.hidden
     ]
@@ -508,6 +558,7 @@ async def _auto_hide(
         return set()
     if Capability.COMMENTS not in adapter.capabilities_for(acct):
         return set()
+    spam = await _flagged_alone(sessionmaker, settings, workspace_id, batch, read, spam, now)
     hidden: set[uuid.UUID] = set()
     for comment in spam:
         try:

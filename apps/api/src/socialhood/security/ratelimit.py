@@ -6,12 +6,14 @@ Retry-After.
   counts against the workspace's 60 sends a minute;
 - MCP tool calls (C-165, mcp/calls.py): 120 a minute per connection and 300 a minute per
   workspace, refused as a tool error rather than a 429;
-- per workspace: 60 sends a minute and 20 AI requests a minute (api/ratelimit.per_workspace);
+- per workspace: 60 sends a minute, 20 AI requests a minute, 120 knowledge changes an hour, and
+  200 upload signatures an hour and 1000 a day (api/ratelimit.per_workspace);
 - per client IP on unauthenticated routes: 30 a minute on OAuth callbacks (TR-API-07), 60 a
   minute on the other public routes (api/ratelimit.per_ip);
 - the website chat widget's public routes (GR-28): per IP 120 frame loads, 20 sessions, 40 sends,
-  240 polls and 10 email forms a minute, and per visitor 10 sends a minute, 300 sends a day and 60
-  polls a minute.
+  240 polls and 10 email forms a minute, per visitor 10 sends a minute, 300 sends a day and 60
+  polls a minute, and per widget 120 sends a minute. AI on those messages has its own daily caps
+  (services/widget/chat.py); over them the message is kept for the team.
 
 Webhooks are not limited by IP (Meta shares IPs, TR-API-07); their bodies are capped at 5 MB.
 
@@ -79,6 +81,11 @@ LIMITS: dict[str, Limit] = {
         Limit("widget_poll_ip", 240, 60),
         Limit("widget_poll_visitor", 60, 60),
         Limit("widget_email_ip", 10, 60),
+        Limit("widget_send_account", 120, 60),
+        Limit("widget_ai_visitor", 40, 86_400),
+        Limit("knowledge_ingest", 120, 3600),
+        Limit("upload_signature", 200, 3600),
+        Limit("upload_signature_day", 1000, 86_400),
     )
 }
 

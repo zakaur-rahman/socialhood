@@ -41,9 +41,10 @@ import { Meter } from "@/components/ui/meter";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
-import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
+import { isProcessing, useApproveKnowledgeSource, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeCreateType, KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
+import { PERMISSION, useCan } from "@/lib/permissions";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -112,6 +113,13 @@ export function AddKnowledgeMenu({
 
 /** FR-KB-02: Processing (with a spinner), Ready, or Failed with the reason. */
 export function StatusChip({ source, className }: { source: KnowledgeSource; className?: string }) {
+  if (source.status === "awaiting_approval") {
+    return (
+      <Badge tone="warning" size="md" className={className}>
+        Needs approval
+      </Badge>
+    );
+  }
   if (isProcessing(source)) {
     return (
       <Badge tone="brand" size="md" className={className}>
@@ -153,6 +161,8 @@ export function SourcesCard({
 }) {
   const workspace = useCurrentWorkspace();
   const remove = useDeleteKnowledgeSource(workspace.id);
+  const approve = useApproveKnowledgeSource(workspace.id);
+  const { can } = useCan();
   const upgradeDialog = useUpgradeDialog();
   const [deleting, setDeleting] = useState<KnowledgeSource | null>(null);
   // GR-35: the websites whose pages are open under their row.
@@ -307,6 +317,33 @@ export function SourcesCard({
                         </div>
                       </TableCell>
                     </TableRow>
+                    {source.status === "awaiting_approval" ? (
+                      <TableRow data-awaiting-approval={source.id}>
+                        <TableCell colSpan={5} className="whitespace-normal">
+                          <p className="text-xs text-fg-secondary">
+                            Added by an AI app. Your AI won&apos;t use it until it&apos;s approved.
+                          </p>
+                          {source.question ? <p className="mt-2 font-medium break-words">{source.question}</p> : null}
+                          <p className="mt-1 max-h-64 overflow-y-auto break-words whitespace-pre-wrap">{source.body}</p>
+                          {can(PERMISSION.manageKnowledge) ? (
+                            <Button
+                              size="sm"
+                              className="mt-3"
+                              aria-label={`Approve ${source.title}`}
+                              disabled={approve.isPending && approve.variables === source.id}
+                              onClick={() =>
+                                approve.mutate(source.id, {
+                                  onSuccess: () => toast.success(`Approved “${source.title}”`),
+                                  onError: (error) => toastError(error),
+                                })
+                              }
+                            >
+                              Approve
+                            </Button>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
                     {pagesOpen ? (
                       <TableRow data-site-pages={source.id}>
                         <TableCell colSpan={5} className="p-0 whitespace-normal">
@@ -337,9 +374,11 @@ export function SourcesCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle>
               <AlertDialogDescription>
-                {deleting?.type === "site"
-                  ? "The AI stops using the site and all its pages right away. This can't be undone."
-                  : "The AI stops using it right away. This can't be undone."}
+                {deleting?.status === "awaiting_approval"
+                  ? "The AI never used it. This can't be undone."
+                  : deleting?.type === "site"
+                    ? "The AI stops using the site and all its pages right away. This can't be undone."
+                    : "The AI stops using it right away. This can't be undone."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -81,6 +81,7 @@ function setup(initial: OrderList, extra: Record<string, (call: Call) => Respons
   return renderWithApi(<OrdersPage />, {
     upgradeDialog: true,
     handlers: {
+      "GET /v1/w/:wid/permissions": () => json({ role: "owner", permissions: ["orders.money"] }),
       "GET /v1/w/:wid/orders": () => json(current),
       "GET /v1/w/:wid/integrations/payments": () => json(SETTINGS),
       "POST /v1/w/:wid/orders/:order_id/mark-paid": () => {

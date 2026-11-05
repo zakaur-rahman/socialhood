@@ -69,6 +69,7 @@ from socialhood.schemas.billing import (
     PortalSession,
     UsageMeter,
 )
+from socialhood.security.signatures import sign_checkout_workspace
 from socialhood.services.conversations import decode_cursor, encode_cursor
 from socialhood.settings import Settings
 
@@ -333,7 +334,12 @@ async def start_checkout(
         customer_email=ctx.user.email,
         customer_name=ctx.user.name,
         return_url=_billing_url(settings, ctx.workspace) + "?checkout=return",
-        metadata={"workspace_id": str(ctx.workspace_id)},
+        metadata={
+            "workspace_id": str(ctx.workspace_id),
+            "workspace_sig": sign_checkout_workspace(
+                str(ctx.workspace_id), settings.token_encryption_keys
+            ),
+        },
         # Always sent: the product's own trial applies when it's left out (TR-BIL-05).
         trial_period_days=trial_days,
     )

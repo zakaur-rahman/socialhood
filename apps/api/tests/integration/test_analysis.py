@@ -17,6 +17,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.ai import metering
 from socialhood.ai.fake import FakeProvider
 from socialhood.ai.provider import AIError
 from socialhood.jobs.app import app as jobs_app
@@ -257,6 +258,23 @@ async def test_with_credits_used_up_nothing_is_called_and_messaging_carries_on(
         "anyone there?",
     )
     assert (conv["last_intent"], conv["lead_score"]) == (None, None)
+
+
+async def test_a_contact_over_their_limit_gets_no_ai_and_goes_to_a_person(
+    inbox: Inbox, fake_ai: FakeProvider, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(metering, "CONTACT_LIMITS", (("hour", 1, 3600),))
+    await inbox.set("social_accounts", inbox.account_id, ai_mode="suggest")
+    await inbox.dm(CUSTOMER, "first question")
+    conv_id = await inbox.conversation_id(CUSTOMER)
+    assert (await inbox.analyze(conv_id)).outcome == "analysed"
+    await inbox.dm(CUSTOMER, "second question")
+
+    assert (await inbox.analyze(conv_id)).outcome == "contact_limited"
+
+    assert len(fake_ai.calls_for("analysis")) == 1
+    [conv] = await inbox.rows("SELECT needs_human FROM conversations")
+    assert conv["needs_human"] is True
 
 
 async def test_with_analysis_off_no_text_reaches_the_provider(

@@ -248,7 +248,11 @@ function SourceForm({
         { id: mode.source.id, patch },
         {
           onSuccess: (source) => {
-            toast.success("Saved. The AI uses the new version once it's processed.");
+            toast.success(
+              source.status === "awaiting_approval"
+                ? "Saved. Approve it when it's ready."
+                : "Saved. The AI uses the new version once it's processed.",
+            );
             onDone(source);
           },
           onError: fail,

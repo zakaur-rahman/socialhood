@@ -10,7 +10,12 @@ from typing import Literal
 from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
-from socialhood.schemas.inbox import ContactDetail, ConversationListItem, ReplyWindow
+from socialhood.schemas.inbox import (
+    ContactDetail,
+    ConversationListItem,
+    PlatformName,
+    ReplyWindow,
+)
 
 
 class PublicKeyInfo(ResponseModel):
@@ -26,7 +31,7 @@ class PublicAccount(ResponseModel):
     """A connected account: the ``account_id`` a new contact is added to."""
 
     id: uuid.UUID
-    platform: Literal["instagram", "whatsapp"]
+    platform: PlatformName
     display_name: str | None = None
     username: str | None = None
     phone_number: str | None = None

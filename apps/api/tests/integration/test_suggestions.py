@@ -238,17 +238,43 @@ async def test_a_new_suggestion_supersedes_the_pending_one(ai: Ai) -> None:
 
 async def test_open_gap_labels_reach_the_next_draft(ai: Ai) -> None:
     """C-034: the draft lists the open gap labels as data (KNOWN GAPS), so the model can reuse
-    one exactly; suggest.v2 asks it to."""
+    one exactly; suggest.v2 asks it to. A label needs two conversations behind it."""
     ai.fake.respond("suggest", cannot())
     await ai.suggest()  # records the gap "shipping to uae"
     await ai.suggest(regeneration=1)
+    [one_conversation] = [c.contents[0].text for c in ai.fake.calls_for("suggest")[1:]]
+    assert "KNOWN GAPS" not in one_conversation
 
-    first, second = ai.fake.calls_for("suggest")
+    other = await make_thread(ai.engine, workspace_id=ai.wid, account_id=ai.setup.account_id)
+    with workspace_scope(ai.wid):
+        async with ai.maker() as session:
+            await record_knowledge_gap(
+                session, "shipping to uae", other.message_ids[0], datetime.now(UTC)
+            )
+            await session.commit()
+    await ai.suggest(regeneration=2)
+
+    first, _, second = ai.fake.calls_for("suggest")
     assert "KNOWN GAPS" not in first.contents[0].text
     assert "KNOWN GAPS" in second.contents[0].text
     assert "- shipping to uae" in second.contents[0].text
     assert "KNOWN GAPS" in second.system  # the instruction, not the labels
     assert "shipping to uae" not in second.system.split("e.g.")[-1].split("\n")[1]
+
+
+async def test_a_dismissed_gap_label_stays_out_of_drafts(ai: Ai) -> None:
+    ai.fake.respond("suggest", cannot())
+    await ai.suggest()
+    other = await make_thread(ai.engine, workspace_id=ai.wid, account_id=ai.setup.account_id)
+    with workspace_scope(ai.wid):
+        async with ai.maker() as session:
+            await record_knowledge_gap(
+                session, "shipping to uae", other.message_ids[0], datetime.now(UTC)
+            )
+            await session.commit()
+    await ai.execute("UPDATE knowledge_gaps SET status = 'dismissed', dismissed_at = now()")
+    await ai.suggest(regeneration=1)
+    assert "KNOWN GAPS" not in ai.fake.calls_for("suggest")[-1].contents[0].text
 
 
 async def test_a_gap_counts_once_per_message(ai: Ai) -> None:

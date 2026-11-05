@@ -186,6 +186,18 @@ async def test_a_key_whose_maker_left_without_a_revocation_is_refused(
     assert "no longer in the workspace" in refused.json()["detail"]
 
 
+async def test_a_key_stops_on_the_public_api_when_its_maker_is_demoted(ws: Ws) -> None:
+    sam = await join(ws, "sam@example.com")
+    key, _ = await make_key(sam)
+    assert (await public_me(ws.client, key)).status_code == 200
+    await ws.ok("PATCH", f"/members/{sam.user_id}", json={"role": "agent"})
+    refused = await public_me(ws.client, key)
+    assert refused.status_code == 403
+    assert "no longer manage" in refused.json()["detail"]
+    await ws.ok("PATCH", f"/members/{sam.user_id}", json={"role": "admin"})
+    assert (await public_me(ws.client, key)).status_code == 200
+
+
 async def test_a_key_from_a_deleted_account_before_c167_still_works_and_is_flagged(
     ws: Ws, engine: AsyncEngine
 ) -> None:

@@ -160,8 +160,11 @@ async def ingest(
     *,
     now: datetime | None = None,
     backfill: bool = False,
+    ai: bool = True,
 ) -> IngestResult:
-    run = _Ingest(session, acct, now or datetime.now(UTC), backfill)
+    """``ai`` False stores the messages and queues nothing that can spend AI credits (the website
+    chat's daily caps, services/widget/chat.py)."""
+    run = _Ingest(session, acct, now or datetime.now(UTC), backfill, ai)
     for event in events:
         await run.apply(event)
     await run.finish()
@@ -265,14 +268,15 @@ async def _cart(
     await cart.from_cart(session, conv, contact, msg, event.order, now=now)
 
 
-async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
+async def _automations(session: AsyncSession, contact: Contact, msg: Message, *, run: bool) -> None:
     """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let
     automations answer it (F-11 runtime, before the AI's analysis): a tap-first opening waiting
     for this contact (FR-AUT-21), or DM keyword automations."""
     from socialhood.services.automations import runtime
 
     await runtime.contact_replied(session, contact.id, at=msg.occurred_at)
-    await runtime.enqueue_for_message(session, msg, contact_id=contact.id)
+    if run:
+        await runtime.enqueue_for_message(session, msg, contact_id=contact.id)
 
 
 async def _supersede_suggestion(session: AsyncSession, conv: Conversation, msg: Message) -> None:
@@ -298,12 +302,13 @@ def _later(current: datetime | None, candidate: datetime) -> datetime:
 
 class _Ingest:
     def __init__(
-        self, session: AsyncSession, acct: SocialAccount, now: datetime, backfill: bool
+        self, session: AsyncSession, acct: SocialAccount, now: datetime, backfill: bool, ai: bool
     ) -> None:
         self.session = session
         self.acct = acct
         self.now = now
         self.backfill = backfill
+        self.ai = ai
         self.result = IngestResult()
         self.touched: dict[uuid.UUID, tuple[Conversation, Contact | None]] = {}
         self.profiles: dict[uuid.UUID, None] = {}  # contact ids, in order, without duplicates
@@ -382,9 +387,9 @@ class _Ingest:
                 await _sequences(self.session, self.acct, contact, msg, replied)
                 await _assign(self.session, conv, contact, self.now)
                 await _cart(self.session, conv, contact, msg, event, self.now)
-                await _automations(self.session, contact, msg)
+                await _automations(self.session, contact, msg, run=self.ai)
                 await _supersede_suggestion(self.session, conv, msg)
-                if self.acct.ai_analysis_enabled:  # FR-PRV-02
+                if self.ai and self.acct.ai_analysis_enabled:  # FR-PRV-02
                     self.analyze[conv.id] = None
         self.touched[conv.id] = (conv, contact)
         self.result.created_message_ids.append(msg.id)

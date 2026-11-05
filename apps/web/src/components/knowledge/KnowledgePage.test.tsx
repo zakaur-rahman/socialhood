@@ -39,6 +39,7 @@ type State = {
   create?: (call: Call) => Response;
   test?: KnowledgeTestResult;
   testFails?: () => Response;
+  permissions?: string[];
 };
 
 function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<MediaAsset>) {
@@ -96,6 +97,13 @@ function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<Me
           state.sources = state.sources.map((s) => (s.id === p.id ? updated : s));
           return json(updated);
         },
+        "GET /v1/w/:wid/permissions": () =>
+          json({ role: "admin", permissions: state.permissions ?? ["knowledge.manage"] }),
+        "POST /v1/w/:wid/knowledge-sources/:id/approve": (_, p) => {
+          const approved = { ...state.sources.find((s) => s.id === p.id)!, status: "pending" as const };
+          state.sources = state.sources.map((s) => (s.id === p.id ? approved : s));
+          return json(approved);
+        },
         "DELETE /v1/w/:wid/knowledge-sources/:id": (_, p) => {
           state.sources = state.sources.filter((s) => s.id !== p.id);
           return noContent();
@@ -130,6 +138,48 @@ async function addFromMenu(type: "FAQ" | "Note" | "Web page" | "File") {
 beforeEach(() => {
   toast.success.mockReset();
   toast.error.mockReset();
+});
+
+describe("Knowledge an AI app added", () => {
+  const waiting = () =>
+    knowledgeSource({
+      id: "ai1",
+      title: "Returns",
+      type: "text",
+      question: null,
+      body: "Returns within 7 days.",
+      status: "awaiting_approval",
+      chunk_count: 0,
+    });
+
+  it("shows where it came from and its content, and Approve makes it usable", async () => {
+    const { state, calls } = setup({ sources: [waiting()] });
+    expect(await screen.findByText(/Added by an AI app/)).toBeInTheDocument();
+    expect(screen.getByText("Returns within 7 days.")).toBeInTheDocument();
+    expect(screen.getAllByText("Needs approval").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Processing")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Returns" })).toBeInTheDocument();
+
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Approve Returns" }));
+
+    await waitFor(() => expect(state.sources[0].status).toBe("pending"));
+    expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources/ai1/approve")).toBe(true);
+    await waitFor(() => expect(screen.queryByText(/Added by an AI app/)).not.toBeInTheDocument());
+    expect(toast.success).toHaveBeenCalledWith("Approved “Returns”");
+  });
+
+  it("offers Approve only to roles that manage knowledge", async () => {
+    setup({ sources: [waiting()], permissions: ["inbox.reply"] });
+    expect(await screen.findByText(/Added by an AI app/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Approve Returns" })).not.toBeInTheDocument());
+  });
+
+  it("offers no Approve on a source a person added", async () => {
+    setup({ sources: [knowledgeSource({ title: "Shipping" })] });
+    await screen.findByRole("button", { name: "Delete Shipping" });
+    expect(screen.queryByText(/Added by an AI app/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Approve/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("Brand voice (FR-KB-04, F-14)", () => {

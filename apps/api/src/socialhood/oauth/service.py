@@ -262,7 +262,10 @@ async def pending(redis: Redis, request_id: str) -> PendingRequest:
     raw = await redis.get(REQUEST_KEY.format(request_id)) if request_id else None
     if raw is None:
         raise ConsentError("not_found", EXPIRED_REQUEST)
-    return PendingRequest(**json.loads(raw))
+    request = PendingRequest(**json.loads(raw))
+    if not clients.valid_redirect_uri(request.redirect_uri):
+        raise ConsentError("not_found", EXPIRED_REQUEST)
+    return request
 
 
 async def _take(redis: Redis, request_id: str) -> PendingRequest:
@@ -270,7 +273,10 @@ async def _take(redis: Redis, request_id: str) -> PendingRequest:
     raw = await redis.getdel(REQUEST_KEY.format(request_id))
     if raw is None:
         raise ConsentError("not_found", EXPIRED_REQUEST)
-    return PendingRequest(**json.loads(raw))
+    request = PendingRequest(**json.loads(raw))
+    if not clients.valid_redirect_uri(request.redirect_uri):
+        raise ConsentError("not_found", EXPIRED_REQUEST)
+    return request
 
 
 @dataclass(frozen=True)
@@ -496,7 +502,8 @@ async def exchange_code(
             raise OAuthError("invalid_grant", BAD_CODE)
         if now >= code.expires_at:
             raise OAuthError("invalid_grant", BAD_CODE)
-        if (form.get("redirect_uri") or "") != code.redirect_uri:
+        asked_redirect = form.get("redirect_uri") or ""
+        if asked_redirect != code.redirect_uri or not clients.valid_redirect_uri(asked_redirect):
             raise OAuthError("invalid_grant", "redirect_uri doesn't match the authorization.")
         if not pkce_ok(form.get("code_verifier") or "", code.code_challenge):
             raise OAuthError("invalid_grant", "The PKCE code_verifier doesn't match.")

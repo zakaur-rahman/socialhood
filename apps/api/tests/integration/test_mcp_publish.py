@@ -148,6 +148,24 @@ async def test_the_same_key_returns_the_same_post(
     assert done["duplicate_of_previous_call"] is False
 
 
+async def test_a_token_runs_once_and_a_retry_with_its_key_replays(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    media = await image(engine, setup)
+    args = post_args(setup, media, when=at(days=2), idempotency_key="once-0001")
+    token = structured(await call(mcp_app, key, "create_post", args))["confirmation_token"]
+    args = {**args, "confirmed": True, "confirmation_token": token}
+    first = structured(await call(mcp_app, key, "create_post", args))
+    again = structured(await call(mcp_app, key, "create_post", args))
+    assert again == {**first, "duplicate_of_previous_call": True}
+    other_key = error_of(
+        await call(mcp_app, key, "create_post", {**args, "idempotency_key": "once-0002"})
+    )
+    assert other_key["field_errors"][0]["field"] == "confirmation_token"
+    assert "already been used" in other_key["message"]
+    assert len(await rows(engine, "SELECT 1 FROM scheduled_posts")) == 1
+
+
 async def test_a_post_must_be_five_minutes_ahead(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:

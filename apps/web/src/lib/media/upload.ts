@@ -177,7 +177,7 @@ export function chunkRanges(size: number, chunk = CHUNK_BYTES): { start: number;
 
 /** POST the file to Cloudinary with the signed parameters; resolves with its public_id. */
 export async function sendToStorage(
-  signature: UploadSignature & { tags?: string },
+  signature: UploadSignature & { tags?: string; public_id?: string | null },
   file: File,
   options: UploadOptions = {},
 ): Promise<{ public_id: string }> {
@@ -197,7 +197,7 @@ export async function sendToStorage(
 }
 
 function sendPart(
-  signature: UploadSignature & { tags?: string },
+  signature: UploadSignature & { tags?: string; public_id?: string | null },
   file: Blob,
   { onProgress, signal, headers, name }: UploadOptions & { headers?: Record<string, string>; name?: string } = {},
 ): Promise<{ public_id: string }> {
@@ -210,6 +210,8 @@ function sendPart(
     form.append("folder", signature.folder);
     // An AI app's upload ticket (C-165) is signed with a tag.
     if (signature.tags) form.append("tags", signature.tags);
+    if (signature.public_id) form.append("public_id", signature.public_id);
+    if (signature.allowed_formats) form.append("allowed_formats", signature.allowed_formats);
     form.append("signature", signature.signature);
 
     const xhr = new XMLHttpRequest();
@@ -251,7 +253,7 @@ export async function uploadAsset(api: Api, wid: string, file: File, options: As
   const signature = await unwrap(
     api.POST("/v1/w/{wid}/media-assets/upload-signature", {
       params: { path: { wid } },
-      body: { resource_type, purpose: options.purpose ?? "message" },
+      body: { resource_type, purpose: options.purpose ?? "message", extension: extensionOf(file.name) || undefined },
     }),
   );
   const { public_id } = await sendToStorage(signature, file, options);

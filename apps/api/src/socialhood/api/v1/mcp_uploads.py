@@ -39,6 +39,7 @@ class DropSignature(ResponseModel):
     timestamp: int
     folder: str
     tags: str
+    allowed_formats: str
     signature: str
     upload_url: str
 

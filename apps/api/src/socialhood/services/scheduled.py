@@ -27,11 +27,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import check_account_writable, quota_error
 from socialhood.billing.plans import current_plan, entitlement
+from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ERROR_CODES, ApiError, FieldError
 from socialhood.models.inbox import Conversation, Message, ScheduledMessage
 from socialhood.models.inbox import ScheduledStatus as S
 from socialhood.realtime import events
-from socialhood.repositories import inbox, social_accounts
+from socialhood.repositories import inbox, social_accounts, workspaces
 from socialhood.repositories import scheduled as repo
 from socialhood.repositories.scheduled import DONE, ScheduledRow
 from socialhood.schemas.inbox import (
@@ -349,7 +350,10 @@ async def _check_capacity(session: AsyncSession, conv: Conversation) -> None:
     if account is not None:
         await check_account_writable(session, account, plan=plan)
     limit = entitlement(plan, "pending_scheduled_messages")
-    if limit is not None and await repo.count_pending(session) >= limit:
+    if limit is None:
+        return
+    await workspaces.lock_limit(session, "pending_scheduled_messages", require_workspace())
+    if await repo.count_pending(session) >= limit:
         raise quota_error("pending_scheduled_messages", limit)
 
 

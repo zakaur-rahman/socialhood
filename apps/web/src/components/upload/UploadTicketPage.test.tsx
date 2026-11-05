@@ -27,6 +27,7 @@ const waiting: McpUploadTicket = {
     timestamp: 1,
     folder: "ws/w/post",
     tags: "mcp_upload_t1",
+    allowed_formats: "mp4",
     signature: "s",
     upload_url: "https://api.cloudinary.com/v1_1/demo/video/upload",
   },

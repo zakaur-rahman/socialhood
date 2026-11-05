@@ -22,11 +22,18 @@ transaction, and never commits except where it says so; the route commits with
   (services/contacts.normalize_email), sets it on the contact with source ``widget``, qualifies a
   new lead (GR-18) and tells webhooks (``contact.updated``). When the widget asks for marketing
   consent and the visitor ticks the box, a granted ``email`` consent is recorded with the exact
-  words shown, the page's host and the time as evidence (as GR-14 does for flows). Unticked
-  records nothing: silence is not a refusal.
+  words shown, the page's host and the time as evidence (as GR-14 does for flows), and marked as
+  not confirmed: nothing proves the visitor owns the address or that the host is the real page.
+  Unticked records nothing: silence is not a refusal.
 - **Limits.** A new chat counts against the plan's daily cap (``widget_conversations_daily``;
   over it the visitor sees "try again later" and the owner nothing), messages go through
-  services/widget/abuse.py, and the per-IP and per-visitor request limits are in the routes.
+  services/widget/abuse.py, and the per-IP and per-visitor request limits are in the routes. The
+  email form counts a new visitor against the same daily cap.
+- **AI spend.** Anyone can send messages, so they can't be allowed to spend a workspace's credits
+  without bound. A message starts AI work (analysis, suggestions, Auto, automations) only within
+  ``widget_ai_visitor`` a day per visitor and AI_MESSAGES_PER_DAY_DIVISOR's share of the plan's
+  monthly credits a day per workspace. Past either, or with Valkey down, it is still stored and
+  shows in the inbox for the team to answer.
 """
 
 from __future__ import annotations
@@ -47,6 +54,7 @@ from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.contacts import ConsentChannel, ConsentSource, ConsentStatus
 from socialhood.models.inbox import Contact, Conversation, Direction, Message, MessageSource
 from socialhood.models.widget import EmailCapture, WidgetSettings
+from socialhood.observability.logging import get_logger
 from socialhood.platforms.events import InboundMessage
 from socialhood.realtime import events
 from socialhood.repositories import inbox
@@ -62,6 +70,7 @@ from socialhood.schemas.widget import (
     WidgetMessages,
     WidgetSession,
 )
+from socialhood.security import ratelimit as limits
 from socialhood.security import widget_tokens
 from socialhood.security.widget_tokens import VisitorClaim
 from socialhood.services import contact_names, ingest, leads
@@ -72,7 +81,10 @@ from socialhood.services.widget.settings import day_start
 from socialhood.settings import Settings
 from socialhood.webhooks.routing import RoutedAccount, resolve_account
 
+log = get_logger(__name__)
+
 MAX_WAIT_S = 20.0
+AI_MESSAGES_PER_DAY_DIVISOR = 10  # of the monthly credits: Free 20 messages a day, Agency 1200
 POLL_EVERY_S = 1.5
 NOT_AVAILABLE = "This chat isn't available."
 WRONG_SITE = "This chat can't be used on this site."
@@ -257,10 +269,30 @@ async def send(
                 kind="text",
                 text=abuse.clean_text(text),
             )
-            await ingest.ingest(session, widget.acct, [event], now=now)
+            allowed = await _ai_allowed(redis, claim, await current_plan(session))
+            await ingest.ingest(session, widget.acct, [event], now=now, ai=allowed)
             await events.commit_and_publish(session, redis)
         _, conv = await _thread(session, widget, claim.visitor_id)
         return await _messages(session, conv)
+
+
+async def _ai_allowed(redis: Redis, claim: VisitorClaim, plan: str) -> bool:
+    """Whether this message may start AI work (see "AI spend" above). Never raises: when the
+    counts can't be read the credits are protected, and the team still gets the message."""
+    credits = int(entitlement(plan, "ai_credits_monthly"))
+    workspace_day = limits.Limit(
+        "widget_ai_workspace", max(credits // AI_MESSAGES_PER_DAY_DIVISOR, 1), 86_400
+    )
+    try:
+        if await limits.hit(redis, limits.LIMITS["widget_ai_visitor"], claim.visitor_id) > 0:
+            return False
+        if await limits.hit(redis, workspace_day, str(claim.workspace_id)) > 0:
+            log.warning("widget_ai_daily_cap", workspace_id=str(claim.workspace_id))
+            return False
+    except Exception as error:
+        log.warning("widget_ai_cap_unavailable", error=type(error).__name__)
+        return False
+    return True
 
 
 def visitor_name(visitor: str) -> str:
@@ -289,15 +321,18 @@ async def _admit(
     if reason is not None:
         raise ApiError("validation_error", reason, errors=[FieldError("text", reason)])
     if conv is None:
-        plan = await current_plan(session)
-        limit = int(entitlement(plan, "widget_conversations_daily"))
         started = await repo.count_conversations_since(session, widget.acct.id, day_start(now))
-        if started >= limit:
-            raise ApiError(
-                "rate_limited",
-                BUSY,
-                headers={"Retry-After": str(_seconds_to_midnight(now))},
-            )
+        await _check_daily_cap(session, started, now)
+
+
+async def _check_daily_cap(session: AsyncSession, started: int, now: datetime) -> None:
+    limit = int(entitlement(await current_plan(session), "widget_conversations_daily"))
+    if started >= limit:
+        raise ApiError(
+            "rate_limited",
+            BUSY,
+            headers={"Retry-After": str(_seconds_to_midnight(now))},
+        )
 
 
 def _seconds_to_midnight(now: datetime) -> int:
@@ -373,6 +408,9 @@ async def save_email(
                 "validation_error", str(error), errors=[FieldError("email", str(error))]
             ) from error
         name = _clean_name(body.name)
+        if await ingest_repo.find_contact(session, widget.acct.id, claim.visitor_id) is None:
+            started = await repo.count_contacts_since(session, widget.acct.id, day_start(now))
+            await _check_daily_cap(session, started, now)
         contact, created = await ingest_repo.get_or_create_contact(
             session,
             social_account_id=widget.acct.id,
@@ -404,6 +442,7 @@ async def save_email(
                     "widget_account_id": str(widget.acct.id),
                     "host": claim.host,
                     "at": now.isoformat(),
+                    "address_confirmed": False,
                 },
                 at=now,
             )

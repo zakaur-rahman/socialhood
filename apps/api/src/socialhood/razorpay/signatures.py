@@ -7,6 +7,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 
+from socialhood.security.signatures import same_text
+
 
 def sign_webhook(raw: bytes, secret: str) -> str:
     return hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
@@ -15,4 +17,4 @@ def sign_webhook(raw: bytes, secret: str) -> str:
 def verify_webhook(raw: bytes, header: str | None, secret: str) -> bool:
     if not header or not secret:
         return False
-    return hmac.compare_digest(sign_webhook(raw, secret), header.strip())
+    return same_text(sign_webhook(raw, secret), header.strip())

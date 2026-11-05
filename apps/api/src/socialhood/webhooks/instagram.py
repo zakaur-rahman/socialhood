@@ -8,7 +8,6 @@ inside the request, so the acknowledgement stays well under Meta's timeout.
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 import time
 from typing import Annotated
@@ -22,7 +21,7 @@ from socialhood.models.platform import WebhookProvider
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.events import RawEvent
 from socialhood.platforms.instagram.webhooks import split_payload
-from socialhood.security.signatures import verify_hub_signature
+from socialhood.security.signatures import same_text, verify_hub_signature
 from socialhood.services.webhook_intake import record_delivery, store_and_enqueue
 from socialhood.settings import Settings
 
@@ -43,7 +42,7 @@ async def verify_subscription(
         if settings.ig_webhook_verify_token
         else ""
     )
-    if mode == "subscribe" and expected and hmac.compare_digest(expected, verify_token or ""):
+    if mode == "subscribe" and expected and same_text(expected, verify_token or ""):
         return PlainTextResponse(challenge or "")
     raise ApiError("forbidden")
 

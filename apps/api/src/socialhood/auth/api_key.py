@@ -10,7 +10,9 @@ A request is checked in this order, and each refusal stops it:
    Caddy (CLIENT_IP_HEADER, security/client_ip.py);
 3. the workspace is active (401 otherwise, like a revoked key), and the member who made the key
    is still in it (C-167: their keys are revoked when they leave; this also covers a key whose
-   revocation was missed). A key whose maker's account was deleted before C-167 still works;
+   revocation was missed) and may still manage integrations, the permission that makes a key (403
+   after a demotion; it works again if they get the role back). A key whose maker's account was
+   deleted before C-167 still works;
 4. the per-key rate limit (``api_key`` in security/ratelimit.py: 120 a minute), then the plan
    (402 entitlement_required when the workspace is no longer on Business, C-172);
 5. each route's scope (403 forbidden, naming the scope the key lacks).
@@ -37,11 +39,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.deps import Session, _bearer
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.billing.entitlements import check_entitlement
 from socialhood.db.tenancy import current_workspace_id, tenant_bypass_scope, workspace_scope
 from socialhood.errors import ApiError
 from socialhood.models.api_keys import ApiKey
-from socialhood.models.identity import Workspace, WorkspaceMember, WorkspaceStatus
+from socialhood.models.identity import Role, Workspace, WorkspaceMember, WorkspaceStatus
 from socialhood.repositories.base import scoped_update
 from socialhood.security import ratelimit
 from socialhood.services import api_keys
@@ -52,6 +55,7 @@ REVOKED = api_keys.REVOKED
 EXPIRED = "That API key has expired."
 WRONG_ADDRESS = "This API key can't be used from this address."
 MAKER_LEFT = "This key's owner is no longer in the workspace. Make a new key in Amplychat."
+MAKER_DEMOTED = "This key's owner can no longer manage API keys. Make a new key in Amplychat."
 
 
 def is_expired(key: ApiKey, now: datetime) -> bool:
@@ -80,16 +84,19 @@ def address_allowed(allowed: Sequence[str], address: str) -> bool:
     return False
 
 
-async def maker_is_member(session: AsyncSession, key: ApiKey) -> bool:
-    """Whether the member who made ``key`` still belongs to its workspace (True for a key with
-    no maker on record). Runs in the key's workspace."""
+async def check_maker(session: AsyncSession, key: ApiKey) -> None:
+    """Refuse a key whose maker has left its workspace or lost the permission that makes keys
+    (nothing to check for a key with no maker on record). Runs in the key's workspace."""
     if key.created_by_user_id is None:
-        return True
+        return
     with workspace_scope(key.workspace_id):
-        found = await session.scalar(
-            select(WorkspaceMember.id).where(WorkspaceMember.user_id == key.created_by_user_id)
+        role = await session.scalar(
+            select(WorkspaceMember.role).where(WorkspaceMember.user_id == key.created_by_user_id)
         )
-    return found is not None
+    if role is None:
+        raise ApiError("unauthorized", MAKER_LEFT)
+    if not has_permission(Role(role), Permission.INTEGRATIONS_MANAGE):
+        raise ApiError("forbidden", MAKER_DEMOTED)
 
 
 @dataclass(frozen=True)
@@ -131,8 +138,7 @@ async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKe
     workspace = await session.get(Workspace, key.workspace_id)
     if workspace is None or workspace.status != WorkspaceStatus.ACTIVE:
         raise ApiError("unauthorized", INVALID)
-    if not await maker_is_member(session, key):
-        raise ApiError("unauthorized", MAKER_LEFT)
+    await check_maker(session, key)
 
     token = current_workspace_id.set(workspace.id)
     try:

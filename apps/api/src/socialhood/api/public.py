@@ -143,7 +143,7 @@ async def list_contacts(
     session: Session,
     q: Annotated[str | None, Query(max_length=100)] = None,
     tag_id: Annotated[list[uuid.UUID] | None, Query(max_length=10)] = None,
-    platform: Annotated[Literal["instagram", "whatsapp"] | None, Query()] = None,
+    platform: Annotated[PlatformName | None, Query()] = None,
     account_id: uuid.UUID | None = None,
     has_email: bool | None = None,
     has_phone: bool | None = None,

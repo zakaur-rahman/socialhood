@@ -2880,6 +2880,27 @@ export interface paths {
         patch: operations["update_knowledge_source"];
         trace?: never;
     };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Knowledge Source
+         * @description A person approves what an AI app added: it is read in and the AI starts using it. A source
+         *     that isn't waiting for approval is returned as it is.
+         */
+        post: operations["approve_knowledge_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths": {
         parameters: {
             query?: never;
@@ -8467,6 +8488,8 @@ export interface components {
          *     signature) and where to send them.
          */
         DropSignature: {
+            /** Allowed Formats */
+            allowed_formats: string;
             /** Api Key */
             api_key: string;
             /** Cloud Name */
@@ -9461,7 +9484,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "processing" | "ready" | "failed";
+            status: "awaiting_approval" | "pending" | "processing" | "ready" | "failed";
             /** Title */
             title: string;
             /**
@@ -13062,7 +13085,7 @@ export interface components {
              */
             id: string;
             /** Ingest Status */
-            ingest_status?: ("pending" | "processing" | "ready" | "failed") | null;
+            ingest_status?: ("awaiting_approval" | "pending" | "processing" | "ready" | "failed") | null;
             /** Last Crawled At */
             last_crawled_at?: string | null;
             /**
@@ -13765,12 +13788,16 @@ export interface components {
         };
         /** UploadSignature */
         UploadSignature: {
+            /** Allowed Formats */
+            allowed_formats?: string | null;
             /** Api Key */
             api_key: string;
             /** Cloud Name */
             cloud_name: string;
             /** Folder */
             folder: string;
+            /** Public Id */
+            public_id?: string | null;
             /** Signature */
             signature: string;
             /** Timestamp */
@@ -13780,6 +13807,8 @@ export interface components {
         };
         /** UploadSignatureRequest */
         UploadSignatureRequest: {
+            /** Extension */
+            extension?: string | null;
             /**
              * Purpose
              * @enum {string}
@@ -21788,6 +21817,47 @@ export interface operations {
                 "application/json": components["schemas"]["KnowledgeSourcePatch"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_knowledge_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

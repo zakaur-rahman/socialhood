@@ -12,7 +12,9 @@ corrected drift, moves last_event_at forward.
 
 The plan comes from the product id (plans.plan_for_product); an unknown product is ignored.
 Events about a subscription other than the workspace's are ignored, except one that grants a plan
-while the workspace has no live one (a new checkout).
+while the workspace has no live one (a new checkout). A new subscription in its trial when the
+workspace or its owner's email has used the trial (TR-BIL-05, checked again here because a checkout
+can be finished long after it started) grants nothing: it raises an alert and is cancelled in Dodo.
 
 Events (TR-BIL-02, and C-049's mapping for the ones it doesn't list):
 
@@ -57,7 +59,7 @@ from socialhood.models.identity import Workspace
 from socialhood.models.platform import WebhookEvent
 from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
-from socialhood.repositories import payments, subscriptions, usage
+from socialhood.repositories import payments, subscriptions, usage, workspaces
 from socialhood.repositories.subscriptions import LIVE_STATUSES
 from socialhood.services.notifications import notify_admins
 from socialhood.settings import Settings, get_settings
@@ -89,10 +91,12 @@ BILLING_LINK = "/settings/billing"
 
 @dataclass(frozen=True)
 class Applied:
-    """What an event did: ``changed`` False for an ignored (out-of-order, unknown) event."""
+    """What an event did: ``changed`` False for an ignored (out-of-order, unknown) event.
+    ``cancel``: a subscription id the caller must have cancelled in Dodo."""
 
     changed: bool
     reason: str | None = None
+    cancel: str | None = None
 
 
 def _rank(plan: str) -> int:
@@ -153,6 +157,17 @@ async def apply_event(
                 detail=f"{snap.subscription_id} while {sub.dodo_subscription_id} is live",
             )
             return Applied(False, "the workspace already has another live subscription")
+        if not ours and snap.in_trial(at) and event_type != "subscription.renewed":
+            workspace = await session.get(Workspace, require_workspace())
+            if workspace is not None and await workspaces.trial_used_by_owner(session, workspace):
+                log.error(
+                    "alert",
+                    kind="billing_trial_already_used",
+                    detail=f"{snap.subscription_id} started a trial; cancelling it",
+                )
+                return Applied(
+                    False, "the trial has already been used", cancel=snap.subscription_id
+                )
         await _grant(session, sub, snap, plan, event_type, at=at)
     elif not ours:
         return Applied(False, "not the workspace's subscription")
@@ -216,6 +231,7 @@ async def _grant(
         workspace = await session.get(Workspace, require_workspace())
         if workspace is not None and workspace.trial_used_at is None:
             workspace.trial_used_at = at  # TR-BIL-05: one trial per workspace and owner email
+            await workspaces.remember_trial_email(session, workspace, at)
 
 
 def _hold(sub: Subscription, snap: DodoSubscription, at: datetime) -> None:

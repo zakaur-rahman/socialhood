@@ -28,6 +28,7 @@ from tests.support.billing import (
     post_dodo_event,
     set_subscription,
 )
+from tests.support.dodo import checkout_metadata
 from tests.support.ingest import stream
 
 
@@ -102,7 +103,7 @@ async def test_checkout_starts_the_trial_for_an_eligible_workspace(
     [params] = fake_dodo.checkouts
     assert (params.product_id, params.customer_email) == (PRO_PRODUCT, "owner@example.com")
     assert params.return_url == f"{WEB}/w/{owner.slug}/settings/billing?checkout=return"
-    assert dict(params.metadata) == {"workspace_id": owner.wid}
+    assert dict(params.metadata) == checkout_metadata(owner.wid)
     assert params.trial_period_days == 7
     assert (await owner.billing())["plan"] == "free"  # nothing changes until the webhook
 

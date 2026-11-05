@@ -4,16 +4,22 @@ The browser uploads straight to Cloudinary with a signature for ``ws/{workspace_
 then registers the upload. Registration reads the asset back with the Admin API, checks it sits in
 this workspace's folder and within the limits, and stores a ``media_assets`` row. Messages and
 posts refer to assets by id, so a workspace can only ever send its own files.
+
+A signature names one file, so it stores one file however often it is used. A file that was signed
+for and never registered is deleted a day later (jobs/tasks/purge.clean_unregistered_uploads).
 """
 
 from __future__ import annotations
 
+import json
 import re
+import time
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -143,15 +149,63 @@ VIDEO_DELIVERY_EAGER = f"{VIDEO_DELIVERY}/mp4"
 # ---------------------------------------------------------------- upload and registration
 
 
-def upload_signature(
-    cloudinary: Cloudinary, workspace_id: uuid.UUID, *, purpose: str, resource_type: ResourceType
+SIGNED_UPLOADS_KEY = "media:signed_uploads"  # a sorted set of signed uploads, by time signed
+
+
+def _file_name(purpose: str, resource_type: ResourceType, extension: str | None) -> str:
+    """A new name for one upload. A raw file keeps its extension in its name (a format we accept
+    for the purpose); nothing else has one, so a file sent to the raw endpoint instead can't be
+    served as a web page."""
+    name = uuid.uuid4().hex
+    if resource_type != "raw":
+        return name
+    fmt = (extension or "").lower()
+    if purpose == AssetPurpose.KNOWLEDGE:
+        if fmt not in KNOWLEDGE_FILE.formats:
+            raise ApiError("unsupported_media", KNOWLEDGE_UNSUPPORTED)
+    elif fmt not in DOCUMENT.formats:
+        raise ApiError("unsupported_media", UNSUPPORTED)
+    return f"{name}.{fmt}"
+
+
+def accepted_formats(purpose: str, resource_type: ResourceType) -> frozenset[str]:
+    """The formats ``check_limits`` can register for this purpose and resource type."""
+    if purpose == AssetPurpose.KNOWLEDGE:
+        return KNOWLEDGE_FILE.formats
+    if resource_type == "raw":
+        return DOCUMENT.formats
+    if purpose == AssetPurpose.POST:
+        return IMAGE.formats if resource_type == "image" else POST_VIDEO.formats
+    if resource_type == "image":
+        return IMAGE.formats | DOCUMENT.formats
+    return AUDIO.formats | VIDEO.formats | DOCUMENT.formats
+
+
+async def upload_signature(
+    cloudinary: Cloudinary,
+    redis: Redis,
+    workspace_id: uuid.UUID,
+    *,
+    purpose: str,
+    resource_type: ResourceType,
+    extension: str | None = None,
 ) -> UploadSignature:
+    folder = workspace_folder(workspace_id, purpose)
+    name = _file_name(purpose, resource_type, extension)
     try:
         params = cloudinary.upload_signature(
-            folder=workspace_folder(workspace_id, purpose), resource_type=resource_type
+            folder=folder,
+            resource_type=resource_type,
+            public_id=name,
+            allowed_formats=accepted_formats(purpose, resource_type),
         )
     except CloudinaryError as error:
         raise ApiError("service_unavailable", "Uploads aren't set up yet.") from error
+    entry = json.dumps([str(workspace_id), resource_type, f"{folder}/{name}"])
+    try:
+        await redis.zadd(SIGNED_UPLOADS_KEY, {entry: time.time()})
+    except Exception as error:  # the upload still works; only the cleanup misses this file
+        log.warning("media_signed_upload_unrecorded", error=type(error).__name__)
     return UploadSignature.model_validate(params)
 
 

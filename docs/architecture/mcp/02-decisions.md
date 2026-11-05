@@ -42,7 +42,7 @@ Today the public API and Zapier are **Pro and Max only** (PD-6).
 
 ## D3 · Should the AI's actions happen directly, or wait for approval in Amplychat?
 
-- **A. Direct for posts, with safety nets.** *(recommended for R1)* Scheduling, changing and cancelling posts, uploading media, adding knowledge, and pausing or resuming automations happen at once. The safety nets:
+- **A. Direct for posts, with safety nets.** *(recommended for R1)* Scheduling, changing and cancelling posts, uploading media, adding knowledge, and pausing or resuming automations happen at once. *(Since changed for knowledge and automations: a person approves them in the dashboard, see [04-phase-b.md](04-phase-b.md), "A person approves".)* The safety nets:
   - Claude and ChatGPT ask the user to confirm;
   - posts can't be "publish now" (at least 5 minutes ahead);
   - owners and admins get a notification ("Claude scheduled a Reel for Fri 6 pm, by Asha") with a Cancel button;

@@ -2,9 +2,9 @@
 
 - **Status:** built on `feature/mcp-b` (from `feature/mcp-core`), 2026-11-01. Deviations and small calls: "C-165 (phase B)" in `docs/CONFLICTS.md`.
 - **Design:** [01-design.md](01-design.md), decisions [02-decisions.md](02-decisions.md), phase A [03-phase-a.md](03-phase-a.md).
-- **Result:** the catalogue is now the design's 25 tools (13 read, 12 new).
+- **Result:** the catalogue was the design's 25 tools (13 read, 12 new). See "A person approves" at the end for what has changed since; it is 27 tools today.
 
-## The 12 new tools
+## The new tools
 
 | Tool | Scope | Role | Access (mode that admits it) | Plan | Hints (read-only / destructive / idempotent / open world) |
 |---|---|---|---|---|---|
@@ -17,11 +17,10 @@
 | `draft_reply` | `replies:draft` | agent | draft | all | false / false / true / false |
 | `add_knowledge` | `knowledge:write` | admin | write | Pro, Max (see the deviation) | false / false / true / false |
 | `pause_automation` | `automations:write` | admin | write | Pro, Max | false / true / true / false |
-| `resume_automation` | `automations:write` | admin | write | Pro, Max | false / false / true / true |
 | `ask_amplychat` | `ask` | agent | read | all (the plan's AI credits, D8) | true / false / true / false |
 | `get_ask_answer` | `ask` | agent | read | all | true / false / true / false |
 
-`get_media_upload` (phase A) reads the tickets these tools make. Every write takes an `idempotency_key`. `create_post` and `add_knowledge` also dedupe an identical resend for 10 minutes. `pause_automation` and `resume_automation` don't: they undo each other, so a replay would swallow a real second pause.
+`get_media_upload` (phase A) reads the tickets these tools make. Every write takes an `idempotency_key`. `create_post` and `add_knowledge` also dedupe an identical resend for 10 minutes. `pause_automation` doesn't: a person may have turned the automation back on, so a replay would swallow a real second pause.
 
 ### The prompts
 
@@ -53,8 +52,7 @@
 ## Drafts, knowledge, automations, Ask
 
 - **`draft_reply`** saves the text (or a draft Amplychat writes from the knowledge base, 2 AI credits) as the conversation's pending reply suggestion, answering the customer's latest message. The inbox shows it like any suggestion. It never sends and there is no send tool. A closed reply window is refused.
-- **`add_knowledge`** adds a note or FAQ through `services/knowledge/sources.create`; the plan's characters-of-knowledge limit applies (402). Ingestion is queued after the commit.
-- **`resume_automation`** only resumes an automation that was live before (`activated_at` set); a never-live draft is refused with a link. It runs the app's own activation (validation, plan limit) and restarts a held private-reply queue.
+- **`add_knowledge`** adds a note or FAQ through `services/knowledge/sources.create`; the plan's characters-of-knowledge limit applies (402). It waits as `awaiting_approval` until a person approves it on the Knowledge page.
 - **`ask_amplychat`** creates a normal Ask run (`agent_runs.create`, the `ai` rate limit, the plan's credits), commits, enqueues it for the worker, and waits up to 25 seconds. Longer runs return `ask_run_id` for `get_ask_answer`. The same question twice in two minutes by one connection is the same run.
 
 ## Plumbing
@@ -89,19 +87,26 @@ Without a shell (claude.ai), step 3 gives `upload_page_url` instead: the member 
 
 ## C-169: automations and Instagram posts
 
-Added after launch, because Claude could neither create an automation nor find "my last post". The catalogue is now 28 tools (`mcp/tools/automations_create.py`, and `list_instagram_posts` in `mcp/tools/posts.py`). Decisions: "C-169" in `docs/CONFLICTS.md`.
+Added after launch, because Claude could neither create an automation nor find "my last post". The catalogue is now 28 tools (`mcp/tools/automations_create.py`, and `list_instagram_posts` in `mcp/tools/posts.py`). Decisions: "C-169" in `docs/CONFLICTS.md`. Today's count and what changed are under "A person approves" below.
 
 | Tool | Scope | Role | Access | Plan | Hints (read-only / destructive / idempotent / open world) |
 |---|---|---|---|---|---|
 | `list_instagram_posts` | `posts:read` | agent | read | all | true / false / true / false |
-| `create_automation` | `automations:create` | admin | write | Pro, Max | false / false / true / true |
-| `update_automation` | `automations:create` | admin | write | Pro, Max | false / true / true / true |
+| `create_automation` | `automations:create` | admin | write | Pro, Max | false / false / true / false |
+| `update_automation` | `automations:create` | admin | write | Pro, Max | false / true / true / false |
 
 - **`post`.** `resolve_post` (`mcp/tools/common.py`) is the one reader of a post id or `latest`, used by `create_automation`, `update_automation`, `get_post_comments_summary` and `get_analytics_summary` (`post_id`). `latest` is the first item of `list_instagram_posts`, without Stories (they take no comments), of `account` when given. The automation tools also take `next` and `any`.
-- **`create_automation`** goes through the editor's services: `definitions.create`, `definitions.update` (the autosave PUT), and `definitions.activate` when `turn_on` is true. Without `confirmed` the same calls run inside a savepoint, so its errors are the real ones. The result shows the account, the post, the keywords, the DM, the public reply, the tap first opening, overlaps with live automations (`queries`, FR-AUT-15), what activation would still refuse (`flow_store.problems`) and active automations used and allowed. Over the limit, it is `quota_exceeded` telling the member to pause one or upgrade, in the preview and in the confirmed call, and nothing is created. Identical confirmed calls dedupe for 15 minutes, as long as a confirmation token lasts (`create_post` too).
-- **`update_automation`** sends the stored definition back with only the fields given. It refuses a flow, an AI reply, an image, Live comments and other triggers, with a link to the editor. It doesn't turn anything on or off.
-- **Told and recorded.** `ai_automation_change` notifies owners and admins; `automation.created`, `automation.activated` and `automation.updated` go to the audit mirror.
+- **`create_automation`** goes through the editor's services: `definitions.create` and `definitions.update` (the autosave PUT). It is always saved off. Without `confirmed` the same calls run inside a savepoint, so its errors are the real ones. The result shows the account, the post, the keywords, the DM, the public reply, the tap first opening, overlaps with live automations (`queries`, FR-AUT-15), what activation would still refuse (`flow_store.problems`) and active automations used and allowed. Identical confirmed calls dedupe for 15 minutes, as long as a confirmation token lasts (`create_post` too).
+- **`update_automation`** sends the stored definition back with only the fields given. It refuses a flow, an AI reply, an image, Live comments and other triggers, with a link to the editor. It doesn't turn anything on or off, and it refuses an automation that is on: pause it first, and a person turns it back on in the dashboard.
+- **Told and recorded.** `ai_automation_change` notifies owners and admins; `automation.created` and `automation.updated` go to the audit mirror.
 - **Prompt.** `set_up_comment_automation` (`mcp/prompts.py`).
 - **Preview, enforced.** `mcp/confirmations.py`: a confirmed change needs the preview's `confirmation_token` (01-design.md §6.6). This also applies to `create_post` (scheduling), `update_post` and `cancel_post`; item 1 of "Posts" above now means this.
-- **Scope.** The two automation tools need `automations:create`; `automations:write` stays pause and resume, so existing connections don't gain them.
+- **Scope.** The two automation tools need `automations:create`; `automations:write` is pause, so existing connections don't gain them.
 - **Tests.** `tests/integration/test_mcp_automations.py`.
+
+## A person approves
+
+AI apps can draft what customers would be told unattended, and a person approves it in the dashboard. This holds whatever an app's own confirmation setting is, and there is no switch to turn it off. The catalogue is 27 tools.
+
+- **Automations.** AI apps can create, change and pause. `create_automation` always saves the automation off and links to it (`dashboard_url`, `next_step`); `turn_on` and `resume_automation` are gone. `update_automation` refuses one that is on (`conflict`, with a link): pause it first, and a person turns it back on, which is when they see the change. Pausing stays direct.
+- **Knowledge.** `add_knowledge` stores the source as `awaiting_approval`. It isn't queued, read in or embedded, and it has no chunks, so every path that reads chunks of `ready` sources leaves it out (`repositories/knowledge.nearest_chunks`, for auto replies, suggestions, Ask, the website chat, MCP search and automation AI replies, and `drafting.knowledge_mentioning`). An edit in the dashboard keeps it waiting. `POST /v1/w/{wid}/knowledge-sources/{id}/approve` (owners and admins) makes it `pending` and queues ingestion, and `knowledge.approved` goes to the audit log. It counts toward the plan's characters while it waits. `add_knowledge` is the only MCP knowledge write, and nothing from MCP edits a source.

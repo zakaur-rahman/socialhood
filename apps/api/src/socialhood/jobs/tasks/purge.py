@@ -22,19 +22,26 @@ services/workspace_deletion.py, the retention deletes in repositories/retention.
   §5.3): MCP upload tickets that never finished and expired more than a day ago have their tagged
   files deleted from Cloudinary (never one registered in the library) and then their rows
   (services/mcp_uploads.clean_stale). A ticket whose storage call fails stays for the next run.
+- clean_unregistered_uploads: periodic, daily 05:00 UTC (bulk lane, singleton, 600 s): a file signed
+  for at least a day ago and never registered in the library is deleted from Cloudinary. It only
+  ever looks at names we signed (services/media_assets.SIGNED_UPLOADS_KEY). One whose storage call
+  fails stays for the next run.
 """
 
 from __future__ import annotations
 
 import asyncio
 import calendar
+import json
 import time
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 from procrastinate import BaseRetryStrategy, RetryDecision
 from procrastinate.jobs import Job
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.billing.plans import PLANS, entitlement
@@ -44,12 +51,12 @@ from socialhood.jobs.app import BULK, app
 from socialhood.jobs.retry import BASE_DELAY_S, MAX_DELAY_S
 from socialhood.jobs.runtime import runtime
 from socialhood.jobs.tasks import privacy
-from socialhood.media.cloudinary import CloudinaryError
+from socialhood.media.cloudinary import Cloudinary, CloudinaryError
 from socialhood.media.purge import MediaPurger, get_media_purger
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import account_deletion as account_rows
 from socialhood.repositories import retention
-from socialhood.services import account_deletion, mcp_uploads
+from socialhood.services import account_deletion, mcp_uploads, media_assets
 from socialhood.services import workspace_deletion as deletion
 
 log = get_logger(__name__)
@@ -69,6 +76,7 @@ OAUTH_CODES_KEPT = timedelta(days=1)
 OAUTH_TOKENS_KEPT = timedelta(days=1)
 MCP_CONNECTIONS_KEPT = timedelta(days=90)
 DCR_CLIENTS_UNUSED = timedelta(days=30)
+TRIAL_EMAILS_KEPT = timedelta(days=3 * 365)  # stated in the Privacy Policy
 AI_USAGE_KEPT_MONTHS = 13
 FINISHED_JOBS_KEPT_HOURS = 30 * 24
 
@@ -266,6 +274,10 @@ async def purge_expired_rows(
             "oauth_clients",
             lambda s: retention.unused_dcr_clients_before(s, now - DCR_CLIENTS_UNUSED, limit=batch),
         ),
+        (
+            "trial_emails",
+            lambda s: retention.trial_emails_before(s, now - TRIAL_EMAILS_KEPT, limit=batch),
+        ),
     ]
     for rule, delete in rules:
         if not await drain(rule, delete):
@@ -371,6 +383,58 @@ async def clean_mcp_uploads(timestamp: int) -> None:
     rt = runtime()
     await asyncio.wait_for(
         clean_mcp_upload_tickets(rt.sessionmaker, get_media_purger(rt.http, rt.settings)),
+        timeout=PURGE_EXPIRED_TIMEOUT_S,
+    )
+
+
+# ---------------------------------------------------------------- clean_unregistered_uploads
+
+UNREGISTERED_AFTER_S = 86_400
+UNREGISTERED_BATCH = 2000
+
+
+async def clean_signed_uploads(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    cloudinary: Cloudinary,
+    *,
+    now: float | None = None,
+) -> dict[str, int]:
+    """One pass over uploads signed over a day ago: a registered file is forgotten, any other is
+    deleted from storage and then forgotten. Returns the files deleted and those left for the next
+    run."""
+    cutoff = (time.time() if now is None else now) - UNREGISTERED_AFTER_S
+    entries: list[str] = cast(
+        list[str],
+        await redis.zrangebyscore(
+            media_assets.SIGNED_UPLOADS_KEY, "-inf", cutoff, start=0, num=UNREGISTERED_BATCH
+        ),
+    )
+    counts = {"deleted": 0, "failed": 0}
+    for entry in entries:
+        workspace_id, resource_type, public_id = json.loads(entry)
+        with workspace_scope(uuid.UUID(workspace_id)):
+            async with sessionmaker() as session:
+                registered = await media_assets.find_by_public_id(session, public_id)
+        if registered is None:
+            try:
+                await cloudinary.destroy(public_id, resource_type)
+            except CloudinaryError as error:
+                log.warning("signed_upload_cleanup_failed", error=str(error)[:200])
+                counts["failed"] += 1
+                continue
+            counts["deleted"] += 1
+        await redis.zrem(media_assets.SIGNED_UPLOADS_KEY, entry)
+    log.info("signed_uploads_cleaned", **counts)
+    return counts
+
+
+@app.periodic(cron="0 5 * * *", periodic_id="clean_unregistered_uploads")
+@app.task(name="clean_unregistered_uploads", queue=BULK, queueing_lock="clean_unregistered_uploads")
+async def clean_unregistered_uploads(timestamp: int) -> None:
+    rt = runtime()
+    await asyncio.wait_for(
+        clean_signed_uploads(rt.sessionmaker, rt.redis, Cloudinary(rt.http, rt.settings)),
         timeout=PURGE_EXPIRED_TIMEOUT_S,
     )
 

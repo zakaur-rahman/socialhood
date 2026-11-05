@@ -102,6 +102,7 @@ async def send_message(
     claim = claim_of(request)
     await _visitor_limit(request, "widget_send_visitor", claim)
     await _visitor_limit(request, "widget_send_day", claim)
+    await limits.enforce(request, "widget_send_account", str(claim.account_id))
     response.headers.update(NO_STORE)
     return await chat.send(
         session, request.app.state.redis, claim, text=body.text, client_id=body.client_id

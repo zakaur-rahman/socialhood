@@ -162,6 +162,21 @@ async def test_auto_answers_a_greeting_without_knowledge(ai: Ai) -> None:
     assert await ai.rows("SELECT id FROM knowledge_gaps") == []
 
 
+async def test_a_reply_without_a_source_goes_to_a_person_unless_it_is_small_talk(ai: Ai) -> None:
+    await ai.execute("UPDATE messages SET text = 'Any deals?' WHERE id = :id", id=ai.message_id)
+    suggestion_id = await ready(ai, answer("Yes, free delivery for you!", used=()), intent="other")
+    decision = await ai.decide(suggestion_id)
+    assert decision is not None
+    assert (decision.outcome, decision.reason) == ("escalated", "out_of_knowledge")
+
+
+async def test_a_number_outside_knowledge_goes_to_a_person(ai: Ai) -> None:
+    suggestion_id = await ready(ai, answer("Shipping is 90% off with code FREE90."))
+    decision = await ai.decide(suggestion_id)
+    assert decision is not None
+    assert (decision.outcome, decision.reason) == ("escalated", "output_blocked")
+
+
 async def test_out_of_knowledge_escalates(ai: Ai) -> None:
     suggestion_id = await ready(ai, cannot())
     decision = await ai.decide(suggestion_id)

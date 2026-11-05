@@ -111,6 +111,9 @@ services:
       - effective_io_concurrency=200
       - -c
       - log_min_duration_statement=1000
+      # Slow statements are logged without their bind values: those hold customer text.
+      - -c
+      - log_parameter_max_length=0
     shm_size: 256m
     volumes:
       - postgres-data:/var/lib/postgresql
