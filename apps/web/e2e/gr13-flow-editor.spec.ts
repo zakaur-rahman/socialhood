@@ -232,6 +232,7 @@ test.describe("GR-13 reorder and errors", () => {
     for (let added = 0; added < 3; added += 1) {
       await editor.getByRole("button", { name: "Add step", exact: true }).click();
       await page.getByRole("menuitem", { name: /^Delay/ }).click();
+      await expect(editor.getByTestId("flow-count")).toContainText(`${added + 3} of 5`);
     }
     await expect(editor.getByTestId("flow-count")).toContainText("5 of 5");
     await expect(editor.getByText(/Your plan includes 5 steps in a flow/).first()).toBeVisible();
