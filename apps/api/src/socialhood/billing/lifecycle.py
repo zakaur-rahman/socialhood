@@ -85,8 +85,8 @@ PAYMENTS = {
     "payment.processing": PaymentStatus.PENDING,
     "payment.cancelled": PaymentStatus.FAILED,
 }
-# shortcut: a refund doesn't end the plan or stop renewal, so the owner also cancels in Dodo by hand;
-# automate this once refunds are regular.
+# shortcut: a refund doesn't end the plan or stop renewal, so the owner also cancels in Dodo by
+# hand; automate this once refunds are regular.
 LOGGED_ONLY = ("refund.", "dispute.")
 BILLING_LINK = "/settings/billing"
 
