@@ -659,7 +659,7 @@ function Composer({
     <div className="w-full p-4 pt-0 md:p-6 md:pt-0">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
-      <header className={cn(STICKY_PAGE_HEADER, "flex items-center gap-3 pt-4 md:pt-6")}>
+      <header className={cn(STICKY_PAGE_HEADER, "flex items-center gap-3 pt-4")}>
         <div className="min-w-max flex-1">
           <BackLink href={scheduleHref(slug)} label="Schedule" />
           <h1 className={PAGE_TITLE}>Post</h1>

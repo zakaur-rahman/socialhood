@@ -11,8 +11,8 @@ export function PageSkeleton({ fullPage = false, rows = 4 }: { fullPage?: boolea
       aria-label="Loading"
       className={cn("w-full space-y-4 p-4 pt-0 md:p-6 md:pt-0", fullPage && "min-h-dvh")}
     >
-      {/* The page header's band (PageFrame), so nothing jumps when the page arrives. */}
-      <div className="-mx-4 mb-6 border-b border-line bg-panel px-4 pt-4 pb-3 md:-mr-6 md:-ml-2 md:pr-6 md:pl-2 md:pt-6">
+      {/* The page header's band, a card from md (PageFrame), so nothing jumps when the page arrives. */}
+      <div className="-mx-4 mb-6 border-b border-line bg-panel px-4 pt-4 pb-3 md:mx-0 md:mt-4 md:rounded-xl md:border md:border-line-card md:px-5 md:py-4">
         <Skeleton className="h-8 w-48" />
       </div>
       {Array.from({ length: rows }, (_, i) => (

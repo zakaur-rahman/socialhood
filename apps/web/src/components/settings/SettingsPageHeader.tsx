@@ -34,7 +34,7 @@ export function SettingsPageHeader({
 export function SettingsFrame({ header, children }: { header: ReactNode; children: ReactNode }) {
   return (
     <div className="w-full space-y-6 px-4 pb-6 md:px-6">
-      <div className={cn(STICKY_PAGE_HEADER, "pt-5 md:pt-6")}>{header}</div>
+      <div className={cn(STICKY_PAGE_HEADER, "pt-5")}>{header}</div>
       {children}
     </div>
   );

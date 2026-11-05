@@ -71,7 +71,7 @@ export function HomeScreen() {
   };
 
   const header = (
-    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex pt-4 md:pt-6 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
+    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex pt-4flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
       <div className="min-w-0">
         <h1 className={PAGE_TITLE}>{title}</h1>
         {data ? (

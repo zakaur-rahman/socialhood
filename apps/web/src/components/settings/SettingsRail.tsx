@@ -20,10 +20,10 @@ export function SettingsRail({ slug, groups }: { slug: string; groups: SettingsG
   const [query, setQuery] = useState("");
   const shown = filterGroups(groups, query);
   return (
-    <aside className="sticky top-0 hidden max-h-dvh w-64 shrink-0 self-start p-4 pe-0 lg:block xl:w-72">
+    <aside className="sticky top-[var(--banner-h,0px)] hidden max-h-[calc(100dvh-var(--banner-h,0px))] w-64 shrink-0 self-start p-4 pe-0 lg:block xl:w-72">
       <nav
         aria-label="Settings"
-        className="bg-panel flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto rounded-xl p-3"
+        className="bg-panel flex max-h-[calc(100dvh-var(--banner-h,0px)-2rem)] flex-col gap-4 overflow-y-auto rounded-xl p-3"
       >
         <SearchInput
           label="Find a setting"

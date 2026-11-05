@@ -30,7 +30,7 @@ import { TopicsCard } from "./TopicsCard";
  * scroll (owner, 2026-10-24). A side column taller than the screen scrolls on its own.
  */
 const SIDE_STICKY =
-  "xl:sticky xl:top-[calc(var(--page-header-h,0px)+1.5rem)] xl:max-h-[calc(100dvh-var(--page-header-h,0px)-3rem)] xl:self-start xl:overflow-y-auto";
+  "xl:sticky xl:top-[calc(var(--banner-h,0px)+var(--page-header-h,0px)+1.5rem)] xl:max-h-[calc(100dvh-var(--banner-h,0px)-var(--page-header-h,0px)-3rem)] xl:self-start xl:overflow-y-auto";
 export const DETAIL_GRID_CLASS =
   "grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-6 xl:grid-cols-[300px_minmax(0,1fr)_340px] xl:grid-rows-1";
 

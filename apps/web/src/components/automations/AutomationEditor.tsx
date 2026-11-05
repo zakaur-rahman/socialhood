@@ -294,7 +294,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
 
   return (
     <div ref={page} className="w-full p-4 pt-0 md:p-6 md:pt-0">
-      <header ref={header} className={cn(STICKY_PAGE_HEADER, "flex flex-wrap items-center gap-x-3 gap-y-2 pt-4 md:pt-6")}>
+      <header ref={header} className={cn(STICKY_PAGE_HEADER, "flex flex-wrap items-center gap-x-3 gap-y-2 pt-4")}>
         <h1 className="sr-only">{draft.name.trim() || DEFAULT_NAME}</h1>
         <div className="min-w-0 flex-1 basis-64">
           <BackLink href={`/w/${slug}/automations` as Route} label="Automations" />
@@ -478,7 +478,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </div>
         <Card
           asChild
-          className="xl:sticky xl:top-[calc(var(--page-header-h,0px)+1.5rem)] xl:col-start-2 xl:row-start-1 xl:self-start"
+          className="xl:sticky xl:top-[calc(var(--banner-h,0px)+var(--page-header-h,0px)+1.5rem)] xl:col-start-2 xl:row-start-1 xl:self-start"
         >
         <aside aria-label="Preview and results">
           <SidePanel

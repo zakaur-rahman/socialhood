@@ -419,7 +419,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           className={cn("w-full p-4 pt-0 md:p-6 md:pt-0", fillsHeight && "flex min-h-0 flex-1 flex-col")}
           data-shell-fill={fillsHeight ? "" : undefined}
         >
-          <header className={cn(STICKY_PAGE_HEADER, "mb-4 flex pt-4 md:pt-6 flex-wrap items-start justify-between gap-3")}>
+          <header className={cn(STICKY_PAGE_HEADER, "mb-4 flex pt-4flex-wrap items-start justify-between gap-3")}>
             <div>
               <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
                 Schedule

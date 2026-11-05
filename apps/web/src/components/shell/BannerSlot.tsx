@@ -3,6 +3,7 @@
 import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useEffect, useRef } from "react";
 
 import { Alert, AlertAction } from "@/components/ui/alert";
 import type { BillingState, Role } from "@/lib/api/types";
@@ -26,13 +27,29 @@ export type Banner = {
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
  * AI credits exhausted, trial ending), drawn with Alert (DESIGN_SYSTEM §8.2): one action each, danger
  * banners announced at once, critical states cannot be dismissed. They sit in `<main>`'s flow and keep
- * their height; a full-height frame below takes the rest. On the page header's band, with its 16 px
- * gap from the sidebar, so the banner and the header read as one top bar (owner, 2026-11-06).
+ * their height; a full-height frame below takes the rest. From md they float on top while the page
+ * scrolls (owner, 2026-11-06): sticky above everything in `<main>`, with their height as --banner-h
+ * on the root, so the sticky page header, toolbars and side panels sit just under them.
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
-  if (banners.length === 0) return null;
+  const slot = useRef<HTMLDivElement>(null);
+  const shown = banners.length > 0;
+  useEffect(() => {
+    const element = slot.current;
+    const root = document.documentElement;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const sync = () => root.style.setProperty("--banner-h", `${element.offsetHeight}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--banner-h");
+    };
+  }, [shown]);
+  if (!shown) return null;
   return (
-    <div className="shrink-0 space-y-2 bg-panel px-4 pt-4 md:ml-4 md:pr-6 md:pl-2">
+    <div ref={slot} className="shrink-0 space-y-2 bg-canvas px-4 pt-4 pb-3 md:sticky md:pb-0 md:top-0 md:z-30 md:px-6">
       {banners.map((banner) => (
         // The Alert is the live region: `alert` for danger (payment on hold), `status` otherwise.
         <Alert
