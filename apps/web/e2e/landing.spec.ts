@@ -84,10 +84,11 @@ test.describe("landing page", () => {
       expect(draft).toEqual({ background: "rgba(0, 0, 0, 0)", display: "block" });
 
       // Sections in order (C-157): a night band every two or three sections, Security early, the
-      // connections inside Features, the setup steps as the bridge into Pricing.
+      // connections inside Features, the setup steps before the FAQ (the plans are on /pricing).
       const order = await page.$$eval("main > section", (sections) => sections.map((s) => s.id || s.getAttribute("aria-labelledby") || s.getAttribute("aria-label")));
       expect(order).toEqual([
         "hero-title",
+        "product-demo",
         "how-it-works",
         "automations",
         "modes",
@@ -96,7 +97,6 @@ test.describe("landing page", () => {
         "who-its-for",
         "features",
         "setup",
-        "pricing",
         "faq",
         "cta-title",
       ]);
@@ -155,6 +155,40 @@ test.describe("landing page", () => {
     expect(await automations.locator("[data-comments] .cmt").allTextContents()).toEqual(count);
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("the product demo plays on screen, and its pause control stops it (C-175)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const demo = page.locator("section#product-demo");
+    await demo.locator("[data-demo]").scrollIntoViewIfNeeded();
+    await expect(demo.locator("[data-demo][data-live]")).toHaveCount(1, { timeout: 15_000 });
+    await expect(demo.locator(".pd-steps li.on")).toHaveCount(1);
+    // The platform filter changes the list, and the account Select comes with a platform that has two accounts.
+    await expect(demo.locator('[data-demo][data-strip="instagram"]')).toHaveCount(1, { timeout: 20_000 });
+    await expect(demo.locator('[data-row="nina"]')).not.toHaveClass(/\bon\b/);
+    await expect(demo.locator(".pd-acct")).toHaveCSS("opacity", "1");
+    const toggle = demo.getByRole("button", { name: "Pause the example" });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(demo).toHaveAttribute("data-motion-paused", "");
+    const shown = () => demo.locator("[data-p].on").count();
+    const count = await shown();
+    await page.waitForTimeout(2_500);
+    expect(await shown()).toBe(count);
+
+    // The steps are buttons: paused, a click shows that step's finished state and stays paused.
+    const step = demo.locator(".pd-steps button").nth(3);
+    await step.click();
+    await expect(step).toHaveAttribute("aria-current", "step");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(demo.locator('[data-p="maya-chip"].on')).toHaveCount(1);
+    // From the keyboard too, and backwards: the later state goes.
+    const first = demo.locator(".pd-steps button").first();
+    await first.focus();
+    await page.keyboard.press("Enter");
+    await expect(first).toHaveAttribute("aria-current", "step");
+    await expect(demo.locator('[data-p="maya-chip"].on')).toHaveCount(0);
   });
 
   test("the hero's scattered inbox sorts as the page scrolls, and the headline never moves (C-157 motion)", async ({ page }) => {
@@ -320,17 +354,18 @@ test.describe("landing page", () => {
       expect(same(row.map((c) => c.status))).toBe(true);
     }
 
-    // Pricing: plan cards of one height, with their buttons and lists starting at one height.
-    await bring("section#pricing .plans");
-    expect(same(await bottoms("section#pricing .plan"))).toBe(true);
-    expect(same(await tops("section#pricing .plan > .btn"))).toBe(true);
-    expect(same(await tops("section#pricing .plan > .limits"))).toBe(true);
-
     // FAQ: the heading block stays in view beside the long list.
     await bring("section#faq");
     await page.evaluate(() => window.scrollTo(0, document.querySelector("#faq")!.getBoundingClientRect().top + window.scrollY + 240));
     const faqHead = await page.locator("section#faq .faq-head").evaluate((el) => el.getBoundingClientRect().top);
     expect(faqHead).toBeGreaterThan(0);
+
+    // Pricing has its own page: plan cards of one height, with their buttons and lists starting at one height.
+    await page.goto("/pricing");
+    await bring("section#pricing .plans");
+    expect(same(await bottoms("section#pricing .plan"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .btn"))).toBe(true);
+    expect(same(await tops("section#pricing .plan > .limits"))).toBe(true);
   });
 
   test("on a phone How it works plays once by itself, with a pause control", async ({ page }) => {

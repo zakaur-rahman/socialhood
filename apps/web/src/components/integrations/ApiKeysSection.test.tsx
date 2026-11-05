@@ -40,7 +40,7 @@ beforeAll(() => {
 
 function setup({
   items = [] as ApiKey[],
-  ws = { ...workspace, plan: "max" } as WorkspaceSummary, // API keys are Business only (C-172)
+  ws = { ...workspace, plan: "max" } as WorkspaceSummary, // API keys are on Business and Agency (C-172, C-174)
   create,
 }: { items?: ApiKey[]; ws?: WorkspaceSummary; create?: (call: Call) => Response } = {}) {
   return renderWithApi(<ApiKeysSection />, {
@@ -141,6 +141,12 @@ describe("Settings > API keys (GR-25)", () => {
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
 
+  it("offers API keys on Agency, like Business (C-174)", async () => {
+    setup({ ws: { ...workspace, plan: "agency" } });
+    expect(await screen.findByRole("button", { name: "Create API key" })).toBeInTheDocument();
+    expect(screen.queryByText("The public API, API keys and Zapier are part of Business.")).not.toBeInTheDocument();
+  });
+
   it("tells a Free workspace (not Business) the API is part of Business instead of offering the form", async () => {
     setup({ ws: { ...workspace, plan: "free" } });
     expect(await screen.findByText("The public API, API keys and Zapier are part of Business.")).toBeInTheDocument();
@@ -160,7 +166,7 @@ describe("Settings > API keys (GR-25)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Create an API key" });
     await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Zapier");
     await user.click(within(dialog).getByRole("button", { name: "Create key" }));
-    expect(await screen.findByText("Public API access is part of Business")).toBeInTheDocument();
+    expect(await screen.findByText("Public API access is part of Business and Agency")).toBeInTheDocument();
     expect(toast.error).not.toHaveBeenCalled(); // the dialog says it, not a toast
   });
 

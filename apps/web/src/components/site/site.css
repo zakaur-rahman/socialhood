@@ -3048,6 +3048,380 @@ body:has(.site) {
 }
 /* ==== end C-173 plan cards ==== */
 
+/* ==== C-175 product demo ==== */
+/* A replica of the signed-in inbox (ProductDemo.tsx). `.site` re-points the app's tokens at paper, so
+   the app's own values are kept here under --app-*: a custom property declared on :root resolves its
+   var() there, before `.site` changes it, and light-dark() then takes `.site`'s light scheme. Every
+   moving part keeps its box, so the frame's height is fixed where it plays. With no script or reduced
+   motion everything simply follows, finished, and the frame takes its height. */
+:root {
+  --app-canvas: var(--color-canvas); --app-panel: var(--color-panel); --app-field: var(--color-field); --app-raised: var(--color-raised);
+  --app-fg: var(--color-fg); --app-fg-2: var(--color-fg-secondary); --app-line: var(--color-line); --app-line-subtle: var(--color-line-subtle);
+  --app-hover: var(--color-hover); --app-brand: var(--color-brand); --app-brand-fg: var(--color-brand-fg); --app-brand-soft: var(--color-brand-soft);
+  --app-brand-line: var(--color-brand-line); --app-on-brand: var(--color-on-brand); --app-accent: var(--color-brand-strong);
+  --app-warning: var(--color-warning); --app-warning-soft: var(--color-warning-soft); --app-danger-fg: var(--color-danger-fg); --app-danger-soft: var(--color-danger-soft);
+  --app-success: var(--color-success); --app-overlay: var(--color-overlay);
+  --app-field-input: var(--color-field-input); --app-segment: var(--color-segment); --app-pressed: var(--color-pressed); --app-line-strong: var(--color-line-strong); --app-line-control: var(--color-line-control);
+}
+/* No script can pin the page light, as THEME_INIT_SCRIPT does: the --app-* values follow the root's scheme. */
+@media (scripting: none) {
+  :root:has(.site) { color-scheme: light; }
+}
+@layer components {
+  .site .pd {
+    --pd-h: clamp(460px, calc(100svh - 290px), 640px);
+    & .pd-stage { margin: var(--space-6) 0 0; min-width: 0; }
+    & .pd-win { position: relative; background: var(--app-canvas); border: 1px solid var(--rule); border-radius: var(--r-xl); box-shadow: var(--shadow-panel); overflow: hidden; color: var(--app-fg); font-size: var(--fs-label); line-height: 1.4; }
+    & .pd-win p { margin: 0; }
+    & .pd-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: auto; min-height: 44px; margin-top: var(--space-2); }
+    & .pd-cap .motion-toggle { flex: none; }
+    & .pd-topbar { display: none; }
+
+    /* ---- the frame: the inbox's three panes (InboxShell) */
+    & .pd-body { display: flex; }
+    & .pd-inbox { flex: 1; min-width: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr) 300px; grid-template-rows: minmax(0, 1fr); background: var(--app-panel); overflow: hidden; }
+
+    & .pd-logo { flex: none; width: 32px; height: 32px; border-radius: var(--r-sm); }
+
+    /* ---- the list pane: PlatformStrip, ListHeader */
+    & .pd-list { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--app-line); background: var(--app-panel); }
+    & .pd-strip { padding: var(--space-3) var(--space-3) 0; }
+    & .pd-track { display: flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--r-sm); background: var(--app-field); }
+    & .pd-seg { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 28px; padding: var(--space-1) var(--space-2); border-radius: var(--r-xs); font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+    & .pd-seg > i:not(.pd-count) { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+    & .pd-strip .pd-seg { flex: 1 1 auto; padding-inline: 6px; }
+    & .pd-seg-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    & [data-strip="all"] [data-seg="all"], & [data-strip="instagram"] [data-seg="instagram"], & [data-strip="whatsapp"] [data-seg="whatsapp"],
+    & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-segment); color: var(--app-fg); }
+    & .pd-list-h { padding: var(--space-3) var(--space-3) 0; }
+    & .pd-list-title { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+    & .pd-list-title > b { font-size: var(--fs-body); font-weight: 600; }
+    & .pd-list-tools { display: flex; align-items: center; gap: var(--space-2); }
+    & .pd-tool { flex: none; color: var(--app-fg-2); }
+    & .pd-tabs { flex: none; }
+    & .pd-tabs .pd-seg { flex: none; }
+    & .pd-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--app-pressed); color: var(--app-fg); font-size: var(--fs-micro); font-style: normal; font-weight: 500; }
+    & .pd-panel-stack { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    & .pd-panel-chats { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    & .pd-list-filters { padding: var(--space-3) var(--space-3) 10px; border-bottom: 1px solid var(--app-line); }
+    & .pd-search { position: relative; }
+    & .pd-field { display: flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-3); border: 1px solid var(--app-line-control); border-radius: var(--r-sm); background: var(--app-field-input); color: var(--app-fg-2); white-space: nowrap; }
+    & .pd-acct { display: block; margin-top: var(--space-2); }
+    & .pd-acct-trigger { justify-content: space-between; color: var(--app-fg); font-size: var(--fs-micro); }
+    & .pd-acct-trigger .pd-swap { min-width: 0; overflow: hidden; }
+    & .pd-pop { background: var(--app-overlay); border: 1px solid var(--app-line); border-radius: var(--r-sm); box-shadow: var(--shadow-note); z-index: 3; }
+    & .pd-menu { display: block; margin-top: var(--space-1); padding: var(--space-1); }
+    & .pd-opt { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 var(--space-2); border-radius: var(--r-xs); font-size: var(--fs-micro); white-space: nowrap; }
+    & .pd-opt svg { opacity: 0; }
+    & [data-acct="all"] [data-opt="all"] svg, & [data-acct="mumbai"] [data-opt="mumbai"] svg, & [data-acct="pune"] [data-opt="pune"] svg { opacity: 1; }
+    & [data-acct-show] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    & .pd-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3); }
+    & .pd-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border: 1px solid var(--app-line); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; }
+    & .pd-chip-on { border-color: var(--app-line-strong); background: var(--app-raised); color: var(--app-fg); }
+    & .pd-rows { position: relative; flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
+
+    /* ---- ConversationRow */
+    & .pd-row { position: relative; display: flex; align-items: flex-start; gap: var(--space-3); height: var(--h); padding: var(--space-3) var(--space-4); }
+    & .pd-sel { position: absolute; inset: 0; background: var(--app-raised); }
+    & .pd-sel::before { content: ""; position: absolute; inset: var(--space-2) auto var(--space-2) 0; width: 2px; border-radius: 999px; background: var(--app-fg); }
+    & .pd-av { position: relative; flex: none; display: grid; place-items: center; border-radius: 50%; font-weight: 600; color: var(--ink); background: var(--bg); }
+    & .pd-av-40 { width: 40px; height: 40px; font-size: var(--fs-body); }
+    & .pd-av-32 { width: 32px; height: 32px; font-size: var(--fs-label); }
+    & .pd-av-24 { width: 24px; height: 24px; font-size: var(--fs-micro); }
+    & .pd-mark { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; color: var(--app-on-brand); box-shadow: 0 0 0 2px var(--app-panel); }
+    & .pd-mark svg { width: 10px; height: 10px; }
+    & .pd-row-main { position: relative; flex: 1; min-width: 0; }
+    & .pd-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+    & .pd-row-top b { flex: 1; min-width: 0; font-weight: 600; color: var(--app-fg-2); }
+    & .pd-row-top time { font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-row-line { display: flex; align-items: center; gap: var(--space-2); margin-top: 2px; }
+    & .pd-swap { display: grid; min-width: 0; }
+    & .pd-swap > * { grid-area: 1 / 1; min-width: 0; }
+    & .pd-row-text { flex: 1; color: var(--app-fg-2); }
+    & .pd-row-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg); }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-text { font-weight: 500; }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-top time { font-weight: 500; color: var(--app-fg); }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg-2); }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-text { font-weight: 400; }
+    & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-top time { font-weight: 400; color: var(--app-fg-2); }
+    & .pd-unread-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--app-fg); }
+    & .pd-badges { display: flex; gap: var(--space-1); margin-top: var(--space-1); overflow: hidden; }
+
+    /* ---- Badge */
+    & .pd-b { flex: none; display: inline-flex; align-items: center; gap: var(--space-1); width: fit-content; height: 20px; padding: 0 var(--space-2); border-radius: 999px; background: var(--app-hover); color: var(--app-fg-2); font-size: var(--fs-micro); font-weight: 500; white-space: nowrap; }
+    & .pd-b-brand { background: var(--app-brand-soft); color: var(--app-brand-fg); }
+    & .pd-b-danger { background: var(--app-danger-soft); color: var(--app-danger-fg); }
+
+    /* ---- Button */
+    & .pd-btn { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 var(--space-3); border-radius: var(--r-sm); font-weight: 500; white-space: nowrap; }
+    & .pd-btn-sm { height: 28px; padding: 0 10px; font-size: var(--fs-micro); gap: var(--space-1); }
+    & .pd-btn-main { background: var(--app-accent); color: var(--app-on-brand); }
+    & .pd-btn-line, & .pd-btn-empty { background: var(--app-raised); color: var(--app-fg); }
+    & .pd-btn-line { box-shadow: inset 0 0 0 1px var(--app-line); }
+    & .pd-btn-empty { color: var(--app-fg-2); }
+    & .pd-btn-ghost { color: var(--app-fg-2); }
+    & .pd-btn-soft { background: var(--app-brand-soft); color: var(--app-brand-fg); }
+    & .pd-btn-off { opacity: 0.5; margin-left: var(--space-1); font-size: var(--fs-micro); }
+    & .pd-btn-danger { color: var(--app-danger-fg); }
+
+    /* ---- the conversation: ThreadHeader, MessageLog */
+    & .pd-panes { position: relative; min-width: 0; min-height: 0; background: var(--app-canvas); }
+    & .pd-pick { display: grid; place-content: center; justify-items: center; gap: var(--space-1); color: var(--app-fg-2); }
+    & .pd-pick b { font-size: var(--fs-body); font-weight: 600; color: var(--app-fg); }
+    & .pd-conv { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; container-type: inline-size; }
+    & .pd-head { flex: none; display: flex; align-items: center; gap: var(--space-3); height: 64px; padding: 0 var(--space-4); background: var(--app-panel); border-bottom: 1px solid var(--app-line); }
+    & .pd-back { display: none; flex: none; color: var(--app-fg-2); }
+    & .pd-who { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+    & .pd-who-top { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+    & .pd-who-top b { font-weight: 600; white-space: nowrap; }
+    & .pd-id { display: flex; align-items: center; gap: var(--space-1); min-width: 0; font-size: var(--fs-micro); color: var(--app-fg-2); white-space: nowrap; }
+    & .pd-id-t { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    & .pd-glyph { display: inline-block; width: 12px; height: 12px; flex: none; margin-right: var(--space-1); vertical-align: text-bottom; }
+    & .pd-c-instagram { color: var(--ig); }
+    & .pd-c-whatsapp { color: var(--wa); }
+    & .pd-head-acts { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+    & .pd-narrow-672, & .pd-narrow-576 { display: none; }
+    /* The header follows the pane's width, at the app's own steps (ThreadHeader's container queries). */
+    @container (width < 672px) {
+      & .pd-wide-672 { display: none; }
+      & .pd-narrow-672 { display: inline-flex; }
+    }
+    @container (width < 576px) {
+      & .pd-wide-576 { display: none; }
+      & .pd-narrow-576 { display: inline-flex; }
+    }
+    @container (width < 352px) { & .pd-wide-352 { display: none; } }
+    & .pd-log { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-3); padding: var(--space-4); overflow: hidden; }
+    & .pd-day { text-align: center; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-msg { max-width: 85%; }
+    & .pd-in { align-self: flex-start; display: flex; align-items: flex-start; gap: var(--space-2); }
+    & .pd-out { justify-self: end; align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; }
+    & .pd-bub { width: fit-content; padding: var(--space-2) var(--space-3); border-radius: var(--r-lg); line-height: 1.6; }
+    & .pd-in .pd-bub { background: var(--app-field); border: 1px solid var(--app-line-subtle); border-bottom-left-radius: var(--r-xs); }
+    & .pd-out .pd-bub { background: var(--app-accent); border-bottom-right-radius: var(--r-xs); color: var(--app-on-brand); }
+    & .pd-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding: 0 var(--space-1); font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); }
+    & .pd-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--app-fg-2); }
+    & .pd-by { display: inline-flex; align-items: center; gap: 2px; margin-left: var(--space-1); font-weight: 500; color: var(--app-brand-fg); }
+    & .pd-status { width: 14px; height: 14px; }
+    & .pd-quick { display: block; width: fit-content; margin-top: var(--space-2); padding: 2px 10px; border: 1px solid var(--app-on-brand); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; }
+    & .pd-url { display: block; margin-top: var(--space-1); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+    & .pd-comment { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); background: var(--app-panel); font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-comment b { font-weight: 600; color: var(--app-fg); }
+    & .pd-comment mark { padding: 0 var(--space-1); border-radius: var(--r-xs); background: var(--app-brand-soft); color: var(--app-brand-fg); font-weight: 600; }
+    & .pd-banner { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--r-sm); background: var(--app-warning-soft); color: var(--app-warning); font-weight: 500; }
+    & .pd-banner svg { flex: none; }
+
+    /* The suggestion bar (SuggestionCard) and the scheduled chip (ThreadView). */
+    & .pd-bar { padding: var(--space-2) var(--space-3); border: 1px solid var(--app-brand-line); border-radius: var(--r-sm); background: var(--app-panel); }
+    & .pd-bar-top { display: flex; align-items: flex-start; gap: var(--space-2); }
+    & .pd-spark { flex: none; margin-top: 3px; color: var(--app-brand-fg); }
+    & .pd-x { flex: none; margin-top: 3px; color: var(--app-fg-2); }
+    & .pd-draft { flex: 1; }
+    & .pd-draft b { font-weight: 500; color: var(--app-brand-fg); }
+    & .pd-drafting { color: var(--app-fg-2); }
+    & .pd-bar-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: 6px; padding-left: 22px; }
+    & .pd-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-left: auto; }
+    & .pd-left { font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-sched-chip { justify-self: start; width: fit-content; }
+
+    /* ---- Composer, SchedulePanel, the toast */
+    & .pd-composer { position: relative; flex: none; padding: var(--space-3) var(--space-4); background: var(--app-panel); border-top: 1px solid var(--app-line); }
+    & .pd-comp-card { border: 1px solid var(--app-line); border-radius: var(--r-md); background: var(--app-field); }
+    & .pd-comp-text { min-height: 40px; padding: 10px var(--space-3) var(--space-1); }
+    & .pd-comp-ph { color: var(--app-fg-2); }
+    & .pd-comp-typed { color: var(--app-fg); }
+    & .pd-comp-tools { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3) 6px; min-height: 38px; }
+    & .pd-comp-tools .pd-btn-off { margin-left: 0; }
+    & .pd-comp-send { margin-left: auto; }
+    & .pd-sched { padding: var(--space-3); }
+    & .pd-sched-h { font-weight: 600; }
+    & .pd-sched-w { margin-top: var(--space-1) !important; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-sched-f { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: var(--space-2); margin-top: var(--space-3); }
+    & .pd-sched-f small { display: block; margin-bottom: var(--space-1); font-size: var(--fs-micro); font-weight: 500; }
+    & .pd-sched-f .pd-field { padding: 0 var(--space-2); color: var(--app-fg); font-size: var(--fs-micro); justify-content: space-between; }
+    & .pd-sched-go { display: flex; width: 100%; margin-top: var(--space-3); }
+    & .pd-toast { display: none; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--app-overlay); border: 1px solid var(--app-line); border-radius: var(--r-sm); box-shadow: var(--shadow-note); font-weight: 500; white-space: nowrap; }
+    & .pd-toast svg { color: var(--app-success); }
+
+    /* ---- DetailsPanel: the customer, who has it, the latest message, the summary */
+    & .pd-panel-toggle { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--app-brand-soft); color: var(--app-brand-fg); }
+    & .pd-details { min-width: 0; min-height: 0; overflow: hidden; background: var(--app-panel); border-left: 1px solid var(--app-line); }
+    & .pd-det { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); min-height: 0; overflow: hidden; }
+    & .pd-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 24px; margin-bottom: var(--space-2); }
+    & .pd-sec-h h3 { margin: 0; font-family: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); }
+    & .pd-link { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); font-weight: 500; color: var(--app-brand-fg); white-space: nowrap; }
+    & .pd-inset { min-width: 0; padding: var(--space-3); border-radius: var(--r-sm); background: var(--app-field); }
+    & .pd-det-who { display: flex; align-items: center; gap: var(--space-3); }
+    & .pd-det-who b { display: block; font-weight: 600; }
+    & .pd-det-who small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; padding-top: var(--space-3); border-top: 1px solid var(--app-line); }
+    & .pd-dl-wide { grid-column: 1 / -1; }
+    & .pd-dl dt { font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-dl dd { margin: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    & .pd-meter { margin-top: var(--space-3); }
+    & .pd-meter-h { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-meter-bar { display: block; height: 6px; margin-top: var(--space-1); border-radius: 999px; background: var(--app-raised); overflow: hidden; }
+    & .pd-meter-bar i { display: block; height: 100%; border-radius: 999px; background: var(--app-brand); }
+    & .pd-btn-full { display: flex; width: 100%; margin-top: var(--space-3); }
+    & .pd-sec:nth-child(2) .pd-btn-full { margin-top: 0; }
+    & .pd-btn-between { justify-content: space-between; }
+    & .pd-btn-between .pd-swap > span { display: inline-flex; align-items: center; gap: var(--space-2); }
+    & .pd-btn-xs { flex: none; height: 24px; padding: 0 var(--space-2); font-size: var(--fs-micro); }
+    & .pd-attn { display: flex; align-items: center; gap: var(--space-2); margin-top: 6px !important; padding: var(--space-2) var(--space-3); border-radius: var(--r-sm); background: var(--app-danger-soft); color: var(--app-danger-fg); font-weight: 500; }
+    & .pd-attn svg { flex: none; }
+    & .pd-det-wait { color: var(--app-fg-2); }
+    & .pd-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-3); margin: 0; }
+    & .pd-kv dt { color: var(--app-fg-2); }
+    & .pd-kv dd { margin: 0; justify-self: end; }
+    & .pd-b-warn { background: var(--app-warning-soft); color: var(--app-warning); }
+    & .pd-correct { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2) !important; padding-top: var(--space-2); border-top: 1px solid var(--app-line); font-size: var(--fs-micro); color: var(--app-fg-2); }
+
+    /* ---- AssigneeMenu, AssigneeAvatar */
+    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: 10px; font-style: normal; font-weight: 600; }
+    & .pd-assign { padding: var(--space-1); }
+    & .pd-assign-h { padding: var(--space-1) var(--space-2); font-size: var(--fs-micro); font-weight: 600; color: var(--app-fg-2); }
+    & .pd-opt-2 { height: 40px; }
+    & .pd-opt-2 small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
+    & .pd-opt .pd-assign-check { opacity: 1; }
+
+    /* ---- ScheduledCard */
+    & .pd-panel-sched { padding: var(--space-3); }
+    & .pd-card { display: block; padding: var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); background: var(--app-field); }
+    & .pd-card-top { display: flex; gap: var(--space-3); }
+    & .pd-card-top b { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    & .pd-card-top b svg { color: var(--app-fg-2); }
+    & .pd-card-text { display: block; margin-top: 2px; color: var(--app-fg-2); }
+    & .pd-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+    & .pd-card-acts { display: flex; gap: var(--space-1); margin-left: auto; }
+
+    /* ---- the captions: plain text; the current one takes the ink and the rule above it */
+    & .pd-steps { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+    & .pd-step { display: block; width: 100%; min-height: 32px; margin: 0; padding: var(--space-2) 0 0; border: 0; border-top: 2px solid var(--rule); border-radius: 0; background: none; font: inherit; font-size: var(--fs-caption); line-height: var(--lh-caption); text-align: left; color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+    & button.pd-step { cursor: pointer; }
+    @media (hover: hover) { & button.pd-step:hover { border-color: var(--ink-3); color: var(--ink); } }
+    & .pd-steps li.on .pd-step { border-color: var(--iris); color: var(--ink); font-weight: 500; }
+
+    /* ---- the pointer: only where it plays */
+    & .pd-cursor { display: none; }
+
+    /* ---- no script: everything finished, one thing under the other */
+    @media (scripting: none) {
+      & .pd-before { display: none !important; }
+      & [data-acct-show]:not([data-acct-show="all"]) { display: none; }
+      & .pd-inbox { align-items: start; }
+      & .pd-conv + .pd-conv, & .pd-det + .pd-det { border-top: 1px solid var(--app-line); }
+      & .pd-assign { margin: 0 var(--space-4) var(--space-3); }
+      & .pd-log { justify-content: flex-start; min-height: 0; }
+      & .pd-cell { display: flex; flex-direction: column; gap: var(--space-3); }
+      & .pd-panel-sched { border-top: 1px solid var(--app-line); }
+      & .pd-menu { margin-bottom: var(--space-1); }
+      & .pd-sched { margin-bottom: var(--space-3); }
+    }
+
+    /* ---- where it plays: the frame holds one size, the parts share their boxes */
+    @media (scripting: enabled) {
+      & .pd-body { height: var(--pd-h); }
+      & .pd-panes { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      & .pd-panes > * { grid-area: 1 / 1; min-width: 0; min-height: 0; }
+      & .pd-cell { display: grid; align-items: end; }
+      & .pd-cell > * { grid-area: 1 / 1; min-width: 0; }
+      /* The sent reply stands above the chip's room, so the chip never covers it. */
+      & .pd-cell .pd-out { margin-bottom: 40px; }
+      & .pd-panel-stack, & .pd-details { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      & .pd-details > * { grid-area: 1 / 1; }
+      & .pd-assign { position: absolute; top: 60px; right: var(--space-4); width: 224px; }
+      & .pd-panel-stack > .pd-panel { grid-area: 1 / 1; min-height: 0; transition: opacity var(--dur-fast) var(--ease); }
+      & [data-tab="chats"] .pd-panel-sched, & [data-tab="scheduled"] .pd-panel-chats { opacity: 0; }
+
+      & .pd-rows > .pd-row { position: absolute; inset: 0 0 auto; transform: translateY(var(--y, 0)); }
+
+      /* The Select shows on a platform with two accounts, laid over the search's end (InboxShell). */
+      & .pd-acct { position: absolute; top: 0; right: 0; width: 128px; margin: 0; opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+      & [data-strip="instagram"] .pd-acct { opacity: 1; }
+      & .pd-menu { position: absolute; top: 100%; right: 0; width: 170px; }
+      & [data-acct-show] { opacity: 0; }
+      & [data-acct="all"] [data-acct-show="all"], & [data-acct="mumbai"] [data-acct-show="mumbai"], & [data-acct="pune"] [data-acct-show="pune"] { opacity: 1; }
+
+      /* Over the composer, from the clock (align end, side top, w-80). */
+      & .pd-sched { position: absolute; right: var(--space-4); bottom: calc(100% - var(--space-1)); width: min(320px, calc(100% - 2 * var(--space-4))); }
+      & .pd-toast { display: flex; position: absolute; right: var(--space-4); bottom: var(--space-4); z-index: 4; }
+
+      /* Before the script arrives: the finished Maya conversation, the rest waiting in their boxes. */
+      & .pd-before, & .pd-float, & .pd-conv:not(.pd-first), & .pd-det:not(.pd-det-first), & .pd-bar { opacity: 0; }
+
+      /* The script owns every part from here: off until the timeline turns it on. */
+      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease); }
+      & [data-live] [data-p].on { opacity: 1; translate: none; }
+      & [data-live] .pd-conv, & [data-live] .pd-det, & [data-live] .pd-det [data-p], & [data-live] .pd-who-av, & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-count, & [data-live] .pd-unread-dot, & [data-live] .pd-b[data-p], & [data-live] .pd-status > * { translate: none; }
+      & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+      & [data-live] .pd-row.on { translate: none; }
+      & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-medium) var(--ease-swap) infinite alternate; }
+
+      & .pd-cursor { display: block; position: absolute; top: 0; left: 0; z-index: 5; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-slow) var(--ease); }
+      & .pd-cursor.on { opacity: 1; }
+      & .pd-cursor svg { display: block; fill: var(--ink); stroke: var(--sheet); stroke-width: 1.5; filter: drop-shadow(0 1px 2px var(--ink-strike)); }
+      & .pd-ring { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; background: var(--iris-hit); opacity: 0; }
+      /* A jump lands at once. Reduced motion: never anything but that, and no pointer. */
+      & [data-seek], & [data-seek] * { transition: none !important; }
+      @media (prefers-reduced-motion: reduce) {
+        & [data-demo], & [data-demo] * { transition: none !important; animation: none !important; }
+        & .pd-cursor { display: none; }
+      }
+    }
+
+    /* ---- narrower than 1280 px the app's details are a sheet, closed: the list and the thread */
+    @media (width < 1280px) {
+      & .pd-inbox { grid-template-columns: 300px minmax(0, 1fr); }
+      & .pd-details { display: none !important; }
+      & .pd-panel-toggle { background: none; color: var(--app-fg-2); }
+    }
+    @media (width <= 1060px) { /* site-wide */
+      & .pd-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). */
+    @media (height < 820px) and (width > 760px) { /* site-nav */
+      padding-top: var(--space-6);
+      padding-bottom: var(--space-6);
+      & .pd-stage { margin-top: var(--space-3); }
+      & .h2 { font-size: var(--fs-h3); line-height: var(--lh-h3); }
+      & .lede { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+    }
+
+    /* ---- a phone, as the app's: the top bar, then the list or the conversation, never both */
+    @media (width <= 760px) { /* site-nav */
+      --pd-h: clamp(500px, calc(100svh - 300px), 640px);
+      & .pd-topbar { display: flex; align-items: center; gap: var(--space-3); height: 56px; padding: 0 var(--space-4); background: var(--app-panel); border-bottom: 1px solid var(--app-line); }
+      & .pd-topbar b { flex: 1; font-size: var(--fs-body); font-weight: 600; }
+      & .pd-topbar > svg { color: var(--app-fg-2); }
+      & .pd-list-title > b { display: none; }
+      & .pd-inbox { grid-template-columns: minmax(0, 1fr); }
+      & .pd-list { border-right: 0; }
+      & .pd-list-tools { margin-left: auto; }
+      & .pd-chips-row { flex-wrap: nowrap; overflow: hidden; }
+      & .pd-back { display: block; }
+      & .pd-act-far, & .pd-left, & .pd-send-t { display: none; }
+      & .pd-head { padding: 0 var(--space-3); gap: var(--space-2); }
+      & .pd-log { padding: var(--space-3); }
+      & .pd-composer { padding: var(--space-2) var(--space-3); }
+      & .pd-comp-tools { gap: var(--space-2); }
+      & .pd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      @media (scripting: enabled) {
+        & .pd-inbox { display: grid; }
+        & .pd-inbox > * { grid-area: 1 / 1; min-width: 0; min-height: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+        & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-medium)); }
+        & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-medium))); }
+        & .pd-toast { top: var(--space-3); right: auto; bottom: auto; left: 50%; transform: translateX(-50%); }
+        /* A tap, not a mouse. */
+        & .pd-cursor svg { display: none; }
+        & .pd-cursor::after { content: ""; position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border: 2px solid var(--on-ink); border-radius: 50%; background: var(--ink-shade); }
+      }
+    }
+  }
+}
+@keyframes pd-shimmer { from { opacity: 0.45; } to { opacity: 1; } }
+/* ==== end C-175 product demo ==== */
 /* ==== C-174 ==== */
 /* The Monthly / 6 months switch above the plan cards. */
 @layer components {

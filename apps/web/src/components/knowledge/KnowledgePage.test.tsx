@@ -41,6 +41,7 @@ type State = {
   testFails?: () => Response;
   permissions?: string[];
   approve?: () => Response | Promise<Response>;
+  sourcesGate?: Promise<unknown>;
 };
 
 function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<MediaAsset>) {
@@ -71,8 +72,10 @@ function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<Me
           state.settings = { ...(call.body as AiSettings), updated_at: "2026-09-28T12:00:00Z" };
           return json(state.settings);
         },
-        "GET /v1/w/:wid/knowledge-sources": () =>
-          json({ items: state.sources, usage: { characters_used: state.used, characters_limit: state.limit } }),
+        "GET /v1/w/:wid/knowledge-sources": async () => {
+          await state.sourcesGate;
+          return json({ items: state.sources, usage: { characters_used: state.used, characters_limit: state.limit } });
+        },
         "POST /v1/w/:wid/knowledge-sources": (call) => {
           if (state.create) return state.create(call);
           const body = call.body as KnowledgeSourceCreate;
@@ -140,6 +143,19 @@ async function addFromMenu(type: "FAQ" | "Note" | "Web page" | "File") {
 beforeEach(() => {
   toast.success.mockReset();
   toast.error.mockReset();
+});
+
+describe("Loading", () => {
+  it("holds the questions card until every card can show, so it never jumps down past them", async () => {
+    let release = () => {};
+    const { calls } = setup({ sourcesGate: new Promise<void>((resolve) => (release = resolve)) });
+    await waitFor(() => expect(calls.some((c) => c.path === "/v1/w/w1/knowledge-gaps")).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("heading", { name: "Questions the AI couldn't answer" })).not.toBeInTheDocument();
+
+    release();
+    expect(await screen.findByRole("heading", { name: "Questions the AI couldn't answer" })).toBeInTheDocument();
+  });
 });
 
 describe("Knowledge an AI app added", () => {

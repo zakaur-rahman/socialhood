@@ -27,7 +27,7 @@ export default async function PricingPage() {
     <main id="main" tabIndex={-1} className="flex-1 outline-none">
       <JsonLd data={softwareApplicationJsonLd(pricing)} />
       <BreadcrumbJsonLd name="Pricing" path={PRICING_PATH} />
-      <Pricing pricing={pricing} headingLevel={1} />
+      <Pricing pricing={pricing} />
       <PlanMatrix />
       <WhatsAppCharges />
       <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />

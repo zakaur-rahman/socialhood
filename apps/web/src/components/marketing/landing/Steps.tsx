@@ -22,7 +22,7 @@ export const SETUP_STEPS: { title: string; body: string; icon: LucideIcon }[] = 
 ];
 
 /**
- * Set up in three steps (C-157): the bridge into pricing, on a night band. The order is the list's
+ * Set up in three steps (C-157): the last word before the FAQ, on a night band. The order is the list's
  * own (an <ol>), with no step numbers on screen.
  */
 export function Steps() {

@@ -77,7 +77,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           {gaps.isError ? <ErrorState error={gaps.error} onRetry={() => void gaps.refetch()} /> : null}
-          {openGaps.length > 0 ? gapsCard : null}
+          {ready && openGaps.length > 0 ? gapsCard : null}
 
           {!ready ? (
             <CardSkeleton label="Loading sources" rows={4} />
@@ -100,7 +100,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
             <BrandVoiceCard wid={wid} settings={settings.data} workspaceName={workspace.name} />
           )}
 
-          {gaps.isSuccess && openGaps.length === 0 ? gapsCard : null}
+          {ready && gaps.isSuccess && openGaps.length === 0 ? gapsCard : null}
         </div>
         <aside aria-label="Try the AI" className={cn("xl:sticky xl:top-6 xl:self-start", !ready && "max-xl:hidden")}>
           <TestBox wid={wid} onAddAnswer={(question) => setSheet({ kind: "create", type: "faq", question })} />

@@ -75,7 +75,7 @@ export const colourExceptions: ColourException[] = [
   {
     kind: "tokens",
     tokens: ["shell-1", "shell-2"],
-    reason: "The public site's logo gradient and the app icons: the one place the brand mark has colours of its own. The icon script reads them.",
+    reason: "The logo gradient and the app icons: the one place the brand mark has colours of its own. The icon script reads them.",
   },
 
   // The shadcn layer.

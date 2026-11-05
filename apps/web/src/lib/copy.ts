@@ -563,9 +563,9 @@ const FEATURE_COPY: Record<string, { feature: string; plans: string; body: strin
   },
   public_api: {
     feature: "Public API access",
-    plans: "Business",
+    plans: "Business and Agency",
     target: "max",
-    body: "On Business, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
+    body: "On Business and Agency, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
   },
   commerce: {
     feature: "The product catalogue",

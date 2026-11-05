@@ -9576,6 +9576,104 @@ Step 1 of 2 (web only, no API or database change). Owner decisions, 2026-11-03:
 - **Stale plans after a deploy.** `PLANS_REVALIDATE_SECONDS` and the `revalidate` of `/pricing` and the landing are 300 (was 3600); the segment value stays a literal (a test reads the source).
 - **Not done here.** Six-month billing and an Agency plan key and checkout are step 2. On a phone the cards without a button keep an empty button row, a small gap.
 
+## C-175 · Product demo
+
+The owner can't record a video yet and asked for a code-built demo on the landing page, then for a true
+replica of the inbox, with switching between platforms and accounts, scheduling, and more speed.
+`components/marketing/landing/ProductDemo.tsx`, right after the hero, on paper, so How it works stays the
+first night band. The story runs about 21.5 s and rests until 23 s before it loops (`productDemo` in
+`landing-motion.ts`). No new dependency or client island.
+
+**What each beat is checked against.**
+- The frame (owner: the right panel, not the left sidebar): the list, the thread and the details panel of
+  `InboxShell`, with `ListHeader` (`CHIP_VIEWS`, pinned by a test). No app sidebar at any width.
+- The details panel: `DetailsPanel`, in its order. Customer (Open in …, avatar, handle, Customer since, Linked
+  account, Started from via `entryLabel`, the lead score `Meter`, View contact, and `Attention`'s "Needs you: asked
+  for a person"); Assigned to; Latest message (`AnalysisDetails`, Add answer); Summary (`SummarySection`'s empty
+  state and Summarise). It follows the open conversation. "Not analysed yet" until the AI reads, then the analysis
+  and Maya's lead score; Sam's analysis and the alert come with the handover. It shows from 1280 px, where the app's
+  details are inline (`layout === "wide"`); below that the app's are a closed sheet, so the demo has none.
+- Assign it to a teammate: `AssigneeMenu` in the thread header ("Assigned to", Nobody, each member with their open
+  conversations), the toast "Assigned", then the header's and the row's `AssigneeAvatar` and the panel's name.
+  Needs you stays on: only a reply clears it. Members need a paid plan (`plans.py` `members`: 1, 2, 3), and the
+  caption says so.
+- The filters open a conversation: whenever the list changes, its top conversation opens, so the thread and the
+  panel match the list. **The app doesn't do this:** its open conversation stays until you pick another. The owner
+  asked for it, because the mismatch read as a mistake.
+- A DM arrives: `ConversationRow` (68 and 90 px rows, the selection bar), "Pick a conversation" (`lib/copy.ts`).
+- The AI reads and drafts: `AnalysisChips` (intent, sentiment, priority), `rowBadges` ("Lead 72/100"),
+  `SuggestionCard` ("Drafting a reply…", then the whole draft, "From: Menu", "5 drafts left", Draft again,
+  Insert, Send; `MAX_REGENERATIONS` is 5).
+- You stay in control: `SuggestionSlot` send, `MessageBubble` status icons, `previewPrefix` ("You: ").
+- Schedule a message: `Composer` (the clock is "Schedule message", it needs text), `SchedulePanel` ("Window
+  closes Tomorrow 17:26", Date, Time, "Times are in Asia/Kolkata.", Schedule), `checkSchedule` (18:30 is at
+  least 2 minutes away and 5 minutes before the window closes; 18:30 is also `defaultSchedule` at 17:26), the
+  toast "Scheduled for Today 18:30", `ScheduledChip` ("1 scheduled · Today 18:30"), the Scheduled tab's count and
+  `ScheduledCard` (Today 18:30, Scheduled, Edit, Cancel). A scheduled message is not in the thread until sent;
+  the chip above the composer is what the app shows there.
+- Switch platform and account: `PlatformStrip` (All and connected platforms, so no Facebook here), then
+  `ListHeader`'s account Select, which shows only on a platform with more than one account ("All accounts",
+  `@cafe_mumbai`, `@cafe_pune`); changing platform clears the account (`changePlatform`). Two accounts on one
+  platform need Business (`plans.py` `accounts_per_platform`: 1, 1, 3), and the caption under the frame says so.
+- A comment becomes a DM: `services/automations/actions.py` `opens_first` and the comment template's
+  `confirm_first=True`, `MessageBubble` ("Automation · …", the quick reply), `previewPrefix` ("Automation: ").
+- The tricky one: `ai/policy.py` and `escalationBanner` ("AI didn't reply: customer asked for a person",
+  shown in Auto), `ThreadHeader` ("Needs you: asked for a person"), `rowBadges` ("Auto replies").
+- A phone: `MobileNav`'s top bar, then the list or the conversation with its back arrow (`showList`,
+  `showThread`), the chips in one clipped row, and the toast at the top (`sonner.tsx`). A dot stands for a tap.
+
+**Where it still differs from the app, for the owner to check.**
+- **The comment card in the thread is the story's own.** In the app, comments live on the Comments page and
+  the thread starts with the automation's message. It is the one piece of UI here the inbox doesn't have.
+- **Colours are the app's light theme** (`--app-*` in the block, the app's own tokens read at `:root`). A member
+  on dark, or on the app's frosted panels and grain, sees those instead.
+- **The list pane is 360 px and the details 300 px at 1280 px and up,** so the strip's labels fit and the thread
+  keeps its room. The app's defaults are 320 and 320 (resizable, 260 to 560 and 280 to 480), where the labels truncate; below 1280 px the demo is 300 px and they truncate too. The
+  strip's segments size to their labels here; the app's share the width equally.
+- **The details panel from 1280 px:** the app can show it inline from there but opens it by default from 1440 px,
+  and only with a conversation open; the demo keeps its empty column before the first one, so nothing shifts.
+- **The panel's content is clipped at the frame's foot** where the app would scroll it (Summary, mostly).
+- **The frame's height comes from the viewport,** so the list and thread clip where the app's fill a taller window.
+- **Left out:** the app's sidebar (owner's call), topics in the analysis, the follow status, the menu's availability
+  item, the Needs reply count, the date picker's calendar and the time list (the popover
+  shows the chosen values), the public comment reply and follow nudge, the disclosure line, and any draft Auto
+  may hold under its banner. The Select's menu is drawn wider than the app's 128 px trigger, as Radix does.
+- **Row heights:** Maya's row is 90 px from when it arrives; the app makes it 90 when the Lead badge appears.
+- **Before the tap,** ana.wears' window chip is hidden; the app would show the window's state then.
+- **Sam's conversation is in Auto (Creator and Business),** because the banner is Auto's; Maya's is in Suggest.
+- **The date in the popover is fixed** (Fri 6 Nov 2026), as it's made-up data.
+- **Not compared against a live screenshot:** the signed-in app needs a login, so this was built from the
+  components' classes and labels.
+
+**Faster.** Each old beat is about 30% quicker. To fit the new ones in about 20 s: "The AI reads it" and "drafts"
+are one caption, the draft appears whole (5087d4f2), and the rest went from 5.6 s to 1.5 s.
+
+**Rules kept.** Labelled "Example, with made-up data". One labelled picture for assistive tech (`role="img"`,
+like the hero's), with the steps as plain captions and no live region. `MotionToggle` outside the picture. Off
+screen, a hidden tab or the pause control stop the clock, and it resumes where it stopped. Only opacity and
+transforms move, and every part keeps its box.
+- **The steps are controls.** The captions are plain text from the server, and the script swaps each for a button
+  with the same box, so nothing shifts and no-script stays plain. A jump replays the timeline from its start (`seek`),
+  so a step looks the same however it was reached; a test compares every step, played and jumped to. Playing, it goes to
+  the step's start and plays on; paused, it shows the step's finished state and stays paused.
+- **Judgment call on reduced motion:** with a script it now gets the playing frame, still, on the story's end, and the
+  steps show each finished state with no animation. Without a script everything is laid out finished, one thing under
+  the other (taller, chosen by a media query before first paint, so it never shifts). That frame shows the open menus,
+  the popover and the Scheduled card in flow, and Maya's draft with its sent reply, which the app wouldn't show at once.
+- **The fit.** The frame's height is `clamp(460px, 100svh - 290px, 640px)`, fixed once set, so the band from heading
+  to steps fits under the 64 px header at 1366×768 (669 of 704 px, with the short-window type), 1440×900 (833 of
+  836) and 1920×1080 (863 of 1016). On a phone the frame fits (570 of 748 at 375×812); the eight steps take a
+  second screen.
+- The pointer's target is read when it's sent there (one `getBoundingClientRect` a beat, not in a frame). A
+  target with no box is skipped, so the same timeline serves the wide layout, where the back arrow is hidden.
+
+### C-175 (pricing off the homepage)
+
+Owner: pricing has its own page, so the homepage no longer shows it. The plan list is still fetched, for the
+structured data's offers and the closer's trial perk. The rhythm holds: Security (night), Who it's for,
+Features, the setup steps (night), the FAQ, the closer (night), so a night band every two or three sections.
+Nothing on the page pointed down to pricing; the header's link goes to `/pricing`. `Pricing.tsx` is untouched
+(another branch is changing it), so its `headingLevel === 2` branch is unused for now.
 ## C-174 · Six-month billing and Agency
 
 Step 2 of 2. Owner decisions, 2026-11-03 and 2026-11-04:
@@ -9616,7 +9714,7 @@ Step 2 of 2. Owner decisions, 2026-11-03 and 2026-11-04:
 The owner felt the dark theme looked like a generic AI product, and asked for it to change. This replaces C-128's glass cards and ambient light in the app. The public site keeps its own look, with its shared tokens pinned under `.site`.
 
 - **Dark** is a neutral grey with little blue: canvas `#141416`, panel `#1E1E21`. **Light** keeps `#F5F6FB` and `#FFFFFF`.
-- **One solid accent,** `#5550E0`, on main actions, AI moments, links and focus. No gradients on buttons or the logo tile. The hue stays the brand's; choosing a new one is the owner's call. Favicons and app icons keep their artwork for now.
+- **One solid accent,** `#5550E0`, on main actions, AI moments, links and focus. No gradients on buttons. The hue stays the brand's; the owner kept it on 2026-11-05. **The logo, favicons and app icons are locked (owner, 2026-11-05):** their colours don't change, because business verification uses them, so the logo tile keeps its gradient in the app too.
 - **Cards are solid and borderless,** with no page glow, grain or blur, in menus too. Spacing and quieter surfaces separate sections; borders stay where they mean something, like inputs, tables and selected states.
 - **Automations** opens with a one-line summary instead of a row of tiles. **Home** keeps its figures in one band.
 - **Light input fields are white** (`field-input`), and a chosen segment has its own token (`segment`). Secondary buttons have a `line` edge so they hold on tinted panels.

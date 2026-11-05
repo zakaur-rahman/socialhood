@@ -100,13 +100,13 @@ in a calendar, meters, icon tiles, unread dots, count badges. The hue is unchang
 | Token | Value | Role | Status |
 |---|---|---|---|
 | `brand` | `#6D6AF5` (light `#5B57EA`) | **Non-text marks only:** focus outline, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, an identity ring (§1.7). Never behind text. | Keep (rule tightened) |
-| `brand-strong` | `#5550E0` | **The accent fill**, solid: primary buttons, the logo tile, Upgrade, outgoing bubbles, the skip link, Clerk's primary, `--primary`. White on it is 5.82:1 | Change: replaces the gradients |
+| `brand-strong` | `#5550E0` | **The accent fill**, solid: primary buttons, Upgrade, outgoing bubbles, the skip link, Clerk's primary, `--primary`. White on it is 5.82:1 | Change: replaces the gradients |
 | `brand-deep` | `#2B2585` | The logo's bars; an identity stop (§1.7) | Change |
 | `brand-fg` | `#B5B3FF` (light `#4640C8`) | Accent text and icons: links, AI labels; an identity ring (§1.7) | Change: no longer active segments |
 | `brand-soft` | brand 15% (light 12%) | AI moments: the AI pill, the Ask card, AI chips; the `brand` tone; the `soft` Button | Change: no longer selected cards or chips |
 | `brand-soft-hover` | brand 25% | Hover and open on a `brand-soft` control: the `soft` Button (as `raised-hover` is to `raised`) | **Add** (the AI trigger's existing hover, C-073) |
 | `brand-line` | brand 35% (light 40%) | The `soft` Button's edge and the Ask card's | Change |
-| `shell-1`, `shell-2` | `#4B44C9`, `#231E6B` | The public site's logo tile (`--gradient-shell`, §1.14), the app icons and the share image; one identity pair (§1.7, D-13) | Change (scoped) |
+| `shell-1`, `shell-2` | `#4B44C9`, `#231E6B` | The logo tile (`--gradient-shell`), the app icons and the share image; one identity pair (§1.7, D-13) | Change (scoped) |
 
 ### 1.5 Status
 
@@ -179,7 +179,7 @@ the ambient light are gone. What remains:
 | Name | Stops | Job |
 |---|---|---|
 | `bg-instagram-logo-gradient` | the platform's logo colours | Instagram's logo tile; never under text |
-| `--gradient-shell` | `shell-1 → shell-2` | The public site's logo tile only (§1.14) |
+| `--gradient-shell` | `shell-1 → shell-2` | The logo tile only. Locked: business verification uses the logo and icons (owner, 2026-11-05) |
 | `--gradient-media-fade` | `media-heavy → transparent` | The fade over a photo |
 
 Identity avatars keep their own gradient stops (§1.7, D-13).
@@ -320,7 +320,7 @@ Motion durations, the reduced-motion safety net and the base-layer rules are in 
 
 The public site (`.site`) has its own palette (C-155), and the tokens it shares are re-pointed in the
 `.site` block. What it takes from the app's primitives is pinned there too, so changing the app's skin
-doesn't touch it: the primary fill (`brand-strong` is `ink` there), the logo tile's gradient, a Card's
+doesn't touch it: the primary fill (`brand-strong` is `ink` there), a Card's
 `rule` edge and drop, the primary and secondary Buttons' shadows and the secondary's fill, and the chosen
 segment's `brand-fg` text. `tokens.test.ts` holds these. A primitive that newly appears on a public page
 needs the same check.

@@ -36,7 +36,7 @@ describe("the landing page", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders every section in order, with the plan list's prices", async () => {
+  it("renders every section in order, and reads the plan list for its structured data", async () => {
     const fetcher = vi.fn(plansFetch(plansFixture()));
     vi.stubGlobal("fetch", fetcher);
     const { container } = render(await HomePage());
@@ -48,6 +48,7 @@ describe("the landing page", () => {
     expect(h1).toHaveAccessibleName(HERO_TITLE);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "See a day in your inbox",
       "AI replies from your own knowledge",
       "Comment LINK, get the link in a DM",
       "Off, Suggest or Auto, for each account",
@@ -56,14 +57,15 @@ describe("the landing page", () => {
       "Who it's for",
       "Everything your customer conversations need",
       "Set up in three steps",
-      "Start free, upgrade when you grow",
       "Common questions",
       "Ready to take control of every conversation?",
     ]);
     // C-157: the order, with a night band every two or three sections; the connections sit inside Features.
     // C-168: the AI assistant band (MCP) is paper, between Modes and Security, so the paper run there is three.
+    // C-175: the product demo is paper, between the hero and How it works, the first night band.
     expect([...container.querySelectorAll("main > section")].map((section) => section.id || section.className)).toEqual([
       "hero",
+      "product-demo",
       "how-it-works",
       "automations",
       "modes",
@@ -72,7 +74,6 @@ describe("the landing page", () => {
       "who-its-for",
       "features",
       "setup",
-      "pricing",
       "faq",
       "night close",
     ]);
@@ -206,9 +207,9 @@ describe("the landing page", () => {
     // No language marketing (C-155).
     expect(container.textContent).not.toMatch(/Hindi|Hinglish/);
 
-    // Pricing from the API.
-    const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByText("₹999")).toBeInTheDocument();
+    // The plans have their own page; no price on this one (the structured data's offers are below).
+    expect(container.querySelector("section#pricing")).toBeNull();
+    expect(container.textContent).not.toMatch(/₹\s?\d/);
 
     // FAQ: the eight most asked, as native disclosures, and a link to every question on /faq.
     expect(FAQ.length).toBeGreaterThanOrEqual(6);
@@ -308,12 +309,11 @@ describe("the landing page", () => {
     expect(faq.querySelectorAll("details.qa > summary")).toHaveLength(faq.querySelectorAll("details.qa").length);
   });
 
-  it("C-149: with Creator not on sale, the closing makes no trial claim and Free is the plan to start on", async () => {
+  it("C-149: with Creator not on sale, the closing makes no trial claim", async () => {
     const items = plansFixture().items.map((offer) => (offer.plan === "pro" ? { ...offer, available: false, price: null } : offer));
     vi.stubGlobal("fetch", vi.fn(plansFetch({ items })));
-    const { container } = render(await HomePage());
+    render(await HomePage());
     expect(screen.queryByText(/Try Creator free/)).toBeNull();
-    expect(container.querySelector("section#pricing .plan.main h3")?.textContent).toBe("Free");
   });
 
   it("claims nothing we don't have: no testimonials, logos, user counts, ratings, made-up metrics or certifications", async () => {
@@ -327,7 +327,7 @@ describe("the landing page", () => {
     expect(container.querySelectorAll("img")).toHaveLength(0);
   });
 
-  it("when the plan list can't load: features without prices, and no offers in the structured data", async () => {
+  it("when the plan list can't load: the page still renders, with no offers in the structured data", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -335,29 +335,18 @@ describe("the landing page", () => {
       }),
     );
     const { container } = render(await HomePage());
-    const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByTestId("planned-price-pro")).toHaveTextContent(/^\$15 a month/);
-    expect(pricing.getByTestId("planned-price-max")).toHaveTextContent(/^\$30 a month/);
-    expect(pricing.getByText("3 active automations")).toBeInTheDocument();
-    // A site deployed without the API reads the same: no "couldn't load" notice, no blanks or "null".
-    expect(pricing.queryByText(/couldn't be loaded/)).toBeNull();
-    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
-    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/[₹€£]\s?\d/);
+    // A site deployed without the API reads the same: no blanks or "null".
+    expect(container.querySelector("main")?.textContent).not.toMatch(/\bnull\b|undefined|NaN/);
     const graph = jsonLd(container)["@graph"] as Record<string, unknown>[];
     expect(graph.find((node) => node["@type"] === "SoftwareApplication")).not.toHaveProperty("offers");
   });
 
-  it("without an API address it doesn't call out at all, and still lists the plans", async () => {
+  it("without an API address it doesn't call out at all", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
-    const { container } = render(await HomePage());
+    render(await HomePage());
     expect(fetcher).not.toHaveBeenCalled();
-    const pricing = within(container.querySelector("section#pricing") as HTMLElement);
-    expect(pricing.getByRole("heading", { level: 3, name: "Creator" })).toBeInTheDocument();
-    expect(pricing.getByRole("heading", { level: 3, name: "Business" })).toBeInTheDocument();
-    expect(pricing.getByRole("heading", { level: 3, name: "Agency" })).toBeInTheDocument();
-    expect(pricing.getByText(/Business isn't available to buy yet/)).toBeInTheDocument();
   });
 
   it("is revalidated every five minutes and has its own title, description and canonical URL", () => {

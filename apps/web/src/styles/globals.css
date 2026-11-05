@@ -82,13 +82,13 @@
 
   /* Brand: the one accent. Solid, and it means a main action or an AI moment; everything else stays neutral. */
   --color-brand: light-dark(#5B57EA, #6D6AF5);         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text; 3:1 or more on every surface: dark 3.19 (raised-hover) to 4.41, light 4.04 to 5.25 */
-  --color-brand-strong: #5550E0;  /* the accent fill: main buttons, the logo tile, outgoing bubbles; 5.82:1 with on-brand in both themes */
+  --color-brand-strong: #5550E0;  /* the accent fill: main buttons, outgoing bubbles; 5.82:1 with on-brand in both themes */
   --color-brand-deep: #2B2585;
   --color-brand-fg: light-dark(#4640C8, #B5B3FF);      /* brand-coloured text and icons: 6.88:1 or more on every dark surface (8.60 on panel), 5.71:1 or more on every light one (7.43 on panel) */
   --color-brand-soft: light-dark(rgb(91 87 234 / 0.12), rgb(109 106 245 / 0.15));
   --color-brand-soft-hover: light-dark(rgb(91 87 234 / 0.20), rgb(109 106 245 / 0.25));  /* hover and open on brand-soft: the soft button (C-073) */
   --color-brand-line: light-dark(rgb(91 87 234 / 0.40), rgb(109 106 245 / 0.35));  /* the light values are the light brand (#5B57EA) */
-  --color-shell-1: #4B44C9;       /* the public site's logo, the app icons and one identity pair */
+  --color-shell-1: #4B44C9;       /* the logo, the app icons, the share image and one identity pair; locked: business verification uses them */
   --color-shell-2: #231E6B;
 
   /* Semantic */
@@ -287,7 +287,7 @@
 }
 
 /* Gradients (DESIGN_SYSTEM §1.9): the app's fills are solid. What's left: a platform's own logo, the
-   public site's logo tile and the photo fade. Stops are tokens (C-070). */
+   logo tile and the photo fade. Stops are tokens (C-070). */
 :root {
   --gradient-shell: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%);
   --gradient-instagram-logo: linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%);
@@ -658,10 +658,12 @@
   --color-warning-soft: var(--color-site-wait-soft);
   color-scheme: light;
 }
+/* The logo is the same everywhere, on its own gradient and not the accent (owner, 2026-11-05). */
+[data-logo-mark] { background-image: var(--gradient-shell); }
+
 /* What the public pages take from the app's primitives keeps the site's own look when the app's
    changes. Unlayered, so it outranks the primitives' utilities; a hover or an open menu still shows
    through on the secondary button. */
-.site [data-logo-mark] { background-image: var(--gradient-shell); }
 .site [data-slot="card"] { border-color: var(--color-rule); box-shadow: var(--shadow-site-card); }
 .site [data-slot="button"][data-variant="default"] { box-shadow: var(--shadow-site-button-primary); }
 .site [data-slot="button"][data-variant="secondary"] { box-shadow: var(--shadow-site-button-secondary); }

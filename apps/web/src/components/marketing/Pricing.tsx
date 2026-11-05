@@ -1,12 +1,11 @@
-import { ArrowRight, ChevronDown } from "lucide-react";
-import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 import { NEED_MORE, PLAN_NAME, PRICE_TAX_NOTE } from "@/lib/copy";
 import { CREDIT_COSTS, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS } from "@/lib/marketing/site";
 
 import { PlanGrid } from "./PlanGrid";
-import { PAGE_HEADING, SECTION_EYEBROW, UTILITY_TITLE } from "./primitives";
+import { PAGE_HEADING, SECTION_EYEBROW } from "./primitives";
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -16,19 +15,18 @@ const count = new Intl.NumberFormat("en-US");
  * C-149; a plan until its product is set) shows its planned price, labelled as planned, and says it
  * can't be bought yet.
  */
-export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; headingLevel?: 1 | 2 }) {
+export function Pricing({ pricing }: { pricing: PricingData }) {
   const { free, pro, max, agency } = pricing.credits;
   const agencyOnSale = pricing.plans.some((card) => card.plan === "agency" && card.available);
-  const Heading = headingLevel === 1 ? "h1" : "h2";
   return (
     <section className="sec" id={SECTION_IDS.pricing} aria-labelledby="pricing-title">
       <div className="wrap">
         <div className="split-head">
           <div>
-            {headingLevel === 1 ? <p className={SECTION_EYEBROW}>Pricing</p> : null}
-            <Heading id="pricing-title" className={headingLevel === 1 ? PAGE_HEADING : UTILITY_TITLE}>
+            <p className={SECTION_EYEBROW}>Pricing</p>
+            <h1 id="pricing-title" className={PAGE_HEADING}>
               Start free, upgrade when you grow
-            </Heading>
+            </h1>
           </div>
           <p className="lede">
             Contacts are unlimited on every plan. Creator adds Auto replies, WhatsApp, more automations and more AI credits.
@@ -44,7 +42,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
           .
         </p>
         {/* Under the cards, one stack on the cards' edges (C-157 organize): the credits disclosure as wide as
-            the plan grid, then the fine print and the link to every limit. */}
+            the plan grid, then the fine print. */}
         <div className="price-foot">
           <details className="credits">
             <summary>
@@ -77,14 +75,6 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
               Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees, which Meta
               charges directly to your business.
             </p>
-            {headingLevel === 2 ? (
-              <p>
-                <Link href="/pricing" className="tlink">
-                  Compare every plan limit
-                </Link>{" "}
-                <ArrowRight className="inline size-4" aria-hidden />
-              </p>
-            ) : null}
           </div>
         </div>
       </div>

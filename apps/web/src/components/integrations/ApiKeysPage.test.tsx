@@ -10,7 +10,7 @@ import { visibleGroups } from "@/components/settings/groups";
 describe("Settings > API keys (C-165)", () => {
   it("is a page of its own with one h1 and links to the API and AI app guides", async () => {
     renderWithApi(<ApiKeysPage />, {
-      ws: { ...workspace, plan: "max" }, // API keys are Business only (C-172)
+      ws: { ...workspace, plan: "max" }, // API keys are on Business and Agency (C-172, C-174)
       handlers: { "GET /v1/w/:wid/api-keys": () => json({ items: [], scopes: [], active_limit: 20 }) },
     });
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);

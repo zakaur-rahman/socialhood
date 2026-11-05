@@ -170,7 +170,7 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, drafting knowledge and automations for you to approve, and pausing automations from an AI app are part of Creator and Business. API keys are Business only.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, drafting knowledge and automations for you to approve, and pausing automations from an AI app are part of Creator and Business. API keys are on Business and Agency.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",
