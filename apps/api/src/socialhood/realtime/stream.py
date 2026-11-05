@@ -64,6 +64,7 @@ def connect(redis_url: str, workspace_id: uuid.UUID) -> Redis:
         redis_url,
         decode_responses=True,
         single_connection_client=True,
+        socket_timeout=BLOCK_MS / 1000 + 5,  # longer than a blocking read, still ends a dead one
         client_name=f"sse:{workspace_id}",
     )
 

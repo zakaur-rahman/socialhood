@@ -124,7 +124,7 @@ def curl_command(fields: dict[str, Any], url: str, filename: str | None) -> str:
     if any(c in name for c in '"$`'):
         name = "FILE"
     parts = [f'-F "file=@{name}"']
-    for key in ("api_key", "timestamp", "folder", "tags", "signature"):
+    for key in ("api_key", "timestamp", "folder", "tags", "allowed_formats", "signature"):
         if key in fields:
             parts.append(f'-F "{key}={fields[key]}"')
     return f"curl -sS {' '.join(parts)} {url}"

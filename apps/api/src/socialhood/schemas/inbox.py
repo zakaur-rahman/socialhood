@@ -408,6 +408,7 @@ class UploadSignature(ResponseModel):
     api_key: str
     timestamp: int
     folder: str
+    allowed_formats: str | None = None  # signed: send it with the upload
     public_id: str | None = None  # signed: send it with the upload, as with ``folder``
     signature: str
     upload_url: str

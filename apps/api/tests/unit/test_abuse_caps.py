@@ -88,8 +88,21 @@ async def test_each_signature_names_one_new_file_and_signs_that_name() -> None:
 
     assert first.public_id != second.public_id
     assert "." not in first.public_id
-    params = {"folder": first.folder, "public_id": first.public_id, "timestamp": first.timestamp}
+    params = {
+        "allowed_formats": first.allowed_formats,
+        "folder": first.folder,
+        "public_id": first.public_id,
+        "timestamp": first.timestamp,
+    }
     assert first.signature == sign(params, "secret")
+
+
+async def test_a_signature_names_only_the_formats_the_purpose_can_register() -> None:
+    assert "html" not in (await _signed("image", "message", None)).allowed_formats
+    assert "svg" not in (await _signed("video", "post", None)).allowed_formats
+    raw = (await _signed("raw", "knowledge", "docx")).allowed_formats.split(",")
+    assert "docx" in raw
+    assert "html" not in raw
 
 
 async def test_a_raw_upload_keeps_an_accepted_extension_and_refuses_others() -> None:

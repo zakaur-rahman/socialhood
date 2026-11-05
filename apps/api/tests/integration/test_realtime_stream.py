@@ -120,6 +120,15 @@ def parse(chunk: str) -> dict[str, str]:
     return fields
 
 
+async def test_a_blocking_read_outlasts_the_clients_default_timeout(redis: Redis) -> None:
+    wid = uuid.uuid4()
+    reader = stream.connect(get_settings().redis_url, wid)
+    try:
+        assert await reader.xread({stream_key(wid): "$"}, block=6_000) == []
+    finally:
+        await reader.aclose()
+
+
 async def test_the_stream_sends_retry_then_entries_in_order(redis: Redis) -> None:
     wid = uuid.uuid4()
     start = await stream.start_position(redis, stream_key(wid), None)

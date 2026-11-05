@@ -10513,6 +10513,10 @@
       "DropSignature": {
         "description": "The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,\nsignature) and where to send them.",
         "properties": {
+          "allowed_formats": {
+            "title": "Allowed Formats",
+            "type": "string"
+          },
           "api_key": {
             "title": "Api Key",
             "type": "string"
@@ -10548,6 +10552,7 @@
           "timestamp",
           "folder",
           "tags",
+          "allowed_formats",
           "signature",
           "upload_url"
         ],
@@ -25416,6 +25421,17 @@
       },
       "UploadSignature": {
         "properties": {
+          "allowed_formats": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Formats"
+          },
           "api_key": {
             "title": "Api Key",
             "type": "string"

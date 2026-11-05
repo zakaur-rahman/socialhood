@@ -211,6 +211,7 @@ function sendPart(
     // An AI app's upload ticket (C-165) is signed with a tag.
     if (signature.tags) form.append("tags", signature.tags);
     if (signature.public_id) form.append("public_id", signature.public_id);
+    if (signature.allowed_formats) form.append("allowed_formats", signature.allowed_formats);
     form.append("signature", signature.signature);
 
     const xhr = new XMLHttpRequest();

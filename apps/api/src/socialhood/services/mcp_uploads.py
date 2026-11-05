@@ -156,6 +156,9 @@ def signature(cloudinary: Cloudinary, workspace_id: uuid.UUID, upload: McpUpload
             folder=workspace_folder(workspace_id, AssetPurpose.POST.value),
             resource_type=resource_type_of(upload.kind),
             tags=tag_of(upload.id),
+            allowed_formats=media_assets.accepted_formats(
+                AssetPurpose.POST.value, resource_type_of(upload.kind)
+            ),
         )
     except CloudinaryError as error:
         raise ApiError("service_unavailable", CLOUDINARY_OFF) from error

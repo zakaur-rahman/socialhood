@@ -85,6 +85,7 @@ describe("sendToStorage", () => {
       timestamp: 1,
       folder: "ws/w/message",
       public_id: "abc",
+      allowed_formats: "png,jpg",
       signature: "s",
       upload_url: "https://api.cloudinary.com/v1_1/demo/image/upload",
       cloud_name: "demo",
@@ -92,6 +93,7 @@ describe("sendToStorage", () => {
 
     await expect(sendToStorage(signature, new File(["x"], "a.png"))).resolves.toEqual({ public_id: "ws/w/message/abc" });
     expect(sent[0].get("public_id")).toBe("abc");
+    expect(sent[0].get("allowed_formats")).toBe("png,jpg");
     vi.unstubAllGlobals();
   });
 });

@@ -168,6 +168,19 @@ def _file_name(purpose: str, resource_type: ResourceType, extension: str | None)
     return f"{name}.{fmt}"
 
 
+def accepted_formats(purpose: str, resource_type: ResourceType) -> frozenset[str]:
+    """The formats ``check_limits`` can register for this purpose and resource type."""
+    if purpose == AssetPurpose.KNOWLEDGE:
+        return KNOWLEDGE_FILE.formats
+    if resource_type == "raw":
+        return DOCUMENT.formats
+    if purpose == AssetPurpose.POST:
+        return IMAGE.formats if resource_type == "image" else POST_VIDEO.formats
+    if resource_type == "image":
+        return IMAGE.formats | DOCUMENT.formats
+    return AUDIO.formats | VIDEO.formats | DOCUMENT.formats
+
+
 async def upload_signature(
     cloudinary: Cloudinary,
     redis: Redis,
@@ -181,7 +194,10 @@ async def upload_signature(
     name = _file_name(purpose, resource_type, extension)
     try:
         params = cloudinary.upload_signature(
-            folder=folder, resource_type=resource_type, public_id=name
+            folder=folder,
+            resource_type=resource_type,
+            public_id=name,
+            allowed_formats=accepted_formats(purpose, resource_type),
         )
     except CloudinaryError as error:
         raise ApiError("service_unavailable", "Uploads aren't set up yet.") from error

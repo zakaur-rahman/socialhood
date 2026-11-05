@@ -8488,6 +8488,8 @@ export interface components {
          *     signature) and where to send them.
          */
         DropSignature: {
+            /** Allowed Formats */
+            allowed_formats: string;
             /** Api Key */
             api_key: string;
             /** Cloud Name */
@@ -13786,6 +13788,8 @@ export interface components {
         };
         /** UploadSignature */
         UploadSignature: {
+            /** Allowed Formats */
+            allowed_formats?: string | null;
             /** Api Key */
             api_key: string;
             /** Cloud Name */

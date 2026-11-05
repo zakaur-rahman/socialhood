@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import time
 import uuid
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -99,12 +100,15 @@ class Cloudinary:
         timestamp: int | None = None,
         tags: str | None = None,
         public_id: str | None = None,
+        allowed_formats: Collection[str] = (),
     ) -> dict[str, Any]:
         """Parameters for a signed direct upload from the browser (TR-MED-01). ``tags`` is signed
         too, so the upload carries it and nothing else can: an AI app's one-time ticket
         (mcp/tools/media.py) is the tag ``mcp_upload_{id}``. ``public_id`` (the file's name inside
         ``folder``) is signed as well, so sending the same signature again replaces that one file
-        instead of storing another."""
+        instead of storing another. ``allowed_formats`` is signed so Cloudinary itself refuses any
+        other file: on the raw endpoint a file otherwise keeps its own extension and is served as
+        that type."""
         self._require()
         ts = timestamp or int(time.time())
         signed: dict[str, Any] = {"folder": folder, "timestamp": ts}
@@ -112,6 +116,9 @@ class Cloudinary:
             signed["tags"] = tags
         if public_id:
             signed["public_id"] = public_id
+        formats = ",".join(sorted(allowed_formats))
+        if formats:
+            signed["allowed_formats"] = formats
         return {
             "cloud_name": self.cloud,
             "api_key": self.api_key,
@@ -119,6 +126,7 @@ class Cloudinary:
             "folder": folder,
             **({"tags": tags} if tags else {}),
             **({"public_id": public_id} if public_id else {}),
+            **({"allowed_formats": formats} if formats else {}),
             "signature": sign(signed, self.secret),
             "upload_url": f"{API}/{self.cloud}/{resource_type}/upload",
         }

@@ -106,7 +106,12 @@ async def test_start_returns_a_signed_command_and_the_limits(
     assert fields["folder"] == f"ws/{setup.wid}/post"
     assert fields["tags"] == f"mcp_upload_{upload_id}"
     assert fields["signature"] == sign(
-        {"folder": fields["folder"], "tags": fields["tags"], "timestamp": fields["timestamp"]},
+        {
+            "allowed_formats": fields["allowed_formats"],
+            "folder": fields["folder"],
+            "tags": fields["tags"],
+            "timestamp": fields["timestamp"],
+        },
         SECRET,
     )
     assert SECRET not in str(started)
@@ -114,6 +119,7 @@ async def test_start_returns_a_signed_command_and_the_limits(
     assert curl.startswith("curl -sS")
     assert '-F "file=@reel.mp4"' in curl
     assert f'-F "tags=mcp_upload_{upload_id}"' in curl
+    assert f'-F "allowed_formats={fields["allowed_formats"]}"' in curl
     assert curl.endswith(f"{API}/video/upload")
     assert started["upload_page_url"].endswith(f"/upload/{upload_id}")
     assert started["limits"]["max_duration_s"]["reel"] == 900
@@ -494,6 +500,7 @@ async def test_the_upload_page_reads_and_completes_a_ticket(
     assert ticket["upload"]["tags"] == f"mcp_upload_{upload_id}"
     assert ticket["upload"]["signature"] == sign(
         {
+            "allowed_formats": ticket["upload"]["allowed_formats"],
             "folder": ticket["upload"]["folder"],
             "tags": ticket["upload"]["tags"],
             "timestamp": ticket["upload"]["timestamp"],

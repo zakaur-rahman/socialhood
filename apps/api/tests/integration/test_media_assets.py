@@ -87,7 +87,12 @@ async def test_the_signature_is_for_the_workspace_folder(
     assert body["api_key"] == API_KEY
     assert body["upload_url"] == f"https://api.cloudinary.com/v1_1/{CLOUD}/image/upload"
     expected = sign(
-        {"folder": body["folder"], "public_id": body["public_id"], "timestamp": body["timestamp"]},
+        {
+            "allowed_formats": body["allowed_formats"],
+            "folder": body["folder"],
+            "public_id": body["public_id"],
+            "timestamp": body["timestamp"],
+        },
         API_SECRET,
     )
     assert body["signature"] == expected
