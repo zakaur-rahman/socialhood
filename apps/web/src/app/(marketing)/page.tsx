@@ -9,9 +9,9 @@ import { Features } from "@/components/marketing/landing/Features";
 import { Hero } from "@/components/marketing/landing/Hero";
 import { LandingMotion } from "@/components/marketing/landing/LandingMotion";
 import { Modes } from "@/components/marketing/landing/Modes";
+import { ProductDemo } from "@/components/marketing/landing/ProductDemo";
 import { Steps } from "@/components/marketing/landing/Steps";
 import { Trust } from "@/components/marketing/landing/Trust";
-import { Pricing } from "@/components/marketing/Pricing";
 import { buildPricing, fetchPlans } from "@/lib/marketing/plans";
 import { landingJsonLd, pageMetadata } from "@/lib/marketing/seo";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE_LINE } from "@/lib/marketing/site";
@@ -28,11 +28,11 @@ export const metadata = pageMetadata({
 
 /**
  * The landing page (§3.1 "/", C-155; order C-157): the owner's design, paper bands with a night band
- * every two or three sections, with the site's own words: the hero and its facts, How it works (night,
+ * every two or three sections, with the site's own words: the hero and its facts, the inbox at work (C-175), How it works (night,
  * the peak), Automations, Modes, your AI assistant (MCP, C-168), Security (night), Who it's for, Features with the connections, the
- * setup steps (night) into Pricing, the FAQ and the closer (night). Every section is server-rendered and meaningful without script; one small
+ * setup steps (night), the FAQ and the closer (night). Every section is server-rendered and meaningful without script; one small
  * island (LandingMotion) brings the scenes to life after load, and leaves them still under reduced
- * motion. The pricing cards and the trial perk come from the plans API.
+ * motion. The plans have their own page (/pricing); the plan list here feeds the structured data's offers and the closer's trial perk.
  */
 export default async function HomePage() {
   const pricing = buildPricing(await fetchPlans());
@@ -41,6 +41,7 @@ export default async function HomePage() {
     <main id="main" tabIndex={-1} data-landing="" className="flex-1 outline-none">
       <JsonLd data={landingJsonLd(pricing)} />
       <Hero />
+      <ProductDemo />
       <Decide />
       <Comments />
       <Modes />
@@ -49,7 +50,6 @@ export default async function HomePage() {
       <Audience />
       <Features />
       <Steps />
-      <Pricing pricing={pricing} />
       <Faq />
       <FinalCta trialDays={pro?.available ? pro.trialDays : 0} />
       <LandingMotion />

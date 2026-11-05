@@ -65,6 +65,18 @@ async def characters_used(session: AsyncSession, *, exclude: uuid.UUID | None = 
     return int(await session.scalar(statement) or 0)
 
 
+async def count_awaiting_approval(session: AsyncSession) -> int:
+    statement = (
+        select(func.count())
+        .select_from(KnowledgeSource)
+        .where(
+            KnowledgeSource.status == KnowledgeStatus.AWAITING_APPROVAL,
+            KnowledgeSource.parent_source_id.is_(None),
+        )
+    )
+    return int(await session.scalar(statement) or 0)
+
+
 async def any_source(session: AsyncSession) -> bool:
     return (await session.scalar(select(KnowledgeSource.id).limit(1))) is not None
 

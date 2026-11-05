@@ -4,7 +4,7 @@ import { colorValue } from "./tokens";
 import type { Theme } from "./tokens";
 
 /**
- * The contrast of the key token pairs in both themes (C-128, C-129), by the WCAG 2.x formula. The
+ * The contrast of the key token pairs in both themes (C-129), by the WCAG 2.x formula. The
  * numbers in globals.css's comments and THEME.md are these, measured; this test is what keeps them
  * true when a value changes. Text is 4.5:1, non-text marks and control edges 3:1.
  */
@@ -38,7 +38,7 @@ function ratio(a: Rgb, b: Rgb): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const SURFACES = ["canvas", "panel", "field", "raised", "raised-hover", "overlay"] as const;
+const SURFACES = ["canvas", "panel", "field", "field-input", "raised", "raised-hover", "overlay"] as const;
 
 function suite(theme: Theme, floor: { secondary: number; brandFg: number }) {
   const token = (name: string): Rgba => parse(colorValue(name, theme));
@@ -94,7 +94,7 @@ function suite(theme: Theme, floor: { secondary: number; brandFg: number }) {
   });
 }
 
-suite("dark", { secondary: 5.4, brandFg: 6.4 });
+suite("dark", { secondary: 5.8, brandFg: 6.8 });
 suite("light", { secondary: 5.0, brandFg: 5.7 });
 
 describe("the light palette's order", () => {
@@ -104,6 +104,11 @@ describe("the light palette's order", () => {
     expect(l("canvas")).toBeLessThan(l("panel"));
     expect(l("raised")).toBeLessThan(l("field"));
     expect(l("raised-hover")).toBeLessThan(l("raised"));
+  });
+
+  it("has white input fields on light, and the dark theme's fields stay one colour", () => {
+    expect(colorValue("field-input", "light").toLowerCase()).toBe("#ffffff");
+    expect(colorValue("field-input", "dark")).toBe(colorValue("field", "dark"));
   });
 });
 

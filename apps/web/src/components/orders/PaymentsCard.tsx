@@ -22,7 +22,7 @@ import {
   useSaveUpi,
 } from "@/lib/api/queries";
 import type { PaymentSettings } from "@/lib/api/types";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 
 /**
@@ -115,7 +115,7 @@ function RazorpaySection({ wid, settings }: { wid: string; settings: PaymentSett
             Using key {settings.razorpay_key_id}. A payment link is made for each order you ask payment for.
           </p>
           {settings.razorpay_error ? <Alert tone="warning">{settings.razorpay_error}</Alert> : null}
-          <div className="space-y-1 rounded-lg border border-line p-3 text-sm">
+          <div className="space-y-1 rounded-lg bg-field p-3 text-sm">
             <p className="font-medium">Add this webhook in your Razorpay dashboard</p>
             <p className="text-fg-secondary">
               Settings, Webhooks, Add new webhook. Use the same webhook secret you entered here, and turn on{" "}
@@ -130,7 +130,7 @@ function RazorpaySection({ wid, settings }: { wid: string; settings: PaymentSett
             )}
             <p className="text-xs text-fg-secondary">
               {settings.webhook_seen_at
-                ? `Last event received ${relativeTime(settings.webhook_seen_at) === "now" ? "just now" : `${relativeTime(settings.webhook_seen_at)} ago`}.`
+                ? `Last event received ${timeAgo(settings.webhook_seen_at)}.`
                 : "No event received yet. Without the webhook, paid links don't mark orders paid."}
             </p>
           </div>
@@ -221,7 +221,7 @@ function UpiSection({ wid, settings }: { wid: string; settings: PaymentSettings 
         </h3>
         <Badge tone={settings.upi_vpa ? "success" : "neutral"}>{settings.upi_vpa ? "Set up" : "Not set up"}</Badge>
       </div>
-      <Alert tone="brand">
+      <Alert tone="neutral">
         A UPI request has no confirmation from the bank. When the customer says they have paid, open the order and mark it
         paid. Amplychat records who did it and when.
       </Alert>

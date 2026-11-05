@@ -8,11 +8,11 @@ import type * as React from "react"
 
 /**
  * The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `overlay`, a shade lighter than the
- * panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, frosted (`glass-float`: 86% with a 22 px blur, C-128), set here so call
+ * panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, frosted (`bg-overlay`: 86% with a 22 px blur, C-128), set here so call
  * sites don't add their own. The edge is a ring of its own, so a call site's `shadow-*` replaces
  * only the shadow, never the edge.
  */
-export const FLOATING_SURFACE = "rounded-lg glass-float text-fg ring-1 ring-line shadow-floating"
+export const FLOATING_SURFACE = "rounded-lg bg-overlay text-fg ring-1 ring-line shadow-floating"
 
 /**
  * The floating motion (DESIGN_SYSTEM §7.2): in and out in `duration-fast` (120 ms), with

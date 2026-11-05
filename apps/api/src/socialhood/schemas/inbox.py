@@ -233,12 +233,13 @@ class ConversationList(ResponseModel):
 
 
 class InboxCounts(ResponseModel):
-    """The Inbox nav badge (FR-INB-04) and view chips."""
+    """The Inbox and Knowledge nav badges (FR-INB-04), the view chips and Home's approval banner."""
 
     unread: int
     needs_reply: int
     needs_you: int
     mine: int  # GR-20: open conversations assigned to the caller
+    knowledge_waiting: int = 0  # sources waiting for approval; 0 for roles that can't approve them
 
 
 class ConversationPatch(RequestModel):

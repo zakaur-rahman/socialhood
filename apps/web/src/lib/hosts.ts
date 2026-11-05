@@ -29,7 +29,6 @@ const SHARED_PREFIXES = [
   "/favicon.ico",
   "/apple-icon.png",
   "/og.png",
-  "/grain.jpg",
 ] as const;
 
 /** robots.txt on the app host: nothing there is for search engines (its pages are noindex too). */

@@ -9307,9 +9307,14 @@ export interface components {
         };
         /**
          * InboxCounts
-         * @description The Inbox nav badge (FR-INB-04) and view chips.
+         * @description The Inbox and Knowledge nav badges (FR-INB-04), the view chips and Home's approval banner.
          */
         InboxCounts: {
+            /**
+             * Knowledge Waiting
+             * @default 0
+             */
+            knowledge_waiting: number;
             /** Mine */
             mine: number;
             /** Needs Reply */
@@ -18770,7 +18775,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -18871,7 +18876,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -18926,7 +18931,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -19286,7 +19291,7 @@ export interface operations {
         parameters: {
             query?: {
                 view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
-                platform?: ("instagram" | "facebook" | "whatsapp" | "web") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;
                 q?: string | null;

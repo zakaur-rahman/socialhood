@@ -166,7 +166,7 @@ export function PreviewPane({
 
         <div className={cn("flex justify-end", flow && "hidden")}>
           {draft.action === "ai_reply" ? (
-            <p className="bg-brand-gradient flex max-w-[88%] items-start gap-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand">
+            <p className="bg-brand-strong flex max-w-[88%] items-start gap-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand">
               <Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden />
               The AI writes a reply from your knowledge base.
             </p>
@@ -211,7 +211,7 @@ function Mine({ children, testId }: { children: ReactNode; testId?: string }) {
   return (
     <div
       data-testid={testId}
-      className="bg-brand-gradient max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand"
+      className="bg-brand-strong max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand"
     >
       {children}
     </div>

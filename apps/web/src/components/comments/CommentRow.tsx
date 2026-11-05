@@ -27,7 +27,7 @@ import type { Platform, PostComment } from "@/lib/api/types";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { SENTIMENT_DOT, SENTIMENT_LABEL } from "@/lib/ai/format";
 import { authorHandle, authorName, commentActionError } from "@/lib/comments/format";
-import { relativeTime } from "@/lib/time";
+import { timeAgo } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +40,7 @@ import { CommentComposer, type ComposerKind } from "./CommentComposer";
 const ACTION = "text-fg-secondary";
 
 function when(iso: string, now: Date): string {
-  const relative = relativeTime(iso, now);
-  if (relative === "now") return "just now";
-  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : relative;
+  return timeAgo(iso, now);
 }
 
 /**
@@ -214,7 +212,7 @@ export function CommentRow({
           ) : null}
           {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
           {/* GR-01: a comment on a live broadcast. */}
-          {comment.is_live ? <Badge tone="brand">Live</Badge> : null}
+          {comment.is_live ? <Badge tone="neutral">Live</Badge> : null}
           {comment.hidden ? (
             <Badge>
               <EyeOff aria-hidden /> Hidden
@@ -229,7 +227,7 @@ export function CommentRow({
         </p>
 
         {comment.public_reply ? (
-          <div className="mt-2 border-l-2 border-brand-line pl-3" data-testid="public-reply">
+          <div className="mt-2 border-l-2 border-line-strong pl-3" data-testid="public-reply">
             <p className="text-xs text-fg-secondary">
               Your public reply · {when(comment.public_reply.replied_at, now)}
             </p>

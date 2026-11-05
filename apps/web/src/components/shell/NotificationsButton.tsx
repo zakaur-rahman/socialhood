@@ -36,7 +36,7 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
           <Bell className={sidebarIconClass()} aria-hidden />
           {/* Dots under 12 px are solid brand, not the gradient (DESIGN_SYSTEM §1.9, UI-ISS-055). */}
           {unread > 0 ? (
-            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand ring-2 ring-panel" aria-hidden />
+            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-fg ring-2 ring-panel" aria-hidden />
           ) : null}
         </span>
         <span aria-hidden={collapsed} className={sidebarLabelClass(collapsed)}>
@@ -70,7 +70,7 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
 const SEVERITY_ICON = {
   critical: { icon: CircleAlert, className: "text-danger" },
   warning: { icon: AlertTriangle, className: "text-warning" },
-  info: { icon: Info, className: "text-brand-fg" },
+  info: { icon: Info, className: "text-fg-secondary" },
 } as const;
 
 export function NotificationsPanel({
@@ -124,7 +124,7 @@ export function NotificationsPanel({
                 </span>
                 <span className="shrink-0 text-xs text-fg-secondary">{relativeTime(item.created_at, now)}</span>
                 {item.read_at ? null : (
-                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" role="img" aria-label="unread" />
+                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-fg" role="img" aria-label="unread" />
                 )}
               </>
             );

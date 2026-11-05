@@ -62,7 +62,7 @@ describe("ConversationRow (UX-INB-04)", () => {
     const row = renderRow({}, true);
     expect(row).toHaveAttribute("aria-current", "page");
     expect(row.className).toContain("bg-raised");
-    expect(screen.getByTestId("row-accent")).toHaveClass("bg-brand", "w-0.5", "inset-y-2", "left-0", "rounded-full");
+    expect(screen.getByTestId("row-accent")).toHaveClass("bg-fg", "w-0.5", "inset-y-2", "left-0", "rounded-full");
   });
 
   it("not selected: no selection bar; hover and inset focus from the tokens", () => {
@@ -73,7 +73,7 @@ describe("ConversationRow (UX-INB-04)", () => {
 
   it("without badges the row is two lines", () => {
     const row = renderRow();
-    expect(row).toHaveClass("h-[68px]");
+    expect(row).toHaveClass("h-[4.25rem]");
     expect(row.querySelector("[data-badge]")).toBeNull();
   });
 
@@ -84,7 +84,7 @@ describe("ConversationRow (UX-INB-04)", () => {
   ] as const)("signal %s shows its badge: %s", (signal, label) => {
     const row = renderRow({ signal, reply_window_closes_at: "2026-09-28T15:00:00Z" });
     expect(screen.getByText(label)).toBeInTheDocument();
-    expect(row).toHaveClass("h-[90px]");
+    expect(row).toHaveClass("h-[5.625rem]");
   });
 
   // UI-031: the hint is the Tooltip primitive, not a native title (UI-ISS-042); screen readers hear

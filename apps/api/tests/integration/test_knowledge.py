@@ -636,6 +636,17 @@ async def test_the_knowledge_characters_limit(
 # ---------------------------------------------------------------- retrieval (TR-AI-08)
 
 
+async def test_the_waiting_count_is_this_workspaces(ws: Ws, engine: AsyncEngine) -> None:
+    from tests.support.inbox import make_workspace
+
+    other = await make_workspace(engine)
+    await make_source(engine, workspace_id=ws.wid, status="awaiting_approval", chunks=False)
+    await make_source(engine, workspace_id=ws.wid, question="Ready?", chunks=False)
+    await make_source(engine, workspace_id=other, status="awaiting_approval", chunks=False)
+
+    assert (await ws.ok("GET", "/conversations/counts"))["knowledge_waiting"] == 1
+
+
 async def test_retrieval_keeps_similar_chunks_of_ready_sources_in_this_workspace(
     engine: AsyncEngine, maker: async_sessionmaker[AsyncSession], clean_db: None
 ) -> None:

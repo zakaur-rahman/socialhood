@@ -16,13 +16,13 @@ describe("Button variants (DESIGN_SYSTEM §8.2, §8.3)", () => {
     render(<Button>Save</Button>);
     const button = screen.getByRole("button", { name: "Save" });
     expect(button).toHaveAttribute("data-variant", "default");
-    expect(button).toHaveClass("bg-brand-gradient", "text-on-brand", "shadow-button-primary", "hover:brightness-110", "active:brightness-95");
+    expect(button).toHaveClass("bg-brand-strong", "text-on-brand", "hover:brightness-110", "active:brightness-95");
     // Not the solid `bg-primary` (white on it was 3.63:1) and no colour hover painting under the gradient.
     expect(classes(button).filter((c) => /^(bg|text)-primary/.test(c))).toEqual([]);
   });
 
   it.each([
-    ["secondary", ["glass-raised", "text-fg", "hover:bg-raised-hover"]],
+    ["secondary", ["bg-raised", "text-fg", "hover:bg-raised-hover"]],
     ["outline", ["border-line-strong", "hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["ghost", ["hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["soft", ["bg-brand-soft", "text-brand-fg", "border-brand-line", "hover:bg-brand-soft-hover", "aria-expanded:bg-brand-soft-hover"]],
@@ -230,18 +230,18 @@ describe("Overrides until the area sweeps migrate them", () => {
   it("a danger fill given after the variant drops the gradient, so today's danger overrides stay red", () => {
     const merged = cn(buttonVariants(), "bg-danger-fill text-white hover:bg-danger-fill/90");
     expect(merged.split(" ")).toContain("bg-danger-fill");
-    expect(merged).not.toMatch(/bg-brand-gradient/);
+    expect(merged).not.toMatch(/bg-brand-strong/);
 
     render(<Button className="bg-danger-fill text-white hover:bg-danger-fill/90">Delete</Button>);
     const button = screen.getByRole("button", { name: "Delete" });
     expect(button).toHaveClass("bg-danger-fill");
-    expect(button).not.toHaveClass("bg-brand-gradient");
+    expect(button).not.toHaveClass("bg-brand-strong");
   });
 
   it("the pasted gradient on a default Button is a harmless duplicate", () => {
-    render(<Button className="bg-brand-gradient text-white">Save</Button>);
+    render(<Button className="bg-brand-strong text-white">Save</Button>);
     const button = screen.getByRole("button", { name: "Save" });
-    expect(classes(button).filter((c) => c === "bg-brand-gradient")).toHaveLength(1);
+    expect(classes(button).filter((c) => c === "bg-brand-strong")).toHaveLength(1);
     expect(button).toHaveClass("text-white", "hover:brightness-110");
     expect(button).not.toHaveClass("text-on-brand");
   });
@@ -257,7 +257,7 @@ describe("Overrides until the area sweeps migrate them", () => {
     const link = screen.getByRole("link", { name: "Open" });
     expect(link).toHaveAttribute("data-slot", "button");
     expect(link).toHaveClass("bg-danger-fill", "text-white", "h-7", "rounded-md");
-    expect(link).not.toHaveClass("bg-brand-gradient", "text-on-brand", "rounded-lg");
+    expect(link).not.toHaveClass("bg-brand-strong", "text-on-brand", "rounded-lg");
   });
 
   it("an AlertDialogAction with a danger fill is red, not the gradient (the Disconnect confirmation)", () => {
@@ -272,7 +272,7 @@ describe("Overrides until the area sweeps migrate them", () => {
     );
     const action = screen.getByRole("button", { name: "Disconnect" });
     expect(action).toHaveClass("bg-danger-fill", "hover:bg-danger-fill/90");
-    expect(action).not.toHaveClass("bg-brand-gradient");
+    expect(action).not.toHaveClass("bg-brand-strong");
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("border-line-strong");
   });
 });

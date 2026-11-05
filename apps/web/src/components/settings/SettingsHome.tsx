@@ -50,7 +50,7 @@ export function SettingsHome() {
             </h2>
             {group.hint ? <p className="text-xs text-fg-secondary">{group.hint}</p> : null}
           </div>
-          <ul className="glass-card divide-y divide-line overflow-hidden rounded-xl border border-line">
+          <ul className="bg-panel divide-y divide-line overflow-hidden rounded-xl">
             {group.items.map((item) => (
               <li key={item.segment}>
                 <Link

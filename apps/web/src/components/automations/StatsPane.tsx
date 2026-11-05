@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutomationStats } from "@/lib/api/queries";
 import type { AutomationStats } from "@/lib/api/types";
 import { formatCount, repliedShare } from "@/lib/automations/format";
+import { plural } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { EYEBROW, KPI } from "@/styles/tokens";
 
@@ -152,7 +153,7 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
       </p>
       <div
         role="img"
-        aria-label={`${formatCount(total)} runs over ${daily.length} days`}
+        aria-label={`${formatCount(total)} ${plural(total, "run", "runs")} over ${daily.length} days`}
         className="flex items-end gap-0.5 border-b border-line"
         style={{ height: CHART_HEIGHT }}
         onMouseLeave={() => setActive(null)}

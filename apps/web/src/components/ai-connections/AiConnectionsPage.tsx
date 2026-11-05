@@ -148,7 +148,7 @@ function ModeCard() {
                 htmlFor={id}
                 className={cn(
                   "flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3",
-                  current === option.mode && "border-brand-line bg-brand-soft",
+                  current === option.mode && "border-line-strong bg-raised",
                   !inPlan && "cursor-not-allowed opacity-70",
                 )}
               >

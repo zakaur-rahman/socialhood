@@ -79,7 +79,7 @@ export function InstallPrompt({
 
   return (
     <Alert
-      tone="brand"
+      tone="neutral"
       aria-label={title}
       className={className}
       onDismiss={() => setDismissed(true)}

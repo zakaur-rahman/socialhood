@@ -130,7 +130,7 @@ export function Checklist({ steps, slug, onDismiss, dismissing = false }: Props)
               aria-controls="checklist-done"
               onClick={() => setShowDone((value) => !value)}
             >
-              <ChevronDown className={cn("transition-transform", showDone && "rotate-180")} aria-hidden />
+              <ChevronDown className={cn("motion-safe:transition-transform", showDone && "rotate-180")} aria-hidden />
               {done.length === 1 ? "1 step done" : `${done.length} steps done`}
             </Button>
             <ol id="checklist-done" hidden={!showDone} className="space-y-1">

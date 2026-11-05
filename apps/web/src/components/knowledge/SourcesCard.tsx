@@ -44,8 +44,10 @@ import { useUpgradeDialog } from "@/lib/api/provider";
 import { isProcessing, useApproveKnowledgeSource, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeCreateType, KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
+import { waitingFirst, waitingLine } from "@/lib/knowledge/approval";
 import { PERMISSION, useCan } from "@/lib/permissions";
 import { relativeTime } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -62,6 +64,8 @@ const TYPE_ICON: Record<KnowledgeType, LucideIcon> = {
 };
 
 const ADD_ORDER: KnowledgeCreateType[] = ["faq", "text", "url", "site", "file"];
+/** A waiting source longer than this starts cut short, with "Show all". */
+const LONG_BODY = 400;
 const count = new Intl.NumberFormat("en-US");
 
 /** UX-SCR-06 "Add knowledge": FAQ, Note, Web page, Website or File, each opening its form in a sheet. */
@@ -116,13 +120,13 @@ export function StatusChip({ source, className }: { source: KnowledgeSource; cla
   if (source.status === "awaiting_approval") {
     return (
       <Badge tone="warning" size="md" className={className}>
-        Needs approval
+        Waiting for approval
       </Badge>
     );
   }
   if (isProcessing(source)) {
     return (
-      <Badge tone="brand" size="md" className={className}>
+      <Badge tone="neutral" size="md" className={className}>
         <Spinner size="xs" /> Processing
       </Badge>
     );
@@ -173,6 +177,8 @@ export function SourcesCard({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const removedRef = useRef(false);
   const { items, usage } = data;
+  const canManage = can(PERMISSION.manageKnowledge);
+  const waiting = items.filter((source) => source.status === "awaiting_approval").length;
 
   return (
     <Card asChild padding="roomy">
@@ -182,7 +188,14 @@ export function SourcesCard({
             <CardTitle id="sources-title" ref={headingRef} tabIndex={-1}>
               Sources
             </CardTitle>
-            <CardDescription>What the AI may use to answer. Nothing else counts as a fact.</CardDescription>
+            <CardDescription>
+              What the AI may use to answer. Nothing else counts as a fact.
+              {canManage && waiting > 0 ? (
+                <span className="block font-medium text-fg" data-testid="waiting-count">
+                  {waitingLine(waiting)}
+                </span>
+              ) : null}
+            </CardDescription>
           </CardHeader>
           <div className="w-full sm:w-64">
             <Meter
@@ -228,16 +241,18 @@ export function SourcesCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((source) => {
+                {waitingFirst(items).map((source) => {
                   const Icon = TYPE_ICON[source.type];
                   const sub = detail(source);
                   const isSite = source.type === "site";
                   const pagesOpen = isSite && open[source.id] === true;
+                  const long = (source.body?.length ?? 0) > LONG_BODY;
+                  const full = open[`body-${source.id}`] === true;
                   const characters = isSite ? (source.site?.char_count ?? 0) : source.char_count;
                   const chunks = isSite ? (source.site?.chunk_count ?? 0) : source.chunk_count;
                   return (
                     <Fragment key={source.id}>
-                    <TableRow data-status={source.status}>
+                    <TableRow data-status={source.status} className={source.status === "awaiting_approval" ? "border-b-0" : undefined}>
                       {/* The name takes the room the other columns leave, and truncates in it. Below 512 px of table the
                       status sits under the name, so the name keeps the Status column's 75 px (at 320 px it
                       had about 35 px beside the status and two 40 px buttons). */}
@@ -253,13 +268,13 @@ export function SourcesCard({
                               aria-controls={`site-pages-${source.id}`}
                               onClick={() => setOpen((current) => ({ ...current, [source.id]: !pagesOpen }))}
                             >
-                              <ChevronRight className={pagesOpen ? "rotate-90 transition-transform" : "transition-transform"} aria-hidden />
+                              <ChevronRight className={pagesOpen ? "rotate-90 motion-safe:transition-transform" : "motion-safe:transition-transform"} aria-hidden />
                             </Button>
                           ) : (
                             <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
                           )}
                           <div className="min-w-0">
-                            <p className="truncate font-medium">
+                            <p className={source.status === "awaiting_approval" ? "line-clamp-2 font-medium" : "truncate font-medium"}>
                               <span className="sr-only">{SOURCE_TYPE_LABEL[source.type]}: </span>
                               {source.title}
                             </p>
@@ -323,23 +338,71 @@ export function SourcesCard({
                           <p className="text-xs text-fg-secondary">
                             Added by an AI app. Your AI won&apos;t use it until it&apos;s approved.
                           </p>
-                          {source.question ? <p className="mt-2 font-medium break-words">{source.question}</p> : null}
-                          <p className="mt-1 max-h-64 overflow-y-auto break-words whitespace-pre-wrap">{source.body}</p>
-                          {can(PERMISSION.manageKnowledge) ? (
-                            <Button
-                              size="sm"
-                              className="mt-3"
-                              aria-label={`Approve ${source.title}`}
-                              disabled={approve.isPending && approve.variables === source.id}
-                              onClick={() =>
-                                approve.mutate(source.id, {
-                                  onSuccess: () => toast.success(`Approved “${source.title}”`),
-                                  onError: (error) => toastError(error),
-                                })
-                              }
-                            >
-                              Approve
-                            </Button>
+                          {source.question && source.question !== source.title ? <p className="mt-2 font-medium break-words">{source.question}</p> : null}
+                          {source.body ? (
+                            <>
+                              {/* Focusable so the keyboard can scroll it: Safari doesn't make scrollers focusable. */}
+                              <div className="relative mt-1">
+                                <div
+                                  role="group"
+                                  tabIndex={0}
+                                  aria-label={`Content of ${source.title}`}
+                                  className={cn(
+                                    "max-w-prose overflow-y-auto break-words whitespace-pre-wrap",
+                                    long && !full ? "max-h-32 overflow-hidden" : !long && "max-h-64",
+                                  )}
+                                >
+                                  {source.body}
+                                </div>
+                                {long && !full ? (
+                                  <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-linear-to-t from-panel to-transparent" />
+                                ) : null}
+                              </div>
+                              {long && !full ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="mt-1"
+                                  aria-label={`Show all of ${source.title}`}
+                                  onClick={() => setOpen((current) => ({ ...current, [`body-${source.id}`]: true }))}
+                                >
+                                  Show all
+                                </Button>
+                              ) : null}
+                            </>
+                          ) : null}
+                          {canManage ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                aria-label={`Approve ${source.title}`}
+                                loading={approve.isPending && approve.variables === source.id}
+                                disabled={remove.isPending && remove.variables === source.id}
+                                onClick={() =>
+                                  approve.mutate(source.id, {
+                                    onSuccess: () => {
+                                      toast.success(`Approved “${source.title}”`);
+                                      // The row's buttons go with the approval.
+                                      headingRef.current?.focus();
+                                    },
+                                    onError: (error) => toastError(error),
+                                  })
+                                }
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive-ghost"
+                                aria-label={`Reject ${source.title}`}
+                                loading={remove.isPending && remove.variables === source.id}
+                                disabled={approve.isPending && approve.variables === source.id}
+                                onClick={() => setDeleting(source)}
+                              >
+                                Reject
+                              </Button>
+                            </div>
                           ) : null}
                         </TableCell>
                       </TableRow>
@@ -372,7 +435,9 @@ export function SourcesCard({
             }}
           >
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle>
+              <AlertDialogTitle>
+                {deleting?.status === "awaiting_approval" ? "Reject" : "Delete"} “{deleting?.title}”?
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 {deleting?.status === "awaiting_approval"
                   ? "The AI never used it. This can't be undone."
@@ -390,7 +455,7 @@ export function SourcesCard({
                   if (!source) return;
                   remove.mutate(source.id, {
                     onSuccess: () => {
-                      toast.success(`Deleted “${source.title}”`);
+                      toast.success(`${source.status === "awaiting_approval" ? "Rejected" : "Deleted"} “${source.title}”`);
                       // Closing still ahead: the dialog's own focus return must not win.
                       removedRef.current = document.querySelector("[role=alertdialog]") !== null;
                       // Focus may still be inside the closing dialog or on the vanished row: take it.
@@ -408,7 +473,7 @@ export function SourcesCard({
                   });
                 }}
               >
-                Delete
+                {deleting?.status === "awaiting_approval" ? "Reject" : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

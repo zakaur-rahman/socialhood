@@ -244,7 +244,7 @@ function TagsEditor({ record, admin }: { record: ContactRecord; admin: boolean }
                   <button
                     type="button"
                     aria-label={`Remove ${item.name}`}
-                    className="-mr-1 inline-flex size-5 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:size-8"
+                    className="relative -mr-1 inline-flex size-5 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:size-8 after:absolute after:-inset-0.5 after:content-[''] pointer-coarse:after:-inset-1"
                     onClick={() => change({ remove: [item.id] })}
                   >
                     <X className="size-3" aria-hidden />

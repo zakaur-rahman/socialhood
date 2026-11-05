@@ -167,7 +167,7 @@ export function TestResult({
         <Rendered label="Opening" testId="test-opening">
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_opening}</p>
           {openingButton?.trim() ? (
-            <Badge tone="brand" size="md">
+            <Badge tone="neutral" size="md">
               {openingButton}
             </Badge>
           ) : null}

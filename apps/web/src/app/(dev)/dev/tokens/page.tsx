@@ -15,9 +15,9 @@ import {
   customVariants,
   easings,
   fontSizes,
-  glassShadows,
   glowShadows,
   gradientUtilities,
+  surfaceShadows,
   motionDurations,
   otherUtilities,
   radiusTokens,
@@ -136,13 +136,10 @@ export default function TokensPage() {
         </div>
       </Section>
 
-      <Section title="Glass">
-        <p className={META}>
-          Frost colours with the glass-pane, glass-card, glass-float, glass-raised and glass-outline utilities (the
-          blur), over the ambient light fixed on the body. Work panes are subtler than cards: dense text sits on them.
-        </p>
+      <Section title="Surface shadows">
+        <p className={META}>Cards are solid. Nothing in the app is frosted or blurred.</p>
         <div className={cn(CARD, "grid grid-cols-1 gap-6 p-6 sm:grid-cols-2")}>
-          {glassShadows.map((g) => (
+          {surfaceShadows.map((g) => (
             <div key={g.name} className={`${g.sample} rounded-lg p-4`}>
               <span className="block text-sm font-medium">{g.name}</span>
               <span className="block font-mono text-xs break-words text-fg-secondary">dark {g.value}</span>
@@ -260,7 +257,7 @@ export default function TokensPage() {
           ))}
         </div>
         {/* shadow-crop-mask: the box dims everything outside it; the stage clips the spread. */}
-        <div aria-hidden className="bg-brand-gradient-decor relative h-28 overflow-hidden rounded-lg">
+        <div aria-hidden className="bg-raised relative h-28 overflow-hidden rounded-lg">
           <span className="absolute inset-y-4 left-1/4 w-1/2 rounded-sm border-2 border-fg shadow-crop-mask" />
         </div>
       </Section>

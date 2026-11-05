@@ -35,7 +35,7 @@ function TooltipTrigger({
  * floating family's 1 px `line` edge drawn as a ring and its `shadow-floating` (`ui/floating`), on
  * the tooltip's `rounded-md`.
  */
-const TOOLTIP_SURFACE = "rounded-md glass-float text-fg ring-1 ring-line shadow-floating"
+const TOOLTIP_SURFACE = "rounded-md bg-overlay text-fg ring-1 ring-line shadow-floating"
 
 /**
  * The tooltip's motion (DESIGN_SYSTEM §7.2): after the provider's delay it fades in over

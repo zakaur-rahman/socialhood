@@ -37,7 +37,7 @@ describe("the root layout (C-129)", () => {
   });
 
   it("starts the browser bar on the dark canvas; ThemeSync moves it for Light", () => {
-    expect(viewport.themeColor).toBe("#131520");
+    expect(viewport.themeColor).toBe("#141416");
   });
 });
 

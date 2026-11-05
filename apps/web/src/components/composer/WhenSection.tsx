@@ -83,7 +83,7 @@ export function WhenSection({
     >
       {scheduledAt ? (
         <p className="mb-3 flex items-center gap-2 text-sm">
-          <CalendarClock className="size-4 text-brand-fg" aria-hidden />
+          <CalendarClock className="size-4 text-fg-secondary" aria-hidden />
           Scheduled for {formatDayTime(scheduledAt, timeZone, now)}
         </p>
       ) : null}

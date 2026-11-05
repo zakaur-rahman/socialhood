@@ -245,8 +245,12 @@ export const CONNECT_ERRORS = [
 ] as const;
 export type ConnectError = (typeof CONNECT_ERRORS)[number];
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
+const pluralRules = new Intl.PluralRules("en");
+/** The word for a count: `plural(n, "like", "likes")`. */
+export const plural = (n: number, one: string, other: string) => (pluralRules.select(n) === "one" ? one : other);
+
+function withCount(count: number, one: string, many: string): string {
+  return `${count} ${plural(count, one, many)}`;
 }
 
 export function instagramConnected(username?: string | null): ConnectResult {
@@ -326,7 +330,7 @@ function connectErrorResult(error: string, limitParam?: string | null): ConnectR
       return {
         kind: "error",
         message: Number.isFinite(limit) && limit > 0
-          ? `Your plan includes ${plural(limit, "Instagram account", "Instagram accounts")}.`
+          ? `Your plan includes ${withCount(limit, "Instagram account", "Instagram accounts")}.`
           : "Your plan's Instagram account limit is reached.",
         retry: false,
       };
@@ -559,9 +563,9 @@ const FEATURE_COPY: Record<string, { feature: string; plans: string; body: strin
   },
   public_api: {
     feature: "Public API access",
-    plans: "Business",
+    plans: "Business and Agency",
     target: "max",
-    body: "On Business, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
+    body: "On Business and Agency, make API keys to connect your own tools, and use the Amplychat app in Zapier.",
   },
   commerce: {
     feature: "The product catalogue",

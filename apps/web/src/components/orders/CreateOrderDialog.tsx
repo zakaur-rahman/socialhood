@@ -147,7 +147,7 @@ export function CreateOrderDialog({
           <form className="space-y-4" onSubmit={submit}>
             {!entitled ? (
               <Alert
-                tone="brand"
+                tone="neutral"
                 action={
                   canUpgrade ? (
                     <AlertAction type="button" onClick={() => upgrade.open(COMMERCE_UPGRADE)}>

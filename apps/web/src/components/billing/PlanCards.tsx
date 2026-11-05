@@ -37,7 +37,7 @@ export function PlanCards({
   plans: { data?: { items: PlanOffer[] }; isPending: boolean; isError: boolean; refetch: () => unknown };
   billing: BillingState;
   isOwner: boolean;
-  checkout: { start: (plan: PaidPlan, period?: BillingPeriod) => void; pending: boolean };
+  checkout: { start: (plan: PaidPlan, period?: BillingPeriod) => void; pending: boolean; plan?: PaidPlan | null };
 }) {
   const [period, setPeriod] = useState<BillingPeriod>("month");
   if (plans.isPending) {
@@ -92,20 +92,17 @@ export function PlanCards({
               key={offer.plan}
               padding="roomy"
               tone={isCurrent ? "brand" : "default"}
-              // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
-              // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
-              className={cn("relative flex flex-col", !isCurrent && !offer.available && "border-line-subtle bg-panel-glass")}
+              // A plan that isn't available yet sits on the quieter fill; its text stays full strength (UI-ISS-007).
+              // The current plan is marked by its edge and its badge: no ring, no glow (UI-ISS-094).
+              // Five shared rows (name, tagline, price, limits, button), so the rule under the price lines up.
+              className={cn("relative row-span-5 grid grid-rows-subgrid gap-y-0", !isCurrent && !offer.available && "bg-field")}
               data-testid={`plan-${offer.plan}`}
             >
               <li aria-current={isCurrent ? "true" : undefined}>
-                {isCurrent ? (
-                  // A 2 px mark: solid, not a gradient (DESIGN_SYSTEM §1.9, marks under 12 px).
-                  <span aria-hidden className="absolute inset-x-6 -top-px h-0.5 rounded-full bg-brand" />
-                ) : null}
                 <div className="flex items-center justify-between gap-2">
                   <h3 className={SECTION_TITLE}>{PLAN_NAME[offer.plan]}</h3>
                   {isCurrent ? (
-                    <Badge tone="brand" size="md">
+                    <Badge tone="neutral" size="md">
                       Current plan
                     </Badge>
                   ) : !offer.available ? (
@@ -142,10 +139,10 @@ export function PlanCards({
                     <span className="text-base font-normal text-fg-secondary">Price shown at checkout</span>
                   )}
                 </p>
-                <ul className="mt-5 flex-1 space-y-2 border-t border-line-subtle pt-5 text-sm">
+                <ul className="mt-5 space-y-2 border-t border-line-subtle pt-5 text-sm">
                   {highlights.map((line) => (
                     <li key={line} className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-brand-fg" aria-hidden />
+                      <Check className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
                       <span>{line}</span>
                     </li>
                   ))}
@@ -156,7 +153,8 @@ export function PlanCards({
                     variant="secondary"
                     size="lg"
                     className="mt-5 w-full"
-                    loading={checkout.pending}
+                    loading={checkout.pending && checkout.plan === offer.plan}
+                    disabled={checkout.pending && checkout.plan !== offer.plan}
                     onClick={() => checkout.start(offer.plan as PaidPlan, six ? "six_month" : "month")}
                   >
                     {!six && billing.trial_eligible && offer.trial_days > 0

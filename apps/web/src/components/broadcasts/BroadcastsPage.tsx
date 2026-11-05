@@ -15,6 +15,7 @@ import { Meter } from "@/components/ui/meter";
 import { useBroadcastAvailability, useBroadcasts } from "@/lib/api/queries";
 import type { Broadcast } from "@/lib/api/types";
 import { BROADCAST_STATUS, formatCount, formatMoney, reached } from "@/lib/broadcasts/format";
+import { plural } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { META } from "@/styles/tokens";
@@ -85,7 +86,7 @@ export function BroadcastsPage() {
             </p>
           </Card>
         ) : (
-          <Alert tone="brand" variant="outline">
+          <Alert tone="neutral" variant="outline">
             <AlertTitle>Broadcasts are part of Creator and Business</AlertTitle>
             <AlertDescription>
               Send a WhatsApp template to everyone in a segment who agreed to hear from you.{" "}
@@ -155,7 +156,7 @@ function BroadcastRow({ broadcast, slug, timeZone }: { broadcast: Broadcast; slu
       </p>
       {broadcast.status === "draft" || broadcast.status === "scheduled" ? null : (
         <p className="text-sm tabular-nums">
-          {formatCount(broadcast.audience_size)} people · {formatCount(reached(c))} sent · {formatCount(c.delivered + c.read)}{" "}
+          {formatCount(broadcast.audience_size)} {plural(broadcast.audience_size, "person", "people")} · {formatCount(reached(c))} sent · {formatCount(c.delivered + c.read)}{" "}
           delivered · {formatCount(c.read)} read · {formatCount(c.failed)} failed
           {c.replied > 0 ? ` · ${formatCount(c.replied)} replied` : ""}
         </p>

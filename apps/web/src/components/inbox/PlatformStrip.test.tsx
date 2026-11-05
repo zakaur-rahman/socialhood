@@ -33,13 +33,13 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     expect(segment.querySelector(".bg-facebook-logo")).not.toBeNull();
   });
 
-  // D-15 item 1 (C-069): the chosen segment is neutral, raised with brand-fg text, like every other
+  // D-15 item 1 (C-069): the chosen segment is neutral, raised with fg text, like every other
   // segmented control; no longer the brand-strong fill UI-002 gave it.
   it("the chosen segment is the neutral one; the others stay on the track", () => {
     const { rerender } = render(<PlatformStrip platforms={["instagram", "whatsapp"]} value="all" onChange={() => {}} />);
     const all = screen.getByRole("radio", { name: "All" });
     expect(all).toHaveAttribute("data-state", "on");
-    expect(all).toHaveClass("aria-checked:bg-raised", "aria-checked:text-brand-fg");
+    expect(all).toHaveClass("aria-checked:bg-segment", "aria-checked:text-fg");
     expect(all).not.toHaveClass("bg-brand-strong");
     rerender(<PlatformStrip platforms={["instagram", "whatsapp"]} value="instagram" onChange={() => {}} />);
     expect(screen.getByRole("radiogroup")).toHaveAttribute("data-active", "instagram");

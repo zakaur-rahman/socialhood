@@ -65,6 +65,14 @@ describe("ReplyWindowChip (UX-INB-05, C-063)", () => {
   });
 });
 
+describe("ReplyWindowChip compact", () => {
+  it("shows a closed window as Closed, and still names it for screen readers", () => {
+    render(<ReplyWindowChip window={{ state: "closed" }} now={now} compact />);
+    const chip = screen.getByText("Closed").closest("[data-slot=badge]");
+    expect(chip).toHaveTextContent("Window Closed");
+  });
+});
+
 describe("ThreadHeader (UX-INB-05)", () => {
   it("shows the contact, handle, platform, our linked account and AI mode", () => {
     renderHeader();

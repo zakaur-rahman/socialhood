@@ -230,7 +230,9 @@ function setup({
   byQuery,
   fail = false,
   onPost,
+  knowledgeWaiting = 0,
 }: {
+  knowledgeWaiting?: number;
   overview?: Overview;
   ws?: typeof workspace;
   byQuery?: (call: Call) => Overview | Promise<Overview>;
@@ -245,6 +247,8 @@ function setup({
         if (fail) return problem(500, "internal");
         return json(byQuery ? await byQuery(call) : overview);
       },
+      "GET /v1/w/:wid/conversations/counts": () =>
+        json({ unread: 0, needs_reply: 0, needs_you: 0, mine: 0, knowledge_waiting: knowledgeWaiting }),
       "POST /v1/w/:wid/knowledge-sources": (call) => {
         onPost?.(call.body);
         return json(knowledgeSource({ question: "Any eggless cakes?" }), 201);
@@ -595,6 +599,21 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     const banner = await screen.findByTestId("gap-banner");
     expect(within(banner).queryByRole("link", { name: "Open conversation" })).not.toBeInTheDocument();
     expect(within(banner).getByRole("button", { name: "Add answer" })).toBeInTheDocument();
+  });
+
+  it("says how many sources wait for approval, with a link to review them", async () => {
+    setup({ knowledgeWaiting: 2 });
+    const banner = await screen.findByTestId("approval-banner");
+    expect(within(banner).getByRole("heading")).toHaveTextContent("2 sources from AI apps are waiting for approval");
+    expect(banner).toHaveTextContent("Your AI won't use them until they're approved.");
+    expect(within(banner).getByRole("link", { name: "Review" })).toHaveAttribute("href", "/w/maple/knowledge");
+  });
+
+  it("shows no approval banner when the count is 0, as it is for roles that can't approve", async () => {
+    const { calls } = setup({ ws: { ...workspace, role: "agent" } });
+    await screen.findByTestId("gap-banner");
+    await waitFor(() => expect(calls.some((c) => c.path.endsWith("/conversations/counts"))).toBe(true));
+    expect(screen.queryByTestId("approval-banner")).not.toBeInTheDocument();
   });
 
   it("agents can view the thread but not train the AI or fix connections", async () => {

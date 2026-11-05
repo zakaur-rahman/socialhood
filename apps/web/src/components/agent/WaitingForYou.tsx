@@ -36,7 +36,7 @@ export function WaitingForYou({
   if (items.length === 0) return null;
 
   return (
-    <section aria-label="Waiting for you" className="mb-2 rounded-xl border border-line bg-panel" data-testid="waiting-for-you">
+    <section aria-label="Waiting for you" className="mb-2 rounded-xl bg-panel" data-testid="waiting-for-you">
       <button
         type="button"
         aria-expanded={open}

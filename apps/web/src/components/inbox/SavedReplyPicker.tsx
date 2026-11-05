@@ -50,7 +50,7 @@ export function SavedReplyPicker({
           )}
         >
           <span className="flex min-w-0 items-baseline gap-2">
-            <span className="shrink-0 font-medium text-brand-fg">/{reply.shortcut}</span>
+            <span className="shrink-0 font-medium text-fg-secondary">/{reply.shortcut}</span>
             <span className="truncate font-medium">{reply.title}</span>
           </span>
           <span className="line-clamp-2 text-xs text-fg-secondary">{reply.body}</span>

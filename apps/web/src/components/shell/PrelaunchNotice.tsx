@@ -15,7 +15,7 @@ import { SITE_NAME, siteHref } from "@/lib/marketing/site";
 export function PrelaunchNotice() {
   return (
     <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 text-center">
+      <div className="w-full max-w-md rounded-2xl bg-panel p-8 text-center">
         <LogoMark className="mx-auto size-12 rounded-xl" />
         <h1 className="mt-6 text-xl font-semibold tracking-tight text-fg">Your account is ready</h1>
         <p className="mt-3 text-sm text-fg-secondary">

@@ -23,7 +23,7 @@ export function SettingsRail({ slug, groups }: { slug: string; groups: SettingsG
     <aside className="sticky top-0 hidden max-h-dvh w-64 shrink-0 self-start p-4 pe-0 lg:block xl:w-72">
       <nav
         aria-label="Settings"
-        className="glass-card flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto rounded-xl border border-line p-3"
+        className="bg-panel flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto rounded-xl p-3"
       >
         <SearchInput
           label="Find a setting"

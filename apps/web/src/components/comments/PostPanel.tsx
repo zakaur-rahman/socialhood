@@ -23,7 +23,7 @@ const LONG_CAPTION = 220;
 export function AnalysisProgress({ analysed, total }: { analysed: number; total: number }) {
   return (
     <div className="space-y-1.5" data-testid="analysis-progress">
-      <p role="status" className="text-xs text-brand-fg">
+      <p role="status" className="text-xs text-fg-secondary">
         {analysingText({ analysed, total })}
       </p>
       <Progress aria-label="Comments analysed" value={analysed} max={total} />

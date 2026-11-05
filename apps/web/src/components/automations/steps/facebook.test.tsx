@@ -25,8 +25,9 @@ function renderWhen(accountId: string, accounts = [ig, page]) {
 }
 
 describe("When, on a Facebook Page (GR-29)", () => {
-  it("says Facebook in the trigger names and disables the story triggers, with the reason", () => {
+  it("says Facebook in the trigger names and disables the story triggers, with the reason", async () => {
     renderWhen("f1");
+    await userEvent.click(screen.getByRole("button", { name: "Change trigger" }));
     expect(screen.getByRole("radio", { name: "Facebook comment keyword" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "Facebook DM keyword" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "Facebook entry link" })).toBeEnabled();
@@ -36,8 +37,9 @@ describe("When, on a Facebook Page (GR-29)", () => {
     expect(screen.getByRole("radio", { name: "Facebook comment keyword" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("an Instagram account keeps every trigger", () => {
+  it("an Instagram account keeps every trigger", async () => {
     renderWhen("a1");
+    await userEvent.click(screen.getByRole("button", { name: "Change trigger" }));
     expect(screen.getByRole("radio", { name: "Instagram story reply" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "Instagram story mention" })).toBeEnabled();
   });
@@ -46,6 +48,7 @@ describe("When, on a Facebook Page (GR-29)", () => {
     const draft = toDefinition(automation({ social_account_id: "f1", trigger: "story_reply" }));
     renderWithApi(<WhenStep draft={draft} change={vi.fn()} errors={{}} state="complete" accounts={[page]} slug="maple" />);
     expect(screen.getByText("Facebook Pages have no story replies. Choose another trigger.")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Facebook DM keyword" })).toBeEnabled();
   });
 
   it("the account field is just 'Account', and the empty link covers both networks", () => {

@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Link from "next/link";
 import type { ReactElement } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
 import { ApiError } from "@/lib/api/errors";
@@ -378,6 +378,11 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
   });
 
   it("asks for a time, and refuses one less than 5 minutes away", async () => {
+    // Midday in the workspace: in the last minutes of its day, today can no longer be picked.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T06:30:00Z") });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const user = userEvent.setup();
     renderComposer({ initial: readyPost() });
     await screen.findByRole("textbox", { name: "Caption" });

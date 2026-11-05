@@ -14,9 +14,9 @@ import {
   describedColors,
   easings,
   fontSizes,
-  glassShadows,
   glowShadows,
   gradientUtilities,
+  surfaceShadows,
   motionDurations,
   otherUtilities,
   radiusTokens,
@@ -72,7 +72,7 @@ const rootAliases = blocks(/:root/)
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .matchAll(/--([a-z-]+):/g);
 // `--motion-*` are durations and `--gradient-*` gradients, not colour aliases.
-const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-") && !name.startsWith("grain-"));
+const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-"));
 const themeInline = blocks(/@theme inline/).join("\n");
 /** Every `--color-*` declared in `@theme` (the palette lock, `--color-*`, is not a token). */
 const themeColorNames = [...blocks(/@theme/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
@@ -147,24 +147,23 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 
   it("keeps the WCAG fixes from UX-TOK-02", () => {
-    expect(declared("brand-strong")).toBe("#5550E0"); // the gradient ends at 5.82:1 with white, not #6D6AF5
-    expect(gradientUtilities[0].value).toContain("var(--color-brand-strong) 100%");
+    expect(declared("brand-strong")).toBe("#5550E0"); // the primary fill: 5.82:1 with white, not #6D6AF5
     expect(declared("brand-fg")).toBe("#B5B3FF");
-    expect(declared("fg-secondary")).toBe("#A6A9BC");
+    expect(declared("fg-secondary")).toBe("#ABABB3");
     expect(declared("danger-fill")).toBe("#C53030");
   });
 
   it("applies the owner's token decisions D-01, D-06 and D-12 (C-069, C-071)", () => {
-    // D-01: control edges are white 40%, through --input, so every field, select, checkbox and
+    // D-01: control edges are a near-white at 45%, through --input, so every field, select, checkbox and
     // switch edge is 3:1 or more on every surface.
-    expect(declared("line-control")).toBe("rgb(214 219 255 / 0.45)");
+    expect(declared("line-control")).toBe("rgb(235 235 245 / 0.45)");
     expect(css).toMatch(/--input:\s*var\(--color-line-control\);/);
     // D-06: placeholders are fg-secondary (text, 4.5:1), not fg-disabled.
     const base = blocks(/@layer base/).join("\n");
     expect(base).toMatch(/::placeholder \{ color: var\(--color-fg-secondary\); \}/);
     expect(base).not.toMatch(/fg-disabled/);
     // D-12: what floats sits on overlay, lighter than the panel cards beneath it.
-    expect(declared("overlay")).toBe("#222633");
+    expect(declared("overlay")).toBe("#242428");
     expect(css).toMatch(/--popover:\s*var\(--color-overlay\);/);
   });
 
@@ -177,7 +176,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(light).toMatch(/^0 \d+px \d+px -\d+px rgb\(30 35 80 \/ 0\.\d+\)$/);
   });
 
-  it.each(glassShadows)("defines the $name glass shadow from the tokens (C-128)", ({ name, value, light }) => {
+  it.each(surfaceShadows)("defines the $name surface shadow from the tokens", ({ name, value, light }) => {
     expect(declaredShadow(name, "dark")).toBe(value);
     expect(declaredShadow(name, "light")).toBe(light);
   });
@@ -291,9 +290,9 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     },
   );
 
-  it("gives Clerk the brand gradient and the radii as CSS variables, and the icon script its colours from the generated tokens (C-127)", () => {
+  it("gives Clerk the solid primary and the radii as CSS variables, and the icon script its colours from the generated tokens (C-127)", () => {
     const clerk = source("lib/clerk-appearance.ts");
-    expect(clerk).toContain('backgroundImage: "var(--gradient-brand)"');
+    expect(clerk).toContain('backgroundColor: "var(--color-brand-strong)"');
     expect(clerk).not.toMatch(/linear-gradient|0\.5rem|0\.75rem/);
     const icons = readFileSync(join(__dirname, "..", "..", "scripts", "generate-icons.mjs"), "utf8");
     expect(icons).toContain("tokens.generated.json");
@@ -301,7 +300,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 
   it("looks colour tokens up by name and refuses unknown ones", () => {
-    expect(colorValue("canvas")).toBe("#131520");
+    expect(colorValue("canvas")).toBe("#141416");
     expect(colorValue("brand-line")).toBe("rgb(109 106 245 / 0.35)");
     expect(() => colorValue("red-500")).toThrow(/Unknown colour token/);
     expect(() => radiusValue("huge")).toThrow(/Unknown radius token/);
@@ -343,14 +342,30 @@ describe("two themes, one declaration (C-129)", () => {
       expect(token.light, token.name).not.toContain("light-dark(");
       expect(token.value, token.name).not.toContain("light-dark(");
     }
-    expect(colorValue("canvas")).toBe("#131520");
+    expect(colorValue("canvas")).toBe("#141416");
     expect(colorValue("canvas", "light")).toBe("#F5F6FB");
     expect(colorValue("chart-series-1", "light")).toBe(colorValue("brand", "light"));
   });
 
   it("keeps the shades on their base in both themes", () => {
-    expect(colorValue("card-glass", "light")).toContain("var(--color-panel) 72%");
-    expect(colorValue("card-glass")).toContain("var(--color-panel) 68%");
+    expect(colorValue("panel-glass", "light")).toContain("var(--color-panel) 50%");
+    expect(colorValue("panel-glass")).toContain("var(--color-panel) 50%");
+  });
+
+  it("draws no glass and no page glow: the surfaces are solid", () => {
+    expect(css).not.toMatch(/backdrop-filter|prefers-reduced-transparency|--gradient-ambient/);
+    const base = blocks(/@layer base/).join("\n");
+    expect(base).toMatch(/body \{ background-color: var\(--color-canvas\); color: var\(--color-fg\); \}/);
+  });
+
+  it("keeps the public site's shared primitives on its own look, whatever the app's values", () => {
+    expect(css).toMatch(/--color-brand-strong: var\(--color-ink\);/);
+    expect(css).toMatch(/^\[data-logo-mark\] \{ background-image: var\(--gradient-shell\); \}/m);
+    expect(css).toMatch(/\.site \[data-slot="card"\] \{ border-color: var\(--color-rule\); box-shadow: var\(--shadow-site-card\); \}/);
+    expect(css).toMatch(/\[data-variant="default"\] \{ box-shadow: var\(--shadow-site-button-primary\); \}/);
+    expect(css).toMatch(/\[data-variant="secondary"\] \{ box-shadow: var\(--shadow-site-button-secondary\); \}/);
+    expect(css).toMatch(/\.site \[data-slot="toggle-group-item"\]\[aria-checked="true"\] \{ color: var\(--color-brand-fg\); \}/);
+    expect(colorValue("site-control")).toBe("rgb(232 234 245 / 0.72)");
   });
 
   it("sets the scheme from the theme attribute, dark by default, and System takes both", () => {

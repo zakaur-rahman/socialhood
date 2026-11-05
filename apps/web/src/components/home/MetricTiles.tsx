@@ -40,10 +40,10 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
   if (!connected) {
     return (
       <Row>
-        <MetricTile label="Needs reply" value={DASH} hint="Conversations waiting for you." />
-        <MetricTile label="Messages today" value={DASH} hint="Counted once an account is connected." />
-        <MetricTile label={`Handled by AI, ${days}`} value={DASH} hint="Share of conversations the AI answered." />
-        <MetricTile label={`Median first response, ${days}`} value={DASH} hint="How fast customers hear back." />
+        <MetricTile cell label="Needs reply" value={DASH} hint="Conversations waiting for you." />
+        <MetricTile cell label="Messages today" value={DASH} hint="Counted once an account is connected." />
+        <MetricTile cell label={`Handled by AI, ${days}`} value={DASH} hint="Share of conversations the AI answered." />
+        <MetricTile cell label={`Median first response, ${days}`} value={DASH} hint="How fast customers hear back." />
       </Row>
     );
   }
@@ -53,6 +53,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
   return (
     <Row>
       <MetricTile
+        cell
         label="Needs reply"
         value={formatCount(overview.needs_reply)}
         href={inboxHref}
@@ -72,6 +73,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
         }
       />
       <MetricTile
+        cell
         label="Messages today"
         value={formatCount(overview.messages_today)}
         hint={
@@ -84,6 +86,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
         }
       />
       <MetricTile
+        cell
         label={`Handled by AI, ${days}`}
         value={formatPercent(current.handled_by_ai_rate)}
         trend={rateTrend(current.handled_by_ai_rate, previous.handled_by_ai_rate, days, "neither")}
@@ -94,6 +97,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
         }
       />
       <MetricTile
+        cell
         label={`Median first response, ${days}`}
         value={formatWait(current.median_first_response_s)}
         badge={isFast(current.median_first_response_s) ? { label: "Fast", tone: "success" } : null}
@@ -113,9 +117,10 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
  * width decides, and two tiles need about 186 px each for "Median first response, 7 days" and its
  * value; with larger text, rem keeps them stacked longer); four from 1024 px, with the shell's
  * expanded sidebar. `max-lg:` because container variants come after `lg:` in the stylesheet, so a
- * plain `@sm:` would win over the four columns.
+ * plain `@sm:` would win over the four columns. One band, not four boxes: the 1 px gap shows the
+ * `line` behind the cells, so the dividers follow the columns at every width.
  */
-const GRID = "grid grid-cols-1 gap-3 @sm:max-lg:grid-cols-2 lg:grid-cols-4";
+const GRID = "grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line-card bg-line shadow-surface @sm:max-lg:grid-cols-2 lg:grid-cols-4";
 
 function Row({ children }: { children: ReactNode }) {
   return (
@@ -130,7 +135,7 @@ export function MetricTilesSkeleton() {
     <div aria-hidden className="@container">
       <div className={GRID}>
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-27 rounded-xl" />
+          <Skeleton key={i} className="h-27 rounded-none" />
         ))}
       </div>
     </div>

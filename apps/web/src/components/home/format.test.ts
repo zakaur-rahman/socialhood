@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  agoLabel,
   channelsConnected,
   channelsLine,
   countTrend,
@@ -84,10 +83,6 @@ describe("Home formatting (UX-SCR-01)", () => {
     expect(channelsConnected(2)).toBe("2 channels connected");
     expect(channelsConnected(1)).toBe("1 channel connected");
     expect(channelsConnected(0)).toBe("No channels connected");
-    expect(agoLabel("now")).toBe("just now");
-    expect(agoLabel("12m")).toBe("12m ago");
-    expect(agoLabel("3d")).toBe("3d ago");
-    expect(agoLabel("28 Sep")).toBe("28 Sep");
   });
 });
 

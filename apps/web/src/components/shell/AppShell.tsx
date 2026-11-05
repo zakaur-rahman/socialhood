@@ -90,6 +90,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     account: <ThemedUserButton />,
     unreadCount: counts.data?.unread ?? 0,
     commentsCount: commentCounts.data?.needs_reply ?? 0,
+    knowledgeCount: counts.data?.knowledge_waiting ?? 0,
     credits: creditsUsage(billing.data, billing.isPending),
     reconnecting,
     // UI-058: the setup checklist comes back from the workspace menu (those who can change the workspace).

@@ -42,7 +42,7 @@ export function useConversations(wid: string, filters: ConversationFilters) {
   });
 }
 
-/** The Inbox nav badge (FR-INB-04); kept fresh by conversation.updated. */
+/** The Inbox and Knowledge nav badges (FR-INB-04); kept fresh by conversation.updated. */
 export function useInboxCounts(wid: string) {
   const api = useApi();
   return useQuery<InboxCounts>({

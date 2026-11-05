@@ -41,7 +41,7 @@ function meterTone(level: MeterLevel, kind: MeterKind): Tone {
 
 // Status colours straight from the tokens (UI-016's tone map isn't on develop yet). The bar is the
 // decor gradient (§1.9); the ring's 3 px arc is a mark under 12 px, so it is solid brand.
-const FILL: Record<Tone, string> = { normal: "bg-brand-gradient-decor", warning: "bg-warning", danger: "bg-danger" }
+const FILL: Record<Tone, string> = { normal: "bg-fg-secondary", warning: "bg-warning", danger: "bg-danger" }
 const ARC: Record<Tone, string> = { normal: "stroke-brand", warning: "stroke-warning", danger: "stroke-danger" }
 const FIGURE: Record<Tone, string> = { normal: "text-fg-secondary", warning: "text-warning", danger: "text-danger-fg" }
 
@@ -112,7 +112,8 @@ function Meter({
   const limit = typeof max === "number" && max > 0 ? max : null
   const level = meterLevel(value, limit, kind)
   const tone = meterTone(level, kind)
-  const units = unit ? ` ${unit}` : ""
+  // A limit of one reads "1 of 1 member"; units are plural nouns.
+  const units = unit ? ` ${limit === 1 ? unit.replace(/s$/, "") : unit}` : ""
   const text =
     valueText ?? (limit ? `${count.format(value)} of ${count.format(limit)}${units}` : `${count.format(value)}${units} · no limit`)
   const share = limit ? Math.min(1, Math.max(0, value / limit)) : 0
@@ -158,7 +159,7 @@ function Meter({
               strokeDasharray={circumference}
               strokeDashoffset={circumference * (1 - share)}
               className={cn(
-                "transition-[stroke-dashoffset] duration-500 ease-standard motion-reduce:transition-none",
+                "mark-forced transition-[stroke-dashoffset] duration-500 ease-standard motion-reduce:transition-none",
                 ARC[tone]
               )}
             />
@@ -200,7 +201,7 @@ function Meter({
           <div
             data-slot="meter-fill"
             className={cn(
-              "h-full rounded-full transition-[width] duration-500 ease-standard motion-reduce:transition-none",
+              "mark-forced h-full rounded-full transition-[width] duration-500 ease-standard motion-reduce:transition-none",
               FILL[tone]
             )}
             style={{ width: `${share * 100}%` }}

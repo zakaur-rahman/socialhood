@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils"
 import { CARD_TITLE } from "@/styles/tokens"
 
 /**
- * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092). Glass (C-128): `card-glass`,
- * 68% `panel` with a 16 px blur, a 1 px `line-glass` edge, a top highlight and a soft drop
- * (`shadow-glass`); `rounded-xl` for every app card (owner decision D-02).
+ * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092): solid `panel` with a thin
+ * `line-card` edge, a top highlight and a soft drop (`shadow-surface`); `rounded-xl` for every app card
+ * (owner decision D-02).
  *
  * - `padding`: `standard` 16 px for data and dashboard cards, `roomy` 20 px on phones and 24 px
  *   from `md` for settings, billing, forms and plan cards (§3).
  * - `tone`: `default`; `danger`, a 2 px `danger` leading edge (the danger zone; §5's status edge);
- *   `brand`, a `brand-line` edge (§1.4's brand border; the current plan).
+ *   `brand`, a `line-strong` edge (a selected state: the current plan).
  * - The padding is the `--card-padding` variable, so what sits inside can line up with it:
  *   CardBleed runs a table, a divider or a row list to the card's edges without negative margins,
  *   and a bled table's edge cells pad with `--card-padding` to keep their text on the card's edge
@@ -33,7 +33,7 @@ import { CARD_TITLE } from "@/styles/tokens"
  *     </section>
  *   </Card>
  */
-const cardVariants = cva("group/card min-w-0 rounded-xl border border-line-glass glass-card shadow-glass p-(--card-padding) text-fg", {
+const cardVariants = cva("group/card min-w-0 rounded-xl border border-line-card bg-panel shadow-surface p-(--card-padding) text-fg", {
   variants: {
     padding: {
       standard: "[--card-padding:--spacing(4)]",
@@ -42,7 +42,7 @@ const cardVariants = cva("group/card min-w-0 rounded-xl border border-line-glass
     tone: {
       default: "",
       danger: "border-l-2 border-l-danger",
-      brand: "border-brand-line",
+      brand: "border-line-strong",
     },
   },
   defaultVariants: { padding: "standard", tone: "default" },
@@ -94,7 +94,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="card-description"
-      className={cn("text-xs text-fg-secondary group-data-[padding=roomy]/card:text-sm", className)}
+      className={cn("max-w-prose text-xs text-fg-secondary group-data-[padding=roomy]/card:text-sm", className)}
       {...props}
     />
   )
@@ -112,11 +112,11 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * A group inside a card: `rounded-lg` (the card's 12 px less its padding, §4) with a `line` edge
- * (§5). `standard` 16 px for form groups, `compact` 12 px for rows (§3). It sets `--card-padding`
+ * A group inside a card: `rounded-lg` (the card's 12 px less its padding, §4) on the quieter `field`
+ * surface, with no edge (§5), so a card holds no box-in-a-box. `standard` 16 px for form groups, `compact` 12 px for rows (§3). It sets `--card-padding`
  * to its own padding, so CardBleed inside it runs to its edges.
  */
-const cardInsetVariants = cva("min-w-0 rounded-lg border border-line p-(--card-padding)", {
+const cardInsetVariants = cva("min-w-0 rounded-lg bg-field p-(--card-padding)", {
   variants: {
     padding: {
       standard: "[--card-padding:--spacing(4)]",
