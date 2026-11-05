@@ -3,7 +3,8 @@
 Billing state is mirrored from Dodo (D9, TR-BIL-02): only a signed webhook (or the reconcile job,
 TR-BIL-03) changes ``subscriptions.plan`` or ``status``; ``last_event_at`` is the ordering guard
 (an event older than it is ignored). ``payments`` records payment.* events and never changes the
-plan on its own. Trial use is ``workspaces.trial_used_at`` (TR-BIL-05).
+plan on its own. Trial use is ``workspaces.trial_used_at`` and, surviving account deletion,
+``trial_emails`` (TR-BIL-05).
 """
 
 from __future__ import annotations
@@ -31,10 +32,21 @@ from socialhood.db.tenancy import TenantScoped
 from socialhood.models.identity import _in
 
 
+class TrialEmail(Base):
+    """A hash of an owner's email that has had the trial. Not tenant-scoped, and kept when the
+    workspace and user are deleted: it is all that remembers the trial then."""
+
+    __tablename__ = "trial_emails"
+
+    email_hash: Mapped[str] = mapped_column(Text, primary_key=True)
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class Plan(StrEnum):
     FREE = "free"
     PRO = "pro"
     MAX = "max"
+    AGENCY = "agency"
 
 
 class SubscriptionStatus(StrEnum):

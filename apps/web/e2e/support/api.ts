@@ -486,6 +486,13 @@ export class Api {
     return draft;
   }
 
+  /** The workspace signature our checkout puts in the metadata Dodo copies onto its events. */
+  checkoutSignature(workspaceId: string): string {
+    return createHmac("sha256", this.stack.E2E_CHECKOUT_KEY)
+      .update(`socialhood/dodo-checkout/v1:${workspaceId}`)
+      .digest("hex");
+  }
+
   /**
    * Dodo's webhook as Dodo sends it (Standard Webhooks): signed with DODO_WEBHOOK_SECRET, the
    * value the launcher generated for the API.

@@ -77,7 +77,7 @@ test.describe("F-15 upgrade after hitting a limit", () => {
         next_billing_date: new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
         cancel_at_next_billing_date: false,
         customer: { customer_id: "cus_e2e", name: `${E2E_USER.firstName} ${E2E_USER.lastName}`, email: E2E_USER.email },
-        metadata: { workspace_id: workspace.id },
+        metadata: { workspace_id: workspace.id, workspace_sig: api.checkoutSignature(workspace.id) },
       },
     });
     expect(status).toBe(200);

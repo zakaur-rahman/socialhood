@@ -15,7 +15,7 @@ import dataclasses
 import itertools
 from collections import deque
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from socialhood.billing.dodo import (
     CheckoutParams,
@@ -48,12 +48,13 @@ class FakeDodo:
         amount_minor: int = 99900,
         currency: str = "INR",
         trial_period_days: int = 7,
+        interval: Literal["month", "six_month"] = "month",
     ) -> ProductPrice:
         price = ProductPrice(
             product_id=product_id,
             amount_minor=amount_minor,
             currency=currency,
-            interval="month",
+            interval=interval,
             trial_period_days=trial_period_days,
         )
         self.products[product_id] = price

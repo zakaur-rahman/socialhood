@@ -176,6 +176,11 @@ class Settings(BaseSettings):
     dodo_webhook_secret: SecretStr | None = None
     dodo_product_pro_monthly: str | None = None
     dodo_product_max_monthly: str | None = None
+    # C-174: optional, and never part of BILLING_SETTINGS: each goes on sale once its id is set.
+    dodo_product_pro_six_month: str | None = None
+    dodo_product_max_six_month: str | None = None
+    dodo_product_agency_monthly: str | None = None
+    dodo_product_agency_six_month: str | None = None
     # fake: run without Dodo (billing/dodo_fake.py); refused in production. Tests swap the client
     # with billing.registry.use_dodo whatever this says.
     dodo_provider: Literal["dodo", "fake"] = "dodo"

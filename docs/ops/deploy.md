@@ -181,6 +181,7 @@ API and worker read the same variables.
 | `DODO_API_KEY` · `DODO_WEBHOOK_SECRET` | secrets | no | Dodo dashboard (live keys in production); with `DODO_PRODUCT_PRO_MONTHLY`, all three or none (C-149: none = billing off, everyone on Free) |
 | `DODO_ENVIRONMENT` | config | no | `live` / `test` |
 | `DODO_PRODUCT_PRO_MONTHLY` · `DODO_PRODUCT_MAX_MONTHLY` | secrets | no* | product ids (pro is Creator, max is Business; Business is sold once its id is set) |
+| `DODO_PRODUCT_PRO_SIX_MONTH` · `DODO_PRODUCT_MAX_SIX_MONTH` · `DODO_PRODUCT_AGENCY_MONTHLY` · `DODO_PRODUCT_AGENCY_SIX_MONTH` | secrets | no | product ids (C-174); optional, each on sale once set; Agency needs its monthly id |
 | `DODO_PROVIDER` · `EMAIL_PROVIDER` · `PUSH_PROVIDER` | default | no | real providers; `fake` refused in production |
 | `RESEND_API_KEY` | secrets | yes | Resend → API keys (sending access, one domain) |
 | `EMAIL_FROM` | config | no | `Amplychat <support@amplychat.com>` |
@@ -310,7 +311,7 @@ Replace `{API}`, `{SITE}` and `{APP}` with the environment's domains (production
 | Clerk | Webhook endpoint | `{API}/webhooks/clerk`, events `user.updated` and `user.deleted` (copy the signing secret) |
 | Clerk | Google OAuth | your own Google OAuth client in production |
 | Dodo | Webhook endpoint | `{API}/webhooks/dodo` (copy the secret) |
-| Dodo | Products | the Pro (and later Max) monthly products; ids into the secrets group |
+| Dodo | Products | Creator, Business and Agency, monthly and every 6 months (C-174); ids into the secrets group |
 | Dodo | Return URL | built by the API from `WEB_BASE_URL` (`{APP}/w/{slug}/settings/billing`) |
 | Resend | Sending domain | verify the `EMAIL_FROM` domain: SPF, DKIM and DMARC records |
 | Cloudinary | nothing per environment | one cloud per environment is simplest |

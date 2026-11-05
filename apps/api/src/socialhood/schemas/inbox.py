@@ -399,6 +399,8 @@ ResourceTypeName = Literal["image", "video", "raw"]
 class UploadSignatureRequest(RequestModel):
     resource_type: ResourceTypeName
     purpose: AssetPurposeName
+    # The file's extension. Needed for ``raw``, which keeps it in its name; others ignore it.
+    extension: str | None = Field(default=None, max_length=8, pattern=r"^[A-Za-z0-9]+$")
 
 
 class UploadSignature(ResponseModel):
@@ -406,6 +408,8 @@ class UploadSignature(ResponseModel):
     api_key: str
     timestamp: int
     folder: str
+    allowed_formats: str | None = None  # signed: send it with the upload
+    public_id: str | None = None  # signed: send it with the upload, as with ``folder``
     signature: str
     upload_url: str
 

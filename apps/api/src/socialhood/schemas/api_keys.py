@@ -32,7 +32,7 @@ ApiScopeName = Literal[
     "knowledge:read",
     "knowledge:write",
     "automations:write",
-    "automations:create",  # C-169: create and change automations, apart from pause and resume
+    "automations:create",  # C-169: create and change automations, apart from pause
     "ask",
 ]
 
@@ -71,9 +71,9 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
     "comments:read": "AI apps: read post comments, their topics and sentiment.",
     "analytics:read": "AI apps: read post and account analytics.",
     "knowledge:read": "AI apps: search the knowledge base.",
-    "knowledge:write": "AI apps: add a text note or a website to the knowledge base.",
-    "automations:write": "AI apps: pause and resume automations.",
-    "automations:create": "AI apps: create and change keyword automations, and turn new ones on.",
+    "knowledge:write": "AI apps: draft a note or an FAQ for a person to approve.",
+    "automations:write": "AI apps: pause automations.",
+    "automations:create": "AI apps: draft and change keyword automations for a person to turn on.",
     "ask": "AI apps: ask Amplychat's own assistant (uses AI credits).",
 }
 

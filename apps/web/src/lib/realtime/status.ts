@@ -29,7 +29,7 @@ export function setRealtimeStatus(status: RealtimeStatus): void {
 }
 
 /**
- * The server ends each stream after 30 minutes and the client is back within about 3 s, so a drop
+ * The server ends each stream after 5 minutes and the client is back within about 3 s, so a drop
  * is only worth showing once it has lasted this long.
  */
 export const RECONNECTING_GRACE_MS = 5_000;

@@ -1548,7 +1548,7 @@ export function channelsRow(label = "Connected channels"): LimitRow {
   const per = E.accounts_per_platform as Plans<number>;
   return {
     label,
-    free: `${count.format((E.channels_total as Plans<number | null>).free ?? 0)} in total from Instagram, Facebook and web chat, no WhatsApp`,
+    free: `Any ${count.format((E.channels_total as Plans<number | null>).free ?? 0)} of Instagram, Facebook or web chat, no WhatsApp`,
     pro: `${per.pro} each of Instagram, WhatsApp, Facebook and web chat`,
     max: `${per.max} each of Instagram, WhatsApp and Facebook`,
   };

@@ -10,6 +10,7 @@ type StackValues = {
   E2E_API_URL: string;
   E2E_SEED_TOKEN: string;
   E2E_DODO_WEBHOOK_SECRET: string;
+  E2E_CHECKOUT_KEY: string;
   E2E_DODO_PRO_PRODUCT: string;
 };
 
@@ -22,6 +23,7 @@ function load(): StackValues | null {
       E2E_API_URL: process.env.E2E_API_URL,
       E2E_SEED_TOKEN: process.env.E2E_SEED_TOKEN,
       E2E_DODO_WEBHOOK_SECRET: process.env.E2E_DODO_WEBHOOK_SECRET ?? "",
+      E2E_CHECKOUT_KEY: process.env.E2E_CHECKOUT_KEY ?? "",
       E2E_DODO_PRO_PRODUCT: process.env.E2E_DODO_PRO_PRODUCT ?? "",
     };
   }

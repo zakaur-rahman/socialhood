@@ -353,6 +353,36 @@ API refuses to start.
    `grep -E '^(IG|WHATSAPP)_WEBHOOK_VERIFY_TOKEN=' /opt/amplychat/api.env`.
 7. If you made sign-ups restricted in Clerk for the website-only period, open them again.
 
+### Going live with Dodo
+
+Production runs on Dodo's test mode until launch, so anyone can hold a paid plan paid for with a
+test card. Those plans keep working after the switch unless they are reset, because the live Dodo
+account has never heard of them. Do this once, right after the switch:
+
+1. In `api.env` set `DODO_ENVIRONMENT=live`, the live `DODO_API_KEY` and `DODO_WEBHOOK_SECRET`, and
+   the live product ids. Restart `api` and `worker`.
+2. See who would be reset. This changes nothing:
+
+   ```sh
+   docker compose exec worker python -m socialhood.billing.reset_test_plans
+   ```
+
+   It lists each paid workspace whose subscription the live account doesn't have. If it stops
+   because the key can't read the product, fix the key and run it again.
+3. If the list looks right, reset them:
+
+   ```sh
+   docker compose exec worker python -m socialhood.billing.reset_test_plans --apply
+   ```
+
+   They move to Free, and their owners get the usual "You're on Free now" notification. A
+   subscription the live account does have is never touched, so running it again later is safe.
+
+If you skip this, Sentry shows `alert_kind:billing_many_subscriptions_missing` every 6 hours when
+most paid workspaces are affected, and those plans stay paid until you run the step above. A small
+number (fewer than three, or under half of all paid workspaces) move to Free by themselves after
+four runs in a row, about a day.
+
 ## 7. Backups and restore
 
 `backup.sh` writes `pg_dump` custom-format files to `/opt/amplychat/backups`. It keeps the last 7
@@ -525,6 +555,7 @@ docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KE
 - `SENTRY_DSN`
 - `DODO_API_KEY`, `DODO_WEBHOOK_SECRET`, `DODO_PRODUCT_PRO_MONTHLY`: all three or none
 - `DODO_PRODUCT_MAX_MONTHLY`
+- `DODO_PRODUCT_PRO_SIX_MONTH`, `DODO_PRODUCT_MAX_SIX_MONTH`, `DODO_PRODUCT_AGENCY_MONTHLY`, `DODO_PRODUCT_AGENCY_SIX_MONTH` (C-174): each optional, and not part of the all-or-none set. A plan or period is on sale once its id is set; Agency needs its monthly id. Restart `api` and `worker` after adding one.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`
 

@@ -419,7 +419,7 @@ const STORY_REPLIES: AutomationPage = {
   updated: "2026-10-31",
   sections: ["How it works in Amplychat", "Meta's rules for story messages", "Set it up", "An example", "See what it does", "Mistakes to avoid"],
   Body: StoryRepliesBody,
-  limits: [ROW_AUTOMATIONS, ROW_STEPS, { label: "Instagram accounts", free: `Within ${E.channels_total.free} channels in total`, pro: `${E.accounts_per_platform.pro}`, max: `${E.accounts_per_platform.max}` }],
+  limits: [ROW_AUTOMATIONS, ROW_STEPS, { label: "Instagram accounts", free: `Any ${E.channels_total.free} of Instagram, Facebook or web chat`, pro: `${E.accounts_per_platform.pro}`, max: `${E.accounts_per_platform.max}` }],
   credits: [CREDIT_FIXED, CREDIT_AUTOMATION_AI, CREDIT_READ],
   faq: [
     {

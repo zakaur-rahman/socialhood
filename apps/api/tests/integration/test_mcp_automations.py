@@ -1,8 +1,8 @@
 """C-169: list_instagram_posts, create_automation and update_automation through the SDK client
 against the mounted app: the preview (nothing stored) and the confirmed call, “latest” as the
-newest synced post, an ambiguous account, the plan, role and mode gates, turning on within and
-over the plan's active limit, overlaps, the notification and audit mirror, idempotency, and
-update_automation refusing what it can't edit safely."""
+newest synced post, an ambiguous account, the plan, role and mode gates, always created off,
+overlaps, the notification and audit mirror, idempotency, and update_automation refusing what it
+can't edit safely, an automation that is on included."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from socialhood.billing.plans import ENTITLEMENTS
 from socialhood.mcp import confirmations
 from tests.support.automation_api import set_plan
 from tests.support.automations import make_automation, make_media_item
@@ -187,64 +186,54 @@ async def test_create_previews_then_creates_on_the_latest_post(
     assert audit["detail"]["via"] == "mcp"
 
 
-async def test_turn_on_activates_within_the_limit_and_refuses_over_it(
-    mcp_app: FastAPI,
-    key: str,
-    setup: Setup,
-    engine: AsyncEngine,
-    monkeypatch: pytest.MonkeyPatch,
+async def test_an_automation_is_always_created_off_with_a_link_to_turn_it_on(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
-    on = structured(
-        await confirm(
-            mcp_app,
-            key,
-            "create_automation",
-            {
-                "name": "DM price",
-                "account": setup.account_id,
-                "trigger": "dm_keyword",
-                "keywords": ["price", "cost"],
-                "dm_text": "It's RS 500.",
-                "link_button": {"title": "Shop", "url": "https://example.com/shop"},
-                "turn_on": True,
-            },
-        )
-    )
-    assert on["status"] == "active"
-    assert on["posts"] == "DMs, not posts"
-    assert on["link_buttons"] == [{"title": "Shop", "url": "https://example.com/shop"}]
-    [row] = await rows(engine, "SELECT status, activated_at FROM automations")
-    assert row["status"] == "active"
-    assert row["activated_at"] is not None
-    activated = await rows(
-        engine, "SELECT 1 FROM audit_events WHERE action = 'automation.activated'"
-    )
-    assert len(activated) == 1
-    [note] = await rows(engine, "SELECT title FROM notifications")
-    assert note["title"].endswith(", which is on")
-
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 1)
     args = {
-        "name": "DM hours",
+        "name": "DM price",
         "account": setup.account_id,
         "trigger": "dm_keyword",
-        "keywords": ["hours"],
-        "dm_text": "We open at 9.",
-        "turn_on": True,
+        "keywords": ["price", "cost"],
+        "dm_text": "It's RS 500.",
+        "link_button": {"title": "Shop", "url": "https://example.com/shop"},
     }
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 2)
-    token = structured(await call(mcp_app, key, "create_automation", args))["confirmation_token"]
-    monkeypatch.setitem(ENTITLEMENTS["active_automations"], "max", 1)
-    # The preview refuses, and so does a confirmed call whose preview was fine when it was made.
-    for extra in ({}, {"confirmed": True, "confirmation_token": token}):
-        error = error_of(await call(mcp_app, key, "create_automation", {**args, **extra}))
-        assert (error["code"], error["entitlement"]) == ("quota_exceeded", "active_automations")
-        assert "Pause one" in error["message"]
-        assert "1 are on" in error["message"]
-    assert len(await rows(engine, "SELECT 1 FROM automations")) == 1  # nothing was created
-    off = structured(await confirm(mcp_app, key, "create_automation", {**args, "turn_on": False}))
-    assert off["status"] == "draft"
-    assert off["active_automations"] == {"on_now": 1, "allowed": 1}
+    made = structured(await confirm(mcp_app, key, "create_automation", args))
+    assert made["status"] == "draft"
+    assert made["posts"] == "DMs, not posts"
+    assert made["link_buttons"] == [{"title": "Shop", "url": "https://example.com/shop"}]
+    assert f"/automations/{made['automation_id']}" in made["next_step"]
+    assert made["dashboard_url"].endswith(f"/automations/{made['automation_id']}")
+    [row] = await rows(engine, "SELECT status, activated_at FROM automations")
+    assert (row["status"], row["activated_at"]) == ("draft", None)
+    assert await rows(engine, "SELECT 1 FROM audit_events WHERE action LIKE '%activated'") == []
+    # The old switch is an unknown argument now, not ignored.
+    refused = error_of(await call(mcp_app, key, "create_automation", {**args, "turn_on": True}))
+    assert refused["code"] == "validation_error"
+    assert len(await rows(engine, "SELECT 1 FROM automations")) == 1
+
+
+async def test_a_person_turning_on_a_draft_keeps_what_was_approved(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    """A confirmation token from before it went on doesn't change it afterwards."""
+    draft = await make_automation(
+        engine, workspace_id=setup.wid, account_id=setup.account_id, status="draft"
+    )
+    change = {"automation_id": str(draft), "dm_text": "New words"}
+    token = structured(await call(mcp_app, key, "update_automation", change))["confirmation_token"]
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE automations SET status = 'active'"))
+    refused = error_of(
+        await call(
+            mcp_app,
+            key,
+            "update_automation",
+            {**change, "confirmed": True, "confirmation_token": token},
+        )
+    )
+    assert refused["code"] == "conflict"
+    [row] = await rows(engine, "SELECT message_text FROM automations")
+    assert row["message_text"] != "New words"
 
 
 async def test_overlaps_with_live_automations_are_shown(
@@ -378,7 +367,7 @@ async def test_update_previews_then_changes_the_automation(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
     older, newer = await two_posts(engine, setup)
-    made = structured(await confirm(mcp_app, key, "create_automation", price_args(turn_on=True)))
+    made = structured(await confirm(mcp_app, key, "create_automation", price_args()))
     automation_id = made["automation_id"]
     change = {
         "automation_id": automation_id,
@@ -391,7 +380,7 @@ async def test_update_previews_then_changes_the_automation(
     assert preview["preview"] is True
     assert preview["keywords"] == ["price", "rate"]
     assert preview["post"]["post_id"] == str(older)
-    assert preview["status"] == "active"  # the tool never turns it on or off
+    assert preview["status"] == "draft"  # the tool never turns it on or off
     [row] = await rows(engine, "SELECT message_text, public_reply_texts FROM automations")
     assert row["message_text"] == "Hi {first_name}! It's RS 500."  # unchanged by the preview
     assert row["public_reply_texts"] == []
@@ -406,7 +395,7 @@ async def test_update_previews_then_changes_the_automation(
             {**change, "confirmed": True, "confirmation_token": preview["confirmation_token"]},
         )
     )
-    assert (done["preview"], done["status"]) == (False, "active")
+    assert (done["preview"], done["status"]) == (False, "draft")
     [row] = await rows(engine, "SELECT * FROM automations")
     assert row["message_text"] == "It's RS 450 this week."
     assert row["public_reply_texts"] == ["Check your DMs!"]
@@ -451,6 +440,7 @@ async def test_update_refuses_flows_and_other_shapes(
         engine,
         workspace_id=setup.wid,
         account_id=setup.account_id,
+        status="paused",
         action="ai_reply",
         ai_instructions="Answer from the knowledge base.",
     )
@@ -460,7 +450,9 @@ async def test_update_refuses_flows_and_other_shapes(
     assert refused_ai["code"] == "conflict"
     assert "AI" in refused_ai["message"]
 
-    dm = await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id)
+    dm = await make_automation(
+        engine, workspace_id=setup.wid, account_id=setup.account_id, status="paused"
+    )
     dm_post = error_of(
         await call(mcp_app, key, "update_automation", {"automation_id": str(dm), "post": "any"})
     )
@@ -509,7 +501,7 @@ async def test_get_analytics_summary_reads_latest_through_the_same_resolver(
     assert bad["code"] == "validation_error"
 
 
-async def test_what_activation_would_refuse_is_shown_on_a_draft_and_stops_a_live_change(
+async def test_what_activation_would_refuse_is_shown_on_a_draft(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
     long_dm = "x" * 1500  # over Instagram's 1,000 bytes, under the argument's backstop
@@ -523,22 +515,29 @@ async def test_what_activation_would_refuse_is_shown_on_a_draft_and_stops_a_live
     preview = structured(await call(mcp_app, key, "create_automation", args))
     assert preview["needs_before_on"]
     assert "1,000" in preview["needs_before_on"][0] or "bytes" in preview["needs_before_on"][0]
-    refused = error_of(await call(mcp_app, key, "create_automation", {**args, "turn_on": True}))
-    assert refused["code"] == "validation_error"
     assert await rows(engine, "SELECT 1 FROM automations") == []
 
-    live = await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id)
-    broken = error_of(
-        await call(
-            mcp_app,
-            key,
-            "update_automation",
-            {"automation_id": str(live), "dm_text": long_dm},
+
+async def test_update_refuses_an_automation_that_is_on_and_pausing_opens_it(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    live = str(await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id))
+    change = {"automation_id": live, "dm_text": "New words"}
+    for field in ({"dm_text": "New words"}, {"keywords": ["other"]}, {"name": "Other"}):
+        refused = error_of(
+            await call(mcp_app, key, "update_automation", {"automation_id": live, **field})
         )
-    )
-    assert broken["code"] == "validation_error"
-    [row] = await rows(engine, "SELECT message_text FROM automations")
-    assert row["message_text"] != long_dm
+        assert refused["code"] == "conflict"
+        assert "pause_automation" in refused["message"]
+        assert f"/automations/{live}" in refused["message"]
+    [row] = await rows(engine, "SELECT message_text, name FROM automations")
+    assert row["message_text"] != "New words"
+    assert row["name"] != "Other"
+
+    await call(mcp_app, key, "pause_automation", {"automation_id": live})
+    done = structured(await confirm(mcp_app, key, "update_automation", change))
+    assert (done["dm_text"], done["status"]) == ("New words", "paused")
+    assert f"/automations/{live}" in done["next_step"]
 
 
 async def test_update_refuses_a_live_comments_automation(
@@ -550,6 +549,7 @@ async def test_update_refuses_a_live_comments_automation(
         account_id=setup.account_id,
         trigger="comment_keyword",
         comment_surface="live",
+        status="draft",
     )
     refused = error_of(
         await call(
@@ -585,7 +585,7 @@ async def test_confirming_needs_a_valid_token_for_exactly_those_arguments(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await two_posts(engine, setup)
-    args = price_args(turn_on=True)
+    args = price_args()
     tool = "create_automation"
     good = structured(await call(mcp_app, key, tool, args))["confirmation_token"]
     assert good
@@ -601,15 +601,13 @@ async def test_confirming_needs_a_valid_token_for_exactly_those_arguments(
     # The first call of the owner's report: live with no preview.
     await refused({**args, "confirmed": True})
     await refused({**args, "confirmed": True, "confirmation_token": "wrong"})
-    await refused({**args, "confirmed": True, "confirmation_token": good[:-1] + "0"})
+    tampered = good[:-1] + ("1" if good.endswith("0") else "0")
+    await refused({**args, "confirmed": True, "confirmation_token": tampered})
     await refused({**args, "confirmed": True, "confirmation_token": "99999999999.é"})
     # Changed arguments need a new preview, whichever one changed.
     changed = {"confirmed": True, "confirmation_token": good}
     await refused({**args, **changed, "dm_text": "RS 900"})
     await refused({**args, **changed, "keywords": ["price", "cost"]})
-    # Off in the preview, on in the call: the one change that matters most.
-    off_token = structured(await call(mcp_app, key, tool, price_args()))["confirmation_token"]
-    await refused({**args, "confirmed": True, "confirmation_token": off_token})
     # Another connection's preview isn't this one's.
     other, _ = await make_key(client, setup, *SCOPES, name="Other laptop")
     theirs = structured(await call(mcp_app, other, tool, args))["confirmation_token"]
@@ -631,14 +629,16 @@ async def test_confirming_needs_a_valid_token_for_exactly_those_arguments(
     done = structured(
         await call(mcp_app, key, tool, {**args, "confirmed": True, "confirmation_token": fresh})
     )
-    assert done["status"] == "active"
+    assert done["status"] == "draft"
 
 
 async def test_update_automation_needs_the_token_too(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
-    live = await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id)
-    change = {"automation_id": str(live), "dm_text": "New words"}
+    paused = await make_automation(
+        engine, workspace_id=setup.wid, account_id=setup.account_id, status="paused"
+    )
+    change = {"automation_id": str(paused), "dm_text": "New words"}
     error = error_of(await call(mcp_app, key, "update_automation", {**change, "confirmed": True}))
     assert error["field_errors"][0]["field"] == "confirmation_token"
     token = structured(await call(mcp_app, key, "update_automation", change))["confirmation_token"]
@@ -667,7 +667,7 @@ async def test_automations_write_alone_doesn_t_open_the_new_tools(
     async with connect(mcp_app, old_key) as mcp:
         names = {t.name for t in (await mcp.list_tools()).tools}
         refused = error_of(await mcp.call_tool("create_automation", price_args(post="any")))
-    assert {"pause_automation", "resume_automation", "list_automations"} <= names
+    assert {"pause_automation", "list_automations"} <= names
     assert names.isdisjoint({"create_automation", "update_automation"})
     assert refused["code"] == "forbidden"
     assert "automations:create" in refused["message"]

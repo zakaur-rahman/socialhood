@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
+from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.integrations import (
     DeliveryStatus,
@@ -32,6 +33,7 @@ from socialhood.models.integrations import (
     WebhookDelivery,
     WebhookEndpoint,
 )
+from socialhood.repositories import workspaces
 from socialhood.schemas.integrations import WebhookDelivery as DeliveryOut
 from socialhood.schemas.integrations import (
     WebhookDeliveryList,
@@ -114,6 +116,7 @@ async def create(
     url = _url(body.url, allow_private=allow_private)
     limit = entitlement(await current_plan(session), "webhook_endpoints")
     if limit is not None:
+        await workspaces.lock_limit(session, "webhook_endpoints", require_workspace())
         count = await session.scalar(  # a Zapier REST hook (GR-26) takes no slot
             select(func.count())
             .select_from(WebhookEndpoint)

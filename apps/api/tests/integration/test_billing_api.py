@@ -28,6 +28,7 @@ from tests.support.billing import (
     post_dodo_event,
     set_subscription,
 )
+from tests.support.dodo import checkout_metadata
 from tests.support.ingest import stream
 
 
@@ -102,7 +103,7 @@ async def test_checkout_starts_the_trial_for_an_eligible_workspace(
     [params] = fake_dodo.checkouts
     assert (params.product_id, params.customer_email) == (PRO_PRODUCT, "owner@example.com")
     assert params.return_url == f"{WEB}/w/{owner.slug}/settings/billing?checkout=return"
-    assert dict(params.metadata) == {"workspace_id": owner.wid}
+    assert dict(params.metadata) == checkout_metadata(owner.wid)
     assert params.trial_period_days == 7
     assert (await owner.billing())["plan"] == "free"  # nothing changes until the webhook
 
@@ -160,6 +161,7 @@ async def test_business_checkout_is_422_until_its_product_is_set(
         "free": True,
         "pro": True,
         "max": False,
+        "agency": False,
     }
 
 
@@ -271,7 +273,7 @@ async def test_the_public_plan_list_has_entitlements_prices_and_the_trial(
 
     assert response.status_code == 200, response.text
     items = {item["plan"]: item for item in response.json()["items"]}
-    assert list(items) == ["free", "pro", "max"]
+    assert list(items) == ["free", "pro", "max", "agency"]
     assert items["free"]["price"] is None
     assert items["pro"]["price"] == {
         "plan": "pro",
@@ -297,7 +299,7 @@ async def test_prices_are_left_out_when_dodo_cant_give_them(
 ) -> None:
     fake_dodo.products.clear()
     items = (await client.get("/v1/billing/plans")).json()["items"]
-    assert [item["price"] for item in items] == [None, None, None]
+    assert [item["price"] for item in items] == [None, None, None, None]
 
 
 async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) -> None:
@@ -473,8 +475,9 @@ async def test_the_plan_list_marks_paid_plans_unavailable_without_dodo(
         "free": True,
         "pro": False,
         "max": False,
+        "agency": False,
     }
-    assert [item["price"] for item in items.values()] == [None, None, None]
+    assert [item["price"] for item in items.values()] == [None, None, None, None]
     # The entitlements still show what each plan will include.
     assert {e["key"] for e in items["pro"]["entitlements"]} == set(ENTITLEMENTS)
     assert fake_dodo.calls == []

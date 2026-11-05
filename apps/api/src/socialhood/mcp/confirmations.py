@@ -12,8 +12,10 @@ means a new preview), and the expiry. The key is derived from each of TOKEN_ENCR
 the widget's tokens (security/widget_tokens.py): the newest signs, every configured key verifies.
 
 It proves a preview was made by this connection. It can't prove a person read it: that rests on
-the AI app, and one set to always allow the tools can confirm by itself. It isn't single use
-either; the dedupe window covers the same token sent twice, and is as long as the token lasts.
+the AI app, and one set to always allow the tools can preview and confirm by itself. A token
+runs its change once: ``claim`` marks it used in Valkey just before the tool runs, and ``release``
+gives it back when the call fails, so a failed call can be retried. A retry of a call that worked
+never gets this far: its idempotency key or the dedupe window returns the first result first.
 """
 
 from __future__ import annotations
@@ -23,14 +25,19 @@ import binascii
 import hashlib
 import hmac
 import json
+import uuid
 from collections.abc import Mapping, Sequence
 from typing import Final
 
 from pydantic import BaseModel
+from redis.asyncio import Redis
 
 from socialhood.errors import ApiError, FieldError
 from socialhood.mcp.context import ToolCall
+from socialhood.observability.logging import get_logger
 from socialhood.settings import ConfigurationError
+
+log = get_logger(__name__)
 
 PURPOSE = b"socialhood/mcp-confirmation/v1"
 TTL_S: int = 900
@@ -46,6 +53,15 @@ THEN = (
 MISSING = f"This change needs a preview first. {THEN}"
 EXPIRED = f"That preview has expired. {THEN}"
 MISMATCH = f"That confirmation_token isn't for this change on this connection. {THEN}"
+USED = f"That preview has already been used. {THEN}"
+
+
+def next_step(then: str) -> str:
+    """What a preview tells the AI app to do."""
+    return (
+        "Nothing was changed. Show the member this. After they agree, call again with the same "
+        f"arguments, confirmed: true and this confirmation_token to {then}."
+    )
 
 
 def _mac_key(fernet_key: str) -> bytes | None:
@@ -110,3 +126,31 @@ def require(call: ToolCall, args: BaseModel, token: str | None, **resolved: obje
         raise _refused(MISMATCH)
     if expires <= int(call.now.timestamp()):
         raise _refused(EXPIRED)
+
+
+async def claim(redis: Redis, credential_id: uuid.UUID, args: BaseModel) -> str | None:
+    """Mark a confirmed call's token used, or refuse one already used. Returns what ``release``
+    takes, or None when there is nothing to give back. Valkey being down never blocks a write
+    (mcp/idempotency.py); the token's other limits still hold."""
+    token = getattr(args, ARGUMENT, None)
+    if not token or not getattr(args, "confirmed", False):
+        return None
+    name = f"mcp-confirm:{credential_id}:{hashlib.sha256(token.encode()).hexdigest()}"
+    try:
+        first = await redis.set(name, "1", nx=True, ex=TTL_S)
+    except Exception:
+        log.warning("mcp_confirmation_claim_unavailable")
+        return None
+    if not first:
+        raise _refused(USED)
+    return name
+
+
+async def release(redis: Redis, claimed: str | None) -> None:
+    """Give a token back after a call that changed nothing."""
+    if claimed is None:
+        return
+    try:
+        await redis.delete(claimed)
+    except Exception:
+        log.warning("mcp_confirmation_claim_unavailable")

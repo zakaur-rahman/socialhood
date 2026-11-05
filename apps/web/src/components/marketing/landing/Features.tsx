@@ -59,7 +59,7 @@ export const FEATURES: Feature[] = [
     note: "Shopify sync arrives with our Shopify app listing.",
   },
   {
-    title: "Sequences, and broadcasts soon",
+    title: "Follow-up sequences",
     icon: Timer,
     body: "Timed follow-ups after a lead is captured or a tag is added, stopping when they reply. WhatsApp broadcasts are coming soon, once consent rules are checked.",
   },
@@ -105,7 +105,7 @@ export const FEATURE_GROUPS: { title: string; icon: LucideIcon; items: Feature[]
     icon: Workflow,
     items: [
       byTitle("Scheduling, Reels and Stories"),
-      byTitle("Sequences, and broadcasts soon"),
+      byTitle("Follow-up sequences"),
       byTitle("Work from Claude, ChatGPT and Codex"),
     ],
   },

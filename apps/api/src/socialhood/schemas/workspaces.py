@@ -13,7 +13,7 @@ from socialhood.schemas.inbox import ContactSummary, EscalationReason, IntentNam
 from socialhood.schemas.posts import CommentStats
 
 RoleName = Literal["owner", "admin", "agent"]
-PlanName = Literal["free", "pro", "max"]
+PlanName = Literal["free", "pro", "max", "agency"]
 
 
 class WorkspaceSummary(ResponseModel):

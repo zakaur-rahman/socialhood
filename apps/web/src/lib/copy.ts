@@ -390,56 +390,51 @@ export const aiCopy = {
 
 // ---- billing (P8: F-15, UX-SCR-07, FR-BIL-02…06, §4.7 402 codes)
 
-export type PlanName = "free" | "pro" | "max";
+export type PlanName = "free" | "pro" | "max" | "agency";
+export type PaidPlan = Exclude<PlanName, "free">;
+export type BillingPeriod = "month" | "six_month";
 
-/** C-172: the stored plan keys stay free, pro and max; they are shown as Free, Creator and Business. */
-export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Creator", max: "Business" };
+/** C-172, C-174: the stored plan keys; pro is shown as Creator and max as Business. */
+export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Creator", max: "Business", agency: "Agency" };
 
 /**
  * C-172, C-173: what the paid plans will cost, shown only while billing is off (the real price from
  * the API replaces it once it is on) so a visitor, and Dodo's reviewer, can see what customers will
  * pay. Never used in structured data (JSON-LD offers) while the plans aren't on sale. Whole US dollars.
  */
-export const PLANNED_PRICE_USD: Record<"pro" | "max", number> = { pro: 15, max: 30 };
+export const PLANNED_PRICE_USD: Record<PaidPlan, Record<BillingPeriod, number>> = {
+  pro: { month: 15, six_month: 81 },
+  max: { month: 30, six_month: 153 },
+  agency: { month: 70, six_month: 315 },
+};
 
 /** C-172: Dodo adds tax at checkout (prices are tax exclusive), so a listed price says so. */
 export const PRICE_TAX_NOTE = "Prices are in US dollars. Tax is added at checkout where it applies.";
 
 /** "$15 a month when we launch" */
-export function plannedPriceLabel(plan: "pro" | "max"): string {
-  return `$${PLANNED_PRICE_USD[plan]} a month when we launch`;
+export function plannedPriceLabel(plan: PaidPlan): string {
+  return `$${PLANNED_PRICE_USD[plan].month} a month when we launch`;
 }
 
 /** "$15": the planned price alone, for a card's big number. */
-export function plannedAmount(plan: "pro" | "max"): string {
-  return `$${PLANNED_PRICE_USD[plan]}`;
+export function plannedAmount(plan: PaidPlan): string {
+  return `$${PLANNED_PRICE_USD[plan].month}`;
+}
+
+/** A planned price in the API's shape, so it formats like a real one (whole US dollars). */
+export function plannedPrice(plan: PaidPlan, period: BillingPeriod): { amount_minor: number; currency: string } {
+  return { amount_minor: PLANNED_PRICE_USD[plan][period] * 100, currency: "USD" };
 }
 
 /**
- * C-173: Agency (renamed from Enterprise, C-172) is a card, not a plan yet: no plan key, no checkout,
- * no entitlements in the API until billing step 2. It shows its price, a "Coming soon" tag and a
- * "Contact us" link. Nothing about uptime guarantees, dedicated support or SSO is promised.
+ * C-174: what Agency says while its monthly product isn't set: "Coming soon" and a Contact us link. Its
+ * price and lines come from the plan data like the others. Nothing about uptime guarantees, dedicated
+ * support or SSO is promised.
  */
-export const AGENCY_PRICE_USD = 70;
-export const AGENCY_AI_CREDITS = 12000;
 export const AGENCY = {
-  name: "Agency",
-  tagline: "For agencies and people managing several brands.",
-  price: `$${AGENCY_PRICE_USD}`,
-  priceNote: "a month",
-  soon: "Coming soon",
   note: "Not on sale yet. Contact us if you're interested.",
   cta: "Contact us",
   href: `mailto:${SUPPORT_EMAIL}`,
-  lines: [
-    "10 each of Instagram, WhatsApp and Facebook; 1 web chat",
-    "10 team members",
-    "Unlimited active automations",
-    `${AGENCY_AI_CREDITS.toLocaleString("en-US")} AI credits a month`,
-    "Unlimited scheduled posts",
-    "50M characters of knowledge",
-    "Full MCP, API keys, Zapier and message history",
-  ],
 } as const;
 
 /** C-173: the quiet line under the plans. */
@@ -472,7 +467,7 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
   },
   channels_total: {
     limitTitle: "Channel limit reached",
-    includes: (n) => `${counted(n, "channel", "channels")} in total`,
+    includes: (n) => `any ${count.format(n)} of Instagram, Facebook or web chat`,
     unlimited: "channels",
   },
   knowledge_characters: {
@@ -706,6 +701,11 @@ export function pricePerMonth(price: { amount_minor: number; currency: string })
   return `${formatPrice(price)} a month`;
 }
 
+/** What was bought: "₹999 a month" or "$81 every 6 months". */
+export function pricePerPeriod(price: { amount_minor: number; currency: string; interval: string }): string {
+  return price.interval === "six_month" ? `${formatPrice(price)} every 6 months` : pricePerMonth(price);
+}
+
 export const billingCopy = {
   upgradeCta: "Upgrade to Creator",
   upgradeToBusiness: "Upgrade to Business",
@@ -725,7 +725,7 @@ export const billingCopy = {
   confirmedBody: "Your new limits are ready to use.",
   slow: "Payment received? It can take a minute. We'll email you when your plan is active.",
   checkoutConflict: "This workspace already has a paid plan. Change it from Manage billing.",
-  maxUnavailable: "Business isn't available yet.",
+  planUnavailable: "That plan isn't available yet.",
   paymentsUnavailable: "Payments aren't available right now. Try again in a few minutes.",
   /** C-149: billing isn't set up on this server, so only Free exists for now. */
   paidPlansSoon: "Paid plans aren't available yet. Everything on Free keeps working.",

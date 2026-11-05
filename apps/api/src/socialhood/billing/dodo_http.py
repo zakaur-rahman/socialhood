@@ -15,7 +15,7 @@ import re
 import time
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, cast, get_args
+from typing import Any, Literal, cast, get_args
 
 import httpx
 
@@ -40,6 +40,11 @@ BASE_URLS = {
 # Dodo ids are prefixed tokens (sub_…, cus_…, pdt_…); anything else never reaches a URL path.
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 _STATUSES = frozenset(get_args(DodoSubscriptionStatus))
+# A product's billing cycle: (payment_frequency_interval, payment_frequency_count).
+_INTERVALS: dict[tuple[str, Any], Literal["month", "six_month"]] = {
+    ("month", 1): "month",
+    ("month", 6): "six_month",
+}
 
 
 def base_url(environment: str) -> str:
@@ -101,26 +106,31 @@ def parse_subscription(data: Mapping[str, Any]) -> DodoSubscription:
 
 
 def parse_price(data: Mapping[str, Any]) -> ProductPrice:
-    """A Product's monthly recurring price (GET /products/{id})."""
+    """A Product's monthly or six-monthly recurring price (GET /products/{id})."""
     product_id = _text(data.get("product_id"))
     price = _mapping(data.get("price"))
     amount = price.get("price")
     currency = price.get("currency")
+    interval = _INTERVALS.get(
+        (
+            str(price.get("payment_frequency_interval", "")).lower(),
+            price.get("payment_frequency_count", 1),
+        )
+    )
     if (
         product_id is None
         or price.get("type") != "recurring_price"
-        or str(price.get("payment_frequency_interval", "")).lower() != "month"
-        or price.get("payment_frequency_count", 1) != 1
+        or interval is None
         or not isinstance(amount, int)
         or not isinstance(currency, str)
     ):
-        raise DodoError("the product has no monthly recurring price")
+        raise DodoError("the product has no monthly or six-monthly recurring price")
     trial = price.get("trial_period_days")
     return ProductPrice(
         product_id=product_id,
         amount_minor=amount,
         currency=currency.upper(),
-        interval="month",
+        interval=interval,
         trial_period_days=trial if isinstance(trial, int) and trial > 0 else 0,
     )
 

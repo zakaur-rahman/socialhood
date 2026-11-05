@@ -18,7 +18,7 @@ import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 
 const ROLE = { owner: "Owner", admin: "Admin", agent: "Agent" } as const;
-const PLAN: Record<string, string> = { free: "Free", pro: "Creator", max: "Business" };
+const PLAN: Record<string, string> = { free: "Free", pro: "Creator", max: "Business", agency: "Agency" };
 
 /** Sends the browser on to the AI app. A seam so tests can watch it. */
 export const navigate = { to: (url: string) => window.location.assign(url) };

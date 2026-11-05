@@ -54,6 +54,7 @@ async def ingest_knowledge_source(
             source_id=uuid.UUID(source_id),
             version=int(version),
             will_retry=will_retry,
+            redis=rt.redis,
         )
 
     async def requeue(delay_s: float) -> None:

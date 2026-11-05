@@ -14,7 +14,8 @@ DODO_ENVIRONMENT; ``Authorization: Bearer {DODO_API_KEY}``), checked against Dod
 on 2026-09-30:
 
 - create_checkout: POST /checkouts {product_cart: [{product_id, quantity: 1}], customer: {email,
-  name}, return_url, metadata: {workspace_id}, subscription_data: {trial_period_days}} ->
+  name}, return_url, metadata: {workspace_id, workspace_sig}, subscription_data:
+  {trial_period_days}} ->
   {session_id, checkout_url}. The product carries its own trial (7 days on the test-mode Pro), so
   the trial is always sent: 7 when eligible, 0 otherwise (0 was verified live to remove it).
 - get_subscription: GET /subscriptions/{id} -> subscription_id, status (pending, active, on_hold,
@@ -27,7 +28,9 @@ on 2026-09-30:
 - create_portal_session: POST /customers/{customer_id}/customer-portal/session?return_url= ->
   {link}.
 - get_product_price: GET /products/{id} -> price {type: recurring_price, price (minor units),
-  currency, payment_frequency_interval (Month), trial_period_days}; cached for 1 h by the caller.
+  currency, payment_frequency_count, payment_frequency_interval, trial_period_days}; 1 Month is
+  monthly, 6 Month is six-monthly (C-174: from docs.dodopayments.com, not recorded from a live
+  call). The caller caches it for 1 h.
 
 Recorded test-mode responses (anonymised) are in tests/fixtures/dodo/.
 """
@@ -78,7 +81,7 @@ class CheckoutParams:
     customer_email: str
     customer_name: str | None
     return_url: str  # {WEB_BASE_URL}/w/{slug}/settings/billing?checkout=return
-    metadata: Mapping[str, str]  # at least {"workspace_id": …}; comes back on every webhook
+    metadata: Mapping[str, str]  # {"workspace_id", "workspace_sig"}; back on every webhook
     trial_period_days: int | None = None  # set only when eligible (TR-BIL-05)
 
 
@@ -122,7 +125,7 @@ class ProductPrice:
     product_id: str
     amount_minor: int
     currency: str  # ISO 4217
-    interval: Literal["month"]
+    interval: Literal["month", "six_month"]
     trial_period_days: int = 0
 
 

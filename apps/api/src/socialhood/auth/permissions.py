@@ -7,8 +7,8 @@ routes and fails for a write route that does not.
 
 - Agents reply, tag and assign, and use Ask Amplychat.
 - Admins also manage automations, knowledge and settings (integrations, webhooks, saved replies,
-  business hours, segments, contact fields, templates), connect channels, publish, read the
-  audit log, and invite agents.
+  business hours, segments, contact fields, templates), connect channels, publish, record payments
+  and refunds on orders, read the audit log, and invite agents.
 - Owners also manage billing, members and ownership, and delete the workspace.
 
 Every role has every permission of the roles below it, so the map is built from the tiers.
@@ -37,6 +37,7 @@ class Permission(StrEnum):
     INTEGRATIONS_MANAGE = "integrations.manage"  # webhook endpoints
     PUBLISHING_MANAGE = "publishing.manage"  # scheduled posts, hashtag groups, captions
     COMMENTS_DELETE = "comments.delete"
+    ORDERS_MONEY = "orders.money"  # record a payment on an order, refund one
     AUDIT_READ = "audit.read"
     MEMBERS_READ = "members.read"
     MEMBERS_INVITE = "members.invite"  # admins invite agents, owners invite anyone
@@ -60,6 +61,7 @@ _ADMIN = _AGENT | {
     Permission.INTEGRATIONS_MANAGE,
     Permission.PUBLISHING_MANAGE,
     Permission.COMMENTS_DELETE,
+    Permission.ORDERS_MONEY,
     Permission.AUDIT_READ,
     Permission.MEMBERS_READ,
     Permission.MEMBERS_INVITE,

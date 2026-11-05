@@ -30,6 +30,7 @@ import {
   STATUS_LABEL,
   STATUS_TONE,
 } from "@/lib/orders/format";
+import { PERMISSION, useCan } from "@/lib/permissions";
 import { formatDayTime } from "@/lib/tz";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -63,6 +64,7 @@ export function OrderSheet({
   const cancel = useCancelOrder(wid);
   const fulfil = useFulfilOrder(wid);
   const refund = useRefundOrder(wid);
+  const { can: allowed } = useCan();
   const [reference, setReference] = useState("");
   const [amount, setAmount] = useState("");
   const [shipNote, setShipNote] = useState("");
@@ -74,7 +76,13 @@ export function OrderSheet({
 
   if (!order) return <Sheet open={false} onOpenChange={onOpenChange} />;
   const current: Order = order;
-  const can = actionsFor(current.status);
+  const statusActions = actionsFor(current.status);
+  const movesMoney = allowed(PERMISSION.moveOrderMoney);
+  const can = {
+    ...statusActions,
+    markPaid: statusActions.markPaid && movesMoney,
+    refund: statusActions.refund && movesMoney,
+  };
   const payments = current.payments ?? [];
   const refunds = current.refunds ?? [];
   const paidSoFar = current.amount_paid_minor ?? 0;
@@ -241,7 +249,10 @@ export function OrderSheet({
           ) : null}
           {current.status === "awaiting_payment" && current.payment_method === "upi" ? (
             <p className="text-sm text-fg-secondary">
-              UPI has no confirmation from the bank. When the customer says they have paid, mark the order paid.
+              UPI has no confirmation from the bank.{" "}
+              {movesMoney
+                ? "When the customer says they have paid, mark the order paid."
+                : "When the customer says they have paid, an owner or admin marks the order paid."}
             </p>
           ) : null}
 

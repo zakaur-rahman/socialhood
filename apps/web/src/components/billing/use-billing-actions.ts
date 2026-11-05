@@ -6,15 +6,15 @@ import { toast } from "sonner";
 import { ApiError } from "@/lib/api/errors";
 import { useCheckout, usePortal } from "@/lib/api/queries";
 import { browser } from "@/lib/billing/browser";
-import { billingCopy, errorMessage } from "@/lib/copy";
+import { billingCopy, errorMessage, type BillingPeriod, type PaidPlan } from "@/lib/copy";
 
-/** C-049: 409 when a paid plan exists, 422 for Max until R2, 503 when Dodo isn't there;
+/** C-049: 409 when a paid plan exists, 422 while a plan or period isn't on sale, 503 when Dodo isn't there;
  * C-149: 503 billing_unavailable while paid plans aren't on sale. */
 export function checkoutErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === "billing_unavailable") return billingCopy.billingUnavailable;
     if (error.status === 409) return billingCopy.checkoutConflict;
-    if (error.status === 422) return billingCopy.maxUnavailable;
+    if (error.status === 422) return billingCopy.planUnavailable;
     if (error.status === 503) return billingCopy.paymentsUnavailable;
     if (error.status === 403) return billingCopy.ownerOnly;
   }
@@ -39,9 +39,9 @@ export function useStartCheckout(wid: string) {
   const checkout = useCheckout(wid);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const start = (plan: "pro" | "max" = "pro") => {
+  const start = (plan: PaidPlan = "pro", period: BillingPeriod = "month") => {
     setError(null);
-    checkout.mutate(plan, {
+    checkout.mutate({ plan, period }, {
       onSuccess: (session) => {
         setLeaving(true);
         browser.assign(session.checkout_url);

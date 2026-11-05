@@ -9,6 +9,7 @@ mocks and DNS is a table, so nothing leaves the machine.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -17,17 +18,22 @@ from typing import Any
 import httpx
 import pytest
 import respx
+from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from socialhood.ai.fake import FakeCall, FakeProvider
 from socialhood.ai.metering import quota
 from socialhood.ai.provider import AIError, EmbedKind
+from socialhood.billing.plans import ENTITLEMENTS
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
+from socialhood.models.identity import Workspace
 from socialhood.security import ssrf
 from socialhood.services.knowledge import ingest
+from socialhood.services.knowledge.answer import try_question
 from socialhood.services.knowledge.retrieval import retrieve
+from socialhood.services.suggestions import drafting, knowledge_port
 from tests.support.ai import make_source
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
@@ -653,6 +659,42 @@ async def test_retrieval_keeps_similar_chunks_of_ready_sources_in_this_workspace
     assert await search(maker, str(a), "   ") == []
 
 
+async def test_every_retrieval_path_leaves_out_a_source_waiting_for_approval(
+    engine: AsyncEngine,
+    maker: async_sessionmaker[AsyncSession],
+    clean_db: None,
+    fake_ai: FakeProvider,
+) -> None:
+    """Chunks are stored here only to prove the read filter: approval is what makes a source ready.
+    Auto replies, suggestions, the widget and automation AI replies all draft through
+    ``retrieve_knowledge``; Ask and MCP search through ``retrieve``."""
+    from tests.support.inbox import make_workspace
+
+    wid = await make_workspace(engine)
+    question, reply = "What is the refund phone?", "Call 9876543210 for refunds."
+    await make_source(
+        engine, workspace_id=wid, question=question, body=reply, status="awaiting_approval"
+    )
+
+    assert await search(maker, str(wid), question) == []
+    with workspace_scope(wid):
+        async with maker() as session:
+            assert await knowledge_port.retrieve_knowledge(session, question) == []
+            assert await drafting.knowledge_mentioning(session, ["9876543210"]) == []
+            found = await try_question(
+                session, maker, workspace=await session.get(Workspace, wid), question=question
+            )
+            assert (found.can_answer, found.sources) == (False, [])
+    # The same source approved and read in is found on each of them.
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE knowledge_sources SET status = 'ready'"))
+    assert [title for title, _ in await search(maker, str(wid), question)] == [question]
+    with workspace_scope(wid):
+        async with maker() as session:
+            assert len(await knowledge_port.retrieve_knowledge(session, question)) == 1
+            assert await drafting.knowledge_mentioning(session, ["9876543210"]) != []
+
+
 async def test_retrieval_returns_at_most_six_of_the_eight_nearest(
     engine: AsyncEngine, maker: async_sessionmaker[AsyncSession], clean_db: None
 ) -> None:
@@ -811,3 +853,65 @@ async def test_knowledge_is_for_admins(ws: Ws, engine: AsyncEngine) -> None:
     ):
         response = await ws.call(method, path)
         assert response.status_code == 403, f"{method} {path}"
+
+
+# ---------------------------------------------------------------- limits at store and embed time
+
+
+async def test_a_workspace_past_its_daily_embedding_budget_fails_the_source(
+    maker: async_sessionmaker[AsyncSession], http: httpx.AsyncClient, ws: Ws, redis: Redis
+) -> None:
+    source = await ws.ok(
+        "POST", "/knowledge-sources", 201, json={"type": "text", "title": "T", "body": "Hours."}
+    )
+    day = datetime.now(UTC)
+    await redis.set(f"kb_embed:{ws.wid}:{day:%Y%m%d}", 200_000 * ingest.EMBED_DAILY_PLAN_MULTIPLE)
+
+    outcome = await ingest.ingest_source(
+        maker,
+        http,
+        workspace_id=uuid.UUID(ws.wid),
+        source_id=uuid.UUID(source["id"]),
+        version=source["version"],
+        will_retry=False,
+        redis=redis,
+    )
+
+    assert outcome == "failed"
+    again = await ws.ok("GET", f"/knowledge-sources/{source['id']}")
+    assert again["error"] == ingest.EMBED_LIMIT_REACHED
+
+
+async def test_two_sources_read_side_by_side_cant_both_pass_the_limit(
+    maker: async_sessionmaker[AsyncSession],
+    http: httpx.AsyncClient,
+    ws: Ws,
+    engine: AsyncEngine,
+    dns: dict[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both pass the check after reading, because neither has stored yet; only the first to store
+    may keep its characters."""
+    monkeypatch.setitem(ENTITLEMENTS["knowledge_characters"], "free", 30)
+    made = [
+        await ws.ok(
+            "POST",
+            "/knowledge-sources",
+            201,
+            json={"type": "url", "url": f"https://shop.example/{name}"},
+        )
+        for name in ("a", "b")
+    ]
+
+    async def read_page(_: str) -> ssrf.Page:
+        return ssrf.Page(url="https://shop.example/", content=b"", content_type="text/html")
+
+    monkeypatch.setattr(ingest, "_fetch", read_page)
+    monkeypatch.setattr(
+        ingest.extract, "web_page", lambda *_: ingest.extract.WebText("x" * 20, None)
+    )
+    outcomes = await asyncio.gather(*(run_ingest(maker, http, ws, source) for source in made))
+
+    assert sorted(outcomes) == ["failed", "ready"]
+    [total] = await rows(engine, "SELECT sum(char_count) AS used FROM knowledge_sources")
+    assert total["used"] == 20

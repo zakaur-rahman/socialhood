@@ -102,6 +102,46 @@ def test_no_token_says_to_preview_first() -> None:
     assert "show it to the member" in message
 
 
+class FakeValkey:
+    def __init__(self) -> None:
+        self.keys: set[str] = set()
+
+    async def set(self, name: str, value: str, *, nx: bool, ex: int) -> bool:
+        assert nx
+        assert ex == confirmations.TTL_S
+        if name in self.keys:
+            return False
+        self.keys.add(name)
+        return True
+
+    async def delete(self, name: str) -> None:
+        self.keys.discard(name)
+
+
+async def test_a_token_runs_once_unless_the_call_fails() -> None:
+    redis: Any = FakeValkey()
+    args = Args(confirmed=True, confirmation_token="1.abc", idempotency_key="one-00001")
+    claimed = await confirmations.claim(redis, CREDENTIAL, args)
+    # A failed call gives it back, so the retry can run.
+    await confirmations.release(redis, claimed)
+    assert await confirmations.claim(redis, CREDENTIAL, args)
+    # After that, a new retry key doesn't make it a new approval.
+    other = args.model_copy(update={"idempotency_key": "two-00002"})
+    with pytest.raises(ApiError) as caught:
+        await confirmations.claim(redis, CREDENTIAL, other)
+    assert caught.value.errors[0].field == "confirmation_token"
+    assert "already been used" in str(caught.value.detail)
+    # Another connection's identical token isn't this one's.
+    assert await confirmations.claim(redis, uuid.uuid4(), args)
+
+
+async def test_a_preview_claims_nothing() -> None:
+    redis: Any = FakeValkey()
+    assert await confirmations.claim(redis, CREDENTIAL, Args()) is None
+    assert await confirmations.claim(redis, CREDENTIAL, Args(confirmed=True)) is None
+    assert redis.keys == set()
+
+
 def test_a_rotated_key_still_verifies_a_live_preview() -> None:
     token = confirmations.issue(call(keys=[OLD_KEY]), Args())
     confirmations.require(call(keys=[NEW_KEY, OLD_KEY]), Args(), token)

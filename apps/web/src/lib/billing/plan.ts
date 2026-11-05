@@ -4,7 +4,8 @@
  * from Dodo's signed webhook as usage.updated (C-049).
  */
 import type { BillingPrice, BillingState, EntitlementValue, PlanOffer, UsageMeter } from "@/lib/api/types";
-import { PLAN_NAME, billingCopy, pricePerMonth, shortDate, type PlanName } from "@/lib/copy";
+import { PLAN_NAME, billingCopy, formatPrice, plannedPrice, pricePerPeriod, shortDate, type PlanName } from "@/lib/copy";
+import table from "@/lib/marketing/plan-table.json";
 import { dayKey } from "@/lib/tz";
 
 const DAY_MS = 86_400_000;
@@ -22,17 +23,44 @@ export function daysUntil(iso: string, now: Date = new Date()): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY_MS));
 }
 
-/** The paid plan's price, from GET …/billing (F-15) or the public plan list. */
+/** The paid plan's monthly price, from GET …/billing (F-15) or the public plan list. */
 export function priceOf(
   plan: PlanName,
   billing: BillingState | undefined,
   plans?: PlanOffer[] | undefined,
 ): BillingPrice | null {
   return (
-    billing?.prices.find((price) => price.plan === plan) ??
+    billing?.prices.find((price) => price.plan === plan && price.interval === "month") ??
     plans?.find((offer) => offer.plan === plan)?.price ??
     null
   );
+}
+
+type Money = { amount_minor: number; currency: string };
+
+/** A six-month card's price: "$81" and "($13.50 a month), save 10%". */
+export type SixMonthOffer = { total: string; note: string; planned: boolean };
+
+/**
+ * C-174: what a plan's six-month card shows: Dodo's price when it is on sale; the planned price while
+ * the plan isn't on sale at all; null (keep the monthly price, no six-month button) when the plan is
+ * on sale monthly with no six-month price.
+ */
+export function sixMonthOffer(offer: {
+  plan: PlanName;
+  available: boolean;
+  price?: Money | null;
+  six_month_price?: Money | null;
+}): SixMonthOffer | null {
+  if (offer.plan === "free") return null;
+  const planned = !offer.six_month_price;
+  if (planned && offer.available) return null;
+  const six = offer.six_month_price ?? plannedPrice(offer.plan, "six_month");
+  const month = planned ? plannedPrice(offer.plan, "month") : offer.price;
+  const perMonth = formatPrice({ amount_minor: Math.round(six.amount_minor / 6), currency: six.currency });
+  const save =
+    month && month.currency === six.currency ? Math.round((1 - six.amount_minor / (6 * month.amount_minor)) * 100) : 0;
+  return { total: formatPrice(six), note: `(${perMonth} a month)${save > 0 ? `, save ${save}%` : ""}`, planned };
 }
 
 export function entitlementOf(entitlements: EntitlementValue[] | undefined, key: string): EntitlementValue["value"] | undefined {
@@ -74,8 +102,8 @@ export type PlanStatus = {
 export function planStatus(billing: BillingState, timeZone: string, now: Date = new Date()): PlanStatus {
   const name = PLAN_NAME[billing.plan];
   const date = (iso: string | null | undefined) => (iso ? billingDate(iso, timeZone, now) : null);
-  const price = priceOf(billing.plan, billing);
-  const perMonth = price ? pricePerMonth(price) : null;
+  // What this workspace bought, not the plan's monthly price (C-174).
+  const perMonth = billing.current_price ? pricePerPeriod(billing.current_price) : null;
 
   switch (billing.status) {
     case "trialing": {
@@ -223,7 +251,7 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
  * has them, else the AI mode). Six or seven lines, in this order; the full table has the rest.
  */
 const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => string | null }[] = [
-  { key: "channels_total", label: (v) => (typeof v === "number" ? `${v} channels in total (Instagram, Facebook, web chat)` : null) },
+  { key: "channels_total", label: (v) => (typeof v === "number" ? `Any ${v} of Instagram, Facebook or web chat` : null) },
   {
     key: "accounts_per_platform",
     label: (v) =>
@@ -235,7 +263,11 @@ const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => st
   },
   { key: "members", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "team member" : "team members"}` : null) },
   { key: "active_automations", label: (v) => (v === null ? "Unlimited automations" : typeof v === "number" ? `${fmt(v)} active automations` : null) },
-  { key: "ai_credits_monthly", label: (v) => (typeof v === "number" ? `${fmt(v)} AI credits a month` : null) },
+  {
+    key: "ai_credits_monthly",
+    label: (v) =>
+      typeof v === "number" ? `${fmt(v)} AI credits a month, up to about ${fmt(Math.floor(v / table.credit_costs.auto_reply))} AI replies` : null,
+  },
   { key: "scheduled_posts_monthly", label: (v) => (v === null ? "Unlimited scheduled posts" : typeof v === "number" ? `${fmt(v)} scheduled posts a month` : null) },
   { key: "knowledge_characters", label: (v) => (typeof v === "number" ? `${compact(v)} characters of knowledge` : null) },
 ];

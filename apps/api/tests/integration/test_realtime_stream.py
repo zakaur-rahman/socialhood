@@ -120,6 +120,15 @@ def parse(chunk: str) -> dict[str, str]:
     return fields
 
 
+async def test_a_blocking_read_outlasts_the_clients_default_timeout(redis: Redis) -> None:
+    wid = uuid.uuid4()
+    reader = stream.connect(get_settings().redis_url, wid)
+    try:
+        assert await reader.xread({stream_key(wid): "$"}, block=6_000) == []
+    finally:
+        await reader.aclose()
+
+
 async def test_the_stream_sends_retry_then_entries_in_order(redis: Redis) -> None:
     wid = uuid.uuid4()
     start = await stream.start_position(redis, stream_key(wid), None)
@@ -143,6 +152,31 @@ async def test_the_stream_sends_retry_then_entries_in_order(redis: Redis) -> Non
         for i, event_id in enumerate(ids)
     ]
     assert chunks[0].endswith("\n\n")
+    await until_closed(redis, wid)
+
+
+async def test_a_hidden_event_type_is_skipped(redis: Redis) -> None:
+    wid = uuid.uuid4()
+    start = await stream.start_position(redis, stream_key(wid), None)
+    reader = stream.connect(get_settings().redis_url, wid)
+    body = stream.event_stream(
+        reader,
+        wid,
+        start,
+        is_disconnected=never(),
+        hidden=stream.PUBLISHING_EVENTS,
+        block_ms=5_000,
+    )
+
+    async with asyncio.timeout(TIMEOUT_S):
+        assert await anext(body) == "retry: 3000\n\n"
+        await published(redis, wid, 1, "scheduled_post.updated")
+        [shown] = await published(redis, wid, 1, "message.created")
+        chunk = await anext(body)
+        await body.aclose()
+
+    assert parse(chunk)["id"] == shown
+    assert parse(chunk)["event"] == "message.created"
     await until_closed(redis, wid)
 
 

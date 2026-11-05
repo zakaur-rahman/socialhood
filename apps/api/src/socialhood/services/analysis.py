@@ -8,7 +8,9 @@ job:
 
 1. skips when AI analysis is off for the account (FR-PRV-02: no message text reaches the
    provider), when the conversation has no customer message in its last 12, or when that message
-   already has an analysis;
+   already has an analysis. A contact over their limit (ai/metering.contact_admitted: 30 analyses
+   an hour, 60 a day) gets no analysis, so no suggestion or auto reply either, and in Suggest or
+   Auto mode the conversation goes to a person;
 2. loads the last 12 messages, marks the newest customer message TARGET and reserves 1 credit; with
    the credits used up it stops before any call and messaging carries on (FR-AI-05);
 3. calls the provider with AI_MODEL_ANALYSIS, temperature 0, 400 tokens, 8 s and the versioned
@@ -46,7 +48,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.ai import prompts
-from socialhood.ai.metering import Meter, QuotaExceeded, metered
+from socialhood.ai.metering import Meter, QuotaExceeded, contact_admitted, metered
 from socialhood.ai.provider import AIError, Turn
 from socialhood.ai.registry import get_provider
 from socialhood.db.tenancy import require_workspace, workspace_scope
@@ -116,6 +118,7 @@ Outcome = Literal[
     "no_customer_message",
     "already_analysed",
     "quota_exhausted",
+    "contact_limited",
     "failed",
 ]
 
@@ -132,6 +135,7 @@ class AnalysisRun:
 @dataclass(frozen=True)
 class _Context:
     conversation_id: uuid.UUID
+    contact_id: uuid.UUID
     messages: list[Message]
     target: Message
     business_name: str
@@ -243,7 +247,7 @@ async def _context(session: AsyncSession, conversation_id: uuid.UUID) -> _Contex
     if await analyses.exists_for_message(session, target.id):
         return "already_analysed"
     name, description = await business_profile(session)
-    return _Context(conv.id, messages, target, name, description)
+    return _Context(conv.id, conv.contact_id, messages, target, name, description)
 
 
 # ---------------------------------------------------------------- the job
@@ -346,6 +350,9 @@ async def analyze_conversation(
     if not isinstance(ctx, _Context):
         log.info("analysis_skipped", conversation_id=str(conversation_id), reason=ctx)
         return AnalysisRun(ctx)
+    if not await contact_admitted(redis, ctx.contact_id, "analysis"):
+        await _hand_to_person(sessionmaker, redis, workspace_id, conversation_id, now)
+        return AnalysisRun("contact_limited")
 
     prompt = prompts.load("analysis")
     system = prompt.render(
@@ -382,6 +389,35 @@ async def analyze_conversation(
 
     values = _values(result.value, ctx=ctx, model=result.model, version=prompt.version, meter=meter)
     return await _store(sessionmaker, redis, settings, workspace_id, ctx, values, now)
+
+
+async def _hand_to_person(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    workspace_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    now: datetime,
+) -> None:
+    """AI stops answering this contact for now: where it would have, a person is told, once."""
+    from socialhood.services.suggestions.auto import escalate
+
+    with workspace_scope(workspace_id):
+        async with sessionmaker() as session:
+            conv = await ingest_rows.lock_conversation(session, conversation_id)
+            acct = await social_accounts.get(session, conv.social_account_id) if conv else None
+            if conv is None or acct is None or conv.needs_human:
+                return
+            if (conv.ai_mode_override or acct.ai_mode) not in SUGGEST_MODES:
+                return
+            await escalate(
+                session,
+                conv,
+                None,
+                message_id=None,
+                now=now,
+                dedupe_key=f"ai_contact_limit:{conv.id}",
+            )
+            await events.commit_and_publish(session, redis)
 
 
 async def _store(

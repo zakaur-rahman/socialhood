@@ -37,10 +37,52 @@ def test_redirect_uri_rules(uri: object, ok: bool) -> None:
     assert clients.valid_redirect_uri(uri) is ok
 
 
+MISREAD_REDIRECTS = [
+    "http://evil.example\\@localhost/cb",
+    "http://evil.example%5C@localhost/cb",
+    "http://a@localhost/cb",
+    "http://a:b@localhost/cb",
+    "http://localhost\\.evil.example/cb",
+    "http://localhost/cb\\..\\x",
+    "http://local\thost/cb",
+    "http://localhost/c\nb",
+    "https://evil.example\\.good.example/cb",
+    "https://evil.example\\@good.example/cb",
+    "https:\\\\evil.example/cb",
+    "https://good.example%2eevil.example/cb",
+    "https://g\uff4fod.example/cb",
+    "https://[::1]x/cb",
+]
+
+
+@pytest.mark.parametrize("uri", MISREAD_REDIRECTS)
+def test_refuses_a_redirect_uri_the_browser_would_read_differently(uri: str) -> None:
+    assert clients.valid_redirect_uri(uri) is False
+    assert not clients.is_loopback(uri)
+    # Asked for at authorize, registered or not.
+    for registered in (["http://localhost/cb", "https://good.example/cb"], [uri]):
+        assert not clients.redirect_matches(registered, uri)
+    with pytest.raises(ClientError):
+        clients._redirects([uri], "invalid_redirect_uri")
+    url = "https://client.example/meta.json"
+    with pytest.raises(ClientError):
+        clients.parse_cimd(
+            url,
+            json.dumps({"client_id": url, "client_name": "A", "redirect_uris": [uri]}).encode(),
+        )
+
+
+def test_a_display_or_client_id_url_the_browser_would_read_differently_is_refused() -> None:
+    assert clients._https_or_none("https://evil.example\\.good.example/") is None
+    with pytest.raises(ClientError):
+        clients.check_cimd_url("https://evil.example\\.good.example/meta.json")
+
+
 def test_loopback_matches_on_any_port_and_nothing_else_loosens() -> None:
     registered = ["http://127.0.0.1:3000/callback", "https://claude.ai/api/mcp/auth_callback"]
     assert clients.redirect_matches(registered, "http://127.0.0.1:51123/callback")
     assert clients.redirect_matches(registered, "http://127.0.0.1/callback")
+    assert clients.redirect_matches(["http://[::1]:1/cb"], "http://[::1]:51123/cb")
     assert not clients.redirect_matches(registered, "http://localhost:3000/callback")
     assert not clients.redirect_matches(registered, "http://127.0.0.1:3000/callback/")
     assert not clients.redirect_matches(registered, "https://claude.ai/api/mcp/auth_callback/")

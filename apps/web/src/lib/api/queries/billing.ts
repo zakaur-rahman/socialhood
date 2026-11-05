@@ -30,7 +30,7 @@ export function useBilling(
   });
 }
 
-/** The public plan list (C-049): Free, Creator and Business with entitlements and Dodo prices. */
+/** The public plan list (C-049): Free, Creator, Business and Agency with entitlements and Dodo prices. */
 export function useBillingPlans(enabled = true) {
   const api = useApi();
   return useQuery<PlanList>({
@@ -68,13 +68,13 @@ export function useBillingPayments(wid: string, enabled = true) {
 
 /**
  * F-15 Checkout: Dodo's hosted checkout URL (and whether it starts the trial). 409 when a paid
- * plan exists, 422 for Max until R2 (C-049). The plan changes only when the webhook arrives.
+ * plan exists, 422 while a plan or period isn't on sale. The plan changes only when the webhook arrives.
  */
 export function useCheckout(wid: string) {
   const api = useApi();
-  return useMutation<CheckoutSession, Error, "pro" | "max">({
-    mutationFn: (plan) =>
-      unwrap(api.POST("/v1/w/{wid}/billing/checkout", { params: { path: { wid } }, body: { plan } })),
+  return useMutation<CheckoutSession, Error, { plan: "pro" | "max" | "agency"; period: "month" | "six_month" }>({
+    mutationFn: (body) =>
+      unwrap(api.POST("/v1/w/{wid}/billing/checkout", { params: { path: { wid } }, body })),
   });
 }
 

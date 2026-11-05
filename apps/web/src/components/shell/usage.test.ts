@@ -23,6 +23,7 @@ describe("usageView: who sees the meter, and when it offers Upgrade", () => {
     ["pro", 80, "owner", "warning", true],
     ["pro", 100, "admin", "danger", true],
     ["max", 95, "owner", "warning", false],
+    ["agency", 95, "owner", "warning", false],
   ] as const;
 
   it.each(cases)("%s at %i%% for an %s: %s, upgrade %s", (plan, used, role, tone, upgrade) => {

@@ -7,6 +7,11 @@ is replaced. Ids (`sub_…`, `cus_…`, `pdt_…`, `pay_…`) are test-mode ids.
 
 - `product_pro.json`: `GET /products/{id}` for the Pro product ($10.00 a month, its own 7-day
   trial, `payment_frequency_interval: "Month"`).
+- `product_pro_six_month.json`: **not recorded.** `product_pro.json` changed by hand to what Dodo's
+  API reference shows for a six-month price (C-174, 2026-11-04,
+  https://docs.dodopayments.com/api-reference/products/get-products-1): `payment_frequency_count: 6`
+  with `payment_frequency_interval: "Month"`, and $81.00 with no trial. Replace it with a recorded
+  answer once the owner has made the product.
 - `checkout_session.json`: `POST /checkouts` → `{session_id, checkout_url}`. Sent with
   `subscription_data.trial_period_days` 7 the hosted page shows "7 day free trial", $0.00 today;
   with 0 it shows no trial and $10.00 today (checked by opening both sessions).

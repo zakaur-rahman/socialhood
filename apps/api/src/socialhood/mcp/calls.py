@@ -30,7 +30,7 @@ from socialhood.billing.entitlements import entitlement_error, quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError, FieldError
-from socialhood.mcp import audit, http, results
+from socialhood.mcp import audit, confirmations, http, results
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.idempotency import WriteGuard
 from socialhood.mcp.principal import McpPrincipal, McpRequest
@@ -343,7 +343,9 @@ async def _run(
                 client_name=client_name,
                 tool_name=tool.name,
             )
+            claimed = None
             try:
+                claimed = await confirmations.claim(env.redis, principal.credential_id, args)
                 output = await tool.handler(call, args)
                 if tool.read_only:
                     await session.rollback()
@@ -353,6 +355,7 @@ async def _run(
             except BaseException:
                 await session.rollback()
                 events.discard(session)
+                await confirmations.release(env.redis, claimed)
                 if guard is not None:
                     await guard.release()
                 raise

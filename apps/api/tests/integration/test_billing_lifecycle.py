@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.billing.dodo import DodoError, DodoSubscriptionStatus
 from socialhood.billing.dodo_fake import FakeDodo
 from socialhood.billing.downgrade import apply_downgrade
+from socialhood.billing.reconcile import MISSING_RUNS
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError
@@ -303,3 +304,56 @@ async def test_a_workspace_without_a_dodo_subscription_has_nothing_to_cancel(
         async with maker() as session:
             assert not await workspace_service.cancel_dodo_subscription(session, fake_dodo)
     assert fake_dodo.calls == []
+
+
+# ---------------------------------------------------------------- a subscription Dodo doesn't have
+
+
+async def test_one_not_found_changes_nothing_but_repeated_ones_end_the_plan(
+    owner: Owner, fake_dodo: FakeDodo, redis: Redis
+) -> None:
+    await pro(owner, fake_dodo)
+    del fake_dodo.subscriptions["sub_1"]
+    run = reconcile_all(
+        owner.app.state.sessionmaker, fake_dodo, redis=redis, settings=owner.settings
+    )
+    assert (await run)["corrected"] == 0
+    assert (await owner.sub())["plan"] == "pro"
+
+    for _ in range(MISSING_RUNS - 2):
+        await reconcile_all(
+            owner.app.state.sessionmaker, fake_dodo, redis=redis, settings=owner.settings
+        )
+    assert (await owner.sub())["plan"] == "pro"
+
+    counts = await reconcile_all(
+        owner.app.state.sessionmaker, fake_dodo, redis=redis, settings=owner.settings
+    )
+    assert counts["corrected"] == 1
+    sub = await owner.sub()
+    assert (sub["plan"], sub["status"]) == ("free", "expired")
+
+
+async def test_not_found_with_a_key_that_cant_read_our_product_changes_nothing(
+    owner: Owner, fake_dodo: FakeDodo, redis: Redis
+) -> None:
+    await pro(owner, fake_dodo)
+    del fake_dodo.subscriptions["sub_1"]
+    del fake_dodo.products[PRO_PRODUCT]
+    for _ in range(MISSING_RUNS + 1):
+        await reconcile_all(
+            owner.app.state.sessionmaker, fake_dodo, redis=redis, settings=owner.settings
+        )
+    assert (await owner.sub())["plan"] == "pro"
+
+
+async def test_an_outage_is_not_a_missing_subscription(
+    owner: Owner, fake_dodo: FakeDodo, redis: Redis
+) -> None:
+    await pro(owner, fake_dodo)
+    for _ in range(MISSING_RUNS + 1):
+        fake_dodo.fail_next(DodoError("Dodo timed out", status=503, retryable=True))
+        await reconcile_all(
+            owner.app.state.sessionmaker, fake_dodo, redis=redis, settings=owner.settings
+        )
+    assert (await owner.sub())["plan"] == "pro"

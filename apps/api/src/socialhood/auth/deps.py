@@ -181,6 +181,9 @@ CanManagePublishing = Annotated[
 CanDeleteComments = Annotated[
     WorkspaceContext, Depends(require_permission(Permission.COMMENTS_DELETE))
 ]
+CanMoveOrderMoney = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.ORDERS_MONEY))
+]
 CanReadAudit = Annotated[WorkspaceContext, Depends(require_permission(Permission.AUDIT_READ))]
 CanReadMembers = Annotated[WorkspaceContext, Depends(require_permission(Permission.MEMBERS_READ))]
 CanInviteMembers = Annotated[

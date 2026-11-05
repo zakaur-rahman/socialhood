@@ -25,7 +25,7 @@ export function PlanMatrix() {
             Compare every limit
           </h2>
           <p className="lede">
-            Limits are on features, never on how many contacts you have: contacts are unlimited on every plan. Creator has a{" "}
+            Limits are on features, never on how many contacts you have: contacts are unlimited on every plan. Monthly Creator has a{" "}
             {TRIAL_DAYS.pro}-day free trial, once per workspace.
           </p>
         </div>
