@@ -6,10 +6,9 @@ import { cn } from "@/lib/utils"
 import { CARD_TITLE } from "@/styles/tokens"
 
 /**
- * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092): solid `panel` with no visible
- * edge, told from the page by the surface step and the space around it (`shadow-surface` adds a hair of
- * drop on light); `rounded-xl` for every app card (owner decision D-02). The transparent border keeps
- * the box the size a toned card has.
+ * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092): solid `panel` with a thin
+ * `line-card` edge, a top highlight and a soft drop (`shadow-surface`); `rounded-xl` for every app card
+ * (owner decision D-02).
  *
  * - `padding`: `standard` 16 px for data and dashboard cards, `roomy` 20 px on phones and 24 px
  *   from `md` for settings, billing, forms and plan cards (§3).
@@ -34,7 +33,7 @@ import { CARD_TITLE } from "@/styles/tokens"
  *     </section>
  *   </Card>
  */
-const cardVariants = cva("group/card min-w-0 rounded-xl border border-transparent bg-panel shadow-surface p-(--card-padding) text-fg", {
+const cardVariants = cva("group/card min-w-0 rounded-xl border border-line-card bg-panel shadow-surface p-(--card-padding) text-fg", {
   variants: {
     padding: {
       standard: "[--card-padding:--spacing(4)]",

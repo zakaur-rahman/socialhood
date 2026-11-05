@@ -12,7 +12,7 @@ describe("Card (UI-020)", () => {
   it("is a flat panel with a line edge and the xl radius (D-02), standard padding by default", () => {
     render(<Card>Replies this week</Card>);
     const card = slot("card");
-    expect(card).toHaveClass("rounded-xl", "border", "border-transparent", "bg-panel", "p-(--card-padding)");
+    expect(card).toHaveClass("rounded-xl", "border", "border-line-card", "bg-panel", "p-(--card-padding)");
     expect(card).toHaveAttribute("data-padding", "standard");
     expect(card).toHaveAttribute("data-tone", "default");
     // standard: 16 px, through the variable the card pads with
@@ -32,7 +32,7 @@ describe("Card (UI-020)", () => {
     render(<Card tone="danger">Delete workspace</Card>);
     const card = slot("card");
     expect(card).toHaveAttribute("data-tone", "danger");
-    expect(card).toHaveClass("border", "border-transparent", "border-l-2", "border-l-danger", "bg-panel");
+    expect(card).toHaveClass("border", "border-line-card", "border-l-2", "border-l-danger", "bg-panel");
   });
 
   it("gives the brand tone a brand-line edge in place of the line edge", () => {

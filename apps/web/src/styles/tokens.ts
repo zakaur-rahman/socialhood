@@ -39,6 +39,7 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "panel-veil": { use: "The floating marketing nav over scrolled content", swatch: "bg-panel-veil" },
   // Lines
   line: { use: "Borders", swatch: "bg-line" },
+  "line-card": { use: "A card's thin edge", swatch: "bg-line-card" },
   "line-subtle": { use: "Faint borders", swatch: "bg-line-subtle" },
   "line-strong": { use: "Emphasised borders", swatch: "bg-line-strong" },
   "line-control": { use: "Control edges, 3:1 or more on every surface: fields, selects, checkboxes, switches (D-01)", swatch: "bg-line-control" },
@@ -268,7 +269,7 @@ export const shadowTokens = shadowMeta.map((entry) => ({
 
 /** The card's hair of drop, and what the public site's shared primitives keep (the .site pins in globals.css). */
 const surfaceShadowMeta = [
-  { name: "shadow-surface", use: "A card: no drop on dark, a hair on light", sample: "bg-panel shadow-surface" },
+  { name: "shadow-surface", use: "A card: a top highlight and a soft drop", sample: "bg-panel shadow-surface" },
   { name: "shadow-site-card", use: "A shared Card on the public site", sample: "bg-sheet shadow-site-card" },
   { name: "shadow-site-button-primary", use: "The primary Button on the public site", sample: "bg-ink text-sheet shadow-site-button-primary" },
   { name: "shadow-site-button-secondary", use: "The secondary Button on the public site", sample: "bg-site-control text-ink shadow-site-button-secondary" },
