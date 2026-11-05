@@ -72,7 +72,8 @@ bar, so the two are told apart (§5).
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `line` | near-white 10% (light ink 10%) | Where a line means something: table and list rows, the edges between panes in one frame. **Not around cards** | Change |
+| `line` | near-white 10% (light ink 10%) | Where a line means something: table and list rows, the edges between panes in one frame | Change |
+| `line-card` | near-white 14% (light ink 14%) | A card's thin edge | Add (owner, 2026-11-05) |
 | `line-subtle` | near-white 6% (light ink 6%) | Row dividers inside a card | Keep |
 | `line-strong` | near-white 22% (light ink 24%) | Hover edge on interactive cards; **selected tiles, chips and the current plan**; dashed placeholders; outline button edge | Change |
 | `line-control` | `rgb(235 235 245 / 0.45)` (light ink 55%) | Edges that identify a control: checkbox, radio, switch; text fields and selects through `--input` | **Owner D-01**, applied (C-071) |
@@ -462,7 +463,7 @@ get one.
 
 | Level | Surface | Edge and shadow | Use | Status |
 |---|---|---|---|---|
-| 0 Flat | `panel` on `canvas` | no edge; `shadow-surface` (none on dark, a hair of drop on light) | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
+| 0 Flat | `panel` on `canvas` | cards: a thin `line-card` edge and `shadow-surface`, a top highlight and a soft drop; panes, sidebar and bubbles: no edge | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
 | 1 Floating | `overlay` | a 1 px `line` ring (`ring-1 ring-line`; the toast: a `line-strong` border) plus `shadow-floating`, a dark drop shadow | Popovers, menus, selects, tooltip, toasts, the jump-to-latest pill, drag previews, the sticky save bar | **Owner D-12**, applied (C-071) |
 | 2 Overlay | `overlay` (the phone drawer: `canvas`, with the sidebar card on `panel`, UI-041) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
 | Marketing glow | — | `shadow-brand/10–25` | Marketing pages only | Keep (not in the app) |
@@ -580,7 +581,7 @@ and one safety net in `globals.css`:
 | Tooltip | `ui/tooltip` (level 1 surface on `rounded-md`, an arrow with the same fill and edge) | — | native `title` on meaningful elements (D15) | Change; colour **Owner D-03**, applied (UI-017; C-069) |
 | Toaster | `ui/sonner` | `position` by width; action toasts last 10 s or more | bare `<Toaster>` | Add |
 | Badge | `ui/badge` | `tone`: `neutral` (`hover` fill; notices and labels), `brand` (AI moments), `success`, `warning`, `danger` (soft fills), `count` (`pressed` fill, `fg`), `media` (`media-scrim` at 70% with `on-brand`, for labels on photos and video, with `shape="tag"`; UI-075) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
-| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`, `CardBleed`) | Solid `panel`, no edge (§5). `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` (a `line-strong` edge: the current plan) · exposes its padding (`--card-padding`) so `CardBleed` runs a table or row list to the edges · `CardInset` `padding`: `standard` 16 px (form groups), `compact` 12 px (rows) | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
+| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`, `CardBleed`) | Solid `panel`, a thin `line-card` edge and a soft drop (§5). `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` (a `line-strong` edge: the current plan) · exposes its padding (`--card-padding`) so `CardBleed` runs a table or row list to the edges · `CardInset` `padding`: `standard` 16 px (form groups), `compact` 12 px (rows) | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
 | Alert | `ui/alert` | `tone` · `variant`: `soft`, `outline` · one action (`Button secondary size="sm"`) | BannerSlot internals, 17 callouts, 4 tinted actions (D8, D9) | Add |
 | Meter | `ui/meter` (`role="meter"`) | `kind`: `consumable` (warning at 80%, danger at 100%), `slot` (neutral "All used" at 100%) | UsageMeter, QuotaTile, UsageCard, ScheduleRail, LeadScore (D5) | Add |
 | Progress | `ui/progress` (`role="progressbar"`) | — | upload and analysis bars (D5) | Add |

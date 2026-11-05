@@ -53,7 +53,8 @@
   --color-raised-hover: light-dark(#DEE1F0, #2F2F34);
   --color-segment: light-dark(#FFFFFF, #28282C);       /* the chosen segment or tab, on its `field` track */
   --color-overlay: light-dark(#FFFFFF, #242428);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
-  --color-line: light-dark(rgb(20 24 54 / 0.10), rgb(235 235 245 / 0.10));  /* where a line means something: tables, rows, pane edges. Not around cards */
+  --color-line: light-dark(rgb(20 24 54 / 0.10), rgb(235 235 245 / 0.10));  /* where a line means something: tables, rows, pane edges */
+  --color-line-card: light-dark(rgb(20 24 54 / 0.14), rgb(235 235 245 / 0.14));  /* a card's thin edge */
   --color-line-subtle: light-dark(rgb(20 24 54 / 0.06), rgb(235 235 245 / 0.06));
   --color-line-strong: light-dark(rgb(20 24 54 / 0.24), rgb(235 235 245 / 0.22));
   --color-line-control: light-dark(rgb(20 24 54 / 0.55), rgb(235 235 245 / 0.45));  /* edges that identify a control, 3:1 or more on every surface: dark 3.57 (raised-hover) to 4.00, light 3.61 to 3.91; --input (D-01, C-071, C-128, C-129) */
@@ -270,8 +271,8 @@
   --shadow-floating: 0 8px 24px -6px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.7));
   --shadow-overlay: 0 24px 64px -12px light-dark(rgb(30 35 80 / 0.25), rgb(0 0 0 / 0.8));
 
-  /* A card is solid and has no edge. Dark: none; light: a hair of drop, since white on the pale canvas barely separates. */
-  --shadow-surface: 0 1px 2px light-dark(rgb(30 35 80 / 0.06), transparent);
+  /* A card: a top highlight and a soft drop, with its `line-card` edge (owner, 2026-11-05). */
+  --shadow-surface: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06)), 0 1px 2px light-dark(rgb(30 35 80 / 0.08), rgb(0 0 0 / 0.30)), 0 12px 32px -14px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.65));
 
   /* The public site's shared primitives. Its look doesn't follow the app's (the .site pins below). */
   --shadow-site-card: inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 35 80 / 0.08), 0 12px 32px -14px rgb(30 35 80 / 0.18);

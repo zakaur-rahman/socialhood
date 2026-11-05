@@ -115,7 +115,7 @@ the base changes the shade.
 | Token | Controls |
 |---|---|
 | `canvas` | App and thread background, the page behind everything |
-| `panel` | Cards, sidebar, list pane, headers, composer bar, phone drawer; solid, with no edge around a card |
+| `panel` | Cards, sidebar, list pane, headers, composer bar, phone drawer; solid |
 | `field` | Incoming bubbles, the segmented track, composer shells, quiet insets (`CardInset`), dialog footers |
 | `field-input` | Text fields and select triggers: white on light, the same as `field` on dark |
 | `raised` | Selected row, chosen chip, focused input, secondary button |
@@ -150,7 +150,8 @@ the base changes the shade.
 
 | Token | Controls |
 |---|---|
-| `line` | Where a line means something: tables, rows, pane edges, a secondary button's edge. Not around cards. The default border colour |
+| `line` | Where a line means something: tables, rows, pane edges, a secondary button's edge. The default border colour |
+| `line-card` | A card's thin edge |
 | `line-subtle` | Row dividers inside a card |
 | `line-strong` | Outline buttons, a chosen chip or the current plan's edge, the chart axis |
 | `line-control` | Edges that identify a control (fields, selects, checkboxes, switches), 3:1 on every surface |
@@ -203,7 +204,7 @@ The app's fills are solid. What's left (DESIGN_SYSTEM §1.9):
 |---|---|
 | `shadow-floating` | Level 1: popovers, menus, select options, toasts |
 | `shadow-overlay` | Level 2: dialogs, alert dialogs, sheets over the scrim |
-| `shadow-surface` | Cards: a hair of drop on light, none on dark |
+| `shadow-surface` | Cards: a top highlight and a soft drop |
 | `shadow-glow`, `shadow-glow-hover`, `shadow-glow-button` | Marketing: brand-tinted drops under cards, card hover, the primary call to action; never in the app |
 | `shadow-site-card`, `shadow-site-button-primary`, `shadow-site-button-secondary` | The public site's own card and button shadows |
 | `shadow-crop-mask` (utility) | The crop box's dimming spread; not an elevation |
@@ -309,7 +310,7 @@ Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated fil
   needs a job that §1.9 of the design system allows, then the variable, a one-line `@utility` and the name
   in `lib/utils.ts` (`bg-token-image`).
 - **Shadows.** `--shadow-floating` and `--shadow-overlay` are the app's two elevations, and
-  `--shadow-surface` the hair of drop under a card on light; `--shadow-glow*` are the marketing tints (they use `--color-brand`).
+  `--shadow-surface` a card's highlight and soft drop; `--shadow-glow*` are the marketing tints (they use `--color-brand`).
 - **Radius.** `--radius-lg` and `--radius-xl` move buttons and inputs, and cards and dialogs;
   Clerk follows. Change one step, not the role of a class.
 - **Typography and sizing.** Sizes: `--text-2xs`, `--text-md` (and Tailwind's scale). Roles: edit the
@@ -326,8 +327,7 @@ Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated fil
 
 C-177 removed C-128's glass from the app: no `glass-*` utilities, frost tokens, ambient light, grain or
 backdrop blur, in menus and dialogs too. Each surface is its token, solid, so nothing depends on what sits
-behind it. Cards have no visible edge: the step from `canvas` to `panel` and the space around them separate
-them. The public site's header is its own, intentional exception.
+behind it. Cards keep a thin `line-card` edge and a soft drop, which the owner preferred to no edge. The public site's header is its own, intentional exception.
 
 ## 6. Checks
 

@@ -120,7 +120,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
  * plain `@sm:` would win over the four columns. One band, not four boxes: the 1 px gap shows the
  * `line` behind the cells, so the dividers follow the columns at every width.
  */
-const GRID = "grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-line shadow-surface @sm:max-lg:grid-cols-2 lg:grid-cols-4";
+const GRID = "grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line-card bg-line shadow-surface @sm:max-lg:grid-cols-2 lg:grid-cols-4";
 
 function Row({ children }: { children: ReactNode }) {
   return (
