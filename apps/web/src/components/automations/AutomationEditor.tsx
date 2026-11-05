@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { BackLink } from "@/components/shell/PageFrame";
+import { BackLink, STICKY_PAGE_HEADER, usePageHeaderHeight } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
 import { NotFoundState } from "@/components/states/NotFoundState";
 import {
@@ -162,6 +162,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The confirmation opens from a menu item, which is gone when it closes: focus goes back to ⋯.
   const menuTrigger = useRef<HTMLButtonElement>(null);
+  const { header, page } = usePageHeaderHeight<HTMLElement>();
 
   const activate = useActivateAutomation(wid);
   const pause = usePauseAutomation(wid);
@@ -292,8 +293,8 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const nameError = errors.name;
 
   return (
-    <div className="w-full p-4 md:p-6">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-4">
+    <div ref={page} className="w-full p-4 pt-0 md:p-6 md:pt-0">
+      <header ref={header} className={cn(STICKY_PAGE_HEADER, "flex flex-wrap items-center gap-x-3 gap-y-2 pt-4 md:pt-6")}>
         <h1 className="sr-only">{draft.name.trim() || DEFAULT_NAME}</h1>
         <div className="min-w-0 flex-1 basis-64">
           <BackLink href={`/w/${slug}/automations` as Route} label="Automations" />
@@ -477,7 +478,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </div>
         <Card
           asChild
-          className="xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:self-start"
+          className="xl:sticky xl:top-[calc(var(--page-header-h,0px)+1.5rem)] xl:col-start-2 xl:row-start-1 xl:self-start"
         >
         <aside aria-label="Preview and results">
           <SidePanel

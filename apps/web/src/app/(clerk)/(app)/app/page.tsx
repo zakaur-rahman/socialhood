@@ -6,7 +6,7 @@ import { Suspense, useEffect } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { ShellSkeleton } from "@/components/shell/ShellFrame";
 import { useMe, useSocialAccounts } from "@/lib/api/queries";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { resolveDestination } from "@/lib/resolve";
@@ -17,7 +17,7 @@ import { resolveDestination } from "@/lib/resolve";
  */
 export default function AppResolverPage() {
   return (
-    <Suspense fallback={<PageSkeleton fullPage />}>
+    <Suspense fallback={<ShellSkeleton />}>
       <Resolver />
     </Suspense>
   );
@@ -59,5 +59,6 @@ function Resolver() {
       />
     );
   }
-  return <PageSkeleton fullPage />;
+  // The shell frame stays from sign-in to the workspace, so the page doesn't flash bare in between.
+  return <ShellSkeleton />;
 }

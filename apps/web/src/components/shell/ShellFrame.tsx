@@ -4,6 +4,7 @@ import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { minWidth } from "@/lib/breakpoints";
 import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -82,15 +83,25 @@ export function ShellSkeleton() {
     <ShellFrame
       topBar={
         <div aria-hidden data-testid="shell-skeleton-topbar" className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-panel px-4 md:hidden">
-          <span className="bg-brand-strong size-8 shrink-0 rounded-lg" />
+          <span data-logo-mark className="size-8 shrink-0 rounded-lg" />
         </div>
       }
       sidebar={
+        // Shaped like the sidebar (logo, Ask card, links), so it reads as the app, not a blank card.
         <div
           aria-hidden
           data-testid="shell-skeleton-sidebar"
-          className={cn("h-full rounded-xl bg-panel", sidebar.collapsed ? "w-16" : "w-58")}
-        />
+          className={cn(
+            "flex h-full flex-col gap-4 overflow-hidden rounded-xl bg-panel px-3.5 py-4",
+            sidebar.collapsed ? "w-16" : "w-58",
+          )}
+        >
+          <span data-logo-mark className="size-8 shrink-0 rounded-lg" />
+          <Skeleton className="h-11 shrink-0 rounded-xl" />
+          {Array.from({ length: 9 }, (_, i) => (
+            <Skeleton key={i} className="h-4 shrink-0" />
+          ))}
+        </div>
       }
     >
       <PageSkeleton />

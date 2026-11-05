@@ -71,7 +71,7 @@ export function HomeScreen() {
   };
 
   const header = (
-    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
+    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex pt-4 md:pt-6 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
       <div className="min-w-0">
         <h1 className={PAGE_TITLE}>{title}</h1>
         {data ? (
@@ -117,7 +117,7 @@ export function HomeScreen() {
   );
 
   return (
-    <div className="w-full p-4 md:p-6">
+    <div className="w-full p-4 pt-0 md:p-6 md:pt-0">
       {/* `?plan=pro` from the pricing page opens the upgrade dialog once (UI-063). */}
       <Suspense fallback={null}>
         <ProTrialOffer />

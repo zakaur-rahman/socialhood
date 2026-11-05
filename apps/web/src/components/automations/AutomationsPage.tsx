@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
-import { PageFrame } from "@/components/shell/PageFrame";
+import { PageFrame, STICKY_PAGE_TOOLBAR } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -485,7 +485,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           <>
         <SummaryStrip summary={summary.data} loading={summary.isPending} />
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cn(STICKY_PAGE_TOOLBAR, "flex flex-wrap items-center gap-2")}>
           <SearchInput
             label="Search automations"
             id="automations-search"

@@ -21,6 +21,35 @@ import { type ReactNode, useEffect, useRef } from "react";
 export const STICKY_PAGE_HEADER =
   "bg-panel sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
 
+/**
+ * A list's search and filter row, which stays in view just under the sticky page header while the
+ * list scrolls (owner, 2026-11-06). On the page's canvas, bleeding over its padding like the header;
+ * z-20 like the header, above the rows' own z-10 parts (avatar badges, row controls).
+ */
+export const STICKY_PAGE_TOOLBAR =
+  "bg-canvas sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-20 -mx-4 px-4 py-2 md:top-(--page-header-h) md:-mx-6 md:px-6";
+
+/**
+ * The header's height, as --page-header-h on the page, so a sticky bar inside the page (a list's
+ * toolbar, the comment filters, a side panel) sits just under the sticky header. Only the variable
+ * on the page's element is written (no React state, no re-render).
+ */
+export function usePageHeaderHeight<H extends HTMLElement>() {
+  const header = useRef<H>(null);
+  const page = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = header.current;
+    const root = page.current;
+    if (!element || !root || typeof ResizeObserver === "undefined") return;
+    const sync = () => root.style.setProperty("--page-header-h", `${element.offsetHeight}px`);
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return { header, page };
+}
+
 /** The "‹ Parent" link above a child page's title (D-16). Replaces the old Breadcrumb landmark. */
 export function BackLink({ href, label }: { href: Route; label: string }) {
   return (
@@ -47,23 +76,9 @@ export function PageFrame({
   back?: { href: Route; label: string };
   children: ReactNode;
 }) {
-  // The header's height, as --page-header-h on the page, so a sticky bar inside the page (the
-  // comment filters) can sit just under the sticky header. The CSS gives it a first-paint value
-  // for a title-only header (below), and the observer only writes the variable on the page's
-  // element (no React state, no re-render), so the first paint and the measured value agree for
-  // the common case and nothing jumps after mount.
-  const header = useRef<HTMLDivElement>(null);
-  const page = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const element = header.current;
-    const root = page.current;
-    if (!element || !root || typeof ResizeObserver === "undefined") return;
-    const sync = () => root.style.setProperty("--page-header-h", `${element.offsetHeight}px`);
-    sync();
-    const observer = new ResizeObserver(sync);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  // PAGE_CLASS gives --page-header-h a first-paint value for a title-only header, so the first
+  // paint and the measured value agree for the common case and nothing jumps after mount.
+  const { header, page } = usePageHeaderHeight<HTMLDivElement>();
   return (
     <div ref={page} className={PAGE_CLASS}>
       <div ref={header} className={cn(STICKY_PAGE_HEADER, "mb-6 pt-4 md:pt-6")}>
