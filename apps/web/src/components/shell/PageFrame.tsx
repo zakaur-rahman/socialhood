@@ -15,11 +15,12 @@ import { type ReactNode, useEffect, useRef } from "react";
 /**
  * A page's header row stays in view while the page scrolls (owner, 2026-10-24): sticky under the
  * phone's top bar (h-14) and at the top from md, on the work-pane glass so what scrolls beneath it
- * blurs. It bleeds over the page's padding (p-4 / md:p-6) so the glass reaches both edges. Pages
+ * blurs. It bleeds over the page's padding (p-4 / md:p-6) to the right edge; from md it stops 16 px
+ * short of the sidebar card, its own margin, so the two don't merge (owner, 2026-11-06). Pages
  * that build their own header (Home, Schedule, the post composer) use it too.
  */
 export const STICKY_PAGE_HEADER =
-  "bg-panel sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mx-6 md:px-6";
+  "bg-panel sticky top-14 z-20 -mx-4 border-b border-line px-4 py-3 md:top-0 md:-mr-6 md:-ml-2 md:pr-6 md:pl-2";
 
 /**
  * A list's search and filter row, which stays in view just under the sticky page header while the
