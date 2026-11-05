@@ -3058,9 +3058,10 @@ body:has(.site) {
   --app-canvas: var(--color-canvas); --app-panel: var(--color-panel); --app-field: var(--color-field); --app-raised: var(--color-raised);
   --app-fg: var(--color-fg); --app-fg-2: var(--color-fg-secondary); --app-line: var(--color-line); --app-line-subtle: var(--color-line-subtle);
   --app-hover: var(--color-hover); --app-brand: var(--color-brand); --app-brand-fg: var(--color-brand-fg); --app-brand-soft: var(--color-brand-soft);
-  --app-brand-line: var(--color-brand-line); --app-on-brand: var(--color-on-brand); --app-gradient: var(--gradient-brand);
+  --app-brand-line: var(--color-brand-line); --app-on-brand: var(--color-on-brand); --app-accent: var(--color-brand-strong);
   --app-warning: var(--color-warning); --app-warning-soft: var(--color-warning-soft); --app-danger-fg: var(--color-danger-fg); --app-danger-soft: var(--color-danger-soft);
-  --app-success: var(--color-success); --app-overlay: var(--color-overlay); --app-shadow: var(--shadow-glow);
+  --app-success: var(--color-success); --app-overlay: var(--color-overlay);
+  --app-field-input: var(--color-field-input); --app-segment: var(--color-segment); --app-pressed: var(--color-pressed); --app-line-strong: var(--color-line-strong); --app-line-control: var(--color-line-control);
 }
 /* No script can pin the page light, as THEME_INIT_SCRIPT does: the --app-* values follow the root's scheme. */
 @media (scripting: none) {
@@ -3091,7 +3092,7 @@ body:has(.site) {
     & .pd-strip .pd-seg { flex: 1 1 auto; padding-inline: 6px; }
     & .pd-seg-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     & [data-strip="all"] [data-seg="all"], & [data-strip="instagram"] [data-seg="instagram"], & [data-strip="whatsapp"] [data-seg="whatsapp"],
-    & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-raised); color: var(--app-brand-fg); }
+    & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-segment); color: var(--app-fg); }
     & .pd-list-h { padding: var(--space-3) var(--space-3) 0; }
     & .pd-list-title { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
     & .pd-list-title > b { font-size: var(--fs-body); font-weight: 600; }
@@ -3099,12 +3100,12 @@ body:has(.site) {
     & .pd-tool { flex: none; color: var(--app-fg-2); }
     & .pd-tabs { flex: none; }
     & .pd-tabs .pd-seg { flex: none; }
-    & .pd-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--app-gradient); color: var(--app-on-brand); font-size: var(--fs-micro); font-style: normal; font-weight: 500; }
+    & .pd-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--app-pressed); color: var(--app-fg); font-size: var(--fs-micro); font-style: normal; font-weight: 500; }
     & .pd-panel-stack { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     & .pd-panel-chats { flex: 1; min-height: 0; display: flex; flex-direction: column; }
     & .pd-list-filters { padding: var(--space-3) var(--space-3) 10px; border-bottom: 1px solid var(--app-line); }
     & .pd-search { position: relative; }
-    & .pd-field { display: flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); background: var(--app-field); color: var(--app-fg-2); white-space: nowrap; }
+    & .pd-field { display: flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-3); border: 1px solid var(--app-line-control); border-radius: var(--r-sm); background: var(--app-field-input); color: var(--app-fg-2); white-space: nowrap; }
     & .pd-acct { display: block; margin-top: var(--space-2); }
     & .pd-acct-trigger { justify-content: space-between; color: var(--app-fg); font-size: var(--fs-micro); }
     & .pd-acct-trigger .pd-swap { min-width: 0; overflow: hidden; }
@@ -3116,13 +3117,13 @@ body:has(.site) {
     & [data-acct-show] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     & .pd-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3); }
     & .pd-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border: 1px solid var(--app-line); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; }
-    & .pd-chip-on { border-color: var(--app-brand-line); background: var(--app-brand-soft); color: var(--app-brand-fg); }
+    & .pd-chip-on { border-color: var(--app-line-strong); background: var(--app-raised); color: var(--app-fg); }
     & .pd-rows { position: relative; flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
 
     /* ---- ConversationRow */
     & .pd-row { position: relative; display: flex; align-items: flex-start; gap: var(--space-3); height: var(--h); padding: var(--space-3) var(--space-4); }
     & .pd-sel { position: absolute; inset: 0; background: var(--app-raised); }
-    & .pd-sel::before { content: ""; position: absolute; inset: var(--space-2) auto var(--space-2) 0; width: 2px; border-radius: 999px; background: var(--app-brand); }
+    & .pd-sel::before { content: ""; position: absolute; inset: var(--space-2) auto var(--space-2) 0; width: 2px; border-radius: 999px; background: var(--app-fg); }
     & .pd-av { position: relative; flex: none; display: grid; place-items: center; border-radius: 50%; font-weight: 600; color: var(--ink); background: var(--bg); }
     & .pd-av-40 { width: 40px; height: 40px; font-size: var(--fs-body); }
     & .pd-av-32 { width: 32px; height: 32px; font-size: var(--fs-label); }
@@ -3140,11 +3141,11 @@ body:has(.site) {
     & .pd-row-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg); }
     & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-text { font-weight: 500; }
-    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-top time { font-weight: 500; color: var(--app-brand-fg); }
+    & :is(.pd-unread, [data-live] .pd-row:has(.pd-unread-dot.on)) .pd-row-top time { font-weight: 500; color: var(--app-fg); }
     & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) :is(.pd-row-top b, .pd-row-text) { color: var(--app-fg-2); }
     & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-text { font-weight: 400; }
     & [data-live] .pd-row:has(.pd-unread-dot:not(.on)) .pd-row-top time { font-weight: 400; color: var(--app-fg-2); }
-    & .pd-unread-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--app-brand); }
+    & .pd-unread-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--app-fg); }
     & .pd-badges { display: flex; gap: var(--space-1); margin-top: var(--space-1); overflow: hidden; }
 
     /* ---- Badge */
@@ -3155,8 +3156,9 @@ body:has(.site) {
     /* ---- Button */
     & .pd-btn { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 var(--space-3); border-radius: var(--r-sm); font-weight: 500; white-space: nowrap; }
     & .pd-btn-sm { height: 28px; padding: 0 10px; font-size: var(--fs-micro); gap: var(--space-1); }
-    & .pd-btn-main { background: var(--app-gradient); color: var(--app-on-brand); }
+    & .pd-btn-main { background: var(--app-accent); color: var(--app-on-brand); }
     & .pd-btn-line, & .pd-btn-empty { background: var(--app-raised); color: var(--app-fg); }
+    & .pd-btn-line { box-shadow: inset 0 0 0 1px var(--app-line); }
     & .pd-btn-empty { color: var(--app-fg-2); }
     & .pd-btn-ghost { color: var(--app-fg-2); }
     & .pd-btn-soft { background: var(--app-brand-soft); color: var(--app-brand-fg); }
@@ -3197,7 +3199,7 @@ body:has(.site) {
     & .pd-out { justify-self: end; align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; }
     & .pd-bub { width: fit-content; padding: var(--space-2) var(--space-3); border-radius: var(--r-lg); line-height: 1.6; }
     & .pd-in .pd-bub { background: var(--app-field); border: 1px solid var(--app-line-subtle); border-bottom-left-radius: var(--r-xs); }
-    & .pd-out .pd-bub { background: var(--app-gradient); border-bottom-right-radius: var(--r-xs); color: var(--app-on-brand); }
+    & .pd-out .pd-bub { background: var(--app-accent); border-bottom-right-radius: var(--r-xs); color: var(--app-on-brand); }
     & .pd-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding: 0 var(--space-1); font-size: var(--fs-micro); color: var(--app-fg-2); }
     & .pd-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin-top: var(--space-1); }
     & .pd-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--app-fg-2); }
@@ -3250,7 +3252,7 @@ body:has(.site) {
     & .pd-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 24px; margin-bottom: var(--space-2); }
     & .pd-sec-h h3 { margin: 0; font-family: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); }
     & .pd-link { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); font-weight: 500; color: var(--app-brand-fg); white-space: nowrap; }
-    & .pd-inset { min-width: 0; padding: var(--space-3); border: 1px solid var(--app-line); border-radius: var(--r-sm); }
+    & .pd-inset { min-width: 0; padding: var(--space-3); border-radius: var(--r-sm); background: var(--app-field); }
     & .pd-det-who { display: flex; align-items: center; gap: var(--space-3); }
     & .pd-det-who b { display: block; font-weight: 600; }
     & .pd-det-who small { display: block; font-size: var(--fs-micro); color: var(--app-fg-2); }
@@ -3392,7 +3394,7 @@ body:has(.site) {
       --pd-h: clamp(500px, calc(100svh - 300px), 640px);
       & .pd-topbar { display: flex; align-items: center; gap: var(--space-3); height: 56px; padding: 0 var(--space-4); background: var(--app-panel); border-bottom: 1px solid var(--app-line); }
       & .pd-topbar b { flex: 1; font-size: var(--fs-body); font-weight: 600; }
-      & .pd-topbar svg { color: var(--app-fg-2); }
+      & .pd-topbar > svg { color: var(--app-fg-2); }
       & .pd-list-title > b { display: none; }
       & .pd-inbox { grid-template-columns: minmax(0, 1fr); }
       & .pd-list { border-right: 0; }

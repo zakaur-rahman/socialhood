@@ -7,7 +7,7 @@ import { cx } from "@/lib/cx";
 import { cn } from "@/lib/utils";
 
 /**
- * The logo mark (C-140): the solid accent tile (the public site pins its gradient, globals.css) with the "amp bubble", a chat bubble holding three
+ * The logo mark (C-140): the shell-gradient tile (`[data-logo-mark]` in globals.css) with the "amp bubble", a chat bubble holding three
  * rising bars (UX-SH-01, public/icons, scripts/generate-icons.mjs draws the same shape). The SVG has
  * no colours of its own (UI-ISS-095): the bubble is `currentColor`, `on-brand` from the tile, and the
  * bars are `brand-deep`.
@@ -17,7 +17,7 @@ export function LogoMark({ className }: { className?: string }) {
     <span
       aria-hidden
       data-logo-mark=""
-      className={cn("bg-brand-strong grid size-8 shrink-0 place-items-center rounded-lg text-on-brand", className)}
+      className={cn("grid size-8 shrink-0 place-items-center rounded-lg text-on-brand", className)}
     >
       <svg viewBox="0 0 64 64" className="size-full" fill="none" aria-hidden focusable="false">
         <path d={LOGO_BUBBLE_PATH} fill="currentColor" />

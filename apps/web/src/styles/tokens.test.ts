@@ -360,7 +360,7 @@ describe("two themes, one declaration (C-129)", () => {
 
   it("keeps the public site's shared primitives on its own look, whatever the app's values", () => {
     expect(css).toMatch(/--color-brand-strong: var\(--color-ink\);/);
-    expect(css).toMatch(/\.site \[data-logo-mark\] \{ background-image: var\(--gradient-shell\); \}/);
+    expect(css).toMatch(/^\[data-logo-mark\] \{ background-image: var\(--gradient-shell\); \}/m);
     expect(css).toMatch(/\.site \[data-slot="card"\] \{ border-color: var\(--color-rule\); box-shadow: var\(--shadow-site-card\); \}/);
     expect(css).toMatch(/\[data-variant="default"\] \{ box-shadow: var\(--shadow-site-button-primary\); \}/);
     expect(css).toMatch(/\[data-variant="secondary"\] \{ box-shadow: var\(--shadow-site-button-secondary\); \}/);

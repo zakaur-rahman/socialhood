@@ -9714,7 +9714,7 @@ Step 2 of 2. Owner decisions, 2026-11-03 and 2026-11-04:
 The owner felt the dark theme looked like a generic AI product, and asked for it to change. This replaces C-128's glass cards and ambient light in the app. The public site keeps its own look, with its shared tokens pinned under `.site`.
 
 - **Dark** is a neutral grey with little blue: canvas `#141416`, panel `#1E1E21`. **Light** keeps `#F5F6FB` and `#FFFFFF`.
-- **One solid accent,** `#5550E0`, on main actions, AI moments, links and focus. No gradients on buttons or the logo tile. The hue stays the brand's; choosing a new one is the owner's call. Favicons and app icons keep their artwork for now.
+- **One solid accent,** `#5550E0`, on main actions, AI moments, links and focus. No gradients on buttons. The hue stays the brand's; the owner kept it on 2026-11-05. **The logo, favicons and app icons are locked (owner, 2026-11-05):** their colours don't change, because business verification uses them, so the logo tile keeps its gradient in the app too.
 - **Cards are solid and borderless,** with no page glow, grain or blur, in menus too. Spacing and quieter surfaces separate sections; borders stay where they mean something, like inputs, tables and selected states.
 - **Automations** opens with a one-line summary instead of a row of tiles. **Home** keeps its figures in one band.
 - **Light input fields are white** (`field-input`), and a chosen segment has its own token (`segment`). Secondary buttons have a `line` edge so they hold on tinted panels.
