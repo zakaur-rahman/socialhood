@@ -334,7 +334,7 @@
 @utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
 @utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
 @utility bg-glow-brand-centre { background-image: var(--gradient-glow-brand-centre); }
-@utility bg-ambient { background-image: var(--gradient-ambient); }
+@utility bg-ambient { background-image: var(--gradient-ambient); }
 
 /* Glass surfaces (C-128): a frost colour and a blur, bundled. Work panes get a light blur, cards
    and the secondary and outline buttons a medium one, what floats a strong one. Under

@@ -12797,8 +12797,13 @@
         "type": "object"
       },
       "InboxCounts": {
-        "description": "The Inbox nav badge (FR-INB-04) and view chips.",
+        "description": "The Inbox and Knowledge nav badges (FR-INB-04), the view chips and Home's approval banner.",
         "properties": {
+          "knowledge_waiting": {
+            "default": 0,
+            "title": "Knowledge Waiting",
+            "type": "integer"
+          },
           "mine": {
             "title": "Mine",
             "type": "integer"
@@ -34794,8 +34799,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "facebook",
                     "whatsapp",
+                    "facebook",
                     "web"
                   ],
                   "type": "string"
@@ -35208,8 +35213,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "facebook",
                     "whatsapp",
+                    "facebook",
                     "web"
                   ],
                   "type": "string"
@@ -35529,8 +35534,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "facebook",
                     "whatsapp",
+                    "facebook",
                     "web"
                   ],
                   "type": "string"
@@ -36342,8 +36347,8 @@
                 {
                   "enum": [
                     "instagram",
-                    "facebook",
                     "whatsapp",
+                    "facebook",
                     "web"
                   ],
                   "type": "string"

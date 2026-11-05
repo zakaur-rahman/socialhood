@@ -228,7 +228,13 @@ async def test_other_workspaces_are_never_listed_or_counted(
     assert await owner.ids() == ids_of(mine)
     assert await owner.ids(q="priya") == ids_of(mine)
     counts = (await owner.call("GET", "/conversations/counts")).json()
-    assert counts == {"unread": 1, "needs_reply": 1, "needs_you": 0, "mine": 0}
+    assert counts == {
+        "unread": 1,
+        "needs_reply": 1,
+        "needs_you": 0,
+        "mine": 0,
+        "knowledge_waiting": 0,
+    }
 
 
 async def test_counts(owner: Owner, engine: AsyncEngine) -> None:
@@ -239,7 +245,13 @@ async def test_counts(owner: Owner, engine: AsyncEngine) -> None:
 
     response = await owner.call("GET", "/conversations/counts")
     assert response.status_code == 200
-    assert response.json() == {"unread": 2, "needs_reply": 2, "needs_you": 1, "mine": 0}
+    assert response.json() == {
+        "unread": 2,
+        "needs_reply": 2,
+        "needs_you": 1,
+        "mine": 0,
+        "knowledge_waiting": 0,
+    }
 
 
 # ---------------------------------------------------------------- list: cursor (TR-API-04)
