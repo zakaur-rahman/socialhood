@@ -349,7 +349,7 @@ export function SourcesCard({
                                   aria-label={`Content of ${source.title}`}
                                   className={cn(
                                     "max-w-prose overflow-y-auto break-words whitespace-pre-wrap",
-                                    long && !full ? "max-h-32 overflow-hidden" : "max-h-64",
+                                    long && !full ? "max-h-32 overflow-hidden" : !long && "max-h-64",
                                   )}
                                 >
                                   {source.body}

@@ -24,6 +24,7 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "field-input": { use: "Text fields and select triggers: white on light", swatch: "bg-field-input" },
   raised: { use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
   "raised-hover": { use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
+  segment: { use: "The chosen segment or tab, on its field track", swatch: "bg-segment" },
   overlay: { use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },
   // States: overlays, so they work on any surface
   hover: { use: "Hover fill on any surface; neutral chip fill", swatch: "bg-hover" },

@@ -58,7 +58,7 @@ describe("Tabs", () => {
     expect(tab).toHaveClass(
       "rounded-md",
       "text-fg-secondary",
-      "aria-selected:bg-raised",
+      "aria-selected:bg-segment",
       "aria-selected:text-fg",
       "whitespace-nowrap",
       "min-h-8",

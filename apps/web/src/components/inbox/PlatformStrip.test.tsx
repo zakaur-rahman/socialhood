@@ -39,7 +39,7 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     const { rerender } = render(<PlatformStrip platforms={["instagram", "whatsapp"]} value="all" onChange={() => {}} />);
     const all = screen.getByRole("radio", { name: "All" });
     expect(all).toHaveAttribute("data-state", "on");
-    expect(all).toHaveClass("aria-checked:bg-raised", "aria-checked:text-fg");
+    expect(all).toHaveClass("aria-checked:bg-segment", "aria-checked:text-fg");
     expect(all).not.toHaveClass("bg-brand-strong");
     rerender(<PlatformStrip platforms={["instagram", "whatsapp"]} value="instagram" onChange={() => {}} />);
     expect(screen.getByRole("radiogroup")).toHaveAttribute("data-active", "instagram");

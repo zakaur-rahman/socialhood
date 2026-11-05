@@ -125,7 +125,7 @@ function ToggleGroupItem({ className, ...props }: React.ComponentProps<typeof To
       className={cn(
         variant === "chips"
           ? chipClass
-          : cn(segmentVariants({ size }), "aria-checked:bg-raised aria-checked:text-fg aria-pressed:bg-raised aria-pressed:text-fg"),
+          : cn(segmentVariants({ size }), "aria-checked:bg-segment aria-checked:text-fg aria-pressed:bg-segment aria-pressed:text-fg"),
         className
       )}
       {...props}

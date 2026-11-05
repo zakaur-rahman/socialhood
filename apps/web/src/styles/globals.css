@@ -51,6 +51,7 @@
   --color-field-input: light-dark(#FFFFFF, #19191C);   /* what you type in: text fields and select triggers */
   --color-raised: light-dark(#E8EAF5, #28282C);        /* selected row, active segment, focused input, secondary button */
   --color-raised-hover: light-dark(#DEE1F0, #2F2F34);
+  --color-segment: light-dark(#FFFFFF, #28282C);       /* the chosen segment or tab, on its `field` track */
   --color-overlay: light-dark(#FFFFFF, #242428);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
   --color-line: light-dark(rgb(20 24 54 / 0.10), rgb(235 235 245 / 0.10));  /* where a line means something: tables, rows, pane edges. Not around cards */
   --color-line-subtle: light-dark(rgb(20 24 54 / 0.06), rgb(235 235 245 / 0.06));
@@ -326,12 +327,12 @@
 
 /* Marks drawn only as a background or a stroke (a selected bar, an unread or usage dot, a meter's
    fill) vanish in forced colours; this gives them the system highlight. */
-@utility mark-forced { @media (forced-colors: active) { background-color: Highlight; stroke: Highlight; } }
+@utility mark-forced { @media (forced-colors: active) { background-color: Highlight !important; stroke: Highlight !important; } }
 /* The same for a chosen segment, tab or chip, whose only cue is its fill. A fill, not a border, so
    nothing changes size and the focus outline stays its own. */
 @utility selected-forced {
   @media (forced-colors: active) {
-    &:is([aria-checked="true"], [aria-pressed="true"], [aria-selected="true"]) { background-color: Highlight; color: HighlightText; }
+    &:is([aria-checked="true"], [aria-pressed="true"], [aria-selected="true"]) { background-color: Highlight !important; color: HighlightText !important; }
   }
 }
 
@@ -634,6 +635,7 @@
   --color-field: var(--color-paper);
   --color-field-input: var(--color-paper);
   --color-raised: var(--color-paper-deep);
+  --color-segment: var(--color-paper-deep);
   --color-raised-hover: var(--color-rule-subtle);
   --color-fg: var(--color-ink);
   --color-fg-secondary: var(--color-ink-secondary);
@@ -672,6 +674,7 @@
   --color-field: var(--color-night-raised);
   --color-field-input: var(--color-night-raised);
   --color-raised: var(--color-night-high);
+  --color-segment: var(--color-night-high);
   --color-fg: var(--color-night-ink);
   --color-fg-secondary: var(--color-night-ink-secondary);
   --color-line: color-mix(in srgb, var(--color-night-ink) 10%, transparent);

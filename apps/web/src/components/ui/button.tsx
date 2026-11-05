@@ -17,7 +17,7 @@ const buttonRecipe = cva(
     variants: {
       variant: {
         default: "bg-brand-strong text-on-brand hover:brightness-110 active:brightness-95",
-        secondary: "bg-raised text-fg hover:bg-raised-hover aria-expanded:bg-raised-hover",
+        secondary: "bg-raised text-fg border-line hover:bg-raised-hover aria-expanded:bg-raised-hover",
         outline:
           "border-line-strong hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         ghost: "hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",

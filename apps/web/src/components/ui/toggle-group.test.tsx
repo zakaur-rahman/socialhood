@@ -96,7 +96,7 @@ describe("ToggleGroup (segmented)", () => {
     expect(track).toHaveClass("inline-flex", "w-full", "gap-1", "rounded-lg", "bg-field", "p-1")
     expect(track).toHaveAttribute("data-variant", "segmented")
     const item = screen.getByRole("radio", { name: "7 days" })
-    expect(item).toHaveClass("rounded-md", "aria-checked:bg-raised", "aria-checked:text-fg", "text-fg-secondary", "hover:text-fg")
+    expect(item).toHaveClass("rounded-md", "aria-checked:bg-segment", "aria-checked:text-fg", "text-fg-secondary", "hover:text-fg")
     expect(item).toHaveAttribute("data-state", "on")
     expect(classes(item).filter((c) => c.includes("shadow"))).toEqual([])
   })
