@@ -52,8 +52,8 @@ describe("the landing page", () => {
       "AI replies from your own knowledge",
       "Comment LINK, get the link in a DM",
       "Off, Suggest or Auto, for each account",
-      "Your AI assistant, connected to your Instagram",
-      "Your customers' messages, handled with care",
+      "Your AI assistant, on your Instagram",
+      "Your customers' messages, safe",
       "Who it's for",
       "Everything your customer conversations need",
       "Set up in three steps",
@@ -103,7 +103,7 @@ describe("the landing page", () => {
       "It doesn't message your customers itself",
       "Reading and drafts on every plan",
     ]);
-    expect(aiApps.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/mcp");
+    expect(aiApps.getByRole("link", { name: "How it works with AI apps" })).toHaveAttribute("href", "/mcp");
     expect(aiApps.getByRole("link", { name: "Set it up" })).toHaveAttribute("href", "/developers/mcp");
     // The server renders the sorted inbox: what needs a person comes first.
     const tags = [...container.querySelectorAll(".note .tag")].map((tag) => tag.textContent);
@@ -114,6 +114,8 @@ describe("the landing page", () => {
     // It is the hero's last part (C-157 hero spacing), so a wide screen can pin it with the first screen.
     expect(container.querySelector("section.hero > section.strip:last-child")).toBe(strip);
     expect(strip).toHaveTextContent("200 AI credits");
+    // What a credit buys, in the pricing page's own cost (plan-table.json credit_costs).
+    expect(strip).toHaveTextContent("An AI reply uses 2.");
     expect(strip).toHaveTextContent("50 website chats");
     expect(strip).not.toHaveTextContent("Official Meta APIs");
 
@@ -148,12 +150,10 @@ describe("the landing page", () => {
       title: group.querySelector("h3")?.textContent,
       items: [...group.querySelectorAll("h4")].map((h) => h.textContent?.replace(/ · Creator and Business$/, "")),
     }));
+    // The AI apps (MCP) have their own band above, so Features doesn't pitch them again (the design audit, 2026-11-06).
     expect(groups).toEqual([
       { title: "Manage every conversation", items: ["Team roles and assignment", "Notifications, on your phone too"] },
-      {
-        title: "Automate the repetitive work",
-        items: ["Scheduling, Reels and Stories", "Follow-up sequences", "Work from Claude, ChatGPT and Codex"],
-      },
+      { title: "Automate the repetitive work", items: ["Scheduling, Reels and Stories", "Follow-up sequences"] },
       {
         title: "Understand and grow",
         items: ["Analytics and the weekly report", "Comment intelligence", "Product catalogue, orders and payment links"],
@@ -161,10 +161,9 @@ describe("the landing page", () => {
     ]);
     // A feature with its own page is one whole-card link; one "Go deeper" line in the section.
     expect(within(features).getByRole("link", { name: "Scheduling, Reels and Stories" })).toHaveAttribute("href", "/features/publishing");
-    expect(features.querySelectorAll(".fcard-link")).toHaveLength(3);
-    // C-165: the MCP card leads to /mcp.
-    expect(within(features).getByRole("link", { name: "Work from Claude, ChatGPT and Codex" })).toHaveAttribute("href", "/mcp");
-    expect(features.querySelectorAll(".more-links")).toHaveLength(1);
+    expect(features.querySelectorAll(".fcard-link")).toHaveLength(2);
+    expect(features.querySelector('a[href="/mcp"]')).toBeNull();
+    expect(features.querySelectorAll(".fgroup ~ .more-links")).toHaveLength(1);
     // The hub of every feature (C-163).
     expect(within(features).getByRole("link", { name: "See every feature" })).toHaveAttribute("href", "/features");
     // Who it's for: the two audience pages.
@@ -178,31 +177,28 @@ describe("the landing page", () => {
       "/features/publishing",
       "/compare",
       "/guides/comment-to-dm-automations",
-      "/guides/whatsapp-business-api-vs-app",
       "/security",
     ]) {
       expect(container.querySelector(`main a[href="${href}"]`), href).not.toBeNull();
     }
-    // Integrations: each with an honest status; payments are one line, not a headline item.
+    // Integrations: one compact list, each name with its honest status and dot (the design audit,
+    // 2026-11-06); payments are one line, not a headline item; the detail is on /features.
     const integrations = within(container.querySelector("#integrations") as HTMLElement);
-    expect(integrations.getAllByRole("heading", { level: 4 }).map((h) => h.textContent)).toEqual([
-      "Instagram",
-      "WhatsApp",
-      "Website chat",
-      "Facebook Pages",
-      "Live comments and ads",
-      "Shopify",
-      "Google Sheets",
-      "Zapier and the public API",
+    const rows = [...container.querySelectorAll<HTMLElement>("#integrations .chan-list > li.st")];
+    expect(rows.map((li) => li.textContent)).toEqual([
+      "Instagram · Official API",
+      "WhatsApp · Official API",
+      "Website chat · On every plan",
+      "Facebook Pages · With Meta's approval",
+      "Live comments and ads · With Meta's approval",
+      "Shopify · With our Shopify app listing",
+      "Google Sheets · Creator and Business",
+      "Zapier and the public API · Business",
     ]);
-    expect(integrations.getByText("With our Shopify app listing")).toBeInTheDocument();
-    expect(integrations.getAllByText("With Meta's approval")).toHaveLength(2);
-    expect(integrations.getAllByText("Official API")).toHaveLength(2);
-    // Insights wait for a permission production doesn't ask for yet.
-    expect(integrations.getByText(/Post insights follow Meta's approval/)).toBeInTheDocument();
+    for (const li of rows) expect(li.style.getPropertyValue("--sc")).not.toBe("");
+    expect(container.querySelector("#integrations .crow")).toBeNull();
     expect(integrations.getByText(/Razorpay payment links and UPI requests/)).toBeInTheDocument();
-    // The guide sits in its card's own link row, not inside the description.
-    expect(integrations.getByRole("link", { name: "The WhatsApp Business API, explained" }).closest(".crow-g")).not.toBeNull();
+    expect(integrations.getByRole("link", { name: "See all connections" })).toHaveAttribute("href", "/features");
 
     // No language marketing (C-155).
     expect(container.textContent).not.toMatch(/Hindi|Hinglish/);
@@ -283,7 +279,7 @@ describe("the landing page", () => {
     expect(toggle).toHaveAttribute("hidden");
 
     // Icons: server-rendered SVG in a tile, hidden from assistive tech, on every card the brief names.
-    for (const selector of [".feat-lead", "#features .fgroup > h3", ".fcard", ".spec-row", ".steps > li", ".aud-card", ".crow", ".pay"]) {
+    for (const selector of ["#features .fgroup > h3", ".fcard", ".spec-row", ".pay"]) {
       const cards = [...container.querySelectorAll(selector)];
       expect(cards.length, selector).toBeGreaterThan(0);
       for (const card of cards) {
@@ -292,16 +288,11 @@ describe("the landing page", () => {
         expect(tile).toHaveAttribute("aria-hidden");
       }
     }
-    // A channel shows its own glyph in its colour (the motif); the others get an icon.
-    for (const name of ["Instagram", "WhatsApp", "Website chat", "Facebook Pages"]) {
-      const row = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === name)!;
-      expect(row.querySelector(".ico-mark svg")).not.toBeNull();
-      expect((row.querySelector(".ico-mark") as HTMLElement).style.getPropertyValue("--c")).not.toBe("");
+    // No icon tiles on Ask Amplychat, the audience cards or the setup steps (the design audit, 2026-11-06).
+    for (const selector of [".feat-lead", ".aud-card", ".steps > li"]) {
+      expect(container.querySelectorAll(selector).length, selector).toBeGreaterThan(0);
+      expect(container.querySelector(`${selector} .ico`), selector).toBeNull();
     }
-    const shopify = [...container.querySelectorAll(".crow")].find((c) => c.querySelector("h4")?.textContent === "Shopify")!;
-    expect(shopify.querySelector(".ico svg")).not.toBeNull();
-    // Only the AI's card wears iris.
-    expect([...container.querySelectorAll(".ico-ai")].map((tile) => tile.closest(".feat-lead") !== null)).toEqual([true]);
 
     // The FAQ's plus is two bars (it folds into a minus as it opens); the questions stay native details.
     const faq = container.querySelector("section#faq")!;

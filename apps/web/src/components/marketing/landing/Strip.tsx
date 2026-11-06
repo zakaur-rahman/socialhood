@@ -17,7 +17,8 @@ export const FREE = {
  */
 export const STRIP: { value: string; label: string }[] = [
   { value: "1 inbox", label: "For Instagram, WhatsApp and your website chat." },
-  { value: `${number.format(FREE.aiCredits)} AI credits`, label: "Every month on the Free plan." },
+  // The gloss is the pricing page's credit cost for "Suggesting a reply, or an Auto reply" (CREDIT_COSTS).
+  { value: `${number.format(FREE.aiCredits)} AI credits`, label: `Every month on the Free plan. An AI reply uses ${table.credit_costs.reply_suggestion}.` },
   { value: `${number.format(FREE.automations)} automations`, label: "Comment and DM automations on the Free plan." },
   { value: `${number.format(FREE.websiteChats)} website chats`, label: "New chats a day on your site, on the Free plan." },
 ];

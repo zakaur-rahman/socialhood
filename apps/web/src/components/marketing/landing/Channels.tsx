@@ -1,11 +1,9 @@
-import type { Route } from "next";
 import { type LucideIcon, Radio, Sheet, ShoppingCart, Wallet, Webhook } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import type { Platform } from "@/lib/api/types";
-import { SECTION_IDS } from "@/lib/marketing/site";
+import { FEATURES_PATH, SECTION_IDS } from "@/lib/marketing/site";
 
 import { Ico } from "./Ico";
 
@@ -102,9 +100,9 @@ export const PAYMENTS = "Razorpay payment links and UPI requests in the chat, fo
 const DOT = { live: "var(--ok)", waiting: "var(--wait-mark)", yours: "var(--iris)" } as const;
 
 /**
- * What Amplychat connects to (C-155), inside the Features section since C-157: a strict grid of
- * equal-height cards (the mark and name, one line, a guide when there is one, and the honest status
- * pinned to the card's foot so statuses line up across a row), then payments as one full-width row.
+ * What Amplychat connects to (C-155), inside the Features section since C-157: one compact list of the
+ * names, each with its honest status and dot (the design audit, 2026-11-06), then payments as one row.
+ * Each connection's detail is on /features. The full cards (`.crow`) stay on /ai-info and the solution pages.
  */
 export function Connections() {
   return (
@@ -118,28 +116,11 @@ export function Connections() {
           says what runs today.
         </p>
       </div>
-      <ul className="chan">
+      <ul className="chan-list">
         {INTEGRATIONS.map((item) => (
-          <li key={item.name} className="crow">
-            <h4>
-              {item.platform ? (
-                <Ico className="ico-mark" style={{ "--c": item.mark } as CSSProperties}>
-                  <PlatformGlyph platform={item.platform} />
-                </Ico>
-              ) : (
-                <Ico icon={item.icon} />
-              )}
-              <span>{item.name}</span>
-            </h4>
-            <p className="crow-b">{item.body}</p>
-            {item.guide ? (
-              <p className="crow-g">
-                <Link href={item.guide.href as Route}>{item.guide.label}</Link>
-              </p>
-            ) : null}
-            <span className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
-              {item.status}
-            </span>
+          <li key={item.name} className="st" style={{ "--sc": DOT[item.tone] } as CSSProperties}>
+            {item.name}
+            <span className="pl"> · {item.status}</span>
           </li>
         ))}
       </ul>
@@ -149,6 +130,9 @@ export function Connections() {
           Payments
         </b>
         <span>{PAYMENTS}</span>
+      </p>
+      <p className="more-links">
+        <Link href={FEATURES_PATH}>See all connections</Link> and what each one does.
       </p>
     </div>
   );

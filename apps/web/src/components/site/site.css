@@ -596,7 +596,6 @@ body:has(.site) {
     & .aud-sec { padding-bottom: var(--space-section-tight); }
     & .aud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin-bottom: 0; padding: 0; list-style: none; }
     & .aud-card { position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-10) var(--space-8) var(--space-8); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); overflow: hidden; transition: background-color var(--dur-quick) var(--ease); }
-    & .aud-card .chan-line { position: absolute; left: 0; right: 0; top: 0; }
     & .aud-card h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
     & .aud-link { display: inline-flex; align-items: center; gap: var(--space-3); color: inherit; text-decoration: none; }
     & .aud-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
@@ -613,7 +612,6 @@ body:has(.site) {
 
     /* ---- features, with the connections */
     & .feat-lead { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-12); padding: var(--space-10); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); }
-    & .feat-lead-h { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5); }
     & .feat-lead h3 { margin: 0; font-size: var(--fs-h2-sm); line-height: var(--lh-h2-sm); letter-spacing: var(--tr-h2-sm); font-weight: 700; }
     & .feat-lead p { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 52ch; }
     & .feat-lead .note-line { margin-top: var(--space-4); font-size: var(--fs-body-sm); color: var(--s-text); font-weight: 500; }
@@ -663,6 +661,9 @@ body:has(.site) {
     & .crow-g { grid-row: 3; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
     & .st { grid-row: 4; align-self: end; display: inline-flex; align-items: center; gap: var(--space-2); padding-top: var(--space-2); font-size: var(--fs-label); font-weight: 500; color: var(--s-text); }
     & .st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sc); flex: 0 0 8px; }
+    /* The landing page's compact list (the design audit, 2026-11-06): each name with its status dot, in one wrapping row. */
+    & .chan-list { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
+    & .chan-list .st { padding-top: 0; font-size: var(--fs-body-sm); }
     /* Payments: one full-width row on the same columns as the cards above, so its name and its line start
        on the cards' own text edges. */
     & .pay {
@@ -693,7 +694,7 @@ body:has(.site) {
       transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease);
     }
     & .ico svg { width: 20px; height: 20px; }
-    & :is(.feat-lead, .fcard, .crow, .pay, .aud-card) .ico { background: var(--s-surface-2); }
+    & :is(.fcard, .crow, .pay) .ico { background: var(--s-surface-2); }
     & .ico-ai { color: var(--s-link); }
     /* A channel's own glyph (the app's PlatformGlyph) in the channel's colour: the page's motif. */
     & .ico-mark { color: var(--c); }
@@ -707,8 +708,8 @@ body:has(.site) {
     @media (hover: hover) {
       & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
       & :is(.fcard.is-link, .aud-card):hover { transform: translateY(-3px); }
-      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico { transform: translateY(-1px) scale(1.06); }
-      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
+      & :is(.fcard, .crow, .pay):hover .ico { transform: translateY(-1px) scale(1.06); }
+      & :is(.fcard, .crow, .pay):hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
       & :is(.fcard.is-link, .aud-card):hover:active { transform: translateY(-2px); }
     }
     & :is(.fcard.is-link, .aud-card):active { transform: translateY(1px); }
@@ -3387,12 +3388,12 @@ body:has(.site) {
     @media (width <= 1060px) { /* site-wide */
       & .pd-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
-    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). */
+    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). The
+       heading keeps the .h2 tier of the other scene sections (the design audit, 2026-11-06). */
     @media (height < 820px) and (width > 760px) { /* site-nav */
       padding-top: var(--space-6);
       padding-bottom: var(--space-6);
       & .pd-stage { margin-top: var(--space-3); }
-      & .h2 { font-size: var(--fs-h3); line-height: var(--lh-h3); }
       & .lede { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
     }
 
