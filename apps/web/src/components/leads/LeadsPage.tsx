@@ -10,7 +10,7 @@ import { ContactDrawer } from "@/components/contacts/ContactDrawer";
 import { FiltersSheet } from "@/components/contacts/FiltersSheet";
 import { TagChip } from "@/components/contacts/TagChip";
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
-import { PageFrame } from "@/components/shell/PageFrame";
+import { PageFrame, STICKY_PAGE_TOOLBAR } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,7 @@ export function LeadsPage() {
   return (
     <PageFrame title="Leads" actions={admin ? <ColdSetting /> : null}>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cn(STICKY_PAGE_TOOLBAR, "flex flex-wrap items-center gap-2")}>
           <SearchInput
             label="Search leads"
             placeholder={roomy ? "Name, @username, email or phone" : "Search leads"}

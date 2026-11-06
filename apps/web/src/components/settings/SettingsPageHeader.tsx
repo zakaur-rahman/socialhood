@@ -1,5 +1,7 @@
 "use client";
 
+import { STICKY_PAGE_HEADER, usePageHeaderHeight } from "@/components/shell/PageFrame";
+import { cn } from "@/lib/utils";
 import { PAGE_TITLE } from "@/styles/tokens";
 import type { ReactNode } from "react";
 
@@ -28,11 +30,15 @@ export function SettingsPageHeader({
   );
 }
 
-/** A settings page: the header, then the page's cards, then (for a form) its save bar. */
+/** A settings page: the header (sticky, like every page's), then the page's cards, then (for a form) its save bar. */
 export function SettingsFrame({ header, children }: { header: ReactNode; children: ReactNode }) {
+  // --page-header-h, so a sticky search row (Connections) sits under the header.
+  const { header: headerRef, page } = usePageHeaderHeight<HTMLDivElement>();
   return (
-    <div className="w-full space-y-6 px-4 pt-5 pb-6 md:px-6 md:pt-6">
-      {header}
+    <div ref={page} className="w-full space-y-6 px-4 pb-6 md:px-6">
+      <div ref={headerRef} className={cn(STICKY_PAGE_HEADER, "pt-5")}>
+        {header}
+      </div>
       {children}
     </div>
   );

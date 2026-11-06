@@ -19,7 +19,16 @@ import { unwrap } from "./unwrap";
 
 export function useMe() {
   const api = useApi();
-  return useQuery<Me>({ queryKey: keys.me, queryFn: () => unwrap(api.GET("/v1/me")) });
+  const queryClient = useQueryClient();
+  return useQuery<Me>({
+    queryKey: keys.me,
+    queryFn: async () => {
+      const me = await unwrap(api.GET("/v1/me"));
+      // The same list GET /v1/workspaces sends, so the workspace /app opens loads without asking again.
+      queryClient.setQueryData(keys.workspaces, me.workspaces);
+      return me;
+    },
+  });
 }
 
 export function useWorkspaces() {
