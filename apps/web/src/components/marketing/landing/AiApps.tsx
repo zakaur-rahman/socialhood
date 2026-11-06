@@ -2,6 +2,8 @@ import { BookOpen, Check, CircleCheck, type LucideIcon, MessageSquareOff, Messag
 
 import { MCP_PAGE_PATH, MCP_SETUP_PATH } from "@/lib/marketing/mcp-page";
 import { SITE_NAME } from "@/lib/marketing/site";
+import type { Route } from "next";
+import Link from "next/link";
 
 import { CtaLink } from "../primitives";
 
@@ -102,12 +104,13 @@ export function AiApps() {
             ))}
           </ul>
           <div className="ctas mh-ctas">
-            <CtaLink href={MCP_PAGE_PATH} variant="secondary">
-              How it works with AI apps
-            </CtaLink>
+            {/* One button here: "Start free" stays the page's main action, and the explainer is a link. */}
             <CtaLink href={MCP_SETUP_PATH} variant="secondary">
               Set it up
             </CtaLink>
+            <Link href={MCP_PAGE_PATH as Route} className="tlink">
+              How it works with AI apps
+            </Link>
           </div>
         </div>
         <AiAppsScene />
