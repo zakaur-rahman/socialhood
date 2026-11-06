@@ -43,13 +43,17 @@ type Cleanup = () => void;
 export function startLandingMotion(root: ParentNode = document): Cleanup {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const cleanups: Cleanup[] = [];
+  // hero and decide read computed styles first: after the other scenes' DOM writes, those reads
+  // would force a style pass over the whole page.
+  if (!reduce) {
+    cleanups.push(hero(root));
+    cleanups.push(decide(root));
+  }
   cleanups.push(modes(root, reduce));
   cleanups.push(comments(root, reduce));
   cleanups.push(productDemo(root, reduce));
   if (!reduce) {
     cleanups.push(aiApps(root));
-    cleanups.push(hero(root));
-    cleanups.push(decide(root));
     cleanups.push(reveals(root));
   }
   return () => cleanups.forEach((stop) => stop());
@@ -240,7 +244,6 @@ function decide(root: ParentNode): Cleanup {
   const scrub = section?.querySelector<HTMLElement>("[data-decide-scrub]");
   const sticky = section?.querySelector<HTMLElement>("[data-decide-sticky]");
   if (!section || !scrub || !sticky) return () => {};
-  const scene = decideScene(section);
 
   // Whether the frame pins is CSS's call (site.css, the site-md breakpoint and reduced motion): read
   // it from the frame, never restate the breakpoint here (LP-4.6). The nav offset is the frame's own top.
@@ -339,6 +342,9 @@ function decide(root: ParentNode): Cleanup {
   window.addEventListener("resize", relayout);
   void document.fonts?.ready.then(() => !disposed && relayout());
   setMode();
+  // After setMode's computed-style read: decideScene writes (the word spans), and a read after a
+  // write forces a style pass.
+  const scene = decideScene(section);
 
   return () => {
     disposed = true;
@@ -394,6 +400,8 @@ function decideScene(section: HTMLElement) {
   let kbHeight = 0;
   let lineTops: number[] = [];
   let last = -1;
+  /** The `--f` each step last got: a frame writes only what changed (each write restyles). */
+  const lastF: string[] = [];
   const NS = "http://www.w3.org/2000/svg";
 
   function layout() {
@@ -479,13 +487,16 @@ function decideScene(section: HTMLElement) {
     const shown = Math.floor(seg(p, 0.32, 0.56) * words.length + (p >= 0.56 ? 1 : 0));
     words.forEach((word, i) => word.classList.toggle("on", i < shown));
     show(parts.cites, p >= 0.56);
-    state.textContent = p < 0.56 ? "Writing" : p < 0.64 ? "Ready to send" : "Sent by you";
+    // Assigning textContent replaces the text node even when it is the same string.
+    const label = p < 0.56 ? "Writing" : p < 0.64 ? "Ready to send" : "Sent by you";
+    if (state.textContent !== label) state.textContent = label;
     show(parts.q2, p >= 0.66);
     show(parts.hand, p >= 0.86);
     show(parts.gap, p >= 0.92);
     const marks = [0, 0.06, 0.27, 0.66, 1];
     steps.forEach((step, i) => {
-      step.style.setProperty("--f", seg(p, marks[i], marks[i + 1]).toFixed(3));
+      const f = seg(p, marks[i], marks[i + 1]).toFixed(3);
+      if (lastF[i] !== f) step.style.setProperty("--f", (lastF[i] = f));
       step.classList.toggle("on", p >= marks[i] && (i === steps.length - 1 || p < marks[i + 1]));
     });
   }
@@ -551,7 +562,10 @@ function comments(root: ParentNode, reduce: boolean): Cleanup {
     row.append(avatar, body);
     if (item.spam) row.append(el("span", "tag t-stop", "Hidden"));
     list.insertBefore(row, list.firstChild);
-    while (list.children.length > 6) list.lastElementChild?.remove();
+    // A seventh row stays, so the one leaving slides out under the edge instead of vanishing.
+    while (list.children.length > 7) list.lastElementChild?.remove();
+    // Rows are absolute (site.css): each moves to its slot with a transform, never through layout.
+    [...list.children].forEach((child, i) => (child as HTMLElement).style.setProperty("--y", `${i * 100}%`));
     if (item.match) {
       later(() => row.classList.add("match"), 350);
       if (!busy) later(() => fly(row, item), 700);
@@ -580,7 +594,7 @@ function comments(root: ParentNode, reduce: boolean): Cleanup {
         { transform: `translate(${p2.x}px,${p2.y}px)`, opacity: 1, offset: 0.92 },
         { transform: `translate(${p2.x}px,${p2.y}px)`, opacity: 0 },
       ],
-      { duration: 1300, easing: "cubic-bezier(.45,0,.25,1)" },
+      { duration: 1200, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
     );
     later(() => {
       rule.classList.remove("pulse");
@@ -588,19 +602,33 @@ function comments(root: ParentNode, reduce: boolean): Cleanup {
       rule.classList.add("pulse");
       sent += 1;
       sentEl.textContent = String(sent);
-    }, 600);
-    later(() => playDm(item), 1250);
+    }, 550);
+    later(() => playDm(item), 1150);
   }
 
+  /** Raises each line by the height of the lines after it (site.css: live lines are pinned to the foot). */
+  const stack = () => {
+    const lines = [...dm.children] as HTMLElement[];
+    // Reads first, together: one layout for the whole thread.
+    const gap = parseFloat(getComputedStyle(dm).rowGap) || 0;
+    const heights = lines.map((line) => line.offsetHeight);
+    let y = 0;
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      lines[i].style.setProperty("--y", `${y}px`);
+      y += heights[i] + gap;
+    }
+  };
   const bubble = (className: string, text: string, extra?: HTMLElement) => {
     const node = el("p", `${className} enter`, text);
     if (extra) node.append(extra);
     dm.append(node);
+    stack();
     return node;
   };
 
   function playDm(item: (typeof COMMENT_STREAM)[number]) {
     dm.replaceChildren();
+    dm.dataset.live = "";
     dmName.textContent = item.user;
     dmAvatar.textContent = item.user.charAt(0).toUpperCase();
     dmAvatar.style.setProperty("--bg", `var(--av-${item.avatar})`);
@@ -616,6 +644,7 @@ function comments(root: ParentNode, reduce: boolean): Cleanup {
       typing = el("div", "dm-typing");
       typing.append(el("i", ""), el("i", ""), el("i", ""));
       dm.append(typing);
+      stack();
     }, 2100);
     later(() => {
       typing?.remove();
@@ -824,13 +853,14 @@ type DemoBeat = { at: number; step?: number; on?: string[]; off?: string[]; list
 const DEMO_ALL = ["maya", "theo", "nina", "ria", "lena", "leo", "visitor"];
 const open = (id: string) => [`sel-${id}`, `conv-${id}`, `det-${id}`];
 
-/** The story (ProductDemo.tsx), about 21.5 s, then a rest; the first beat is the scene's start. */
+/** The story (ProductDemo.tsx), about 22 s, then a rest; the first beat is the scene's start. */
 export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
-  { at: 0, step: 0, on: ["pick", "theo-dot", "nina-dot"], list: DEMO_ALL.slice(1), state: { strip: "all", acct: "all", tab: "chats", view: "list" } },
+  // The start already has a conversation open (the list's top one), never an empty pane.
+  { at: 0, step: 0, on: [...open("theo"), "det-theo-analysis", "det-theo-add", "nina-dot"], list: DEMO_ALL.slice(1), state: { strip: "all", acct: "all", tab: "chats", view: "list" } },
   // 1. A DM arrives, and the row opens.
   { at: 400, on: ["maya-row-q", "maya-dot"], list: DEMO_ALL },
   { at: 1000, to: "row-maya" },
-  { at: 1350, click: true, on: [...open("maya"), "maya-ph", "det-maya-wait"], off: ["pick", "maya-dot"], state: { view: "thread" } },
+  { at: 1350, click: true, on: [...open("maya"), "maya-ph", "det-maya-wait"], off: [...open("theo"), "det-theo-analysis", "det-theo-add", "maya-dot"], state: { view: "thread" } },
   // 2. The AI reads it and drafts.
   { at: 1700, step: 1, on: ["maya-tags", "maya-lead", "det-maya-lead", "det-maya-analysis", "det-maya-add"], off: ["det-maya-wait"] },
   { at: 2200, on: ["maya-bar", "maya-drafting"] },
@@ -862,7 +892,7 @@ export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
   { at: 12700, to: "acct" },
   { at: 12900, click: true, on: ["menu"] },
   { at: 13150, to: "opt-pune" },
-  { at: 13400, click: true, on: [...open("theo"), "det-theo-analysis", "det-theo-add"], off: ["menu", ...open("maya"), "theo-dot"], list: ["theo", "lena"], state: { acct: "pune" } },
+  { at: 13400, click: true, on: [...open("theo"), "det-theo-analysis", "det-theo-add"], off: ["menu", ...open("maya")], list: ["theo", "lena"], state: { acct: "pune" } },
   { at: 14000, to: "seg-whatsapp" },
   { at: 14250, click: true, on: [...open("nina"), "det-nina-analysis", "det-nina-add"], off: [...open("theo"), "nina-dot"], list: ["nina", "leo"], state: { strip: "whatsapp", acct: "all" } },
   { at: 14800, to: "seg-all" },
@@ -886,6 +916,8 @@ export const PRODUCT_DEMO_TIMELINE: DemoBeat[] = [
   { at: 20950, click: true, on: ["assign-menu"] },
   { at: 21200, to: "opt-priya" },
   { at: 21450, click: true, on: ["assign-toast", "sam-assign-who", "sam-row-who", "det-sam-who"], off: ["assign-menu", "sam-assign-none", "det-sam-nobody"] },
+  // The toast leaves before the end, so the resting frame (and reduced motion's) never sits under it.
+  { at: 22300, off: ["assign-toast"] },
   // The rest, before it loops.
   { at: 23000 },
 ];
@@ -965,7 +997,7 @@ export function productDemo(root: ParentNode, reduce = false): Cleanup {
   };
   const apply = (beat: DemoBeat) => {
     if (beat.to) aim(beat.to);
-    if (beat.click && aimed) ring?.animate?.([{ opacity: 0.7, transform: "scale(0.4)" }, { opacity: 0, transform: "scale(1)" }], { duration: 350 });
+    if (beat.click && aimed) ring?.animate?.([{ opacity: 0.7, transform: "scale(0.4)" }, { opacity: 0, transform: "scale(1)" }], { duration: 350, easing: "ease-out" });
     change(beat);
   };
   const begin = () => {
@@ -1043,7 +1075,10 @@ export function productDemo(root: ParentNode, reduce = false): Cleanup {
     : new IntersectionObserver(
         (entries) => {
           onScreen = entries[entries.length - 1].isIntersecting;
-          if (!armed) {
+          // Already on screen (a link or reload landed here): keep the finished frame the server drew
+          // and play on from the story's end and rest, so nothing blinks (as aiApps).
+          if (!armed && onScreen) seek(LAST);
+          else if (!armed) {
             arm();
             begin();
           }

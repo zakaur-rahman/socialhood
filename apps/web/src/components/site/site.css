@@ -114,7 +114,7 @@ body:has(.site) {
       & .btn-line:hover { border-color: var(--s-text); background: var(--s-hover); }
       & .btn-ghost:hover { color: var(--s-text); }
     }
-    & .btn:active { transform: translateY(1px); }
+    & .btn:active { transform: scale(0.97); }
     & .btn:is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; transform: none; }
     & .btn:is(:disabled, [aria-disabled="true"]) svg { transform: none; }
     & .btn-main:is(:disabled, [aria-disabled="true"]) { background: var(--s-text-3); color: var(--s-bg); }
@@ -235,7 +235,7 @@ body:has(.site) {
     & .foot .foot-contact { gap: var(--space-2); margin-top: var(--space-4); min-height: 44px; color: var(--s-text); font-weight: 500; }
     & .foot .foot-contact svg { flex: none; transition: transform var(--dur-fast) var(--ease); }
     /* The business's own profiles under the brand (SOCIAL_PROFILES): quiet 44 px icon links. */
-    & .foot .foot-social { display: flex; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+    & .foot .foot-social { display: flex; flex-direction: row; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
     & .foot .foot-social a { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--s-text-2); transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease); }
     @media (hover: hover) { & .foot .foot-social a:hover { color: var(--s-text); background: var(--s-hover); } }
     @media (hover: hover) {
@@ -502,7 +502,13 @@ body:has(.site) {
     & .post-cap { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-label); color: var(--ink-2); margin: 0; }
     & .post-cap b { color: var(--ink); }
     & .comments { flex: 1 1 236px; min-height: 236px; overflow: hidden; padding: var(--space-1) 0; margin: 0; list-style: none; position: relative; }
-    & .cmt { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-4); font-size: var(--fs-label); transition: background-color var(--dur-slow) var(--ease); }
+    /* Each row sits at its own `--y` (a multiple of its height, set by Comments.tsx and the script), so a
+       new comment slides the others down with a transform, never through layout (CLS 0). */
+    & .cmt {
+      position: absolute; inset: var(--space-1) 0 auto; translate: 0 var(--y, 0);
+      display: flex; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-4); font-size: var(--fs-label);
+      transition: translate var(--dur-slow) var(--ease), background-color var(--dur-slow) var(--ease);
+    }
     & .cmt .av { flex-basis: 28px; width: 28px; height: 28px; font-size: var(--fs-micro); }
     & .cmt .body { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     & .cmt .body b { font-weight: 600; margin-right: var(--space-2); }
@@ -530,12 +536,21 @@ body:has(.site) {
     & .kwfield input:focus-visible { outline: 2px solid var(--s-focus); outline-offset: 1px; border-color: transparent; }
     & .rule-stat { display: flex; justify-content: space-between; align-items: baseline; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); margin: 0; }
     & .rule-stat b { font-size: var(--fs-stat-sm); font-weight: 700; color: var(--ink); letter-spacing: var(--tr-h3); }
-    & .rule.pulse { animation: site-pulse var(--dur-very-slow) var(--ease); }
+    /* The pulse is a ring over the card's edge whose opacity animates (box-shadow would repaint every frame). */
+    & .rule::after { content: ""; position: absolute; inset: -1px; border: 1px solid var(--iris); border-radius: inherit; box-shadow: 0 0 0 6px var(--iris-soft); opacity: 0; pointer-events: none; }
+    & .rule.pulse::after { animation: site-pulse var(--dur-very-slow) var(--ease); }
     & .dm-h { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--rule-2); font-size: var(--fs-caption); color: var(--ink-3); }
     & .dm-h b { display: block; color: var(--ink); font-size: var(--fs-label); font-weight: 600; line-height: 1.3; }
     & .dm-b { flex: 1 1 332px; min-height: 332px; padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); overflow: hidden; }
     & .pb { max-width: 86%; padding: var(--space-2) var(--space-3); border-radius: var(--r-lg); font-size: var(--fs-label); line-height: 1.45; margin: 0; }
-    & .pb.enter { animation: site-in var(--dur-slow) var(--ease) both; }
+    /* Live (the script's thread): each line is pinned to the foot and raised by `--y`, the height of the
+       lines after it, so a new line slides the others up with a transform, never through layout (CLS 0). */
+    & .dm-b[data-live] { position: relative; }
+    & .dm-b[data-live] > * { position: absolute; left: var(--space-3); bottom: var(--space-4); translate: 0 calc(-1 * var(--y, 0px)); transition: translate var(--dur-slow) var(--ease); }
+    & .dm-b[data-live] > .pb { max-width: calc(0.86 * (100% - 2 * var(--space-3))); }
+    & .dm-b[data-live] > .pb.r { left: auto; right: var(--space-3); }
+    /* A line joins the foot of the thread, so it rises from below. */
+    & .pb.enter { animation: site-rise var(--dur-slow) var(--ease) both; }
     & .pb.l { background: var(--paper-2); border-bottom-left-radius: var(--r-xs); align-self: flex-start; }
     & .pb.r { background: var(--iris); color: var(--on-ink); border-bottom-right-radius: var(--r-xs); align-self: flex-end; }
     & .pb .tapbtn { display: flex; align-items: center; justify-content: center; margin-top: var(--space-2); height: 34px; border-radius: var(--r-sm); background: var(--sheet); border: 1px solid var(--rule); font-weight: 600; color: var(--iris-ink); transition: transform var(--dur-quick) var(--ease), background-color var(--dur-fast) var(--ease); }
@@ -565,6 +580,7 @@ body:has(.site) {
     /* Auto is part of Pro: said in words beside the label, not a badge. */
     & .switch .pro { font-size: var(--fs-caption); font-weight: 500; color: var(--ink-3); }
     & .switch button[aria-pressed="true"] .pro { color: inherit; opacity: .72; }
+    @media (width < 480px) { & .switch button:has(.pro) { flex-direction: column; gap: 0; height: auto; min-height: 48px; padding-block: var(--space-1); } }
     & .mode-desc { font-size: var(--fs-body); color: var(--ink-2); margin: var(--space-4) 0 0; min-height: 52px; max-width: 60ch; }
     & .mtable { margin-top: var(--space-6); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
     & .mrow { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-5); align-items: center; padding: var(--space-5) var(--space-6); border-top: 1px solid var(--rule-2); }
@@ -576,7 +592,7 @@ body:has(.site) {
     & .mrow .lab { font-size: var(--fs-label); color: var(--ink-2); }
     & .out { display: flex; flex-direction: column; gap: var(--space-1); align-items: flex-start; }
     & .out small { font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.4; }
-    & .out.swap { animation: site-swap var(--dur-slow) var(--ease) both; }
+    & .out.swap { animation: site-swap var(--dur-quick) var(--ease-swap) both; }
 
     /* ---- security: a spec list (C-157 organize). The heading block on the left stays in view on a wide
        screen; the points are rows on the right, the title in a fixed column, a hairline between rows. */
@@ -595,7 +611,6 @@ body:has(.site) {
     & .aud-sec { padding-bottom: var(--space-section-tight); }
     & .aud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin-bottom: 0; padding: 0; list-style: none; }
     & .aud-card { position: relative; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-10) var(--space-8) var(--space-8); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); overflow: hidden; transition: background-color var(--dur-quick) var(--ease); }
-    & .aud-card .chan-line { position: absolute; left: 0; right: 0; top: 0; }
     & .aud-card h3 { margin: 0; font-size: var(--fs-h3); line-height: var(--lh-h3); letter-spacing: var(--tr-h3); font-weight: 700; }
     & .aud-link { display: inline-flex; align-items: center; gap: var(--space-3); color: inherit; text-decoration: none; }
     & .aud-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
@@ -612,7 +627,6 @@ body:has(.site) {
 
     /* ---- features, with the connections */
     & .feat-lead { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: var(--space-12); padding: var(--space-10); border-radius: var(--r-lg); background: var(--s-surface); border: 1px solid var(--s-line); }
-    & .feat-lead-h { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5); }
     & .feat-lead h3 { margin: 0; font-size: var(--fs-h2-sm); line-height: var(--lh-h2-sm); letter-spacing: var(--tr-h2-sm); font-weight: 700; }
     & .feat-lead p { margin: 0; font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 52ch; }
     & .feat-lead .note-line { margin-top: var(--space-4); font-size: var(--fs-body-sm); color: var(--s-text); font-weight: 500; }
@@ -629,6 +643,7 @@ body:has(.site) {
     /* The icon sits beside the title (not stacked above it), and the text hangs under the title. */
     & .fcard > .ico { grid-column: 1; align-self: center; }
     & .fcard > :not(.ico) { grid-column: 2; }
+    @media (width >= 1024px) { & .fcard h4 { min-block-size: calc(2 * var(--lh-title)); } }
     & .fcard h4 { align-self: center; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
     & .fcard p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 60ch; }
     & .fcard .note-line { font-size: var(--fs-body-sm); color: var(--s-text-3); }
@@ -661,6 +676,9 @@ body:has(.site) {
     & .crow-g { grid-row: 3; margin: 0; font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
     & .st { grid-row: 4; align-self: end; display: inline-flex; align-items: center; gap: var(--space-2); padding-top: var(--space-2); font-size: var(--fs-label); font-weight: 500; color: var(--s-text); }
     & .st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sc); flex: 0 0 8px; }
+    /* The landing page's compact list (the design audit, 2026-11-06): each name with its status dot, in one wrapping row. */
+    & .chan-list { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: var(--space-head) 0 0; padding: 0; list-style: none; }
+    & .chan-list .st { padding-top: 0; font-size: var(--fs-body-sm); }
     /* Payments: one full-width row on the same columns as the cards above, so its name and its line start
        on the cards' own text edges. */
     & .pay {
@@ -691,7 +709,7 @@ body:has(.site) {
       transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease);
     }
     & .ico svg { width: 20px; height: 20px; }
-    & :is(.feat-lead, .fcard, .crow, .pay, .aud-card) .ico { background: var(--s-surface-2); }
+    & :is(.fcard, .crow, .pay) .ico { background: var(--s-surface-2); }
     & .ico-ai { color: var(--s-link); }
     /* A channel's own glyph (the app's PlatformGlyph) in the channel's colour: the page's motif. */
     & .ico-mark { color: var(--c); }
@@ -705,8 +723,8 @@ body:has(.site) {
     @media (hover: hover) {
       & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--s-line-control); }
       & :is(.fcard.is-link, .aud-card):hover { transform: translateY(-3px); }
-      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico { transform: translateY(-1px) scale(1.06); }
-      & :is(.feat-lead, .fcard, .crow, .pay, .aud-card):hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
+      & :is(.fcard, .crow, .pay):hover .ico { transform: translateY(-1px) scale(1.06); }
+      & :is(.fcard, .crow, .pay):hover .ico:not(.ico-ai, .ico-mark) { color: var(--s-text); }
       & :is(.fcard.is-link, .aud-card):hover:active { transform: translateY(-2px); }
     }
     & :is(.fcard.is-link, .aud-card):active { transform: translateY(1px); }
@@ -799,7 +817,7 @@ body:has(.site) {
     /* The answer fades in and rises 4 px as it opens (after the height has started), and fades out
        quietly on close. */
     & .qa p {
-      margin: 0; padding-bottom: var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 62ch;
+      margin: 0; padding-bottom: var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 52ch;
       transition: opacity var(--dur-quick) var(--ease), translate var(--dur-quick) var(--ease);
     }
     & .qa[open]:not([data-closing]) p {
@@ -867,7 +885,6 @@ body:has(.site) {
       & .close .btn:hover { transform: translateY(-1px); }
       & .close .btn-main:hover { box-shadow: var(--shadow-cta-night); }
     }
-    & .close .btn:active { transform: translateY(0) scale(var(--scale-small)); box-shadow: none; transition-duration: var(--dur-micro); }
     & .close .facts.close-facts { justify-content: center; gap: var(--space-2) var(--space-6); margin-top: var(--space-6); font-size: var(--fs-label); color: var(--s-text-2); }
     & .close .close-facts svg { color: var(--s-text-3); }
     /* The reveal, once, as the close comes up the screen (the view() rise the cards use, so no
@@ -918,7 +935,7 @@ body:has(.site) {
       & .hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-10); }
       & .hero-sub { max-width: 52ch; }
       & .stage { align-items: flex-start; }
-      & .inbox, & .stage-cap { width: min(100%, 460px); }
+      & .inbox, & .stage-cap { width: 100%; }
       & .strip-in { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6) var(--space-8); }
       & .decide-scrub { height: auto; }
       & .decide-sticky { position: relative; top: 0; height: auto; min-height: 0; padding-block: var(--space-section); }
@@ -1014,8 +1031,9 @@ body:has(.site) {
   }
 }
 
-@keyframes site-in { from { opacity: 0; transform: translateY(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
-@keyframes site-pulse { 40% { box-shadow: 0 0 0 6px var(--iris-soft); border-color: var(--iris); } }
+@keyframes site-in { from { opacity: 0; transform: translateY(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes site-rise { from { opacity: 0; transform: translateY(var(--dist-base, 8px)); } to { opacity: 1; transform: none; } }
+@keyframes site-pulse { 40% { opacity: 1; } }
 @keyframes site-dot { 0%, 60%, 100% { opacity: .35; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
 /* The hero's pile (C-157 motion): each row starts where HERO_PILE puts it and settles into its slot;
    its card skin fades as it lands, its rule fades in, the frame grows in from the modal scale. */
@@ -1026,7 +1044,7 @@ body:has(.site) {
 @keyframes site-fade { from { opacity: 0; } }
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
-@keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
+@keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-micro, 4px))); filter: blur(var(--blur-small, 2px)); } to { opacity: 1; transform: none; filter: none; } }
 
 /* ==== C-159 shared ==== */
 /* What the guides and the legal and information pages share (C-159): the callout (site/Callout.tsx),
@@ -2973,7 +2991,7 @@ body:has(.site) {
       font-size: var(--fs-label); font-weight: 600;
       transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-quick) var(--ease);
     }
-    & .mh-btn > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--dur-fast) var(--ease-swap), filter var(--dur-fast) var(--ease-swap), transform var(--dur-fast) var(--ease-swap); }
+    & .mh-btn > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--dur-quick) var(--ease-swap), filter var(--dur-quick) var(--ease-swap), transform var(--dur-quick) var(--ease-swap); }
     & .mh-btn-a { opacity: 0; filter: blur(var(--blur-small)); transform: scale(var(--scale-medium)); }
     & .mh-btn.press { transform: scale(var(--scale-large)); }
     & .mh-done { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--ink-2); }
@@ -3167,8 +3185,6 @@ body:has(.site) {
 
     /* ---- the conversation: ThreadHeader, MessageLog */
     & .pd-panes { position: relative; min-width: 0; min-height: 0; background: var(--app-canvas); }
-    & .pd-pick { display: grid; place-content: center; justify-items: center; gap: var(--space-1); color: var(--app-fg-2); }
-    & .pd-pick b { font-size: var(--fs-body); font-weight: 600; color: var(--app-fg); }
     & .pd-conv { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; container-type: inline-size; }
     & .pd-head { flex: none; display: flex; align-items: center; gap: var(--space-3); height: 64px; padding: 0 var(--space-4); background: var(--app-panel); border-bottom: 1px solid var(--app-line); }
     & .pd-back { display: none; flex: none; color: var(--app-fg-2); }
@@ -3279,7 +3295,7 @@ body:has(.site) {
     & .pd-correct { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2) !important; padding-top: var(--space-2); border-top: 1px solid var(--app-line); font-size: var(--fs-micro); color: var(--app-fg-2); }
 
     /* ---- AssigneeMenu, AssigneeAvatar */
-    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: 10px; font-style: normal; font-weight: 600; }
+    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: var(--fs-micro); font-style: normal; font-weight: 600; }
     & .pd-assign { padding: var(--space-1); }
     & .pd-assign-h { padding: var(--space-1) var(--space-2); font-size: var(--fs-micro); font-weight: 600; color: var(--app-fg-2); }
     & .pd-opt-2 { height: 40px; }
@@ -3300,6 +3316,7 @@ body:has(.site) {
     & .pd-steps { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
     & .pd-step { display: block; width: 100%; min-height: 32px; margin: 0; padding: var(--space-2) 0 0; border: 0; border-top: 2px solid var(--rule); border-radius: 0; background: none; font: inherit; font-size: var(--fs-caption); line-height: var(--lh-caption); text-align: left; color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
     & button.pd-step { cursor: pointer; }
+    @media (pointer: coarse) { & .pd-step { min-height: 40px; } }
     @media (hover: hover) { & button.pd-step:hover { border-color: var(--ink-3); color: var(--ink); } }
     & .pd-steps li.on .pd-step { border-color: var(--iris); color: var(--ink); font-weight: 500; }
 
@@ -3352,12 +3369,17 @@ body:has(.site) {
       & .pd-before, & .pd-float, & .pd-conv:not(.pd-first), & .pd-det:not(.pd-det-first), & .pd-bar { opacity: 0; }
 
       /* The script owns every part from here: off until the timeline turns it on. */
-      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease); }
-      & [data-live] [data-p].on { opacity: 1; translate: none; }
+      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-quick) var(--ease), translate var(--dur-quick) var(--ease); }
+      & [data-live] [data-p].on { opacity: 1; translate: none; transition-duration: var(--dur-fast); }
+      /* Menus grow from their anchor; toasts arrive slowly and leave quicker. */
+      & [data-live] :is([data-p="menu"], [data-p="assign-menu"], [data-p="pop"]) { translate: none; scale: var(--scale-medium); transform-origin: top right; transition: opacity var(--dur-quick) var(--ease), scale var(--dur-quick) var(--ease); }
+      & [data-live] :is([data-p="menu"], [data-p="assign-menu"], [data-p="pop"]).on { scale: none; transition-duration: var(--dur-fast); }
+      & [data-live] :is([data-p="toast"], [data-p="assign-toast"]) { transition-duration: var(--dur-medium); }
+      & [data-live] :is([data-p="toast"], [data-p="assign-toast"]).on { transition-duration: var(--dur-slow); }
       & [data-live] .pd-conv, & [data-live] .pd-det, & [data-live] .pd-det [data-p], & [data-live] .pd-who-av, & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-count, & [data-live] .pd-unread-dot, & [data-live] .pd-b[data-p], & [data-live] .pd-status > * { translate: none; }
       & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
       & [data-live] .pd-row.on { translate: none; }
-      & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-medium) var(--ease-swap) infinite alternate; }
+      & [data-live] .pd-drafting.on { animation: pd-shimmer 1.2s linear infinite alternate; }
 
       & .pd-cursor { display: block; position: absolute; top: 0; left: 0; z-index: 5; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-slow) var(--ease); }
       & .pd-cursor.on { opacity: 1; }
@@ -3380,12 +3402,12 @@ body:has(.site) {
     @media (width <= 1060px) { /* site-wide */
       & .pd-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
-    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). */
+    /* A short laptop: the band closes up, so the heading stays with the frame (the frame stays at its floor). The
+       heading keeps the .h2 tier of the other scene sections (the design audit, 2026-11-06). */
     @media (height < 820px) and (width > 760px) { /* site-nav */
       padding-top: var(--space-6);
       padding-bottom: var(--space-6);
       & .pd-stage { margin-top: var(--space-3); }
-      & .h2 { font-size: var(--fs-h3); line-height: var(--lh-h3); }
       & .lede { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
     }
 
@@ -3410,8 +3432,8 @@ body:has(.site) {
       @media (scripting: enabled) {
         & .pd-inbox { display: grid; }
         & .pd-inbox > * { grid-area: 1 / 1; min-width: 0; min-height: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-        & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-medium)); }
-        & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-medium))); }
+        & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-base)); }
+        & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-base))); }
         & .pd-toast { top: var(--space-3); right: auto; bottom: auto; left: 50%; transform: translateX(-50%); }
         /* A tap, not a mouse. */
         & .pd-cursor svg { display: none; }

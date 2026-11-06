@@ -137,7 +137,7 @@ function SheetTitle({
     <SheetPrimitive.Title
       data-slot="sheet-title"
       className={cn(
-        "text-base font-semibold text-fg group-has-data-[slot=sheet-close]/sheet-content:pe-8 pointer-coarse:group-has-data-[slot=sheet-close]/sheet-content:pe-10",
+        "text-base font-semibold text-fg [[data-slot=sheet-content]:has([data-slot=sheet-close])_&]:pe-8 pointer-coarse:[[data-slot=sheet-content]:has([data-slot=sheet-close])_&]:pe-10",
         className
       )}
       {...props}

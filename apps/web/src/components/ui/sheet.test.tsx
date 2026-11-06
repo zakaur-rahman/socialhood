@@ -108,8 +108,8 @@ describe("Sheet (UI-012)", () => {
     expect(title).toHaveClass(
       "text-base",
       "font-semibold",
-      "group-has-data-[slot=sheet-close]/sheet-content:pe-8",
-      "pointer-coarse:group-has-data-[slot=sheet-close]/sheet-content:pe-10",
+      "[[data-slot=sheet-content]:has([data-slot=sheet-close])_&]:pe-8",
+      "pointer-coarse:[[data-slot=sheet-content]:has([data-slot=sheet-close])_&]:pe-10",
     );
     expect(title).not.toHaveClass("font-medium");
     await user.click(close);

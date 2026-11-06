@@ -38,7 +38,7 @@ export function ModeSwitch() {
     <>
       <div className="switch" role="group" aria-label="AI reply mode">
         {ORDER.map((key) => (
-          <button key={key} type="button" data-mode={key} aria-pressed={key === DEFAULT_MODE}>
+          <button key={key} type="button" data-mode={key} aria-pressed={key === DEFAULT_MODE} aria-label={key === "auto" ? "Auto, Creator and Business plans" : undefined}>
             {MODES[key].label}
             {key === "auto" ? <span className="pro">Creator and Business</span> : null}
           </button>
