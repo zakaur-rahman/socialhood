@@ -69,7 +69,7 @@ describe("the AI assistant band (C-168)", () => {
     // The apps are plain names; no logos or images.
     expect(container.querySelectorAll("img, svg image")).toHaveLength(0);
     const links = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
-    expect(links).toEqual(["/mcp", "/developers/mcp"]);
+    expect(links).toEqual(["/developers/mcp", "/mcp"]);
     for (const href of links) expect(PUBLIC_PATHS, href ?? "").toContain(href);
   });
 
