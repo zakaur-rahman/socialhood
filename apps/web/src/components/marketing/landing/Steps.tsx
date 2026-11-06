@@ -1,8 +1,6 @@
 import { BookOpenText, Link2, type LucideIcon, MessageSquareReply } from "lucide-react";
 
-import { Ico } from "./Ico";
-
-/** The three setup steps, as the site has always described them; each with its icon (C-157 motion). */
+/** The three setup steps, as the site has always described them; each with its icon (C-157 motion), shown on the feature pages (GtmPageView). */
 export const SETUP_STEPS: { title: string; body: string; icon: LucideIcon }[] = [
   {
     title: "Connect your accounts",
@@ -23,7 +21,7 @@ export const SETUP_STEPS: { title: string; body: string; icon: LucideIcon }[] = 
 
 /**
  * Set up in three steps (C-157): the last word before the FAQ, on a night band. The order is the list's
- * own (an <ol>), with no step numbers on screen.
+ * own (an <ol>), with no step numbers or icon tiles on screen (the design audit, 2026-11-06).
  */
 export function Steps() {
   return (
@@ -35,10 +33,7 @@ export function Steps() {
         <ol className="steps after-head">
           {SETUP_STEPS.map((step) => (
             <li key={step.title}>
-              <h3>
-                <Ico icon={step.icon} />
-                {step.title}
-              </h3>
+              <h3>{step.title}</h3>
               <p>{step.body}</p>
             </li>
           ))}
