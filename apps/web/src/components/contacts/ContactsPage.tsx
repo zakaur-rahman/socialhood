@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
 import { STAGE_LABEL, STAGE_TONE } from "@/lib/leads/stages";
-import { PageFrame } from "@/components/shell/PageFrame";
+import { PageFrame, STICKY_PAGE_TOOLBAR } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,7 +123,7 @@ export function ContactsPage() {
       }
     >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cn(STICKY_PAGE_TOOLBAR, "flex flex-wrap items-center gap-2")}>
           <SearchInput
             label="Search contacts"
             placeholder={roomy ? "Name, @username, email or phone" : "Search contacts"}

@@ -21,6 +21,7 @@ import {
 } from "@/components/connections/filters";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
+import { STICKY_PAGE_TOOLBAR } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
@@ -213,31 +214,33 @@ function Connections() {
       ) : (
         <>
           {accounts.data.length >= 2 ? (
-            <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
-              <SearchInput
-                label="Search accounts"
-                placeholder="Search by name, handle or number"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                size="xl"
-                className="flex-1"
-              />
-              {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
-                Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
-              <ToggleGroup
-                value={filter}
-                onValueChange={(value) => setFilter(value as AccountFilter)}
-                aria-label="Show accounts"
-                className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
-              >
-                {ACCOUNT_FILTERS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
-                    {option.label}
-                    <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </Card>
+            <div className={STICKY_PAGE_TOOLBAR}>
+              <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
+                <SearchInput
+                  label="Search accounts"
+                  placeholder="Search by name, handle or number"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  size="xl"
+                  className="flex-1"
+                />
+                {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+                  Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
+                <ToggleGroup
+                  value={filter}
+                  onValueChange={(value) => setFilter(value as AccountFilter)}
+                  aria-label="Show accounts"
+                  className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
+                >
+                  {ACCOUNT_FILTERS.map((option) => (
+                    <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
+                      {option.label}
+                      <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </Card>
+            </div>
           ) : null}
           {shown.length === 0 ? (
             <Card>
