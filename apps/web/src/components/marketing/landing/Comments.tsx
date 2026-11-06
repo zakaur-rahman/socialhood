@@ -69,8 +69,8 @@ export function CommentMachine() {
             <b>{CREATOR.handle}</b> {CREATOR.post}
           </p>
           <ul className="comments" data-comments="" aria-label="Comments on the Reel (example)">
-            {seedComments().map((comment) => (
-              <li key={comment.user} className={`cmt${comment.match ? " match" : ""}${comment.spam ? " spam" : ""}`}>
+            {seedComments().map((comment, i) => (
+              <li key={comment.user} className={`cmt${comment.match ? " match" : ""}${comment.spam ? " spam" : ""}`} style={{ "--y": `${i * 100}%` } as CSSProperties}>
                 <span className="av" style={avatar(comment.avatar)} aria-hidden>
                   {comment.user.charAt(0).toUpperCase()}
                 </span>

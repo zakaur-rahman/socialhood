@@ -29,7 +29,7 @@ export function Trust() {
       <div className="wrap spec">
         <div className="spec-head">
           <h2 id="trust-title" className="h2">
-            Your customers&apos; messages, handled with care
+            Your customers&apos; messages, safe
           </h2>
           <p className="lede">
             Read exactly what we collect and why in our <Link href="/privacy">Privacy Policy</Link>, and how we protect it on

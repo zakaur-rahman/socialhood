@@ -340,19 +340,13 @@ test.describe("landing page", () => {
     // Features: three groups of cards, with no half-empty row.
     await bring("section#features .fgroup");
     await expect(page.locator("section#features .fgroup")).toHaveCount(3);
-    await expect(page.locator("section#features .more-links")).toHaveCount(1);
+    await expect(page.locator("section#features .fgroup ~ .more-links")).toHaveCount(1);
 
-    // Integrations: four cards a row, equal heights and every status on one line per row.
-    await bring("#integrations .chan");
-    const cards = await page.$$eval("#integrations .crow", (els) =>
-      els.map((el) => ({ top: Math.round(el.getBoundingClientRect().top), height: Math.round(el.getBoundingClientRect().height), status: Math.round(el.querySelector(".st")!.getBoundingClientRect().top) })),
-    );
-    expect(cards).toHaveLength(8);
-    for (const row of [cards.slice(0, 4), cards.slice(4)]) {
-      expect(same(row.map((c) => c.top))).toBe(true);
-      expect(same(row.map((c) => c.height))).toBe(true);
-      expect(same(row.map((c) => c.status))).toBe(true);
-    }
+    // Integrations: one compact list of names with their status dots (the design audit, 2026-11-06).
+    await bring("#integrations .chan-list");
+    await expect(page.locator("#integrations .chan-list > li")).toHaveCount(8);
+    await expect(page.locator("#integrations .crow")).toHaveCount(0);
+    await expect(page.locator("#integrations").getByRole("link", { name: "See all connections" })).toHaveAttribute("href", "/features");
 
     // FAQ: the heading block stays in view beside the long list.
     await bring("section#faq");
@@ -390,8 +384,8 @@ test.describe("the MCP highlight (C-168)", () => {
     await expect(heroNew).toBeVisible();
 
     const band = page.locator("section#ai-apps");
-    await expect(band.getByRole("heading", { level: 2 })).toHaveText("Your AI assistant, connected to your Instagram");
-    await expect(band.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "/mcp");
+    await expect(band.getByRole("heading", { level: 2 })).toHaveText("Your AI assistant, on your Instagram");
+    await expect(band.getByRole("link", { name: "How it works with AI apps" })).toHaveAttribute("href", "/mcp");
     await expect(band.getByRole("link", { name: "Set it up" })).toHaveAttribute("href", "/developers/mcp");
     await expect(band.getByRole("img", { name: /^Example:/ })).toHaveCount(1);
     await expect(band.locator("figcaption")).toHaveText("Example. Works in Claude, ChatGPT and Codex.");

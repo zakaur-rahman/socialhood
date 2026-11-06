@@ -91,7 +91,7 @@ const byTitle = (title: string) => FEATURES.find((f) => f.title === title)!;
 
 /**
  * The rest, under three outcomes (C-157 organize; the group titles are the only new words). Each
- * group's cards fill a two-column grid; the group of three ends on its widest card, which spans both
+ * group's cards fill a two-column grid; a group of three ends on its widest card, which spans both
  * columns, so no group leaves a hole.
  */
 export const FEATURE_GROUPS: { title: string; icon: LucideIcon; items: Feature[] }[] = [
@@ -103,11 +103,8 @@ export const FEATURE_GROUPS: { title: string; icon: LucideIcon; items: Feature[]
   {
     title: "Automate the repetitive work",
     icon: Workflow,
-    items: [
-      byTitle("Scheduling, Reels and Stories"),
-      byTitle("Follow-up sequences"),
-      byTitle("Work from Claude, ChatGPT and Codex"),
-    ],
+    // The AI apps (MCP) card is in FEATURES for /features; the landing page has its own band for it.
+    items: [byTitle("Scheduling, Reels and Stories"), byTitle("Follow-up sequences")],
   },
   {
     title: "Understand and grow",
@@ -156,10 +153,7 @@ export function Features() {
         </h2>
         <p className="lede">From the first comment to the reply that closes the sale, in one place.</p>
         <div className="feat-lead after-head">
-          <div className="feat-lead-h">
-            <Ico icon={LEAD.icon} className="ico-ai" />
-            <h3>{LEAD.title}</h3>
-          </div>
+          <h3>{LEAD.title}</h3>
           <div>
             <p>{LEAD.body}</p>
             {LEAD.note ? <p className="note-line">{LEAD.note}</p> : null}
@@ -182,7 +176,7 @@ export function Features() {
         <p className="more-links">
           <Link href={FEATURES_PATH}>See every feature</Link>. Go deeper: <Link href="/features/ai-inbox">the AI inbox</Link>,{" "}
           <Link href="/features/comment-intelligence">comment intelligence</Link>,{" "}
-          <Link href="/features/publishing">publishing</Link>, <Link href="/mcp">using {SITE_NAME} from your AI assistant</Link>, or{" "}
+          <Link href="/features/publishing">publishing</Link>, or{" "}
           <Link href="/compare">how {SITE_NAME} compares</Link>.
         </p>
         <Connections />

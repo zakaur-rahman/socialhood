@@ -1,23 +1,25 @@
-import { ArrowRight, BookOpen, Check, CircleCheck, type LucideIcon, MessageSquareOff, MessagesSquare, Sparkles } from "lucide-react";
+import { BookOpen, Check, CircleCheck, type LucideIcon, MessageSquareOff, MessagesSquare, Sparkles } from "lucide-react";
 
-import { CONFIRM_LINE, MCP_PAGE_PATH, MCP_SETUP_PATH } from "@/lib/marketing/mcp-page";
+import { MCP_PAGE_PATH, MCP_SETUP_PATH } from "@/lib/marketing/mcp-page";
 import { SITE_NAME } from "@/lib/marketing/site";
+import type { Route } from "next";
+import Link from "next/link";
 
 import { CtaLink } from "../primitives";
 
 /*
  * C-168: the MCP highlight. Every line is true of the server today (docs/architecture/mcp
  * 03-phase-a.md, 04-phase-b.md, 05-phase-c.md; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY):
- * the preview and the yes before anything is scheduled (CONFIRM_LINE), posts at least 5 minutes out
- * with owners and admins told, no DMs or comment replies from an AI app, reading and drafts on every
- * plan. C-169: keyword automations can be set up from an AI app (Creator and Business); the automation sends,
+ * the preview and the yes before anything is scheduled (CONFIRM_LINE in full on /mcp), no DMs or
+ * comment replies from an AI app, reading and drafts on every plan. Each point is its title and one
+ * sentence (the design audit, 2026-11-06); the detail lives on /mcp. C-169: keyword automations can be set up from an AI app (Creator and Business); the automation sends,
  * after a person turns it on in the dashboard. Not claimed: the AI sending messages, TikTok, a listing in
  * Anthropic's or OpenAI's directories, or that we are the only or first tool with an MCP server
  * (C-168: four of the nine competitors we compare have one).
  */
 
 export const AI_APPS_ID = "ai-apps";
-export const AI_APPS_TITLE = "Your AI assistant, connected to your Instagram";
+export const AI_APPS_TITLE = "Your AI assistant, on your Instagram";
 
 /** The three apps we've tested, as plain names (brand rules: no logos). */
 export const AI_APPS_CLIENTS = ["Claude", "ChatGPT", "Codex"] as const;
@@ -26,22 +28,22 @@ export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[]
   {
     title: "Works with Claude, ChatGPT and Codex",
     icon: Sparkles,
-    body: `Add ${SITE_NAME} as a connector, sign in and pick the workspace. Other MCP apps should work too, but we haven't tested them yet.`,
+    body: `Add ${SITE_NAME} as a connector, sign in and pick the workspace.`,
   },
   {
     title: "You confirm first",
     icon: CircleCheck,
-    body: `${CONFIRM_LINE} A post goes out at least 5 minutes later, and owners and admins are told. Keep approvals on in your AI app for changes: set to always allow, it can confirm without asking you.`,
+    body: "The AI shows you a preview and waits for your yes before it schedules or changes a post or an automation. Keep approvals on in your AI app for changes. If it's set to always allow, it can confirm without asking you.",
   },
   {
     title: "It doesn't message your customers itself",
     icon: MessageSquareOff,
-    body: `AI apps read conversations and draft replies. Sending a DM or a comment reply stays in ${SITE_NAME}, with a person. An automation set up from your AI app does nothing until you turn it on in ${SITE_NAME}.`,
+    body: `Sending a DM or a comment reply stays in ${SITE_NAME} with a person, and an automation set up from your AI app does nothing until you turn it on in ${SITE_NAME}.`,
   },
   {
     title: "Reading and drafts on every plan",
     icon: BookOpen,
-    body: "Free included. Scheduling posts, drafting knowledge and automations for you to approve, and pausing automations are on Creator and Business.",
+    body: "Included on Free. Scheduling posts, drafting knowledge and automations for you to approve, and pausing automations are on Creator and Business.",
   },
 ];
 
@@ -72,7 +74,7 @@ export const AI_APPS_SCENE_LABEL = `Example: in an AI app, someone asks to sched
 
 
 /**
- * "Your AI assistant, connected to your Instagram" (C-168), between Modes and Security: the copy
+ * "Your AI assistant, on your Instagram" (C-168), between Modes and Security: the copy
  * and four points on the left, an example chat on the right. Server-rendered in its final state
  * (scheduled, then the DM summary), so it reads complete without script and under reduced motion.
  * landing-motion.ts (aiApps) plays it once when it scrolls into view from below: the ask, the
@@ -90,7 +92,7 @@ export function AiApps() {
           </h2>
           <p className="lede">
             Ask Claude, ChatGPT or Codex to schedule a Reel, sum up this week&apos;s DMs or check how your posts did. It works
-            through {SITE_NAME}&apos;s MCP server, with your workspace&apos;s rules.
+            through {SITE_NAME}&apos;s MCP server, the standard way AI apps connect to other tools, with your workspace&apos;s rules.
           </p>
           <ul className="mh-points">
             {AI_APPS_POINTS.map(({ title, body, icon: Icon }) => (
@@ -102,12 +104,13 @@ export function AiApps() {
             ))}
           </ul>
           <div className="ctas mh-ctas">
-            <CtaLink href={MCP_PAGE_PATH}>
-              See how it works <ArrowRight className="size-4" aria-hidden />
-            </CtaLink>
+            {/* One button here: "Start free" stays the page's main action, and the explainer is a link. */}
             <CtaLink href={MCP_SETUP_PATH} variant="secondary">
               Set it up
             </CtaLink>
+            <Link href={MCP_PAGE_PATH as Route} className="tlink">
+              How it works with AI apps
+            </Link>
           </div>
         </div>
         <AiAppsScene />

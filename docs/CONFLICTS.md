@@ -9719,3 +9719,13 @@ The owner felt the dark theme looked like a generic AI product, and asked for it
 - **Automations** opens with a one-line summary instead of a row of tiles. **Home** keeps its figures in one band.
 - **Light input fields are white** (`field-input`), and a chosen segment has its own token (`segment`). Secondary buttons have a `line` edge so they hold on tinted panels.
 - **At larger browser font sizes,** pane limits scale with the root size, and the inbox filters collapse into one control when space is short.
+
+## C-178 · Landing page fixes from the 2026-11-06 design audit
+
+Four read-only reviews of the live home page (impeccable, design-taste-frontend, apple-design, ui-cheatsheet, extract-design, transitions-polish, gsap-performance) were turned into one change. The owner said "do your best", so these calls were made here (decide-small-calls).
+
+- **Whole-page restyle.** Tailwind's `group-has-*` variants compile to `X:is(:where(.group\/x):has(…) *)`, which made Chrome restyle every element on the page (about 2,600) on each DOM change the landing scenes make. They are written as arbitrary variants of the shape `[ANCESTOR:has(…)_&]`, measured on production at about 150 elements and 10 ms a restyle instead of 2,600 and 95 ms. Don't add `group-has-*` or `peer-has-*` again.
+- **Shorter page.** On the landing page, Connections is one row of names linking to /features, the duplicate MCP card and link in Features are gone, and the AI apps points are a title and one sentence each (the detail is on /mcp). The icon tiles in Audience, the Ask lead and Steps are removed; Trust keeps its icons.
+- **Copy.** The AI apps and Trust headlines are shorter, a comma fixes the hero sentence, and "AI credits" and "MCP server" get a short gloss.
+- **Kept as the owner chose.** The closing section's arc, the gradient footer wordmark, the hero's "New" pill (C-168), the violet accent phrase, Geist and the logo colours.
+- **Not done (larger restyles).** Features as a large-type list, Connections with logos, a bigger hero headline and removing the remaining thin rules.

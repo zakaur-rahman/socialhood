@@ -71,7 +71,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
     <main
       id="main"
       data-auth-shell={mode}
-      className="group/auth min-h-dvh bg-canvas text-fg lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+      className="min-h-dvh bg-canvas text-fg lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
     >
       <section
         aria-label={`About ${SITE_NAME}`}
