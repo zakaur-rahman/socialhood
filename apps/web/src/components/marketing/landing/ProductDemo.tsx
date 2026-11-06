@@ -782,10 +782,6 @@ export function ProductDemo() {
               <div className="pd-inbox">
                 <ListPane />
                 <div className="pd-panes">
-                  <div className="pd-pick pd-before" {...part("pick")}>
-                    <b>Pick a conversation</b>
-                    <span>Choose someone on the left to start replying.</span>
-                  </div>
                   <MayaThread />
                   <FilteredThread id="theo" name="Theo" handle="@theo.k" account={PUNE} shade={6} platform="instagram" text="Are you open late on Friday?" time="17:14" />
                   <FilteredThread id="nina" name="Nina" account="Cafe WhatsApp" shade={3} platform="whatsapp" text="What time do you open on Sunday?" time="17:00" />

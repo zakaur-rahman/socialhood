@@ -85,8 +85,8 @@ describe("Dialog (UI-012)", () => {
     expect(title).toHaveClass(
       "group-data-[size=lg]/dialog-content:text-lg",
       "group-data-[size=xl]/dialog-content:text-lg",
-      "group-has-data-[slot=dialog-close]/dialog-content:pe-6",
-      "pointer-coarse:group-has-data-[slot=dialog-close]/dialog-content:pe-10",
+      "[[data-slot=dialog-content]:has([data-slot=dialog-close])_&]:pe-6",
+      "pointer-coarse:[[data-slot=dialog-content]:has([data-slot=dialog-close])_&]:pe-10",
     );
     expect(screen.getByRole("dialog")).toHaveClass("group/dialog-content");
   });

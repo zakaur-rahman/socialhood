@@ -22,6 +22,11 @@ class DrivenObserver {
   fire(isIntersecting: boolean) {
     this.callback([{ isIntersecting } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
   }
+  /** First reported below the viewport, then scrolled into view (the story plays from its start). */
+  arrive() {
+    this.fire(false);
+    this.fire(true);
+  }
 }
 
 const reducedMotion = (reduce: boolean) =>
@@ -145,11 +150,11 @@ describe("the product demo (C-175)", () => {
     expect(text).not.toMatch(/\bonly\b|the first\b|first to|\bunique\b|exclusive|\bbest\b|#1|guarantee|\binstant|trusted by|\d+%|\d+x\b|faster|Facebook|TikTok|verified|official partner/i);
   });
 
-  it("is about 21.5 s, with a short rest, and 23 s or less in all", () => {
+  it("is about 22 s, with a short rest, and 23 s or less in all", () => {
     const total = PRODUCT_DEMO_TIMELINE.at(-1)!.at;
     const lastChange = PRODUCT_DEMO_TIMELINE.at(-2)!.at;
     expect(total).toBeLessThanOrEqual(23_000);
-    expect(lastChange).toBeLessThanOrEqual(21_500);
+    expect(lastChange).toBeLessThanOrEqual(22_300);
     // In order, or a later beat would fire at once.
     const times = PRODUCT_DEMO_TIMELINE.map((beat) => beat.at);
     expect(times).toEqual([...times].sort((a, b) => a - b));
@@ -163,6 +168,8 @@ describe("the product demo (C-175)", () => {
     expect(container.querySelector("[data-motion-toggle]")).toHaveAttribute("hidden");
     expect(DrivenObserver.last).toBeNull();
     expect(lit(container)).toContain("det-sam-who");
+    // The brief "Assigned" toast is gone: it would cover the frame's key state.
+    expect(lit(container)).not.toContain("assign-toast");
     const before = lit(container);
     vi.advanceTimersByTime(60_000);
     expect(lit(container)).toEqual(before);
@@ -186,7 +193,7 @@ describe("the product demo (C-175)", () => {
     const buttons = screen.getAllByRole("button", { name: new RegExp(PRODUCT_DEMO_STEPS.join("|")) });
     expect(buttons.map((b) => b.textContent)).toEqual(PRODUCT_DEMO_STEPS);
     for (const button of buttons) expect(button.tagName).toBe("BUTTON");
-    DrivenObserver.last!.fire(true);
+    DrivenObserver.last!.arrive();
     expect(buttons[0]).toHaveAttribute("aria-current", "step");
     expect(buttons[1]).not.toHaveAttribute("aria-current");
     stop();
@@ -205,7 +212,7 @@ describe("the product demo (C-175)", () => {
     PRODUCT_DEMO_STEPS.forEach((_, step) => {
       const played = render(<ProductDemo />);
       const stopPlayed = productDemo(played.container);
-      DrivenObserver.last!.fire(true);
+      DrivenObserver.last!.arrive();
       vi.advanceTimersByTime(beatAt((b) => b.step === step));
       const expected = snapshot(played.container);
       stopPlayed();
@@ -213,7 +220,7 @@ describe("the product demo (C-175)", () => {
 
       const jumped = render(<ProductDemo />);
       const stopJumped = productDemo(jumped.container);
-      DrivenObserver.last!.fire(true);
+      DrivenObserver.last!.arrive();
       // To the end, then back: nothing of the later state may survive.
       stepButton(jumped.container, PRODUCT_DEMO_STEPS.length - 1).click();
       stepButton(jumped.container, step).click();
@@ -228,7 +235,7 @@ describe("the product demo (C-175)", () => {
     const { container } = render(<ProductDemo />);
     const stop = productDemo(container);
     const toggle = container.querySelector<HTMLButtonElement>("[data-motion-toggle]")!;
-    DrivenObserver.last!.fire(true);
+    DrivenObserver.last!.arrive();
 
     stepButton(container, 5).click();
     expect(litStep(container)).toBe(PRODUCT_DEMO_STEPS[5]);
@@ -251,7 +258,7 @@ describe("the product demo (C-175)", () => {
     vi.useFakeTimers();
     const { container } = render(<ProductDemo />);
     const stop = productDemo(container);
-    DrivenObserver.last!.fire(true);
+    DrivenObserver.last!.arrive();
     vi.advanceTimersByTime(beatAt((b) => b.on?.includes("assign-menu") ?? false));
     expect(litStep(container)).toBe(PRODUCT_DEMO_STEPS[7]);
     expect(lit(container)).toEqual(expect.arrayContaining(["assign-menu", "sam-assign-none", "det-sam-nobody"]));
@@ -272,7 +279,7 @@ describe("the product demo (C-175)", () => {
     const maya = container.querySelector<HTMLElement>('[data-p="det-maya"]')!;
     expect([...maya.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(["Customer", "Assigned to", "Latest message", "Summary"]);
     const stop = productDemo(container);
-    DrivenObserver.last!.fire(true);
+    DrivenObserver.last!.arrive();
     const open = () => lit(container).filter((name) => name && /^det-(maya|theo|nina|ana|sam)$/.test(name));
     const goTo = (() => {
       let now = 0;
@@ -308,7 +315,7 @@ describe("the product demo (C-175)", () => {
     const stop = productDemo(container);
     const stage = container.querySelector<HTMLElement>("[data-demo]")!;
     const shown = () => [...container.querySelectorAll<HTMLElement>("[data-row].on")].map((row) => row.dataset.row).sort();
-    DrivenObserver.last!.fire(true);
+    DrivenObserver.last!.arrive();
 
     vi.advanceTimersByTime(beatAt((b) => b.state?.strip === "instagram"));
     expect(stage.dataset.strip).toBe("instagram");
@@ -334,6 +341,21 @@ describe("the product demo (C-175)", () => {
     expect(stage.dataset.view).toBe("list");
   });
 
+  it("already on screen when the script arrives, it keeps the finished frame and plays on from the rest", () => {
+    vi.useFakeTimers();
+    const { container } = render(<ProductDemo />);
+    const stop = productDemo(container);
+    DrivenObserver.last!.fire(true);
+    expect(litStep(container)).toBe(PRODUCT_DEMO_STEPS[7]);
+    expect(lit(container)).toEqual(expect.arrayContaining(["conv-sam", "det-sam-who", "sam-row-who"]));
+    expect(lit(container)).not.toContain("assign-toast");
+    const last = PRODUCT_DEMO_TIMELINE.length - 2;
+    vi.advanceTimersByTime(PRODUCT_DEMO_TIMELINE.at(-1)!.at - PRODUCT_DEMO_TIMELINE[last].at);
+    expect(litStep(container)).toBe(PRODUCT_DEMO_STEPS[0]);
+    expect(lit(container)).toContain("conv-theo");
+    stop();
+  });
+
   it("plays only on screen, stops on pause and off screen, loops after its rest, and restores the server's state", () => {
     vi.useFakeTimers();
     const { container } = render(<ProductDemo />);
@@ -344,7 +366,8 @@ describe("the product demo (C-175)", () => {
     // Reported off screen: armed in its start state, and the clock doesn't run.
     DrivenObserver.last!.fire(false);
     expect(container.querySelector("[data-live]")).not.toBeNull();
-    expect(lit(container)).toEqual(expect.arrayContaining(["pick", "row-nina", "row-visitor"]));
+    // The start has a conversation open, never an empty pane.
+    expect(lit(container)).toEqual(expect.arrayContaining(["conv-theo", "sel-theo", "det-theo", "row-nina", "row-visitor"]));
     expect(lit(container)).not.toContain("row-maya");
     vi.advanceTimersByTime(30_000);
     expect(lit(container)).not.toContain("row-maya");

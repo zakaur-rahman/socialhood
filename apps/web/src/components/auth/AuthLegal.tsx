@@ -39,10 +39,12 @@ function LegalLink({ href, children }: { href: string; children: string }) {
  * - Sign-up: "By continuing, you agree to our Terms and Privacy Policy." while Clerk's "Require
  *   express consent to legal documents" is off. When it is on, Clerk renders its own checkbox ("I
  *   agree to the Terms of Service and Privacy Policy"), and the sentence would say the same thing
- *   twice, so the line becomes "Terms · Privacy" like sign-in's. The swap is CSS only: the shell is a
- *   `group/auth`, and Clerk's checkbox input is `#legalAccepted-field`, so `group-has-[…]` reads
- *   whether the card shows it. No script, and it follows each step of the flow (the checkbox is on
- *   the first step only; later steps, such as the email code, show the short line's fallback again).
+ *   twice, so the line becomes "Terms · Privacy" like sign-in's. The swap is CSS only: the shell carries
+ *   `data-auth-shell`, and Clerk's checkbox input is `#legalAccepted-field`, so
+ *   `[[data-auth-shell]:has(#legalAccepted-field)_&]` reads whether the card shows it (not
+ *   `group-has-*`, whose `:is(… *)` output restyles the whole page on every DOM change). No
+ *   script, and it follows each step of the flow (the checkbox is on the first step only; later
+ *   steps, such as the email code, show the short line's fallback again).
  */
 export function AuthLegal({ mode, className }: { mode: AuthMode; className?: string }) {
   const { terms, privacy } = authLegalLinks();
@@ -66,11 +68,11 @@ export function AuthLegal({ mode, className }: { mode: AuthMode; className?: str
   }
   return (
     <nav aria-label="Legal" data-auth-legal="sign-up" className={base}>
-      <p data-legal-line="fallback" className="text-pretty group-has-[#legalAccepted-field]/auth:hidden">
+      <p data-legal-line="fallback" className="text-pretty [[data-auth-shell]:has(#legalAccepted-field)_&]:hidden">
         By continuing, you agree to our <LegalLink href={terms.href}>Terms</LegalLink> and{" "}
         <LegalLink href={privacy.href}>Privacy Policy</LegalLink>.
       </p>
-      <p data-legal-line="with-consent" className="hidden group-has-[#legalAccepted-field]/auth:block">
+      <p data-legal-line="with-consent" className="hidden [[data-auth-shell]:has(#legalAccepted-field)_&]:block">
         {short}
       </p>
     </nav>

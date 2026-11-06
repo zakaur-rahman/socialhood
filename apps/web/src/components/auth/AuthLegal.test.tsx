@@ -51,10 +51,10 @@ describe("AuthLegal", () => {
     expect(fallback?.textContent?.replace(/\s*\(opens in a new tab\)/g, "")).toBe(
       "By continuing, you agree to our Terms and Privacy Policy.",
     );
-    // CSS swaps the two (group-has on Clerk's #legalAccepted-field): never both on screen.
-    expect(fallback?.className).toContain("group-has-[#legalAccepted-field]/auth:hidden");
+    // CSS swaps the two (:has on Clerk's #legalAccepted-field): never both on screen.
+    expect(fallback?.className).toContain("[[data-auth-shell]:has(#legalAccepted-field)_&]:hidden");
     expect(withConsent?.className).toMatch(/(^|\s)hidden(\s|$)/);
-    expect(withConsent?.className).toContain("group-has-[#legalAccepted-field]/auth:block");
+    expect(withConsent?.className).toContain("[[data-auth-shell]:has(#legalAccepted-field)_&]:block");
     for (const link of within(nav).getAllByRole("link", { name: /^Terms/ })) expect(link).toHaveAttribute("href", "/terms");
     for (const link of within(nav).getAllByRole("link", { name: /^Privacy/ })) expect(link).toHaveAttribute("href", "/privacy");
   });
@@ -68,7 +68,7 @@ describe("AuthShell", () => {
       </AuthShell>,
     );
     const main = screen.getByRole("main");
-    expect(main.className).toContain("group/auth");
+    expect(main).toHaveAttribute("data-auth-shell", mode);
     expect(within(main).getByRole("navigation", { name: "Legal" })).toBeInTheDocument();
     // One logo link back to the public site's home on small screens and one in the wide panel.
     expect(within(main).getAllByRole("link", { name: "Amplychat" }).every((a) => a.getAttribute("href") === "/")).toBe(true);
