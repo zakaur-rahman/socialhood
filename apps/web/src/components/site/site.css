@@ -114,7 +114,7 @@ body:has(.site) {
       & .btn-line:hover { border-color: var(--s-text); background: var(--s-hover); }
       & .btn-ghost:hover { color: var(--s-text); }
     }
-    & .btn:active { transform: translateY(1px); }
+    & .btn:active { transform: scale(0.97); }
     & .btn:is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; transform: none; }
     & .btn:is(:disabled, [aria-disabled="true"]) svg { transform: none; }
     & .btn-main:is(:disabled, [aria-disabled="true"]) { background: var(--s-text-3); color: var(--s-bg); }
@@ -235,7 +235,7 @@ body:has(.site) {
     & .foot .foot-contact { gap: var(--space-2); margin-top: var(--space-4); min-height: 44px; color: var(--s-text); font-weight: 500; }
     & .foot .foot-contact svg { flex: none; transition: transform var(--dur-fast) var(--ease); }
     /* The business's own profiles under the brand (SOCIAL_PROFILES): quiet 44 px icon links. */
-    & .foot .foot-social { display: flex; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+    & .foot .foot-social { display: flex; flex-direction: row; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
     & .foot .foot-social a { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--s-text-2); transition: color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease); }
     @media (hover: hover) { & .foot .foot-social a:hover { color: var(--s-text); background: var(--s-hover); } }
     @media (hover: hover) {
@@ -565,6 +565,7 @@ body:has(.site) {
     /* Auto is part of Pro: said in words beside the label, not a badge. */
     & .switch .pro { font-size: var(--fs-caption); font-weight: 500; color: var(--ink-3); }
     & .switch button[aria-pressed="true"] .pro { color: inherit; opacity: .72; }
+    @media (width < 480px) { & .switch button:has(.pro) { flex-direction: column; gap: 0; height: auto; min-height: 48px; padding-block: var(--space-1); } }
     & .mode-desc { font-size: var(--fs-body); color: var(--ink-2); margin: var(--space-4) 0 0; min-height: 52px; max-width: 60ch; }
     & .mtable { margin-top: var(--space-6); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
     & .mrow { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-5); align-items: center; padding: var(--space-5) var(--space-6); border-top: 1px solid var(--rule-2); }
@@ -576,7 +577,7 @@ body:has(.site) {
     & .mrow .lab { font-size: var(--fs-label); color: var(--ink-2); }
     & .out { display: flex; flex-direction: column; gap: var(--space-1); align-items: flex-start; }
     & .out small { font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.4; }
-    & .out.swap { animation: site-swap var(--dur-slow) var(--ease) both; }
+    & .out.swap { animation: site-swap var(--dur-quick) var(--ease-swap) both; }
 
     /* ---- security: a spec list (C-157 organize). The heading block on the left stays in view on a wide
        screen; the points are rows on the right, the title in a fixed column, a hairline between rows. */
@@ -629,6 +630,7 @@ body:has(.site) {
     /* The icon sits beside the title (not stacked above it), and the text hangs under the title. */
     & .fcard > .ico { grid-column: 1; align-self: center; }
     & .fcard > :not(.ico) { grid-column: 2; }
+    @media (width >= 1024px) { & .fcard h4 { min-block-size: calc(2 * var(--lh-title)); } }
     & .fcard h4 { align-self: center; margin: 0; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); font-weight: 600; }
     & .fcard p { margin: 0; color: var(--s-text-2); font-size: var(--fs-body); line-height: var(--lh-body); max-width: 60ch; }
     & .fcard .note-line { font-size: var(--fs-body-sm); color: var(--s-text-3); }
@@ -799,7 +801,7 @@ body:has(.site) {
     /* The answer fades in and rises 4 px as it opens (after the height has started), and fades out
        quietly on close. */
     & .qa p {
-      margin: 0; padding-bottom: var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 62ch;
+      margin: 0; padding-bottom: var(--space-6); color: var(--s-text-2); font-size: var(--fs-body); line-height: 1.7; max-width: 52ch;
       transition: opacity var(--dur-quick) var(--ease), translate var(--dur-quick) var(--ease);
     }
     & .qa[open]:not([data-closing]) p {
@@ -867,7 +869,6 @@ body:has(.site) {
       & .close .btn:hover { transform: translateY(-1px); }
       & .close .btn-main:hover { box-shadow: var(--shadow-cta-night); }
     }
-    & .close .btn:active { transform: translateY(0) scale(var(--scale-small)); box-shadow: none; transition-duration: var(--dur-micro); }
     & .close .facts.close-facts { justify-content: center; gap: var(--space-2) var(--space-6); margin-top: var(--space-6); font-size: var(--fs-label); color: var(--s-text-2); }
     & .close .close-facts svg { color: var(--s-text-3); }
     /* The reveal, once, as the close comes up the screen (the view() rise the cards use, so no
@@ -918,7 +919,7 @@ body:has(.site) {
       & .hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-10); }
       & .hero-sub { max-width: 52ch; }
       & .stage { align-items: flex-start; }
-      & .inbox, & .stage-cap { width: min(100%, 460px); }
+      & .inbox, & .stage-cap { width: 100%; }
       & .strip-in { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6) var(--space-8); }
       & .decide-scrub { height: auto; }
       & .decide-sticky { position: relative; top: 0; height: auto; min-height: 0; padding-block: var(--space-section); }
@@ -1014,7 +1015,7 @@ body:has(.site) {
   }
 }
 
-@keyframes site-in { from { opacity: 0; transform: translateY(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
+@keyframes site-in { from { opacity: 0; transform: translateY(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; filter: none; } }
 @keyframes site-pulse { 40% { box-shadow: 0 0 0 6px var(--iris-soft); border-color: var(--iris); } }
 @keyframes site-dot { 0%, 60%, 100% { opacity: .35; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
 /* The hero's pile (C-157 motion): each row starts where HERO_PILE puts it and settles into its slot;
@@ -1026,7 +1027,7 @@ body:has(.site) {
 @keyframes site-fade { from { opacity: 0; } }
 /* A card rising into place as it scrolls in (C-157 motion). */
 @keyframes site-rise { from { opacity: 0; translate: 0 var(--dist-medium, 12px); } }
-@keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-base, 8px))); } to { opacity: 1; transform: none; } }
+@keyframes site-swap { from { opacity: 0; transform: translateX(calc(-1 * var(--dist-micro, 4px))); filter: blur(var(--blur-small, 2px)); } to { opacity: 1; transform: none; filter: none; } }
 
 /* ==== C-159 shared ==== */
 /* What the guides and the legal and information pages share (C-159): the callout (site/Callout.tsx),
@@ -2973,7 +2974,7 @@ body:has(.site) {
       font-size: var(--fs-label); font-weight: 600;
       transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-quick) var(--ease);
     }
-    & .mh-btn > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--dur-fast) var(--ease-swap), filter var(--dur-fast) var(--ease-swap), transform var(--dur-fast) var(--ease-swap); }
+    & .mh-btn > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity var(--dur-quick) var(--ease-swap), filter var(--dur-quick) var(--ease-swap), transform var(--dur-quick) var(--ease-swap); }
     & .mh-btn-a { opacity: 0; filter: blur(var(--blur-small)); transform: scale(var(--scale-medium)); }
     & .mh-btn.press { transform: scale(var(--scale-large)); }
     & .mh-done { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--ink-2); }
@@ -3279,7 +3280,7 @@ body:has(.site) {
     & .pd-correct { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-2) !important; padding-top: var(--space-2); border-top: 1px solid var(--app-line); font-size: var(--fs-micro); color: var(--app-fg-2); }
 
     /* ---- AssigneeMenu, AssigneeAvatar */
-    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: 10px; font-style: normal; font-weight: 600; }
+    & .pd-who-av { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--app-raised); color: var(--app-fg); font-size: var(--fs-micro); font-style: normal; font-weight: 600; }
     & .pd-assign { padding: var(--space-1); }
     & .pd-assign-h { padding: var(--space-1) var(--space-2); font-size: var(--fs-micro); font-weight: 600; color: var(--app-fg-2); }
     & .pd-opt-2 { height: 40px; }
@@ -3300,6 +3301,7 @@ body:has(.site) {
     & .pd-steps { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
     & .pd-step { display: block; width: 100%; min-height: 32px; margin: 0; padding: var(--space-2) 0 0; border: 0; border-top: 2px solid var(--rule); border-radius: 0; background: none; font: inherit; font-size: var(--fs-caption); line-height: var(--lh-caption); text-align: left; color: var(--ink-2); transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
     & button.pd-step { cursor: pointer; }
+    @media (pointer: coarse) { & .pd-step { min-height: 40px; } }
     @media (hover: hover) { & button.pd-step:hover { border-color: var(--ink-3); color: var(--ink); } }
     & .pd-steps li.on .pd-step { border-color: var(--iris); color: var(--ink); font-weight: 500; }
 
@@ -3352,12 +3354,17 @@ body:has(.site) {
       & .pd-before, & .pd-float, & .pd-conv:not(.pd-first), & .pd-det:not(.pd-det-first), & .pd-bar { opacity: 0; }
 
       /* The script owns every part from here: off until the timeline turns it on. */
-      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease); }
-      & [data-live] [data-p].on { opacity: 1; translate: none; }
+      & [data-live] [data-p] { opacity: 0; translate: 0 var(--dist-base); transition: opacity var(--dur-quick) var(--ease), translate var(--dur-quick) var(--ease); }
+      & [data-live] [data-p].on { opacity: 1; translate: none; transition-duration: var(--dur-fast); }
+      /* Menus grow from their anchor; toasts arrive slowly and leave quicker. */
+      & [data-live] :is([data-p="menu"], [data-p="assign-menu"], [data-p="pop"]) { translate: none; scale: var(--scale-medium); transform-origin: top right; transition: opacity var(--dur-quick) var(--ease), scale var(--dur-quick) var(--ease); }
+      & [data-live] :is([data-p="menu"], [data-p="assign-menu"], [data-p="pop"]).on { scale: none; transition-duration: var(--dur-fast); }
+      & [data-live] :is([data-p="toast"], [data-p="assign-toast"]) { transition-duration: var(--dur-medium); }
+      & [data-live] :is([data-p="toast"], [data-p="assign-toast"]).on { transition-duration: var(--dur-slow); }
       & [data-live] .pd-conv, & [data-live] .pd-det, & [data-live] .pd-det [data-p], & [data-live] .pd-who-av, & [data-live] .pd-sel, & [data-live] .pd-swap > [data-p], & [data-live] .pd-count, & [data-live] .pd-unread-dot, & [data-live] .pd-b[data-p], & [data-live] .pd-status > * { translate: none; }
       & [data-live] .pd-row { translate: 0 -40%; transition: opacity var(--dur-fast) var(--ease), translate var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
       & [data-live] .pd-row.on { translate: none; }
-      & [data-live] .pd-drafting.on { animation: pd-shimmer var(--dur-medium) var(--ease-swap) infinite alternate; }
+      & [data-live] .pd-drafting.on { animation: pd-shimmer 1.2s linear infinite alternate; }
 
       & .pd-cursor { display: block; position: absolute; top: 0; left: 0; z-index: 5; width: 0; height: 0; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-slow) var(--ease); }
       & .pd-cursor.on { opacity: 1; }
@@ -3410,8 +3417,8 @@ body:has(.site) {
       @media (scripting: enabled) {
         & .pd-inbox { display: grid; }
         & .pd-inbox > * { grid-area: 1 / 1; min-width: 0; min-height: 0; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-        & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-medium)); }
-        & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-medium))); }
+        & [data-view="list"] .pd-panes { opacity: 0; transform: translateX(var(--dist-base)); }
+        & [data-view="thread"] .pd-list { opacity: 0; transform: translateX(calc(-1 * var(--dist-base))); }
         & .pd-toast { top: var(--space-3); right: auto; bottom: auto; left: 50%; transform: translateX(-50%); }
         /* A tap, not a mouse. */
         & .pd-cursor svg { display: none; }
