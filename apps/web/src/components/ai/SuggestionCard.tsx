@@ -49,6 +49,7 @@ export function SuggestionCard({
   generating,
   customerName,
   canSend,
+  sendOff = null,
   composerHasText = false,
   busy = false,
   addingToKnowledge = false,
@@ -61,6 +62,8 @@ export function SuggestionCard({
   customerName: string;
   /** The composer can send right now (window open, account connected). */
   canSend: boolean;
+  /** Why the draft can't be sent as is (Insert still works), or null. */
+  sendOff?: string | null;
   /** The composer holds a typed reply: its Send is the primary one, so the draft's Send steps back (D-10). */
   composerHasText?: boolean;
   /** A dismiss or regenerate request is in flight. */
@@ -115,18 +118,22 @@ export function SuggestionCard({
       </section>
     );
   }
-  return <ReadyBar suggestion={suggestion} canSend={canSend} composerHasText={composerHasText} busy={busy} actions={actions} />;
+  return (
+    <ReadyBar suggestion={suggestion} canSend={canSend} sendOff={sendOff} composerHasText={composerHasText} busy={busy} actions={actions} />
+  );
 }
 
 function ReadyBar({
   suggestion,
   canSend,
+  sendOff,
   composerHasText,
   busy,
   actions,
 }: {
   suggestion: Suggestion;
   canSend: boolean;
+  sendOff: string | null;
   composerHasText: boolean;
   busy: boolean;
   actions: SuggestionActions;
@@ -212,9 +219,11 @@ function ReadyBar({
             <TooltipContent>Put the draft in the reply box to edit</TooltipContent>
           </Tooltip>
           {/* One primary Send at a time: while the composer has text, its Send is the primary one. */}
-          <Button size="sm" variant={composerHasText ? "secondary" : "default"} disabled={!canSend || !text} onClick={actions.onSend}>
-            <SendHorizontal aria-hidden /> Send
-          </Button>
+          <DisabledReason reason={sendOff}>
+            <Button size="sm" variant={composerHasText ? "secondary" : "default"} disabled={!canSend || !text || Boolean(sendOff)} onClick={actions.onSend}>
+              <SendHorizontal aria-hidden /> Send
+            </Button>
+          </DisabledReason>
           </span>
         </span>
       </div>

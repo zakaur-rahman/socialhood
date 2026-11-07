@@ -28,6 +28,7 @@ import { useTeachAi } from "./TeachAi";
 export const DRAFT_WAIT_MS = 30_000;
 /** How long a regenerated draft is awaited before the card says it didn't come. */
 export const REGENERATE_WAIT_MS = 30_000;
+export const HUMAN_AGENT_SEND_OFF = "After 24 hours, a person writes the reply: insert the draft and send it from the reply box";
 
 /** True until `ms` after `since`; re-renders when it flips. */
 function useWithin(since: string | null, ms: number): boolean {
@@ -137,8 +138,11 @@ export function useSuggestionSlot({
   const question =
     (suggestion && messages.find((m) => m.id === suggestion.message_id)?.text) || lastInbound?.text || "";
 
+  // Meta's Human Agent tag is for a person's reply: after 24 hours the draft goes through the composer.
+  const sendOff = humanAgent ? HUMAN_AGENT_SEND_OFF : null;
+
   const send = () => {
-    if (!suggestion?.reply_text || !canReply) return;
+    if (!suggestion?.reply_text || !canReply || sendOff) return;
     onSend({ text: suggestion.reply_text, suggestionId: suggestion.id, humanAgent });
     setHandledFor(suggestion.message_id);
     setPendingSuggestion(queryClient, wid, conversationId, null, suggestion.id);
@@ -203,6 +207,7 @@ export function useSuggestionSlot({
             generating={regenerating || (!suggestion && drafting)}
             customerName={name}
             canSend={canReply}
+            sendOff={sendOff}
             composerHasText={composerHasText}
             busy={dismiss.isPending || regenerate.isPending}
             addingToKnowledge={teachAi.opening}
