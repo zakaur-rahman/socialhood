@@ -8,7 +8,7 @@ import { expect, test } from "./support/fixtures";
  * it registers with DCR, starts the authorization, and the signed-in member answers on the
  * consent page (/connect/authorize). The browser goes back to the app's loopback redirect, which
  * the test intercepts, the code is exchanged for tokens, and a tool call works on /mcp. Then
- * Settings › Connected AI apps lists it with its activity, and Disconnect stops it at once.
+ * Settings › AI apps & API lists it with its activity, and Disconnect stops it at once.
  * Plus the public setup guide, /developers/mcp.
  */
 const REDIRECT = "http://127.0.0.1:43219/callback";
@@ -103,7 +103,7 @@ test.describe("C-165 AI app connections", () => {
 
     await page.unroute(`${REDIRECT}**`);
     await page.goto(`/w/${workspace.slug}/settings/ai-apps`);
-    await expect(page.getByRole("heading", { name: "Connected AI apps", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "AI apps & API", level: 1 })).toBeVisible();
     await expect(page.getByRole("radio", { name: /^Read and drafts/ })).toBeVisible();
     const row = page.getByTestId("ai-connection").filter({ hasText: "E2E Agent" });
     await expect(row).toContainText("get_workspace");
@@ -174,11 +174,17 @@ test.describe("C-165 AI app connections", () => {
     expect(blocks.filter((block) => block.includes('"FAQPage"'))).toHaveLength(1);
   });
 
-  test("API keys are their own Settings section, not under Integrations", async ({ page, workspace }) => {
+  test("Connections and AI apps & API sit above Settings; API keys moved to AI apps & API (C-180)", async ({ page, workspace }) => {
+    await page.goto(`/w/${workspace.slug}/home`);
+    const sidebar = page.getByRole("navigation", { name: "Main" });
+    await sidebar.getByRole("link", { name: "AI apps & API" }).click();
+    await expect(page).toHaveURL(/\/settings\/ai-apps$/);
+    await expect(page.getByRole("heading", { level: 1, name: "AI apps & API" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Claude Code" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "API keys" })).toBeVisible();
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
-    await expect(page.getByRole("heading", { level: 1, name: "API keys" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "API keys" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Connect an AI app with a key" })).toHaveAttribute("href", /\/developers\/mcp\/api-key$/);
+    await expect(page).toHaveURL(/\/settings\/ai-apps#api-keys$/);
+    await expect(page.getByRole("navigation", { name: "Settings" }).getByRole("link", { name: "API keys" })).toHaveCount(0);
     await page.goto(`/w/${workspace.slug}/settings/integrations`);
     await expect(page.getByRole("heading", { level: 1, name: "Integrations" })).toBeVisible();
     await expect(page.getByTestId("api-key")).toHaveCount(0);

@@ -363,7 +363,7 @@ function sections(): LegalSection[] {
           <p>
             A member can disconnect an AI app at any time in Settings → Connected AI apps; owners and admins can disconnect
             anyone&apos;s, or all of them at once. It stops working on its next request. A connection also ends after 30
-            days without use, and after 180 days in any case. Revoking an API key in Settings → API keys stops it at once.
+            days without use, and after 180 days in any case. Revoking an API key in AI apps & API → API keys stops it at once.
           </p>
         </>
       ),

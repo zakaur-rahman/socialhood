@@ -1,10 +1,8 @@
-import type { Metadata } from "next";
+import type { Route } from "next";
+import { redirect } from "next/navigation";
 
-import { ApiKeysPage } from "@/components/integrations/ApiKeysPage";
-
-export const metadata: Metadata = { title: "API keys" };
-
-/** C-165 Settings › API keys: keys for the public API and for AI apps over MCP, on their own page. */
-export default function ApiKeysRoute() {
-  return <ApiKeysPage />;
+/** C-180: API keys are on Settings › AI apps & API now; old links and bookmarks land on that section. */
+export default async function ApiKeysRoute({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  redirect(`/w/${slug}/settings/ai-apps#api-keys` as Route);
 }

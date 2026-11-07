@@ -9740,3 +9740,22 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   the draft in the reply box, where a person reviews it and sends it.
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
+
+## C-180 · Connections and AI apps & API in the sidebar (owner, 2026-11-08)
+
+- **Ask:** the owner found connecting an AI app (MCP) from the dashboard confusing. Connections and
+  the AI apps page were only inside Settings, and the setup steps were only on the public site
+  (/developers/mcp).
+- **Sidebar:** **Connections** and **AI apps & API** sit right above **Settings**. Both stay
+  settings pages, so the settings rail still lists them. Settings now opens on its own home, not
+  on Connections. The highlighted item follows the page: Connections, AI apps & API (and the old
+  API keys address), else Settings.
+- **Name:** I chose "AI apps & API" over "MCP", "API" or "MCP and API". Most customers know
+  Claude and ChatGPT but not MCP. "& API" keeps it findable for developers, and settings search
+  still matches "mcp".
+- **The page:** steps for Claude, Claude Code, ChatGPT and Codex in tabs, with copy buttons. The
+  text is `clientGuides()`, the same as /developers/mcp, so the two can't drift. Then the
+  connected apps, the mode, and the API keys (owners and admins).
+- **API keys:** `/settings/api-keys` forwards to `/settings/ai-apps#api-keys`, and the rail no
+  longer lists API keys on its own. Public copy that said "Settings › API keys" now says
+  "AI apps & API › API keys".

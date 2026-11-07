@@ -5,7 +5,6 @@ import {
   Building2,
   CreditCard,
   Globe,
-  KeyRound,
   Link2,
   MessageSquareText,
   MoreHorizontal,
@@ -78,13 +77,8 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
   },
   "ai-apps": {
     icon: Plug,
-    description: "Claude, ChatGPT and Codex",
-    keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps"],
-  },
-  "api-keys": {
-    icon: KeyRound,
-    description: "For the public API and AI apps",
-    keywords: ["api", "key", "token", "mcp", "claude code", "codex", "zapier", "bearer"],
+    description: "Connect Claude, ChatGPT or Codex; API keys",
+    keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps", "api", "key", "token", "zapier", "bearer"],
   },
   billing: {
     icon: CreditCard,
@@ -140,7 +134,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
   {
     id: "admin",
     label: "Admin",
-    segments: ["billing", "integrations", "api-keys", "audit", "activity"],
+    segments: ["billing", "integrations", "audit", "activity"],
   },
   {
     id: "you",

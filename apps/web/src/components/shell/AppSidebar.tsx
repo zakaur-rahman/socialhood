@@ -13,7 +13,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
-import { SETTINGS_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
+import { SETTINGS_AREA_NAV, activeSegment, navGroupsFor, settingsAreaKey, type NavGroup, type NavItem } from "./nav";
 import { COLLAPSE_SHORTCUT_ARIA, shortcutHint, useCollapseShortcut, useModifierKey } from "./shortcuts";
 import { useCollapsedTooltip } from "./use-collapsed-tooltip";
 import { KBD_CLASS, sidebarFadeClass, sidebarIconClass, sidebarLabelClass, sidebarRowClass } from "./sidebar-styles";
@@ -86,6 +86,7 @@ export function AppSidebar({
 }: Props) {
   const pathname = usePathname();
   const active = activeSegment(pathname, workspace.slug);
+  const settingsArea = settingsAreaKey(pathname, workspace.slug);
   const modifier = useModifierKey();
   useCollapseShortcut(onToggleCollapsed);
 
@@ -183,13 +184,16 @@ export function AppSidebar({
 
       <div className="relative mt-2 flex w-full flex-col gap-0.5 border-t border-line-subtle pt-2">
         {notifications}
-        <SidebarLink
-          item={SETTINGS_NAV}
-          href={SETTINGS_NAV.href(workspace.slug)}
-          active={active === SETTINGS_NAV.segment}
-          collapsed={collapsed}
-          onNavigate={onNavigate}
-        />
+        {SETTINGS_AREA_NAV.map((item) => (
+          <SidebarLink
+            key={item.key}
+            item={item}
+            href={item.href(workspace.slug)}
+            active={settingsArea === item.key}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        ))}
         <WithTooltip label={`Help: ${SUPPORT_EMAIL}`} enabled={collapsed}>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}

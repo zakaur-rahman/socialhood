@@ -5,7 +5,9 @@ import {
   Funnel,
   House,
   Inbox,
+  Link2,
   MessageSquare,
+  Plug,
   Receipt,
   Settings,
   ShoppingBag,
@@ -67,14 +69,46 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 
 export const PRIMARY_NAV: readonly NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
 
+// Owner, 2026-11-08: Connections and AI apps & API sit right above Settings, so connecting an
+// account or an AI app doesn't start with a hunt through Settings. They stay settings pages.
+export const CONNECTIONS_NAV: NavItem = {
+  key: "connections",
+  label: "Connections",
+  icon: Link2,
+  segment: "settings",
+  roles: EVERYONE,
+  href: (s) => route(`/w/${s}/settings/connections`),
+};
+
+export const AI_APPS_NAV: NavItem = {
+  key: "ai-apps",
+  label: "AI apps & API",
+  icon: Plug,
+  segment: "settings",
+  roles: EVERYONE,
+  href: (s) => route(`/w/${s}/settings/ai-apps`),
+};
+
 export const SETTINGS_NAV: NavItem = {
   key: "settings",
   label: "Settings",
   icon: Settings,
   segment: "settings",
   roles: EVERYONE,
-  href: (s) => route(`/w/${s}/settings/connections`),
+  href: (s) => route(`/w/${s}/settings`),
 };
+
+/** The items above Settings, then Settings, in sidebar order. */
+export const SETTINGS_AREA_NAV: readonly NavItem[] = [CONNECTIONS_NAV, AI_APPS_NAV, SETTINGS_NAV];
+
+/** Which of SETTINGS_AREA_NAV is current: a settings page is Settings unless it has its own item. */
+export function settingsAreaKey(pathname: string, slug: string): string | null {
+  if (activeSegment(pathname, slug) !== "settings") return null;
+  const page = pathname.slice(`/w/${slug}/settings/`.length).split("/")[0];
+  if (page === "connections") return CONNECTIONS_NAV.key;
+  if (page === "ai-apps" || page === "api-keys") return AI_APPS_NAV.key;
+  return SETTINGS_NAV.key;
+}
 
 export const BILLING_HREF = (slug: string): Route => route(`/w/${slug}/settings/billing`);
 /** The billing page opened on its Billing tab, where the plans are (C-171). */
@@ -105,6 +139,9 @@ const OTHER_TITLES: Record<string, string> = { ask: "Ask Amplychat" };
 
 export function pageTitle(pathname: string, slug: string): string {
   const segment = activeSegment(pathname, slug);
-  const item = [...PRIMARY_NAV, SETTINGS_NAV].find((i) => i.segment === segment);
+  const area = settingsAreaKey(pathname, slug);
+  const item = area
+    ? SETTINGS_AREA_NAV.find((i) => i.key === area)
+    : PRIMARY_NAV.find((i) => i.segment === segment);
   return item?.label ?? (segment ? OTHER_TITLES[segment] : undefined) ?? "Amplychat";
 }

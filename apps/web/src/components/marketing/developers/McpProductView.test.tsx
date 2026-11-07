@@ -85,7 +85,7 @@ describe("/developers/mcp/api-key (C-165)", () => {
     }
     expect(screen.getAllByText(/https:\/\/api\.amplychat\.com\/mcp/).length).toBeGreaterThan(3);
     expect(screen.getByText(/bearer_token_env_var = "AMPLYCHAT_API_KEY"/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Settings › API keys/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/AI apps & API › API keys/).length).toBeGreaterThan(0);
   });
 
   it("keeps its metadata within the limits and its FAQ JSON-LD valid", () => {

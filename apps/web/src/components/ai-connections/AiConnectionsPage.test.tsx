@@ -46,6 +46,7 @@ function setup({
         json({ items: [{ id: "t-9", tool: "get_workspace", outcome: "refused", error_code: "forbidden", created_at: "2026-10-31T08:00:00Z" }] }),
       "DELETE /v1/w/:wid/ai-connections/:id": () => noContent(),
       "POST /v1/w/:wid/ai-connections/revoke-all": () => json({ revoked: items.length }),
+      "GET /v1/w/:wid/api-keys": () => json({ items: [], scopes: [], active_limit: 20 }),
     },
   });
 }
@@ -55,7 +56,7 @@ beforeEach(() => {
   toast.error.mockReset();
 });
 
-describe("Settings › Connected AI apps (C-165)", () => {
+describe("Settings › AI apps & API (C-165, C-180)", () => {
   it("lists each connection with its member, what it may do and its recent calls", async () => {
     setup();
     const [row] = await screen.findAllByTestId("ai-connection");
@@ -65,7 +66,18 @@ describe("Settings › Connected AI apps (C-165)", () => {
     expect(row).toHaveTextContent("3 calls in 7 days");
     expect(row).toHaveTextContent("Read the inbox");
     expect(row).toHaveTextContent("list_conversations");
-    expect(screen.getByRole("link", { name: /How to connect an AI app/ })).toHaveAttribute("href", expect.stringContaining("/developers/mcp"));
+  });
+
+  it("shows the setup steps for each AI app here, with the server address to copy", async () => {
+    const user = userEvent.setup();
+    setup();
+    expect(screen.getByRole("heading", { level: 1, name: "AI apps & API" })).toBeInTheDocument();
+    const steps = screen.getByRole("tablist", { name: "AI app" });
+    expect(within(steps).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Claude", "Claude Code", "ChatGPT", "Codex"]);
+    expect(screen.getByText(/Add custom connector/)).toBeInTheDocument();
+    await user.click(within(steps).getByRole("tab", { name: "Codex" }));
+    expect(screen.getByText(/\[mcp_servers\.amplychat\]/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create an API key below" })).toHaveAttribute("href", "#api-keys");
   });
 
   it("shows the latest activity on demand", async () => {
@@ -119,9 +131,17 @@ describe("Settings › Connected AI apps (C-165)", () => {
     expect(screen.queryByRole("button", { name: "Disconnect all" })).not.toBeInTheDocument();
   });
 
-  it("links to the setup guide when nothing is connected", async () => {
+  it("points to the steps above when nothing is connected", async () => {
     setup({ items: [] });
-    expect(await screen.findByText(/No AI apps are connected/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "setup guide" })).toHaveAttribute("href", expect.stringContaining("/developers/mcp"));
+    expect(await screen.findByText(/No AI apps are connected yet. Follow the steps above/)).toBeInTheDocument();
+  });
+
+  it("owners and admins get the API keys on this page; members don't", async () => {
+    const { unmount } = setup({ ws: { ...workspace, plan: "max" } });
+    expect(await screen.findByText(/No API keys yet/)).toBeInTheDocument();
+    unmount();
+    setup({ ws: { ...workspace, role: "agent" }, manages: false });
+    expect(await screen.findByRole("heading", { name: "Your connected apps" })).toBeInTheDocument();
+    expect(screen.queryByText(/No API keys yet/)).not.toBeInTheDocument();
   });
 });
