@@ -57,7 +57,7 @@ async def test_a_successful_connect_stores_an_encrypted_token_and_subscribes(
         "/v1/oauth/instagram/callback", params={"code": "code-1", "state": state}
     )
     query = redirect_query(response)
-    assert query["_path"] == f"/w/{ws['slug']}/settings/connections"
+    assert query["_path"] == f"/w/{ws['slug']}/connections"
     assert set(query) == {"instagram", "_path"}
     assert response.headers["location"].startswith(WEB)
     assert instagram.calls == []  # X-1: the callback connects nothing

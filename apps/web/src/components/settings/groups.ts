@@ -5,7 +5,6 @@ import {
   Building2,
   CreditCard,
   Globe,
-  Link2,
   MessageSquareText,
   MoreHorizontal,
   Palette,
@@ -49,11 +48,6 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
     icon: Timer,
     description: "Open hours and the away message",
     keywords: ["schedule", "away", "opening", "time"],
-  },
-  connections: {
-    icon: Link2,
-    description: "Instagram and WhatsApp accounts",
-    keywords: ["instagram", "whatsapp", "facebook", "accounts", "connect"],
   },
   widget: {
     icon: Globe,
@@ -125,7 +119,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
     label: "Workspace",
     segments: ["workspace", "members", "hours"],
   },
-  { id: "channels", label: "Channels", segments: ["connections", "widget"] },
+  { id: "channels", label: "Channels", segments: ["widget"] },
   {
     id: "automation",
     label: "Automation and AI",

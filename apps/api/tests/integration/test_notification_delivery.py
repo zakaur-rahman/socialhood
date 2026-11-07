@@ -69,7 +69,7 @@ async def test_account_problems_email_and_push_the_owners_and_admins(team: Team)
         assert delivery["data"] == {
             "title": "Reconnect @maple.bakery",
             "body": "@maple.bakery needs reconnecting to keep receiving messages.",
-            "link": "/settings/connections",
+            "link": "/connections",
             "workspace_name": "Maple Bakery",
             "workspace_slug": team.slug,
         }
@@ -188,7 +188,7 @@ async def test_an_email_is_sent_once_under_its_idempotency_key(
         assert sent.subject == "Reconnect @maple.bakery"
         assert sent.tags == {"template": "account_needs_reconnect"}
         assert sent.headers == {}  # List-Unsubscribe is for the digest only
-        assert f"{WEB}/w/{team.slug}/settings/connections" in sent.html
+        assert f"{WEB}/w/{team.slug}/connections" in sent.html
         assert delivery["status"] == "sent"
         assert (delivery["sent_at"], delivery["attempts"]) == (at, 1)
         assert delivery["subject"] == "Reconnect @maple.bakery"

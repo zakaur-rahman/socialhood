@@ -100,7 +100,7 @@ test.describe("GR-29 Facebook Pages", () => {
 
   test("Connections shows the Page with Facebook's name", async ({ page, facebook }) => {
     const { workspace } = facebook;
-    await page.goto(`/w/${workspace.slug}/settings/connections`);
+    await page.goto(`/w/${workspace.slug}/connections`);
     const card = page.getByRole("article", { name: "Sandbox page" });
     await expect(card).toBeVisible();
     await expect(card.getByText("Facebook Pages API")).toBeVisible();

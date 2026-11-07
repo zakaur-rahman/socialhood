@@ -254,7 +254,7 @@ export function BroadcastComposer() {
               {numbers.length === 0 ? (
                 <p className="text-sm text-fg-secondary">
                   Connect a WhatsApp number first.{" "}
-                  <Link href={`/w/${workspace.slug}/settings/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+                  <Link href={`/w/${workspace.slug}/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
                     Open connections
                   </Link>
                 </p>

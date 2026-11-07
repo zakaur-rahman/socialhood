@@ -44,7 +44,7 @@ export function resolveDestination(
   next: string | null = null,
   plan: string | null = null,
 ): string | null {
-  if (connectError === "state_invalid") return `/w/${slug}/settings/connections?error=state_invalid`;
+  if (connectError === "state_invalid") return `/w/${slug}/connections?error=state_invalid`;
   if (isNextPage(next)) return `/w/${slug}/${next}`;
   if (plan === PRO_PLAN_PARAM) return `/w/${slug}/home?plan=${PRO_PLAN_PARAM}`;
   if (accounts === undefined) return null;

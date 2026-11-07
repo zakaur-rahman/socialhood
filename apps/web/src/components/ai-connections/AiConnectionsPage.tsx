@@ -84,7 +84,7 @@ const OUTCOME: Record<AiConnectionCall["outcome"], { label: string; tone: "succe
 };
 
 /**
- * Settings › Connected AI apps (C-165 phase C): what AI apps (Claude, ChatGPT, Codex over MCP)
+ * Settings › MCP & API (C-165 phase C): what AI apps (Claude, ChatGPT, Codex over MCP)
  * may do in this workspace, and every app connected to it, each with its member, what it may do,
  * when it was last used, its recent tool calls and Disconnect. Owners and admins set the mode and
  * see everyone's connections; other members see their own.
@@ -96,7 +96,7 @@ export function AiConnectionsPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          title="AI apps & API"
+          title="MCP & API"
           description="Claude, ChatGPT and Codex can work in this workspace as one of its members (over MCP). API keys are for the public API and AI apps that use a key."
         />
       }

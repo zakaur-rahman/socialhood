@@ -5000,7 +5000,7 @@ export interface components {
         };
         /**
          * ActivityAction
-         * @description The one thing to do about it: a link inside the workspace ("/settings/connections").
+         * @description The one thing to do about it: a link inside the workspace ("/connections").
          */
         ActivityAction: {
             /** Href */

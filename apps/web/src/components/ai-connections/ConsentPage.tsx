@@ -174,7 +174,7 @@ function Consent({ id, request }: { id: string; request: ConnectRequest }) {
           <span>
             {app} acts as you, and can&rsquo;t do anything your role
             {workspace ? ` (${ROLE[workspace.role]})` : ""} doesn&rsquo;t allow. You can disconnect it any time in Settings ›
-            Connected AI apps. Messages and comments it reads are sent to {app}&rsquo;s provider under their terms.
+            MCP &amp; API. Messages and comments it reads are sent to {app}&rsquo;s provider under their terms.
           </span>
         </p>
 

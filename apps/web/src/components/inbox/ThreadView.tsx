@@ -213,7 +213,7 @@ function Thread({
     conversation.platform === "whatsapp"
       ? (conversation.social_account.display_name ?? account?.phone_number)
       : conversation.social_account.username;
-  const reconnectHref = `/w/${workspace.slug}/settings/connections` as Route;
+  const reconnectHref = `/w/${workspace.slug}/connections` as Route;
   const canSchedule = conversation.reply_window.state === "open" || conversation.reply_window.state === "human_agent";
   const accountStatus = conversation.social_account.status;
   // As the composer decides: replies need an open window and a connected account.

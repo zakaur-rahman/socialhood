@@ -55,7 +55,7 @@ async def instagram_callback(
         active = await workspaces.is_active(session, uuid.UUID(data["workspace_id"]))
     if not active:  # deleted or being deleted since the connect started (T9.6)
         return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
-    target = f"{_web(settings)}/w/{data['slug']}/settings/connections"
+    target = f"{_web(settings)}/w/{data['slug']}/connections"
     if error or not code:
         reason = "access_denied" if error in (None, "access_denied") else "connect_failed"
         return RedirectResponse(f"{target}?error={reason}", status_code=303)
@@ -118,7 +118,7 @@ async def facebook_callback(
         active = await workspaces.is_active(session, uuid.UUID(data["workspace_id"]))
     if not active:
         return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
-    target = f"{_web(settings)}/w/{data['slug']}/settings/connections"
+    target = f"{_web(settings)}/w/{data['slug']}/connections"
     if error or not code:
         reason = "access_denied" if error in (None, "access_denied") else "connect_failed"
         return RedirectResponse(f"{target}?error={reason}&platform=facebook", status_code=303)

@@ -25,7 +25,6 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
 
   it("the tab labels are the page titles (D-08)", () => {
     expect(SETTINGS_SECTIONS.map((section) => section.label)).toEqual([
-      "Connections",
       "AI rules and takeover",
       "Workspace",
       "Saved replies",
@@ -39,7 +38,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Audit log",
       "Activity",
       "Ask Amplychat",
-      "AI apps & API",
+      "MCP & API",
     ]);
   });
 });

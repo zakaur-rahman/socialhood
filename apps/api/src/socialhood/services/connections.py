@@ -489,7 +489,7 @@ async def mark_needs_reconnect(session: AsyncSession, acct: SocialAccount, reaso
         severity="critical",
         title=f"Reconnect {handle}",
         body=f"{handle} needs reconnecting to keep receiving messages.",
-        link="/settings/connections",
+        link="/connections",
         dedupe_key=f"reconnect:{acct.id}:{since}",
     )
 
@@ -519,7 +519,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
             f"Amplychat was removed from {handle} in {platform_label(acct)}. "
             "Connect it again to keep receiving messages."
         ),
-        link="/settings/connections",
+        link="/connections",
         dedupe_key=f"deauthorized:{acct.id}:{(acct.connected_at or datetime.now(UTC)).isoformat()}",
     )
 

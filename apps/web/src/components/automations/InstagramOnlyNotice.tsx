@@ -23,7 +23,7 @@ export function InstagramOnlyNotice({
   /** Only owners and admins can connect an account; others are told whom to ask. */
   canConnect?: boolean;
 }) {
-  const href = `/w/${slug}/settings/connections` as Route;
+  const href = `/w/${slug}/connections` as Route;
   if (variant === "page") {
     return (
       <Card data-testid="instagram-only-notice">

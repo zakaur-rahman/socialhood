@@ -56,7 +56,7 @@ beforeEach(() => {
   toast.error.mockReset();
 });
 
-describe("Settings › AI apps & API (C-165, C-180)", () => {
+describe("Settings › MCP & API (C-165, C-180)", () => {
   it("lists each connection with its member, what it may do and its recent calls", async () => {
     setup();
     const [row] = await screen.findAllByTestId("ai-connection");
@@ -71,7 +71,7 @@ describe("Settings › AI apps & API (C-165, C-180)", () => {
   it("shows the setup steps for each AI app here, with the server address to copy", async () => {
     const user = userEvent.setup();
     setup();
-    expect(screen.getByRole("heading", { level: 1, name: "AI apps & API" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "MCP & API" })).toBeInTheDocument();
     const steps = screen.getByRole("tablist", { name: "AI app" });
     expect(within(steps).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Claude", "Claude Code", "ChatGPT", "Codex"]);
     expect(screen.getByText(/Add custom connector/)).toBeInTheDocument();

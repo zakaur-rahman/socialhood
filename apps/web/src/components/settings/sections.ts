@@ -5,11 +5,10 @@ const EVERYONE: readonly Role[] = ["owner", "admin", "agent"];
 export type SettingsSection = { segment: string; label: string; roles: readonly Role[] };
 
 /**
- * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Role visibility is unchanged
+ * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Connections is its own page (C-180). Role visibility is unchanged
  * (C-066). D-08: each tab's label equals its page's title.
  */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
-  { segment: "connections", label: "Connections", roles: EVERYONE },
   { segment: "ai", label: "AI rules and takeover", roles: EVERYONE },
   { segment: "workspace", label: "Workspace", roles: EVERYONE },
   // GR-21: the snippets typed after / in a reply. Everyone reads and uses them; owners and admins edit.
@@ -38,5 +37,5 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   // C-165: Claude, ChatGPT and Codex over MCP. Everyone sees their own connections; owners and
   // admins also set the mode and see everyone's (the API decides which list each gets). C-180: the
   // setup steps and the API keys (owners and admins) moved here; /settings/api-keys forwards here.
-  { segment: "ai-apps", label: "AI apps & API", roles: EVERYONE },
+  { segment: "ai-apps", label: "MCP & API", roles: EVERYONE },
 ];

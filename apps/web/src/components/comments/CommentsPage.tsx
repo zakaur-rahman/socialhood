@@ -86,7 +86,7 @@ export function CommentsPage() {
             {...emptyStates.comments}
             action={
               <Button asChild size="sm">
-                <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect Instagram</Link>
+                <Link href={`/w/${workspace.slug}/connections` as Route}>Connect Instagram</Link>
               </Button>
             }
           />

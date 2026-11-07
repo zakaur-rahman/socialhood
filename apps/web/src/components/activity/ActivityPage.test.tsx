@@ -29,7 +29,7 @@ function item(values: Partial<ActivityItem> = {}): ActivityItem {
     social_account_id: "a1",
     account_label: "@maple.bakery",
     platform: "instagram",
-    action: { label: "Reconnect Instagram", href: "/settings/connections" },
+    action: { label: "Reconnect Instagram", href: "/connections" },
     retryable: false,
     retry: null,
     ...values,
@@ -65,7 +65,7 @@ describe("Settings, Activity (GR-05)", () => {
     expect(row).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
     expect(row).toHaveTextContent("5m ago");
     const link = within(row).getByRole("link", { name: "Reconnect Instagram" });
-    expect(link).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(link).toHaveAttribute("href", "/w/maple/connections");
     expect(within(row).queryByRole("button", { name: /Retry/ })).toBeNull();
   });
 

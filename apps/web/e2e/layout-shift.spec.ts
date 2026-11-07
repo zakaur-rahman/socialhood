@@ -29,7 +29,7 @@ const PAGES = [
   "ask",
   "reports",
   "settings/workspace",
-  "settings/connections",
+  "connections",
   "settings/members",
   "settings/billing",
   "settings/ai",

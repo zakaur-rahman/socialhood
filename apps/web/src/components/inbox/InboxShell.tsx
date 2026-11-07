@@ -100,7 +100,7 @@ export function InboxShell({ children }: { children: ReactNode }) {
           body={emptyStates.connections.body}
           action={
             <Button asChild>
-              <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect an account</Link>
+              <Link href={`/w/${workspace.slug}/connections` as Route}>Connect an account</Link>
             </Button>
           }
         />

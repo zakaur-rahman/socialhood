@@ -9741,21 +9741,23 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
 
-## C-180 · Connections and AI apps & API in the sidebar (owner, 2026-11-08)
+## C-180 · Connections as its own page; MCP & API in Settings; no credits meter in the sidebar (owner, 2026-11-08)
 
-- **Ask:** the owner found connecting an AI app (MCP) from the dashboard confusing. Connections and
-  the AI apps page were only inside Settings, and the setup steps were only on the public site
-  (/developers/mcp).
-- **Sidebar:** **Connections** and **AI apps & API** sit right above **Settings**. Both stay
-  settings pages, so the settings rail still lists them. Settings now opens on its own home, not
-  on Connections. The highlighted item follows the page: Connections, AI apps & API (and the old
-  API keys address), else Settings.
-- **Name:** I chose "AI apps & API" over "MCP", "API" or "MCP and API". Most customers know
-  Claude and ChatGPT but not MCP. "& API" keeps it findable for developers, and settings search
-  still matches "mcp".
-- **The page:** steps for Claude, Claude Code, ChatGPT and Codex in tabs, with copy buttons. The
-  text is `clientGuides()`, the same as /developers/mcp, so the two can't drift. Then the
-  connected apps, the mode, and the API keys (owners and admins).
-- **API keys:** `/settings/api-keys` forwards to `/settings/ai-apps#api-keys`, and the rail no
-  longer lists API keys on its own. Public copy that said "Settings › API keys" now says
-  "AI apps & API › API keys".
+- **Ask:** the owner found connecting an AI app (MCP) from the dashboard confusing: the setup steps
+  were only on the public site (/developers/mcp). Then, after seeing a first version: no AI
+  credits in the sidebar; name it "MCP & API" and keep it in Settings only; Connections opens
+  straight on its own page, like Inbox, and leaves Settings.
+- **Connections:** `/w/{slug}/connections`, in the sidebar right above Settings, with no settings
+  rail. `/settings/connections` forwards there, query included, so old emails and links still
+  work. The API now links to `/connections`: the connect return, notifications and the activity
+  feed. Settings opens on its own home.
+- **Settings › MCP & API** (was "Connected AI apps"):
+  - setup steps for Claude, Claude Code, ChatGPT and Codex in tabs, with copy buttons. The text
+    is `clientGuides()`, the same as /developers/mcp, so the two can't drift;
+  - the connected apps and the mode;
+  - the API keys, for owners and admins.
+
+  `/settings/api-keys` forwards to `/settings/ai-apps#api-keys`, and the rail no longer lists API
+  keys on its own. Public copy says "Settings › MCP & API".
+- **Sidebar:** the AI credits meter is gone. The credits banner when they run out, and the usage on
+  Billing and usage, stay.

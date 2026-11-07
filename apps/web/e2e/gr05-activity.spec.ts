@@ -40,7 +40,7 @@ test.describe("GR-05 activity", () => {
       "GET",
       `/v1/w/${workspace.id}/activity?automation_id=${draft.id}`,
     );
-    expect(feed.items[0]).toMatchObject({ kind: "automation_run", action: { href: "/settings/connections" } });
+    expect(feed.items[0]).toMatchObject({ kind: "automation_run", action: { href: "/connections" } });
 
     await page.goto(`/w/${workspace.slug}/settings/activity?automation=${draft.id}`);
     await expect(page.getByRole("heading", { name: "Activity", level: 1 })).toBeVisible();
@@ -49,7 +49,7 @@ test.describe("GR-05 activity", () => {
     await expect(row).toContainText("Failed");
     await expect(row).toContainText("needs reconnecting");
     const link = row.getByRole("link", { name: "Reconnect Instagram" });
-    await expect(link).toHaveAttribute("href", `/w/${workspace.slug}/settings/connections`);
+    await expect(link).toHaveAttribute("href", `/w/${workspace.slug}/connections`);
     await link.click();
     await expect(page).toHaveURL(/\/settings\/connections/);
   });

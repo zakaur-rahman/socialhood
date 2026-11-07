@@ -37,12 +37,11 @@ describe("Settings rail (UX-SCR-07)", () => {
       "Workspace",
       "Members",
       "Business hours",
-      "Connections",
       "Website chat",
       "AI rules and takeover",
       "Saved replies",
       "Ask Amplychat",
-      "AI apps & API",
+      "MCP & API",
       "Billing and usage",
       "Integrations",
       "Audit log",
@@ -58,7 +57,7 @@ describe("Settings rail (UX-SCR-07)", () => {
     expect(within(nav).queryByRole("heading", { name: "Admin" })).toBeNull();
     expect(within(nav).getByText("Only changes things for you")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Connections" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: "Connections" })).toBeNull();
   });
 
   it("filters by label or keyword, says when nothing matches, and Escape clears", async () => {
