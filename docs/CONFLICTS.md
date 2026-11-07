@@ -9729,3 +9729,14 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Copy.** The AI apps and Trust headlines are shorter, a comma fixes the hero sentence, and "AI credits" and "MCP server" get a short gloss.
 - **Kept as the owner chose.** The closing section's arc, the gradient footer wordmark, the hero's "New" pill (C-168), the violet accent phrase, Geist and the logo colours.
 - **Not done (larger restyles).** Features as a large-type list, Connections with logos, a bigger hero headline and removing the remaining thin rules.
+
+## C-179 · Human Agent: the AI draft isn't sent as is after 24 hours (owner, 2026-11-08)
+
+- **Decision:** the owner asked for Human Agent in the Instagram App Review. Meta allows the
+  `HUMAN_AGENT` tag only for a person's reply. The server already limited the 7-day window to sends
+  of kind "human". But in the Inbox, the AI draft card's Send (and Ctrl/⌘ Enter) sent the AI's text
+  in one click.
+- **Change:** in the `human_agent` window, the card's Send is off and says why. Insert still puts
+  the draft in the reply box, where a person reviews it and sends it.
+- **Not done:** no server check that the text was changed. A person who inserts the draft and
+  sends it unedited has still reviewed it in the reply box.

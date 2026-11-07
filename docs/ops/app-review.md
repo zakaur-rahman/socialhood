@@ -176,7 +176,7 @@ in `docs/verification.md` item 36.
 | Facebook Login product | Add it; valid OAuth redirect URI `<api>/v1/oauth/facebook/callback` (`FB_REDIRECT_URI`) | [ ] |
 | Webhooks product, **Page** object | Callback `<api>/webhooks/facebook`, verify token from `FB_WEBHOOK_VERIFY_TOKEN`; signed with the app secret (`META_APP_SECRET`) | [ ] |
 | Server settings | `META_APP_ID`, `META_APP_SECRET`, `FB_REDIRECT_URI`, `FB_WEBHOOK_VERIFY_TOKEN` set on the API; without `FB_REDIRECT_URI` the Connect Facebook button answers "not configured" | [ ] |
-| Human Agent | One request covers Instagram and Messenger; set `IG_HUMAN_AGENT_ENABLED` once Meta approves it | [ ] |
+| Human Agent | One request covers Instagram and Messenger. Requested with the Instagram submission (2026-11-08). To record its screencast, `IG_HUMAN_AGENT_ENABLED` is turned on with a role account; leave it on once Meta approves. In the 7-day window the AI draft can't be sent as is (C-179): a person inserts it and sends from the reply box | [ ] |
 
 **Permissions** (Advanced Access; one successful call each within 30 days of submitting):
 
@@ -189,7 +189,7 @@ in `docs/verification.md` item 36.
 | `pages_read_user_content` | To read the comments people leave on the Page's posts (*verify* whether `pages_read_engagement` covers this). | Open a post's comments | S-12 |
 | `pages_manage_engagement` | To reply to comments as the Page, hide spam, delete comments, and send one private reply to a person who comments a keyword. | Reply to and hide a comment; automation private reply | S-12, S-13 |
 
-Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories) and `read_insights` for Page post insights (only asked for when `FB_REQUEST_INSIGHTS_SCOPE` is on).
+Asked for at connect (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories), and `read_insights` for Page post insights only when `FB_REQUEST_INSIGHTS_SCOPE` is on. Both still need App Review.
 
 Not requested yet (FR-PUB-07, C-134): the Page Public Metadata Access feature, which the Pages search (`GET /pages/search`) needs to look up a place for an Instagram post's location. Until it is approved the composer takes a Facebook Page's id or link. Meta's collaborators reference names `instagram_basic` and `pages_read_engagement` for reading invites; our connection uses Instagram Login (`instagram_business_basic`), and whether that covers the read is unverified (C-134). If it does not, the invites stay Pending and the Schedule page says when they were last read.
 

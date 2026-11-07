@@ -114,6 +114,22 @@ describe("Suggested reply in the thread (F-08)", () => {
     expect(screen.queryByText("Editing AI draft")).not.toBeInTheDocument();
   });
 
+  it("in the Human Agent window the draft can't be sent as is; Insert and the reply box still work", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ reply_window: { state: "human_agent", closes_at: "2026-10-04T11:55:00Z" } });
+    const card = await screen.findByRole("region", { name: "Suggested reply" });
+    expect(within(card).getByRole("button", { name: "Send" })).toBeDisabled();
+
+    await user.click(screen.getByRole("textbox", { name: "Reply to Priya Nair" }));
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(sends(calls)).toHaveLength(0);
+
+    await user.click(within(card).getByRole("button", { name: "Insert" }));
+    await user.type(screen.getByRole("textbox", { name: "Reply to Priya Nair" }), "{Enter}");
+    await waitFor(() => expect(sends(calls)).toHaveLength(1));
+    expect((sends(calls)[0].body as SendMessage).suggestion_id).toBe("s1");
+  });
+
   it("stopping the edit keeps the text, drops the link and brings the card back", async () => {
     const user = userEvent.setup();
     const { calls } = setup();
