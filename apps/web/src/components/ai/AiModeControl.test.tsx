@@ -17,7 +17,7 @@ import {
   type Call,
 } from "@/test/api";
 
-import { AiModeMenu, HUMAN_AGENT_AI_NOTE } from "./AiModeControl";
+import { AI_RESUMES_NOTE, AiModeMenu, HUMAN_AGENT_AI_NOTE } from "./AiModeControl";
 
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -81,14 +81,15 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
   it("in the Human Agent window, says only a person's replies go out; not otherwise (C-182)", async () => {
     setup({ reply_window: { state: "human_agent", closes_at: "2026-10-03T12:00:00Z" } });
     const menu = await openMenu();
-    expect(within(menu).getByText(HUMAN_AGENT_AI_NOTE)).toBeInTheDocument();
+    expect(within(menu).getByText(`${HUMAN_AGENT_AI_NOTE} ${AI_RESUMES_NOTE}`)).toBeInTheDocument();
+    expect(menu).toHaveAccessibleDescription(`${HUMAN_AGENT_AI_NOTE} ${AI_RESUMES_NOTE}`);
     expect(within(menu).getByRole("menuitemradio", { name: "Auto" })).toBeInTheDocument();
   });
 
   it("no Human Agent note while the reply window is open", async () => {
     setup();
     const menu = await openMenu();
-    expect(within(menu).queryByText(HUMAN_AGENT_AI_NOTE)).not.toBeInTheDocument();
+    expect(within(menu).queryByText(new RegExp(HUMAN_AGENT_AI_NOTE))).not.toBeInTheDocument();
   });
 
   it("Auto asks first, listing the escalation rules, the owner's phrases and the takeover period", async () => {
