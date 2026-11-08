@@ -142,22 +142,22 @@
   /* The public site (C-155): the owner's paper and night palette, the same in both app themes (the
      public pages have their own look, independent of the member's choice). site.css and the .site
      block below use them; the app never does. */
-  --color-paper: #F5F5F2;
-  --color-paper-deep: #EDEDE9;
+  --color-paper: #F6F1E7;
+  --color-paper-deep: #EDE5D6;
   --color-sheet: #FFFFFF;
-  --color-ink: #121317;
-  --color-ink-secondary: #464953;
-  --color-ink-tertiary: #5E616A;       /* C-157: 5.66 on paper, 5.27 on paper-deep, 5.23 on iris-soft (was #686B74, 4.5 near-misses) */
-  --color-rule: #DFDFDA;               /* hairlines only: 1.22 on paper, never a control's edge */
-  --color-rule-subtle: #EAEAE6;
-  --color-site-line-control: #82848B;  /* C-157: the edge that identifies a control on paper (WCAG 1.4.11): 3.42 paper, 3.18 paper-deep, 3.74 sheet */
-  --color-night-line-control: #6A6C76; /* C-157: the same on night: 3.63 night, 3.34 night-raised */
-  --color-night: #0F1017;
-  --color-night-raised: #181923;
-  --color-night-high: #232532;
-  --color-night-ink: #F2F2F5;
-  --color-night-ink-secondary: #B7B8C4;
-  --color-night-ink-tertiary: #8E909E;
+  --color-ink: #1E1D1A;
+  --color-ink-secondary: #4A473F;
+  --color-ink-tertiary: #5F5B51;       /* C-184: 6.01 on paper, 5.41 on paper-deep, 5.72 on iris-soft (was #686B74, 4.5 near-misses) */
+  --color-rule: #E2DACB;               /* hairlines only: never a control's edge */
+  --color-rule-subtle: #ECE5D8;
+  --color-site-line-control: #85806F;  /* C-157: the edge that identifies a control on paper (WCAG 1.4.11): 3.51 paper, 3.16 paper-deep, 3.95 sheet */
+  --color-night-line-control: #78746A; /* C-157: the same on night: 3.69 night, 3.30 night-raised */
+  --color-night: #1C1B18;
+  --color-night-raised: #26251F;
+  --color-night-high: #312F28;
+  --color-night-ink: #F4F1EA;
+  --color-night-ink-secondary: #BDB9AE;
+  --color-night-ink-tertiary: #9A968B;
   --color-iris: #4B3FE0;
   --color-iris-ink: #3A2FC2;
   --color-iris-soft: #ECEAFD;
@@ -167,9 +167,9 @@
   --color-site-ok-soft: #E3F1E8;
   --color-site-wait: #985200;
   --color-site-wait-soft: #FBEEDC;
-  --color-site-wait-mark: #B06A00;     /* C-157: 3.92 on paper (was #D08A22, 2.62) */
-  --color-instagram-night: #E0559A;    /* C-157: the Instagram mark on night: 4.94 night-raised, 4.29 night-high */
-  --color-web-night: #2AA597;          /* C-157: the website-chat mark on night: 5.01 night-high */
+  --color-site-wait-mark: #B06A00;     /* C-184: 3.80 on paper (was #D08A22, 2.62) */
+  --color-instagram-night: #E0559A;    /* C-157: the Instagram mark on night: 4.34 night-raised, 3.79 night-high */
+  --color-web-night: #2AA597;          /* C-157: the website-chat mark on night: 4.42 night-high */
   --color-site-stop: #A43535;
   --color-site-stop-soft: #F8E6E6;
   --color-handoff: #F2A23A;
