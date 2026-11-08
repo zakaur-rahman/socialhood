@@ -5,7 +5,7 @@ Every 402 comes from here, so each carries its code and the §1.7 key (errors.Pl
 - ``entitlement_required``: a feature the plan lacks (``PlanLimit(entitlement=key)``, limit null),
   e.g. Auto mode ("ai_modes") or AI-reply automations ("ai_reply_automations").
 - ``quota_exceeded``: a limit the workspace has reached (``PlanLimit(entitlement=key, limit=n)``):
-  a capacity counted live (accounts_per_platform, active_automations, knowledge_characters,
+  a capacity counted live (instagram_accounts, accounts_per_platform, active_automations, knowledge_characters,
   pending_scheduled_messages) or a monthly allowance from usage_counters (ai_credits_monthly,
   scheduled_posts_monthly; billing/usage.py has the periods).
 
@@ -24,14 +24,14 @@ Three forms, the same 402 whichever answers:
   that is off stays a 409): the routes §2.15 marks "credits" whose services predate P8.
 
 The plan is always the workspace's subscription (billing/plans.py, never a copy). Accounts beyond
-the plan's accounts_per_platform (after a downgrade, FR-BIL-07) are read-only: the earliest
+the plan's limit for their platform (after a downgrade, FR-BIL-07) are read-only: the earliest
 connected accounts of each platform keep the plan's slots; the rest can be read, synced and
 disconnected but not send (``check_account_writable``): replies and retries
 (services/sending.queue_outbound, so AI, automation and scheduled sends too), comment replies,
 scheduled messages and automation activations refuse them, and the automation runtime skips them
 (``read_only_error``). Publishing is not gated (C-050).
 
-C-172 adds two channel rules on top of accounts_per_platform: ``channels_total`` (Free: 2 channels
+C-172 adds two channel rules on top of the per-platform limits: ``channels_total`` (Free: 2 channels
 across Instagram, Facebook and the website chat) and ``whatsapp`` (not on Free). Both are checked
 where a channel is added (``check_new_channel``: connecting an account, the website chat's first
 open) and both feed ``read_only_accounts``, so an existing Free workspace with WhatsApp, or with
@@ -204,7 +204,7 @@ async def check_new_channel(
     """The C-172 channel rules for a channel about to be added (not for a reconnect of a live
     one, which keeps its slot): 402 entitlement_required for WhatsApp on a plan without it, 402
     quota_exceeded (channels_total) when the plan's channels in total are all in use. The
-    per-platform limit (accounts_per_platform) is the caller's own check."""
+    per-platform limit (plans.accounts_limit) is the caller's own check."""
     if platform == "whatsapp" and not allows(plan, "whatsapp"):
         raise entitlement_error("whatsapp")
     total = entitlement(plan, "channels_total")

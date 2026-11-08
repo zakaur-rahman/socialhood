@@ -375,7 +375,7 @@ async def test_channels_past_the_free_total_are_read_only(shop: Shop) -> None:
     assert "is read-only until you upgrade or disconnect another channel" in body["detail"]
 
 
-async def test_instagram_limits_creator_2_business_4_and_whatsapp_stays_1_on_creator(
+async def test_instagram_limits_creator_2_and_business_4(
     shop: Shop,
 ) -> None:
     """C-187: Instagram has its own limit; the shop starts with one account."""

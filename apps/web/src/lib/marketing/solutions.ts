@@ -151,7 +151,7 @@ export const FOR_CREATORS: SolutionPage = {
     },
     {
       name: "Established",
-      who: "More than one account, with a manager or an assistant.",
+      who: "Three or more Instagram accounts, or a team of three.",
       plan: "max",
       body: `${E.instagram_accounts.max} Instagram, ${E.accounts_per_platform.max} each of WhatsApp and Facebook, ${E.members.max} team members, up to ${E.active_automations.max} automations on at once and ${n(E.ai_credits_monthly.max)} AI credits a month.`,
     },
