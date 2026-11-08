@@ -21,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.billing import plans
+from socialhood.billing.downgrade import apply_downgrade
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.platforms.deps import deps_from
@@ -917,3 +918,14 @@ async def test_each_plan_covers_its_sites_and_a_downgrade_keeps_the_first(
     assert (await ws.call("PUT", "/widget", json={"allowed_domains": [HOST]})).status_code == 200
     assert (await site.session()).status_code == 200
     assert (await ws.call("PUT", "/widget", json={"allowed_domains": two})).status_code == 402
+
+
+async def test_a_downgrade_that_cuts_sites_says_so(ws: Ws, site: Site, engine: AsyncEngine) -> None:
+    await set_plan(engine, ws.wid, "max")
+    await site.settings(allowed_domains=["a.example.com", "b.example.com", HOST])
+    with workspace_scope(uuid.UUID(ws.wid)):
+        async with make_sessionmaker(engine)() as session:
+            report = await apply_downgrade(session, plan="pro", now=datetime.now(UTC))
+    assert report.sites_cut == 2
+    assert report.changed
+    assert "2 websites stopped showing the chat." in report.summary()
