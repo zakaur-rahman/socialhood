@@ -9748,3 +9748,10 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   opened.
 - **Change:** a row shows its account's handle next to the contact, only when that platform has more
   than one account, and not once the list is filtered to one account. Row height is unchanged.
+
+## C-188 · Inbox: account pictures in the filter; the view chips on one row (owner, 2026-11-08; local only so far)
+
+- **Account filter:** each option, and the closed Select, shows the picture (or an initial) beside the
+  handle. The picture is decorative for screen readers.
+- **View chips:** one row that scrolls sideways at every width; they used to wrap from md. A plain mouse
+  wheel scrolls the row too, since its scrollbar is hidden.

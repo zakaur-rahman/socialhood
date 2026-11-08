@@ -3,6 +3,7 @@
 import { Keyboard } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
@@ -54,6 +55,20 @@ function countText(count: number): string {
  * 900 px screen the chips had pushed the first conversation to the bottom.
  */
 const SHORT_ON_ROOM = "(max-height: 40rem)";
+
+/** An account in the filter: its picture and handle, in the list and on the closed Select (C-188). */
+function AccountChoice({ account }: { account: SocialAccount }) {
+  const name = accountName(account);
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <Avatar size="sm" aria-hidden>
+        {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
+        <AvatarFallback className="bg-raised text-fg">{name.replace("@", "").slice(0, 1).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 truncate">{name}</span>
+    </span>
+  );
+}
 
 /**
  * UX-INB-03, re-arranged (C-063): "Inbox" with the Chats | Scheduled tabs, a full-width search
@@ -160,14 +175,14 @@ export function ListHeader({
             />
             {accounts.length > 1 ? (
               <Select value={accountId ?? "all"} onValueChange={(value) => onAccountChange(value === "all" ? null : value)}>
-                <SelectTrigger size="lg" aria-label="Account" className="max-w-32 shrink-0">
+                <SelectTrigger size="lg" aria-label="Account" className="max-w-36 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All accounts</SelectItem>
                   {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {accountName(account)}
+                      <AccountChoice account={account} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -192,15 +207,20 @@ export function ListHeader({
             </Select>
           ) : (
           <>
-          {/* From md the chips wrap onto as many rows as they need; below it they stay one row that scrolls
-              sideways, with the right edge fading out so a cut-off chip reads as "more" (UI-052). */}
-          <div className="mask-fade-x -mx-3 overflow-x-auto pe-7 ps-3 scroll-pe-7 [scrollbar-width:none] md:mask-none md:overflow-visible md:pe-3">
+          {/* One row that scrolls sideways at every width (owner, C-188), with the right edge fading out so a
+              cut-off chip reads as "more" (UI-052). A plain mouse wheel scrolls it too. */}
+          <div
+            className="mask-fade-x -mx-3 overflow-x-auto pe-7 ps-3 scroll-pe-7 [scrollbar-width:none]"
+            onWheel={(event) => {
+              event.currentTarget.scrollLeft += event.deltaY;
+            }}
+          >
             <ToggleGroup
               variant="chips"
               aria-label="Views"
               value={view}
               onValueChange={(value) => onViewChange(value as InboxView)}
-              className="w-max flex-nowrap md:w-auto md:flex-wrap"
+              className="w-max flex-nowrap"
             >
               {CHIP_VIEWS.map((option) => {
                 const count = counts && COUNTED[option.value] ? (counts[COUNTED[option.value]!] ?? 0) : 0;
