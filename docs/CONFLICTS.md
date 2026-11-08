@@ -9761,3 +9761,20 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   keys on its own. Public copy says "Settings › MCP & API".
 - **Sidebar:** the AI credits meter is gone. The credits banner when they run out, and the usage on
   Billing and usage, stay.
+
+## C-183 · Website chat on the Connections page (owner, 2026-11-08; local only so far)
+
+- **Ask:** put Website chat inside Connections, with the other channels.
+- **Choice:** a card in the Connections list that opens a setup page. Not tabs, which would hide it,
+  and not the whole form on the page, which would mix four long cards and a save bar with the
+  search and filters.
+- **The card:** On or Off, the number of sites and today's chats, or "Not set up". It comes after
+  the accounts, and stays on the page when no account is connected. It matches a search for
+  "website", counts under All, and under Connected only while the chat is on. An off or unused chat
+  isn't "Disconnected".
+- **Reading the settings creates the channel** (`services/widget/settings.ensure`), so the card
+  reads them only once the workspace has a web account. Otherwise every workspace whose admin opened
+  Connections would get a website channel it never asked for.
+- **Add account** lists Website chat too. The form is unchanged at `/connections/website`, with a
+  "Connections" back link. `/settings/widget` forwards there. Settings loses Website chat and with
+  it the empty "Channels" group. Owners and admins only, as before.

@@ -10,6 +10,7 @@ import { AUTO_UPGRADE } from "@/components/ai/AiModeControl";
 import { AutoConfirmDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
 import { AddAccountMenu } from "@/components/connections/AddAccountMenu";
+import { WebsiteChatCard } from "@/components/connections/WebsiteChatCard";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
 import { FacebookGlyph } from "@/components/connections/FacebookGlyph";
 import { FacebookPagesDialog } from "@/components/connections/FacebookPagesDialog";
@@ -17,6 +18,7 @@ import {
   ACCOUNT_FILTERS,
   filterCounts,
   visibleAccounts,
+  websiteChatShown,
   type AccountFilter,
 } from "@/components/connections/filters";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
@@ -38,6 +40,7 @@ import {
   useDisconnectAccount,
   useResubscribeAccount,
   useSocialAccounts,
+  useWidgetSettings,
   useStartFacebookConnect,
   useStartInstagramConnect,
   useUpdateAccount,
@@ -71,6 +74,9 @@ function Connections() {
   const wid = workspace.id;
   const canManage = workspace.role !== "agent";
   const accounts = useSocialAccounts(wid);
+  // Reading the settings creates the channel, so only read them once the workspace has it (C-183).
+  const hasWebsiteChat = Boolean(accounts.data?.some((account) => account.platform === "web"));
+  const websiteChat = useWidgetSettings(wid, canManage && hasWebsiteChat);
   const connect = useStartInstagramConnect(wid);
   const connectFacebook = useStartFacebookConnect(wid);
   const update = useUpdateAccount(wid);
@@ -109,9 +115,10 @@ function Connections() {
   if (accounts.isPending) return <PageSkeleton rows={2} />;
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
 
-  // The website chat is not a connection: its settings are under Website chat (GR-28).
+  // Website chat has its own card (C-183): it has no account settings or Disconnect.
   const connections = accounts.data.filter((account) => account.platform !== "web");
   const empty = connections.length === 0;
+  const websiteHref = `/w/${workspace.slug}/connections/website` as Route;
   const failWhatsApp = (message: string) => setConnectError({ message, retry: "whatsapp" });
   const retryConnect = () => {
     const platform = connectError?.retry;
@@ -165,6 +172,7 @@ function Connections() {
             onFacebook={startFacebook}
             onWhatsApp={whatsapp.connectNew}
             whatsAppConfigured={whatsapp.configured}
+            websiteHref={websiteHref}
             busy={connect.isPending || finishing || connectFacebook.isPending || whatsapp.busy}
           />
         </>
@@ -174,6 +182,19 @@ function Connections() {
 
   const counts = filterCounts(connections, query);
   const shown = visibleAccounts(connections, filter, query);
+  const websiteChatOn = websiteChat.data?.enabled === true;
+  if (canManage) {
+    for (const option of ACCOUNT_FILTERS) if (websiteChatShown(websiteChatOn, option.value, query)) counts[option.value] += 1;
+  }
+  const websiteChatCard = (
+    <WebsiteChatCard
+      href={websiteHref}
+      exists={hasWebsiteChat}
+      settings={websiteChat.data}
+      loading={hasWebsiteChat && websiteChat.isPending}
+    />
+  );
+  const showWebsiteChat = canManage && websiteChatShown(websiteChatOn, filter, query);
 
   return (
     <SettingsFrame
@@ -187,6 +208,7 @@ function Connections() {
     >
       {connectAlert}
       {empty ? (
+        <>
         <Card>
           <EmptyState
             title={emptyStates.connections.title}
@@ -211,6 +233,8 @@ function Connections() {
             }
           />
         </Card>
+        {canManage ? websiteChatCard : null}
+        </>
       ) : (
         <>
           {accounts.data.length >= 2 ? (
@@ -242,7 +266,7 @@ function Connections() {
               </Card>
             </div>
           ) : null}
-          {shown.length === 0 ? (
+          {shown.length === 0 && !showWebsiteChat ? (
             <Card>
               <EmptyState
                 title="No accounts match"
@@ -332,6 +356,7 @@ function Connections() {
                   }}
                 />
               ))}
+              {showWebsiteChat ? websiteChatCard : null}
             </div>
           )}
         </>

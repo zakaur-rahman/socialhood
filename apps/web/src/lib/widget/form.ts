@@ -1,6 +1,6 @@
 import type { WidgetEmailCapture, WidgetPosition, WidgetSettings, WidgetSettingsUpdate } from "@/lib/api/types";
 
-/** Settings → Website chat (GR-28): the form's values, and how they turn into a save. */
+/** Connections › Website chat (GR-28, C-183): the form's values, and how they turn into a save. */
 export type WidgetForm = {
   enabled: boolean;
   domains: string[];

@@ -29,7 +29,6 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Workspace",
       "Saved replies",
       "Business hours",
-      "Website chat",
       "Notifications",
       "Appearance",
       "Billing and usage",

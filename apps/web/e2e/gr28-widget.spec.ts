@@ -198,9 +198,9 @@ test.describe("GR-28 website chat", () => {
     expect(allowed.headers()["content-security-policy"]).toContain("frame-ancestors http://localhost:*");
   });
 
-  test("Settings → Website chat shows the embed code and saves a new greeting", async ({ page, api, workspace }) => {
+  test("Connections › Website chat shows the embed code and saves a new greeting", async ({ page, api, workspace }) => {
     await setUp(api, workspace);
-    await page.goto(`/w/${workspace.slug}/settings/widget`);
+    await page.goto(`/w/${workspace.slug}/connections/website`);
     await expect(page.getByRole("heading", { level: 1, name: "Website chat" })).toBeVisible();
     await expect(page.getByText(/data-widget="wgt_/)).toBeVisible();
     await expect(page.getByRole("list", { name: "Allowed sites" })).toContainText("localhost");
