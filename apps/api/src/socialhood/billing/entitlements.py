@@ -5,7 +5,7 @@ Every 402 comes from here, so each carries its code and the §1.7 key (errors.Pl
 - ``entitlement_required``: a feature the plan lacks (``PlanLimit(entitlement=key)``, limit null),
   e.g. Auto mode ("ai_modes") or AI-reply automations ("ai_reply_automations").
 - ``quota_exceeded``: a limit the workspace has reached (``PlanLimit(entitlement=key, limit=n)``):
-  a capacity counted live (instagram_accounts, accounts_per_platform, active_automations, knowledge_characters,
+  a capacity counted live (the account limits, active_automations, knowledge_characters,
   pending_scheduled_messages) or a monthly allowance from usage_counters (ai_credits_monthly,
   scheduled_posts_monthly; billing/usage.py has the periods).
 
