@@ -535,7 +535,7 @@ async def test_edit_and_retry_makes_a_failed_post_a_draft_again(shop: Shop) -> N
 # ---------------------------------------------------------------- reschedule and unschedule
 
 
-async def test_reschedule_moves_a_scheduled_post_at_least_five_minutes_ahead(shop: Shop) -> None:
+async def test_reschedule_moves_a_scheduled_post_at_least_a_minute_ahead(shop: Shop) -> None:
     post = await shop.scheduled()
     new_at = later(days=4).replace(microsecond=0)
 

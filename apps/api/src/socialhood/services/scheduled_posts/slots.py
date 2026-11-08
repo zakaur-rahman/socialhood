@@ -122,6 +122,7 @@ async def queue_time(
     timezone: str,
     now: datetime,
     post_id: uuid.UUID,
+    lead: timedelta = MIN_SCHEDULE_LEAD,
 ) -> datetime:
     """Add to queue: the earliest time within 8 weeks that is a free posting time of every
     account (C-043). 422 on ``targets`` without accounts or without a shared free time, on
@@ -146,7 +147,7 @@ async def queue_time(
         session,
         ids,
         timezone=timezone,
-        start=now + MIN_SCHEDULE_LEAD,
+        start=now + lead,
         end=now + QUEUE_HORIZON,
         exclude_post_id=post_id,
     )

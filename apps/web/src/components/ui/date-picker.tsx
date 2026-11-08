@@ -362,7 +362,7 @@ function DateTimePicker({
       </Field>
       <Field id={`${idPrefix}-time`} density={density} invalid={invalid} disabled={disabled || (timeNeedsDate && !value.date)}>
         <FieldLabel className={labelClass}>{labels.time}</FieldLabel>
-        <TimeField size={size} value={value.time} min={value.date && value.date === min ? minTime : undefined} onChange={(time) => onChange({ ...value, time })} />
+        <TimeField size={size} value={value.time} min={value.date && min && value.date <= min ? minTime : undefined} onChange={(time) => onChange({ ...value, time })} />
       </Field>
     </div>
   )

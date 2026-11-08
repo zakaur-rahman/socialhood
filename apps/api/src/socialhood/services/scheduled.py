@@ -304,7 +304,7 @@ def send_window(
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
     if not may_send(window, "human") or window.closes_at is None:
         return None
-    earliest = (now + 2 * MIN_LEAD).replace(second=0, microsecond=0) + MIN_LEAD
+    earliest = (now + MIN_LEAD).replace(second=0, microsecond=0) + MIN_LEAD
     # The last whole minute that is still 5 minutes before the window closes.
     latest = (window.closes_at - WINDOW_MARGIN - timedelta(microseconds=1)).replace(
         second=0, microsecond=0

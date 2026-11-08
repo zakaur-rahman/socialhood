@@ -392,7 +392,7 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
                 errors=[FieldError("media_ids", "A Reel is one video. Add a video.")],
             )
         if when == "slot":
-            post = await posts.queue(call.session, post.id, _env(call))
+            post = await posts.queue(call.session, post.id, _env(call), lead=AI_APP_LEAD)
         elif isinstance(when, datetime):
             post = await posts.schedule(call.session, post.id, when, _env(call))
     except BaseException:
@@ -542,6 +542,16 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
         target_ids = [t.social_account_id for t in targets or current.targets]
         kind = _post_kind(args.kind, await _platforms(call.session, target_ids))
     moved = when if isinstance(when, datetime) and scheduled_before else None
+    # Editing a post about to go out cuts the team's window to stop it. Cancelling stays allowed.
+    due = current.publish_at
+    if (
+        scheduled_before
+        and moved is None
+        and when != "slot"
+        and due
+        and due < call.now + AI_APP_LEAD
+    ):
+        raise _when_error(TOO_SOON)
     merged = _merge(current, args, targets=targets, kind=kind, publish_at=moved)
     preview = scheduling and not args.confirmed
     if scheduling and not preview:
@@ -553,7 +563,7 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
     try:
         post = await posts.replace(call.session, args.post_id, merged, env)
         if when == "slot":
-            post = await posts.queue(call.session, post.id, env)
+            post = await posts.queue(call.session, post.id, env, lead=AI_APP_LEAD)
         elif isinstance(when, datetime) and not scheduled_before:
             post = await posts.schedule(call.session, post.id, when, env)
     except BaseException:

@@ -74,8 +74,9 @@ export function ScheduleFields({
   limits: ScheduleLimits;
   error?: string | null;
 }) {
-  // The first whole minute at or after the limit, so a time the list offers always passes the check.
-  const earliest = toZonedInputs(new Date(Math.ceil(limits.min.getTime() / 60_000) * 60_000), timeZone);
+  // The list starts a minute past the limit: `limits.min` comes from a clock that ticks every 30 to 60 s,
+  // and the API checks against its own, so a time the list offers isn't refused. A typed time is the form's.
+  const earliest = toZonedInputs(new Date(Math.ceil((limits.min.getTime() + 60_000) / 60_000) * 60_000), timeZone);
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
   // The calendar and time pickers (ui/date-picker) take and give the same "YYYY-MM-DD" and "HH:mm"
