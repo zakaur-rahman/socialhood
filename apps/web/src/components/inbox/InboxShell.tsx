@@ -25,6 +25,7 @@ import {
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { AiMode, Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
 import { minWidth } from "@/lib/breakpoints";
+import { rowAccountLabels } from "@/lib/inbox/format";
 import { inboxSearch } from "@/lib/inbox/url";
 import { emptyStates, inboxFilterEmpty } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -215,6 +216,8 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     () => Object.fromEntries(accounts.map((account) => [account.id, account.ai_mode])) as Record<string, AiMode>,
     [accounts],
   );
+  // Once the list is one account, naming it on every row says nothing.
+  const accountLabels = useMemo(() => (effectiveAccountId ? undefined : rowAccountLabels(accounts)), [accounts, effectiveAccountId]);
 
   // ---- context panel: inline at ≥ 1280 px, a sheet below. Collapsible from the header; the
   // choice is remembered per device, and until there is one it starts open only from `wide`
@@ -418,6 +421,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                     isFetchingNextPage={conversations.isFetchingNextPage}
                     fetchNextPage={() => void conversations.fetchNextPage()}
                     accountModes={accountModes}
+                    accountLabels={accountLabels}
                     query={listQuery}
                     timeZone={workspace.timezone}
                   />

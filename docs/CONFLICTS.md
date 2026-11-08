@@ -9740,3 +9740,11 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   the draft in the reply box, where a person reviews it and sends it.
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
+
+## C-186 · Inbox rows name their account when a platform has several (owner, 2026-11-08; local only so far)
+
+- **Why:** the main idea is many platforms and accounts in one workspace. The account filter already
+  existed beside the search, but with several accounts on a platform the rows looked the same until
+  opened.
+- **Change:** a row shows its account's handle next to the contact, only when that platform has more
+  than one account, and not once the list is filtered to one account. Row height is unchanged.

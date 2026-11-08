@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { InboxCounts, InboxView, SocialAccount } from "@/lib/api/types";
+import { accountName } from "@/lib/inbox/format";
 import { useMediaQuery } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { PANE_TITLE } from "@/styles/tokens";
@@ -166,7 +167,7 @@ export function ListHeader({
                   <SelectItem value="all">All accounts</SelectItem>
                   {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "Account")}
+                      {accountName(account)}
                     </SelectItem>
                   ))}
                 </SelectContent>
