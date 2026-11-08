@@ -466,8 +466,13 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
   },
   accounts_per_platform: {
     limitTitle: "Account limit reached",
-    includes: (n) => `${counted(n, "account", "accounts")} per platform`,
+    includes: (n) => `${counted(n, "WhatsApp number", "WhatsApp numbers")} and ${counted(n, "Facebook Page", "Facebook Pages")}`,
     unlimited: "connected accounts",
+  },
+  instagram_accounts: {
+    limitTitle: "Account limit reached",
+    includes: (n) => counted(n, "Instagram account", "Instagram accounts"),
+    unlimited: "Instagram accounts",
   },
   channels_total: {
     limitTitle: "Channel limit reached",

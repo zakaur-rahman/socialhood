@@ -9832,3 +9832,11 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   opened.
 - **Change:** a row shows its account's handle next to the contact, only when that platform has more
   than one account, and not once the list is filtered to one account. Row height is unchanged.
+## C-187 · Instagram has its own account limit (owner, 2026-11-08; local only so far)
+
+- **Limits:** Instagram: Free 1, Creator 2, Business 4, Agency 10 (`instagram_accounts`). WhatsApp and
+  Facebook keep `accounts_per_platform`: 1, 1, 3, 10. This replaces my earlier advice to keep Creator
+  at 1: the product is one workspace, and a person cannot buy a second one for a second brand.
+- **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
+  be cheaper per account than Agency.
+- **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.

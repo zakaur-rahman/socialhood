@@ -53,7 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.ai.metering import Quota, quota
 from socialhood.auth.deps import Session, WorkspaceContext, require_role
-from socialhood.billing.plans import current_plan, entitlement
+from socialhood.billing.plans import accounts_key, accounts_limit, current_plan, entitlement
 from socialhood.billing.usage import PERIOD_KEYS, live_used, period_used
 from socialhood.errors import ApiError, PlanLimit
 from socialhood.models.connections import AccountStatus, SocialAccount
@@ -227,13 +227,10 @@ def _noun(limit: int, platform: str) -> str:
 
 async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID, str]:
     """Each read-only account and why: ``whatsapp`` (the plan has none), ``platform`` (beyond
-    accounts_per_platform) or ``total`` (beyond channels_total). The earliest connected accounts
-    keep the slots."""
-    limit = entitlement(plan, "accounts_per_platform")
+    the platform's account limit) or ``total`` (beyond channels_total). The earliest connected
+    accounts keep the slots."""
     total = entitlement(plan, "channels_total")
     whatsapp = allows(plan, "whatsapp")
-    if limit is None and total is None and whatsapp:
-        return {}
     rows = (
         await session.execute(
             select(SocialAccount.id, SocialAccount.platform)
@@ -253,6 +250,7 @@ async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID
             extra[account_id] = "whatsapp"
             continue
         seen[platform] = seen.get(platform, 0) + 1
+        limit = accounts_limit(plan, platform)
         if limit is not None and seen[platform] > int(limit):
             extra[account_id] = "platform"
             continue
@@ -293,9 +291,9 @@ async def read_only_error(
             f"Your plan includes {total} channels in total. {name} is read-only until you "
             "upgrade or disconnect another channel.",
         )
-    limit = int(entitlement(plan, "accounts_per_platform"))
+    limit = int(accounts_limit(plan, account.platform))
     return quota_error(
-        "accounts_per_platform",
+        accounts_key(account.platform),
         limit,
         f"Your plan includes {_noun(limit, account.platform)}. {name} is read-only until you "
         "upgrade or disconnect another.",

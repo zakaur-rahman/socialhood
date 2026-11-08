@@ -44,6 +44,7 @@ describe("the pricing page's plan table (GR-37)", () => {
     expect(cells("channels_total")).toEqual(["2", "Per platform", "Per platform", "Per platform"]);
     expect(cells("whatsapp")).toEqual(["Not included", "Included", "Included", "Included"]);
     expect(cells("accounts_per_platform")).toEqual(["1", "1", "3", "10"]);
+    expect(cells("instagram_accounts")).toEqual(["1", "2", "4", "10"]); // C-187
     expect(cells("public_api")[1]).toBe("Not included"); // Creator has no API keys or Zapier
     expect(cells("public_api")[2]).toBe("Included"); // Business does
   });

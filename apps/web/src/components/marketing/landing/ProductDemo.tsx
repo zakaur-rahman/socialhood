@@ -49,8 +49,8 @@ import { LogoMark } from "../primitives";
 export const PRODUCT_DEMO_ID = "product-demo";
 export const PRODUCT_DEMO_TITLE = "See a day in your inbox";
 export const PRODUCT_DEMO_NOTE = "Example, with made-up data";
-/** plans.py: accounts_per_platform is 1, 1, 3 (Free, Creator, Business); members is 1, 2, 3. */
-export const PRODUCT_DEMO_PLAN_NOTE = "Two accounts on one platform need the Business plan, and teammates a paid plan.";
+/** plans.py: instagram_accounts is 1, 2, 4 (Free, Creator, Business); members is 1, 2, 3. */
+export const PRODUCT_DEMO_PLAN_NOTE = "Two Instagram accounts and teammates need a paid plan.";
 
 export const PRODUCT_DEMO_STEPS = [
   "A DM arrives",

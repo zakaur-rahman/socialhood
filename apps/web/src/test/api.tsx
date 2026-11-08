@@ -421,6 +421,7 @@ export function planList(
     overrides.sixMonth ? { plan, amount_minor, currency: "USD", interval: "six_month" as const } : null;
   const ent = (plan: "free" | "pro" | "max" | "agency") => [
     { key: "accounts_per_platform", value: { free: 1, pro: 1, max: 3, agency: 10 }[plan] },
+    { key: "instagram_accounts", value: { free: 1, pro: 2, max: 4, agency: 10 }[plan] },
     { key: "channels_total", value: plan === "free" ? 2 : null },
     { key: "whatsapp", value: plan !== "free" },
     { key: "members", value: { free: 1, pro: 2, max: 3, agency: 10 }[plan] },

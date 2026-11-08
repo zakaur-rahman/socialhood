@@ -202,7 +202,7 @@ describe("upgrade dialog copy (§4.7, F-15)", () => {
       "Free includes 10 scheduled posts a month.",
     );
     expect(upgradeCopy({ code: "quota_exceeded", entitlement: "accounts_per_platform", limit: 1 }).body).toBe(
-      "Your plan includes 1 account per platform.",
+      "Your plan includes 1 WhatsApp number and 1 Facebook Page.",
     );
     expect(upgradeCopy({ code: "quota_exceeded", entitlement: "knowledge_characters", limit: 200_000 }, { plan: "free" }).body).toBe(
       "Free includes 200,000 characters of knowledge.",
