@@ -19,6 +19,7 @@ const saved: WidgetSettings = {
   marketing_consent_text: "Email me offers.",
   show_branding: true,
   can_remove_branding: false,
+  sites_limit: 1,
   ai_mode: "suggest",
   script_url: "https://api.example.com/widget.js",
   embed_snippet: "<script></script>",

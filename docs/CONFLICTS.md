@@ -9740,3 +9740,13 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   the draft in the reply box, where a person reviews it and sends it.
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
+
+## C-185 · Website chat: sites per plan (owner, 2026-11-08; local only so far)
+
+- **Why:** one widget could run on 20 sites on every plan, so $15 covered 20 client sites. The limit
+  now matches the other channel limits: Free 1, Creator 1, Business 3, Agency 20. A wildcard entry
+  such as `*.example.com` counts as one.
+- **After a downgrade:** the first sites in the list keep working and the rest stop, like extra
+  accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
+- **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
+  route creates another, so limits can only be bypassed by signing up again with another email.
