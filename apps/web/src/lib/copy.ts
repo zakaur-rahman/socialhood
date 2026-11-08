@@ -464,6 +464,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => counted(n, "active automation", "active automations"),
     unlimited: "active automations",
   },
+  widget_sites: {
+    limitTitle: "Website limit reached",
+    includes: (n) => counted(n, "website", "websites"),
+    unlimited: "websites",
+  },
   accounts_per_platform: {
     limitTitle: "Account limit reached",
     includes: (n) => `${counted(n, "account", "accounts")} per platform`,
@@ -587,8 +592,13 @@ const FEATURE_COPY: Record<string, { feature: string; plans: string; body: strin
   },
 };
 
-/** The plan an upgrade for this 402 should offer: Business for what only Business has (C-172), else Creator. */
-export function upgradeTarget(entitlement: string | null | undefined): "pro" | "max" {
+/**
+ * The plan an upgrade for this 402 should offer: Business for what only Business has (C-172), else
+ * Creator. Someone on Creator is offered Business, and so is anyone short of websites: Creator has
+ * the same one site as Free (C-185).
+ */
+export function upgradeTarget(entitlement: string | null | undefined, plan?: PlanName | null): "pro" | "max" {
+  if (plan === "pro" || entitlement === "widget_sites") return "max";
   return (entitlement && FEATURE_COPY[entitlement]?.target) || "pro";
 }
 
