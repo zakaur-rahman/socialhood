@@ -182,7 +182,7 @@
   --color-avatar-4: #F6D3E2;
   --color-avatar-5: #DCE8F6;
   --color-avatar-6: #E6E6E1;
-  --color-site-control: rgb(232 234 245 / 0.72);  /* the secondary button's fill on paper */
+  --color-site-control: rgb(232 224 208 / 0.72);  /* the secondary button's fill on paper */
 
   /* The public site's scales (C-157, docs/landing-page-audit/06). Values only; the `.site` block
      below gives them short names for components/site/site.css, and that reference is also what
@@ -275,9 +275,9 @@
   --shadow-surface: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06)), 0 1px 2px light-dark(rgb(30 35 80 / 0.08), rgb(0 0 0 / 0.30)), 0 12px 32px -14px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.65));
 
   /* The public site's shared primitives. Its look doesn't follow the app's (the .site pins below). */
-  --shadow-site-card: inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 35 80 / 0.08), 0 12px 32px -14px rgb(30 35 80 / 0.18);
+  --shadow-site-card: inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 29 26 / 0.08), 0 12px 32px -14px rgb(30 29 26 / 0.18);
   --shadow-site-button-primary: inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px rgb(91 87 234 / 0.40);
-  --shadow-site-button-secondary: inset 0 0 0 1px rgb(20 24 54 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9);
+  --shadow-site-button-secondary: inset 0 0 0 1px rgb(30 29 26 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9);
 
   /* Marketing glow (C-127): brand-tinted drops under marketing and auth cards. They replace
      `shadow-2xl shadow-brand/15`, `hover:shadow-xl hover:shadow-brand/10` and

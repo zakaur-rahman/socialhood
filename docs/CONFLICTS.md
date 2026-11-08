@@ -9750,6 +9750,8 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   used: it is too close to the violet and would clash with the locked logo.
 - **Scope:** every public page, since they share these tokens. Mixing warm and cool between pages
   would look like a bug. The app and the logo, favicon and icon colours are unchanged. The share
-  image's background warms with the paper.
+  image's background warms with the paper, and the sign-in and sign-up left panel shares the night
+  tokens, so it warms too. The "Amplychat" wordmark text next to the logo follows ink and night, so
+  it warms slightly; the logo mark itself does not.
 - **Readability:** every text and control pairing was recalculated and meets 4.5:1 for text and 3:1
   for marks and control edges.

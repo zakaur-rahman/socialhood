@@ -107,7 +107,7 @@
     "avatar-4": "#F6D3E2",
     "avatar-5": "#DCE8F6",
     "avatar-6": "#E6E6E1",
-    "site-control": "rgb(232 234 245 / 0.72)"
+    "site-control": "rgb(232 224 208 / 0.72)"
   },
   "colorsLight": {
     "canvas": "#F5F6FB",
@@ -217,7 +217,7 @@
     "avatar-4": "#F6D3E2",
     "avatar-5": "#DCE8F6",
     "avatar-6": "#E6E6E1",
-    "site-control": "rgb(232 234 245 / 0.72)"
+    "site-control": "rgb(232 224 208 / 0.72)"
   },
   "themed": [
     "color:canvas",
@@ -270,9 +270,9 @@
     "floating": "0 8px 24px -6px rgb(0 0 0 / 0.7)",
     "overlay": "0 24px 64px -12px rgb(0 0 0 / 0.8)",
     "surface": "inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.30), 0 12px 32px -14px rgb(0 0 0 / 0.65)",
-    "site-card": "inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 35 80 / 0.08), 0 12px 32px -14px rgb(30 35 80 / 0.18)",
+    "site-card": "inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 29 26 / 0.08), 0 12px 32px -14px rgb(30 29 26 / 0.18)",
     "site-button-primary": "inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px rgb(91 87 234 / 0.40)",
-    "site-button-secondary": "inset 0 0 0 1px rgb(20 24 54 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9)",
+    "site-button-secondary": "inset 0 0 0 1px rgb(30 29 26 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9)",
     "glow": "0 25px 50px -12px color-mix(in srgb, var(--color-brand) 15%, transparent)",
     "glow-hover": "0 20px 25px -5px color-mix(in srgb, var(--color-brand) 10%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--color-brand) 10%, transparent)",
     "glow-button": "0 10px 15px -3px color-mix(in srgb, var(--color-brand) 25%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-brand) 25%, transparent)"
@@ -281,9 +281,9 @@
     "floating": "0 8px 24px -6px rgb(30 35 80 / 0.18)",
     "overlay": "0 24px 64px -12px rgb(30 35 80 / 0.25)",
     "surface": "inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 35 80 / 0.08), 0 12px 32px -14px rgb(30 35 80 / 0.18)",
-    "site-card": "inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 35 80 / 0.08), 0 12px 32px -14px rgb(30 35 80 / 0.18)",
+    "site-card": "inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(30 29 26 / 0.08), 0 12px 32px -14px rgb(30 29 26 / 0.18)",
     "site-button-primary": "inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px rgb(91 87 234 / 0.40)",
-    "site-button-secondary": "inset 0 0 0 1px rgb(20 24 54 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9)",
+    "site-button-secondary": "inset 0 0 0 1px rgb(30 29 26 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.9)",
     "glow": "0 25px 50px -12px color-mix(in srgb, var(--color-brand) 15%, transparent)",
     "glow-hover": "0 20px 25px -5px color-mix(in srgb, var(--color-brand) 10%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--color-brand) 10%, transparent)",
     "glow-button": "0 10px 15px -3px color-mix(in srgb, var(--color-brand) 25%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-brand) 25%, transparent)"
