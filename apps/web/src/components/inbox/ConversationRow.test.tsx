@@ -21,6 +21,19 @@ function renderRow(overrides: Partial<ConversationListItem> = {}, selected = fal
   return screen.getByRole("link");
 }
 
+describe("which account (C-186)", () => {
+  it("names the account beside the contact only when told to", () => {
+    const { unmount } = render(
+      <ConversationRow item={listItem()} href={"/w/maple/inbox/c1" as Route} selected={false} now={now} accountLabel="@maple.two" />,
+      { wrapper: TooltipProvider },
+    );
+    expect(screen.getByTestId("row-account")).toHaveTextContent("@maple.two");
+    unmount();
+    renderRow();
+    expect(screen.queryByTestId("row-account")).toBeNull();
+  });
+});
+
 describe("ConversationRow (UX-INB-04)", () => {
   it("is a link to the conversation with name, time and preview", () => {
     const row = renderRow();

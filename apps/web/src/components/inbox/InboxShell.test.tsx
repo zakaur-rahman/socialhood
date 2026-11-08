@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationListItem, ScheduledMessage, SocialAccount } from "@/lib/api/types";
 import { account, conversation, json, listItem, noContent, renderWithApi, type Call } from "@/test/api";
@@ -631,5 +631,40 @@ describe("single-key shortcuts switch (D-14)", () => {
     await user.keyboard("{Control>}j{/Control}");
     expect(nav.push).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("telling accounts apart in the list (C-186)", () => {
+  beforeAll(() => {
+    Element.prototype.hasPointerCapture ??= () => false;
+    Element.prototype.releasePointerCapture ??= () => {};
+    Element.prototype.scrollIntoView ??= () => {};
+  });
+
+  const first = account({ id: "a1", username: "maple" });
+  const second = account({ id: "a2", username: "maple.two" });
+  const list = [
+    listItem({ id: "c1", social_account_id: "a1" }),
+    listItem({ id: "c2", social_account_id: "a2" }),
+  ];
+
+  it("names each row's account when a platform has several, and not once one is chosen", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("socialhood:inbox-platform:w1", "instagram");
+    renderShell({ accounts: [first, second], list });
+    const labels = await screen.findAllByTestId("row-account");
+    expect(labels.map((label) => label.textContent)).toEqual(["@maple", "@maple.two"]);
+    await user.click(screen.getByRole("combobox", { name: "Account" }));
+    await user.click(await screen.findByRole("option", { name: "@maple.two" }));
+    await waitFor(() => expect(screen.queryAllByTestId("row-account")).toEqual([]));
+    window.localStorage.setItem("socialhood:inbox-platform:w1", "all");
+  });
+
+  it("stays quiet with one account per platform, even across platforms", async () => {
+    window.localStorage.setItem("socialhood:inbox-platform:w1", "all");
+    const whatsapp = account({ id: "a2", platform: "whatsapp", username: null, phone_number: "+91 98765 43210" });
+    renderShell({ accounts: [first, whatsapp], list });
+    await screen.findAllByRole("link", { name: /Priya|Kabir/ });
+    expect(screen.queryAllByTestId("row-account")).toEqual([]);
   });
 });

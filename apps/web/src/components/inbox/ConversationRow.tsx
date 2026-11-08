@@ -44,6 +44,8 @@ type Props = {
   timeZone?: string;
   /** The AI mode that applies (the conversation's own, else its account's): "Auto replies" badge. */
   aiMode?: AiMode | null;
+  /** Which account it is on, when the platform has several (C-186). */
+  accountLabel?: string;
   index?: number;
   onNavigate?: () => void;
   ref?: Ref<HTMLAnchorElement>;
@@ -55,7 +57,7 @@ export function rowHeight(item: ConversationListItem, now: Date, aiMode: AiMode 
 }
 
 /** UX-INB-04, restyled (C-063): one conversation, as a link (v1 rows were unfocusable divs). */
-export function ConversationRow({ item, href, selected, now, timeZone, aiMode = null, index, onNavigate, ref }: Props) {
+export function ConversationRow({ item, href, selected, now, timeZone, aiMode = null, accountLabel, index, onNavigate, ref }: Props) {
   const name = contactName(item.contact, item.platform);
   const unread = item.unread_count > 0;
   const prefix = previewPrefix(item);
@@ -87,6 +89,11 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
           <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", unread ? "text-fg" : "text-fg-secondary")}>
             {name}
           </span>
+          {accountLabel ? (
+            <span className="max-w-24 min-w-0 truncate text-xs text-fg-secondary" data-testid="row-account">
+              {accountLabel}
+            </span>
+          ) : null}
           {item.assignee ? (
             // GR-20: who has it. The name is written for screen readers; the avatar is a picture or initials.
             <span className="flex shrink-0 items-center" data-testid="row-assignee">

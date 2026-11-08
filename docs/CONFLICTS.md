@@ -9825,3 +9825,10 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
 - **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
   route creates another, so limits can only be bypassed by signing up again with another email.
+## C-186 · Inbox rows name their account when a platform has several (owner, 2026-11-08; local only so far)
+
+- **Why:** the main idea is many platforms and accounts in one workspace. The account filter already
+  existed beside the search, but with several accounts on a platform the rows looked the same until
+  opened.
+- **Change:** a row shows its account's handle next to the contact, only when that platform has more
+  than one account, and not once the list is filtered to one account. Row height is unchanged.
