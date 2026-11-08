@@ -247,7 +247,7 @@ function sections(): LegalSection[] {
               What was already stored stays in the workspace until the business deletes it.
             </li>
             <li>
-              Deleting an account&apos;s data (Disconnect and delete data, in Connections), deleting the
+              Deleting an account&apos;s data (Delete account and data, in Connections), deleting the
               workspace, or a deletion request through Instagram or Facebook removes everything stored for the account
               within 24 hours. Raw events from Meta are deleted after 30 days in any case.
             </li>
@@ -615,8 +615,8 @@ function sections(): LegalSection[] {
               messages or comments arrive for it. What was already stored stays in the workspace until you delete it.
             </li>
             <li>
-              <strong>Delete an account&apos;s data</strong> (Connections, owners and admins: Disconnect and delete
-              data, or Remove for an account already disconnected). The account is disconnected at once, then everything
+              <strong>Delete an account&apos;s data</strong> (Connections, owners and admins: Delete account and
+              data, in the account&apos;s menu). The account is disconnected at once, then everything
               stored for it is permanently deleted within 24 hours: its conversations and messages with their AI analysis
               and suggested replies, its contacts, its comments, its posts and their statistics, the automations and
               scheduled messages and posts for it, the photos and files received or sent in its messages, and the account

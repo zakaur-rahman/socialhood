@@ -275,7 +275,7 @@ async def notify_expiring(session: AsyncSession, key_id: uuid.UUID, *, now: date
         title=f"API key “{row.name}” expires on {day}"[:200],
         body=(
             f"Anything using {row.key_prefix}… stops working then. Make a new key in Settings, "
-            "API keys and swap it in before that day."
+            "MCP & API and swap it in before that day."
         ),
         link="/settings/api-keys",
         dedupe_key=f"api-key-expiring:{row.id}",

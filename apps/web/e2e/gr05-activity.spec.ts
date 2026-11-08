@@ -51,6 +51,6 @@ test.describe("GR-05 activity", () => {
     const link = row.getByRole("link", { name: "Reconnect Instagram" });
     await expect(link).toHaveAttribute("href", `/w/${workspace.slug}/connections`);
     await link.click();
-    await expect(page).toHaveURL(/\/settings\/connections/);
+    await expect(page).toHaveURL(/\/connections$/);
   });
 });

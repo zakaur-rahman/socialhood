@@ -1,6 +1,6 @@
 """AI connections settings (C-165; 01-design.md §6.7): the workspace's switch for what AI apps
 connected over MCP (/mcp) may do. Owners and admins, with the integrations permission like API
-keys. Settings, Connected AI apps shows it.
+keys. Settings, MCP & API shows it.
 
 Phase C adds the OAuth connections themselves: the list (with recent activity from the MCP
 audit), one connection's activity, Disconnect, and Disconnect all.

@@ -8,7 +8,7 @@
   unused with no live connection). ``blocked_at`` is the operators' block list (§6.7).
 - ``mcp_connections``: one member's consent for one client in one workspace (the "grant"):
   the scopes they allowed, when it was last used, and when and by whom it was revoked. Every
-  token belongs to one. Settings, Connected AI apps lists these.
+  token belongs to one. Settings, MCP & API lists these.
 - ``oauth_codes``: an authorization code, single use and short-lived (60 seconds), with the
   PKCE challenge, the redirect URI and the resource it was asked for. Only its SHA-256 is kept.
   ``connection_id`` is set once it is exchanged, so a second use can revoke what the first made.

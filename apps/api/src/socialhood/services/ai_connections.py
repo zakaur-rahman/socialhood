@@ -1,4 +1,4 @@
-"""Settings, Connected AI apps (C-165 phase C; 01-design.md §3.5, §6.3, §6.7): a workspace's
+"""Settings, MCP & API (C-165 phase C; 01-design.md §3.5, §6.3, §6.7): a workspace's
 OAuth connections, their recent tool calls, and revoking them. Nothing here commits.
 
 - Owners and admins (the integrations permission, like API keys) see and revoke every
