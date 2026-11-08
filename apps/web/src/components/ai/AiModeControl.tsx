@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,6 +38,7 @@ export function pausedUntil(conversation: Conversation, now: Date): Date | null 
 
 /** Auto on a plan without it: the upgrade dialog opens before any request (F-15, §4.7). */
 export const AUTO_UPGRADE = { code: "entitlement_required", entitlement: "ai_modes" } as const;
+export const HUMAN_AGENT_AI_NOTE = "Human Agent: only replies you send go out. AI replies resume when the customer writes again.";
 
 /**
  * FR-SUG-01 per-conversation override: Default (the account's mode), Off, Suggest or Auto. Auto
@@ -170,6 +172,13 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
+          {conversation.reply_window.state === "human_agent" ? (
+            <>
+              <DropdownMenuSeparator />
+              {/* C-182: the AI can't send in the Human Agent window (reply_window.py); the mode is for the next message. */}
+              <p className="max-w-60 px-2 py-1.5 text-xs text-fg-secondary">{HUMAN_AGENT_AI_NOTE}</p>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
       {control.dialogs}

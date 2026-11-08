@@ -9740,3 +9740,15 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   the draft in the reply box, where a person reviews it and sends it.
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
+
+## C-182 · The AI menu explains the Human Agent window (owner, 2026-11-08)
+
+- **Question:** should AI Suggest or Auto be turned off while Human Agent is active? No. The AI
+  acts only when a customer message arrives, and in this window none has arrived for over 24
+  hours. The server already refuses AI and automation sends there (reply_window.py). The mode is
+  kept for the next customer message, which reopens the normal window.
+- **Change:** while the conversation is in the Human Agent window, the "AI in this conversation"
+  menu shows one line under the modes: "Human Agent: only replies you send go out. AI replies
+  resume when the customer writes again." The modes stay selectable.
+- **Kept:** AI polish in the reply box stays. A person writes the text, reviews the rewrite and
+  sends it.
