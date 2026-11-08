@@ -71,8 +71,8 @@ describe("schedule format", () => {
   });
 
   it("says why a move was refused, in the field's words", () => {
-    expect(moveErrorMessage(validation([{ field: "publish_at", message: "Pick a time at least 5 minutes from now." }]))).toBe(
-      "Pick a time at least 5 minutes from now.",
+    expect(moveErrorMessage(validation([{ field: "publish_at", message: "Pick a time at least 1 minute from now." }]))).toBe(
+      "Pick a time at least 1 minute from now.",
     );
     expect(
       moveErrorMessage(new ApiError({ type: "about:blank", title: "conflict", status: 409, code: "conflict", detail: "Publishing started" })),

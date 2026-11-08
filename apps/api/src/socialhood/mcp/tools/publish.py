@@ -8,8 +8,8 @@ Posts go directly, as the member's own action (decision D3), with these safety n
   (``preview`` true, nothing stored): the resolved time in the workspace's zone and UTC, the
   accounts, and the composer's checklist, so a wrong time-zone guess or a failing item shows
   before anything is scheduled. Saving a draft needs no confirmation.
-- **Five minutes ahead at least** (``MIN_SCHEDULE_LEAD``): AI apps cannot publish now, so a team
-  member always has a window to see a post and cancel it.
+- **Five minutes ahead at least** (``AI_APP_LEAD``, more than the app's own 1 minute): AI apps
+  cannot publish now, so a team member always has a window to see a post and cancel it.
 - **The team is told.** Owners and admins get a notification naming the AI app and the member,
   with a link to the post (where it is cancelled).
 - **Free saves drafts only.** The workspace's mode and the plan decide (``require_scheduling``);
@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -46,7 +46,6 @@ from socialhood.models.notifications import NotificationType, Severity
 from socialhood.models.publishing import (
     COLLABORATORS_MAX,
     FIRST_COMMENT_MAX_CHARS,
-    MIN_SCHEDULE_LEAD,
     STORED_CAPTION_MAX_CHARS,
     PostFormat,
 )
@@ -72,6 +71,8 @@ KIND = (
     "as a Reel; story: one image or video as a Story, without caption."
 )
 DRAFT, SLOT, SCHEDULED = "draft", "next_free_slot", "scheduled"
+# A promise on the MCP pages: a post from an AI app waits 5 minutes, so the team can stop it.
+AI_APP_LEAD = timedelta(minutes=5)
 TOO_SOON = (
     "AI apps schedule at least 5 minutes ahead, so the team can see a post before it goes out. "
     "Pick a later time, or use “draft”."
@@ -187,7 +188,7 @@ def resolve_when(call: ToolCall, when: str) -> datetime | Literal["draft", "slot
     if at.tzinfo is None:
         at = at.replace(tzinfo=call.timezone)
     at = at.astimezone(UTC)
-    if at < call.now + MIN_SCHEDULE_LEAD:
+    if at < call.now + AI_APP_LEAD:
         raise _when_error(TOO_SOON)
     return at
 

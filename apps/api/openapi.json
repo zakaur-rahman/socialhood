@@ -6752,7 +6752,7 @@
         "type": "object"
       },
       "BulkSkipped": {
-        "description": "A post the action could not apply to, and why (``conflict``: publishing started or\npublished; ``validation_error``: the shifted time would be less than 5 minutes away).",
+        "description": "A post the action could not apply to, and why (``conflict``: publishing started or\npublished; ``validation_error``: the shifted time would be less than 1 minute away).",
         "properties": {
           "code": {
             "title": "Code",
@@ -20983,7 +20983,7 @@
       },
       "ScheduleRequest": {
         "additionalProperties": false,
-        "description": "POST \u2026/schedule and \u2026/reschedule: at least 5 minutes from now (else 422 on\n``publish_at``).",
+        "description": "POST \u2026/schedule and \u2026/reschedule: at least 1 minute from now (else 422 on\n``publish_at``).",
         "properties": {
           "publish_at": {
             "format": "date-time",
@@ -21453,7 +21453,7 @@
       },
       "ScheduledPostDraft": {
         "additionalProperties": false,
-        "description": "POST \u2026/scheduled-posts (a new draft) and PUT \u2026/scheduled-posts/{id} (replace the whole\neditable post; the composer autosaves). Everything may be empty on a draft: the checklist says\nwhat is missing. Accounts must be this workspace's (else 422 on ``targets.{i}``), assets this\nworkspace's post uploads (else 422 on ``asset_ids.{i}``).\n\nOn a scheduled post (Update schedule) the saved result must still pass the checklist and\n``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);\nits targets stay pending.",
+        "description": "POST \u2026/scheduled-posts (a new draft) and PUT \u2026/scheduled-posts/{id} (replace the whole\neditable post; the composer autosaves). Everything may be empty on a draft: the checklist says\nwhat is missing. Accounts must be this workspace's (else 422 on ``targets.{i}``), assets this\nworkspace's post uploads (else 422 on ``asset_ids.{i}``).\n\nOn a scheduled post (Update schedule) the saved result must still pass the checklist and\n``publish_at`` must be set and at least 1 minute away (else 422 with every failing field);\nits targets stay pending.",
         "properties": {
           "asset_ids": {
             "items": {
@@ -37185,7 +37185,7 @@
         ]
       },
       "post": {
-        "description": "send_at must be at least 2 minutes away and 5 minutes before the reply window closes.\n\nWith an Idempotency-Key (TR-API-05), repeating the request returns the first response and\nschedules nothing more; the same key with a different body is 409 idempotency_conflict.",
+        "description": "send_at must be at least 1 minute away and 5 minutes before the reply window closes.\n\nWith an Idempotency-Key (TR-API-05), repeating the request returns the first response and\nschedules nothing more; the same key with a different body is 409 idempotency_conflict.",
         "operationId": "create_scheduled_message",
         "parameters": [
           {
@@ -44910,7 +44910,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/publish-now": {
       "post": {
-        "description": "F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and\npublish_target is enqueued for every target at once (202; scheduled_post.updated follows\neach step). 402 quota_exceeded past scheduled_posts_monthly.",
+        "description": "F-13 Publish now: the Schedule checks without the 1-minute rule, ``publish_at`` = now, and\npublish_target is enqueued for every target at once (202; scheduled_post.updated follows\neach step). 402 quota_exceeded past scheduled_posts_monthly.",
         "operationId": "publish_post_now",
         "parameters": [
           {
@@ -45038,7 +45038,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule": {
       "post": {
-        "description": "A calendar move or \"Move to\u2026\" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5\nminutes away (422 on ``publish_at``: \"Pick a time at least 5 minutes from now.\"). A draft is\n409 (drafts are scheduled with /schedule).",
+        "description": "A calendar move or \"Move to\u2026\" (FR-PUB-08): a scheduled post to ``publish_at``, at least 1\nminute away (422 on ``publish_at``: \"Pick a time at least 1 minute from now.\"). A draft is\n409 (drafts are scheduled with /schedule).",
         "operationId": "reschedule_post",
         "parameters": [
           {
@@ -45112,7 +45112,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/schedule": {
       "post": {
-        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A\nscheduled post takes the new time the same way.",
+        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 1 minute away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A\nscheduled post takes the new time the same way.",
         "operationId": "schedule_post",
         "parameters": [
           {

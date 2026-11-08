@@ -278,12 +278,12 @@ describe("localChecklist (FR-PUB-10)", () => {
     ]);
   });
 
-  it("checks the time only when the post has one: at least 5 minutes away", () => {
+  it("checks the time only when the post has one: at least 1 minute away", () => {
     expect(localChecklist(input()).some((item) => item.key === "publish_at")).toBe(false);
-    expect(failures(localChecklist(input({ publish_at: "2026-09-29T12:03:00Z" })))).toEqual([
-      ["publish_at", "publish_at", "Pick a time at least 5 minutes from now."],
+    expect(failures(localChecklist(input({ publish_at: "2026-09-29T12:00:30Z" })))).toEqual([
+      ["publish_at", "publish_at", "Pick a time at least 1 minute from now."],
     ]);
-    expect(localChecklist(input({ publish_at: "2026-09-29T12:05:00Z" })).find((item) => item.key === "publish_at")?.ok).toBe(true);
+    expect(localChecklist(input({ publish_at: "2026-09-29T12:01:00Z" })).find((item) => item.key === "publish_at")?.ok).toBe(true);
   });
 });
 
@@ -331,7 +331,7 @@ describe("422 field errors", () => {
       itemsFromErrors([
         { field: "targets.1", message: "@x has no posting times." },
         { field: "asset_ids.0", message: "Instagram can't publish this file." },
-        { field: "publish_at", message: "Pick a time at least 5 minutes from now." },
+        { field: "publish_at", message: "Pick a time at least 1 minute from now." },
       ]).map((item) => [item.key, item.field]),
     ).toEqual([
       ["accounts", "targets.1"],

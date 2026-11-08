@@ -2,7 +2,7 @@
 
 An account's posting times are weekly local times in the workspace time zone. A time is free when
 no scheduled or publishing post of the account is within 30 minutes of it (SLOT_BUSY_WITHIN), and
-usable when it is at least 5 minutes away (MIN_SCHEDULE_LEAD). A post has one ``publish_at``, so
+usable when it is at least 1 minute away (MIN_SCHEDULE_LEAD). A post has one ``publish_at``, so
 Add to queue takes the earliest time that is a free posting time of every selected account within
 8 weeks (C-043). Changing the times never moves posts already scheduled.
 """

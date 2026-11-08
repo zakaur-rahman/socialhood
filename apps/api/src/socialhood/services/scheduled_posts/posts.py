@@ -75,7 +75,7 @@ RETRYABLE = (P.FAILED, P.CANCELED)  # PUT makes them drafts again (Edit and retr
 PUBLISHED = (P.PUBLISHED, P.PARTIALLY_PUBLISHED)
 DIDNT_PUBLISH = "This post didn't publish. Edit it to try again."
 DRAFT_NOT_MOVED = "This post is a draft. Schedule it instead."
-NO_TIME = "Pick a time at least 5 minutes from now."
+NO_TIME = "Pick a time at least 1 minute from now."
 
 
 @dataclass(frozen=True)
@@ -377,7 +377,7 @@ async def replace(
     session: AsyncSession, scheduled_post_id: uuid.UUID, body: ScheduledPostDraft, env: Env
 ) -> ScheduledPost:
     """PUT: autosave a draft; Update schedule (a scheduled post must still pass the checklist at
-    its time, which must be set and at least 5 minutes away); Edit and retry (a failed or
+    its time, which must be set and at least 1 minute away); Edit and retry (a failed or
     canceled post becomes a draft, its targets pending)."""
     post = await _locked(session, scheduled_post_id)
     if post.status not in EDITABLE and post.status not in RETRYABLE:
@@ -576,7 +576,7 @@ def _check_move(at: datetime, now: datetime) -> None:
 async def reschedule(
     session: AsyncSession, scheduled_post_id: uuid.UUID, publish_at: datetime, env: Env
 ) -> ScheduledPost:
-    """A calendar move or "Move to…" (FR-PUB-08): a scheduled post to a time at least 5 minutes
+    """A calendar move or "Move to…" (FR-PUB-08): a scheduled post to a time at least 1 minute
     away. Drafts are scheduled with Schedule (409)."""
     post = await _locked(session, scheduled_post_id)
     if post.status != P.SCHEDULED:
@@ -703,7 +703,7 @@ async def bulk(
                     _skip(
                         post,
                         "validation_error",
-                        "The new time would be less than 5 minutes from now.",
+                        "The new time would be less than 1 minute from now.",
                     )
                 )
             else:

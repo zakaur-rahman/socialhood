@@ -5,7 +5,7 @@ import { FieldDescription, FieldError } from "@/components/ui/field";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 
 /** F-10: the earliest time a message can be scheduled, and the margin before the window closes. */
-export const MIN_LEAD_MS = 2 * 60_000;
+export const MIN_LEAD_MS = 60_000; // owner 2026-11-08: 1 minute, was 2 (the API's MIN_LEAD)
 export const WINDOW_MARGIN_MS = 5 * 60_000;
 
 export type ScheduleValue = { date: string; time: string };
@@ -27,7 +27,7 @@ export function checkSchedule(
 ): { at: Date } | { error: string } {
   const at = zonedToDate(value.date, value.time, timeZone);
   if (!at) return { error: "Pick a date and time." };
-  if (at < limits.min) return { error: "Pick a time at least 2 minutes from now." };
+  if (at < limits.min) return { error: "Pick a time at least 1 minute from now." };
   if (limits.max && at > limits.max) {
     return { error: `Pick a time before ${formatDayTime(limits.max, timeZone, now)}, when the reply window closes.` };
   }
@@ -74,6 +74,8 @@ export function ScheduleFields({
   limits: ScheduleLimits;
   error?: string | null;
 }) {
+  // The first whole minute at or after the limit, so a time the list offers always passes the check.
+  const earliest = toZonedInputs(new Date(Math.ceil(limits.min.getTime() / 60_000) * 60_000), timeZone);
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
   // The calendar and time pickers (ui/date-picker) take and give the same "YYYY-MM-DD" and "HH:mm"
@@ -86,6 +88,7 @@ export function ScheduleFields({
         onChange={onChange}
         min={minDay}
         max={maxDay}
+        minTime={earliest.date === minDay ? earliest.time : "24:00"}
         today={minDay}
         density="compact"
         invalid={Boolean(error)}

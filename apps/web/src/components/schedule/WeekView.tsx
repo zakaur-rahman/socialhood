@@ -9,6 +9,7 @@ import {
   dayParts,
   formatMinutes,
   instantAt,
+  MIN_LEAD_MS,
   minutesOfDay,
   ROW_MINUTES,
   snapMinutes,
@@ -184,8 +185,8 @@ function DayColumn({
   const today = dayKey(now, timeZone);
   const nowMinutes = minutesOfDay(now, timeZone);
   const nowTop = isToday ? (nowMinutes / ROW_MINUTES) * ROW_PX : null;
-  // Rows that start at least 5 minutes from now take a click (F-13: a post at that time).
-  const firstOpenRow = day > today ? 0 : day < today ? ROWS : Math.ceil((nowMinutes + 5) / ROW_MINUTES);
+  // Rows that start at least the minimum lead from now take a click (F-13: a post at that time).
+  const firstOpenRow = day > today ? 0 : day < today ? ROWS : Math.ceil((nowMinutes + MIN_LEAD_MS / 60_000) / ROW_MINUTES);
 
   return (
     <div

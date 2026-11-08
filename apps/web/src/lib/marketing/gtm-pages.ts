@@ -1928,10 +1928,10 @@ export const FEATURE_PUBLISHING: GtmPage = {
         title: "Check before you schedule",
         body: "A checklist looks at the format, a caption of up to 2,200 characters with at most 30 hashtags and 20 mentions, and video lengths. A post with a problem can't be scheduled until it's fixed.",
       },
-      // services/scheduled_posts/slots.py (MIN_SCHEDULE_LEAD 5 minutes, the queue within 8 weeks); posts.py counted_at.
+      // services/scheduled_posts/slots.py (MIN_SCHEDULE_LEAD 1 minute, the queue within 8 weeks); posts.py counted_at.
       {
         title: "Pick a time or add to the queue",
-        body: "Choose a time at least 5 minutes ahead, or let the queue take the next posting time that is free on every account you picked. Each post counts once toward the month's scheduled posts.",
+        body: "Choose a time at least 1 minute ahead, or let the queue take the next posting time that is free on every account you picked. Each post counts once toward the month's scheduled posts.",
       },
       // services/post_publishing/publish.py: the quota first, polls the video, never publishes a container twice;
       // models/publishing.py PUBLISH_ATTEMPTS = 3.

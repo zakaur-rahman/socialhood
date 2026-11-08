@@ -57,8 +57,9 @@ FIRST_COMMENT_MAX_CHARS = 2200  # FR-PUB-11
 CAROUSEL_MIN_ASSETS = 2
 CAROUSEL_MAX_ASSETS = 10
 MAX_ASSETS = CAROUSEL_MAX_ASSETS
-# Schedule, reschedule and calendar moves refuse a time closer than this (F-13, FR-PUB-08).
-MIN_SCHEDULE_LEAD = dt.timedelta(minutes=5)
+# Schedule, reschedule and calendar moves refuse a time closer than this (F-13, FR-PUB-08; owner
+# 2026-11-08: 1 minute, was 5). AI apps keep 5 minutes (mcp/tools/publish.py AI_APP_LEAD).
+MIN_SCHEDULE_LEAD = dt.timedelta(minutes=1)
 # A posting time is free when no scheduled or publishing target of the account is this close
 # to it (FR-PUB-09).
 SLOT_BUSY_WITHIN = dt.timedelta(minutes=30)

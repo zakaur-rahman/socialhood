@@ -425,7 +425,7 @@ function Composer({
   );
   const timeAt = zonedToDate(when.date, when.time, timeZone);
   const timeError =
-    timeAt && timeAt.getTime() - now.getTime() < MIN_SCHEDULE_LEAD_MS ? "Pick a time at least 5 minutes from now." : null;
+    timeAt && timeAt.getTime() - now.getTime() < MIN_SCHEDULE_LEAD_MS ? "Pick a time at least 1 minute from now." : null;
 
   const onWhenChange = (value: ScheduleValue) => {
     setWhen(value);

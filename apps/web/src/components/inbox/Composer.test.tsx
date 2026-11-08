@@ -345,7 +345,7 @@ describe("Schedule popover (F-10)", () => {
 
     fireEvent.change(time, { target: { value: "17:30" } }); // 12:00 UTC: too soon
     await user.click(screen.getByRole("button", { name: "Schedule" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Pick a time at least 2 minutes from now.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick a time at least 1 minute from now.");
 
     fireEvent.change(time, { target: { value: "21:00" } });
     await user.click(screen.getByRole("button", { name: "Schedule" }));

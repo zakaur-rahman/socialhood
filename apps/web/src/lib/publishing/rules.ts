@@ -19,7 +19,7 @@ export const CAROUSEL_MIN_ASSETS = 2;
 export const MAX_ASSETS = 10;
 export const SUGGESTED_HASHTAGS_MAX = 20;
 /** Schedule, reschedule and Update schedule refuse a time closer than this (F-13). */
-export const MIN_SCHEDULE_LEAD_MS = 5 * 60_000;
+export const MIN_SCHEDULE_LEAD_MS = 60_000; // owner 2026-11-08: 1 minute, was 5
 
 // ---- counting (FR-PUB-10)
 
