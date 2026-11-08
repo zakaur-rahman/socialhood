@@ -76,7 +76,7 @@ async def reply_to_comment(
 ) -> Comment:
     """A public reply under the comment, posted on Instagram before the answer (the comment's
     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
-    answer and posts nothing more (TR-API-05). 402 quota_exceeded (the platform's account limit) when
+    answer and posts nothing more (TR-API-05). 402 quota_exceeded (its account limit) when
     the account is read-only after a downgrade (FR-BIL-07)."""
     redis = request.app.state.redis
     claim = _claim(request, ctx, idempotency_key, body)

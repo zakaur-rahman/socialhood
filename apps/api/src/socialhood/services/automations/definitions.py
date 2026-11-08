@@ -9,7 +9,7 @@ Rules:
 - A draft may be incomplete. Activation checks everything at once (services/automations/
   validation.py) after the plan's entitlements: an AI-reply automation needs ai_reply_automations
   (402 entitlement_required), its account must not be read-only after a downgrade (FR-BIL-07,
-  402 quota_exceeded on the platform's account limit) and the workspace's active automations are capped
+  402 quota_exceeded on its account limit) and the workspace's active automations are capped
   by active_automations (402 quota_exceeded).
 - An active automation stays complete: a PUT that would leave it unable to activate is refused
   with the same field errors, and nothing is saved.
