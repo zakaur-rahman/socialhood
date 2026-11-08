@@ -3,7 +3,7 @@
 When a workspace moves to Free (or any plan with lower limits): accounts in Auto move to Suggest;
 AI-reply automations pause; automations of read-only accounts pause; automations still over the
 active_automations limit pause, keeping the most recently updated active; connected accounts
-beyond accounts_per_platform become read-only (billing/entitlements.read_only_accounts: each
+beyond their platform's limit become read-only (billing/entitlements.read_only_accounts: each
 platform's earliest connected accounts keep the plan's slots; the others refuse scheduled
 messages and automation activations with 402). A website chat's sites beyond widget_sites stop
 showing it (services/widget/chat.live_sites). Nothing is deleted, and nothing comes back on its

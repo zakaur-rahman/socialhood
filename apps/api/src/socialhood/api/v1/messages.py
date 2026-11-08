@@ -48,7 +48,7 @@ async def send_message(
 
     Any member may reply. The same Idempotency-Key with the same body returns the first response
     and sends nothing more; with a different body it is 409 idempotency_conflict. 402
-    quota_exceeded (accounts_per_platform) when the conversation's account is read-only after a
+    quota_exceeded (the platform's account limit) when the conversation's account is read-only after a
     downgrade (FR-BIL-07).
     """
     conv = await inbox.get_conversation(session, conversation_id)
