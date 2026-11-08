@@ -95,6 +95,13 @@ describe("the account filter and the chips (C-188)", () => {
     expect(screen.getByRole("option", { name: "All accounts" })).toBeInTheDocument();
   });
 
+  it("brings the chosen chip into view", () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderAccounts();
+    expect(scroll).toHaveBeenCalledWith({ inline: "nearest", block: "nearest" });
+  });
+
   it("keeps the chips on one row that scrolls, and a mouse wheel scrolls it", () => {
     renderAccounts();
     const chips = screen.getByRole("radiogroup", { name: "Views" });
