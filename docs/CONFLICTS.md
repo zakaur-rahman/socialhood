@@ -9840,3 +9840,10 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
   be cheaper per account than Agency.
 - **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.
+
+## C-188 · Inbox: account pictures in the filter; the view chips on one row (owner, 2026-11-08; local only so far)
+
+- **Account filter:** each option, and the closed Select, shows the picture (or an initial) beside the
+  handle. The picture is decorative for screen readers.
+- **View chips:** one row that scrolls sideways at every width; they used to wrap from md. A plain mouse
+  wheel scrolls the row too, since its scrollbar is hidden.
