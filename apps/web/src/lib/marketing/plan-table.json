@@ -196,6 +196,12 @@
       "max": true,
       "agency": true
     },
+    "widget_sites": {
+      "free": 1,
+      "pro": 1,
+      "max": 3,
+      "agency": 20
+    },
     "widget_conversations_daily": {
       "free": 50,
       "pro": 500,

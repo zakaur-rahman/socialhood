@@ -14315,6 +14315,8 @@ export interface components {
             script_url: string;
             /** Show Branding */
             show_branding: boolean;
+            /** Sites Limit */
+            sites_limit: number;
             /** Title */
             title: string;
             /**

@@ -33,6 +33,7 @@ function settings(overrides: Partial<WidgetSettings> = {}): WidgetSettings {
     marketing_consent_text: "Email me news and offers. You can unsubscribe at any time.",
     show_branding: true,
     can_remove_branding: false,
+    sites_limit: 3,
     ai_mode: "suggest",
     script_url: "https://api.example.com/widget.js",
     embed_snippet: SNIPPET,
