@@ -25,6 +25,7 @@ export function Code({ children }: { children: string }) {
   }
 
   return (
+    <>
     <div className="cx-code-wrap">
       <pre className="cx-code" tabIndex={0}>
         <code>{children}</code>
@@ -32,9 +33,11 @@ export function Code({ children }: { children: string }) {
       <button type="button" className="cx-copy" aria-label="Copy" onClick={() => void copy()}>
         {state === "copied" ? <Check aria-hidden /> : <Copy aria-hidden />}
       </button>
-      <span role="status" className="sr-only">
-        {state === "copied" ? "Copied" : state === "failed" ? "Couldn't copy. Select the text and copy it by hand." : ""}
-      </span>
     </div>
+      {/* A failed copy is written out: the icon alone would look as if the click did nothing. */}
+      <p role="status" className={state === "failed" ? "cx-note" : "sr-only"}>
+        {state === "copied" ? "Copied" : state === "failed" ? "Couldn't copy. Select the text and copy it by hand." : ""}
+      </p>
+    </>
   );
 }
