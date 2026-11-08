@@ -41,6 +41,7 @@ from socialhood.billing.plans import (
     PLAN_NAMES,
     PLANS,
     TRIAL_DAYS,
+    accounts_limit,
     entitlement,
     is_available,
     offer_for_product,
@@ -201,7 +202,6 @@ async def billing_state(
         session, "scheduled_posts_monthly", today=now.date()
     )
     posts_end = credits.period_end  # both allowances share the anchor day
-    accounts_limit = entitlement(plan, "accounts_per_platform")
     meters = [
         UsageMeter(
             metric="ai_credits",
@@ -248,7 +248,7 @@ async def billing_state(
             UsageMeter(
                 metric=f"{platform.value}_accounts",
                 used=await social_accounts.count_live(session, platform),
-                limit=accounts_limit,
+                limit=accounts_limit(plan, platform),
             )
         )
     return BillingState(

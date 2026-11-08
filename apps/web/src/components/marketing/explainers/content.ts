@@ -438,7 +438,8 @@ export const DETAILS: DetailGroup[] = [
       `Live comments and ads, with Meta's approval: ${integration("Live comments and ads").body}`,
     ],
     limits: [
-      row("Accounts per platform", "accounts_per_platform"),
+      row("Instagram accounts", "instagram_accounts"),
+      row("WhatsApp numbers and Facebook Pages", "accounts_per_platform"),
       row("New website chats a day", "widget_conversations_daily"),
       row("Message history", "message_history_days", (v) => (v === null ? "No limit" : `${limit(v as number)} days`)),
     ],

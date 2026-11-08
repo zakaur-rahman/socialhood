@@ -14,6 +14,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
         available: true,
         entitlements: [
           { key: "accounts_per_platform", value: 1 },
+          { key: "instagram_accounts", value: 1 },
           { key: "channels_total", value: 2 },
           { key: "whatsapp", value: false },
           { key: "members", value: 1 },
@@ -36,6 +37,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
         available: true,
         entitlements: [
           { key: "accounts_per_platform", value: 1 },
+          { key: "instagram_accounts", value: 2 },
           { key: "channels_total", value: null },
           { key: "whatsapp", value: true },
           { key: "members", value: 2 },
@@ -61,6 +63,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
         available: false,
         entitlements: [
           { key: "accounts_per_platform", value: 3 },
+          { key: "instagram_accounts", value: 4 },
           { key: "channels_total", value: null },
           { key: "whatsapp", value: true },
           { key: "members", value: 3 },
@@ -86,6 +89,7 @@ export function plansFixture(overrides: { proPrice?: PlanOfferBody["price"] } = 
         available: false,
         entitlements: [
           { key: "accounts_per_platform", value: 10 },
+          { key: "instagram_accounts", value: 10 },
           { key: "channels_total", value: null },
           { key: "whatsapp", value: true },
           { key: "members", value: 10 },

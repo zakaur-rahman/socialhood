@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import check_new_channel, entitlement_error, quota_error
-from socialhood.billing.plans import entitlement
+from socialhood.billing.plans import accounts_key, accounts_limit, entitlement
 from socialhood.errors import ApiError
 from socialhood.models.connections import AccountStatus, AiMode, Platform, SocialAccount
 from socialhood.observability.logging import get_logger
@@ -92,7 +92,7 @@ async def _at_capacity(session: AsyncSession, platform: str, plan: str) -> int |
     new channel only: raises the C-172 channel rules first (WhatsApp on a plan without it, the
     plan's channels in total)."""
     await check_new_channel(session, platform, plan)
-    limit = entitlement(plan, "accounts_per_platform")
+    limit = accounts_limit(plan, platform)
     if limit is not None and await accounts.count_live(session, platform) >= limit:
         return int(limit)
     return None
@@ -101,7 +101,7 @@ async def _at_capacity(session: AsyncSession, platform: str, plan: str) -> int |
 def _quota_error(limit: int, platform: str) -> ApiError:
     noun = "account" if limit == 1 else "accounts"
     return quota_error(
-        "accounts_per_platform",
+        accounts_key(platform),
         limit,
         f"Your plan includes {limit} {platform.capitalize()} {noun}.",
     )

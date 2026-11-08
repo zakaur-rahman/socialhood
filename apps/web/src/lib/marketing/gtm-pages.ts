@@ -1546,11 +1546,12 @@ function planRow(label: string, key: PlanKey, word: (value: unknown) => string =
 /** Connected channels: Free counts channels in total; the paid plans count accounts per platform (C-172). */
 export function channelsRow(label = "Connected channels"): LimitRow {
   const per = E.accounts_per_platform as Plans<number>;
+  const instagram = E.instagram_accounts as Plans<number>;
   return {
     label,
     free: `Any ${count.format((E.channels_total as Plans<number | null>).free ?? 0)} of Instagram, Facebook or web chat, no WhatsApp`,
-    pro: `${per.pro} each of Instagram, WhatsApp, Facebook and web chat`,
-    max: `${per.max} each of Instagram, WhatsApp and Facebook`,
+    pro: `${instagram.pro} Instagram and ${per.pro} each of WhatsApp, Facebook and web chat`,
+    max: `${instagram.max} Instagram and ${per.max} each of WhatsApp and Facebook`,
   };
 }
 
@@ -1973,7 +1974,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
     audience: {
       creators: "Keep a steady rhythm of Reels, carousels and Stories, tag collaborators on brand work, and have your comment-to-DM automation ready for the next post before it's live.",
       // accounts_per_platform (plan-table.json).
-      businesses: `Plan launches and offers across your Instagram accounts (${E.accounts_per_platform.pro} on Creator, up to ${E.accounts_per_platform.max} on Business), keep captions in your brand voice, and see the questions each post brings in the inbox.`,
+      businesses: `Plan launches and offers across your Instagram accounts (${E.instagram_accounts.pro} on Creator, up to ${E.instagram_accounts.max} on Business), keep captions in your brand voice, and see the questions each post brings in the inbox.`,
     },
     faq: [
       // jobs/tasks/publishing.py dispatch_due_posts (server side, every 30 s); posts.py (a failed post can be edited and retried).
