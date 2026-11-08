@@ -1,7 +1,7 @@
 "use client";
 
 import { Keyboard } from "lucide-react";
-import { useEffect, useState, type Ref } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +106,11 @@ export function ListHeader({
   onAccountChange: (id: string | null) => void;
 }) {
   const collapseViews = useMediaQuery(SHORT_ON_ROOM, false);
+  // The chosen chip stays in sight: a link or reload can land on one past the row's edge.
+  const chipRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    chipRow.current?.querySelector("[aria-checked='true']")?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
+  }, [view]);
   const [text, setText] = useState(search);
   const [synced, setSynced] = useState(search);
   if (search !== synced) {
@@ -181,7 +186,7 @@ export function ListHeader({
                 <SelectContent>
                   <SelectItem value="all">All accounts</SelectItem>
                   {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
+                    <SelectItem key={account.id} value={account.id} textValue={accountName(account)}>
                       <AccountChoice account={account} />
                     </SelectItem>
                   ))}
@@ -210,6 +215,7 @@ export function ListHeader({
           {/* One row that scrolls sideways at every width (owner, C-188), with the right edge fading out so a
               cut-off chip reads as "more" (UI-052). A plain mouse wheel scrolls it too. */}
           <div
+            ref={chipRow}
             className="mask-fade-x -mx-3 overflow-x-auto pe-7 ps-3 scroll-pe-7 [scrollbar-width:none]"
             onWheel={(event) => {
               event.currentTarget.scrollLeft += event.deltaY;
