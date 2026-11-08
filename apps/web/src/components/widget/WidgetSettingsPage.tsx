@@ -3,8 +3,9 @@
 import { Copy, Globe } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { SaveBar } from "@/components/settings/SaveBar";
 import { SettingsCard } from "@/components/settings/SettingsCard";
@@ -22,6 +23,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ApiError } from "@/lib/api/errors";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useSaveWidgetSettings, useWidgetSettings } from "@/lib/api/queries";
+import { keys } from "@/lib/api/queries/keys";
 import type { WidgetEmailCapture, WidgetPosition, WidgetSettings } from "@/lib/api/types";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
@@ -55,6 +57,12 @@ const BRANDING_UPGRADE = { code: "entitlement_required", entitlement: "widget_re
 export function WidgetSettingsPage() {
   const workspace = useCurrentWorkspace();
   const settings = useWidgetSettings(workspace.id);
+  // Opening this page creates the channel, so Connections' card must not keep saying "Not set up".
+  const queryClient = useQueryClient();
+  const loaded = settings.isSuccess;
+  useEffect(() => {
+    if (loaded) void queryClient.invalidateQueries({ queryKey: keys.accounts(workspace.id) });
+  }, [loaded, queryClient, workspace.id]);
 
   return (
     <SettingsFrame

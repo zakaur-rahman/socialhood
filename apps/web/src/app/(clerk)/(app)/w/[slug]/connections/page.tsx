@@ -75,7 +75,7 @@ function Connections() {
   const canManage = workspace.role !== "agent";
   const accounts = useSocialAccounts(wid);
   // Reading the settings creates the channel, so only read them once the workspace has it (C-183).
-  const hasWebsiteChat = Boolean(accounts.data?.some((account) => account.platform === "web"));
+  const hasWebsiteChat = Boolean(accounts.data?.some((account) => account.platform === "web" && account.status !== "disconnected"));
   const websiteChat = useWidgetSettings(wid, canManage && hasWebsiteChat);
   const connect = useStartInstagramConnect(wid);
   const connectFacebook = useStartFacebookConnect(wid);

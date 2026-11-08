@@ -952,7 +952,7 @@ function WebsiteChatBody() {
 
       <GuideH2>Set it up</GuideH2>
       <Checklist>
-        <li>Open Settings, then Website chat, and set the title, greeting and colour.</li>
+        <li>Open Connections, then Website chat, and set the title, greeting and colour.</li>
         <li>Add the domains where the widget may load.</li>
         <li>Copy the line of code and paste it before the closing body tag of your site.</li>
         <li>Choose when to ask for an email, and add your website&apos;s pages to the knowledge.</li>

@@ -373,6 +373,13 @@ describe("Website chat on Connections (C-183)", () => {
     expect(within(card).getByRole("link", { name: "Manage" })).toBeInTheDocument();
   });
 
+  it("a disconnected channel reads as not set up, and reading it doesn't bring it back", async () => {
+    const { calls } = renderCard([instagram, { ...web, status: "disconnected" }]);
+    const card = await screen.findByRole("article", { name: "Website chat" });
+    expect(card).toHaveTextContent("Not set up");
+    expect(calls.some((call) => call.path.endsWith("/widget"))).toBe(false);
+  });
+
   it("is on the page with no accounts connected", async () => {
     renderCard([]);
     expect(await screen.findByRole("article", { name: "Website chat" })).toBeInTheDocument();
