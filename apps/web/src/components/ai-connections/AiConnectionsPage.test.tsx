@@ -136,6 +136,17 @@ describe("Settings › MCP & API (C-165, C-180)", () => {
     expect(await screen.findByText(/No AI apps are connected yet. Follow the steps above/)).toBeInTheDocument();
   });
 
+  it("the API keys card is the target of #api-keys, and a link there scrolls to it", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.location.hash = "#api-keys";
+    const { container } = setup({ ws: { ...workspace, plan: "max" } });
+    await screen.findByText(/No API keys yet/);
+    expect(container.querySelector("section#api-keys")).not.toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    window.location.hash = "";
+  });
+
   it("owners and admins get the API keys on this page; members don't", async () => {
     const { unmount } = setup({ ws: { ...workspace, plan: "max" } });
     expect(await screen.findByText(/No API keys yet/)).toBeInTheDocument();
