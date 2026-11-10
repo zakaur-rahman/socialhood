@@ -34108,7 +34108,7 @@
     },
     "/v1/w/{wid}/comments/{comment_id}/reply": {
       "post": {
-        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when\nthe account is read-only after a downgrade (FR-BIL-07).",
+        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05). 402 quota_exceeded (its account limit) when\nthe account is read-only after a downgrade (FR-BIL-07).",
         "operationId": "reply_to_comment",
         "parameters": [
           {
@@ -36839,7 +36839,7 @@
         ]
       },
       "post": {
-        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict. 402\nquota_exceeded (accounts_per_platform) when the conversation's account is read-only after a\ndowngrade (FR-BIL-07).",
+        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict. 402\nquota_exceeded (its account limit) when the conversation's account is read-only after a\ndowngrade (FR-BIL-07).",
         "operationId": "send_message",
         "parameters": [
           {
@@ -46235,7 +46235,7 @@
     },
     "/v1/w/{wid}/social-accounts/instagram/complete": {
       "post": {
-        "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,\n502 when Instagram fails.",
+        "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over instagram_accounts,\n502 when Instagram fails.",
         "operationId": "complete_instagram_connect",
         "parameters": [
           {

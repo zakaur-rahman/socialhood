@@ -38,8 +38,10 @@ PERIODS: tuple[BillingPeriod, ...] = ("month", "six_month")
 TRIAL_DAYS: dict[Plan, int] = {"free": 0, "pro": 7, "max": 0, "agency": 0}
 
 ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
-    # Channels (C-172): accounts of one platform. Free 1, Creator 1, Business 3.
+    # Channels (C-172): WhatsApp numbers and Facebook Pages, each counted on its own.
     "accounts_per_platform": {"free": 1, "pro": 1, "max": 3, "agency": 10},
+    # Instagram has its own limit (C-187): it is where people most often run a second account.
+    "instagram_accounts": {"free": 1, "pro": 2, "max": 4, "agency": 10},
     # Channels in total across Instagram, Facebook, WhatsApp and the website chat (C-172): Free
     # has 2 of them; the paid plans have no total beyond the per-platform limit.
     "channels_total": {"free": 2, "pro": None, "max": None, "agency": None},
@@ -160,6 +162,15 @@ CREDIT_COSTS: dict[str, int] = {
 def entitlement(plan: str, key: str) -> Any:
     values = ENTITLEMENTS[key]
     return values.get(plan, values["free"])  # type: ignore[call-overload]
+
+
+def accounts_key(platform: str) -> str:
+    """The entitlement that limits a platform's accounts (C-187)."""
+    return "instagram_accounts" if platform == "instagram" else "accounts_per_platform"
+
+
+def accounts_limit(plan: str, platform: str) -> Any:
+    return entitlement(plan, accounts_key(platform))
 
 
 def is_available(plan: str, settings: Settings) -> bool:

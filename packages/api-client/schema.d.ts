@@ -1631,7 +1631,7 @@ export interface paths {
          * Reply To Comment
          * @description A public reply under the comment, posted on Instagram before the answer (the comment's
          *     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
-         *     answer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when
+         *     answer and posts nothing more (TR-API-05). 402 quota_exceeded (its account limit) when
          *     the account is read-only after a downgrade (FR-BIL-07).
          */
         post: operations["reply_to_comment"];
@@ -2051,7 +2051,7 @@ export interface paths {
          *
          *     Any member may reply. The same Idempotency-Key with the same body returns the first response
          *     and sends nothing more; with a different body it is 409 idempotency_conflict. 402
-         *     quota_exceeded (accounts_per_platform) when the conversation's account is read-only after a
+         *     quota_exceeded (its account limit) when the conversation's account is read-only after a
          *     downgrade (FR-BIL-07).
          */
         post: operations["send_message"];
@@ -4366,7 +4366,7 @@ export interface paths {
          * @description Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
          *     the member who started the connect, in the workspace they started it in, can finish it; the
          *     nonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else
-         *     started it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,
+         *     started it, 422 ig_not_professional, 409 account_in_use, 402 over instagram_accounts,
          *     502 when Instagram fails.
          */
         post: operations["complete_instagram_connect"];

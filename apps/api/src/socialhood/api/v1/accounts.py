@@ -83,7 +83,7 @@ async def complete_instagram_connect(
     """Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
     the member who started the connect, in the workspace they started it in, can finish it; the
     nonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else
-    started it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,
+    started it, 422 ig_not_professional, 409 account_in_use, 402 over instagram_accounts,
     502 when Instagram fails."""
     deps = _deps(request)
     acct = await service.finish_instagram_connect(

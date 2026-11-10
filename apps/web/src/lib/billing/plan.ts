@@ -250,16 +250,20 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
  * members, automations, credits, posts, knowledge, then one more (API keys and Zapier where the plan
  * has them, else the AI mode). Six or seven lines, in this order; the full table has the rest.
  */
-const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"]) => string | null }[] = [
+const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"], all: EntitlementValue[]) => string | null }[] = [
   { key: "channels_total", label: (v) => (typeof v === "number" ? `Any ${v} of Instagram, Facebook or web chat` : null) },
   {
     key: "accounts_per_platform",
-    label: (v) =>
-      typeof v !== "number"
-        ? null
-        : v === 1
-          ? "1 each of Instagram, WhatsApp, Facebook and web chat"
-          : `${v} each of Instagram, WhatsApp and Facebook; 1 web chat`,
+    label: (v, all) => {
+      if (typeof v !== "number") return null;
+      const instagram = all.find((e) => e.key === "instagram_accounts")?.value ?? v;
+      if (instagram === v) {
+        return v === 1 ? "1 each of Instagram, WhatsApp, Facebook and web chat" : `${v} each of Instagram, WhatsApp and Facebook; 1 web chat`;
+      }
+      return v === 1
+        ? `${instagram} Instagram; 1 each of WhatsApp, Facebook and web chat`
+        : `${instagram} Instagram; ${v} each of WhatsApp and Facebook; 1 web chat`;
+    },
   },
   { key: "members", label: (v) => (typeof v === "number" ? `${v} ${v === 1 ? "team member" : "team members"}` : null) },
   { key: "active_automations", label: (v) => (v === null ? "Unlimited automations" : typeof v === "number" ? `${fmt(v)} active automations` : null) },
@@ -283,7 +287,7 @@ export function planHighlights(entitlements: EntitlementValue[]): string[] {
     if (key === "accounts_per_platform" && typeof entitlements.find((e) => e.key === "channels_total")?.value === "number") return [];
     const item = entitlements.find((e) => e.key === key);
     if (!item) return [];
-    const text = label(item.value);
+    const text = label(item.value, entitlements);
     return text ? [text] : [];
   });
   const value = (key: string) => entitlements.find((e) => e.key === key)?.value;

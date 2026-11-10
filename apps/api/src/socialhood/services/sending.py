@@ -7,7 +7,7 @@ message as ``queued``, updates the conversation, queues real-time events and enq
 ``send_message``. It runs in the caller's transaction and workspace scope and does not commit;
 the caller commits with ``realtime.events.commit_and_publish``. Rule failures raise ``ApiError``
 with the §4.7 codes (reply_window_closed, account_needs_reconnect, capability_unavailable,
-validation_error, unsupported_media), and 402 quota_exceeded (accounts_per_platform) from an
+validation_error, unsupported_media), and 402 quota_exceeded (the platform's account limit) from an
 account that is read-only after a downgrade (FR-BIL-07; ``retry`` too, so every source that
 sends through here, scheduled messages, AI replies and automations included, is refused). Calling
 it again with the same client_id in the
