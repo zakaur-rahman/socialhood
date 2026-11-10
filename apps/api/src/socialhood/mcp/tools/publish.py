@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -44,6 +44,7 @@ from socialhood.models.identity import Role, User
 from socialhood.models.mcp import AiConnectionsMode
 from socialhood.models.notifications import NotificationType, Severity
 from socialhood.models.publishing import (
+    AI_APP_SCHEDULE_LEAD,
     COLLABORATORS_MAX,
     FIRST_COMMENT_MAX_CHARS,
     STORED_CAPTION_MAX_CHARS,
@@ -72,7 +73,7 @@ KIND = (
 )
 DRAFT, SLOT, SCHEDULED = "draft", "next_free_slot", "scheduled"
 # A promise on the MCP pages: a post from an AI app waits 5 minutes, so the team can stop it.
-AI_APP_LEAD = timedelta(minutes=5)
+AI_APP_LEAD = AI_APP_SCHEDULE_LEAD
 TOO_SOON = (
     "AI apps schedule at least 5 minutes ahead, so the team can see a post before it goes out. "
     "Pick a later time, or use “draft”."

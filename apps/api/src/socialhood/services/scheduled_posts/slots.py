@@ -103,13 +103,14 @@ async def next_free(
     timezone: str,
     now: datetime,
     count: int = NEXT_FREE_COUNT,
+    lead: timedelta = MIN_SCHEDULE_LEAD,
 ) -> dict[uuid.UUID, list[datetime]]:
     """Each account's next ``count`` usable free times (Add to queue's preview)."""
     free = await free_times(
         session,
         account_ids,
         timezone=timezone,
-        start=now + MIN_SCHEDULE_LEAD,
+        start=now + lead,
         end=now + QUEUE_HORIZON,
     )
     return {account_id: times[:count] for account_id, times in free.items()}

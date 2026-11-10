@@ -20,6 +20,7 @@ from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
 from socialhood.mcp.tools.common import agent_tool, moment
 from socialhood.models.identity import Role
 from socialhood.models.media import MediaType
+from socialhood.models.publishing import AI_APP_SCHEDULE_LEAD
 from socialhood.repositories import social_accounts
 from socialhood.services.comments.queries import find_posts
 from socialhood.services.scheduled_posts import best_times, library, posts, slots
@@ -293,7 +294,11 @@ async def get_best_times(call: ToolCall, args: GetBestTimesInput) -> BestTimesRe
         call.session, call.redis, account.id, timezone=call.timezone.key, now=call.now
     )
     free = await slots.next_free(
-        call.session, [account.id], timezone=call.timezone.key, now=call.now
+        call.session,
+        [account.id],
+        timezone=call.timezone.key,
+        now=call.now,
+        lead=AI_APP_SCHEDULE_LEAD,  # what an AI app could actually be given (C-181)
     )
     caveats = []
     if not found.enough_history:

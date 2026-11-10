@@ -16,8 +16,9 @@ from socialhood.mcp.tools.common import moment
 from socialhood.models.connections import AccountStatus
 from socialhood.models.identity import User
 from socialhood.models.mcp import AiConnectionsMode
+from socialhood.models.publishing import AI_APP_SCHEDULE_LEAD
 from socialhood.repositories import social_accounts
-from socialhood.services.scheduled_posts import calendar, views
+from socialhood.services.scheduled_posts import calendar, slots, views
 
 # ---------------------------------------------------------------- get_workspace
 
@@ -183,6 +184,15 @@ async def list_accounts(call: ToolCall, args: ListAccountsInput) -> AccountsResu
         now=call.now,
     )
     publishing = {row.social_account_id: row for row in rail.accounts}
+    # The free time an AI app could be given: 5 minutes ahead at least, not the app's 1 (C-181).
+    upcoming = await slots.next_free(
+        call.session,
+        [a.id for a in accounts],
+        timezone=call.timezone.key,
+        now=call.now,
+        count=1,
+        lead=AI_APP_SCHEDULE_LEAD,
+    )
     items = []
     for a in accounts:
         row = publishing.get(a.id)
@@ -197,7 +207,7 @@ async def list_accounts(call: ToolCall, args: ListAccountsInput) -> AccountsResu
                 needs_reconnect=a.status == AccountStatus.NEEDS_RECONNECT,
                 published_last_24h=row.published_24h if row else None,
                 publishing_limit=row.publishing_limit if row else None,
-                next_free_slot=moment(call, row.next_free_at) if row else None,
+                next_free_slot=moment(call, next(iter(upcoming.get(a.id, [])), None)),
             )
         )
     noun = "account" if len(items) == 1 else "accounts"
