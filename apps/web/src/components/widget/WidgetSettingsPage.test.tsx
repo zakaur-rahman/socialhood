@@ -198,3 +198,14 @@ describe("WidgetSettingsPage (GR-28)", () => {
     expect(await screen.findByRole("button", { name: /try again|retry/i })).toBeInTheDocument();
   });
 });
+
+describe("an agent on the website chat page (C-183)", () => {
+  it("is told owners and admins set it up, and no settings request is sent", async () => {
+    const { calls } = renderWithApi(<WidgetSettingsPage />, {
+      ws: { ...workspace, role: "agent" },
+      handlers: { "GET /v1/w/:wid/widget": () => json(settings()) },
+    });
+    expect(await screen.findByText("Only owners and admins can set up the website chat.")).toBeInTheDocument();
+    expect(calls.some((call) => call.path.endsWith("/widget"))).toBe(false);
+  });
+});

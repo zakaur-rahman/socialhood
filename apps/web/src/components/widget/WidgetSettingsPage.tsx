@@ -57,7 +57,9 @@ const MOST_SITES = 20;
  */
 export function WidgetSettingsPage() {
   const workspace = useCurrentWorkspace();
-  const settings = useWidgetSettings(workspace.id);
+  // The settings are owners' and admins' (the API refuses agents), so an agent isn't sent a request.
+  const canManage = workspace.role !== "agent";
+  const settings = useWidgetSettings(workspace.id, canManage);
   // Opening this page creates the channel, so Connections' card must not keep saying "Not set up".
   const queryClient = useQueryClient();
   const loaded = settings.isSuccess;
@@ -74,7 +76,9 @@ export function WidgetSettingsPage() {
         />
       }
     >
-      {settings.isPending ? (
+      {!canManage ? (
+        <p className="text-sm text-fg-secondary">Only owners and admins can set up the website chat.</p>
+      ) : settings.isPending ? (
         <PageSkeleton rows={3} />
       ) : settings.isError ? (
         <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />
