@@ -112,13 +112,12 @@ async def frame(request: Request, session: Session, w: WidgetId, h: HostName) ->
         except ApiError as error:
             return _refusal(error.status, error.detail or chat.NOT_AVAILABLE)
         row = await repo.get_settings(session, widget.acct.id)
-    assert row is not None  # load() found it
+        assert row is not None  # load() found it
+        sites = await chat.live_sites(session, row)
     settings = request.app.state.settings
     headers = {
         **FRAME_HEADERS,
-        "Content-Security-Policy": FRAME_POLICY.format(
-            ancestors=origin.frame_ancestors(list(row.allowed_domains or []))
-        ),
+        "Content-Security-Policy": FRAME_POLICY.format(ancestors=origin.frame_ancestors(sites)),
     }
     page = _page(w, host, settings.site_url or DEFAULT_BRAND_URL)
     return HTMLResponse(page, 200, headers)

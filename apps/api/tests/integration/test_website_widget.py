@@ -21,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.billing import plans
+from socialhood.billing.downgrade import apply_downgrade
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.platforms.deps import deps_from
@@ -172,7 +173,10 @@ async def test_the_widget_account_is_listed_with_the_others(ws: Ws, site: Site) 
     ]
 
 
-async def test_changes_are_kept_and_domains_are_cleaned(ws: Ws, site: Site) -> None:
+async def test_changes_are_kept_and_domains_are_cleaned(
+    ws: Ws, site: Site, engine: AsyncEngine
+) -> None:
+    await set_plan(engine, ws.wid, "max")
     saved = await site.settings(
         allowed_domains=["https://Shop.Example.com/page", "*.example.org", "shop.example.com"],
         accent_color="#0f766e",
@@ -806,7 +810,10 @@ async def test_a_switched_off_widget_has_no_frame(site: Site) -> None:
     assert refused.status_code == 404
 
 
-async def test_the_frame_ancestors_follow_the_domain_list(site: Site) -> None:
+async def test_the_frame_ancestors_follow_the_domain_list(
+    ws: Ws, site: Site, engine: AsyncEngine
+) -> None:
+    await set_plan(engine, ws.wid, "max")
     await site.settings(allowed_domains=["*.example.org", "localhost"])
     ok = await site.client.get("/widget/frame", params={"w": site.widget_id, "h": "localhost"})
     policy = ok.headers["content-security-policy"]
@@ -876,3 +883,49 @@ async def test_widget_consent_is_recorded_as_not_confirmed(site: Site) -> None:
     [row] = await site.rows("SELECT status, evidence FROM contact_consents")
     assert row["status"] == "granted"
     assert row["evidence"]["address_confirmed"] is False
+
+
+# ---------------------------------------------------------------- sites per plan (C-185)
+
+
+async def test_each_plan_covers_its_sites_and_a_downgrade_keeps_the_first(
+    ws: Ws, site: Site, engine: AsyncEngine
+) -> None:
+    two = ["first.example.com", HOST]
+    assert (await ws.ok("GET", "/widget"))["sites_limit"] == 1
+    refused = await ws.call("PUT", "/widget", json={"allowed_domains": two})
+    assert refused.status_code == 402, refused.text
+    assert refused.json()["code"] == "quota_exceeded"
+    assert refused.json()["entitlement"] == "widget_sites"
+    assert refused.json()["detail"] == "Your plan includes 1 site."
+
+    await set_plan(engine, ws.wid, "max")
+    assert (await ws.ok("GET", "/widget"))["sites_limit"] == 3
+    await site.settings(allowed_domains=two)
+    assert (await site.session()).status_code == 200  # HOST is the second site
+    four = [*two, "c.example.com", "d.example.com"]
+    assert (await ws.call("PUT", "/widget", json={"allowed_domains": four})).status_code == 402
+
+    await set_plan(engine, ws.wid, "free")
+    assert (await site.session()).status_code == 403  # only the first site still works
+    frame = await site.client.get(
+        "/widget/frame", params={"w": site.widget_id, "h": "first.example.com"}
+    )
+    assert "https://first.example.com" in frame.headers["content-security-policy"]
+    assert f"https://{HOST}" not in frame.headers["content-security-policy"]
+    # Over the limit, the list can be kept or shortened, but not grown or swapped upward.
+    assert (await ws.call("PUT", "/widget", json={"allowed_domains": two})).status_code == 200
+    assert (await ws.call("PUT", "/widget", json={"allowed_domains": [HOST]})).status_code == 200
+    assert (await site.session()).status_code == 200
+    assert (await ws.call("PUT", "/widget", json={"allowed_domains": two})).status_code == 402
+
+
+async def test_a_downgrade_that_cuts_sites_says_so(ws: Ws, site: Site, engine: AsyncEngine) -> None:
+    await set_plan(engine, ws.wid, "max")
+    await site.settings(allowed_domains=["a.example.com", "b.example.com", HOST])
+    with workspace_scope(uuid.UUID(ws.wid)):
+        async with make_sessionmaker(engine)() as session:
+            report = await apply_downgrade(session, plan="pro", now=datetime.now(UTC))
+    assert report.sites_cut == 2
+    assert report.changed
+    assert "2 websites stopped showing the chat." in report.summary()

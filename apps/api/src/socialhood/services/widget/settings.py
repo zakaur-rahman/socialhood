@@ -23,7 +23,12 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.entitlements import allows, check_entitlement, check_new_channel
+from socialhood.billing.entitlements import (
+    allows,
+    check_entitlement,
+    check_new_channel,
+    quota_error,
+)
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.connections import AccountStatus, SocialAccount
@@ -125,6 +130,7 @@ async def out(
         marketing_consent_text=row.marketing_consent_text,
         show_branding=row.show_branding or not can_remove,
         can_remove_branding=can_remove,
+        sites_limit=int(entitlement(plan, "widget_sites")),
         ai_mode=acct.ai_mode,
         script_url=url,
         embed_snippet=snippet(url, acct.platform_account_id),
@@ -158,6 +164,11 @@ async def update(session: AsyncSession, row: WidgetSettings, body: WidgetSetting
         cleaned, errors = _domain_errors(body.allowed_domains)
         if errors:
             raise ApiError("validation_error", errors=errors)
+        limit = int(entitlement(await current_plan(session), "widget_sites"))
+        # A list already over the limit (after a downgrade) can be kept or shortened, not grown.
+        if len(cleaned) > limit and len(cleaned) > len(row.allowed_domains or []):
+            sites = "site" if limit == 1 else "sites"
+            raise quota_error("widget_sites", limit, f"Your plan includes {limit} {sites}.")
         values["allowed_domains"] = cleaned
     if values.get("show_branding") is False:
         await check_entitlement(

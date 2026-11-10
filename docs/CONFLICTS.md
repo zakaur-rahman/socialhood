@@ -9778,3 +9778,13 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Add account** lists Website chat too. The form is unchanged at `/connections/website`, with a
   "Connections" back link. `/settings/widget` forwards there. Settings loses Website chat and with
   it the empty "Channels" group. Owners and admins only, as before.
+
+## C-185 · Website chat: sites per plan (owner, 2026-11-08; local only so far)
+
+- **Why:** one widget could run on 20 sites on every plan, so $15 covered 20 client sites. The limit
+  now matches the other channel limits: Free 1, Creator 1, Business 3, Agency 20. A wildcard entry
+  such as `*.example.com` counts as one.
+- **After a downgrade:** the first sites in the list keep working and the rest stop, like extra
+  accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
+- **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
+  route creates another, so limits can only be bypassed by signing up again with another email.

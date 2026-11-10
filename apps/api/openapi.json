@@ -27012,6 +27012,10 @@
             "title": "Show Branding",
             "type": "boolean"
           },
+          "sites_limit": {
+            "title": "Sites Limit",
+            "type": "integer"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -27041,6 +27045,7 @@
           "marketing_consent_text",
           "show_branding",
           "can_remove_branding",
+          "sites_limit",
           "ai_mode",
           "script_url",
           "embed_snippet",

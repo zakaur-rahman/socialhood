@@ -902,8 +902,8 @@ function WebsiteChatBody() {
       <GuideH2>How it works in Amplychat</GuideH2>
       <StepCards
         items={[
-          // WidgetSettingsPage: one line of code before </body>; widget_settings.allowed_domains (up to 20).
-          { icon: PanelsTopLeft, body: <><strong>One line of code</strong> on your site, and a list of up to 20 domains where it may load. It refuses to load anywhere else.</> },
+          // WidgetSettingsPage: one line of code before </body>; plans.py widget_sites.
+          { icon: PanelsTopLeft, body: <><strong>One line of code</strong> on your site, and a list of the sites where it may load: {E.widget_sites.pro} on Free and Creator, {E.widget_sites.max} on Business, {E.widget_sites.agency} on Agency. It refuses to load anywhere else.</> },
           // widget_settings: title, greeting, accent colour, left or right.
           { icon: MessageCircle, body: <><strong>Your look</strong>: the title, the greeting, your colour, and the left or right corner.</> },
           // email_capture off / optional / required; marketing consent with the words shown as evidence.
@@ -1004,6 +1004,7 @@ const WEBSITE_CHAT: AutomationPage = {
   Body: WebsiteChatBody,
   limits: [
     planRow("New website chats a day", "widget_conversations_daily"),
+    planRow("Websites the chat can run on", "widget_sites"),
     ROW_MODES,
     planRow("Website pages read", "crawl_pages"),
     planRow("Remove “Powered by”", "widget_remove_branding"),
@@ -1022,7 +1023,7 @@ const WEBSITE_CHAT: AutomationPage = {
     {
       question: "Can I put the same chat on more than one site?",
       answer:
-        "Yes. List up to 20 domains in the widget's settings, including every subdomain of one with a wildcard such as *.example.com. The chats from all of them arrive in the same inbox.",
+        `Yes, on Business and Agency. Free and Creator cover ${E.widget_sites.pro} site, Business ${E.widget_sites.max} and Agency ${E.widget_sites.agency}. One wildcard entry such as *.example.com covers every subdomain and counts as one. The chats from all of them arrive in the same inbox.`,
     },
     {
       question: "Can visitors talk to a person?",

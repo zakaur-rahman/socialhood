@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPrice, inferEntitlement, planIncludes, planOffers, upgradeCopy } from "@/lib/copy";
+import { formatPrice, inferEntitlement, planIncludes, planOffers, upgradeCopy, upgradeTarget } from "@/lib/copy";
 import { billingState } from "@/test/api";
 
 import { billingOpen, canCheckout, canStartCheckout, daysUntil, meterViews, planHighlights, planStatus, priceOf, sixMonthOffer } from "./plan";
@@ -201,6 +201,11 @@ describe("upgrade dialog copy (§4.7, F-15)", () => {
     expect(upgradeCopy({ code: "quota_exceeded", entitlement: "scheduled_posts_monthly", limit: 10 }, { plan: "free" }).body).toBe(
       "Free includes 10 scheduled posts a month.",
     );
+    expect(upgradeCopy({ code: "quota_exceeded", entitlement: "widget_sites", limit: 1 }).title).toBe("Website limit reached");
+    expect(upgradeCopy({ code: "quota_exceeded", entitlement: "widget_sites", limit: 1 }).body).toBe("Your plan includes 1 website.");
+    expect(upgradeTarget("widget_sites", "free")).toBe("max"); // Creator has the same one site (C-185)
+    expect(upgradeTarget("active_automations", "free")).toBe("pro");
+    expect(upgradeTarget("active_automations", "pro")).toBe("max");
     expect(upgradeCopy({ code: "quota_exceeded", entitlement: "accounts_per_platform", limit: 1 }).body).toBe(
       "Your plan includes 1 account per platform.",
     );

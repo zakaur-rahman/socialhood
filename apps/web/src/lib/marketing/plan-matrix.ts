@@ -108,6 +108,7 @@ export const MATRIX: MatrixGroup[] = [
     rows: [
       { key: "scheduled_posts_monthly", label: "Scheduled posts a month", format: { kind: "count" } },
       { key: "widget_conversations_daily", label: "New website chats a day", format: { kind: "count" } },
+      { key: "widget_sites", label: "Websites the chat can run on", format: { kind: "count" } },
       { key: "widget_remove_branding", label: "Remove Powered by Amplychat", format: { kind: "flag" } },
     ],
   },
