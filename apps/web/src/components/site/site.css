@@ -3147,7 +3147,9 @@ body:has(.site) {
     & .pd-opt svg { opacity: 0; }
     & [data-acct="all"] [data-opt="all"] svg, & [data-acct="mumbai"] [data-opt="mumbai"] svg, & [data-acct="pune"] [data-opt="pune"] svg { opacity: 1; }
     & [data-acct-show] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    & .pd-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3); }
+    /* One row, cut off with a fade, as the app's view chips (C-188). */
+    & .pd-chips-row { display: flex; flex-wrap: nowrap; overflow: hidden; gap: 6px; margin-top: var(--space-3); mask-image: linear-gradient(to right, var(--ink) calc(100% - 1rem), transparent); }
+    & .pd-chips-row > * { flex: none; }
     & .pd-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border: 1px solid var(--app-line); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; }
     & .pd-chip-on { border-color: var(--app-line-strong); background: var(--app-raised); color: var(--app-fg); }
     & .pd-rows { position: relative; flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
@@ -3435,7 +3437,6 @@ body:has(.site) {
       & .pd-inbox { grid-template-columns: minmax(0, 1fr); }
       & .pd-list { border-right: 0; }
       & .pd-list-tools { margin-left: auto; }
-      & .pd-chips-row { flex-wrap: nowrap; overflow: hidden; }
       & .pd-back { display: block; }
       & .pd-act-far, & .pd-left, & .pd-send-t { display: none; }
       & .pd-head { padding: 0 var(--space-3); gap: var(--space-2); }

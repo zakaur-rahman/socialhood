@@ -649,7 +649,7 @@ export function upgradeCopy(
     if (key === "pro") {
       return {
         title: "Upgrade to Creator",
-        body: "Creator adds Auto replies, WhatsApp, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
+        body: "Creator adds Auto replies, WhatsApp, a second Instagram account, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
       };
     }
     const feature = FEATURE_COPY[key];
