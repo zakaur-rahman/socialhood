@@ -111,7 +111,8 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # Amplychat"; Creator and Business can turn it off. New widget chats a day are capped on every
     # plan to bound abuse (services/widget/chat.py); the cap counts new visitors, not messages.
     "widget_remove_branding": {"free": False, "pro": True, "max": True, "agency": True},
-    # Sites one widget may run on (C-185). A *.example.com entry counts as one.
+    # Sites one widget may run on (C-185). A *.example.com entry counts as one; shared hosts
+    # such as *.myshopify.com are refused (C-189).
     "widget_sites": {"free": 1, "pro": 1, "max": 3, "agency": 20},
     "widget_conversations_daily": {"free": 50, "pro": 500, "max": 500, "agency": 5000},
     # Recipients a workspace may send WhatsApp broadcasts to in a billing period (GR-23, PD-4:

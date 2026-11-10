@@ -280,7 +280,9 @@ async def test_the_site_must_be_on_the_allowed_list(ws: Ws, site: Site) -> None:
     assert (await site.session(host="EXAMPLE.com")).status_code == 200
     await site.settings(allowed_domains=["*.example.com"])
     assert (await site.session(host="shop.example.com")).status_code == 200
-    assert (await site.session(host="example.com")).status_code == 403
+    assert (await site.session(host="example.com")).status_code == 200  # and the domain (C-189)
+    refused = await site.ws.call("PUT", "/widget", json={"allowed_domains": ["*.myshopify.com"]})
+    assert refused.status_code == 422, refused.text  # everyone's shops, counted as one site
     await site.settings(allowed_domains=[])
     assert (await site.session()).status_code == 403  # no domain, no widget
 

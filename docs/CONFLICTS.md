@@ -9812,3 +9812,15 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
   be cheaper per account than Agency.
 - **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.
+
+## C-189 · Website chat wildcards: the whole domain, never a shared host (owner said do your best, 2026-11-11)
+
+- **Shared hosts are refused.** A wildcard on a shared address (`*.myshopify.com`, `*.vercel.app`,
+  `*.co.uk`) covered everyone's sites there and counted as one, so one plan could cover any number
+  of shops. The message suggests the shop's own address (`yourshop.myshopify.com`). The list is kept
+  by hand in `services/widget/origin.SHARED_HOSTS`; move to the Public Suffix List if someone gets
+  round it.
+- **A wildcard covers the domain too.** `*.example.com` now also allows `example.com`. A business
+  needed two entries for its own site before, which Free and Creator (one site) could not have.
+- **Production, checked before release:** one website chat, on Creator, with no sites and no
+  wildcards. So the site limit (C-185) and this rule cut nobody at release.

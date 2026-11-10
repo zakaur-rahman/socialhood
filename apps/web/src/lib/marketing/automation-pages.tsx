@@ -1023,7 +1023,7 @@ const WEBSITE_CHAT: AutomationPage = {
     {
       question: "Can I put the same chat on more than one site?",
       answer:
-        `Yes, on Business and Agency. Free and Creator cover ${E.widget_sites.pro} site, Business ${E.widget_sites.max} and Agency ${E.widget_sites.agency}. One wildcard entry such as *.example.com covers every subdomain and counts as one. The chats from all of them arrive in the same inbox.`,
+        `Yes, on Business and Agency. Free and Creator cover ${E.widget_sites.pro} site, Business ${E.widget_sites.max} and Agency ${E.widget_sites.agency}. One wildcard entry such as *.example.com covers the domain and every subdomain, and counts as one. The chats from all of them arrive in the same inbox.`,
     },
     {
       question: "Can visitors talk to a person?",

@@ -206,7 +206,7 @@ function InstallCard({
           error={domainError}
         />
         <FieldDescription>
-          Add each site by its address, like example.com (www.example.com is included) or *.example.com for every
+          Add each site by its address, like example.com (www.example.com is included) or *.example.com for the domain and every
           subdomain. The chat refuses to load anywhere else.
         </FieldDescription>
         <FieldDescription>
