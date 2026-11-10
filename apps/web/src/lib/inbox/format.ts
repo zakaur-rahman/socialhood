@@ -9,6 +9,7 @@ import type {
   Platform,
   ReplyWindow,
   Signal,
+  SocialAccount,
 } from "@/lib/api/types";
 import { IDENTITIES, identityFor } from "@/lib/ui/identity";
 import type { Tone } from "@/lib/ui/tone";
@@ -160,6 +161,23 @@ export function signalChip(
 }
 
 const TWO_HOURS = 2 * 60 * 60 * 1000;
+
+/** An account's name in the inbox: its handle, else its name or number. */
+export function accountName(account: Pick<SocialAccount, "username" | "display_name" | "phone_number">): string {
+  return account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "Account");
+}
+
+/**
+ * C-186: what a conversation row calls its account, by account id. Only accounts whose platform has
+ * another one: with one Instagram, the row's Instagram badge already says which.
+ */
+export function rowAccountLabels(accounts: SocialAccount[]): Record<string, string> {
+  return Object.fromEntries(
+    accounts
+      .filter((account) => accounts.some((other) => other.id !== account.id && other.platform === account.platform))
+      .map((account) => [account.id, accountName(account)]),
+  );
+}
 
 /** The reply window chip in the thread header (UX-INB-05). */
 export function windowChip(window: ReplyWindow, now: Date): { label: string; tone: Tone } {
