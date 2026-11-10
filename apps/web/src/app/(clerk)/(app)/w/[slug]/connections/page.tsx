@@ -201,7 +201,7 @@ function Connections() {
       header={
         <SettingsPageHeader
           title="Connections"
-          description="The Instagram, Facebook and WhatsApp accounts this workspace uses, and how the AI works on each."
+          description="The Instagram, Facebook and WhatsApp accounts and the website chat this workspace uses, and how the AI works on each."
           actions={connectButtons}
         />
       }
