@@ -2826,12 +2826,24 @@ body:has(.site) {
   .site .cx {
     & .cx-url { margin-top: var(--space-6); max-width: 40rem; }
     & .cx-url-label { margin: 0 0 var(--space-2); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 600; color: var(--s-text-3); }
-    & .cx-code {
-      margin: var(--space-2) 0 0; padding: var(--space-3) var(--space-4); overflow-x: auto; overscroll-behavior-x: contain;
+    /* The box is the wrapper: the text scrolls in its own column, so it never runs behind the copy button. */
+    & .cx-code-wrap {
+      display: flex; align-items: flex-start; margin-top: var(--space-2);
       background: var(--s-surface-2); border: 1px solid var(--s-line); border-radius: var(--r-md);
+    }
+    & .cx-code {
+      flex: 1; min-width: 0; margin: 0; padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4); overflow-x: auto; overscroll-behavior-x: contain;
       font-family: var(--font-mono); font-size: var(--fs-caption); line-height: 1.6; color: var(--s-text); white-space: pre;
     }
     & .cx-code code { font: inherit; }
+    & .cx-copy {
+      flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: var(--space-1);
+      border: 0; border-radius: var(--r-sm); background: transparent; color: var(--s-text-2); cursor: pointer;
+      transition: background-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+    }
+    & .cx-copy svg { width: 16px; height: 16px; }
+    @media (hover: hover) { & .cx-copy:hover { background: var(--s-hover); color: var(--s-text); } }
+    @media (pointer: coarse) { & .cx-copy { width: 40px; height: 40px; margin: 0; } }
 
     & .cx-jump { display: flex; flex-wrap: wrap; gap: var(--space-2); }
     & .cx-jump a {
