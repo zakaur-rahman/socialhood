@@ -93,6 +93,12 @@ describe("the account filter and the chips (C-188)", () => {
     expect(within(withoutPicture).getByText("M")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /@maple$/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "All accounts" })).toBeInTheDocument();
+    // No tick: the chosen account is shaded and bold, and the pictures start at the menu's edge.
+    expect(withoutPicture).toHaveClass("pl-2");
+    const chosen = screen.getByRole("option", { name: "All accounts" });
+    expect(chosen).toHaveAttribute("data-state", "checked");
+    expect(chosen).toHaveClass("data-[state=checked]:bg-brand-soft", "data-[state=checked]:font-semibold");
+    expect(chosen.querySelector("svg.lucide-check")).toBeNull();
   });
 
   it("brings the chosen chip into view", () => {
