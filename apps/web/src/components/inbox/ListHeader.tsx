@@ -1,6 +1,6 @@
 "use client";
 
-import { Keyboard } from "lucide-react";
+import { Keyboard, Layers } from "lucide-react";
 import { useEffect, useRef, useState, type Ref } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -184,9 +184,19 @@ export function ListHeader({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All accounts</SelectItem>
+                  <SelectItem
+                    value="all"
+                    check="highlight"
+                    icon={
+                      <span className="grid size-6 place-items-center rounded-full bg-raised">
+                        <Layers className="size-3.5" aria-hidden />
+                      </span>
+                    }
+                  >
+                    All accounts
+                  </SelectItem>
                   {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id} textValue={accountName(account)}>
+                    <SelectItem key={account.id} value={account.id} textValue={accountName(account)} check="highlight">
                       <AccountChoice account={account} />
                     </SelectItem>
                   ))}

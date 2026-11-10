@@ -142,7 +142,8 @@ function SelectLabel({
 
 /**
  * An option: the menu item's highlight (ui/floating). The tick sits in a fixed slot on the left, so
- * labels line up chosen or not. Only the label goes inside `ItemText`, which Radix copies into the
+ * labels line up chosen or not. `check="highlight"` drops the tick: the chosen option is shaded and
+ * bold instead (not colour alone), so options that lead with a picture start at the menu's edge. Only the label goes inside `ItemText`, which Radix copies into the
  * trigger; the optional `icon` and one-line `description` stay outside it, so the trigger shows the
  * label alone (or whatever `SelectValue` is given as children).
  */
@@ -151,24 +152,33 @@ function SelectItem({
   children,
   icon,
   description,
+  check = "start",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item> & {
   icon?: React.ReactNode
   description?: React.ReactNode
+  check?: "start" | "highlight"
 }) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(FLOATING_ITEM, "w-full py-1.5 pr-2 pl-8", className)}
+      className={cn(
+        FLOATING_ITEM,
+        "w-full py-1.5 pr-2",
+        check === "highlight" ? "pl-2 data-[state=checked]:bg-brand-soft data-[state=checked]:font-semibold data-[state=checked]:text-brand-fg" : "pl-8",
+        className,
+      )}
       // Radix names an option by its text; an `aria-label` (the full name of a shortened label) wins.
       {...(props["aria-label"] ? { "aria-labelledby": undefined } : null)}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="pointer-events-none" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
+      {check === "start" ? (
+        <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center">
+          <SelectPrimitive.ItemIndicator>
+            <CheckIcon className="pointer-events-none" />
+          </SelectPrimitive.ItemIndicator>
+        </span>
+      ) : null}
       {icon ? <span className="flex shrink-0 items-center text-fg-secondary">{icon}</span> : null}
       <span className="flex min-w-0 flex-1 flex-col">
         <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

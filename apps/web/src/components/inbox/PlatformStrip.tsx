@@ -1,6 +1,6 @@
 import { Layers } from "lucide-react";
 
-import { PLATFORM_LOGO_BG } from "@/components/connections/PlatformGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Platform } from "@/lib/api/types";
@@ -11,8 +11,8 @@ export type PlatformChoice = "all" | Platform;
 
 /**
  * UX-INB-02 as the segmented control (C-063, DESIGN_SYSTEM §8.2): All plus each connected platform,
- * labelled at every width, sharing the track's width equally; a platform's segment carries its
- * colour as a dot. The chosen segment is the primitive's neutral one, `raised` with `brand-fg`
+ * sharing the track's width equally. A platform's segment shows its mark on its own colours, named
+ * for screen readers and on hover (owner, C-188); names were cut to "Insta…" in the list pane. The chosen segment is the primitive's neutral one, `raised` with `brand-fg`
  * text, like every other segmented control (D-15 item 1).
  */
 export function PlatformStrip({
@@ -43,16 +43,24 @@ export function PlatformStrip({
         onValueChange={(choice) => onChange(choice as PlatformChoice)}
         data-active={value}
       >
-        {choices.map((choice) => (
-          <ToggleGroupItem key={choice} value={choice} className="min-w-0">
-            {choice === "all" ? (
+        {choices.map((choice) =>
+          choice === "all" ? (
+            <ToggleGroupItem key={choice} value={choice} className="min-w-0">
               <Layers className="size-3.5 shrink-0" aria-hidden />
-            ) : (
-              <span className={cn("size-2 shrink-0 rounded-full", PLATFORM_LOGO_BG[choice])} aria-hidden />
-            )}
-            <span className="truncate">{choice === "all" ? "All" : PLATFORM_LABEL[choice]}</span>
-          </ToggleGroupItem>
-        ))}
+              <span className="truncate">All</span>
+            </ToggleGroupItem>
+          ) : (
+            <ToggleGroupItem key={choice} value={choice} className="min-w-0" title={PLATFORM_LABEL[choice]}>
+              <span
+                className={cn("grid size-5 shrink-0 place-items-center rounded-md text-on-brand", PLATFORM_LOGO_BG[choice])}
+                aria-hidden
+              >
+                <PlatformGlyph platform={choice} className="size-3" />
+              </span>
+              <span className="sr-only">{PLATFORM_LABEL[choice]}</span>
+            </ToggleGroupItem>
+          ),
+        )}
       </ToggleGroup>
     </div>
   );
