@@ -5,8 +5,6 @@ import {
   Building2,
   CreditCard,
   Globe,
-  KeyRound,
-  Link2,
   MessageSquareText,
   MoreHorizontal,
   Palette,
@@ -51,11 +49,6 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
     description: "Open hours and the away message",
     keywords: ["schedule", "away", "opening", "time"],
   },
-  connections: {
-    icon: Link2,
-    description: "Instagram and WhatsApp accounts",
-    keywords: ["instagram", "whatsapp", "facebook", "accounts", "connect"],
-  },
   widget: {
     icon: Globe,
     description: "Chat widget for your website",
@@ -78,13 +71,8 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
   },
   "ai-apps": {
     icon: Plug,
-    description: "Claude, ChatGPT and Codex",
-    keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps"],
-  },
-  "api-keys": {
-    icon: KeyRound,
-    description: "For the public API and AI apps",
-    keywords: ["api", "key", "token", "mcp", "claude code", "codex", "zapier", "bearer"],
+    description: "Connect Claude, ChatGPT or Codex; API keys",
+    keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps", "api", "key", "token", "zapier", "bearer"],
   },
   billing: {
     icon: CreditCard,
@@ -131,7 +119,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
     label: "Workspace",
     segments: ["workspace", "members", "hours"],
   },
-  { id: "channels", label: "Channels", segments: ["connections", "widget"] },
+  { id: "channels", label: "Channels", segments: ["widget"] },
   {
     id: "automation",
     label: "Automation and AI",
@@ -140,7 +128,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
   {
     id: "admin",
     label: "Admin",
-    segments: ["billing", "integrations", "api-keys", "audit", "activity"],
+    segments: ["billing", "integrations", "audit", "activity"],
   },
   {
     id: "you",

@@ -109,7 +109,7 @@ async def test_a_refused_refresh_asks_the_owner_to_reconnect_once(
         "critical",
         "Reconnect @maple.bakery",
     )
-    assert note["link"] == "/settings/connections"
+    assert note["link"] == "/connections"
 
 
 async def test_a_platform_outage_leaves_the_account_alone(

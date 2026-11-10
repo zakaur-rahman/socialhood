@@ -80,7 +80,7 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
           stops at once, and the workspace&apos;s data, including uploaded media, is permanently removed within 24 hours.
         </Option>
         <Option icon={Unplug}>
-          <strong className="text-fg">Owners and admins, for one account</strong>: in Settings → Connections, use
+          <strong className="text-fg">Owners and admins, for one account</strong>: in Connections, use
           Delete account and data (in the account&apos;s ⋯ menu; it disconnects the account first if needed). The account&apos;s
           conversations, messages, comments, contacts, posts and automations are permanently deleted; the
           workspace&apos;s knowledge, settings and billing stay.

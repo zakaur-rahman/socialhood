@@ -6,7 +6,7 @@
  * and platform media), Meta's SDK (WhatsApp Embedded Signup), Sentry (the DSN's host) and the API.
  * Hosts that depend on the environment are read from the NEXT_PUBLIC_* variables at build time.
  *
- * Meta's SDK is allowed app-wide although only Settings → Connections loads it: a CSP belongs to
+ * Meta's SDK is allowed app-wide although only Connections loads it: a CSP belongs to
  * the document, and App Router navigations keep the document, so a per-page CSP would block the
  * SDK after an in-app navigation. Scripts keep 'unsafe-inline' because Next.js bootstraps with
  * inline scripts; a nonce would make every page dynamic. Nothing renders user or model content as

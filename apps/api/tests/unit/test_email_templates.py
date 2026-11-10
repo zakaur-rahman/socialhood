@@ -21,7 +21,7 @@ def notification_data(**values: Any) -> dict[str, Any]:
     return {
         "title": "Reconnect @maple.bakery",
         "body": "@maple.bakery needs reconnecting to keep receiving messages.",
-        "link": "/settings/connections",
+        "link": "/connections",
         "workspace_name": "Maple Bakery",
         "workspace_slug": "maple",
         **values,
@@ -147,13 +147,13 @@ def test_every_notification_email_renders(template: str) -> None:
     assert email.subject == "Reconnect @maple.bakery"
     assert_accessible(email.html)
     assert "@maple.bakery needs reconnecting to keep receiving messages." in email.html
-    assert f'href="{WEB}/w/maple/settings/connections"' in email.html
+    assert f'href="{WEB}/w/maple/connections"' in email.html
     assert f"{WEB}/w/maple/settings/notifications" in email.html
     assert "Maple Bakery" in email.html
     # The text part says the same, with the link written out.
     assert email.text.startswith("Amplychat\n")
     assert "@maple.bakery needs reconnecting to keep receiving messages." in email.text
-    assert f"{WEB}/w/maple/settings/connections" in email.text
+    assert f"{WEB}/w/maple/connections" in email.text
 
 
 def test_the_button_says_what_it_does() -> None:

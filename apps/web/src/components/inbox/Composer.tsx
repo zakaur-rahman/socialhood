@@ -347,7 +347,7 @@ export function Composer({
           action={
             mode === "blocked" ? (
               <AlertAction asChild>
-                <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
+                <Link href={`/w/${slug}/connections` as Route}>Reconnect</Link>
               </AlertAction>
             ) : mode === "template_only" ? (
               <AlertAction onClick={onChooseTemplate}>Choose template</AlertAction>

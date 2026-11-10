@@ -13,12 +13,10 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
-import { SETTINGS_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
+import { FOOT_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
 import { COLLAPSE_SHORTCUT_ARIA, shortcutHint, useCollapseShortcut, useModifierKey } from "./shortcuts";
 import { useCollapsedTooltip } from "./use-collapsed-tooltip";
 import { KBD_CLASS, sidebarFadeClass, sidebarIconClass, sidebarLabelClass, sidebarRowClass } from "./sidebar-styles";
-import { UsageCard } from "./UsageCard";
-import { usageView, type CreditsUsage } from "./usage";
 import { WorkspaceMenu, type SidebarWorkspace } from "./WorkspaceMenu";
 
 export type { SidebarWorkspace };
@@ -38,8 +36,6 @@ type Props = {
   knowledgeCount?: number;
   userName?: string | null;
   userEmail?: string | null;
-  /** The AI credits meter from the billing state (usage.ts). */
-  credits?: CreditsUsage;
   /** The event stream has been down for a while (lib/realtime/status). */
   reconnecting?: boolean;
   /** Clerk's UserButton in the app; a stand-in in tests. */
@@ -62,7 +58,7 @@ type Badge = { count: number; label: string };
 /**
  * UX-SH-01: the floating sidebar card, expanded (232 px) or collapsed to icons (64 px). Top to
  * bottom: workspace menu, Ask Amplychat, grouped navigation, then Notifications, Settings, Help
- * and Collapse, the AI credits meter, a notice while live updates are reconnecting, and the
+ * and Collapse, a notice while live updates are reconnecting, and the
  * account card.
  */
 export function AppSidebar({
@@ -75,7 +71,6 @@ export function AppSidebar({
   knowledgeCount = 0,
   userName,
   userEmail,
-  credits,
   reconnecting = false,
   account,
   notifications,
@@ -183,13 +178,16 @@ export function AppSidebar({
 
       <div className="relative mt-2 flex w-full flex-col gap-0.5 border-t border-line-subtle pt-2">
         {notifications}
-        <SidebarLink
-          item={SETTINGS_NAV}
-          href={SETTINGS_NAV.href(workspace.slug)}
-          active={active === SETTINGS_NAV.segment}
-          collapsed={collapsed}
-          onNavigate={onNavigate}
-        />
+        {FOOT_NAV.map((item) => (
+          <SidebarLink
+            key={item.key}
+            item={item}
+            href={item.href(workspace.slug)}
+            active={active === item.segment}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        ))}
         <WithTooltip label={`Help: ${SUPPORT_EMAIL}`} enabled={collapsed}>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
@@ -203,8 +201,6 @@ export function AppSidebar({
           </a>
         </WithTooltip>
       </div>
-
-      <UsageCard view={usageView(credits, workspace.role)} collapsed={collapsed} />
 
       {reconnecting ? <ReconnectingNotice collapsed={collapsed} /> : null}
 

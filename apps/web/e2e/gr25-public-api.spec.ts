@@ -3,7 +3,7 @@ import { expect, test } from "./support/fixtures";
 /**
  * GR-25 Public API and API keys on the sandbox. Done when a key with read scope lists contacts and
  * gets 403 on a write. A Free workspace is told the API is part of Business; on Business a member makes a key
- * in Settings > API keys (shown once), uses it, sees when it was last used, and revokes it.
+ * in Settings › MCP & API (shown once), uses it, sees when it was last used, and revokes it.
  * The reference page renders from the API's own OpenAPI document.
  */
 type ContactList = { items: { id: string }[] };
@@ -11,7 +11,7 @@ type ContactList = { items: { id: string }[] };
 test.describe("GR-25 public API and API keys", () => {
   test("a Free workspace is told the public API is part of Business", async ({ page, api, workspace }) => {
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
-    await expect(page.getByRole("heading", { name: "API keys", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "MCP & API", level: 1 })).toBeVisible();
     await expect(page.getByText("The public API, API keys and Zapier are part of Business.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Create API key" })).toHaveCount(0);
 

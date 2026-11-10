@@ -54,7 +54,7 @@ describe("When, on a Facebook Page (GR-29)", () => {
   it("the account field is just 'Account', and the empty link covers both networks", () => {
     renderWithApi(<WhenStep draft={toDefinition(automation())} change={vi.fn()} errors={{}} state="incomplete" accounts={[]} slug="maple" />);
     expect(screen.getByText(/Connect an Instagram account or a Facebook Page to use automations\./)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/connections");
   });
 });
 

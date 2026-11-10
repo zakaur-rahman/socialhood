@@ -128,7 +128,7 @@ export function WhenStep({
               Connect an Instagram account or a Facebook Page to use automations.{" "}
               {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
               <Link
-                href={`/w/${slug}/settings/connections` as Route}
+                href={`/w/${slug}/connections` as Route}
                 className="text-brand-fg underline underline-offset-4"
               >
                 Connect an account

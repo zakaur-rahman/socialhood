@@ -5,11 +5,10 @@ const EVERYONE: readonly Role[] = ["owner", "admin", "agent"];
 export type SettingsSection = { segment: string; label: string; roles: readonly Role[] };
 
 /**
- * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Role visibility is unchanged
+ * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Connections is its own page (C-180). Role visibility is unchanged
  * (C-066). D-08: each tab's label equals its page's title.
  */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
-  { segment: "connections", label: "Connections", roles: EVERYONE },
   { segment: "ai", label: "AI rules and takeover", roles: EVERYONE },
   { segment: "workspace", label: "Workspace", roles: EVERYONE },
   // GR-21: the snippets typed after / in a reply. Everyone reads and uses them; owners and admins edit.
@@ -26,9 +25,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
   // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.
   { segment: "integrations", label: "Integrations", roles: ["owner", "admin"] },
-  // C-165: API keys in their own section (they were a card under Integrations): the public API,
-  // Zapier and AI apps over MCP. Owners and admins, like the keys API (the integrations permission).
-  { segment: "api-keys", label: "API keys", roles: ["owner", "admin"] },
   // GR-19: the team and who did what, for owners and admins (the API enforces members.read and
   // audit.read; the pages also ask the API what the caller may do).
   { segment: "members", label: "Members", roles: ["owner", "admin"] },
@@ -39,6 +35,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
   { segment: "agent", label: "Ask Amplychat", roles: EVERYONE },
   // C-165: Claude, ChatGPT and Codex over MCP. Everyone sees their own connections; owners and
-  // admins also set the mode and see everyone's (the API decides which list each gets).
-  { segment: "ai-apps", label: "Connected AI apps", roles: EVERYONE },
+  // admins also set the mode and see everyone's (the API decides which list each gets). C-180: the
+  // setup steps and the API keys (owners and admins) moved here; /settings/api-keys forwards here.
+  { segment: "ai-apps", label: "MCP & API", roles: EVERYONE },
 ];

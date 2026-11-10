@@ -182,7 +182,7 @@ describe("Composer (UX-INB-07)", () => {
     expect(notice).toHaveAttribute("data-slot", "alert");
     expect(notice).toHaveAttribute("data-variant", "outline");
     const reconnect = screen.getByRole("link", { name: "Reconnect" });
-    expect(reconnect).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(reconnect).toHaveAttribute("href", "/w/maple/connections");
     expect(reconnect).toHaveAttribute("data-variant", "secondary");
     expect(reconnect).toHaveAttribute("data-size", "sm");
   });

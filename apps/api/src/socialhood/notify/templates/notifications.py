@@ -5,7 +5,7 @@ write them plain and specific ("Reconnect @maple.bakery", "@maple.bakery needs r
 keep receiving messages."), so the in-app panel and the email say the same thing. Each template
 adds what the email needs on its own: one line of context, a button that says what it does, and
 why the email came. The data (email_deliveries.data) is what services/notifications stored:
-``title``, ``body``, ``link`` (workspace-relative, e.g. "/settings/connections"),
+``title``, ``body``, ``link`` (workspace-relative, e.g. "/connections"),
 ``workspace_name`` and ``workspace_slug``.
 """
 
@@ -36,7 +36,7 @@ KINDS: dict[str, _Kind] = {
         context="Until it's reconnected, new messages and comments from this account don't reach "
         "Amplychat and replies can't be sent from it.",
         action="Reconnect the account",
-        default_link="/settings/connections",
+        default_link="/connections",
         why="You're getting this because an account in {workspace} needs attention. " + _ALWAYS_ON,
     ),
     EmailTemplate.PAYMENT_PROBLEM: _Kind(

@@ -12,7 +12,7 @@ vi.mock("sonner", () => ({ toast }));
 const nav = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(nav.search),
-  usePathname: () => "/w/maple/settings/connections",
+  usePathname: () => "/w/maple/connections",
   useRouter: () => ({ push: vi.fn(), replace: nav.replace }),
 }));
 
@@ -51,7 +51,7 @@ describe("finishing an Instagram connect (F-03, X-1)", () => {
     expect(calls.find((c) => c.path.endsWith("/instagram/complete"))?.path).toBe(
       "/v1/w/w1/social-accounts/instagram/complete",
     );
-    expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/connections", { scroll: false });
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/connections", { scroll: false });
   });
 
   it.each([
@@ -313,7 +313,7 @@ describe("connecting Facebook Pages (GR-29)", () => {
     });
     expect(await screen.findByRole("list", { name: "Your Facebook Pages" })).toBeInTheDocument();
     expect(calls.find((c) => c.path.endsWith("/facebook/pages"))?.body).toEqual({ nonce: "n0nce" });
-    expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/connections", { scroll: false });
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/connections", { scroll: false });
   });
 
   it("a cancelled Facebook login is explained, and nothing starts on its own", async () => {

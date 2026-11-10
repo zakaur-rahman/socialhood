@@ -100,7 +100,7 @@ export const KEEP_SAFE = [
     body: "List the IP addresses or ranges (IPv4 or IPv6) a key may be used from. A request from anywhere else is refused. You can change the list later.",
   },
   {
-    title: "Revoke in Settings › API keys",
+    title: "Revoke in Settings › MCP & API",
     body: "Anything using the key stops on its next request. The list shows when each key was last used.",
   },
   {

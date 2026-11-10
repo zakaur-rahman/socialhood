@@ -5,6 +5,7 @@ import {
   Funnel,
   House,
   Inbox,
+  Link2,
   MessageSquare,
   Receipt,
   Settings,
@@ -67,14 +68,27 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 
 export const PRIMARY_NAV: readonly NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
 
+// Owner, 2026-11-08 (C-180): Connections is its own page right above Settings, opened like Inbox.
+export const CONNECTIONS_NAV: NavItem = {
+  key: "connections",
+  label: "Connections",
+  icon: Link2,
+  segment: "connections",
+  roles: EVERYONE,
+  href: (s) => route(`/w/${s}/connections`),
+};
+
 export const SETTINGS_NAV: NavItem = {
   key: "settings",
   label: "Settings",
   icon: Settings,
   segment: "settings",
   roles: EVERYONE,
-  href: (s) => route(`/w/${s}/settings/connections`),
+  href: (s) => route(`/w/${s}/settings`),
 };
+
+/** The items at the foot of the sidebar, in order. */
+export const FOOT_NAV: readonly NavItem[] = [CONNECTIONS_NAV, SETTINGS_NAV];
 
 export const BILLING_HREF = (slug: string): Route => route(`/w/${slug}/settings/billing`);
 /** The billing page opened on its Billing tab, where the plans are (C-171). */
@@ -105,6 +119,6 @@ const OTHER_TITLES: Record<string, string> = { ask: "Ask Amplychat" };
 
 export function pageTitle(pathname: string, slug: string): string {
   const segment = activeSegment(pathname, slug);
-  const item = [...PRIMARY_NAV, SETTINGS_NAV].find((i) => i.segment === segment);
+  const item = [...PRIMARY_NAV, ...FOOT_NAV].find((i) => i.segment === segment);
   return item?.label ?? (segment ? OTHER_TITLES[segment] : undefined) ?? "Amplychat";
 }

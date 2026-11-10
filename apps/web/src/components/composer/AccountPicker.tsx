@@ -69,7 +69,7 @@ export function AccountPicker({
   onToggle: (accountId: string) => void;
   slug: string;
 }) {
-  const connectHref = `/w/${slug}/settings/connections` as Route;
+  const connectHref = `/w/${slug}/connections` as Route;
   const identities = useMemo(() => instagramAccountColors(accounts), [accounts]);
   return (
     <Section id="composer-accounts" title="Accounts" tabIndex={-1}>

@@ -15,7 +15,7 @@ describe("inline links in the editor's steps", () => {
       <WhenStep draft={toDefinition(automation())} change={vi.fn()} errors={{}} state="incomplete" accounts={[]} slug="maple" />,
     );
     const link = screen.getByRole("link", { name: "Connect an account" });
-    expect(link).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(link).toHaveAttribute("href", "/w/maple/connections");
     expect(link).toHaveClass("underline");
   });
 

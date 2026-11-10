@@ -191,7 +191,7 @@ function NoAccounts() {
       size="compact"
       title="No Instagram account"
       action={
-        <Link href={`/w/${schedule.slug}/settings/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+        <Link href={`/w/${schedule.slug}/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
           Connect an Instagram account
         </Link>
       }

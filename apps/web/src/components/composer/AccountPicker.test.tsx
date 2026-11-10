@@ -33,12 +33,12 @@ describe("AccountPicker (UX-SCR-13 Accounts)", () => {
     const chip = screen.getByRole("button", { name: "@maple.bakery" });
     expect(chip).toBeDisabled();
     expect(chip).toHaveAccessibleDescription("Reconnect to allow publishing · Reconnect");
-    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/connections");
   });
 
   it("points to Connections when no Instagram account is connected", () => {
     render(<AccountPicker accounts={[]} loading={false} selected={[]} onToggle={vi.fn()} slug="maple" />);
-    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/connections");
   });
 
   it("colours each account as Schedule does: by its order, not its id (UI-032)", () => {

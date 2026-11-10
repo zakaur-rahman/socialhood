@@ -86,7 +86,7 @@ def href_for(
 ) -> str | None:
     """The link inside the workspace for an action's target (the web adds /w/{slug})."""
     if target == "connections":
-        return "/settings/connections"
+        return "/connections"
     if target == "billing":
         return "/settings/billing"
     if target == "integrations":

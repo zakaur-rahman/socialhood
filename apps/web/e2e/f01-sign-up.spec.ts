@@ -51,7 +51,7 @@ test.describe("F-01 sign up and first run", () => {
     await expect(steps.nth(1).getByRole("link")).toHaveCount(0);
 
     await connect.click();
-    await expect(page).toHaveURL(/\/w\/[^/]+\/settings\/connections$/);
+    await expect(page).toHaveURL(/\/w\/[^/]+\/connections$/);
     await expect(page.getByRole("heading", { name: "Connections", level: 1 })).toBeVisible();
   });
 });

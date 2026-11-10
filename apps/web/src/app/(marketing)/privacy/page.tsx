@@ -247,7 +247,7 @@ function sections(): LegalSection[] {
               What was already stored stays in the workspace until the business deletes it.
             </li>
             <li>
-              Deleting an account&apos;s data (Disconnect and delete data, in Settings → Connections), deleting the
+              Deleting an account&apos;s data (Delete account and data, in Connections), deleting the
               workspace, or a deletion request through Instagram or Facebook removes everything stored for the account
               within 24 hours. Raw events from Meta are deleted after 30 days in any case.
             </li>
@@ -333,7 +333,7 @@ function sections(): LegalSection[] {
               <strong>The AI provider is the member&apos;s choice.</strong> What the AI app receives is processed by that
               app&apos;s provider (for example Anthropic or OpenAI) under the member&apos;s own agreement with them, not on{" "}
               {N}&apos;s behalf. That provider is not one of our subprocessors. A business decides whether its members may
-              connect AI apps at all: Settings → Connected AI apps can turn this off, or limit it to reading and drafts.
+              connect AI apps at all: Settings → MCP & API can turn this off, or limit it to reading and drafts.
             </li>
             <li>
               <strong>What we never receive.</strong> Your conversation with the AI app. We only see the tool calls it makes
@@ -361,9 +361,9 @@ function sections(): LegalSection[] {
             </li>
           </ul>
           <p>
-            A member can disconnect an AI app at any time in Settings → Connected AI apps; owners and admins can disconnect
+            A member can disconnect an AI app at any time in Settings → MCP & API; owners and admins can disconnect
             anyone&apos;s, or all of them at once. It stops working on its next request. A connection also ends after 30
-            days without use, and after 180 days in any case. Revoking an API key in Settings → API keys stops it at once.
+            days without use, and after 180 days in any case. Revoking an API key in Settings → MCP & API stops it at once.
           </p>
         </>
       ),
@@ -611,12 +611,12 @@ function sections(): LegalSection[] {
               deleted the same way.
             </li>
             <li>
-              <strong>Disconnect an account</strong> (Settings → Connections). Its access token is deleted at once and no new
+              <strong>Disconnect an account</strong> (Connections). Its access token is deleted at once and no new
               messages or comments arrive for it. What was already stored stays in the workspace until you delete it.
             </li>
             <li>
-              <strong>Delete an account&apos;s data</strong> (Settings → Connections, owners and admins: Disconnect and delete
-              data, or Remove for an account already disconnected). The account is disconnected at once, then everything
+              <strong>Delete an account&apos;s data</strong> (Connections, owners and admins: Delete account and
+              data, in the account&apos;s menu). The account is disconnected at once, then everything
               stored for it is permanently deleted within 24 hours: its conversations and messages with their AI analysis
               and suggested replies, its contacts, its comments, its posts and their statistics, the automations and
               scheduled messages and posts for it, the photos and files received or sent in its messages, and the account

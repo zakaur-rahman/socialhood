@@ -25,7 +25,7 @@ describe("/app resolver (F-01, F-02)", () => {
     // Any other plan value is ignored.
     expect(resolveDestination("maple", [account()], null, null, "max")).toBe("/w/maple/inbox");
     // A failed connect link still wins.
-    expect(resolveDestination("maple", [], "state_invalid", null, "pro")).toBe("/w/maple/settings/connections?error=state_invalid");
+    expect(resolveDestination("maple", [], "state_invalid", null, "pro")).toBe("/w/maple/connections?error=state_invalid");
   });
 
   it("opens the inbox once an account is connected", () => {
@@ -41,7 +41,7 @@ describe("/app resolver (F-01, F-02)", () => {
   it("waits for the accounts, except for an expired connect link", () => {
     expect(resolveDestination("maple", undefined, null)).toBeNull();
     expect(resolveDestination("maple", undefined, "state_invalid")).toBe(
-      "/w/maple/settings/connections?error=state_invalid",
+      "/w/maple/connections?error=state_invalid",
     );
   });
 });

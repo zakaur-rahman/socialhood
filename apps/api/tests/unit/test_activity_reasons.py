@@ -20,8 +20,8 @@ AUTO = uuid.UUID("00000000-0000-4000-8000-0000000a0701")
 @pytest.mark.parametrize(
     ("code", "label", "href"),
     [
-        ("account_needs_reconnect", "Reconnect Instagram", "/settings/connections"),
-        ("capability_unavailable", "Reconnect Instagram", "/settings/connections"),
+        ("account_needs_reconnect", "Reconnect Instagram", "/connections"),
+        ("capability_unavailable", "Reconnect Instagram", "/connections"),
         ("read_only", "Upgrade", "/settings/billing"),
         ("entitlement_required", "Upgrade", "/settings/billing"),
         ("quota_exceeded", "Upgrade", "/settings/billing"),

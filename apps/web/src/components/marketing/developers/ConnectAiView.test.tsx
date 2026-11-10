@@ -26,7 +26,7 @@ describe("/developers/mcp (C-165)", () => {
     const links = screen.getAllByRole("link", { name: "Using an API key instead" });
     expect(links).toHaveLength(2);
     for (const link of links) expect(link).toHaveAttribute("href", "/developers/mcp/api-key");
-    expect(screen.getByText(/API key from Settings › API keys/)).toBeInTheDocument();
+    expect(screen.getByText(/API key from Settings › MCP & API/)).toBeInTheDocument();
     expect(screen.queryByText(/Settings › Integrations/)).toBeNull();
   });
 

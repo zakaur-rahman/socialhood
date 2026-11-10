@@ -65,4 +65,4 @@ and carries on, and the number still sends. A failed webhook subscription shows 
 - Messages reach the API through the WhatsApp webhook, so locally run `pnpm tunnel` and set the
   app's WhatsApp webhook (WhatsApp → Configuration) to `<tunnel URL>/webhooks/whatsapp` with
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, subscribed to `messages`.
-- To remove the number, disconnect it in Settings → Connections.
+- To remove the number, disconnect it in Connections.

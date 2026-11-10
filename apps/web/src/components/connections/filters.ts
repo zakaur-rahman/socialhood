@@ -1,6 +1,6 @@
 import type { SocialAccount } from "@/lib/api/types";
 
-/** Settings → Connections' segmented filter (C-066). Sandboxes overlap the other two. */
+/** Connections' segmented filter (C-066). Sandboxes overlap the other two. */
 export type AccountFilter = "all" | "connected" | "disconnected" | "sandbox";
 
 export const ACCOUNT_FILTERS: readonly { value: AccountFilter; label: string }[] = [

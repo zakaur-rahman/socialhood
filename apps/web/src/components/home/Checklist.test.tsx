@@ -17,7 +17,7 @@ describe("Checklist (FR-ACC-04)", () => {
     render(<Checklist steps={steps()} slug="aria" onDismiss={() => {}} />);
     expect(screen.getByText("0 of 4 done")).toBeInTheDocument();
     const action = screen.getByRole("link", { name: "Connect an account" });
-    expect(action).toHaveAttribute("href", "/w/aria/settings/connections");
+    expect(action).toHaveAttribute("href", "/w/aria/connections");
     expect(screen.queryByRole("link", { name: "Add knowledge" })).not.toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe("Checklist (FR-ACC-04)", () => {
     render(
       <Checklist steps={steps({ connect_account: true, add_knowledge: true })} slug="aria" onDismiss={() => {}} />,
     );
-    expect(screen.getByRole("link", { name: "Choose a mode" })).toHaveAttribute("href", "/w/aria/settings/connections");
+    expect(screen.getByRole("link", { name: "Choose a mode" })).toHaveAttribute("href", "/w/aria/connections");
   });
 
   it("folds done steps into one row that opens on request (UI-058)", async () => {

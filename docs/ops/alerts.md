@@ -135,7 +135,7 @@ the launch checklist's "break the staging endpoint for 10 minutes". Stop the loo
 Staging runs with `SANDBOX_PLATFORM_ENABLED=true`, whose account fails any send containing
 `[sandbox:fail=<code>]`:
 
-1. Settings → Connections → **Add sandbox account**; create a conversation with
+1. Connections → **Add sandbox account**; create a conversation with
    `POST /v1/w/{wid}/dev/sandbox/inbound` (or the dev panel).
 2. In that conversation send 12 replies within 15 minutes, 10 of them containing
    `[sandbox:fail=platform_rejected]`.
