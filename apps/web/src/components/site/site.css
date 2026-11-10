@@ -3121,6 +3121,8 @@ body:has(.site) {
     & .pd-seg > i:not(.pd-count) { flex: none; width: 8px; height: 8px; border-radius: 50%; }
     & .pd-strip .pd-seg { flex: 1 1 auto; padding-inline: 6px; }
     & .pd-seg-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    & .pd-seg-mark { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--color-on-brand); }
+    & .pd-seg-mark svg { width: 12px; height: 12px; }
     & [data-strip="all"] [data-seg="all"], & [data-strip="instagram"] [data-seg="instagram"], & [data-strip="whatsapp"] [data-seg="whatsapp"],
     & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-segment); color: var(--app-fg); }
     & .pd-list-h { padding: var(--space-3) var(--space-3) 0; }

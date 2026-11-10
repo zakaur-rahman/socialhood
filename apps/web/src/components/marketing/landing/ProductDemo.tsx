@@ -232,8 +232,17 @@ function ListPane() {
         <div className="pd-track">
           {STRIP.map(({ key, label }) => (
             <span key={key} className="pd-seg" data-seg={key} {...at(`seg-${key}`)}>
-              {key === "all" ? <Layers className="size-3.5" /> : <i className={PLATFORM_LOGO_BG[key]} />}
-              <span className="pd-seg-t">{label}</span>
+              {/* As the app's PlatformStrip: "All" in words, each platform as its mark on its colours (C-188). */}
+              {key === "all" ? (
+                <>
+                  <Layers className="size-3.5" />
+                  <span className="pd-seg-t">{label}</span>
+                </>
+              ) : (
+                <span className={`pd-seg-mark ${PLATFORM_LOGO_BG[key]}`} title={label}>
+                  <PlatformGlyph platform={key} />
+                </span>
+              )}
             </span>
           ))}
         </div>
