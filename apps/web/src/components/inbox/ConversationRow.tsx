@@ -86,11 +86,12 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
       <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
-          <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", unread ? "text-fg" : "text-fg-secondary")}>
+          {/* The handle follows the name, left-aligned; the name keeps its room until the handle is down to 4 rem. */}
+          <span className={cn("min-w-0 truncate text-sm font-semibold", !accountLabel && "flex-1", unread ? "text-fg" : "text-fg-secondary")}>
             {name}
           </span>
           {accountLabel ? (
-            <span className="max-w-24 min-w-0 truncate text-xs text-fg-secondary" data-testid="row-account">
+            <span className="min-w-16 flex-1 truncate text-xs text-fg-secondary" data-testid="row-account">
               {accountLabel}
             </span>
           ) : null}
