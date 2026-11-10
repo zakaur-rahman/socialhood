@@ -645,6 +645,30 @@ async def test_a_status_message_that_cannot_go_says_why_and_the_change_still_hap
     assert sent_audit[0]["detail"]["sent"] is False
 
 
+async def test_in_human_agents_week_only_the_members_own_words_go(
+    ws: Ws, engine: AsyncEngine, app: FastAPI
+) -> None:
+    """The default wording is an automatic notice, which the Human Agent tag isn't for (C-190)."""
+    app.state.settings.ig_human_agent_enabled = True
+    order, _ = await order_in_chat(ws, engine)
+    async with engine.begin() as conn:
+        from sqlalchemy import text
+
+        await conn.execute(
+            text("UPDATE conversations SET last_inbound_at = :t"),
+            {"t": datetime.now(UTC) - timedelta(days=2)},
+        )
+    paid = await ws.ok("POST", f"/orders/{order['id']}/mark-paid", json={"notice": {}})
+    assert (paid["status"], paid["notice"]["sent"]) == ("paid", False)
+    assert "Write your own message" in paid["notice"]["reason"]
+    assert await rows(engine, "SELECT id FROM messages WHERE direction = 'outbound'") == []
+
+    shipped = await ws.ok(
+        "POST", f"/orders/{order['id']}/fulfil", json={"notice": {"message": "Sent it today!"}}
+    )
+    assert shipped["notice"] == {"sent": True, "reason": None}
+
+
 async def test_a_cancel_can_carry_a_message_and_still_works_without_a_body(
     ws: Ws, engine: AsyncEngine
 ) -> None:

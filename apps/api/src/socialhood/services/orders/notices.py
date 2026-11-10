@@ -11,8 +11,9 @@ is made first, and the answer says whether the message went and, if not, why.
   its variables are filled in this order: the customer's first name, the order number, the order
   total, the new status in words. A template with more variables than that can't be used. With no
   template chosen the message is not sent, and the answer says what to do.
-- **Outside it on Instagram or Messenger** nothing can be sent (Human Agent applies for a
-  member's message, as everywhere: ``queue_outbound`` decides).
+- **Outside it on Instagram or Messenger** the default wording never goes. For seven days Human
+  Agent lets a person's own reply through, so the member's own message is sent and the default
+  one is not (it is an automatic notice, which the tag isn't for, C-190). After that nothing goes.
 - An order with no conversation, or one whose account needs reconnecting, says so.
 """
 
@@ -28,6 +29,7 @@ from socialhood.errors import ApiError
 from socialhood.models.inbox import Contact, Conversation
 from socialhood.models.orders import Order
 from socialhood.platforms.base import OutboundTemplate
+from socialhood.platforms.capabilities import Capability
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.repositories import inbox
 from socialhood.repositories import social_accounts as accounts
@@ -36,6 +38,7 @@ from socialhood.services import sending, whatsapp_templates
 from socialhood.services.automations import actions
 from socialhood.services.catalogue import money
 from socialhood.services.orders import orders
+from socialhood.services.reply_window import reply_window
 
 # The variables a template can carry: first name, order number, total, status in words.
 MAX_VARIABLES = 4
@@ -48,6 +51,10 @@ COPY = {
     "window_closed": (
         "The messaging window has closed. {channel} only allows messages for 24 hours after the "
         "customer writes."
+    ),
+    "own_words": (
+        "The 24-hour window has closed. For 7 days {channel} still allows a reply you write "
+        "yourself, but not this automatic message. Write your own message to send the update."
     ),
     "not_utility": "Only an approved utility template can carry an order update.",
     "too_many": "That template needs more details than an order update can fill in. "
@@ -110,7 +117,13 @@ async def send(
     conv = await inbox.get_conversation(session, order.conversation_id)
     if conv is None:
         return NoticeOut(sent=False, reason=COPY["no_conversation"])
-    text = (notice.message or "").strip() or default_text(order, event, amount_minor=amount_minor)
+    own = (notice.message or "").strip()
+    if not own and await _human_agent_only(session, deps, conv, now):
+        return NoticeOut(
+            sent=False,
+            reason=COPY["own_words"].format(channel=CHANNEL.get(conv.platform, "This channel")),
+        )
+    text = own or default_text(order, event, amount_minor=amount_minor)
     try:
         async with session.begin_nested():
             await sending.queue_outbound(
@@ -147,6 +160,21 @@ async def send(
         user_id=user_id,
         now=now,
     )
+
+
+async def _human_agent_only(
+    session: AsyncSession, deps: PlatformDeps, conv: Conversation, now: datetime
+) -> bool:
+    """Past 24 hours, with only Human Agent's seven days left (a person's own reply)."""
+    acct = await accounts.get(session, conv.social_account_id)
+    if acct is None:
+        return False
+    try:
+        human_agent = Capability.HUMAN_AGENT in sending.capabilities(acct, deps)
+    except ApiError:
+        return False  # queue_outbound reports it
+    window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
+    return window.state == "human_agent"
 
 
 async def _template(

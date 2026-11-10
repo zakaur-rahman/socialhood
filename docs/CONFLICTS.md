@@ -9752,3 +9752,13 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   resume when the customer writes again." The modes stay selectable.
 - **Kept:** AI polish in the reply box stays. A person writes the text, reviews the rewrite and
   sends it.
+
+## C-190 · Order updates in the Human Agent week need the member's own words (owner said do your best, 2026-11-11)
+
+- **Rule:** on Instagram and Messenger, between 24 hours and 7 days after the customer last wrote,
+  an order update with the default wording is not sent. The answer says to write your own message.
+  A message the member wrote goes, with the Human Agent tag. The status change happens either way.
+- **Why:** the tag is for a person answering a customer. The default text is an automatic notice,
+  and sending those under the tag risks the permission Meta is reviewing.
+- **Payment links stay as they are.** A member makes the link by hand in a buying conversation.
+- **WhatsApp is unchanged:** after 24 hours it needs an approved utility template.
