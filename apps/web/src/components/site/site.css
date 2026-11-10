@@ -2826,12 +2826,24 @@ body:has(.site) {
   .site .cx {
     & .cx-url { margin-top: var(--space-6); max-width: 40rem; }
     & .cx-url-label { margin: 0 0 var(--space-2); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 600; color: var(--s-text-3); }
-    & .cx-code {
-      margin: var(--space-2) 0 0; padding: var(--space-3) var(--space-4); overflow-x: auto; overscroll-behavior-x: contain;
+    /* The box is the wrapper: the text scrolls in its own column, so it never runs behind the copy button. */
+    & .cx-code-wrap {
+      display: flex; align-items: flex-start; margin-top: var(--space-2);
       background: var(--s-surface-2); border: 1px solid var(--s-line); border-radius: var(--r-md);
+    }
+    & .cx-code {
+      flex: 1; min-width: 0; margin: 0; padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4); overflow-x: auto; overscroll-behavior-x: contain;
       font-family: var(--font-mono); font-size: var(--fs-caption); line-height: 1.6; color: var(--s-text); white-space: pre;
     }
     & .cx-code code { font: inherit; }
+    & .cx-copy {
+      flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: var(--space-1);
+      border: 0; border-radius: var(--r-sm); background: transparent; color: var(--s-text-2); cursor: pointer;
+      transition: background-color var(--dur-quick) var(--ease), color var(--dur-quick) var(--ease);
+    }
+    & .cx-copy svg { width: 16px; height: 16px; }
+    @media (hover: hover) { & .cx-copy:hover { background: var(--s-hover); color: var(--s-text); } }
+    @media (pointer: coarse) { & .cx-copy { width: 40px; height: 40px; margin: 0; } }
 
     & .cx-jump { display: flex; flex-wrap: wrap; gap: var(--space-2); }
     & .cx-jump a {
@@ -3109,6 +3121,8 @@ body:has(.site) {
     & .pd-seg > i:not(.pd-count) { flex: none; width: 8px; height: 8px; border-radius: 50%; }
     & .pd-strip .pd-seg { flex: 1 1 auto; padding-inline: 6px; }
     & .pd-seg-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    & .pd-seg-mark { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--color-on-brand); }
+    & .pd-seg-mark svg { width: 12px; height: 12px; }
     & [data-strip="all"] [data-seg="all"], & [data-strip="instagram"] [data-seg="instagram"], & [data-strip="whatsapp"] [data-seg="whatsapp"],
     & [data-tab="chats"] [data-tab-seg="chats"], & [data-tab="scheduled"] [data-tab-seg="scheduled"] { background: var(--app-segment); color: var(--app-fg); }
     & .pd-list-h { padding: var(--space-3) var(--space-3) 0; }
@@ -3133,7 +3147,9 @@ body:has(.site) {
     & .pd-opt svg { opacity: 0; }
     & [data-acct="all"] [data-opt="all"] svg, & [data-acct="mumbai"] [data-opt="mumbai"] svg, & [data-acct="pune"] [data-opt="pune"] svg { opacity: 1; }
     & [data-acct-show] { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    & .pd-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3); }
+    /* One row, cut off with a fade, as the app's view chips (C-188). */
+    & .pd-chips-row { display: flex; flex-wrap: nowrap; overflow: hidden; gap: 6px; margin-top: var(--space-3); mask-image: linear-gradient(to right, var(--ink) calc(100% - 1rem), transparent); }
+    & .pd-chips-row > * { flex: none; }
     & .pd-chip { display: inline-flex; align-items: center; gap: var(--space-1); height: 28px; padding: 0 var(--space-3); border: 1px solid var(--app-line); border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; color: var(--app-fg-2); white-space: nowrap; }
     & .pd-chip-on { border-color: var(--app-line-strong); background: var(--app-raised); color: var(--app-fg); }
     & .pd-rows { position: relative; flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
@@ -3421,7 +3437,6 @@ body:has(.site) {
       & .pd-inbox { grid-template-columns: minmax(0, 1fr); }
       & .pd-list { border-right: 0; }
       & .pd-list-tools { margin-left: auto; }
-      & .pd-chips-row { flex-wrap: nowrap; overflow: hidden; }
       & .pd-back { display: block; }
       & .pd-act-far, & .pd-left, & .pd-send-t { display: none; }
       & .pd-head { padding: 0 var(--space-3); gap: var(--space-2); }

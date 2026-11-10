@@ -52,11 +52,12 @@ export const MATRIX: MatrixGroup[] = [
         note: "Free: any 2 of Instagram, Facebook or web chat. Paid plans limit accounts per platform instead.",
       },
       { key: "whatsapp", label: "WhatsApp", format: { kind: "flag" } },
+      { key: "instagram_accounts", label: "Instagram accounts", format: { kind: "count" } },
       {
         key: "accounts_per_platform",
-        label: "Accounts per platform",
+        label: "WhatsApp numbers and Facebook Pages",
         format: { kind: "count" },
-        note: "Instagram, WhatsApp and Facebook Pages each count on their own. One web chat per workspace.",
+        note: "Each of these counts on its own. One web chat per workspace.",
       },
       { key: "members", label: "Team members", format: { kind: "count" }, note: "The owner and any pending invitation count." },
       { key: "message_history_days", label: "Message history", format: { kind: "days" } },
@@ -108,6 +109,7 @@ export const MATRIX: MatrixGroup[] = [
     rows: [
       { key: "scheduled_posts_monthly", label: "Scheduled posts a month", format: { kind: "count" } },
       { key: "widget_conversations_daily", label: "New website chats a day", format: { kind: "count" } },
+      { key: "widget_sites", label: "Websites the chat can run on", format: { kind: "count" } },
       { key: "widget_remove_branding", label: "Remove Powered by Amplychat", format: { kind: "flag" } },
     ],
   },

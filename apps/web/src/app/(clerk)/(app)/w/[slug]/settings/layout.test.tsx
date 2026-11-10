@@ -28,7 +28,6 @@ describe("Settings rail (UX-SCR-07)", () => {
     const { nav, links } = rail("owner");
     expect(within(nav).getAllByRole("heading").map((h) => h.textContent)).toEqual([
       "Workspace",
-      "Channels",
       "Automation and AI",
       "Admin",
       "Just for you",
@@ -37,7 +36,6 @@ describe("Settings rail (UX-SCR-07)", () => {
       "Workspace",
       "Members",
       "Business hours",
-      "Website chat",
       "AI rules and takeover",
       "Saved replies",
       "Ask Amplychat",

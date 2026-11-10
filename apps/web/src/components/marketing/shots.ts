@@ -14,8 +14,8 @@ export const SHOTS = {
   },
   connect: {
     src: "/marketing/connect.webp",
-    width: 840,
-    height: 770,
+    width: 1128,
+    height: 718,
     alt: "A connected Instagram account in Connections, with AI replies set to Suggest and AI analysis on.",
   },
   knowledge: {
@@ -26,14 +26,14 @@ export const SHOTS = {
   },
   aiDraft: {
     src: "/marketing/ai-draft.webp",
-    width: 1036,
-    height: 1092,
+    width: 1040,
+    height: 1096,
     alt: "A conversation with an AI draft above the reply box, with Send, Insert and Draft again.",
   },
   automationPreview: {
     src: "/marketing/automation-preview.webp",
-    width: 612,
-    height: 1156,
+    width: 680,
+    height: 1118,
     alt: "The automation editor's preview: a comment saying LINK, the public reply “Sent you a DM!”, a DM with a “Send me the link” button, the link after the tap, and a follow invitation sent only to people who don't follow.",
   },
 } satisfies Record<string, Shot>;

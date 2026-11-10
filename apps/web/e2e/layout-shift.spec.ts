@@ -38,7 +38,7 @@ const PAGES = [
   "settings/replies",
   "settings/integrations",
   "settings/notifications",
-  "settings/widget",
+  "connections/website",
   "settings/activity",
   "settings/appearance",
 ] as const;

@@ -1,7 +1,9 @@
 """Which sites may show a workspace's widget (GR-28). Pure functions.
 
-Allowed domains are host names: ``example.com``, ``shop.example.com`` or ``*.example.com`` (any
-subdomain, not the bare domain). Entries are stored lower case without scheme, port, path or a
+Allowed domains are host names: ``example.com``, ``shop.example.com`` or ``*.example.com`` (the
+domain and any subdomain, so one entry covers a business's whole site, C-189). A wildcard on a
+shared address (``*.myshopify.com``, ``*.co.uk``) is refused: it would cover everyone's sites, and
+the plan counts it as one (C-185). Entries are stored lower case without scheme, port, path or a
 trailing dot, so a pasted address (``https://Example.com/contact``) is cleaned, not refused. A
 bare domain also covers its ``www.`` form, because the two are the same site to everyone who
 types them. ``localhost`` and IP addresses are accepted for testing.
@@ -23,6 +25,89 @@ _LABEL = r"(?!-)[a-z0-9-]{1,63}(?<!-)"
 _HOST = re.compile(rf"^(\*\.)?({_LABEL}\.)*{_LABEL}$")
 _PORT = re.compile(r":\d{1,5}$")
 BAD_DOMAIN = "Enter a domain like example.com."
+
+# Addresses many unrelated sites share: hosting platforms' and shops' subdomains, and country
+# endings people register under. shortcut: a hand-kept list, not the Public Suffix List; move to
+# the PSL if someone gets round it with a host that isn't here.
+SHARED_HOSTS = frozenset(
+    {
+        # Shops, site builders and hosting that give every customer a subdomain.
+        "myshopify.com",
+        "wixsite.com",
+        "squarespace.com",
+        "webflow.io",
+        "framer.website",
+        "framer.app",
+        "carrd.co",
+        "godaddysites.com",
+        "square.site",
+        "weebly.com",
+        "mystrikingly.com",
+        "wordpress.com",
+        "blogspot.com",
+        "tumblr.com",
+        "substack.com",
+        "notion.site",
+        "bigcartel.com",
+        "myinstamojo.com",
+        "mydukaan.io",
+        "vercel.app",
+        "netlify.app",
+        "github.io",
+        "gitlab.io",
+        "pages.dev",
+        "workers.dev",
+        "web.app",
+        "firebaseapp.com",
+        "herokuapp.com",
+        "onrender.com",
+        "fly.dev",
+        "azurewebsites.net",
+        "cloudfront.net",
+        "appspot.com",
+        "replit.app",
+        "glitch.me",
+        # Country endings with a second level that anyone registers under.
+        "co.uk",
+        "org.uk",
+        "me.uk",
+        "ac.uk",
+        "gov.uk",
+        "com.au",
+        "net.au",
+        "org.au",
+        "co.in",
+        "net.in",
+        "org.in",
+        "firm.in",
+        "gen.in",
+        "ind.in",
+        "co.nz",
+        "co.za",
+        "com.br",
+        "com.mx",
+        "com.sg",
+        "com.my",
+        "co.jp",
+        "co.kr",
+        "com.tr",
+        "com.ar",
+        "com.cn",
+        "com.hk",
+        "com.tw",
+        "com.pk",
+        "com.bd",
+        "com.ng",
+        "co.ke",
+        "com.ph",
+        "co.id",
+        "com.vn",
+        "com.eg",
+        "com.sa",
+        "co.th",
+        "com.co",
+    }
+)
 
 
 def normalize_domain(value: str) -> str:
@@ -48,6 +133,11 @@ def normalize_domain(value: str) -> str:
         raise ValueError(BAD_DOMAIN)
     if host.startswith("*.") and "." not in host[2:]:
         raise ValueError("A wildcard needs a full domain, like *.example.com.")
+    if host.startswith("*.") and host[2:] in SHARED_HOSTS:
+        raise ValueError(
+            f"{host} covers everyone's sites on {host[2:]}, not just yours. "
+            f"Add your own address instead, like yourshop.{host[2:]}."
+        )
     return host
 
 
@@ -99,7 +189,7 @@ def host_allowed(host: str | None, domains: list[str]) -> bool:
     host = host.lower()
     for entry in domains:
         if entry.startswith("*."):
-            if host.endswith(entry[1:]) and len(host) > len(entry) - 1:
+            if host == entry[2:] or (host.endswith(entry[1:]) and len(host) > len(entry) - 1):
                 return True
         elif host == entry or host == f"www.{entry}":
             return True
@@ -112,7 +202,7 @@ def frame_ancestors(domains: list[str]) -> str:
     sources: list[str] = []
     for entry in domains:
         if entry.startswith("*."):
-            sources.append(f"https://{entry}")
+            sources.extend((f"https://{entry[2:]}", f"https://{entry}"))
         elif _is_local(entry):
             sources.extend((f"http://{entry}:*", f"https://{entry}:*"))
         else:

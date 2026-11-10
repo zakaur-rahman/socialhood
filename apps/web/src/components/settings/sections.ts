@@ -5,7 +5,7 @@ const EVERYONE: readonly Role[] = ["owner", "admin", "agent"];
 export type SettingsSection = { segment: string; label: string; roles: readonly Role[] };
 
 /**
- * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Connections is its own page (C-180). Role visibility is unchanged
+ * UX-SCR-07 sections in the spec's order, then Ask Amplychat. Connections is its own page (C-180), with Website chat (C-183). Role visibility is unchanged
  * (C-066). D-08: each tab's label equals its page's title.
  */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
@@ -15,8 +15,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "replies", label: "Saved replies", roles: EVERYONE },
   // GR-22: when the workspace is open, the away message and Auto mode's hours (agents read them).
   { segment: "hours", label: "Business hours", roles: EVERYONE },
-  // GR-28: the website chat widget, for owners and admins like the settings route (it makes the widget).
-  { segment: "widget", label: "Website chat", roles: ["owner", "admin"] },
   // T8.6: every member's own digest and push settings.
   { segment: "notifications", label: "Notifications", roles: EVERYONE },
   // C-129: the member's own theme (Dark, Light, System), kept in a cookie on this browser.

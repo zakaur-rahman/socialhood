@@ -64,7 +64,7 @@ export function UpgradeDialog() {
     { ...shown, limit: limitFor(shown, state) },
     { plan: state?.plan ?? null, resetsOn: credits?.period_end ?? null },
   );
-  const target = upgradeTarget(shown.entitlement);
+  const target = upgradeTarget(shown.entitlement, state?.plan);
   const pro = plans.data?.items.find((item) => item.plan === target);
   const offer = canStartCheckout(state) ? proOffer(shown, pro) : null;
   const price = priceOf(target, state, plans.data?.items);

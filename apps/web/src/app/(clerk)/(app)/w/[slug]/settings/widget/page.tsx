@@ -1,10 +1,8 @@
-import type { Metadata } from "next";
+import type { Route } from "next";
+import { redirect } from "next/navigation";
 
-import { WidgetSettingsPage } from "@/components/widget/WidgetSettingsPage";
-
-export const metadata: Metadata = { title: "Website chat" };
-
-/** GR-28: the website chat widget's sites, look, visitor form and branding. */
-export default function WidgetRoute() {
-  return <WidgetSettingsPage />;
+/** C-183: Website chat moved to Connections; old links and bookmarks land there. */
+export default async function OldWidgetRoute({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  redirect(`/w/${slug}/connections/website` as Route);
 }

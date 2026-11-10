@@ -4,7 +4,6 @@ import {
   Bot,
   Building2,
   CreditCard,
-  Globe,
   MessageSquareText,
   MoreHorizontal,
   Palette,
@@ -48,11 +47,6 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
     icon: Timer,
     description: "Open hours and the away message",
     keywords: ["schedule", "away", "opening", "time"],
-  },
-  widget: {
-    icon: Globe,
-    description: "Chat widget for your website",
-    keywords: ["website", "embed", "chat", "install"],
   },
   ai: {
     icon: Sparkles,
@@ -119,7 +113,6 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
     label: "Workspace",
     segments: ["workspace", "members", "hours"],
   },
-  { id: "channels", label: "Channels", segments: ["widget"] },
   {
     id: "automation",
     label: "Automation and AI",

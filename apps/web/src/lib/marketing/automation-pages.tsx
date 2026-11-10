@@ -419,7 +419,7 @@ const STORY_REPLIES: AutomationPage = {
   updated: "2026-10-31",
   sections: ["How it works in Amplychat", "Meta's rules for story messages", "Set it up", "An example", "See what it does", "Mistakes to avoid"],
   Body: StoryRepliesBody,
-  limits: [ROW_AUTOMATIONS, ROW_STEPS, { label: "Instagram accounts", free: `Any ${E.channels_total.free} of Instagram, Facebook or web chat`, pro: `${E.accounts_per_platform.pro}`, max: `${E.accounts_per_platform.max}` }],
+  limits: [ROW_AUTOMATIONS, ROW_STEPS, { label: "Instagram accounts", free: `Any ${E.channels_total.free} of Instagram, Facebook or web chat`, pro: `${E.instagram_accounts.pro}`, max: `${E.instagram_accounts.max}` }],
   credits: [CREDIT_FIXED, CREDIT_AUTOMATION_AI, CREDIT_READ],
   faq: [
     {
@@ -902,8 +902,8 @@ function WebsiteChatBody() {
       <GuideH2>How it works in Amplychat</GuideH2>
       <StepCards
         items={[
-          // WidgetSettingsPage: one line of code before </body>; widget_settings.allowed_domains (up to 20).
-          { icon: PanelsTopLeft, body: <><strong>One line of code</strong> on your site, and a list of up to 20 domains where it may load. It refuses to load anywhere else.</> },
+          // WidgetSettingsPage: one line of code before </body>; plans.py widget_sites.
+          { icon: PanelsTopLeft, body: <><strong>One line of code</strong> on your site, and a list of the sites where it may load: {E.widget_sites.pro} on Free and Creator, {E.widget_sites.max} on Business, {E.widget_sites.agency} on Agency. It refuses to load anywhere else.</> },
           // widget_settings: title, greeting, accent colour, left or right.
           { icon: MessageCircle, body: <><strong>Your look</strong>: the title, the greeting, your colour, and the left or right corner.</> },
           // email_capture off / optional / required; marketing consent with the words shown as evidence.
@@ -952,7 +952,7 @@ function WebsiteChatBody() {
 
       <GuideH2>Set it up</GuideH2>
       <Checklist>
-        <li>Open Settings, then Website chat, and set the title, greeting and colour.</li>
+        <li>Open Connections, then Website chat, and set the title, greeting and colour.</li>
         <li>Add the domains where the widget may load.</li>
         <li>Copy the line of code and paste it before the closing body tag of your site.</li>
         <li>Choose when to ask for an email, and add your website&apos;s pages to the knowledge.</li>
@@ -1004,6 +1004,7 @@ const WEBSITE_CHAT: AutomationPage = {
   Body: WebsiteChatBody,
   limits: [
     planRow("New website chats a day", "widget_conversations_daily"),
+    planRow("Websites the chat can run on", "widget_sites"),
     ROW_MODES,
     planRow("Website pages read", "crawl_pages"),
     planRow("Remove “Powered by”", "widget_remove_branding"),
@@ -1022,7 +1023,7 @@ const WEBSITE_CHAT: AutomationPage = {
     {
       question: "Can I put the same chat on more than one site?",
       answer:
-        "Yes. List up to 20 domains in the widget's settings, including every subdomain of one with a wildcard such as *.example.com. The chats from all of them arrive in the same inbox.",
+        `Yes, on Business and Agency. Free and Creator cover ${E.widget_sites.pro} site, Business ${E.widget_sites.max} and Agency ${E.widget_sites.agency}. One wildcard entry such as *.example.com covers the domain and every subdomain, and counts as one. The chats from all of them arrive in the same inbox.`,
     },
     {
       question: "Can visitors talk to a person?",

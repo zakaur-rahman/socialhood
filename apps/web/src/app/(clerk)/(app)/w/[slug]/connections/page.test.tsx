@@ -139,9 +139,9 @@ describe("search and filters (C-066)", () => {
     const user = userEvent.setup();
     renderList();
     const filters = await screen.findByRole("radiogroup", { name: "Show accounts" });
-    expect(counts(filters)).toEqual(["All5", "Connected3", "Disconnected2", "Sandboxes2"]);
+    expect(counts(filters)).toEqual(["All6", "Connected3", "Disconnected2", "Sandboxes2"]);
     expect(within(filters).getByRole("radio", { name: /^All/ })).toHaveAttribute("aria-checked", "true");
-    expect(cards()).toHaveLength(5);
+    expect(cards()).toHaveLength(6);
 
     await user.click(within(filters).getByRole("radio", { name: /^Connected/ }));
     expect(cards()).toEqual(["Maple Bakery", "Maple Orders", "Sandbox shop"]);
@@ -179,7 +179,7 @@ describe("search and filters (C-066)", () => {
     expect(screen.getByText("No accounts match")).toBeInTheDocument();
     expect(screen.queryAllByRole("article")).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Show all accounts" }));
-    expect(cards()).toHaveLength(5);
+    expect(cards()).toHaveLength(6);
     expect(screen.getByRole("searchbox", { name: "Search accounts" })).toHaveValue("");
   });
 
@@ -339,5 +339,71 @@ describe("connecting Facebook Pages (GR-29)", () => {
     expect(within(card).getByRole("img", { name: "Facebook" })).toBeInTheDocument();
     expect(within(card).getByText("Facebook Pages API")).toBeInTheDocument();
     expect(within(card).getByText("@maplebakery")).toBeInTheDocument();
+  });
+});
+
+describe("Website chat on Connections (C-183)", () => {
+  const instagram = account({ id: "ig", display_name: "Maple Bakery", username: "maple" });
+  const web = account({ id: "web", platform: "web", display_name: "Website chat", username: null });
+  const widget = { enabled: true, allowed_domains: ["maple.test", "shop.maple.test"], conversations_today: 1 };
+
+  function renderCard(items: ReturnType<typeof account>[], ws = workspace) {
+    return renderWithApi(<ConnectionsPage />, {
+      ws,
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items }),
+        "GET /v1/w/:wid/widget": () => json(widget),
+      },
+    });
+  }
+
+  it("offers Set up without reading the settings, because reading them creates the channel", async () => {
+    const { calls } = renderCard([instagram]);
+    const card = await screen.findByRole("article", { name: "Website chat" });
+    expect(card).toHaveTextContent("Not set up");
+    expect(within(card).getByRole("link", { name: "Set up" })).toHaveAttribute("href", `/w/${workspace.slug}/connections/website`);
+    expect(calls.some((call) => call.path.endsWith("/widget"))).toBe(false);
+  });
+
+  it("shows whether the chat is on, its sites and today's chats once the channel exists", async () => {
+    renderCard([instagram, web]);
+    const card = await screen.findByRole("article", { name: "Website chat" });
+    expect(await within(card).findByText("2 sites · 1 chat today")).toBeInTheDocument();
+    expect(within(card).getByText("On")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Manage" })).toBeInTheDocument();
+  });
+
+  it("a disconnected channel reads as not set up, and reading it doesn't bring it back", async () => {
+    const { calls } = renderCard([instagram, { ...web, status: "disconnected" }]);
+    const card = await screen.findByRole("article", { name: "Website chat" });
+    expect(card).toHaveTextContent("Not set up");
+    expect(calls.some((call) => call.path.endsWith("/widget"))).toBe(false);
+  });
+
+  it("is on the page with no accounts connected", async () => {
+    renderCard([]);
+    expect(await screen.findByRole("article", { name: "Website chat" })).toBeInTheDocument();
+  });
+
+  it("agents don't see it, and their browser never asks for the settings", async () => {
+    const { calls } = renderCard([instagram, web], { ...workspace, role: "agent" });
+    await screen.findByRole("article", { name: "Maple Bakery" });
+    expect(screen.queryByRole("article", { name: "Website chat" })).toBeNull();
+    expect(calls.some((call) => call.path.endsWith("/widget"))).toBe(false);
+  });
+
+  it("follows the search and the filters, and their counts", async () => {
+    const user = userEvent.setup();
+    renderCard([instagram, web]);
+    const filters = await screen.findByRole("radiogroup", { name: "Show accounts" });
+    await within(await screen.findByRole("article", { name: "Website chat" })).findByText("On");
+    await user.click(within(filters).getByRole("radio", { name: /Sandboxes/ }));
+    expect(screen.queryByRole("article", { name: "Website chat" })).toBeNull();
+    await user.click(within(filters).getByRole("radio", { name: /Connected/ }));
+    expect(within(filters).getByRole("radio", { name: /Connected/ })).toHaveTextContent("2");
+    expect(screen.getByRole("article", { name: "Website chat" })).toBeInTheDocument();
+    await user.type(screen.getByRole("searchbox", { name: "Search accounts" }), "website");
+    expect(screen.getByRole("article", { name: "Website chat" })).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Maple Bakery" })).toBeNull();
   });
 });
