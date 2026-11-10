@@ -1,6 +1,6 @@
 """AI connections settings (C-165; 01-design.md §6.7): the workspace's switch for what AI apps
 connected over MCP (/mcp) may do. Owners and admins, with the integrations permission like API
-keys. Settings, Connected AI apps shows it.
+keys. Settings, MCP & API shows it.
 
 Phase C adds the OAuth connections themselves: the list (with recent activity from the MCP
 audit), one connection's activity, Disconnect, and Disconnect all.
@@ -153,7 +153,7 @@ async def revoke_connection(connection_id: uuid.UUID, ctx: CanSelf, session: Ses
 @router.post("/ai-connections/revoke-all", operation_id="revoke_all_ai_connections")
 async def revoke_all(ctx: CanManageIntegrations, session: Session) -> AiConnectionsRevoked:
     """ "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
-    are separate (Settings, API keys)."""
+    are separate (Settings, MCP & API)."""
     count = await connections.revoke_all(session, datetime.now(UTC), ctx.user.id)
     if count:
         await audit.record(

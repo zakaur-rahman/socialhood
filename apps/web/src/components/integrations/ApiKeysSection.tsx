@@ -72,7 +72,7 @@ function expiryText(apiKey: Pick<ApiKey, "expires_at">, timeZone: string, now: D
 const IP_HINT = "IP addresses or CIDR ranges, IPv4 or IPv6, like 203.0.113.7 or 10.0.0.0/8. Leave empty to allow any address.";
 
 /**
- * Settings › API keys (GR-25, own section since C-165): keys for the public API, the Zapier app and AI apps over MCP. Make a
+ * Settings › MCP & API (GR-25, own section since C-165, on MCP & API since C-180): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
  * revoke one. The public API is part of Business: a workspace without it is told so instead of
  * being offered the form. Owners and admins, like the webhook endpoints.

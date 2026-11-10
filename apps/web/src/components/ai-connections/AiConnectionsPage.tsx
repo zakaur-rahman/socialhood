@@ -2,7 +2,7 @@
 
 import { Activity, Bot, Plug, ShieldAlert, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ApiKeysSection } from "@/components/integrations/ApiKeysSection";
@@ -92,6 +92,10 @@ const OUTCOME: Record<AiConnectionCall["outcome"], { label: string; tone: "succe
 export function AiConnectionsPage() {
   const workspace = useCurrentWorkspace();
   const admin = workspace.role === "owner" || workspace.role === "admin";
+  // The old API keys address forwards to #api-keys, but the cards render after the browser's own jump.
+  useEffect(() => {
+    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, []);
   return (
     <SettingsFrame
       header={

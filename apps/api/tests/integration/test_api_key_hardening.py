@@ -276,7 +276,7 @@ async def test_owners_and_admins_hear_once_a_week_before_a_key_expires(
     )
     assert {str(n["user_id"]) for n in notes} == {ws.user_id, sam.user_id}  # not the agent
     assert ana.user_id not in {str(n["user_id"]) for n in notes}
-    assert all("Soon" in n["title"] and n["link"] == "/settings/api-keys" for n in notes)
+    assert all("Soon" in n["title"] and n["link"] == "/settings/ai-apps#api-keys" for n in notes)
 
     assert await notify_expiring(maker) == []  # once per key
     assert (

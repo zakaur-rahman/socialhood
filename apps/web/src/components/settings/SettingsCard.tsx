@@ -47,9 +47,10 @@ export function SettingsCard({
       asChild
       padding="roomy"
       tone={tone === "danger" ? "danger" : "default"}
-      className={cn("space-y-5 [&_[data-slot=field]]:max-w-2xl", className)}
+      // The id is a link target (/settings/ai-apps#api-keys); the margin keeps it clear of the sticky header.
+      className={cn("space-y-5 scroll-mt-[calc(var(--page-header-h,0px)+1rem)] [&_[data-slot=field]]:max-w-2xl", className)}
     >
-      <section aria-labelledby={`${id}-title`}>
+      <section id={id} aria-labelledby={`${id}-title`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             {icon ? (

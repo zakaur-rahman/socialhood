@@ -16,7 +16,7 @@ export const SHOTS = {
     src: "/marketing/connect.webp",
     width: 1128,
     height: 718,
-    alt: "A connected Instagram account in Settings, Connections, with AI replies set to Suggest and AI analysis on.",
+    alt: "A connected Instagram account in Connections, with AI replies set to Suggest and AI analysis on.",
   },
   knowledge: {
     src: "/marketing/knowledge.webp",

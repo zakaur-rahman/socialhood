@@ -186,6 +186,7 @@ test.describe("C-165 AI app connections", () => {
 
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
     await expect(page).toHaveURL(/\/settings\/ai-apps#api-keys$/);
+    await expect(page.locator("#api-keys")).toBeInViewport();
     await expect(page.getByRole("heading", { level: 1, name: "MCP & API" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Claude Code" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "API keys" })).toBeVisible();
