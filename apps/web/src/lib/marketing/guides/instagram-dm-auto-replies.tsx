@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Checklist, GuideH2, Pair, PairCard } from "@/components/marketing/guides/blocks";
 import { Callout } from "@/components/site/Callout";
 
+import { glossaryPath } from "../glossary";
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
 
@@ -118,7 +119,7 @@ function Body() {
           doesn&apos;t. Switching is free in the Instagram app.
         </li>
         <li>
-          <strong>The 24-hour window.</strong> A business can message a customer within 24 hours of that customer&apos;s last
+          <strong>The <Link href={glossaryPath("24-hour-messaging-window")}>24-hour window</Link>.</strong> A business can message a customer within 24 hours of that customer&apos;s last
           message. After that, you wait until they write again. {N} shows when the window for a conversation closes, so you
           know which chats to answer first.
         </li>

@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
     return [
       // SEC-11: CSP, HSTS, framing, referrer and permissions on every route.
       { source: "/:path*", headers: securityHeaders(process.env) },
+      // Icons change rarely: a day in browsers and CDNs, a week stale while revalidating.
+      { source: "/icons/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] },
       // TR-FE-09: the service worker is always fetched fresh, so a new version reaches every
       // device. Listed after the rule above, so its own CSP wins for /sw.js.
       {

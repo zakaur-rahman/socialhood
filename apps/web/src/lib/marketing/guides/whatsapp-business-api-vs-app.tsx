@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GuideH2, Pair, PairCard } from "@/components/marketing/guides/blocks";
 import { Callout } from "@/components/site/Callout";
 
+import { glossaryPath } from "../glossary";
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
 
@@ -77,14 +78,14 @@ function Body() {
       </p>
       <h3>The 24-hour window and templates</h3>
       <p>
-        When a customer messages you, a 24-hour window opens in which you can reply freely. Outside that window, or to start
-        a conversation yourself, you can only send a <strong>template</strong>: a message you wrote in advance and Meta
+        When a customer messages you, a <Link href={glossaryPath("24-hour-messaging-window")}>24-hour window</Link> opens in which you can reply freely. Outside that window, or to start
+        a conversation yourself, you can only send a <strong><Link href={glossaryPath("message-templates")}>template</Link></strong>: a message you wrote in advance and Meta
         approved. Templates come in categories such as marketing, utility (order updates, for example) and authentication
         (one-time codes).
       </p>
       <h3>Meta&apos;s charges</h3>
       <p>
-        Meta charges for template messages, per message, at a rate that depends on the category and the customer&apos;s
+        Meta charges for template messages, <Link href={glossaryPath("per-message-pricing")}>per message</Link>, at a rate that depends on the category and the customer&apos;s
         country. Your replies inside the 24-hour window are service messages: since 1 October 2026 each business number
         gets 1,000 free a month, and Meta charges for them after that. Rates change, so
         check{" "}
@@ -95,7 +96,7 @@ function Body() {
       </p>
       <h3>Opt-in and quality</h3>
       <p>
-        WhatsApp&apos;s business policy says you may only message people who have agreed to hear from you, and data
+        WhatsApp&apos;s business policy says you may only message people who have agreed to hear from you (<Link href={glossaryPath("opt-in")}>opt-in</Link>), and data
         protection laws in many countries ask for clear consent too. Meta also watches how customers react: if many people block or
         report your messages, your number&apos;s quality drops and Meta can limit how many people you can start conversations
         with in a day. New numbers start with a lower limit that rises as you build a good record.

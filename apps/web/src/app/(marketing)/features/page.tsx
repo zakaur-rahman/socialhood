@@ -17,7 +17,7 @@ import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } fro
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({
-  title: `${SITE_NAME} features`,
+  title: `AI inbox, automations and scheduling: ${SITE_NAME} features`,
   description:
     "The AI inbox for Instagram, WhatsApp and website chat, AI replies from your knowledge, comment-to-DM, scheduling and analytics, with each plan's limits.",
   path: FEATURES_PATH,

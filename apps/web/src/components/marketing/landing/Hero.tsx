@@ -14,6 +14,9 @@ import { HERO_AUDIENCE, HERO_LINE, HERO_TITLE } from "./copy";
 
 export { HERO_LINE, HERO_TITLE };
 
+/** The tagline sits inside the h1 but reads as the line of body text it was. */
+const TAGLINE_RESET: CSSProperties = { fontFamily: "var(--text)", fontWeight: 400, letterSpacing: "normal", textWrap: "pretty" };
+
 /** The trust row under the calls to action: both true by construction (the official APIs, Free's terms). */
 export const HERO_FACTS = ["Official Meta APIs", "Free plan, no card needed"];
 
@@ -60,15 +63,17 @@ export function Hero() {
                   <ArrowRight className="hero-new-arrow size-4" aria-hidden />
                 </Link>
               </p>
-              <p className="hero-tag">
-                <span className="chan-dots" aria-hidden>
-                  {CHANNELS.map((key) => (
-                    <i key={key} style={{ "--c": SOURCES[key].colour } as CSSProperties} />
-                  ))}
-                </span>
-                {SITE_TAGLINE}
-              </p>
+              {/* SEO finding 11: the tagline is the h1's first line, so the heading names what the product is.
+                  It keeps the paragraph's look: the h1's display face, weight and tracking are reset here. */}
               <h1 id="hero-title" className="h1">
+                <span className="hero-tag" style={TAGLINE_RESET}>
+                  <span className="chan-dots" aria-hidden>
+                    {CHANNELS.map((key) => (
+                      <i key={key} style={{ "--c": SOURCES[key].colour } as CSSProperties} />
+                    ))}
+                  </span>
+                  {SITE_TAGLINE}
+                </span>{" "}
                 <span className="phrase">Every DM.</span> <span className="phrase">Every comment.</span> <em>One inbox.</em>
               </h1>
               <p className="hero-sub">

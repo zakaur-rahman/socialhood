@@ -15,10 +15,10 @@ export const MCP_PAGE_UPDATED = "2026-11-01";
 export const MCP_SETUP_PATH = "/developers/mcp";
 export const MCP_API_KEY_PATH = "/developers/mcp/api-key";
 
-export const MCP_PAGE_H1 = "Use Amplychat from Claude, ChatGPT and Codex";
+export const MCP_PAGE_H1 = "Instagram MCP server for Claude and ChatGPT";
 
 export const MCP_PAGE_META = {
-  title: "Use Amplychat from Claude, ChatGPT and Codex",
+  title: `${MCP_PAGE_H1} · ${SITE_NAME}`,
   description:
     "Ask Claude, ChatGPT or Codex to schedule Instagram posts, sum up your DMs and read analytics. See where it works, what to ask, plans and safety.",
 };

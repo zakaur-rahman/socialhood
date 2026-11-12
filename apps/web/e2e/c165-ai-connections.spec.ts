@@ -147,7 +147,7 @@ test.describe("C-165 AI app connections", () => {
 
   test("the public setup guide", async ({ page }) => {
     await page.goto("/developers/mcp");
-    await expect(page.getByRole("heading", { level: 1, name: "Connect Amplychat to Claude, ChatGPT and Codex" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Set up the Amplychat MCP server in Claude, ChatGPT, Codex" })).toBeVisible();
     for (const name of ["Claude Code", "ChatGPT", "Codex"]) {
       await expect(page.getByRole("heading", { level: 3, name, exact: true })).toBeVisible();
     }
@@ -160,7 +160,7 @@ test.describe("C-165 AI app connections", () => {
 
   test("the MCP product page and the API-key page", async ({ page }) => {
     await page.goto("/mcp");
-    await expect(page.getByRole("heading", { level: 1, name: "Use Amplychat from Claude, ChatGPT and Codex" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Instagram MCP server for Claude and ChatGPT" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: "Other MCP apps" })).toBeVisible();
     await expect(page.getByRole("table", { name: "What each plan includes for AI apps" })).toBeVisible();
     await page.getByRole("link", { name: "Set it up" }).first().click();

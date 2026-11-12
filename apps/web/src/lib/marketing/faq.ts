@@ -43,6 +43,7 @@ export const FAQ_ROBOTIC: FaqItem = {
   question: "Will the replies sound robotic?",
   answer:
     "The AI writes from your own notes and knowledge, in the tone you pick, with your emoji level, your do's and don'ts and your sign-off. On Free it suggests replies that you edit and send. Comment-to-DM automations send exactly the words you write.",
+  link: { label: "Instagram comment to DM", href: "/instagram/comment-to-dm" },
 };
 
 // services/sending.py human_takeover: a reply from a person (in Amplychat or the native app) pauses

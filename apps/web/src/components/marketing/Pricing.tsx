@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 
 import { NEED_MORE, PLAN_NAME, PRICE_TAX_NOTE } from "@/lib/copy";
 import { CREDIT_COSTS, type Pricing as PricingData } from "@/lib/marketing/plans";
@@ -25,11 +26,15 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
           <div>
             <p className={SECTION_EYEBROW}>Pricing</p>
             <h1 id="pricing-title" className={PAGE_HEADING}>
-              Start free, upgrade when you grow
+              Amplychat pricing
             </h1>
+            <p className="lede" style={{ marginTop: "var(--space-3)" }}>
+              Start free, upgrade when you grow
+            </p>
           </div>
           <p className="lede">
-            Contacts are unlimited on every plan. Creator adds Auto replies, WhatsApp, more automations and more AI credits.
+            Contacts are unlimited on every plan. Creator adds Auto replies, WhatsApp,{" "}
+            <Link href="/automations">more automations</Link> and more AI credits.
             Cancel anytime: a paid plan stays until the end of the period you&apos;ve paid for.
           </p>
         </div>
