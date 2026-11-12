@@ -177,7 +177,7 @@ describe("the landing page", () => {
       "/features/comment-intelligence",
       "/features/publishing",
       "/compare",
-      "/guides/comment-to-dm-automations",
+      "/instagram/comment-to-dm", // SEO finding 22: the product page leads the comment-to-DM search
       "/security",
     ]) {
       expect(container.querySelector(`main a[href="${href}"]`), href).not.toBeNull();
