@@ -283,14 +283,18 @@ function LookCard({ form, onChange }: CardProps) {
 function Preview({ form }: { form: Form }) {
   return (
     <div aria-hidden className="flex flex-col justify-end rounded-xl bg-canvas p-4">
-      <div className={cn("w-full overflow-hidden rounded-xl bg-panel ring-1 ring-line", form.position === "left" ? "mr-auto" : "ml-auto")}>
-        <div className="px-4 py-3 text-sm font-semibold text-on-brand" style={{ backgroundColor: form.accent }}>
+      <div className={cn("w-full overflow-hidden rounded-2xl bg-panel ring-1 ring-line", form.position === "left" ? "mr-auto" : "ml-auto")}>
+        {/* The widget tints its header with the accent (frame.css) */}
+        <div
+          className="border-b border-line px-4 py-3 text-sm font-semibold"
+          style={{ backgroundColor: `color-mix(in srgb, ${form.accent} 7%, transparent)` }}
+        >
           {form.title || "Chat with us"}
         </div>
         <div className="space-y-2 p-3">
-          <p className="max-w-[85%] rounded-xl bg-field px-3 py-2 text-sm">{form.greeting || "Hi! How can we help?"}</p>
+          <p className="max-w-[85%] rounded-2xl bg-field px-3 py-2 text-sm">{form.greeting || "Hi! How can we help?"}</p>
           <p
-            className="ml-auto max-w-[70%] rounded-xl px-3 py-2 text-sm text-on-brand"
+            className="ml-auto max-w-[70%] rounded-2xl px-3 py-2 text-sm text-on-brand"
             style={{ backgroundColor: form.accent }}
           >
             Do you ship to Pune?

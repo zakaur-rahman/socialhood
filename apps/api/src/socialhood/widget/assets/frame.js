@@ -248,7 +248,7 @@
     var last = "team";
     st.messages.forEach(function (m) {
       if (m.author === "assistant" && last !== "assistant") {
-        log.appendChild(el("li", { class: "tag", text: "Assistant" }));
+        log.appendChild(el("li", { class: "tag", text: "AI assistant" }));
       }
       log.appendChild(bubble(m.author, m.text, false));
       last = m.author;
@@ -383,8 +383,12 @@
   }
 
   function resize() {
-    ui.input.style.height = "auto";
-    ui.input.style.height = Math.min(ui.input.scrollHeight, 120) + "px";
+    var input = ui.input;
+    input.style.height = "auto";
+    /* scrollHeight leaves out the border; without it the field is 2px short and shows a scrollbar */
+    var height = input.scrollHeight + input.offsetHeight - input.clientHeight;
+    input.style.height = Math.min(height, 120) + "px";
+    input.style.overflowY = height > 120 ? "auto" : "hidden";
   }
 
   function submitMessage(event) {
@@ -487,7 +491,9 @@
     ui.input.addEventListener("keydown", function (event) {
       if (event.key === "Enter" && !event.shiftKey && !event.isComposing) submitMessage(event);
     });
-    ui.send = el("button", { type: "submit", class: "btn", text: "Send" });
+    ui.send = el("button", { type: "submit", class: "btn send", "aria-label": "Send" }, [
+      icon(["M12 19V5", "M5 12l7-7 7 7"]),
+    ]);
     ui.composer = el("form", { class: "composer" }, [ui.input, ui.send]);
     ui.composer.addEventListener("submit", submitMessage);
 

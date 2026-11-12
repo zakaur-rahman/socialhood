@@ -1,27 +1,41 @@
 /* Amplychat chat widget: the styles of the frame (GR-28). Its own small stylesheet: it shares
    nothing with the app or the host page. --accent and --on-accent are set from the widget's
-   colour; the rest follow the visitor's light or dark preference. */
+   colour; the rest follow the visitor's light or dark preference. The frame is 20px larger than
+   the launcher and the panel on every side (loader.js), so their shadows fit inside it: a shadow
+   that reached the frame's edge would be cut off into a visible box. */
 :root {
   --accent: #4467e6;
   --on-accent: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f1f2f5;
+  --surface-2: #f2f3f6;
   --text: #16181d;
-  --text-2: #5a5f6b;
-  --line: #d9dce3;
+  --text-2: #5d6270;
+  --line: #e4e6eb;
+  --hover: rgb(15 18 25 / 0.06);
   --danger: #b42318;
-  --shadow: 0 8px 32px rgb(0 0 0 / 0.22), 0 1px 3px rgb(0 0 0 / 0.2);
-  --radius: 16px;
+  --focus: rgb(68 103 230 / 0.25);
+  --shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.08), 0 2px 6px rgb(15 18 25 / 0.06),
+    0 8px 12px rgb(15 18 25 / 0.1);
+  --shadow-launcher: 0 2px 4px rgb(15 18 25 / 0.12), 0 6px 12px rgb(15 18 25 / 0.16);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@supports (color: color-mix(in srgb, red, blue)) {
+  :root {
+    --focus: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #1b1d22;
-    --surface-2: #2a2d34;
-    --text: #f3f4f6;
-    --text-2: #a4a9b4;
-    --line: #3a3e47;
+    --surface: #1c1d22;
+    --surface-2: #2a2c33;
+    --text: #f2f3f5;
+    --text-2: #a3a8b4;
+    --line: #33353d;
+    --hover: rgb(255 255 255 / 0.08);
     --danger: #ff8a80;
-    --shadow: 0 8px 32px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.5);
+    --shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 6px rgb(0 0 0 / 0.3),
+      0 8px 12px rgb(0 0 0 / 0.4);
+    --shadow-launcher: 0 2px 4px rgb(0 0 0 / 0.3), 0 6px 12px rgb(0 0 0 / 0.35);
   }
 }
 * {
@@ -32,9 +46,10 @@ body {
   margin: 0;
   height: 100%;
   background: transparent;
-  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 [hidden] {
   display: none !important;
@@ -55,10 +70,18 @@ textarea {
 }
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 #root {
   position: fixed;
@@ -66,7 +89,7 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 12px;
+  padding: 20px;
 }
 body.left #root {
   align-items: flex-start;
@@ -78,19 +101,23 @@ body.right #root {
 /* the launcher */
 .launcher {
   position: relative;
+  flex: none;
   width: 60px;
   height: 60px;
   border: 0;
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-launcher);
   display: grid;
   place-items: center;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s var(--ease);
 }
 .launcher:hover {
-  transform: scale(1.06);
+  transform: scale(1.05);
+}
+.launcher:active {
+  transform: scale(0.95);
 }
 .launcher:focus-visible {
   outline-color: var(--text);
@@ -98,26 +125,23 @@ body.right #root {
 .launcher svg {
   width: 28px;
   height: 28px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 .badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -3px;
+  right: -3px;
   min-width: 20px;
   height: 20px;
-  padding: 0 5px;
+  padding: 0 6px;
   border-radius: 10px;
   background: var(--danger);
   color: #ffffff;
+  box-shadow: 0 0 0 2px var(--surface);
   font-size: 12px;
   font-weight: 600;
   line-height: 20px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* the panel */
@@ -127,10 +151,14 @@ body.right #root {
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: 20px;
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
-  animation: rise 0.18s ease-out;
+  transform-origin: bottom right;
+  animation: rise 0.22s var(--ease);
+}
+body.left .panel {
+  transform-origin: bottom left;
 }
 body.full #root {
   padding: 0;
@@ -142,108 +170,128 @@ body.full .panel {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px) scale(0.98);
   }
 }
 header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 8px 14px 16px;
-  background: var(--accent);
-  color: var(--on-accent);
+  min-height: 60px;
+  padding: 10px 10px 10px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+@supports (color: color-mix(in srgb, red, blue)) {
+  header {
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  }
 }
 header h1 {
   flex: 1;
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .close {
+  flex: none;
   width: 40px;
   height: 40px;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: inherit;
+  color: var(--text-2);
   display: grid;
   place-items: center;
+  transition: background-color 0.15s ease-out;
 }
 .close:hover {
-  background: rgb(255 255 255 / 0.18);
-}
-.close:focus-visible {
-  outline-color: var(--on-accent);
+  background: var(--hover);
+  color: var(--text);
 }
 .close svg {
   width: 20px;
   height: 20px;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  fill: none;
 }
 
-/* the conversation */
+/* the conversation: bubbles from the same side join, with tighter spacing and smaller inner corners */
 .log {
   flex: 1;
   min-height: 0;
   margin: 0;
-  padding: 16px;
+  padding: 16px 16px 12px;
   list-style: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 .msg {
-  max-width: 82%;
-  padding: 9px 13px;
-  border-radius: 16px;
+  max-width: 80%;
+  padding: 9px 14px;
+  border-radius: 18px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .msg.them {
   align-self: flex-start;
   background: var(--surface-2);
-  border-bottom-left-radius: 4px;
 }
 .msg.me {
   align-self: flex-end;
   background: var(--accent);
   color: var(--on-accent);
-  border-bottom-right-radius: 4px;
+}
+.msg.them + .msg.them,
+.msg.me + .msg.me {
+  margin-top: -7px;
+}
+.msg.them + .msg.them {
+  border-top-left-radius: 6px;
+}
+.msg.them:has(+ .msg.them) {
+  border-bottom-left-radius: 6px;
+}
+.msg.me + .msg.me {
+  border-top-right-radius: 6px;
+}
+.msg.me:has(+ .msg.me) {
+  border-bottom-right-radius: 6px;
 }
 .msg.pending {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 .tag {
   align-self: flex-start;
-  margin: 4px 0 -4px 4px;
+  margin: 6px 0 -6px 14px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-2);
 }
 
-/* the email card and the composer */
+/* the email card */
 .card {
-  margin: 0 12px 8px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  margin: 0 16px 12px;
+  padding: 14px;
+  border-radius: 16px;
   background: var(--surface-2);
 }
 .card p {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  font-size: 14px;
 }
 .card label.check {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  margin: 8px 0;
+  margin: 10px 0 4px;
   font-size: 13px;
   color: var(--text-2);
 }
@@ -258,24 +306,39 @@ header h1 {
 .field {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
+  min-height: 40px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface);
+}
+.field:focus-visible,
+form.composer textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus);
 }
 .btn {
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 600;
+  transition: transform 0.1s ease-out, opacity 0.15s ease-out;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .btn.quiet {
+  padding: 0 4px;
   background: transparent;
   color: var(--text-2);
   font-weight: 500;
+}
+.btn.quiet:hover {
+  color: var(--text);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -286,33 +349,69 @@ header h1 {
   color: var(--danger);
   font-size: 13px;
 }
+
+/* the composer: a rounded field and a round send button, grey while the field is empty */
 form.composer {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  padding: 10px 12px 12px;
+  padding: 12px 12px 12px 16px;
   border-top: 1px solid var(--line);
 }
 form.composer textarea {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   max-height: 120px;
   resize: none;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  overflow-y: hidden;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  background: var(--surface-2);
+  line-height: 1.45;
+  scrollbar-width: thin;
+}
+form.composer textarea::placeholder {
+  color: var(--text-2);
+}
+form.composer textarea:focus-visible {
   background: var(--surface);
 }
-form.composer .btn {
-  min-width: 64px;
+.btn.send {
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.btn.send svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.25;
+}
+.btn.send {
+  transition: transform 0.1s ease-out, background-color 0.15s ease-out, color 0.15s ease-out;
+}
+form.composer textarea:placeholder-shown + .btn.send {
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 footer {
   padding: 0 12px 10px;
+  margin-top: -2px;
   text-align: center;
   font-size: 12px;
 }
 footer a {
   color: var(--text-2);
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
 }
 
 @media (prefers-reduced-motion: reduce) {
