@@ -9740,3 +9740,19 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   the draft in the reply box, where a person reviews it and sends it.
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
+
+## C-192 · Website chat redesign (owner, 2026-11-12)
+
+- **Asked:** the owner tested the widget on a page and said it needs a redesign. The bubble showed a
+  grey square, the open chat a grey border, the message box a doubled focus ring and scroll arrows.
+- **Cause of the grey boxes:** the frame is only 12px larger than the launcher and the panel, and
+  their shadows reached 40px, so the frame's edge cut them off. The owner asked to remove the
+  shadow: the launcher has none and the panel has a 1px outline instead. The frame keeps its size.
+- **Calls made:** a light header tinted 7% with the accent instead of a solid accent bar (the
+  accent stays on the launcher, the visitor's bubbles and the send button); same-side bubbles join;
+  a rounded field with a round arrow Send button, grey while the field is empty, still named "Send"
+  for screen readers; AI replies labelled "AI assistant" rather than "Assistant"; the settings
+  preview follows the new header (plain, without the tint, which the design lint keeps out of
+  inline styles).
+- **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
+  API doesn't send yet.
