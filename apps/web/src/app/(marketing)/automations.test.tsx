@@ -7,6 +7,7 @@ import { BENTO, DETAILS, STAGES } from "@/components/marketing/explainers/conten
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { AUTOMATIONS_PATH, AUTOMATION_PAGES, META, type AutomationPage } from "@/lib/marketing/automation-pages";
 import { FAQ_ALL } from "@/lib/marketing/faq";
+import { GLOSSARY, glossaryPath } from "@/lib/marketing/glossary";
 import { GUIDES, guidePath } from "@/lib/marketing/guides";
 import { llmsText } from "@/lib/marketing/llms";
 import { DESCRIPTION_MAX, TITLE_MAX } from "@/lib/marketing/seo";
@@ -35,7 +36,11 @@ const ROUTES: Record<string, { Page: () => React.ReactElement; metadata: Metadat
 
 const PAGES = AUTOMATION_PAGES.map((page) => [page.path, page] as const);
 /** Every address an internal link may point at: a public page or a guide. */
-const KNOWN = new Set<string>([...PUBLIC_PATHS, ...GUIDES.map((guide) => guidePath(guide.slug))]);
+const KNOWN = new Set<string>([
+  ...PUBLIC_PATHS,
+  ...GUIDES.map((guide) => guidePath(guide.slug)),
+  ...GLOSSARY.map((term) => glossaryPath(term.slug)),
+]);
 /** Claim words a page must not use about itself (no fake proof, C-163). */
 const CLAIMS = /\b(best|#1|number one|leading|world-class|guaranteed?|trusted by|award)\b|#1/i;
 

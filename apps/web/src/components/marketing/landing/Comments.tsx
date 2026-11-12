@@ -85,7 +85,7 @@ export function CommentMachine() {
         </div>
 
         <div className="rule" data-rule="" data-ui="">
-          <h2 className="rule-h">Automation on this Reel</h2>
+          <h3 className="rule-h">Automation on this Reel</h3>
           <ol className="rsteps">
             {STEPS.map(({ icon: Icon, title, body }, index) => (
               <li key={index} className="rstep">

@@ -71,7 +71,7 @@ describe("the pricing section (C-155 layout)", () => {
 
   it("outlines the plan to start on: Creator when it can be bought", () => {
     const { container } = render(<Pricing pricing={buildPricing(plansFixture().items)} />);
-    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Creator");
+    expect(container.querySelector(".plan.main h2")?.textContent).toBe("Creator");
   });
 
   it("C-149: with no billing on the API yet, Creator is coming soon with its features and no trial", () => {
@@ -82,7 +82,7 @@ describe("the pricing section (C-155 layout)", () => {
     expect(pro.getByText("AI Auto mode and suggestions")).toBeInTheDocument();
     expect(pro.queryByText("7-day free trial")).not.toBeInTheDocument();
     expect(pro.queryByRole("link")).not.toBeInTheDocument();
-    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Free");
+    expect(container.querySelector(".plan.main h2")?.textContent).toBe("Free");
     expect(within(card("Free")).getByRole("link", { name: "Start free" })).toBeInTheDocument();
   });
 
