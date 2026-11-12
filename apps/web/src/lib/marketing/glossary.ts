@@ -15,6 +15,8 @@
  * - No numbers of ours that aren't in the code or plan table, no "best", no fake proof.
  */
 
+import type { Route } from "next";
+
 import type { Status } from "./gtm-pages";
 
 export const GLOSSARY_PATH = "/glossary";
@@ -1013,8 +1015,8 @@ export const GLOSSARY: GlossaryTerm[] = [
   },
 ];
 
-export function glossaryPath(slug: string): string {
-  return `${GLOSSARY_PATH}/${slug}`;
+export function glossaryPath(slug: string): Route {
+  return `${GLOSSARY_PATH}/${slug}` as Route; // a slug from GLOSSARY, so a real page
 }
 
 export function findTerm(slug: string): GlossaryTerm | undefined {
