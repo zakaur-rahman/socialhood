@@ -1,8 +1,7 @@
 /* Amplychat chat widget: the styles of the frame (GR-28). Its own small stylesheet: it shares
    nothing with the app or the host page. --accent and --on-accent are set from the widget's
-   colour; the rest follow the visitor's light or dark preference. The frame is 20px larger than
-   the launcher and the panel on every side (loader.js), so their shadows fit inside it: a shadow
-   that reached the frame's edge would be cut off into a visible box. */
+   colour; the rest follow the visitor's light or dark preference. No drop shadows: the frame is
+   only 12px larger than what it shows, so a shadow would be cut off into a visible box. */
 :root {
   --accent: #4467e6;
   --on-accent: #ffffff;
@@ -14,9 +13,7 @@
   --hover: rgb(15 18 25 / 0.06);
   --danger: #b42318;
   --focus: rgb(68 103 230 / 0.25);
-  --shadow-panel: 0 0 0 1px rgb(15 18 25 / 0.08), 0 2px 6px rgb(15 18 25 / 0.06),
-    0 8px 12px rgb(15 18 25 / 0.1);
-  --shadow-launcher: 0 2px 4px rgb(15 18 25 / 0.12), 0 6px 12px rgb(15 18 25 / 0.16);
+  --edge: rgb(15 18 25 / 0.14);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @supports (color: color-mix(in srgb, red, blue)) {
@@ -33,9 +30,7 @@
     --line: #33353d;
     --hover: rgb(255 255 255 / 0.08);
     --danger: #ff8a80;
-    --shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.1), 0 2px 6px rgb(0 0 0 / 0.3),
-      0 8px 12px rgb(0 0 0 / 0.4);
-    --shadow-launcher: 0 2px 4px rgb(0 0 0 / 0.3), 0 6px 12px rgb(0 0 0 / 0.35);
+    --edge: rgb(255 255 255 / 0.14);
   }
 }
 * {
@@ -89,7 +84,7 @@ svg {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 20px;
+  padding: 12px;
 }
 body.left #root {
   align-items: flex-start;
@@ -108,7 +103,6 @@ body.right #root {
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: var(--shadow-launcher);
   display: grid;
   place-items: center;
   transition: transform 0.2s var(--ease);
@@ -152,7 +146,7 @@ body.right #root {
   flex-direction: column;
   background: var(--surface);
   border-radius: 20px;
-  box-shadow: var(--shadow-panel);
+  box-shadow: 0 0 0 1px var(--edge); /* an outline, not a shadow */
   overflow: hidden;
   transform-origin: bottom right;
   animation: rise 0.22s var(--ease);

@@ -38,15 +38,15 @@
       s.height = "100%";
       return;
     }
-    s[side] = "0";
-    s.bottom = "0"; /* the frame keeps 20px of room for shadows (frame.css) */
+    s[side] = "12px";
+    s.bottom = "12px";
     if (open) {
-      s.width = "420px";
-      s.height = "min(720px, 100%)";
-      s.maxWidth = "100%";
+      s.width = "400px";
+      s.height = "min(680px, calc(100% - 24px))";
+      s.maxWidth = "calc(100% - 24px)";
     } else {
-      s.width = "100px";
-      s.height = "100px";
+      s.width = "84px";
+      s.height = "84px";
       s.maxWidth = "none";
     }
   }

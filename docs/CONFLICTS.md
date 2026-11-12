@@ -9745,10 +9745,9 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 
 - **Asked:** the owner tested the widget on a page and said it needs a redesign. The bubble showed a
   grey square, the open chat a grey border, the message box a doubled focus ring and scroll arrows.
-- **Cause of the grey boxes:** the frame was 12px larger than the launcher and the panel, and their
-  shadows reached 40px, so the frame's edge cut them off. The frame now sits in the corner with 20px
-  of room on every side (100px closed, 420px wide open) and the shadows stay inside 20px. The chat
-  keeps its place on screen and its 380px width; phones still get the full screen.
+- **Cause of the grey boxes:** the frame is only 12px larger than the launcher and the panel, and
+  their shadows reached 40px, so the frame's edge cut them off. The owner asked to remove the
+  shadow: the launcher has none and the panel has a 1px outline instead. The frame keeps its size.
 - **Calls made:** a light header tinted 7% with the accent instead of a solid accent bar (the
   accent stays on the launcher, the visitor's bubbles and the send button); same-side bubbles join;
   a rounded field with a round arrow Send button, grey while the field is empty, still named "Send"
