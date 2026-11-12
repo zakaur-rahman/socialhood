@@ -9752,6 +9752,7 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   accent stays on the launcher, the visitor's bubbles and the send button); same-side bubbles join;
   a rounded field with a round arrow Send button, grey while the field is empty, still named "Send"
   for screen readers; AI replies labelled "AI assistant" rather than "Assistant"; the settings
-  preview follows the new header.
+  preview follows the new header (plain, without the tint, which the design lint keeps out of
+  inline styles).
 - **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
   API doesn't send yet.
