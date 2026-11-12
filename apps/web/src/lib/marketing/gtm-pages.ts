@@ -282,7 +282,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Comment to DM",
-        ours: OURS_COMMENT_TO_DM,
+        ours: { status: "yes", text: "One post, all posts or the next post; keyword or any comment; public reply variations.", href: "/instagram/comment-to-dm" },
         // source: Manychat help centre "Instagram Post and Reel Comments trigger", read 2026-10-29. It doesn't confirm every option we had listed, so "The same set" is softened.
         theirs: { status: "yes", text: "Comment triggers on posts and Reels, with keyword matching." },
       },
@@ -570,7 +570,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Team inbox",
-        ours: OURS_TEAM,
+        ours: { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan.", href: "/features/ai-inbox" },
         // source: interakt.shop/pricing, read 2026-10-29: "Unlimited agents (All Roles)" on the Growth card but "Unlimited Agents (owner role)" in its feature list; all roles on Advanced and Enterprise
         theirs: { status: "yes", text: "Unlimited agents from the Growth plan; the pricing page is unclear which roles Growth includes." },
       },
