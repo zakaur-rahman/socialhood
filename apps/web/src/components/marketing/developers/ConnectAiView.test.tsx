@@ -69,7 +69,7 @@ describe("/developers/mcp (C-165)", () => {
     // Owner, 2026-11-11: AI apps schedule a minute ahead, as the app does, so no page states a wait.
     expect(JSON.stringify([CAPABILITIES, SAFETY, CONNECT_AI_FAQ, CONFIRM_LINE, MCP_PAGE_FAQ])).not.toMatch(/5 minutes/);
     const list = SAFETY.find((item) => item.title === "Your switch, your list")!.body;
-    expect(list).toMatch(/every connected app and every API key with its recent tool calls/);
+    expect(list).toMatch(/every connected app, and Settings › API keys every key, each with its recent tool calls/);
   });
 
   it("points the key-based guides to the API-key page and names Settings > API keys", () => {
