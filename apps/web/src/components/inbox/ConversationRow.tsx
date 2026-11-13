@@ -44,6 +44,8 @@ type Props = {
   timeZone?: string;
   /** The AI mode that applies (the conversation's own, else its account's): "Auto replies" badge. */
   aiMode?: AiMode | null;
+  /** Which account it is on, when the platform has several (C-186). */
+  accountLabel?: string;
   index?: number;
   onNavigate?: () => void;
   ref?: Ref<HTMLAnchorElement>;
@@ -55,7 +57,7 @@ export function rowHeight(item: ConversationListItem, now: Date, aiMode: AiMode 
 }
 
 /** UX-INB-04, restyled (C-063): one conversation, as a link (v1 rows were unfocusable divs). */
-export function ConversationRow({ item, href, selected, now, timeZone, aiMode = null, index, onNavigate, ref }: Props) {
+export function ConversationRow({ item, href, selected, now, timeZone, aiMode = null, accountLabel, index, onNavigate, ref }: Props) {
   const name = contactName(item.contact, item.platform);
   const unread = item.unread_count > 0;
   const prefix = previewPrefix(item);
@@ -84,9 +86,15 @@ export function ConversationRow({ item, href, selected, now, timeZone, aiMode = 
       <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
-          <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", unread ? "text-fg" : "text-fg-secondary")}>
+          {/* The handle follows the name, left-aligned; the name keeps its room until the handle is down to 4 rem. */}
+          <span className={cn("min-w-0 truncate text-sm font-semibold", !accountLabel && "flex-1", unread ? "text-fg" : "text-fg-secondary")}>
             {name}
           </span>
+          {accountLabel ? (
+            <span className="min-w-16 flex-1 truncate text-xs text-fg-secondary" data-testid="row-account">
+              {accountLabel}
+            </span>
+          ) : null}
           {item.assignee ? (
             // GR-20: who has it. The name is written for screen readers; the avatar is a picture or initials.
             <span className="flex shrink-0 items-center" data-testid="row-assignee">

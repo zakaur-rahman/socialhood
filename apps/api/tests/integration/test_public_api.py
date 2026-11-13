@@ -4,6 +4,7 @@ plan gating (PD-6), each public endpoint, and that a key never reaches another w
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import time
 import uuid
@@ -23,6 +24,7 @@ from tests.support.api import Clerk, sign_in
 from tests.support.automation_api import make_run, set_plan
 from tests.support.automations import make_automation
 from tests.support.inbox import make_account, make_thread
+from tests.support.mcp import connect, structured
 from tests.support.sending import (
     Setup,
     clean_outbox,
@@ -209,6 +211,52 @@ async def test_at_most_twenty_active_keys(
         headers=setup.headers,
     )
     assert again.status_code == 201, again.text
+
+
+async def test_keys_made_at_once_stop_at_twenty(client: httpx.AsyncClient, setup: Setup) -> None:
+    for i in range(19):
+        await make_key(client, setup, "contacts:read", name=f"Key {i}")
+    answers = await asyncio.gather(
+        *(
+            client.post(
+                f"/v1/w/{setup.wid}/api-keys",
+                json={"name": f"At once {i}", "scopes": ["contacts:read"]},
+                headers=setup.headers,
+            )
+            for i in range(3)
+        )
+    )
+    assert sorted(a.status_code for a in answers) == [201, 409, 409]
+
+
+async def test_a_keys_tool_calls_show_as_its_activity(
+    client: httpx.AsyncClient, clerk: Clerk, setup: Setup, engine: AsyncEngine, mcp_app: FastAPI
+) -> None:
+    key, made = await make_key(client, setup, "contacts:read", name="Codex laptop")
+    _, unused = await make_key(client, setup, "contacts:read", name="Unused")
+    async with connect(mcp_app, key) as mcp:
+        structured(await mcp.call_tool("get_workspace", {}))
+    base = f"/v1/w/{setup.wid}/api-keys"
+
+    shown = await client.get(f"{base}/{made['id']}/activity", headers=setup.headers)
+    assert shown.status_code == 200, shown.text
+    [call] = shown.json()["items"]
+    assert (call["tool"], call["outcome"]) == ("get_workspace", "ok")
+    assert "arguments" not in call  # tool, outcome and time only
+    quiet = await client.get(f"{base}/{unused['id']}/activity", headers=setup.headers)
+    assert quiet.json()["items"] == []
+    missing = await client.get(f"{base}/{uuid.uuid4()}/activity", headers=setup.headers)
+    assert missing.status_code == 404
+
+    # Owners and admins only, like the keys themselves.
+    member_id, member = await sign_in(client, clerk, email="agent@example.com")
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (:w, :u, :r)"),
+            {"w": setup.wid, "u": member["id"], "r": "agent"},
+        )
+    denied = await client.get(f"{base}/{made['id']}/activity", headers=clerk.headers(member_id))
+    assert denied.status_code == 403
 
 
 async def test_revoking_stops_the_key_at_once(client: httpx.AsyncClient, setup: Setup) -> None:
@@ -616,6 +664,24 @@ async def test_a_message_outside_the_window_is_refused_like_the_app_does(
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "reply_window_closed"
     assert await send_jobs() == []
+
+    # Inside the 7 days a person may still reply from the inbox, but an API key is not a person.
+    recent = await make_thread(
+        engine,
+        workspace_id=setup.wid,
+        account_id=setup.account_id,
+        display_name="Quiet Quinn",
+        last_inbound_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    late = await client.post(
+        f"/public/v1/conversations/{recent.conversation_id}/messages",
+        json={"text": "Still there?"},
+        headers=bearer(key),
+    )
+    assert late.status_code == 409, late.text
+    assert late.json()["code"] == "reply_window_closed"
+    assert await send_jobs() == []
+
     empty = await client.post(url, json={"text": ""}, headers=bearer(key))
     assert empty.status_code == 422
 

@@ -49,7 +49,7 @@ def test_duplicates_are_dropped_and_order_is_kept() -> None:
         ("shop.example.com", ["example.com"], False),
         ("shop.example.com", ["*.example.com"], True),
         ("a.b.example.com", ["*.example.com"], True),
-        ("example.com", ["*.example.com"], False),  # a wildcard is for subdomains only
+        ("example.com", ["*.example.com"], True),  # a wildcard covers the domain too (C-189)
         ("evilexample.com", ["*.example.com"], False),
         ("example.com.evil.net", ["example.com"], False),
         ("EXAMPLE.com", ["example.com"], True),
@@ -84,7 +84,19 @@ def test_the_loaders_host_is_validated() -> None:
 def test_frame_ancestors_names_the_allowed_sites() -> None:
     assert origin.frame_ancestors([]) == "'none'"
     assert origin.frame_ancestors(["example.com"]) == "https://example.com https://www.example.com"
-    assert origin.frame_ancestors(["*.example.com"]) == "https://*.example.com"
+    assert origin.frame_ancestors(["*.example.com"]) == "https://example.com https://*.example.com"
     local = origin.frame_ancestors(["localhost"])
     assert "http://localhost:*" in local
     assert "http://example.com" not in origin.frame_ancestors(["example.com"])  # https only
+
+
+@pytest.mark.parametrize("typed", ["*.myshopify.com", "*.co.uk", "*.vercel.app", "*.co.in"])
+def test_a_wildcard_on_a_shared_address_is_refused(typed: str) -> None:
+    """It would cover everyone's sites there, counted as one (C-185, C-189)."""
+    with pytest.raises(ValueError, match="not just yours"):
+        origin.normalize_domain(typed)
+
+
+def test_a_shops_own_address_on_a_shared_host_is_fine() -> None:
+    assert origin.normalize_domain("maple.myshopify.com") == "maple.myshopify.com"
+    assert origin.normalize_domain("*.maple.co.uk") == "*.maple.co.uk"

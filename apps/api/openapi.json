@@ -6752,7 +6752,7 @@
         "type": "object"
       },
       "BulkSkipped": {
-        "description": "A post the action could not apply to, and why (``conflict``: publishing started or\npublished; ``validation_error``: the shifted time would be less than 5 minutes away).",
+        "description": "A post the action could not apply to, and why (``conflict``: publishing started or\npublished; ``validation_error``: the shifted time would be less than 1 minute away).",
         "properties": {
           "code": {
             "title": "Code",
@@ -10511,7 +10511,7 @@
         "type": "object"
       },
       "DropSignature": {
-        "description": "The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,\nsignature) and where to send them.",
+        "description": "The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,\npublic_id, signature) and where to send them.",
         "properties": {
           "allowed_formats": {
             "title": "Allowed Formats",
@@ -10527,6 +10527,10 @@
           },
           "folder": {
             "title": "Folder",
+            "type": "string"
+          },
+          "public_id": {
+            "title": "Public Id",
             "type": "string"
           },
           "signature": {
@@ -10552,6 +10556,7 @@
           "timestamp",
           "folder",
           "tags",
+          "public_id",
           "allowed_formats",
           "signature",
           "upload_url"
@@ -14135,21 +14140,6 @@
         "title": "MarkRead",
         "type": "object"
       },
-      "McpUploadComplete": {
-        "additionalProperties": false,
-        "properties": {
-          "public_id": {
-            "maxLength": 255,
-            "title": "Public Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "public_id"
-        ],
-        "title": "McpUploadComplete",
-        "type": "object"
-      },
       "McpUploadTicket": {
         "properties": {
           "expires_at": {
@@ -15541,6 +15531,10 @@
         "additionalProperties": false,
         "description": "GET and PUT \u2026/notification-preferences: the signed-in member's settings in this\nworkspace (workspace_members.notification_prefs). PUT sends the whole object and gets it\nback. Fields are required both ways, so the request and response share one schema.",
         "properties": {
+          "email_ai_changes": {
+            "title": "Email Ai Changes",
+            "type": "boolean"
+          },
           "email_digest": {
             "title": "Email Digest",
             "type": "boolean"
@@ -15551,6 +15545,7 @@
         },
         "required": [
           "email_digest",
+          "email_ai_changes",
           "push"
         ],
         "title": "NotificationPreferences",
@@ -20983,7 +20978,7 @@
       },
       "ScheduleRequest": {
         "additionalProperties": false,
-        "description": "POST \u2026/schedule and \u2026/reschedule: at least 5 minutes from now (else 422 on\n``publish_at``).",
+        "description": "POST \u2026/schedule and \u2026/reschedule: at least 1 minute from now (else 422 on\n``publish_at``).",
         "properties": {
           "publish_at": {
             "format": "date-time",
@@ -21453,7 +21448,7 @@
       },
       "ScheduledPostDraft": {
         "additionalProperties": false,
-        "description": "POST \u2026/scheduled-posts (a new draft) and PUT \u2026/scheduled-posts/{id} (replace the whole\neditable post; the composer autosaves). Everything may be empty on a draft: the checklist says\nwhat is missing. Accounts must be this workspace's (else 422 on ``targets.{i}``), assets this\nworkspace's post uploads (else 422 on ``asset_ids.{i}``).\n\nOn a scheduled post (Update schedule) the saved result must still pass the checklist and\n``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);\nits targets stay pending.",
+        "description": "POST \u2026/scheduled-posts (a new draft) and PUT \u2026/scheduled-posts/{id} (replace the whole\neditable post; the composer autosaves). Everything may be empty on a draft: the checklist says\nwhat is missing. Accounts must be this workspace's (else 422 on ``targets.{i}``), assets this\nworkspace's post uploads (else 422 on ``asset_ids.{i}``).\n\nOn a scheduled post (Update schedule) the saved result must still pass the checklist and\n``publish_at`` must be set and at least 1 minute away (else 422 with every failing field);\nits targets stay pending.",
         "properties": {
           "asset_ids": {
             "items": {
@@ -27012,6 +27007,10 @@
             "title": "Show Branding",
             "type": "boolean"
           },
+          "sites_limit": {
+            "title": "Sites Limit",
+            "type": "integer"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -27041,6 +27040,7 @@
           "marketing_consent_text",
           "show_branding",
           "can_remove_branding",
+          "sites_limit",
           "ai_mode",
           "script_url",
           "embed_snippet",
@@ -30569,7 +30569,7 @@
         ]
       },
       "post": {
-        "description": "The key is in this response only. 402 entitlement_required on a plan without the public\nAPI (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:\n``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and\nCIDRs; empty for any address).",
+        "description": "The key is in this response only. 402 entitlement_required on a plan without the public\nAPI (Free and Creator; it is part of Business and Agency); 409 at 20 active keys. C-167:\n``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and\nCIDRs; empty for any address).",
         "operationId": "create_api_key",
         "parameters": [
           {
@@ -30762,6 +30762,70 @@
           }
         },
         "summary": "Update Api Key",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/api-keys/{key_id}/activity": {
+      "get": {
+        "description": "The key's latest 50 tool calls over MCP (the MCP audit keeps 90 days), as for a connected\nAI app: tool, outcome and time.",
+        "operationId": "get_api_key_activity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnectionActivity"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Api Key Activity",
         "tags": [
           "integrations"
         ]
@@ -34103,7 +34167,7 @@
     },
     "/v1/w/{wid}/comments/{comment_id}/reply": {
       "post": {
-        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when\nthe account is read-only after a downgrade (FR-BIL-07).",
+        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05). 402 quota_exceeded (its account limit) when\nthe account is read-only after a downgrade (FR-BIL-07).",
         "operationId": "reply_to_comment",
         "parameters": [
           {
@@ -36834,7 +36898,7 @@
         ]
       },
       "post": {
-        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict. 402\nquota_exceeded (accounts_per_platform) when the conversation's account is read-only after a\ndowngrade (FR-BIL-07).",
+        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict. 402\nquota_exceeded (its account limit) when the conversation's account is read-only after a\ndowngrade (FR-BIL-07).",
         "operationId": "send_message",
         "parameters": [
           {
@@ -37185,7 +37249,7 @@
         ]
       },
       "post": {
-        "description": "send_at must be at least 2 minutes away and 5 minutes before the reply window closes.\n\nWith an Idempotency-Key (TR-API-05), repeating the request returns the first response and\nschedules nothing more; the same key with a different body is 409 idempotency_conflict.",
+        "description": "send_at must be at least 1 minute away and 5 minutes before the reply window closes.\n\nWith an Idempotency-Key (TR-API-05), repeating the request returns the first response and\nschedules nothing more; the same key with a different body is 409 idempotency_conflict.",
         "operationId": "create_scheduled_message",
         "parameters": [
           {
@@ -40880,7 +40944,7 @@
     },
     "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
       "post": {
-        "description": "After the browser uploaded the file: check it came in with this ticket and add it to the\nmedia library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file\nover a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402\nquota_exceeded past the plan's daily upload caps.",
+        "description": "After the browser uploaded the file: add the ticket's file to the media library. 409 when\nno file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``\nticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.",
         "operationId": "complete_mcp_upload",
         "parameters": [
           {
@@ -40904,16 +40968,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/McpUploadComplete"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
@@ -41674,7 +41728,7 @@
     },
     "/v1/w/{wid}/notification-preferences": {
       "get": {
-        "description": "The signed-in member's weekly digest switch and push switches in this workspace.",
+        "description": "The signed-in member's email switches (the weekly digest, changes by AI apps) and push\nswitches in this workspace.",
         "operationId": "get_notification_preferences",
         "parameters": [
           {
@@ -44910,7 +44964,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/publish-now": {
       "post": {
-        "description": "F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and\npublish_target is enqueued for every target at once (202; scheduled_post.updated follows\neach step). 402 quota_exceeded past scheduled_posts_monthly.",
+        "description": "F-13 Publish now: the Schedule checks without the 1-minute rule, ``publish_at`` = now, and\npublish_target is enqueued for every target at once (202; scheduled_post.updated follows\neach step). 402 quota_exceeded past scheduled_posts_monthly.",
         "operationId": "publish_post_now",
         "parameters": [
           {
@@ -45038,7 +45092,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule": {
       "post": {
-        "description": "A calendar move or \"Move to\u2026\" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5\nminutes away (422 on ``publish_at``: \"Pick a time at least 5 minutes from now.\"). A draft is\n409 (drafts are scheduled with /schedule).",
+        "description": "A calendar move or \"Move to\u2026\" (FR-PUB-08): a scheduled post to ``publish_at``, at least 1\nminute away (422 on ``publish_at``: \"Pick a time at least 1 minute from now.\"). A draft is\n409 (drafts are scheduled with /schedule).",
         "operationId": "reschedule_post",
         "parameters": [
           {
@@ -45112,7 +45166,7 @@
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/schedule": {
       "post": {
-        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A\nscheduled post takes the new time the same way.",
+        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 1 minute away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A\nscheduled post takes the new time the same way.",
         "operationId": "schedule_post",
         "parameters": [
           {
@@ -46230,7 +46284,7 @@
     },
     "/v1/w/{wid}/social-accounts/instagram/complete": {
       "post": {
-        "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,\n502 when Instagram fails.",
+        "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over instagram_accounts,\n502 when Instagram fails.",
         "operationId": "complete_instagram_connect",
         "parameters": [
           {

@@ -41,6 +41,8 @@ class Role(StrEnum):
 
 DEFAULT_NOTIFICATION_PREFS: dict[str, Any] = {
     "email_digest": True,
+    # Newer than the column's default: a row without it reads as on (notify/preferences.py).
+    "email_ai_changes": True,
     "push": {"needs_you": True, "new_lead": True, "window_closing": True, "account": True},
 }
 

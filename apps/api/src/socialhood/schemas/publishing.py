@@ -76,7 +76,7 @@ CollaboratorInvite = Literal["pending", "accepted"]
 #   photos, the location (a Facebook Page id) and a Reel's cover and audio name (FR-PUB-07); only
 #   listed when the post uses one
 # - publishing_limit: room in each account's 24-hour publishing limit on the post's day
-# - publish_at: at least 5 minutes from now (only when the post has a time)
+# - publish_at: at least 1 minute from now (only when the post has a time)
 ChecklistKey = Literal[
     "accounts",
     "media",
@@ -264,7 +264,7 @@ class ScheduledPostDraft(RequestModel):
     workspace's post uploads (else 422 on ``asset_ids.{i}``).
 
     On a scheduled post (Update schedule) the saved result must still pass the checklist and
-    ``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);
+    ``publish_at`` must be set and at least 1 minute away (else 422 with every failing field);
     its targets stay pending."""
 
     targets: list[TargetIn] = Field(default_factory=list, max_length=10)
@@ -293,7 +293,7 @@ class ScheduledPostDraft(RequestModel):
 
 
 class ScheduleRequest(RequestModel):
-    """POST …/schedule and …/reschedule: at least 5 minutes from now (else 422 on
+    """POST …/schedule and …/reschedule: at least 1 minute from now (else 422 on
     ``publish_at``)."""
 
     publish_at: datetime
@@ -310,7 +310,7 @@ class BulkScheduledPostRequest(RequestModel):
 
 class BulkSkipped(ResponseModel):
     """A post the action could not apply to, and why (``conflict``: publishing started or
-    published; ``validation_error``: the shifted time would be less than 5 minutes away)."""
+    published; ``validation_error``: the shifted time would be less than 1 minute away)."""
 
     id: uuid.UUID
     code: str

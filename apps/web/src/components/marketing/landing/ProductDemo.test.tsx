@@ -115,8 +115,11 @@ describe("the product demo (C-175)", () => {
     }
     // The list's chips are the app's, in its order.
     expect(PRODUCT_DEMO_CHIPS).toEqual(CHIP_VIEWS.map((view) => view.label));
-    // The strip offers connected platforms: All, Instagram, WhatsApp, Website.
-    expect([...container.querySelectorAll("[data-seg]")].map((seg) => seg.textContent)).toEqual(["All", "Instagram", "WhatsApp", "Website"]);
+    // The strip offers connected platforms: All in words, then each platform's mark (C-188), as the app does.
+    const segs = [...container.querySelectorAll("[data-seg]")];
+    expect(segs.map((seg) => seg.textContent)).toEqual(["All", "", "", ""]);
+    expect(segs.slice(1).map((seg) => seg.querySelector(".pd-seg-mark")?.getAttribute("title"))).toEqual(["Instagram", "WhatsApp", "Website"]);
+    expect(segs.slice(1).every((seg) => seg.querySelector(".pd-seg-mark svg"))).toBe(true);
     // Every row wears its real channel mark.
     expect(container.querySelectorAll(".pd-row .pd-mark svg")).toHaveLength(9);
     // Nothing is live or lit until a script says so, and every name the timeline uses exists in the markup.
@@ -132,7 +135,7 @@ describe("the product demo (C-175)", () => {
     }
   });
 
-  it("schedules inside the reply window: at least 2 minutes away, and before it closes (checkSchedule)", () => {
+  it("schedules inside the reply window: at least 1 minute away, and before it closes (checkSchedule)", () => {
     const { container } = render(<ProductDemo />);
     expect(container.querySelector(".pd-sched")).toHaveTextContent("Fri 6 Nov 2026");
     expect(container.querySelector(".pd-sched")).toHaveTextContent("18:30");

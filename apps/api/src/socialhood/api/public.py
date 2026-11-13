@@ -67,6 +67,7 @@ from socialhood.services import idempotency, sending
 from socialhood.services.automations import queries as automation_queries
 from socialhood.services.contacts import ContactFilter
 from socialhood.services.inbox_views import message_out
+from socialhood.services.reply_window import reply_window
 
 PREFIX = "/public/v1"
 router = APIRouter(prefix=PREFIX)
@@ -315,6 +316,13 @@ async def send_message(
     conv = await inbox.get_conversation(session, conversation_id)
     if conv is None:
         raise ApiError("not_found")
+    # A script is not a person, so Meta's 7-day Human Agent window is not for it (C-179): the
+    # plain 24 hours apply, whatever the app's own window is.
+    window = reply_window(
+        conv.platform, conv.last_inbound_at, human_agent=False, now=datetime.now(UTC)
+    )
+    if window.state != "open":
+        raise ApiError("reply_window_closed", sending.window_closed_detail(conv.platform))
     redis = request.app.state.redis
     claim = None
     if idempotency_key is not None:

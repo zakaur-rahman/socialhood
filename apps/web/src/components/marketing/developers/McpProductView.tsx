@@ -170,6 +170,7 @@ export function McpProductView() {
                   <th scope="col">Free</th>
                   <th scope="col">Creator</th>
                   <th scope="col">Business</th>
+                  <th scope="col">Agency</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +180,7 @@ export function McpProductView() {
                     <td>{row.free}</td>
                     <td>{row.pro}</td>
                     <td>{row.max}</td>
+                    <td>{row.agency}</td>
                   </tr>
                 ))}
               </tbody>

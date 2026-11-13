@@ -71,7 +71,7 @@ const ENTITLEMENT_FOR_METRIC: Record<string, string> = {
   ai_credits: "ai_credits_monthly",
   scheduled_posts: "scheduled_posts_monthly",
   channels: "channels_total",
-  instagram_accounts: "accounts_per_platform",
+  instagram_accounts: "instagram_accounts",
   whatsapp_accounts: "accounts_per_platform",
   facebook_accounts: "accounts_per_platform",
 };

@@ -19,6 +19,7 @@ import { toastError } from "@/lib/toast-error";
 import { setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName, firstName } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
+import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { EditingSuggestionChip, EscalationBanner, SuggestionCard } from "./SuggestionCard";
@@ -77,6 +78,7 @@ export function useSuggestionSlot({
   upload?: KnowledgeUploader;
 }) {
   const workspace = useCurrentWorkspace();
+  const now = useNow();
   const wid = workspace.id;
   const conversationId = conversation.id;
   const queryClient = useQueryClient();
@@ -91,7 +93,14 @@ export function useSuggestionSlot({
 
   const suggestion: Suggestion | null = conversation.pending_suggestion ?? null;
   const name = firstName(contactName(conversation.contact, conversation.platform));
-  const humanAgent = conversation.reply_window.state === "human_agent";
+  // The state is from the last fetch, so a tab left open can still say "open" after the 24 hours.
+  const replyWindow = conversation.reply_window;
+  const closes =
+    replyWindow.state === "open" && replyWindow.closes_at && conversation.platform !== "whatsapp"
+      ? new Date(replyWindow.closes_at).getTime()
+      : null;
+  const windowPassed = (at: number) => closes !== null && closes <= at;
+  const humanAgent = replyWindow.state === "human_agent" || windowPassed(now.getTime());
   const aiOn = conversation.ai.effective_mode !== "off";
   const outOfCredits = Boolean(exhaustedAiCredits(billing.data));
 
@@ -143,6 +152,10 @@ export function useSuggestionSlot({
 
   const send = () => {
     if (!suggestion?.reply_text || !canReply || sendOff) return;
+    if (windowPassed(Date.now())) {
+      toast.error(HUMAN_AGENT_SEND_OFF); // the clock above ticks once a minute
+      return;
+    }
     onSend({ text: suggestion.reply_text, suggestionId: suggestion.id, humanAgent });
     setHandledFor(suggestion.message_id);
     setPendingSuggestion(queryClient, wid, conversationId, null, suggestion.id);

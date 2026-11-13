@@ -70,7 +70,7 @@ async def create_scheduled_message(
         str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
     ] = None,
 ) -> ScheduledMessage:
-    """send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+    """send_at must be at least 1 minute away and 5 minutes before the reply window closes.
 
     With an Idempotency-Key (TR-API-05), repeating the request returns the first response and
     schedules nothing more; the same key with a different body is 409 idempotency_conflict.

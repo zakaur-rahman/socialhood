@@ -80,7 +80,7 @@ export default async function AiInfoPage() {
       plan: "pro" as const,
       body: (
         <>
-          1 Instagram, 1 WhatsApp, 1 Facebook and 1 website chat, 2 team members, 25 active automations, 1,500 AI credits a
+          2 Instagram, 1 WhatsApp, 1 Facebook and 1 website chat, 2 team members, 25 active automations, 1,500 AI credits a
           month, 100 scheduled posts a month, Auto and Suggest modes, 1M characters of knowledge, full message history, the
           catalogue and payment links, Google Sheets and full MCP. {table.trial_days.pro}-day free trial
           {card("pro")?.available ? "." : " once it is on sale."}
@@ -91,7 +91,7 @@ export default async function AiInfoPage() {
       plan: "max" as const,
       body: (
         <>
-          3 each of Instagram, WhatsApp and Facebook, 3 team members, 50 active automations, 5,000 AI credits a month, 300
+          4 Instagram, 3 each of WhatsApp and Facebook, 3 team members, 50 active automations, 5,000 AI credits a month, 300
           scheduled posts a month, 5M characters of knowledge, and everything in Creator plus API keys, Zapier and the public
           API. Agency is for agencies and people managing several brands: 10 each of Instagram, WhatsApp and Facebook, 10 team
           members, unlimited automations and scheduled posts, 12,000 AI credits a month and 50M characters of knowledge.{" "}

@@ -84,7 +84,7 @@ export const FAQ_AUTO_REPLY: FaqItem = {
 
 export const FAQ_ACCOUNTS: FaqItem = {
   question: "Can I connect more than one Instagram account?",
-  answer: "Yes. Free connects any 2 of Instagram, Facebook or web chat, with no WhatsApp. Creator connects 1 each of Instagram, WhatsApp, Facebook and web chat, and Business connects 3 each of Instagram, WhatsApp and Facebook.",
+  answer: "Yes. Free connects any 2 of Instagram, Facebook or web chat, with no WhatsApp. Creator connects 2 Instagram accounts and 1 each of WhatsApp, Facebook and web chat. Business connects 4 Instagram accounts and 3 each of WhatsApp and Facebook.",
 };
 
 export const FAQ_24_HOURS: FaqItem = {
@@ -124,11 +124,11 @@ export const FAQ_CANCEL: FaqItem = {
 // C-168: the MCP server (docs/architecture/mcp 04-phase-b.md, 05-phase-c.md; connect-ai.ts PLAN_ROWS
 // and SAFETY): reading and drafts on every plan, scheduling on Creator and Business, a preview and a yes
 // before anything is scheduled, and no messages sent from an AI app. C-169: keyword automations
-// from an AI app on Creator and Business; the automation sends, once a person turns it on.
+// from an AI app on Creator and Business; the automation sends once it is on (owner, 2026-11-11: the AI app can turn it on after a preview and a yes).
 export const FAQ_AI_APPS: FaqItem = {
   question: "Can I use Amplychat from Claude or ChatGPT?",
   answer:
-    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule posts and set up keyword automations on Creator and Business. Amplychat requires a preview first and the AI waits for your yes, unless you set your AI app to always allow Amplychat's tools, so keep approvals on for changes. It can't send messages to your customers itself: an automation sends once you've turned it on in Amplychat, and knowledge it adds waits for your approval.",
+    "Yes. Amplychat has an MCP server, so Claude, ChatGPT and Codex can read your inbox, comments and analytics and draft replies on every plan, and schedule or publish posts and set up keyword automations on Creator and Business. Amplychat requires a preview first and the AI waits for your yes, unless you set your AI app to always allow Amplychat's tools, so keep approvals on for changes. It can't send messages to your customers itself: an automation sends once it is turned on, by you or by the AI app after your yes, and knowledge it adds waits for your approval.",
   link: { label: "How it works with AI apps", href: "/mcp" },
 };
 

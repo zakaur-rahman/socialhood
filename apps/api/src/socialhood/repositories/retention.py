@@ -24,7 +24,7 @@ from socialhood.models.inbox import Conversation, Message
 from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
 from socialhood.models.mcp import McpToolCall, McpUpload, UploadStatus
 from socialhood.models.notifications import Notification
-from socialhood.models.oauth import ClientKind, McpConnection, OAuthClient, OAuthCode, OAuthToken
+from socialhood.models.oauth import McpConnection, OAuthClient, OAuthCode, OAuthToken
 from socialhood.models.platform import WebhookEvent
 
 
@@ -123,14 +123,16 @@ async def mcp_connections_ended_before(
 
 
 async def unused_dcr_clients_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
-    """C-165 phase C: clients registered with DCR and unused since ``cutoff`` (30 days) that no
-    connection holds. DCR makes a client per fresh connection, so these pile up otherwise."""
+    """C-165 phase C: clients unused since ``cutoff`` (30 days) that no connection holds. Both
+    kinds, despite the name: DCR makes a client per fresh connection, and anyone can make us save
+    a metadata document's client with one authorize request (it is fetched again on its next
+    use). Never a blocked one: its row is the block."""
     held = exists().where(McpConnection.oauth_client_id == OAuthClient.id)
     return await _delete(
         session,
         OAuthClient.id,
         limit,
-        OAuthClient.kind == ClientKind.DCR.value,
+        OAuthClient.blocked_at.is_(None),
         func.coalesce(OAuthClient.last_used_at, OAuthClient.created_at) < cutoff,
         ~held,
     )

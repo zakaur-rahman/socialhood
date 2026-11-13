@@ -105,7 +105,7 @@ type MoveVars = { post: ScheduledPostSummary; publishAt: string };
 
 /**
  * FR-PUB-08 calendar move or "Move to…": the card moves at once and goes back if the API refuses
- * (less than 5 minutes ahead, or publishing started).
+ * (less than 1 minute ahead, or publishing started).
  */
 export function useReschedulePost(wid: string) {
   const api = useApi();

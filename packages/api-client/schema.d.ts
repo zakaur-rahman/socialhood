@@ -765,7 +765,7 @@ export interface paths {
         /**
          * Create Api Key
          * @description The key is in this response only. 402 entitlement_required on a plan without the public
-         *     API (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:
+         *     API (Free and Creator; it is part of Business and Agency); 409 at 20 active keys. C-167:
          *     ``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and
          *     CIDRs; empty for any address).
          */
@@ -800,6 +800,27 @@ export interface paths {
          *     409 for a revoked key.
          */
         patch: operations["update_api_key"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys/{key_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Api Key Activity
+         * @description The key's latest 50 tool calls over MCP (the MCP audit keeps 90 days), as for a connected
+         *     AI app: tool, outcome and time.
+         */
+        get: operations["get_api_key_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/assignment": {
@@ -1631,7 +1652,7 @@ export interface paths {
          * Reply To Comment
          * @description A public reply under the comment, posted on Instagram before the answer (the comment's
          *     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
-         *     answer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when
+         *     answer and posts nothing more (TR-API-05). 402 quota_exceeded (its account limit) when
          *     the account is read-only after a downgrade (FR-BIL-07).
          */
         post: operations["reply_to_comment"];
@@ -2051,7 +2072,7 @@ export interface paths {
          *
          *     Any member may reply. The same Idempotency-Key with the same body returns the first response
          *     and sends nothing more; with a different body it is 409 idempotency_conflict. 402
-         *     quota_exceeded (accounts_per_platform) when the conversation's account is read-only after a
+         *     quota_exceeded (its account limit) when the conversation's account is read-only after a
          *     downgrade (FR-BIL-07).
          */
         post: operations["send_message"];
@@ -2139,7 +2160,7 @@ export interface paths {
         put?: never;
         /**
          * Create Scheduled Message
-         * @description send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+         * @description send_at must be at least 1 minute away and 5 minutes before the reply window closes.
          *
          *     With an Idempotency-Key (TR-API-05), repeating the request returns the first response and
          *     schedules nothing more; the same key with a different body is 409 idempotency_conflict.
@@ -3079,10 +3100,9 @@ export interface paths {
         put?: never;
         /**
          * Complete Mcp Upload
-         * @description After the browser uploaded the file: check it came in with this ticket and add it to the
-         *     media library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file
-         *     over a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402
-         *     quota_exceeded past the plan's daily upload caps.
+         * @description After the browser uploaded the file: add the ticket's file to the media library. 409 when
+         *     no file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``
+         *     ticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.
          */
         post: operations["complete_mcp_upload"];
         delete?: never;
@@ -3277,7 +3297,8 @@ export interface paths {
         };
         /**
          * Get Notification Preferences
-         * @description The signed-in member's weekly digest switch and push switches in this workspace.
+         * @description The signed-in member's email switches (the weekly digest, changes by AI apps) and push
+         *     switches in this workspace.
          */
         get: operations["get_notification_preferences"];
         /**
@@ -3997,7 +4018,7 @@ export interface paths {
         put?: never;
         /**
          * Publish Post Now
-         * @description F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and
+         * @description F-13 Publish now: the Schedule checks without the 1-minute rule, ``publish_at`` = now, and
          *     publish_target is enqueued for every target at once (202; scheduled_post.updated follows
          *     each step). 402 quota_exceeded past scheduled_posts_monthly.
          */
@@ -4042,8 +4063,8 @@ export interface paths {
         put?: never;
         /**
          * Reschedule Post
-         * @description A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5
-         *     minutes away (422 on ``publish_at``: "Pick a time at least 5 minutes from now."). A draft is
+         * @description A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 1
+         *     minute away (422 on ``publish_at``: "Pick a time at least 1 minute from now."). A draft is
          *     409 (drafts are scheduled with /schedule).
          */
         post: operations["reschedule_post"];
@@ -4065,7 +4086,7 @@ export interface paths {
         /**
          * Schedule Post
          * @description F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
-         *     ``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are
+         *     ``publish_at`` be at least 1 minute away (422 with every failing field); then the targets are
          *     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A
          *     scheduled post takes the new time the same way.
          */
@@ -4366,7 +4387,7 @@ export interface paths {
          * @description Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
          *     the member who started the connect, in the workspace they started it in, can finish it; the
          *     nonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else
-         *     started it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,
+         *     started it, 422 ig_not_professional, 409 account_in_use, 402 over instagram_accounts,
          *     502 when Instagram fails.
          */
         post: operations["complete_instagram_connect"];
@@ -7152,7 +7173,7 @@ export interface components {
         /**
          * BulkSkipped
          * @description A post the action could not apply to, and why (``conflict``: publishing started or
-         *     published; ``validation_error``: the shifted time would be less than 5 minutes away).
+         *     published; ``validation_error``: the shifted time would be less than 1 minute away).
          */
         BulkSkipped: {
             /** Code */
@@ -8485,7 +8506,7 @@ export interface components {
         /**
          * DropSignature
          * @description The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,
-         *     signature) and where to send them.
+         *     public_id, signature) and where to send them.
          */
         DropSignature: {
             /** Allowed Formats */
@@ -8496,6 +8517,8 @@ export interface components {
             cloud_name: string;
             /** Folder */
             folder: string;
+            /** Public Id */
+            public_id: string;
             /** Signature */
             signature: string;
             /** Tags */
@@ -9796,11 +9819,6 @@ export interface components {
             /** Ids */
             ids?: string[] | null;
         };
-        /** McpUploadComplete */
-        McpUploadComplete: {
-            /** Public Id */
-            public_id: string;
-        };
         /** McpUploadTicket */
         McpUploadTicket: {
             /**
@@ -10262,6 +10280,8 @@ export interface components {
          *     back. Fields are required both ways, so the request and response share one schema.
          */
         NotificationPreferences: {
+            /** Email Ai Changes */
+            email_ai_changes: boolean;
             /** Email Digest */
             email_digest: boolean;
             push: components["schemas"]["PushPreferences"];
@@ -12220,7 +12240,7 @@ export interface components {
         };
         /**
          * ScheduleRequest
-         * @description POST …/schedule and …/reschedule: at least 5 minutes from now (else 422 on
+         * @description POST …/schedule and …/reschedule: at least 1 minute from now (else 422 on
          *     ``publish_at``).
          */
         ScheduleRequest: {
@@ -12387,7 +12407,7 @@ export interface components {
          *     workspace's post uploads (else 422 on ``asset_ids.{i}``).
          *
          *     On a scheduled post (Update schedule) the saved result must still pass the checklist and
-         *     ``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);
+         *     ``publish_at`` must be set and at least 1 minute away (else 422 with every failing field);
          *     its targets stay pending.
          */
         ScheduledPostDraft: {
@@ -14315,6 +14335,8 @@ export interface components {
             script_url: string;
             /** Show Branding */
             show_branding: boolean;
+            /** Sites Limit */
+            sites_limit: number;
             /** Title */
             title: string;
             /**
@@ -16335,6 +16357,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_api_key_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionActivity"];
                 };
             };
             /** @description Validation error */
@@ -22283,11 +22346,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["McpUploadComplete"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

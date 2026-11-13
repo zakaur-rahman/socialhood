@@ -18,11 +18,13 @@ from socialhood.ai.fake import FakeProvider
 from socialhood.billing.plans import ENTITLEMENTS
 from socialhood.db.engine import make_sessionmaker
 from socialhood.mcp.tools import ask
+from socialhood.security import ratelimit
 from socialhood.services.knowledge import ingest, sources
+from tests.support.api import Clerk
 from tests.support.automation_api import set_plan
 from tests.support.automations import make_automation
 from tests.support.mcp import confirm, connect, error_of, make_key, structured
-from tests.support.sending import Setup, clean_outbox
+from tests.support.sending import Setup, clean_outbox, workspace_with_thread
 
 SCOPES = ("replies:draft", "knowledge:write", "knowledge:read", "automations:write", "ask")
 
@@ -131,6 +133,63 @@ async def test_draft_reply_errors(
     assert await rows(engine, "SELECT 1 FROM reply_suggestions") == []
 
 
+async def test_drafting_from_knowledge_uses_the_workspaces_ai_rate_limit(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    limit = ratelimit.LIMITS["ai"]
+    for _ in range(limit.max_requests):  # the workspace's window, as the inbox's drafts leave it
+        assert await ratelimit.hit(mcp_app.state.redis, limit, setup.wid) == 0
+    refused = error_of(
+        await call(
+            mcp_app,
+            key,
+            "draft_reply",
+            {"conversation_id": setup.conversation_id, "use_knowledge": True},
+        )
+    )
+    assert refused["code"] == "rate_limited"
+    assert refused["retry_after_s"] >= 1
+    assert await rows(engine, "SELECT 1 FROM reply_suggestions") == []
+    # A reply the AI app wrote itself asks no model of ours: it is saved.
+    saved = structured(
+        await call(
+            mcp_app,
+            key,
+            "draft_reply",
+            {"conversation_id": setup.conversation_id, "text": "Thanks for writing!"},
+        )
+    )
+    assert saved["saved"] is True
+
+
+async def test_another_workspaces_conversation_and_automation_are_not_found(
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    mcp_app: FastAPI,
+    key: str,
+    setup: Setup,
+    engine: AsyncEngine,
+) -> None:
+    other = await workspace_with_thread(client, clerk, engine, email="other@example.com")
+    theirs = str(await make_automation(engine, workspace_id=other.wid, account_id=other.account_id))
+    reply = error_of(
+        await call(
+            mcp_app,
+            key,
+            "draft_reply",
+            {"conversation_id": other.conversation_id, "text": "Hello from next door"},
+        )
+    )
+    assert reply["code"] == "not_found"
+    for confirmed in (False, True):
+        args = {"automation_id": theirs, "confirmed": confirmed}
+        error = error_of(await call(mcp_app, key, "pause_automation", args))
+        assert error["code"] == "not_found", args
+    assert await rows(engine, "SELECT 1 FROM reply_suggestions") == []
+    [row] = await rows(engine, "SELECT status FROM automations WHERE id = :i", i=theirs)
+    assert row["status"] == "active"
+
+
 async def test_draft_reply_works_on_free(
     mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
 ) -> None:
@@ -198,10 +257,13 @@ async def test_add_knowledge_text_and_faq(
     assert len(await rows(engine, "SELECT 1 FROM knowledge_sources")) == 2
     audit = await rows(engine, "SELECT 1 FROM audit_events WHERE action = 'knowledge.created'")
     assert len(audit) == 2
-    # An identical resend inside the window is the first result, not a second source.
+    # The same confirmed call sent again inside the window (a lost answer) is the first result,
+    # not a second source.
     args = {"type": "text", "title": "Returns", "body": "Returns within 7 days."}
-    first = structured(await confirm(mcp_app, key, "add_knowledge", args))
-    again = structured(await confirm(mcp_app, key, "add_knowledge", args))
+    token = structured(await call(mcp_app, key, "add_knowledge", args))["confirmation_token"]
+    confirmed = {**args, "confirmed": True, "confirmation_token": token}
+    first = structured(await call(mcp_app, key, "add_knowledge", confirmed))
+    again = structured(await call(mcp_app, key, "add_knowledge", confirmed))
     assert again == {**first, "duplicate_of_previous_call": True}
     assert len(await rows(engine, "SELECT 1 FROM knowledge_sources")) == 3
 
@@ -249,6 +311,10 @@ async def test_add_knowledge_counts_toward_the_plan_and_needs_the_fields(
     )
     assert missing["code"] == "validation_error"
     assert missing["field_errors"][0]["field"] == "question"
+    blank = error_of(
+        await call(mcp_app, key, "add_knowledge", {"type": "text", "title": "   ", "body": "b"})
+    )
+    assert (blank["code"], blank["field_errors"][0]["field"]) == ("validation_error", "title")
     await set_plan(engine, setup.wid, "free")
     free = error_of(
         await call(mcp_app, key, "add_knowledge", {"type": "text", "title": "t", "body": "b"})
@@ -331,10 +397,27 @@ async def test_pause_an_automation(
     automation = str(
         await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id)
     )
-    paused = structured(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
-    assert (paused["status"], paused["changed"]) == ("paused", True)
-    again = structured(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
-    assert (again["status"], again["changed"]) == ("paused", False)
+    args = {"automation_id": automation}
+    # Pausing a live automation is previewed first, like the other automation writes.
+    preview = structured(await call(mcp_app, key, "pause_automation", args))
+    assert (preview["preview"], preview["changed"], preview["status"]) == (True, False, "paused")
+    assert "confirmed: true" in preview["next_step"]
+    assert (await rows(engine, "SELECT status FROM automations"))[0]["status"] == "active"
+    refused = error_of(await call(mcp_app, key, "pause_automation", {**args, "confirmed": True}))
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    assert (await rows(engine, "SELECT status FROM automations"))[0]["status"] == "active"
+    paused = structured(
+        await call(
+            mcp_app,
+            key,
+            "pause_automation",
+            {**args, "confirmed": True, "confirmation_token": preview["confirmation_token"]},
+        )
+    )
+    assert (paused["status"], paused["changed"], paused["preview"]) == ("paused", True, False)
+    # One that is not live needs no preview: nothing changes.
+    again = structured(await call(mcp_app, key, "pause_automation", args))
+    assert (again["status"], again["changed"], again["preview"]) == ("paused", False, False)
     # An identical pause later still runs: there is no dedupe window to replay.
     assert again["duplicate_of_previous_call"] is False
     actions = [r["action"] for r in await rows(engine, "SELECT action FROM audit_events")]
@@ -421,6 +504,15 @@ async def test_ask_returns_a_run_to_collect(
         await call(mcp_app, key, "get_ask_answer", {"ask_run_id": str(uuid.uuid4())})
     )
     assert missing["code"] == "not_found"
+
+
+async def test_a_blank_question_is_a_field_error(
+    mcp_app: FastAPI, key: str, engine: AsyncEngine, queued: list[uuid.UUID]
+) -> None:
+    blank = error_of(await call(mcp_app, key, "ask_amplychat", {"question": "   "}))
+    assert (blank["code"], blank["field_errors"][0]["field"]) == ("validation_error", "question")
+    assert await rows(engine, "SELECT 1 FROM agent_runs") == []
+    assert queued == []
 
 
 async def test_ask_uses_the_plans_credits_and_rate_limit(

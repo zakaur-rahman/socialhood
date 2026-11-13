@@ -36,6 +36,7 @@ describe("/mcp (C-165)", () => {
     render(<McpProductView />);
     const table = screen.getByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(PLAN_ROWS.length + 1);
+    expect(within(table).getByRole("columnheader", { name: "Agency" })).toBeInTheDocument();
     for (const item of SAFETY) expect(screen.getByRole("heading", { level: 3, name: item.title })).toBeInTheDocument();
   });
 
@@ -68,7 +69,7 @@ describe("/mcp (C-165)", () => {
   it("is in the sitemap lists, the footer and llms.txt", () => {
     for (const path of [MCP_PAGE_PATH, API_KEY_PAGE_PATH]) {
       expect(PUBLIC_PATHS).toContain(path);
-      expect((PAGE_UPDATED as Record<string, string>)[path]).toBe(path === MCP_PAGE_PATH ? "2026-11-12" : "2026-11-01");
+      expect((PAGE_UPDATED as Record<string, string>)[path]).toBe(path === MCP_PAGE_PATH ? "2026-11-12" : "2026-11-11");
       expect(llmsText()).toContain(path);
     }
     const connect = footerColumns(null).find((c) => c.links.some((l) => l.href === "/developers/mcp"));
@@ -86,6 +87,9 @@ describe("/developers/mcp/api-key (C-165)", () => {
     expect(screen.getAllByText(/https:\/\/api\.amplychat\.com\/mcp/).length).toBeGreaterThan(3);
     expect(screen.getByText(/bearer_token_env_var = "AMPLYCHAT_API_KEY"/)).toBeInTheDocument();
     expect(screen.getAllByText(/Settings › API keys/).length).toBeGreaterThan(0);
+    // API keys are on Business and Agency (billing/plans.py public_api), on every page.
+    expect(screen.getByText(/A key is part of Business and Agency\./)).toBeInTheDocument();
+    expect(screen.getByText(/Making a key needs a Business or Agency workspace\./)).toBeInTheDocument();
   });
 
   it("keeps its metadata within the limits and its FAQ JSON-LD valid", () => {

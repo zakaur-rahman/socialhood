@@ -49,7 +49,8 @@ function stored(call: Call) {
 }
 
 function setup(detail: Partial<Conversation> = {}, overrides: Record<string, (call: Call) => Response> = {}) {
-  const conv = conversation({ pending_suggestion: suggestion(), ...detail });
+  // A window still open whatever today's date is: the card treats a passed closes_at as closed.
+  const conv = conversation({ pending_suggestion: suggestion(), reply_window: { state: "open", closes_at: "2099-01-01T00:00:00Z" }, ...detail });
   const view = renderWithApi(<ThreadView key="c1" conversationId="c1" />, {
     handlers: {
       "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }),
@@ -128,6 +129,16 @@ describe("Suggested reply in the thread (F-08)", () => {
     await user.type(screen.getByRole("textbox", { name: "Reply to Priya Nair" }), "{Enter}");
     await waitFor(() => expect(sends(calls)).toHaveLength(1));
     expect((sends(calls)[0].body as SendMessage).suggestion_id).toBe("s1");
+  });
+
+  it("treats a tab left open past the 24 hours as the Human Agent window, though its data says open", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ reply_window: { state: "open", closes_at: "2020-01-01T00:00:00Z" } });
+    const card = await screen.findByRole("region", { name: "Suggested reply" });
+    expect(within(card).getByRole("button", { name: "Send" })).toBeDisabled();
+    await user.click(screen.getByRole("textbox", { name: "Reply to Priya Nair" }));
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(sends(calls)).toHaveLength(0);
   });
 
   it("stopping the edit keeps the text, drops the link and brings the card back", async () => {

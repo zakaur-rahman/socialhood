@@ -152,6 +152,9 @@ test.describe("C-165 AI app connections", () => {
       await expect(page.getByRole("heading", { level: 3, name, exact: true })).toBeVisible();
     }
     await expect(page.getByRole("table", { name: "What each plan includes for AI apps" })).toBeVisible();
+    // The tool reference comes from the server's registry (mcp-tools.json).
+    const tools = page.getByRole("table", { name: "Every tool on the server" });
+    await expect(tools.getByRole("row", { name: /get_workspace/ })).toContainText("Every plan");
     // hasText skips <script> contents, so read the blocks (as c163-gloss.spec.ts does).
     const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
     expect(blocks.filter((block) => block.includes('"FAQPage"'))).toHaveLength(1);

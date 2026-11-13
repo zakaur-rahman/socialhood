@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NotificationPreferences } from "@/lib/api/types";
 import type { PushBrowser } from "@/lib/push/browser";
-import { json, problem, renderWithApi, type Call } from "@/test/api";
+import { json, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import { NotificationSettingsPage } from "./NotificationSettingsPage";
 
@@ -20,11 +20,13 @@ const unsupported: PushBrowser = {
 
 const prefs: NotificationPreferences = {
   email_digest: true,
+  email_ai_changes: true,
   push: { needs_you: true, new_lead: true, window_closing: true, account: true },
 };
 
-function setup(put?: (call: Call) => Response) {
+function setup(put?: (call: Call) => Response, ws = workspace) {
   const view = renderWithApi(<NotificationSettingsPage pushBrowser={unsupported} />, {
+    ws,
     handlers: {
       "GET /v1/w/:wid/notification-preferences": () => json(prefs),
       "PUT /v1/w/:wid/notification-preferences": (call) => (put ? put(call) : json(call.body)),
@@ -46,6 +48,20 @@ describe("Settings → Notifications (UX-SCR-07, FR-NOT-03, FR-NOT-04)", () => {
     await user.click(digest);
     await waitFor(() => expect(puts()).toEqual([{ ...prefs, email_digest: false }]));
     expect(digest).not.toBeChecked();
+  });
+
+  it("owners and admins can turn off the emails about changes by AI apps; agents have no switch", async () => {
+    const user = userEvent.setup();
+    const { puts, unmount } = setup();
+    const emails = await screen.findByRole("switch", { name: "Changes by AI apps" });
+    expect(emails).toBeChecked();
+    await user.click(emails);
+    await waitFor(() => expect(puts()).toEqual([{ ...prefs, email_ai_changes: false }]));
+    unmount();
+
+    setup(undefined, { ...workspace, role: "agent" });
+    await screen.findByRole("switch", { name: "Weekly digest" });
+    expect(screen.queryByRole("switch", { name: "Changes by AI apps" })).toBeNull();
   });
 
   it("a switch per push event: Needs you, new lead, window closing, account problems", async () => {

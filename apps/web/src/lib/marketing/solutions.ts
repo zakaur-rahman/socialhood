@@ -153,9 +153,9 @@ export const FOR_CREATORS: SolutionPage = {
     },
     {
       name: "Established",
-      who: "More than one account, with a manager or an assistant.",
+      who: "Three or more Instagram accounts, or a team of three.",
       plan: "max",
-      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, up to ${E.active_automations.max} automations on at once and ${n(E.ai_credits_monthly.max)} AI credits a month.`,
+      body: `${E.instagram_accounts.max} Instagram, ${E.accounts_per_platform.max} each of WhatsApp and Facebook, ${E.members.max} team members, up to ${E.active_automations.max} automations on at once and ${n(E.ai_credits_monthly.max)} AI credits a month.`,
     },
   ],
   faq: [FAQ_BAN_RISK, FAQ_ACCOUNT_LOGIN, FAQ_WHY_PROFESSIONAL, FAQ_ROBOTIC, FAQ_TAKEOVER, FAQ_FREE_LIMIT],
@@ -259,7 +259,7 @@ export const FOR_BUSINESSES: SolutionPage = {
       name: "Established",
       who: "Several brands or numbers, and a bigger team.",
       plan: "max",
-      body: `${E.accounts_per_platform.max} each of Instagram, WhatsApp and Facebook, ${E.members.max} team members, the public API and API keys. Agency, for agencies and people managing several brands, is a card on the pricing page: coming soon, contact us.`,
+      body: `${E.instagram_accounts.max} Instagram, ${E.accounts_per_platform.max} each of WhatsApp and Facebook, ${E.members.max} team members, the public API and API keys. Agency, for agencies and people managing several brands, is a card on the pricing page: coming soon, contact us.`,
     },
   ],
   faq: [

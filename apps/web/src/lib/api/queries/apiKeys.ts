@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useApi } from "../provider";
-import type { ApiKey, ApiKeyCreate, ApiKeyList, ApiKeyUpdate, ApiKeyWithKey } from "../types";
+import type { AiConnectionActivity, ApiKey, ApiKeyCreate, ApiKeyList, ApiKeyUpdate, ApiKeyWithKey } from "../types";
 import { keys } from "./keys";
 import { unwrap } from "./unwrap";
 
@@ -13,6 +13,17 @@ export function useApiKeys(wid: string) {
   return useQuery<ApiKeyList>({
     queryKey: keys.apiKeys(wid),
     queryFn: () => unwrap(api.GET("/v1/w/{wid}/api-keys", { params: { path: { wid } } })),
+  });
+}
+
+/** A key's latest tool calls over MCP, as a connected app's activity; fetched when opened. */
+export function useApiKeyActivity(wid: string, id: string, enabled: boolean) {
+  const api = useApi();
+  return useQuery<AiConnectionActivity>({
+    queryKey: keys.apiKeyActivity(wid, id),
+    queryFn: () =>
+      unwrap(api.GET("/v1/w/{wid}/api-keys/{key_id}/activity", { params: { path: { wid, key_id: id } } })),
+    enabled,
   });
 }
 

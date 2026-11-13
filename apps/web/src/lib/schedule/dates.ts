@@ -13,8 +13,8 @@ export const CALENDAR_VIEWS: readonly CalendarView[] = ["month", "week", "list"]
 export const ROW_MINUTES = 30;
 export const SNAP_MINUTES = 15;
 export const DAY_MINUTES = 24 * 60;
-/** FR-PUB-08: a move to less than 5 minutes from now is refused. */
-export const MIN_LEAD_MS = 5 * 60_000;
+/** FR-PUB-08: a move to less than 1 minute from now is refused (the API's MIN_SCHEDULE_LEAD). */
+export const MIN_LEAD_MS = 60_000;
 /** The API's calendar range limit: a month grid is six weeks. */
 export const MONTH_GRID_DAYS = 42;
 
@@ -172,12 +172,12 @@ export function snapMinutes(raw: number, step = SNAP_MINUTES): number {
   return Math.max(0, Math.min(DAY_MINUTES - step, snapped));
 }
 
-/** FR-PUB-08: less than 5 minutes from now. */
+/** FR-PUB-08: less than 1 minute from now. */
 export function tooSoon(at: Date, now: Date): boolean {
   return at.getTime() < now.getTime() + MIN_LEAD_MS;
 }
 
-export const TOO_SOON_MESSAGE = "Pick a time at least 5 minutes from now.";
+export const TOO_SOON_MESSAGE = "Pick a time at least 1 minute from now.";
 
 /** "Times in Asia/Kolkata" (FR-PUB-08: the page states the workspace time zone). */
 export function zoneLabel(timeZone: string): string {

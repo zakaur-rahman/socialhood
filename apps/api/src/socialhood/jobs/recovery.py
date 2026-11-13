@@ -86,7 +86,7 @@ RECOVERY: dict[str, Recovery] = {
     "send_weekly_digests": R,  # weekly_digests' unique (workspace, week_start)
     "sweep_deletions": R,
     "purge_expired": R,
-    "clean_mcp_uploads": R,  # C-167: lists then deletes by tag; a gone file or ticket is skipped
+    "clean_mcp_uploads": R,  # C-167: deletes the ticket's one file; a gone file or ticket is fine
     "clean_unregistered_uploads": R,  # a deleted or registered file is forgotten; a re-run skips it
     "notify_expiring_api_keys": R,  # C-167: expiry_notified_at and a dedupe key send each once
     # ---- reads, AI and recomputation: they overwrite or skip what already exists

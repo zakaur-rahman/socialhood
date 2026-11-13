@@ -9773,6 +9773,140 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   inline styles).
 - **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
   API doesn't send yet.
+## C-181 · Schedule a post or a message 1 minute ahead; no past times in the time list (owner, 2026-11-08)
+
+- **Minimum lead: 1 minute.**
+  - Posts: down from 5 minutes, in both the API (`MIN_SCHEDULE_LEAD`) and the app (`MIN_SCHEDULE_LEAD_MS`, the calendar's `MIN_LEAD_MS`, the week view's clickable rows). Covers schedule, reschedule, "Move to…", calendar drags and bulk shifts.
+  - Messages: down from 2 minutes in the app's picker (`ScheduleFields`). The API's `MIN_LEAD` already allowed 1 minute.
+  - The 5-minute margin before a reply window closes stays.
+- **AI apps over MCP keep 5 minutes** (`AI_APP_LEAD` in mcp/tools/publish.py). /developers/mcp and the MCP page promise that a post scheduled by an AI app waits 5 minutes, so the team can stop it. That promise stays true.
+- **Time list:** on the earliest allowed day (today), times before the first allowed minute are shown disabled and can't be picked, in the post composer, "Move to…" and Schedule message alike. A typed time is still checked by the form, as before.
+## C-182 · The AI menu explains the Human Agent window (owner, 2026-11-08)
+
+- **Question:** should AI Suggest or Auto be turned off while Human Agent is active? No. The AI
+  acts only when a customer message arrives, and in this window none has arrived for over 24
+  hours. The server already refuses AI and automation sends there (reply_window.py). The mode is
+  kept for the next customer message, which reopens the normal window.
+- **Change:** while the conversation is in the Human Agent window, the "AI in this conversation"
+  menu shows one line under the modes: "Human Agent: only replies you send go out. AI replies
+  resume when the customer writes again." The modes stay selectable.
+- **Kept:** AI polish in the reply box stays. A person writes the text, reviews the rewrite and
+  sends it.
+
+## C-190 · Order updates in the Human Agent week need the member's own words (owner said do your best, 2026-11-11)
+
+- **Rule:** on Instagram and Messenger, between 24 hours and 7 days after the customer last wrote,
+  an order update with the default wording is not sent. The answer says to write your own message.
+  A message the member wrote goes, with the Human Agent tag. The status change happens either way.
+- **Why:** the tag is for a person answering a customer. The default text is an automatic notice,
+  and sending those under the tag risks the permission Meta is reviewing.
+- **Payment links stay as they are.** A member makes the link by hand in a buying conversation.
+- **WhatsApp is unchanged:** after 24 hours it needs an approved utility template.
+## C-184 · A warmer public site: sand and charcoal (owner, 2026-11-08; local only so far)
+
+- **Ask:** the owner liked a charcoal, sand and electric blue palette and said to use my best
+  judgement.
+- **Change:** the public site's paper, ink and night tokens move from cool greys to light sand and
+  warm charcoal. Violet stays the one accent, so it keeps matching the logo. Electric blue is not
+  used: it is too close to the violet and would clash with the locked logo.
+- **Scope:** every public page, since they share these tokens. Mixing warm and cool between pages
+  would look like a bug. The app and the logo, favicon and icon colours are unchanged. The share
+  image's background warms with the paper, and the sign-in and sign-up left panel shares the night
+  tokens, so it warms too. The "Amplychat" wordmark text next to the logo follows ink and night, so
+  it warms slightly; the logo mark itself does not.
+- **Readability:** every text and control pairing was recalculated and meets 4.5:1 for text and 3:1
+  for marks and control edges.
+## C-185 · Website chat: sites per plan (owner, 2026-11-08; local only so far)
+
+- **Why:** one widget could run on 20 sites on every plan, so $15 covered 20 client sites. The limit
+  now matches the other channel limits: Free 1, Creator 1, Business 3, Agency 20. A wildcard entry
+  such as `*.example.com` counts as one.
+- **After a downgrade:** the first sites in the list keep working and the rest stop, like extra
+  accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
+- **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
+  route creates another, so limits can only be bypassed by signing up again with another email.
+## C-186 · Inbox rows name their account when a platform has several (owner, 2026-11-08; local only so far)
+
+- **Why:** the main idea is many platforms and accounts in one workspace. The account filter already
+  existed beside the search, but with several accounts on a platform the rows looked the same until
+  opened.
+- **Change:** a row shows its account's handle next to the contact, only when that platform has more
+  than one account, and not once the list is filtered to one account. Row height is unchanged.
+## C-187 · Instagram has its own account limit (owner, 2026-11-08; local only so far)
+
+- **Limits:** Instagram: Free 1, Creator 2, Business 4, Agency 10 (`instagram_accounts`). WhatsApp and
+  Facebook keep `accounts_per_platform`: 1, 1, 3, 10. This replaces my earlier advice to keep Creator
+  at 1: the product is one workspace, and a person cannot buy a second one for a second brand.
+- **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
+  be cheaper per account than Agency.
+- **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.
+
+## C-188 · Inbox: account pictures in the filter; the view chips on one row (owner, 2026-11-08; local only so far)
+
+- **Account filter:** each option, and the closed Select, shows the picture (or an initial) beside the
+  handle. The picture is decorative for screen readers.
+- **View chips:** one row that scrolls sideways at every width; they used to wrap from md. A plain mouse
+  wheel scrolls the row too, since its scrollbar is hidden.
+## C-189 · Website chat wildcards: the whole domain, never a shared host (owner said do your best, 2026-11-11)
+
+- **Shared hosts are refused.** A wildcard on a shared address (`*.myshopify.com`, `*.vercel.app`,
+  `*.co.uk`) covered everyone's sites there and counted as one, so one plan could cover any number
+  of shops. The message suggests the shop's own address (`yourshop.myshopify.com`). The list is kept
+  by hand in `services/widget/origin.SHARED_HOSTS`; move to the Public Suffix List if someone gets
+  round it.
+- **A wildcard covers the domain too.** `*.example.com` now also allows `example.com`. A business
+  needed two entries for its own site before, which Free and Creator (one site) could not have.
+- **Production, checked before release:** one website chat, on Creator, with no sites and no
+  wildcards. So the site limit (C-185) and this rule cut nobody at release.
+
+## C-191 · MCP audit fixes, the features the design promised, and three owner changes (owner, 2026-11-11)
+
+The owner asked for an audit of the MCP feature, then "fix all the findings and also add the missed
+features", then changed three rules. The audit report is kept outside the repo.
+
+- **Owner changes (they reverse parts of C-169 and C-181):**
+  - **AI apps schedule 1 minute ahead**, the app's own rule. `AI_APP_SCHEDULE_LEAD` is gone.
+  - **Publish now:** `when: "now"` on `create_post` and `update_post`, always after a preview and a
+    yes, through the app's own publish-now path. Paid plan, Full mode, owner or admin.
+  - **Automations on and off:** new tool `activate_automation` (28 tools now), through
+    `definitions.activate`, previewed; the token is also bound to the automation's `updated_at`.
+    `pause_automation` is previewed too. Both stay under `automations:write`, whose words now say
+    "turn automations on and off". No outside connection exists yet, so no grant widens silently.
+  - With the 5-minute wait gone, the preview and the notice to owners and admins are the checks.
+- **Must-fix findings:**
+  - Every authenticated `/mcp` request counts against a workspace limit (600 a minute). A refused
+    call keeps no arguments in the log, and a copy over 4 KB is replaced by a marker.
+  - An upload ticket signs its one file name, so a replayed signature cannot store more files, and
+    cleanup deletes that name. A workspace holds at most 20 unfinished tickets (expired ones count
+    until the daily cleanup).
+  - A link import commits its ticket before storage fetches the file, so a failure leaves a ticket
+    the cleanup finds. Links to our own hosts are refused.
+- **Decisions on the other findings:**
+  - **Key guessing (finding 22):** not changed to refuse before the lookup. That would let one caller
+    lock out everyone behind a shared address (Zapier, the Claude and ChatGPT connectors), and a
+    256-bit key cannot be guessed. The comments now say what the limit does.
+  - **Ask (finding 11):** the scope's words now say Ask can read what the member can see. It is not
+    tied to the other read scopes, which could break a connection that holds only Ask.
+  - **Duplicate check (finding 13):** the 15-minute window's digest now includes the confirmation
+    token, so a new preview is a new request. The idempotency-key fingerprint still ignores it.
+  - **Draft posts** are still edited at once; only scheduling, publishing and scheduled posts preview.
+  - **Token endpoint:** 120 a minute per address before the client is known; the logged 60 a minute
+    is now per client and address.
+  - **Removing a member** revokes their AI app connections, with the existing reason `member`.
+  - **Cloudinary `upload`** still raises the network error as it is: inbound media retries rely on it.
+  - **Per-account captions:** at most 10; the account list is still read once per name (a marked
+    shortcut).
+- **Features the design promised (01-design.md §5.1, §6.7, §7.3):**
+  - **Email on AI changes** to owners and admins, on by default; each person can switch it off
+    under Settings › Notifications (`email_ai_changes`). The in-app notice always stays. No migration.
+  - **Tool reference** on `/developers/mcp`, from `scripts/export_mcp_tools.py`; a test fails when
+    `mcp-tools.json` is stale.
+  - **Activity for API keys:** `GET /v1/w/{wid}/api-keys/{key_id}/activity`.
+  - **Block list:** `scripts/block_oauth_client.py` blocks or unblocks an AI app and revokes its
+    live connections. Not in the production image yet (the Dockerfile copies one script).
+- **Left as they are:** `oauth_tokens.family_id` (needs a migration to drop); no `overwrite=false`
+  on upload signatures; the link probe still holds a database connection for up to 10 seconds; the
+  "later phases" tools (sending a reply, deleting a post, contacts).
 
 ## C-194 · Landing-page analytics with Umami (owner, 2026-11-13)
 

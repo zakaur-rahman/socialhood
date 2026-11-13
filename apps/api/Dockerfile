@@ -47,6 +47,7 @@ RUN python -c "from zoneinfo import available_timezones as a; z = a(); assert {'
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY scripts/worker.sh ./scripts/worker.sh
+COPY scripts/block_oauth_client.py ./scripts/block_oauth_client.py
 USER app
 EXPOSE 8000
 # /healthz says only that the process is up (api/health.py); the worker overrides this check.

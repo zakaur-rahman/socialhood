@@ -17,7 +17,7 @@ from socialhood.models.connections import AccountStatus
 from socialhood.models.identity import User
 from socialhood.models.mcp import AiConnectionsMode
 from socialhood.repositories import social_accounts
-from socialhood.services.scheduled_posts import calendar, views
+from socialhood.services.scheduled_posts import calendar, slots, views
 
 # ---------------------------------------------------------------- get_workspace
 
@@ -183,6 +183,9 @@ async def list_accounts(call: ToolCall, args: ListAccountsInput) -> AccountsResu
         now=call.now,
     )
     publishing = {row.social_account_id: row for row in rail.accounts}
+    upcoming = await slots.next_free(
+        call.session, [a.id for a in accounts], timezone=call.timezone.key, now=call.now, count=1
+    )
     items = []
     for a in accounts:
         row = publishing.get(a.id)
@@ -193,16 +196,21 @@ async def list_accounts(call: ToolCall, args: ListAccountsInput) -> AccountsResu
                 handle=f"@{a.username}" if a.username else a.display_name,
                 name=a.display_name,
                 status=a.status,
-                can_publish=row is not None and views.can_publish(a, call.deps),
+                # An account to reconnect, or one disconnected, takes no posts until it is back.
+                can_publish=row is not None
+                and a.status not in (AccountStatus.NEEDS_RECONNECT, AccountStatus.DISCONNECTED)
+                and views.can_publish(a, call.deps),
                 needs_reconnect=a.status == AccountStatus.NEEDS_RECONNECT,
                 published_last_24h=row.published_24h if row else None,
                 publishing_limit=row.publishing_limit if row else None,
-                next_free_slot=moment(call, row.next_free_at) if row else None,
+                next_free_slot=moment(call, next(iter(upcoming.get(a.id, [])), None)),
             )
         )
-    noun = "account" if len(items) == 1 else "accounts"
+    connected = [i for i in items if i.status != AccountStatus.DISCONNECTED]
+    noun = "account" if len(connected) == 1 else "accounts"
     return AccountsResult(
-        summary=f"{len(items)} connected {noun}, {sum(i.can_publish for i in items)} can publish",
+        summary=f"{len(connected)} connected {noun}, "
+        f"{sum(i.can_publish for i in connected)} can publish",
         items=items,
-        caveats=[] if items else ["No accounts are connected yet. Connect one in Amplychat."],
+        caveats=[] if connected else ["No accounts are connected yet. Connect one in Amplychat."],
     )

@@ -71,9 +71,9 @@ describe("calendar dates (UX-SCR-04)", () => {
     expect(snapMinutes(24 * 60 + 5)).toBe(23 * 60 + 45);
   });
 
-  it("refuses times less than 5 minutes away (FR-PUB-08)", () => {
+  it("refuses times less than 1 minute away (FR-PUB-08)", () => {
     const now = new Date("2026-09-29T04:30:00Z");
-    expect(tooSoon(new Date("2026-09-29T04:34:00Z"), now)).toBe(true);
-    expect(tooSoon(new Date("2026-09-29T04:35:00Z"), now)).toBe(false);
+    expect(tooSoon(new Date("2026-09-29T04:30:30Z"), now)).toBe(true);
+    expect(tooSoon(new Date("2026-09-29T04:31:00Z"), now)).toBe(false);
   });
 });

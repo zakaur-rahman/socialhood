@@ -24,6 +24,8 @@ type Props = {
   fetchNextPage: () => void;
   /** Each account's AI mode, by account id: a row without its own mode shows its account's. */
   accountModes?: Record<string, AiMode>;
+  /** What a row calls its account, by account id, when its platform has several (C-186). */
+  accountLabels?: Record<string, string>;
   /** The list's filters in the address (`?view=...`), carried to the conversation so Back keeps them. */
   query?: string;
   timeZone?: string;
@@ -39,6 +41,7 @@ export function ConversationList({
   isFetchingNextPage,
   fetchNextPage,
   accountModes = {},
+  accountLabels,
   query = "",
   timeZone,
 }: Props) {
@@ -84,6 +87,7 @@ export function ConversationList({
       now={now}
       timeZone={timeZone}
       aiMode={aiModeOf(item)}
+      accountLabel={accountLabels?.[item.social_account_id]}
     />
   );
 

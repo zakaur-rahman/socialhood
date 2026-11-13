@@ -68,7 +68,7 @@ async def thread(shop: Shop, account_id: uuid.UUID | None = None) -> uuid.UUID:
 
 async def test_connecting_a_second_instagram_account(shop: Shop) -> None:
     response = await shop.call("POST", "/social-accounts/instagram/connect")
-    body = assert_402(response, "quota_exceeded", "accounts_per_platform", 1)
+    body = assert_402(response, "quota_exceeded", "instagram_accounts", 1)
     assert body["detail"] == "Your plan includes 1 Instagram account."
 
 
@@ -226,7 +226,7 @@ async def test_publishing_past_the_scheduled_posts(shop: Shop, action: str) -> N
 
 async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEngine) -> None:
     """After a downgrade, accounts past accounts_per_platform can't send (scheduled messages,
-    automations); the earliest connected keeps the plan's slot, and Business lifts it (C-172)."""
+    automations); the earliest connected keeps the plan's slot, and Creator lifts it (C-187)."""
     extra = await shop.account("maple.cakes")
     await shop.execute(
         "UPDATE social_accounts SET connected_at = now() + interval '1 minute' WHERE id = :a",
@@ -239,7 +239,7 @@ async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEn
     body = assert_402(
         await shop.call("POST", path, later_message),
         "quota_exceeded",
-        "accounts_per_platform",
+        "instagram_accounts",
         1,
     )
     assert body["detail"] == (
@@ -249,9 +249,7 @@ async def test_an_account_over_the_plan_is_read_only(shop: Shop, engine: AsyncEn
 
     first = f"/conversations/{await thread(shop)}/scheduled-messages"
     assert (await shop.call("POST", first, later_message)).status_code == 201
-    await set_plan(engine, shop.wid, "pro")  # Creator still has 1 Instagram account
-    assert (await shop.call("POST", path, later_message)).status_code == 402
-    await set_plan(engine, shop.wid, "max")  # Business has 3
+    await set_plan(engine, shop.wid, "pro")  # Creator has 2 Instagram accounts (C-187)
     assert (await shop.call("POST", path, later_message)).status_code == 201
 
 
@@ -269,7 +267,7 @@ async def test_an_automation_of_a_read_only_account_cannot_activate(
         )
     draft = await ws.draft(social_account_id=str(extra))
     response = await ws.call("POST", f"/automations/{draft['id']}/activate")
-    assert_402(response, "quota_exceeded", "accounts_per_platform", 1)
+    assert_402(response, "quota_exceeded", "instagram_accounts", 1)
 
 
 # ---------------------------------------------------------------- the dependency forms
@@ -377,19 +375,22 @@ async def test_channels_past_the_free_total_are_read_only(shop: Shop) -> None:
     assert "is read-only until you upgrade or disconnect another channel" in body["detail"]
 
 
-async def test_creator_is_refused_a_second_instagram_account_and_business_is_allowed(
+async def test_instagram_limits_creator_2_and_business_4(
     shop: Shop,
 ) -> None:
+    """C-187: Instagram has its own limit; the shop starts with one account."""
+    connect = "/social-accounts/instagram/connect"
     await set_plan(shop.engine, shop.wid, "pro")
-    assert_402(
-        await shop.call("POST", "/social-accounts/instagram/connect"),
-        "quota_exceeded",
-        "accounts_per_platform",
-        1,
-    )
+    assert (await shop.call("POST", connect)).status_code == 200
+    await shop.account("maple.cakes")
+    body = assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 2)
+    assert body["detail"] == "Your plan includes 2 Instagram accounts."
+
     await set_plan(shop.engine, shop.wid, "max")
-    allowed = await shop.call("POST", "/social-accounts/instagram/connect")
-    assert allowed.status_code == 200, allowed.text
+    assert (await shop.call("POST", connect)).status_code == 200
+    await shop.account("maple.bread")
+    await shop.account("maple.tea")
+    assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 4)
 
 
 async def test_api_keys_are_business_only(shop: Shop) -> None:

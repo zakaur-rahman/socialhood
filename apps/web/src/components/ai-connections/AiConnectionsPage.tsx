@@ -30,32 +30,38 @@ import {
   useRevokeAllAiConnections,
   useUpdateAiConnectionsMode,
 } from "@/lib/api/queries";
-import type { AiConnection, AiConnectionCall, AiConnectionsMode } from "@/lib/api/types";
+import type { AiConnection, AiConnectionsMode } from "@/lib/api/types";
 import { siteHref } from "@/lib/marketing/site";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { ToolCallList } from "./ToolCallList";
+
 export const SETUP_GUIDE_PATH = "/developers/mcp";
 
 /** The four modes, least first, with what each allows in plain words (01-design.md §6.7). */
 export const MODES: readonly { mode: AiConnectionsMode; label: string; body: string }[] = [
-  { mode: "off", label: "Off", body: "AI apps can't do anything here. They can only say that connections are off." },
+  {
+    mode: "off",
+    label: "Off",
+    body: "AI apps can't do anything here. They can still see the workspace's name and plan, and that connections are off.",
+  },
   {
     mode: "read_only",
     label: "Read only",
-    body: "AI apps can read posts, the inbox, comments, analytics, knowledge and automations. They can't change anything.",
+    body: "AI apps can read posts, the inbox, comments, analytics, knowledge and automations, and ask Amplychat's assistant, which uses AI credits. They can't change posts, replies, knowledge or automations.",
   },
   {
     mode: "read_drafts",
     label: "Read and drafts",
-    body: "Reading, plus drafts: draft posts and reply drafts that a person finishes in Amplychat. Nothing is scheduled.",
+    body: "Reading, plus drafts: draft posts and reply drafts that a person finishes in Amplychat, and uploading media for them. Nothing is scheduled or published.",
   },
   {
     mode: "full",
     label: "Full",
-    body: "Reading and drafts, plus scheduling, changing and cancelling posts, uploading media, drafting knowledge and automations for approval, and pausing automations. Replies are never sent by an AI app. A person approves knowledge and turns automations on in Amplychat. If a member sets their AI app to always allow these tools, it can confirm previews without asking them.",
+    body: "Reading and drafts, plus scheduling posts, publishing them now, changing and cancelling scheduled posts, drafting knowledge for approval, creating and changing automations, and turning automations on and off. Amplychat requires a preview and a yes before each of these. Replies are never sent by an AI app, a person approves knowledge, and a new automation is saved off. If a member sets their AI app to always allow these tools, it can give the yes itself, so members should keep approvals on for changes.",
   },
 ];
 
@@ -63,7 +69,7 @@ export const MODES: readonly { mode: AiConnectionsMode; label: string; body: str
 export const SCOPE_WORDS: Record<string, string> = {
   "workspace:read": "Workspace and accounts",
   "posts:read": "See posts and media",
-  "posts:write": "Schedule and change posts",
+  "posts:write": "Schedule, publish and change posts",
   "media:write": "Upload media",
   "conversations:read": "Read the inbox",
   "replies:draft": "Draft replies",
@@ -72,22 +78,16 @@ export const SCOPE_WORDS: Record<string, string> = {
   "knowledge:read": "Search knowledge",
   "knowledge:write": "Draft knowledge for approval",
   "automations:read": "See automations",
-  "automations:write": "Pause automations",
-  "automations:create": "Draft and change automations",
+  "automations:write": "Turn automations on and off",
+  "automations:create": "Create and change automations",
   ask: "Ask Amplychat",
-};
-
-const OUTCOME: Record<AiConnectionCall["outcome"], { label: string; tone: "success" | "warning" | "danger" }> = {
-  ok: { label: "Done", tone: "success" },
-  refused: { label: "Refused", tone: "warning" },
-  error: { label: "Failed", tone: "danger" },
 };
 
 /**
  * Settings › Connected AI apps (C-165 phase C): what AI apps (Claude, ChatGPT, Codex over MCP)
  * may do in this workspace, and every app connected to it, each with its member, what it may do,
  * when it was last used, its recent tool calls and Disconnect. Owners and admins set the mode and
- * see everyone's connections; other members see their own.
+ * see everyone's connections; other members see their own. API keys show their tool calls too.
  */
 export function AiConnectionsPage() {
   const workspace = useCurrentWorkspace();
@@ -324,19 +324,7 @@ function ConnectionRow({ connection }: { connection: AiConnection }) {
       </div>
       {open || calls.length > 0 ? (
         <div id={`activity-${connection.id}`}>
-          {calls.length === 0 ? (
-            <p className="text-xs text-fg-secondary">No tool calls yet.</p>
-          ) : (
-            <ol className="space-y-1" aria-label={`Recent activity of ${connection.client_name}`}>
-              {calls.map((call) => (
-                <li key={call.id} className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge tone={OUTCOME[call.outcome].tone}>{OUTCOME[call.outcome].label}</Badge>
-                  <code className="font-mono">{call.tool}</code>
-                  <span className="text-fg-secondary">{relativeTime(call.created_at)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <ToolCallList calls={calls} label={`Recent activity of ${connection.client_name}`} />
         </div>
       ) : null}
       <AlertDialog open={confirming} onOpenChange={setConfirming}>

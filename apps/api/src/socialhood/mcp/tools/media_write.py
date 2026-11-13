@@ -4,8 +4,8 @@ import_media_from_url. No media bytes pass through the API.
 - ``start_media_upload`` makes a ticket (``mcp_uploads``) and returns Cloudinary's signed upload
   as a ready ``curl`` command (for AI apps with a shell: Claude Code, Codex) and the link of the
   drop page (for everyone else: a member opens it and drops the file).
-- ``finish_media_upload`` checks the file arrived with that ticket and registers it in the media
-  library with the library's own rules.
+- ``finish_media_upload`` registers the ticket's one file (its name is part of the signature) in
+  the media library with the library's own rules.
 - ``import_media_from_url`` takes a public https link: its address is checked here (public
   addresses only, at every redirect), then storage fetches it. Reaching the link tells its host
   the whole address, so it is previewed first (mcp/confirmations.py), with nothing fetched, and
@@ -111,7 +111,7 @@ class StartedUpload(WriteOutput):
     upload_id: uuid.UUID
     kind: str
     expires_at: str
-    curl: str  # run it where the file is; it prints JSON with a public_id
+    curl: str  # run it where the file is
     upload_url: str
     fields: dict[str, Any]  # the same signed fields, for a client without curl
     upload_page_url: str | None = None  # a member opens it and drops the file
@@ -124,7 +124,8 @@ def curl_command(fields: dict[str, Any], url: str, filename: str | None) -> str:
     if any(c in name for c in '"$`'):
         name = "FILE"
     parts = [f'-F "file=@{name}"']
-    for key in ("api_key", "timestamp", "folder", "tags", "allowed_formats", "signature"):
+    signed = ("api_key", "timestamp", "folder", "public_id", "tags", "allowed_formats", "signature")
+    for key in signed:
         if key in fields:
             parts.append(f'-F "{key}={fields[key]}"')
     return f"curl -sS {' '.join(parts)} {url}"
@@ -176,8 +177,8 @@ async def start_media_upload(call: ToolCall, args: StartMediaUploadInput) -> Sta
         limits=mcp_uploads.limits_for(args.kind, post_video_max_mb=call.settings.post_video_max_mb),
         next_step=(
             "Run the curl command where the file is, then call finish_media_upload with "
-            "upload_id and the public_id it prints. Or have a member open upload_page_url and "
-            "drop the file, then call get_media_upload."
+            "upload_id. Or have a member open upload_page_url and drop the file, then call "
+            "get_media_upload."
         ),
     )
 
@@ -187,11 +188,6 @@ async def start_media_upload(call: ToolCall, args: StartMediaUploadInput) -> Sta
 
 class FinishMediaUploadInput(WriteInput):
     upload_id: uuid.UUID = Field(description="The upload_id start_media_upload returned.")
-    public_id: str | None = Field(
-        default=None,
-        max_length=512,
-        description="The public_id the upload printed. Not needed after the upload page.",
-    )
 
 
 @tool(
@@ -218,7 +214,6 @@ async def finish_media_upload(call: ToolCall, args: FinishMediaUploadInput) -> U
         user_id=call.principal.user_id,
         plan=call.plan,
         upload_id=args.upload_id,
-        public_id=args.public_id,
         post_video_max_mb=call.settings.post_video_max_mb,
         now=call.now,
     )
@@ -246,8 +241,9 @@ class ImportMediaInput(ConfirmedInput):
     title="Import media from a link",
     description=(
         "Add an image or video to the media library from a public https link to the file itself "
-        "(a CDN link, or a Drive or Dropbox direct-download link). Links to private networks are "
-        "refused, as are web pages, very long links and files over the limits. Previewed "
+        "(a CDN link, or a Drive or Dropbox direct-download link). Links to private networks or "
+        "to Amplychat itself are refused, as are web pages, very long links and files over the "
+        "limits. Previewed "
         "first, with nothing fetched: show the member the link and its host, and call again only "
         "after they agree, with confirmed true and its confirmation_token. Returns the media_id "
         "that create_post takes."
@@ -260,7 +256,8 @@ class ImportMediaInput(ConfirmedInput):
     open_world=True,
 )
 async def import_media_from_url(call: ToolCall, args: ImportMediaInput) -> UploadedMedia:
-    host = mcp_uploads.check_import_link(args.url)
+    own = mcp_uploads.own_hosts(call.settings)
+    host = mcp_uploads.check_import_link(args.url, own)
     if not args.confirmed:
         return UploadedMedia(
             summary=f"Preview: Amplychat would fetch this file from {host[:253]}. Nothing is "
@@ -284,5 +281,6 @@ async def import_media_from_url(call: ToolCall, args: ImportMediaInput) -> Uploa
         kind=args.kind,
         post_video_max_mb=call.settings.post_video_max_mb,
         now=call.now,
+        own=own,
     )
     return uploaded(finished, how="import", call=call)

@@ -18,13 +18,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.mcp.results import UNTRUSTED_NOTE
 from tests.support.ai import make_source
-from tests.support.automations import make_automation
+from tests.support.analytics import make_comment_analysis
+from tests.support.automations import make_automation, make_comment
+from tests.support.inbox import make_account
 from tests.support.mcp import (
     connect,
     error_of,
     make_key,
     structured,
 )
+from tests.support.post_metrics import make_instagram_account, make_post, make_windows
 from tests.support.sending import Setup, clean_outbox
 
 
@@ -75,6 +78,29 @@ async def test_list_accounts(mcp_app: FastAPI, key: str, setup: Setup) -> None:
     assert whatsapp["items"] == []
     error = error_of(await call(mcp_app, key, "list_accounts", {"platform": "tiktok"}))
     assert error["code"] == "validation_error"
+
+
+async def test_list_accounts_counts_only_connected_accounts(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE social_accounts SET status = 'needs_reconnect'"))
+    result = structured(await call(mcp_app, key, "list_accounts", {}))
+    [account] = result["items"]
+    assert (account["needs_reconnect"], account["can_publish"]) == (True, False)
+    assert result["summary"] == "1 connected account, 0 can publish"
+    assert result["caveats"] == []
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE social_accounts SET status = 'disconnected'"))
+    gone = structured(await call(mcp_app, key, "list_accounts", {}))
+    assert gone["summary"] == "0 connected accounts, 0 can publish"
+    assert gone["caveats"] == ["No accounts are connected yet. Connect one in Amplychat."]
+    assert [(i["status"], i["can_publish"]) for i in gone["items"]] == [("disconnected", False)]
+    # A second, working account is the one that counts.
+    await make_account(engine, setup.wid, username="cafe.pune")
+    both = structured(await call(mcp_app, key, "list_accounts", {}))
+    assert both["summary"].startswith("1 connected account, ")
+    assert both["caveats"] == []
 
 
 async def test_scheduled_posts(
@@ -201,6 +227,64 @@ async def test_get_post_comments_summary(mcp_app: FastAPI, key: str) -> None:
     assert (bad["code"], bad["field_errors"][0]["field"]) == ("validation_error", "post")
 
 
+async def test_get_post_comments_summary_on_a_post_with_comments(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    now = datetime.now(UTC)
+    post = await make_post(
+        engine,
+        workspace_id=setup.wid,
+        account_id=setup.account_id,
+        posted_at=now - timedelta(hours=26),
+        media_type="reel",
+    )
+    said = (
+        ("How much is it?", "neutral", "price", "pricing"),
+        ("Too expensive for me", "negative", "price", "pricing"),
+        ("Love the colours", "positive", "colours", "feedback"),
+    )
+    ids: list[str] = []
+    for minute, (words, sentiment, topic, intent) in enumerate(said):
+        comment = await make_comment(
+            engine,
+            workspace_id=setup.wid,
+            account_id=setup.account_id,
+            media_item_id=post,
+            text=words,
+            commented_at=now - timedelta(minutes=10 - minute),
+        )
+        await make_comment_analysis(
+            engine,
+            workspace_id=setup.wid,
+            comment_id=comment,
+            sentiment=sentiment,
+            topic=topic,
+            intent=intent,
+        )
+        ids.append(str(comment))
+    result = structured(await call(mcp_app, key, "get_post_comments_summary", {"post": str(post)}))
+    assert result["post_id"] == str(post)
+    assert result["scope"].startswith("comments on the Reel of")
+    split = result["sentiment"]
+    assert (split["total"], split["analysed"]) == (3, 3)
+    assert (split["positive"], split["neutral"], split["negative"]) == (1, 1, 1)
+    topics = {t["topic_text"]: t for t in result["topics"]}
+    assert (topics["price"]["count"], topics["price"]["negative"]) == (2, 1)
+    assert topics["colours"]["positive"] == 1
+    examples = topics["price"]["examples"]
+    assert examples
+    assert {e["comment_id"] for e in examples} <= {ids[0], ids[1]}
+    assert {e["comment_text"] for e in examples} <= {"How much is it?", "Too expensive for me"}
+    # Nobody replied to either price question; the praise isn't a question.
+    assert result["unanswered_questions_total"] == 2
+    asked = {q["comment_id"]: q for q in result["unanswered_questions"]}
+    assert set(asked) == {ids[0], ids[1]}
+    assert asked[ids[0]]["comment_text"] == "How much is it?"
+    assert asked[ids[0]]["intent"] == "pricing"
+    assert "UTC)" in asked[ids[0]]["at"]
+    assert result["dashboard_url"].endswith(f"/comments/{post}")
+
+
 async def test_get_analytics_summary(mcp_app: FastAPI, key: str) -> None:
     account = structured(await call(mcp_app, key, "get_analytics_summary", {"scope": "account"}))
     assert account["scope"] == "account"
@@ -218,6 +302,72 @@ async def test_get_analytics_summary(mcp_app: FastAPI, key: str) -> None:
         )
     )
     assert missing["code"] == "not_found"
+
+
+async def test_get_analytics_summary_on_posts_with_figures(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    account = await make_instagram_account(engine, setup.wid)  # with the insights permission
+    now = datetime.now(UTC)
+    posted = {"reel": now - timedelta(hours=26), "image": now - timedelta(days=3)}
+    reach = {"reel": 4120, "image": 2800}
+    posts: dict[str, uuid.UUID] = {}
+    for media_type, at in posted.items():
+        posts[media_type] = await make_post(
+            engine,
+            workspace_id=setup.wid,
+            account_id=account,
+            posted_at=at,
+            media_type=media_type,
+        )
+        figures = {"reach": reach[media_type], "views": 5000, "likes": 300, "comments": 88}
+        await make_windows(
+            engine,
+            workspace_id=setup.wid,
+            post_id=posts[media_type],
+            posted_at=at,
+            windows={"24h": {**figures, "shares": 20, "saves": 40}},
+        )
+    one = structured(
+        await call(
+            mcp_app,
+            key,
+            "get_analytics_summary",
+            {"scope": "post", "post_id": str(posts["reel"]), "at_age": "24 hours"},
+        )
+    )
+    figures_out = one["post"]
+    assert figures_out["post_id"] == str(posts["reel"])
+    assert figures_out["format"] == "reel"
+    assert figures_out["insights_granted"] is True
+    assert (figures_out["reach"], figures_out["likes"], figures_out["comments"]) == (4120, 300, 88)
+    assert (figures_out["shares"], figures_out["saves"]) == (20, 40)
+    assert "UTC)" in figures_out["posted_at"]
+    # When the figures were read, so an old reading isn't reported as current.
+    assert "UTC)" in figures_out["captured_at"]
+    assert figures_out["captured_at"] != figures_out["posted_at"]
+
+    top = structured(
+        await call(
+            mcp_app,
+            key,
+            "get_analytics_summary",
+            {
+                "scope": "top_posts",
+                "metric": "reach",
+                "at_age": "24 hours",
+                "limit": 2,
+                "account": str(account),
+            },
+        )
+    )
+    assert (top["metric"], top["considered"]) == ("reach", 2)
+    assert [(p["post_id"], p["value"]) for p in top["top_posts"]] == [
+        (str(posts["reel"]), 4120),
+        (str(posts["image"]), 2800),
+    ]
+    assert top["top_posts"][0]["format"] == "reel"
+    assert "UTC)" in top["top_posts"][0]["posted_at"]
 
 
 async def test_search_knowledge(

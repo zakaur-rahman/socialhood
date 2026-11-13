@@ -377,7 +377,7 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
     expect(screen.getByRole("button", { name: /Publish now/ })).toBeDisabled();
   });
 
-  it("asks for a time, and refuses one less than 5 minutes away", async () => {
+  it("asks for a time, and refuses one less than 1 minute away", async () => {
     // Midday in the workspace: in the last minutes of its day, today can no longer be picked.
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T06:30:00Z") });
     onTestFinished(() => {
@@ -390,11 +390,11 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Pick a date and time, or add the post to the queue.");
     expect(screen.getByRole("button", { name: /Publish now/ })).toBeEnabled();
 
-    const soon = new Date(Date.now() + 60_000);
+    const soon = new Date(Date.now());
     const [date, time] = [soon.toLocaleDateString("en-CA", { timeZone: TZ }), soon.toLocaleTimeString("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" })];
     await pickDate(user, "Date", date);
     await user.type(screen.getByLabelText("Time"), time);
-    expect(await within(checklist()).findByRole("link", { name: /Pick a time at least 5 minutes from now./ })).toHaveAttribute("href", "#composer-when-date");
+    expect(await within(checklist()).findByRole("link", { name: /Pick a time at least 1 minute from now./ })).toHaveAttribute("href", "#composer-when-date");
     expect(scheduleButton()).toBeDisabled();
   });
 

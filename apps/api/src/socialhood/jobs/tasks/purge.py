@@ -19,8 +19,8 @@ services/workspace_deletion.py, the retention deletes in repositories/retention.
   30 days (TR-OPS-04). It also sweeps deletions. Idempotency keys live in Valkey with a 24-hour
   TTL (services/idempotency.py) and audit_logs doesn't exist in R1, so neither has a rule here.
 - clean_mcp_uploads: periodic, daily 04:30 UTC (bulk lane, singleton, 600 s), C-167 (01-design.md
-  §5.3): MCP upload tickets that never finished and expired more than a day ago have their tagged
-  files deleted from Cloudinary (never one registered in the library) and then their rows
+  §5.3): MCP upload tickets that never finished and expired more than a day ago have their one
+  file deleted from Cloudinary (never one registered in the library) and then their rows
   (services/mcp_uploads.clean_stale). A ticket whose storage call fails stays for the next run.
 - clean_unregistered_uploads: periodic, daily 05:00 UTC (bulk lane, singleton, 600 s): a file signed
   for at least a day ago and never registered in the library is deleted from Cloudinary. It only

@@ -1,11 +1,11 @@
 """API keys as MCP credentials (C-165; 01-design.md §3.3). In auth/ because finding a key's
 workspace is a cross-workspace lookup (TR-TEN-04).
 
-The same checks as the public API's ``api_key_ctx`` (auth/api_key.py), in the same order: the
-key's hash, not revoked, not expired, the caller's address on its allowlist (C-167; refused
-with 403 rather than 401), its workspace active. Then, MCP's own rule: a key has no member, so the
-principal is the member who made it, with their current role. A key whose maker has left the
-workspace (or whose maker was deleted) can't be used on /mcp.
+The same checks as the public API's ``api_key_ctx``, by the same function
+(auth/api_key.usable_key): the key's hash, not revoked, not expired, the caller's address on its
+allowlist (C-167; refused with 403 rather than 401), its workspace active. Then, MCP's own rule:
+a key has no member, so the principal is the member who made it, with their current role. A key
+whose maker has left the workspace (or whose maker was deleted) can't be used on /mcp.
 
 The plan and the rate limits aren't checked here: on /mcp a refusal for those is a tool error
 the model can explain (mcp/calls.py), not an HTTP error a client shows as "server broken".
@@ -13,28 +13,17 @@ the model can explain (mcp/calls.py), not an HTTP error a client shows as "serve
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.auth.api_key import (
-    EXPIRED,
-    MAKER_LEFT,
-    WRONG_ADDRESS,
-    address_allowed,
-    find_key,
-    is_expired,
-    touch_last_used,
-)
+from socialhood.auth.api_key import INVALID, MAKER_LEFT, touch_last_used, usable_key
 from socialhood.db.tenancy import workspace_scope
+from socialhood.errors import ApiError
 from socialhood.mcp.principal import ALWAYS_GRANTED, McpPrincipal
-from socialhood.models.identity import Role, Workspace, WorkspaceMember, WorkspaceStatus
+from socialhood.models.identity import Role, WorkspaceMember
 from socialhood.models.mcp import CredentialKind
 
-INVALID = "That API key isn't valid."
-REVOKED = "That API key has been revoked."
 OWNER_LEFT = MAKER_LEFT
 
 
@@ -55,18 +44,15 @@ async def principal_for_api_key(
 ) -> McpPrincipal:
     """The principal ``raw`` (an ``shk_`` key) acts as, or ``CredentialRefused``. ``client_ip``
     is the caller's address (``ratelimit.client_ip``); a key with an allowlist needs one."""
-    key = await find_key(session, raw)
-    if key is None:
+    try:
+        found = await usable_key(session, raw, client_ip or "")
+    except ApiError as error:
+        raise CredentialRefused(
+            error.detail or INVALID, forbidden=error.code == "forbidden"
+        ) from error
+    if found is None:
         raise CredentialRefused(INVALID, unknown=True)
-    if key.revoked_at is not None:
-        raise CredentialRefused(REVOKED)
-    if is_expired(key, datetime.now(UTC)):
-        raise CredentialRefused(EXPIRED)
-    if not address_allowed(key.allowed_ips, client_ip or ""):
-        raise CredentialRefused(WRONG_ADDRESS, forbidden=True)
-    workspace = await session.get(Workspace, key.workspace_id)
-    if workspace is None or workspace.status != WorkspaceStatus.ACTIVE:
-        raise CredentialRefused(INVALID)
+    key, workspace = found
     if key.created_by_user_id is None:
         raise CredentialRefused(OWNER_LEFT)
     with workspace_scope(workspace.id):

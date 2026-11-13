@@ -179,6 +179,8 @@ type TimeFieldProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChan
   value: string
   /** Called with a complete "HH:mm" as soon as one is typed or picked, and "" when cleared. */
   onChange: (value: string) => void
+  /** The earliest time in the list ("HH:mm"); earlier ones are shown disabled. A typed time is the form's to check. */
+  min?: string
 }
 
 /**
@@ -187,7 +189,7 @@ type TimeFieldProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChan
  * value format, without its per-browser 12/24-hour widget. Inside a Field it is the labelled
  * control, so `getByLabelText("Time")` finds the input.
  */
-function TimeField({ value, onChange, className, size = "default", disabled: disabledProp, onBlur, ...props }: TimeFieldProps) {
+function TimeField({ value, onChange, min, className, size = "default", disabled: disabledProp, onBlur, ...props }: TimeFieldProps) {
   const fieldDisabled = useFieldControl(props).disabled
   const disabled = disabledProp ?? fieldDisabled
   const [draft, setDraft] = React.useState<string | null>(null)
@@ -242,7 +244,8 @@ function TimeField({ value, onChange, className, size = "default", disabled: dis
           onOpenAutoFocus={(event) => {
             const content = event.currentTarget as HTMLElement
             const current =
-              content.querySelector<HTMLElement>("[aria-selected='true']") ?? content.querySelector<HTMLElement>("[role='option']")
+              content.querySelector<HTMLElement>("[aria-selected='true']:not([aria-disabled='true'])") ??
+              content.querySelector<HTMLElement>("[role='option']:not([aria-disabled='true'])")
             event.preventDefault()
             current?.focus()
             current?.scrollIntoView?.({ block: "center" })
@@ -250,6 +253,7 @@ function TimeField({ value, onChange, className, size = "default", disabled: dis
         >
           <TimeList
             slots={slots}
+            min={min}
             value={value}
             onPick={(time) => {
               onChange(time)
@@ -263,10 +267,10 @@ function TimeField({ value, onChange, className, size = "default", disabled: dis
   )
 }
 
-/** The quarter-hours as a listbox: arrows move, Enter or a click chooses. */
-function TimeList({ slots, value, onPick }: { slots: string[]; value: string; onPick: (time: string) => void }) {
+/** The quarter-hours as a listbox: arrows move, Enter or a click chooses; times before `min` are disabled. */
+function TimeList({ slots, min, value, onPick }: { slots: string[]; min?: string; value: string; onPick: (time: string) => void }) {
   const move = (event: React.KeyboardEvent<HTMLUListElement>) => {
-    const options = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[role='option']"))
+    const options = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[role='option']:not([aria-disabled='true'])"))
     const index = options.indexOf(document.activeElement as HTMLElement)
     const target = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: options.length - 1 }[event.key]
     if (target === undefined) return
@@ -275,24 +279,28 @@ function TimeList({ slots, value, onPick }: { slots: string[]; value: string; on
   }
   return (
     <ul role="listbox" aria-label="Times" onKeyDown={move} className="max-h-56 overflow-y-auto">
-      {slots.map((slot) => (
+      {slots.map((slot) => {
+        const past = Boolean(min && slot < min)
+        return (
         <li
           key={slot}
           role="option"
           aria-selected={slot === value}
+          aria-disabled={past || undefined}
           tabIndex={-1}
-          onClick={() => onPick(slot)}
+          onClick={past ? undefined : () => onPick(slot)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
+            if (!past && (event.key === "Enter" || event.key === " ")) {
               event.preventDefault()
               onPick(slot)
             }
           }}
-          className="cursor-default rounded-md px-2 py-1 text-sm tabular-nums hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand aria-selected:bg-brand-soft aria-selected:text-brand-fg pointer-coarse:min-h-10 pointer-coarse:py-2"
+          className="cursor-default aria-disabled:pointer-events-none aria-disabled:opacity-40 rounded-md px-2 py-1 text-sm tabular-nums hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand aria-selected:bg-brand-soft aria-selected:text-brand-fg pointer-coarse:min-h-10 pointer-coarse:py-2"
         >
           {slot}
         </li>
-      ))}
+        )
+      })}
     </ul>
   )
 }
@@ -304,6 +312,8 @@ type DateTimePickerProps = {
   idPrefix: string
   min?: string
   max?: string
+  /** The earliest time on the `min` day ("HH:mm"); earlier times there are disabled in the list. */
+  minTime?: string
   today?: string
   /** See DatePicker: a month and year Select for far dates. */
   jumpMonths?: boolean
@@ -330,6 +340,7 @@ function DateTimePicker({
   idPrefix,
   min,
   max,
+  minTime,
   today,
   jumpMonths,
   size = "lg",
@@ -351,7 +362,7 @@ function DateTimePicker({
       </Field>
       <Field id={`${idPrefix}-time`} density={density} invalid={invalid} disabled={disabled || (timeNeedsDate && !value.date)}>
         <FieldLabel className={labelClass}>{labels.time}</FieldLabel>
-        <TimeField size={size} value={value.time} onChange={(time) => onChange({ ...value, time })} />
+        <TimeField size={size} value={value.time} min={value.date && min && value.date <= min ? minTime : undefined} onChange={(time) => onChange({ ...value, time })} />
       </Field>
     </div>
   )

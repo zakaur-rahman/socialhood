@@ -30,6 +30,7 @@ from socialhood.main import create_app
 from socialhood.models.billing import PaymentStatus, Plan, SubscriptionStatus
 from socialhood.models.identity import DEFAULT_NOTIFICATION_PREFS
 from socialhood.models.notifications import (
+    EMAIL_SWITCH_OF_TYPE,
     EMAIL_TYPES,
     PUSH_EVENT_OF_TYPE,
     EmailTemplate,
@@ -51,6 +52,7 @@ from socialhood.notify.registry import (
 )
 from socialhood.schemas.billing import PaidPlanName, PlanName, SubscriptionStatusName
 from socialhood.schemas.notifications import NotificationPreferences, PushPreferences
+from socialhood.services.notifications import channels_for
 from socialhood.settings import ConfigurationError, Settings
 from tests.unit.test_settings import complete_production
 
@@ -157,6 +159,20 @@ def test_every_push_event_and_email_has_a_notification_type() -> None:
     # A notification email uses the template named after its type; the digest has its own.
     assert {t.value for t in EmailTemplate} == EMAIL_TYPES | {"weekly_digest"}
     assert {c.value for c in NotificationChannel} == {"in_app", "email", "push"}
+
+
+def test_only_the_emails_about_ai_app_changes_have_a_switch() -> None:
+    assert set(EMAIL_SWITCH_OF_TYPE) == {"ai_post_change", "ai_automation_change"}
+    assert set(EMAIL_SWITCH_OF_TYPE) <= EMAIL_TYPES
+    assert set(EMAIL_SWITCH_OF_TYPE.values()) <= set(NotificationPreferences.model_fields)
+    off = {**DEFAULT_NOTIFICATION_PREFS, "email_ai_changes": False}
+    for type_ in EMAIL_SWITCH_OF_TYPE:
+        # On by default, also for a row stored before the switch existed.
+        assert channels_for(type_, role="owner", prefs={}) == ["in_app", "email"]
+        assert channels_for(type_, role="admin", prefs=off) == ["in_app"]
+        assert channels_for(type_, role="agent", prefs={}) == ["in_app"]
+    # The account and billing emails stay not optional (FR-NOT-02).
+    assert channels_for("payment_problem", role="owner", prefs=off) == ["in_app", "email"]
 
 
 # ---------------------------------------------------------------- push payload

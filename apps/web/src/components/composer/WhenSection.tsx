@@ -8,6 +8,7 @@ import { ScheduleFields, type ScheduleValue } from "@/components/inbox/ScheduleF
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { MIN_SCHEDULE_LEAD_MS } from "@/lib/publishing/rules";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
 
 import { BestTimeHint } from "@/components/schedule/BestTimes";
@@ -66,7 +67,7 @@ export function WhenSection({
   /** GR-30: the account whose best times show beside the picker (the post's first account). */
   bestFor?: { wid: string; accountId: string; handle: string } | null;
 }) {
-  const limits = { min: new Date(now.getTime() + 5 * 60_000), max: null };
+  const limits = { min: new Date(now.getTime() + MIN_SCHEDULE_LEAD_MS), max: null };
   const tools = useComposerTools();
   return (
     <Section

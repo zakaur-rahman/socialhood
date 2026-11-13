@@ -22,8 +22,9 @@ function formatList(formats: string[]): string {
 
 /**
  * C-165: an AI app that cannot run an upload command gives the member this page's link. The file
- * goes straight to storage with the ticket's signature (it never passes through our servers), then
- * the page tells the API, which adds it to the media library. The AI app finds it with its next
+ * goes straight to storage with the ticket's signature (it never passes through our servers; the
+ * signature names the one file, so a second try replaces the first), then the page tells the API,
+ * which adds the ticket's file to the media library. The AI app finds it with its next
  * check. The page keeps to the ticket's kind and limits, which the API enforces again.
  */
 export function UploadTicketPage({ ticketId }: { ticketId: string }) {
@@ -56,8 +57,8 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
     }
     try {
       setProgress(0);
-      const { public_id } = await sendToStorage(data.upload, file, { onProgress: setProgress });
-      await complete.mutateAsync(public_id);
+      await sendToStorage(data.upload, file, { onProgress: setProgress });
+      await complete.mutateAsync();
     } catch (error) {
       setProblem(error instanceof Error ? error.message : "The upload didn't finish. Try again.");
     } finally {

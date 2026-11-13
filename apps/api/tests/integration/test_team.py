@@ -21,6 +21,7 @@ from tests.support.inbox import make_thread
 
 PREFS = {
     "email_digest": False,
+    "email_ai_changes": True,
     "push": {"needs_you": True, "new_lead": True, "window_closing": True, "account": True},
 }
 HOURS_OFF = {"enabled": False, "days": [], "away_enabled": False, "auto_mode": "always"}

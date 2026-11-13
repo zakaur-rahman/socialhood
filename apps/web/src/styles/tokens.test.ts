@@ -365,7 +365,7 @@ describe("two themes, one declaration (C-129)", () => {
     expect(css).toMatch(/\[data-variant="default"\] \{ box-shadow: var\(--shadow-site-button-primary\); \}/);
     expect(css).toMatch(/\[data-variant="secondary"\] \{ box-shadow: var\(--shadow-site-button-secondary\); \}/);
     expect(css).toMatch(/\.site \[data-slot="toggle-group-item"\]\[aria-checked="true"\] \{ color: var\(--color-brand-fg\); \}/);
-    expect(colorValue("site-control")).toBe("rgb(232 234 245 / 0.72)");
+    expect(colorValue("site-control")).toBe("rgb(232 224 208 / 0.72)");
   });
 
   it("sets the scheme from the theme attribute, dark by default, and System takes both", () => {

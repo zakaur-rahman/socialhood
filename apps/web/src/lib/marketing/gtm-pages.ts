@@ -1567,11 +1567,12 @@ function planRow(label: string, key: PlanKey, word: (value: unknown) => string =
 /** Connected channels: Free counts channels in total; the paid plans count accounts per platform (C-172). */
 export function channelsRow(label = "Connected channels"): LimitRow {
   const per = E.accounts_per_platform as Plans<number>;
+  const instagram = E.instagram_accounts as Plans<number>;
   return {
     label,
     free: `Any ${count.format((E.channels_total as Plans<number | null>).free ?? 0)} of Instagram, Facebook or web chat, no WhatsApp`,
-    pro: `${per.pro} each of Instagram, WhatsApp, Facebook and web chat`,
-    max: `${per.max} each of Instagram, WhatsApp and Facebook`,
+    pro: `${instagram.pro} Instagram and ${per.pro} each of WhatsApp, Facebook and web chat`,
+    max: `${instagram.max} Instagram and ${per.max} each of WhatsApp and Facebook`,
   };
 }
 
@@ -1952,10 +1953,10 @@ export const FEATURE_PUBLISHING: GtmPage = {
         title: "Check before you schedule",
         body: "A checklist looks at the format, a caption of up to 2,200 characters with at most 30 hashtags and 20 mentions, and video lengths. A post with a problem can't be scheduled until it's fixed.",
       },
-      // services/scheduled_posts/slots.py (MIN_SCHEDULE_LEAD 5 minutes, the queue within 8 weeks); posts.py counted_at.
+      // services/scheduled_posts/slots.py (MIN_SCHEDULE_LEAD 1 minute, the queue within 8 weeks); posts.py counted_at.
       {
         title: "Pick a time or add to the queue",
-        body: "Choose a time at least 5 minutes ahead, or let the queue take the next posting time that is free on every account you picked. Each post counts once toward the month's scheduled posts.",
+        body: "Choose a time at least 1 minute ahead, or let the queue take the next posting time that is free on every account you picked. Each post counts once toward the month's scheduled posts.",
       },
       // services/post_publishing/publish.py: the quota first, polls the video, never publishes a container twice;
       // models/publishing.py PUBLISH_ATTEMPTS = 3.
@@ -1997,7 +1998,7 @@ export const FEATURE_PUBLISHING: GtmPage = {
     audience: {
       creators: "Keep a steady rhythm of Reels, carousels and Stories, tag collaborators on brand work, and have your comment-to-DM automation ready for the next post before it's live.",
       // accounts_per_platform (plan-table.json).
-      businesses: `Plan launches and offers across your Instagram accounts (${E.accounts_per_platform.pro} on Creator, up to ${E.accounts_per_platform.max} on Business), keep captions in your brand voice, and see the questions each post brings in the inbox.`,
+      businesses: `Plan launches and offers across your Instagram accounts (${E.instagram_accounts.pro} on Creator, up to ${E.instagram_accounts.max} on Business), keep captions in your brand voice, and see the questions each post brings in the inbox.`,
     },
     faq: [
       // jobs/tasks/publishing.py dispatch_due_posts (server side, every 30 s); posts.py (a failed post can be edited and retried).

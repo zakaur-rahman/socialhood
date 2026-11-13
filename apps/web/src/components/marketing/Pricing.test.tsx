@@ -27,7 +27,7 @@ describe("the pricing section (C-155 layout)", () => {
     expect(pro.getByText("7-day free trial")).toBeInTheDocument();
     expect(pro.getByText(/A card is required to start the trial/)).toBeInTheDocument();
     expect(pro.getByText("AI Auto mode and suggestions")).toBeInTheDocument();
-    expect(pro.getByText("1 each of Instagram, WhatsApp, Facebook and web chat")).toBeInTheDocument();
+    expect(pro.getByText("2 Instagram; 1 each of WhatsApp, Facebook and web chat")).toBeInTheDocument();
     expect(pro.getByRole("link", { name: "Start free, then try Creator" })).toHaveAttribute(
       "href",
       "/sign-up?redirect_url=%2Fapp%3Fplan%3Dpro",

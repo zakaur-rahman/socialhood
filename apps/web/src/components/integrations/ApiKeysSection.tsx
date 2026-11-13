@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, Copy, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { Activity, Check, Copy, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ToolCallList } from "@/components/ai-connections/ToolCallList";
 import { PLANS_HREF } from "@/components/shell/nav";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import {
@@ -34,7 +35,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApiKeys, useCreateApiKey, useRevokeApiKey, useUpdateApiKey } from "@/lib/api/queries";
+import { useApiKeyActivity, useApiKeys, useCreateApiKey, useRevokeApiKey, useUpdateApiKey } from "@/lib/api/queries";
 import type { ApiKey, ApiKeyCreate, ApiScope, ApiScopeName } from "@/lib/api/types";
 import { siteHref } from "@/lib/marketing/site";
 import { relativeTime } from "@/lib/time";
@@ -74,8 +75,9 @@ const IP_HINT = "IP addresses or CIDR ranges, IPv4 or IPv6, like 203.0.113.7 or 
 /**
  * Settings › API keys (GR-25, own section since C-165): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
- * revoke one. The public API is part of Business: a workspace without it is told so instead of
- * being offered the form. Owners and admins, like the webhook endpoints.
+ * revoke one. The public API is part of Business and Agency: a workspace without it is told so
+ * instead of being offered the form. Owners and admins, like the webhook endpoints. Activity shows a
+ * key's latest tool calls over MCP, as for a connected app.
  *
  * C-167: a key can expire (30 days, 90 days, a year, or never) and can be limited to IP addresses
  * and ranges. The list shows both; the name and the addresses can be edited later, the scopes
@@ -115,7 +117,7 @@ export function ApiKeysSection() {
     >
       {free && items.length === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-raised p-4">
-          <p className="text-sm">The public API, API keys and Zapier are part of Business.</p>
+          <p className="text-sm">The public API, API keys and Zapier are part of Business and Agency.</p>
           <Button asChild variant="secondary">
             <Link href={PLANS_HREF(workspace.slug)}>See plans</Link>
           </Button>
@@ -170,6 +172,8 @@ function KeyRow({
   const revoke = useRevokeApiKey(wid);
   const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
+  const activity = useApiKeyActivity(wid, apiKey.id, open);
   const revoked = apiKey.revoked_at !== null && apiKey.revoked_at !== undefined;
   const label = (scope: ApiScopeName) => catalogue.find((s) => s.scope === scope)?.description ?? scope;
   const expiry = revoked ? null : expiryText(apiKey, timeZone);
@@ -208,17 +212,44 @@ function KeyRow({
         {apiKey.made_by_former_member && !revoked ? (
           <p className="text-xs text-fg-secondary">Made by a former member. Revoke it if nothing still needs it.</p>
         ) : null}
+        {open ? (
+          <div id={`key-activity-${apiKey.id}`}>
+            {activity.data ? (
+              <ToolCallList
+                calls={activity.data.items}
+                label={`Recent activity of ${apiKey.name}`}
+                empty="No tool calls from an AI app yet. Requests to the public API aren't listed here."
+              />
+            ) : activity.isError ? (
+              <p className="text-xs text-fg-secondary">Couldn&rsquo;t load its activity. Try again in a moment.</p>
+            ) : (
+              <Skeleton className="h-4 w-40" />
+            )}
+          </div>
+        ) : null}
       </div>
-      {revoked ? null : (
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)} aria-label={`Edit ${apiKey.name}`}>
-            <Pencil aria-hidden /> Edit
-          </Button>
-          <Button variant="destructive-ghost" size="sm" onClick={() => setConfirming(true)}>
-            <Trash2 aria-hidden /> Revoke
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1">
+        {/* A revoked key keeps its history: that is when someone asks what it did. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={open}
+          aria-controls={`key-activity-${apiKey.id}`}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <Activity aria-hidden /> {open ? "Hide activity" : "Activity"}
+        </Button>
+        {revoked ? null : (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)} aria-label={`Edit ${apiKey.name}`}>
+              <Pencil aria-hidden /> Edit
+            </Button>
+            <Button variant="destructive-ghost" size="sm" onClick={() => setConfirming(true)}>
+              <Trash2 aria-hidden /> Revoke
+            </Button>
+          </>
+        )}
+      </div>
       {editing ? <EditKeyDialog apiKey={apiKey} wid={wid} onClose={() => setEditing(false)} /> : null}
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>

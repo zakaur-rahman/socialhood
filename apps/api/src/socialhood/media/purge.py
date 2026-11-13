@@ -11,9 +11,9 @@ Deleting one account's data (C-067) deletes named files instead: the ones its me
 type (DELETE /resources/{type}/upload?public_ids[]=…). A file Cloudinary doesn't know is already
 gone; a public id outside the workspace's folder is never sent.
 
-C-167: the daily MCP upload cleanup lists a ticket's files by its tag (``mcp_upload_{id}``,
-GET /resources/{type}/tags/{tag}, image and video), keeps only those in the workspace's folder,
-and deletes the unregistered ones with ``delete_files``.
+C-167: the daily MCP upload cleanup deletes an unfinished ticket's one file by name with
+``delete_files``. Only a ticket made before its file's name was signed is still listed by its tag
+(``mcp_upload_{id}``, GET /resources/{type}/tags/{tag}, image and video).
 
 Without Cloudinary credentials nothing can have been uploaded, so there is nothing to delete.
 Tests swap the purger with ``use_media_purger`` (no test reaches Cloudinary).
@@ -37,8 +37,10 @@ log = get_logger(__name__)
 RESOURCE_TYPES = ("image", "video", "raw")
 MAX_PAGES = 200  # 200,000 files per type in one run; the purge job runs again for the rest
 IDS_PER_CALL = 100  # Cloudinary's limit for public_ids[] in one delete
-TAGGED_TYPES = ("image", "video")  # what an MCP upload ticket can bring in
-TAGGED_MAX = 100  # a ticket takes one file; more would be someone reusing its signature
+# shortcut: listing by tag serves only MCP upload tickets made before their file's name was
+# signed; delete list_tagged once none is left (two days after that release).
+TAGGED_TYPES = ("image", "video")
+TAGGED_MAX = 100
 
 
 def workspace_prefix(workspace_id: uuid.UUID) -> str:

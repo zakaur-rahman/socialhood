@@ -18,7 +18,19 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { CONNECT_AI_FAQ, CONNECT_AI_META, CONNECT_AI_PATH, CAPABILITIES, PLAN_ROWS, SAFETY, clientGuides, mcpUrl, type ClientGuide } from "@/lib/marketing/connect-ai";
+import {
+  CONNECT_AI_FAQ,
+  CONNECT_AI_META,
+  CONNECT_AI_PATH,
+  CAPABILITIES,
+  PLAN_ROWS,
+  SAFETY,
+  TOOLS,
+  TOOL_KIND,
+  clientGuides,
+  mcpUrl,
+  type ClientGuide,
+} from "@/lib/marketing/connect-ai";
 import { API_KEY_PAGE_PATH } from "@/lib/marketing/mcp-api-key";
 import { MCP_PAGE_PATH } from "@/lib/marketing/mcp-page";
 import { PRICING_PATH } from "@/lib/marketing/gtm-pages";
@@ -53,6 +65,7 @@ const SECTIONS = [
   { id: "set-up", label: "Set it up" },
   { id: "plans", label: "Plans" },
   { id: "safety", label: "Safety" },
+  { id: "tools", label: "Every tool" },
   { id: "faq", label: "Common questions" },
 ] as const;
 
@@ -191,6 +204,7 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
                   <th scope="col">Free</th>
                   <th scope="col">Creator</th>
                   <th scope="col">Business</th>
+                  <th scope="col">Agency</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,6 +214,7 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
                     <td>{row.free}</td>
                     <td>{row.pro}</td>
                     <td>{row.max}</td>
+                    <td>{row.agency}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,6 +238,55 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section id="tools" aria-labelledby="tools-title" className="band scroll-mt-24">
+        <div className="wrap">
+          <div className="split-head">
+            <h2 id="tools-title" className="h-sec">
+              Every tool
+            </h2>
+            <p className="lede">
+              The {TOOLS.length} tools the server offers. An AI app sees the ones its permissions and the member&apos;s role open.
+            </p>
+          </div>
+          <div role="region" aria-label="Every tool on the server" tabIndex={0} className="cx-table-box after-head">
+            <table className="cx-table">
+              <caption className="sr-only">Every tool on the server</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Tool</th>
+                  <th scope="col">Kind</th>
+                  <th scope="col">Permission</th>
+                  <th scope="col">Who</th>
+                  <th scope="col">Plan</th>
+                  <th scope="col">Preview first</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TOOLS.map((tool) => (
+                  <tr key={tool.name}>
+                    <th scope="row">
+                      <code>{tool.name}</code>
+                      <br />
+                      {tool.title}
+                    </th>
+                    <td>{TOOL_KIND[tool.access]}</td>
+                    <td>{tool.scope}</td>
+                    <td>{tool.role === "agent" ? "Any member" : "Owners and admins"}</td>
+                    <td>{tool.free ? "Every plan" : "Paid plans"}</td>
+                    <td>{tool.preview ? "Yes" : "No"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="cx-note">
+            Read tools run in Read only mode and up, Draft tools in Read and drafts and up, and Change tools in Full. A draft post is
+            saved and edited at once on every plan; scheduling a post, publishing it now or changing a scheduled one asks for the
+            preview and needs a paid plan and Full mode.
+          </p>
         </div>
       </section>
 

@@ -25,7 +25,7 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeInTheDocument();
   });
 
-  it("GR-29: a Facebook Page is a segment with its colour dot", () => {
+  it("GR-29: a Facebook Page is a segment with its mark on its colour", () => {
     render(<PlatformStrip platforms={["instagram", "facebook", "whatsapp"]} value="facebook" onChange={() => {}} />);
     expect(screen.getAllByRole("radio")).toHaveLength(4);
     const segment = screen.getByRole("radio", { name: "Facebook" });
@@ -52,7 +52,8 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     const onChange = vi.fn();
     render(<PlatformStrip platforms={["instagram"]} value="all" onChange={onChange} />);
     const segment = screen.getByRole("radio", { name: "Instagram" });
-    expect(segment).toHaveTextContent("Instagram");
+    expect(segment).toHaveAttribute("title", "Instagram"); // the mark alone shows; the name is there on hover
+    expect(segment.querySelector("svg")).not.toBeNull();
     await userEvent.click(segment);
     expect(onChange).toHaveBeenCalledWith("instagram");
   });
