@@ -189,6 +189,7 @@ async def test_a_member_with_the_needs_you_switch_off_gets_no_push(
     sam = await join(ws, "sam@example.com", "agent")
     prefs = {
         "email_digest": False,
+        "email_ai_changes": True,
         "push": {"needs_you": False, "new_lead": True, "window_closing": True, "account": True},
     }
     await sam.ok("PUT", "/notification-preferences", json=prefs)

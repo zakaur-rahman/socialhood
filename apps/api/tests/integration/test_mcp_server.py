@@ -1,6 +1,7 @@
 """C-165 phase A: the MCP server mounted at /mcp. Protocol (both eras, stateless), API-key
 authentication and its 401s, the scope, role, plan and mode gates, the daily cap and rate
-limits, the audit row, and that a key never reaches another workspace."""
+limits (per connection, and per workspace for every request), the audit row, and that a key never
+reaches another workspace."""
 
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.mcp.auth import AuthEnv
 from socialhood.oauth import scopes
 from socialhood.security.ratelimit import LIMITS, Limit
 from socialhood.settings import Settings
@@ -352,6 +354,49 @@ async def test_calls_are_rate_limited_per_connection(
         structured(await mcp.call_tool("get_workspace", {}))
 
 
+async def test_every_request_counts_against_the_workspace(
+    client: httpx.AsyncClient, setup: Setup, mcp_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not only tool calls: listing tools, and calls that are then refused, are stopped with a
+    429 before any work, whichever of the workspace's connections sends them."""
+    monkeypatch.setitem(LIMITS, "mcp_requests", Limit("mcp_requests", 2, 60))
+    key, _ = await make_key(client, setup)
+    other, _ = await make_key(client, setup, name="Claude Code")
+    headers = {**ACCEPT, "MCP-Protocol-Version": "2025-11-25"}
+    async with http_client(mcp_app, key) as http:
+        codes = [
+            (await http.post(URL, json=rpc("tools/list", {}), headers=headers)).status_code
+            for _ in range(2)
+        ]
+    async with http_client(mcp_app, other) as http:
+        limited = await http.post(URL, json=rpc("tools/list", {}), headers=headers)
+    assert codes == [200, 200]
+    assert limited.status_code == 429
+    assert limited.json()["error"] == "rate_limited"
+    assert int(limited.headers["retry-after"]) >= 1
+
+
+async def test_a_valkey_outage_lets_mcp_requests_through(
+    client: httpx.AsyncClient, setup: Setup, mcp_app: FastAPI
+) -> None:
+    key, _ = await make_key(client, setup)
+    endpoint = mcp_app.state.mcp.endpoint
+    working = endpoint.auth
+    dead = Redis.from_url("redis://127.0.0.1:1/0", socket_connect_timeout=0.2)
+    endpoint.auth = AuthEnv(working.sessionmaker, dead, working.resource)
+    try:
+        async with http_client(mcp_app, key) as http:
+            listed = await http.post(
+                URL,
+                json=rpc("tools/list", {}),
+                headers={**ACCEPT, "MCP-Protocol-Version": "2025-11-25"},
+            )
+        assert listed.status_code == 200, listed.text
+    finally:
+        await dead.aclose()
+        endpoint.auth = working
+
+
 # ---------------------------------------------------------------- audit and tenancy
 
 
@@ -376,6 +421,8 @@ async def test_every_call_leaves_an_audit_row(
     assert ok["latency_ms"] >= 0
     assert ok["client_name"]  # the client's clientInfo, else its User-Agent
     assert (refused["outcome"], refused["error_code"]) == ("refused", "validation_error")
+    assert refused["arguments"] == {}  # a refused call keeps no copy, only the digest
+    assert len(refused["arguments_digest"]) == 64
 
 
 async def test_a_key_never_reaches_another_workspace(

@@ -19,11 +19,10 @@ broken response doesn't pay twice.
 from __future__ import annotations
 
 import asyncio
-import math
 import time
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from socialhood.agent import orchestrator
 from socialhood.auth.deps import ROLE_RANK, WorkspaceContext
@@ -33,13 +32,13 @@ from socialhood.errors import ApiError
 from socialhood.mcp.audit import digest
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
+from socialhood.mcp.tools.common import ai_rate_limit
 from socialhood.models.agent import AgentRunStatus
 from socialhood.models.identity import Role, User
 from socialhood.observability.logging import get_logger
 from socialhood.realtime.events import commit_and_publish
 from socialhood.repositories import agent as agent_repo
 from socialhood.schemas.agent import AgentRunCreate
-from socialhood.security import ratelimit
 from socialhood.services import agent_runs
 
 log = get_logger(__name__)
@@ -59,6 +58,9 @@ DONE = frozenset(
 
 
 class AskInput(ToolInput):
+    # Stripped here as the app strips it, so a blank question is a field error.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     question: str = Field(
         min_length=1,
         max_length=1000,
@@ -96,23 +98,6 @@ class AskResult(ToolOutput):
     credits_used: int = 0
     error: str | None = None
     next_step: str | None = None
-
-
-async def _rate_limit(call: ToolCall) -> None:
-    if not call.settings.rate_limits_enabled:
-        return
-    try:
-        wait = await ratelimit.hit(call.redis, ratelimit.LIMITS["ai"], str(call.workspace.id))
-    except Exception as error:
-        log.warning("rate_limit_unavailable", limit="ai", error=type(error).__name__)
-        return
-    if wait > 0:
-        seconds = max(1, math.ceil(wait))
-        raise ApiError(
-            "rate_limited",
-            f"Too many questions to Amplychat just now. Try again in {seconds} seconds.",
-            headers={"Retry-After": str(seconds)},
-        )
 
 
 async def _snapshot(call: ToolCall, run_id: uuid.UUID) -> AskResult:
@@ -164,6 +149,9 @@ async def _snapshot(call: ToolCall, run_id: uuid.UUID) -> AskResult:
 
 
 async def _wait(call: ToolCall, run_id: uuid.UUID) -> AskResult:
+    # The wait reads with its own short sessions, so the call's connection goes back to the pool
+    # first. Nothing is pending here; a rollback would expire ``call.workspace``.
+    await call.session.commit()
     deadline = time.monotonic() + WAIT_S
     while True:
         result = await _snapshot(call, run_id)
@@ -188,7 +176,7 @@ async def _wait(call: ToolCall, run_id: uuid.UUID) -> AskResult:
     scope="ask",
 )
 async def ask_amplychat(call: ToolCall, args: AskInput) -> AskResult:
-    key = f"mcp-ask:{call.principal.credential_id}:{digest({'q': args.question.strip()})}"
+    key = f"mcp-ask:{call.principal.credential_id}:{digest({'q': args.question})}"
     try:
         existing = await call.redis.get(key)
     except Exception:
@@ -197,7 +185,7 @@ async def ask_amplychat(call: ToolCall, args: AskInput) -> AskResult:
         return await _wait(
             call, uuid.UUID(existing.decode() if isinstance(existing, bytes) else existing)
         )
-    await _rate_limit(call)
+    await ai_rate_limit(call)
     user = await call.session.get(User, call.principal.user_id)
     if user is None:  # the member was removed after authenticating
         raise ApiError("forbidden", "This connection's member is no longer in the workspace.")

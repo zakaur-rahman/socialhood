@@ -7,10 +7,12 @@ The flow, authorization code only:
 1. ``start_authorization`` (``GET /oauth/authorize``) checks the request. A bad ``client_id``
    or ``redirect_uri`` is shown to the person (never redirected: the redirect URI isn't trusted
    yet). Anything else wrong goes back to the redirect URI as an OAuth error with ``state`` and
-   ``iss`` (RFC 9207). PKCE with S256 is required. ``resource`` (RFC 8707) must be this
-   server's /mcp when given; when left out it means /mcp, the only resource we serve. A good
-   request waits in Valkey for 10 minutes under a random id, and the browser goes to the
-   dashboard's consent page with that id.
+   ``iss`` (RFC 9207), except for a client that registered itself (DCR): anyone can register
+   any redirect URI, so its errors are shown too, or a link to us would send the browser there
+   with no click and no sign-in (RFC 9700 §4.11). PKCE with S256 is required. ``resource``
+   (RFC 8707) must be this server's /mcp when given; when left out it means /mcp, the only
+   resource we serve. A good request waits in Valkey for 10 minutes under a random id, and the
+   browser goes to the dashboard's consent page with that id.
 2. The consent page reads it (``describe``), the member picks a workspace and what to allow,
    then ``approve`` issues a single-use code (60 seconds, hashed, bound to the client, the
    redirect URI, the PKCE challenge, the resource, the member, the workspace and the scopes) and
@@ -56,6 +58,7 @@ from socialhood.models.identity import Workspace
 from socialhood.models.mcp import AiConnectionsMode
 from socialhood.models.oauth import (
     ClientAuth,
+    ClientKind,
     McpConnection,
     OAuthClient,
     OAuthCode,
@@ -205,9 +208,11 @@ async def start_authorization(
             "invalid_request", "redirect_uri isn't one this app registered.", status=400
         )
     state = params.get("state") or None
-    back: dict[str, Any] = {"redirect": redirect_uri, "state": state}
+    # A self-registered client's errors are shown, not sent to the address it registered.
+    shown = client.kind == ClientKind.DCR.value
+    back: dict[str, Any] = {"redirect": None if shown else redirect_uri, "state": state}
     if state is not None and len(state) > MAX_STATE_CHARS:
-        raise OAuthError("invalid_request", "state is too long.", redirect=redirect_uri)
+        raise OAuthError("invalid_request", "state is too long.", redirect=back["redirect"])
     if params.get("response_type") != "code":
         raise OAuthError(
             "unsupported_response_type", "Only response_type=code is supported.", **back

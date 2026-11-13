@@ -94,6 +94,36 @@ async def test_billing_notifications_are_emailed_and_never_pushed(team: Team, ty
     assert {d["template"] for d in await team.deliveries()} == {type_}
 
 
+@pytest.mark.parametrize("type_", ["ai_post_change", "ai_automation_change"])
+async def test_ai_app_changes_email_owners_and_admins_who_left_the_switch_on(
+    team: Team, fake_email: FakeEmail, settings: Settings, type_: str
+) -> None:
+    # 01-design.md §6.7: on by default; each member's own switch turns their email off.
+    await team.set_prefs(team.admin, {"email_ai_changes": False})
+    await team.notify(
+        to="admins",
+        type=type_,
+        severity="info",
+        title="Claude scheduled a Reel for Fri 6:00 pm",
+        body="Asha asked Claude to do this. Open the post to review or cancel it.",
+        link="/schedule/9b0c",
+    )
+
+    assert channels(await team.notes()) == {
+        team.owner: ["in_app", "email"],
+        team.admin: ["in_app"],  # still told in the app
+    }
+    [delivery] = await team.deliveries()
+    assert (delivery["user_id"], delivery["template"]) == (team.owner, type_)
+
+    assert await team.send_email(delivery["id"], fake_email, settings) == "sent"
+    [sent] = fake_email.outbox
+    assert sent.subject == "Claude scheduled a Reel for Fri 6:00 pm"
+    assert f'href="{WEB}/w/{team.slug}/schedule/9b0c"' in sent.html
+    assert "You can turn these emails off in Notification settings." in sent.text
+    assert "can't be turned off" not in sent.text
+
+
 @pytest.mark.parametrize(
     "type_", ["ai_credits_80", "scheduled_message_expired", "automation_ended"]
 )

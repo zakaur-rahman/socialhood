@@ -44,7 +44,8 @@ MAX_DEVICES = 10  # per user; registering an eleventh forgets the least recently
 
 @router.get("/v1/w/{wid}/notification-preferences", operation_id="get_notification_preferences")
 async def get_notification_preferences(ctx: AnyMember, session: Session) -> NotificationPreferences:
-    """The signed-in member's weekly digest switch and push switches in this workspace."""
+    """The signed-in member's email switches (the weekly digest, changes by AI apps) and push
+    switches in this workspace."""
     prefs = await preferences.load(session, ctx.user.id)
     if prefs is None:  # pragma: no cover - workspace_ctx found the membership
         raise ApiError("not_found")

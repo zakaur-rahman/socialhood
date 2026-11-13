@@ -343,7 +343,9 @@ function sections(): LegalSection[] {
               <strong>What we keep.</strong> For each connection: the app&apos;s name and the address it returns to after
               sign-in, the workspace, the member, the access it was given and when it was last used. Access tokens are
               stored only as one-way hashes. For each tool call: which tool, a shortened copy of what it was asked (long
-              text cut, keys and tokens removed), the outcome and how long it took, but not what {N} returned. Changes
+              text cut, arguments named as keys or tokens removed, links cut to their address; nothing for a call we
+              refused), the outcome and how long it took. We don&apos;t keep what {N} returned, except the result of a
+              change, kept for up to 24 hours so that a retry doesn&apos;t repeat it. Changes
               an AI app makes, such as a scheduled post or a new automation, also appear in the workspace&apos;s audit log as made by the
               member through that app.
             </li>
@@ -354,8 +356,8 @@ function sections(): LegalSection[] {
             </li>
             <li>
               <strong>Sending.</strong> An AI app can&apos;t send a direct message or a comment reply. It can prepare a
-              draft, which a person sends from {N}. A member can also ask it to create or change a keyword automation;
-              {N} requires the AI app to fetch a preview first, and once it is confirmed and on, the automation sends messages
+              draft, which a person sends from {N}. A member can also ask it to create or change a keyword automation, or
+              to turn one on or off; {N} requires the AI app to fetch a preview first, and once an automation is on, it sends messages
               to the people who match, as one made in {N} does. An AI app set to always allow {N}&apos;s tools can confirm
               without asking the member.
             </li>

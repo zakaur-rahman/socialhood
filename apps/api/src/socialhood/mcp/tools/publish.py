@@ -2,19 +2,23 @@
 
 Posts go directly, as the member's own action (decision D3), with these safety nets:
 
-- **Confirmation.** A call that would schedule, change or cancel a scheduled post does nothing
-  until it is repeated with ``confirmed: true`` and the preview's ``confirmation_token``
-  (mcp/confirmations.py), which the server checks. Without it the result is a preview
-  (``preview`` true, nothing stored): the resolved time in the workspace's zone and UTC, the
-  accounts, and the composer's checklist, so a wrong time-zone guess or a failing item shows
-  before anything is scheduled. Saving a draft needs no confirmation.
-- **Five minutes ahead at least** (``AI_APP_LEAD``, more than the app's own 1 minute): AI apps
-  cannot publish now, so a team member always has a window to see a post and cancel it.
+- **Confirmation.** A call that would schedule or publish a post, or change or cancel a scheduled
+  one, does nothing until it is repeated with ``confirmed: true`` and the preview's
+  ``confirmation_token`` (mcp/confirmations.py), which the server checks. Without it the result is
+  a preview (``preview`` true, nothing stored): the resolved time in the workspace's zone and UTC,
+  the accounts, and the composer's checklist, so a wrong time-zone guess or a failing item shows
+  before anything is scheduled. Saving or editing a draft needs no confirmation: it is changed at
+  once.
+- **The app's own times.** A time is at least 1 minute ahead (``MIN_SCHEDULE_LEAD``), the rule a
+  person gets in the composer. ``when: "now"`` publishes at once through the app's own Publish now
+  (``posts.publish_now``), for when the member asked for exactly that; it is previewed like any
+  scheduling, and the preview says it can't be undone.
 - **The team is told.** Owners and admins get a notification naming the AI app and the member,
   with a link to the post (where it is cancelled).
 - **Free saves drafts only.** The workspace's mode and the plan decide (``require_scheduling``);
   Free gets ``entitlement_required``, a workspace set to "read and drafts" a plain refusal.
-- **Caps** on posts scheduled: per day (``mcp_posts_daily``) and per minute (``mcp_posts``).
+- **Caps** on posts scheduled or published now: per day (``mcp_posts_daily``) and per minute
+  (``mcp_posts``).
 
 Everything else is the app's own rules: the same services as the composer
 (``services/scheduled_posts``), so the checklist, the account and media checks, the monthly
@@ -24,12 +28,11 @@ quota (``scheduled_posts_monthly``) and the format rules are not repeated here.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Literal
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
+from pydantic import BaseModel, Field, StringConstraints
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.agent.timeparse import TimeParseError, resolve_instant
 from socialhood.agent.tools.common import find_account, handle
@@ -38,19 +41,20 @@ from socialhood.errors import ApiError, FieldError
 from socialhood.mcp import confirmations, limits
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import Access, ConfirmedInput, ToolInput, WriteOutput, registry, tool
-from socialhood.mcp.tools.common import moment
+from socialhood.mcp.tools.common import end_preview, moment
 from socialhood.mcp.tools.posts import ACCOUNT, ChecklistOut
 from socialhood.models.identity import Role, User
 from socialhood.models.mcp import AiConnectionsMode
 from socialhood.models.notifications import NotificationType, Severity
 from socialhood.models.publishing import (
-    AI_APP_SCHEDULE_LEAD,
     COLLABORATORS_MAX,
     FIRST_COMMENT_MAX_CHARS,
+    INSTAGRAM_USERNAME_MAX_CHARS,
+    MIN_SCHEDULE_LEAD,
     STORED_CAPTION_MAX_CHARS,
     PostFormat,
 )
-from socialhood.realtime import events
+from socialhood.repositories import scheduled_posts as scheduled_posts_repo
 from socialhood.repositories import social_accounts
 from socialhood.schemas.publishing import (
     ScheduledPost,
@@ -61,24 +65,32 @@ from socialhood.schemas.publishing import (
 from socialhood.services import notifications
 from socialhood.services.scheduled_posts import posts, rules
 
+NOW_ONLY = "only when the member asked to publish immediately"
 WHEN = (
-    "When to publish: a date and time (2026-11-07T18:00:00+05:30, or 2026-11-07 18:00 in the "
-    "workspace's time zone, or words like “tomorrow 7 pm”), “next_free_slot” for the earliest "
-    "free posting time of the accounts, or “draft” to save it without a time. At least 5 "
-    "minutes from now."
+    "When to publish: a date and time at least 1 minute from now (2026-11-07T18:00:00+05:30, or "
+    "2026-11-07 18:00 in the workspace's time zone, or words like “tomorrow 7 pm”); "
+    "“next_free_slot” for the earliest free posting time of the accounts; “draft” to save it "
+    f"without a time; or “now” to publish at once, {NOW_ONLY}."
 )
 KIND = (
     "post: an image, a video (published as a Reel on Instagram) or a carousel; reel: one video "
     "as a Reel; story: one image or video as a Story, without caption."
 )
-DRAFT, SLOT, SCHEDULED = "draft", "next_free_slot", "scheduled"
-# A promise on the MCP pages: a post from an AI app waits 5 minutes, so the team can stop it.
-AI_APP_LEAD = AI_APP_SCHEDULE_LEAD
-TOO_SOON = (
-    "AI apps schedule at least 5 minutes ahead, so the team can see a post before it goes out. "
-    "Pick a later time, or use “draft”."
-)
+DRAFT, SLOT, NOW, SCHEDULED = "draft", "next_free_slot", "now", "scheduled"
+TOO_SOON = f"{rules.TIME_TOO_SOON} Or use “draft”."
+FARTHEST = timedelta(days=3660)  # nobody plans a post further out, and year 9999 can't be shown
+OUT_OF_RANGE = "That date is out of range. Pick a time in the next few years."
+PUBLISHING = "It is publishing and can't be cancelled. get_scheduled_post shows how it went."
 Kind = Literal["post", "reel", "story"]
+# The app's own limits (schemas/publishing.py), so a value over one is a field error here.
+AccountName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+Collaborator = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=INSTAGRAM_USERNAME_MAX_CHARS + 1
+    ),
+]
+AccountCaption = Annotated[str, Field(max_length=STORED_CAPTION_MAX_CHARS)]
 
 
 class ReelOptions(BaseModel):
@@ -107,7 +119,7 @@ class PostFields(ToolInput):
         max_length=FIRST_COMMENT_MAX_CHARS,
         description="Posted as a comment right after the post publishes.",
     )
-    collaborators: list[str] | None = Field(
+    collaborators: list[Collaborator] | None = Field(
         default=None,
         max_length=COLLABORATORS_MAX,
         description=f"Instagram usernames to invite, at most {COLLABORATORS_MAX}.",
@@ -116,29 +128,30 @@ class PostFields(ToolInput):
         default=None, max_length=300, description="A Facebook Page id or its link."
     )
     reel_options: ReelOptions | None = None
-    per_account_captions: dict[str, str] | None = Field(
+    per_account_captions: dict[AccountName, AccountCaption] | None = Field(
         default=None,
+        max_length=10,  # as many as a post has accounts
         description="A caption for one account instead of the main one, by account id or @handle.",
     )
 
 
 class CreatePostInput(PostFields, ConfirmedInput):
-    accounts: list[str] = Field(min_length=1, max_length=10, description=ACCOUNT)
+    accounts: list[AccountName] = Field(min_length=1, max_length=10, description=ACCOUNT)
     kind: Kind = Field(default="post", description=KIND)
     when: str = Field(min_length=1, max_length=100, description=WHEN)
 
 
 class UpdatePostInput(PostFields, ConfirmedInput):
     post_id: uuid.UUID = Field(description="A draft or scheduled post's id.")
-    accounts: list[str] | None = Field(
+    accounts: list[AccountName] | None = Field(
         default=None, min_length=1, max_length=10, description=ACCOUNT
     )
     kind: Kind | None = Field(default=None, description=KIND)
     when: str | None = Field(
         default=None,
         max_length=100,
-        description="A new time (the same forms as create_post) or “next_free_slot”. A draft "
-        "given a time is scheduled. Omit to keep the time.",
+        description="A new time (the same forms as create_post), “next_free_slot”, or “now” to "
+        f"publish at once, {NOW_ONLY}. A draft given a time is scheduled. Omit to keep the time.",
     )
 
 
@@ -170,15 +183,17 @@ def _when_error(message: str) -> ApiError:
     return ApiError("validation_error", errors=[FieldError("when", message)])
 
 
-def resolve_when(call: ToolCall, when: str) -> datetime | Literal["draft", "slot"]:
-    """``when`` as a UTC time, or ``draft`` or ``slot``. A time without an offset is read in the
-    workspace's zone; a phrase goes through the same resolver as Ask. Under 5 minutes ahead is a
-    field error on ``when``."""
+def resolve_when(call: ToolCall, when: str) -> datetime | Literal["draft", "slot", "now"]:
+    """``when`` as a UTC time, or ``draft``, ``slot`` or ``now``. A time without an offset is read
+    in the workspace's zone; a phrase goes through the same resolver as Ask. Under a minute ahead
+    (the app's rule) or out of range is a field error on ``when``."""
     text = when.strip()
     if text.casefold() == DRAFT:
         return "draft"
     if text.casefold() in (SLOT, "next free slot", "queue"):
         return "slot"
+    if text.casefold() == NOW:
+        return "now"
     try:
         at = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
@@ -188,15 +203,20 @@ def resolve_when(call: ToolCall, when: str) -> datetime | Literal["draft", "slot
             raise _when_error(str(error)) from error
     if at.tzinfo is None:
         at = at.replace(tzinfo=call.timezone)
-    at = at.astimezone(UTC)
-    if at < call.now + AI_APP_LEAD:
+    try:
+        at = at.astimezone(UTC)
+    except OverflowError as error:  # year 1 or 9999, in a zone away from UTC
+        raise _when_error(OUT_OF_RANGE) from error
+    if at > call.now + FARTHEST:
+        raise _when_error(OUT_OF_RANGE)
+    if at < call.now + MIN_SCHEDULE_LEAD:
         raise _when_error(TOO_SOON)
     return at
 
 
 def require_scheduling(call: ToolCall) -> None:
-    """Scheduling or changing a scheduled post needs the ``full`` mode: Free is capped at drafts
-    by its plan (402), a workspace set to drafts refuses in plain words."""
+    """Scheduling, publishing or changing a scheduled post needs the ``full`` mode: Free is capped
+    at drafts by its plan (402), a workspace set to drafts refuses in plain words."""
     if call.mode is AiConnectionsMode.FULL:
         return
     if call.workspace.ai_connections_mode == AiConnectionsMode.FULL:  # the plan holds it back
@@ -218,12 +238,17 @@ async def _reserve_post(call: ToolCall) -> limits.Reservation:
     )
 
 
-async def _accounts(call: ToolCall, names: list[str]) -> list[uuid.UUID]:
+async def _accounts(call: ToolCall, names: list[str], field: str = "accounts") -> list[uuid.UUID]:
+    # shortcut: one accounts query per name (at most 20 names a call); one query for all needs
+    # find_account (agent/tools/common.py) to take a loaded list.
     ctx = call.agent_context()
     found: list[uuid.UUID] = []
     for name in names:
         account = await find_account(ctx, name)
-        assert account is not None  # the input refuses an empty name
+        if account is None:  # a blank name, which the input refuses too
+            raise ApiError(
+                "validation_error", errors=[FieldError(field, "An account can't be blank.")]
+            )
         found.append(account.id)
     return found
 
@@ -231,7 +256,7 @@ async def _accounts(call: ToolCall, names: list[str]) -> list[uuid.UUID]:
 async def _captions(call: ToolCall, by_account: dict[str, str] | None) -> dict[uuid.UUID, str]:
     if not by_account:
         return {}
-    ids = await _accounts(call, list(by_account))
+    ids = await _accounts(call, list(by_account), "per_account_captions")
     return dict(zip(ids, by_account.values(), strict=True))
 
 
@@ -247,6 +272,18 @@ async def _platforms(session: AsyncSession, ids: list[uuid.UUID]) -> set[str]:
     return {a.platform for a in await social_accounts.list_all(session) if a.id in ids}
 
 
+async def _locked(call: ToolCall, post_id: uuid.UUID, env: posts.Env) -> ScheduledPost:
+    """The post, read under its row lock (the one ``posts.replace`` and the dispatcher take): its
+    status decides whether a preview is needed, so it can't change before the write."""
+    await scheduled_posts_repo.get(call.session, post_id, for_update=True)
+    return await posts.get(call.session, post_id, env)
+
+
+async def _target_names(call: ToolCall, post: ScheduledPost) -> list[str]:
+    names = {a.id: handle(a) for a in await social_accounts.list_all(call.session)}
+    return [names.get(t.social_account_id, "a removed account") for t in post.targets]
+
+
 async def _result(
     call: ToolCall,
     post: ScheduledPost,
@@ -256,10 +293,13 @@ async def _result(
     next_step: str,
     stored: bool = True,
     token: str | None = None,
+    now: bool = False,
 ) -> PostResult:
-    names = {a.id: handle(a) for a in await social_accounts.list_all(call.session)}
+    # Publish now sets the time to this moment, so the post's own "at least 1 minute from now"
+    # line fails by design: it isn't shown as something to fix.
+    checklist = [c for c in post.checklist if not (now and c.key == "publish_at")]
     return PostResult(
-        summary=summary,
+        summary=summary[:400],
         preview=preview,
         confirmation_token=token,
         post_id=post.id if stored else None,
@@ -269,14 +309,13 @@ async def _result(
         caption=post.caption,
         first_comment=post.first_comment,
         collaborators=post.collaborators,
-        accounts=[names.get(t.social_account_id, "a removed account") for t in post.targets],
+        accounts=await _target_names(call, post),
         media_ids=[a.id for a in post.assets],
         publish_at=moment(call, post.publish_at),
         checklist=[
-            ChecklistOut(key=c.key, ok=c.ok, message=c.message, field=c.field)
-            for c in post.checklist
+            ChecklistOut(key=c.key, ok=c.ok, message=c.message, field=c.field) for c in checklist
         ],
-        ready=post.ready,
+        ready=all(c.ok for c in checklist) if now else post.ready,
         next_step=next_step,
         dashboard_url=call.dashboard_url(f"schedule/{post.id}") if stored else None,
     )
@@ -287,8 +326,9 @@ def _env(call: ToolCall) -> posts.Env:
 
 
 async def _notify(call: ToolCall, post: ScheduledPost, did: str) -> None:
-    """Tell the owners and admins that an AI app scheduled, changed or cancelled a post, who
-    asked, and where to cancel it (§4.4)."""
+    """Tell the owners and admins that an AI app scheduled, published, changed or cancelled a
+    post, who asked, and where to cancel it (§4.4). Each call tells them once: the key carries the
+    call's id, so a second change to the same post is told too."""
     user = await call.session.get(User, call.principal.user_id)
     who = (user.name or user.email) if user is not None else "A member"
     app = call.client_name or "An AI app"
@@ -297,38 +337,50 @@ async def _notify(call: ToolCall, post: ScheduledPost, did: str) -> None:
         if post.format
         else "post"
     )
+    a = "an" if what[0] in "aeiou" else "a"
     when = moment(call, post.publish_at)
-    title = f"{app} {did} {'an' if what[0] in 'aeiou' else 'a'} {what}" + (
-        f" for {when}" if when and did != "cancelled" else ""
-    )
-    link = f"/schedule/{post.id}"
-    at = post.publish_at.isoformat() if post.publish_at else ""
+    if did == "published":
+        title = f"{app} published {a} {what} now"
+        then = "Open the post to see it."
+    else:
+        title = f"{app} {did} {a} {what}" + (f" for {when}" if when and did != "cancelled" else "")
+        then = "Open the post to review or cancel it before it publishes."
     await notifications.notify_admins(
         call.session,
         type=NotificationType.AI_POST_CHANGE.value,
         severity=Severity.INFO.value,
         title=title[:200],
-        body=f"{who} asked {app} to do this. Open the post to review or cancel it before it "
-        "publishes.",
-        link=link,
-        dedupe_key=f"mcp-post:{post.id}:{did}:{at}",
+        body=f"{who} asked {app} to do this. {then}",
+        link=f"/schedule/{post.id}",
+        dedupe_key=f"mcp-post:{post.id}:{did}:{call.call_id}",
     )
 
 
-def _confirm_step(preview: bool, then: str) -> str:
+async def _now_preview(call: ToolCall, post: ScheduledPost) -> str:
+    names = await _target_names(call, post)
+    to = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
     return (
-        "Nothing was changed. Show the member this. After they agree, call again with the same "
-        f"arguments, confirmed: true and this confirmation_token to {then}."
-        if preview
-        else ""
+        f"Preview: this publishes immediately to {to} and cannot be undone. Nothing is published "
+        "yet"
     )
 
 
-async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> None:
-    """End a preview: everything the call wrote is rolled back, and the events it queued are
-    dropped."""
-    await savepoint.rollback()
-    events.discard(call.session)
+async def _published_now(
+    call: ToolCall, post: ScheduledPost, handover: posts.HandOver
+) -> PostResult:
+    """A confirmed Publish now: the publishing jobs get the targets once the call has committed,
+    as the app's own route does after its commit (the 30-second dispatcher takes any that fail to
+    queue), and the team is told."""
+
+    async def hand_over() -> None:
+        await posts.hand_over(handover)
+
+    call.after_commit.append(hand_over)
+    call.note("post.published", "scheduled_post", post.id, publish_at=post.publish_at)
+    await _notify(call, post, "published")
+    return await _result(
+        call, post, preview=False, summary="Publishing now", next_step=PUBLISHING, now=True
+    )
 
 
 # ---------------------------------------------------------------- create_post
@@ -337,16 +389,17 @@ async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> No
 @tool(
     registry,
     name="create_post",
-    title="Create or schedule a post",
+    title="Create, schedule or publish a post",
     description=(
         "Create an Instagram or Facebook post, carousel, Reel or Story from media in the "
-        "library, and either save it as a draft, schedule it for a time, or put it in the next "
-        "free posting slot. It is checked with the same checklist as the composer, and a failing "
-        "item stops scheduling. Scheduling is previewed first: the call shows the resolved time "
-        "and the checklist. Show the member the preview and call again only after they agree, "
-        "with confirmed true and the preview's confirmation_token. Posts go out at least 5 "
-        "minutes later and the team is notified. Plans: scheduling is part of Creator and "
-        "Business; drafts work on every plan, with no preview."
+        "library, and save it as a draft, schedule it for a time, put it in the next free "
+        "posting slot, or publish it now. It is checked with the same checklist as the composer, "
+        "and a failing item stops scheduling. Scheduling and publishing are previewed first: the "
+        "call shows the resolved time and the checklist. Show the member the preview and call "
+        "again only after they agree, with confirmed true and the preview's confirmation_token. "
+        "A scheduled time is at least 1 minute ahead. when “now” publishes at once and cannot be "
+        f"undone: use it {NOW_ONLY}. The team is notified. Plans: scheduling and publishing are "
+        "part of Creator and Business; drafts work on every plan, with no preview."
     ),
     input_model=CreatePostInput,
     output_model=PostResult,
@@ -359,6 +412,7 @@ async def _preview_end(call: ToolCall, savepoint: AsyncSessionTransaction) -> No
 async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
     when = resolve_when(call, args.when)
     scheduling = when != "draft"
+    now = when == "now"
     if scheduling:
         require_scheduling(call)
     ids = await _accounts(call, args.accounts)
@@ -385,6 +439,7 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
     if scheduling and not preview:
         reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
+    handover: posts.HandOver | None = None
     try:
         post = await posts.create(call.session, draft, _env(call), user_id=call.principal.user_id)
         if args.kind == "reel" and post.format != "reel":
@@ -393,7 +448,9 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
                 errors=[FieldError("media_ids", "A Reel is one video. Add a video.")],
             )
         if when == "slot":
-            post = await posts.queue(call.session, post.id, _env(call), lead=AI_APP_LEAD)
+            post = await posts.queue(call.session, post.id, _env(call))
+        elif now:
+            post, handover = await posts.publish_now(call.session, post.id, _env(call))
         elif isinstance(when, datetime):
             post = await posts.schedule(call.session, post.id, when, _env(call))
     except BaseException:
@@ -401,16 +458,19 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
             await reservation.refund()
         raise
     if savepoint is not None:
-        await _preview_end(call, savepoint)
+        await end_preview(call, savepoint)
         return await _result(
             call,
             post,
             preview=True,
-            summary=f"Preview: this {post.format or 'post'} would be scheduled for "
+            summary=await _now_preview(call, post)
+            if now
+            else f"Preview: this {post.format or 'post'} would be scheduled for "
             f"{moment(call, post.publish_at)}. Nothing is scheduled yet",
-            next_step=_confirm_step(True, "schedule it"),
+            next_step=confirmations.next_step("publish it now" if now else "schedule it"),
             stored=False,
             token=confirmations.issue(call, args),
+            now=now,
         )
     if not scheduling:
         call.note("post.created", "scheduled_post", post.id, status=post.status)
@@ -419,9 +479,10 @@ async def create_post(call: ToolCall, args: CreatePostInput) -> PostResult:
             post,
             preview=False,
             summary="Saved a draft" + ("" if post.ready else f"; {_failing(post)} to fix"),
-            next_step="Schedule it by calling create_post again with a time, or open it in "
-            "Amplychat.",
+            next_step="Schedule it by calling update_post with a time, or open it in Amplychat.",
         )
+    if handover is not None:
+        return await _published_now(call, post, handover)
     call.note("post.scheduled", "scheduled_post", post.id, publish_at=post.publish_at)
     await _notify(call, post, "scheduled")
     return await _result(
@@ -439,12 +500,6 @@ def _failing(post: ScheduledPost) -> str:
 
 
 # ---------------------------------------------------------------- update_post
-
-
-@dataclass
-class _Merged:
-    draft: ScheduledPostDraft
-    scheduled_before: bool
 
 
 def _merge(
@@ -465,6 +520,11 @@ def _merge(
         if a.id in asset_ids
     ]
     options = args.reel_options
+
+    def reel(name: str, kept: Any) -> Any:
+        """A Reel option from the request when it was sent, else the post's own."""
+        return getattr(options, name) if options and name in options.model_fields_set else kept
+
     return ScheduledPostDraft(
         targets=targets
         or [
@@ -483,10 +543,10 @@ def _merge(
         ),
         location=args.location if args.location is not None else current.location_id,
         user_tags=tags,
-        cover_asset_id=options.cover_media_id if options else current.cover_asset_id,
-        cover_offset_ms=options.cover_offset_ms if options else current.cover_offset_ms,
-        share_to_feed=options.share_to_feed if options else current.share_to_feed,
-        audio_name=options.audio_name if options else current.audio_name,
+        cover_asset_id=reel("cover_media_id", current.cover_asset_id),
+        cover_offset_ms=reel("cover_offset_ms", current.cover_offset_ms),
+        share_to_feed=reel("share_to_feed", current.share_to_feed),
+        audio_name=reel("audio_name", current.audio_name),
     )
 
 
@@ -496,11 +556,12 @@ def _merge(
     title="Change a post",
     description=(
         "Change a draft or scheduled post: caption, first comment, media, accounts, "
-        "collaborators, Reel options or time. Only the fields sent change. Changing a scheduled "
-        "post, or giving a draft a time, is previewed first: show the member the preview and "
-        "call again only after they agree, with confirmed true and its confirmation_token. A "
-        "post whose publishing has started can't be changed. Changing scheduled posts is part "
-        "of Creator and Business."
+        "collaborators, Reel options or time. Only the fields sent change. A draft is changed at "
+        "once, with no preview. Changing a scheduled post, giving a draft a time, or publishing "
+        "now is previewed first: show the member the preview and call again only after they "
+        "agree, with confirmed true and its confirmation_token. when “now” publishes at once and "
+        f"cannot be undone: use it {NOW_ONLY}. A post whose publishing has started can't be "
+        "changed. Changing scheduled posts and publishing are part of Creator and Business."
     ),
     input_model=UpdatePostInput,
     output_model=PostResult,
@@ -515,7 +576,8 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
     when = resolve_when(call, args.when) if args.when is not None else None
     if when == "draft":
         raise _when_error("To take a scheduled post back to a draft, use cancel_post.")
-    current = await posts.get(call.session, args.post_id, env)
+    now = when == "now"
+    current = await _locked(call, args.post_id, env)
     scheduled_before = current.status == SCHEDULED
     scheduling = scheduled_before or when is not None
     if scheduling:
@@ -543,28 +605,23 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
         target_ids = [t.social_account_id for t in targets or current.targets]
         kind = _post_kind(args.kind, await _platforms(call.session, target_ids))
     moved = when if isinstance(when, datetime) and scheduled_before else None
-    # Editing a post about to go out cuts the team's window to stop it. Cancelling stays allowed.
-    due = current.publish_at
-    if (
-        scheduled_before
-        and moved is None
-        and when != "slot"
-        and due
-        and due < call.now + AI_APP_LEAD
-    ):
-        raise _when_error(TOO_SOON)
     merged = _merge(current, args, targets=targets, kind=kind, publish_at=moved)
     preview = scheduling and not args.confirmed
     if scheduling and not preview:
         confirmations.require(call, args, args.confirmation_token)
+    # New scheduling and every Publish now count against the caps; a change to a post that is
+    # already scheduled doesn't.
     reservation = None
-    if scheduling and not scheduled_before and not preview:
+    if scheduling and not preview and (now or not scheduled_before):
         reservation = await _reserve_post(call)
     savepoint = await call.session.begin_nested() if preview else None
+    handover: posts.HandOver | None = None
     try:
         post = await posts.replace(call.session, args.post_id, merged, env)
         if when == "slot":
-            post = await posts.queue(call.session, post.id, env, lead=AI_APP_LEAD)
+            post = await posts.queue(call.session, post.id, env)
+        elif now:
+            post, handover = await posts.publish_now(call.session, post.id, env)
         elif isinstance(when, datetime) and not scheduled_before:
             post = await posts.schedule(call.session, post.id, when, env)
     except BaseException:
@@ -572,15 +629,20 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
             await reservation.refund()
         raise
     if savepoint is not None:
-        await _preview_end(call, savepoint)
+        await end_preview(call, savepoint)
         return await _result(
             call,
             post,
             preview=True,
-            summary="Preview: the post would be changed as shown. Nothing is changed yet",
-            next_step=_confirm_step(True, "make the change"),
+            summary=await _now_preview(call, post)
+            if now
+            else "Preview: the post would be changed as shown. Nothing is changed yet",
+            next_step=confirmations.next_step("publish it now" if now else "make the change"),
             token=confirmations.issue(call, args),
+            now=now,
         )
+    if handover is not None:
+        return await _published_now(call, post, handover)
     call.note("post.updated", "scheduled_post", post.id, status=post.status)
     if post.status == SCHEDULED:
         await _notify(call, post, "changed")
@@ -618,7 +680,7 @@ async def update_post(call: ToolCall, args: UpdatePostInput) -> PostResult:
 )
 async def cancel_post(call: ToolCall, args: CancelPostInput) -> PostResult:
     env = _env(call)
-    current = await posts.get(call.session, args.post_id, env)
+    current = await _locked(call, args.post_id, env)
     was_scheduled = current.status == SCHEDULED
     preview = was_scheduled and not args.confirmed
     if was_scheduled and not preview:
@@ -626,14 +688,14 @@ async def cancel_post(call: ToolCall, args: CancelPostInput) -> PostResult:
     savepoint = await call.session.begin_nested() if preview else None
     post = await posts.unschedule(call.session, args.post_id, env)
     if savepoint is not None:
-        await _preview_end(call, savepoint)
+        await end_preview(call, savepoint)
         return await _result(
             call,
             post,
             preview=True,
             summary="Preview: the post would go back to a draft and not publish. Nothing is "
             "changed yet",
-            next_step=_confirm_step(True, "cancel it"),
+            next_step=confirmations.next_step("cancel it"),
             token=confirmations.issue(call, args),
         )
     if was_scheduled:

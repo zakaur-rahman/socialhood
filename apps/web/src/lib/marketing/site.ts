@@ -336,7 +336,7 @@ export const PAGE_UPDATED: Partial<Record<(typeof PUBLIC_PATHS)[number], string>
   "/contact": "2026-10-26",
   "/developers/api": "2026-10-26",
   "/developers/mcp": "2026-11-12",
-  "/developers/mcp/api-key": "2026-11-01",
+  "/developers/mcp/api-key": "2026-11-11",
   "/mcp": "2026-11-12",
   "/security": "2026-10-26",
   "/for-creators": "2026-11-12",

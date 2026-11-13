@@ -7,7 +7,9 @@ per recipient (C-049):
 - ``in_app``: always (FR-NOT-01).
 - ``email``: types in EMAIL_TYPES (account needs reconnecting, payment problem, plan activated,
   plan downgraded, post failed), to owners and admins only, whoever the notification went to:
-  account, billing and publishing are theirs to fix. Not optional (FR-NOT-02).
+  account, billing and publishing are theirs to fix. Not optional (FR-NOT-02). What an AI app
+  changed (a post, an automation; 01-design.md §6.7) is emailed to them too, unless the member
+  turned that off (notification_prefs ``email_ai_changes``).
 - ``push``: types in PUSH_EVENT_OF_TYPE (Needs you, new lead, window closing, account needs
   reconnecting or disconnected), when the member's switch for that event is on (FR-NOT-03).
 
@@ -51,7 +53,12 @@ def channels_for(
 ) -> list[str]:
     """The channels of one recipient's notification of ``type``."""
     channels = [NotificationChannel.IN_APP.value]
-    if type in EMAIL_TYPES and role in EMAIL_ROLES and has_email:
+    if (
+        type in EMAIL_TYPES
+        and role in EMAIL_ROLES
+        and has_email
+        and preferences.emails(prefs, type)
+    ):
         channels.append(NotificationChannel.EMAIL.value)
     event = PUSH_EVENT_OF_TYPE.get(type)
     if event is not None and preferences.pushes(prefs, event):

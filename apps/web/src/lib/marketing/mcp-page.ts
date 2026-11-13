@@ -11,7 +11,7 @@
 import { SITE_NAME } from "./site";
 
 export const MCP_PAGE_PATH = "/mcp";
-export const MCP_PAGE_UPDATED = "2026-11-01";
+export const MCP_PAGE_UPDATED = "2026-11-11";
 export const MCP_SETUP_PATH = "/developers/mcp";
 export const MCP_API_KEY_PATH = "/developers/mcp/api-key";
 
@@ -36,7 +36,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "claude-code",
     title: "Claude Code",
-    body: "Add the server with one command and sign in, or use an API key (Business). It can also upload a video you edited and schedule it as a Reel.",
+    body: "Add the server with one command and sign in, or use an API key (Business and Agency). It can also upload a video you edited and schedule it as a Reel.",
   },
   {
     id: "chatgpt",
@@ -46,7 +46,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "codex",
     title: "Codex",
-    body: "Use an API key (Business), or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
+    body: "Use an API key (Business and Agency), or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
   },
   {
     id: "other",
@@ -57,7 +57,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
 ];
 
 /** C-169: the server can require the preview; it can't prove a person read it. */
-export const ALWAYS_ALLOW_LINE = "If you set your AI app to always allow Amplychat's tools, it can confirm without asking you, so keep approvals on for changes.";
+export const ALWAYS_ALLOW_LINE = "If you set your AI app to always allow Amplychat's tools, it can give the yes itself, so keep approvals on for changes.";
 
 export type Ask = { prompt: string; result: string; plan?: string };
 
@@ -65,7 +65,7 @@ export const ASKS: readonly Ask[] = [
   {
     prompt: "Schedule this Reel for Friday at 6 pm.",
     result:
-      "The AI shows a preview with the time, the account and the composer's checklist. Nothing is scheduled until you say yes. A scheduled post waits at least 5 minutes, and your team is told.",
+      "The AI shows a preview with the time, the account and the composer's checklist. Nothing is scheduled until you say yes, and your team is told. Ask it to post now and it publishes right after your yes.",
     plan: "Creator and Business",
   },
   {
@@ -92,7 +92,7 @@ export const ASKS: readonly Ask[] = [
   {
     prompt: "When someone comments \"price\" on my last post, DM them the price.",
     result:
-      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it's saved off. You review it and turn it on in Amplychat, and then the automation sends the DMs. Your team is told, and you can ask the AI to pause it whenever you like.",
+      "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it's saved off. Turn it on in Amplychat, or ask the AI to: it shows a preview and waits for your yes again. Then the automation sends the DMs. Your team is told, and you can ask the AI to pause it.",
     plan: "Creator and Business",
   },
   {
@@ -119,7 +119,7 @@ export const HOW_STEPS: readonly { title: string; body: string }[] = [
 ];
 
 export const CONFIRM_LINE =
-  "Before a post is scheduled, changed or cancelled, or an automation is created or changed, Amplychat requires a preview, and the AI shows it to you and waits for your yes. Automations and new knowledge also wait for you to approve them in Amplychat.";
+  "Before a post is scheduled or published, a scheduled post is changed or cancelled, or an automation is created, changed, paused or turned on, Amplychat requires a preview, and the AI shows it to you and waits for your yes. Editing a draft post is saved at once. New knowledge also waits for you to approve it in Amplychat.";
 
 export const MCP_PAGE_FAQ = [
   {
@@ -134,15 +134,15 @@ export const MCP_PAGE_FAQ = [
   {
     question: "Does the AI post to my accounts by itself?",
     answer:
-      "No. It only acts when you ask, Amplychat requires a preview before a post is scheduled, changed or cancelled, and a post waits at least 5 minutes so your team can cancel it. " + ALWAYS_ALLOW_LINE,
+      "No. It only acts when you ask, and Amplychat requires a preview before a post is scheduled or published, or a scheduled post is changed or cancelled. Owners and admins are told each time. " + ALWAYS_ALLOW_LINE,
   },
   {
     question: "Can the AI message my customers?",
-    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also draft a keyword automation. It stays off until you turn it on in ${SITE_NAME}, and then the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
+    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also set up a keyword automation. It is saved off. You turn it on in ${SITE_NAME}, or the AI app does after a preview and your yes, and then the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
   },
   {
     question: "Does this cost extra?",
-    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule posts, draft knowledge and automations for you to approve and pause automations, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
+    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule and publish posts, draft knowledge for you to approve, and create automations and turn them on and off, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
   },
   {
     question: "Can I use it with Cursor or VS Code?",

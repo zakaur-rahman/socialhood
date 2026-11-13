@@ -4,7 +4,8 @@
 - ``GET /.well-known/oauth-authorization-server`` (RFC 8414): the metadata.
 - ``GET /oauth/authorize``: checks the request, then 302 to the dashboard's consent page
   (``/connect/authorize?request=…``), or back to the client with an error. A bad client or
-  redirect URI is a small HTML page for the person, never a redirect.
+  redirect URI, and any error of a client that registered itself, is a small HTML page for the
+  person, never a redirect.
 - ``POST /oauth/token``: ``authorization_code`` and ``refresh_token`` grants (form body).
 - ``POST /oauth/register``: Dynamic Client Registration (RFC 7591, JSON body). Deprecated by
   the MCP spec in favour of Client ID Metadata Documents, kept for older clients.
@@ -13,8 +14,9 @@
 They speak OAuth, not the app's problem+json: JSON ``{"error", "error_description"}`` with the
 RFCs' statuses, ``Cache-Control: no-store`` on tokens, and ``WWW-Authenticate: Basic`` on a 401
 for a client that sent Basic credentials. Not in the OpenAPI document (like /mcp). Rate limits
-(§6.1): authorize 30 a minute per IP, register 10 an hour per IP, token and revoke 60 a minute
-per client.
+(§6.1): authorize 30 a minute per IP, register 10 an hour per IP, token and revoke together 120
+a minute per IP before the client is looked up, then 60 a minute per client and IP (one client
+id serves all of an app's users, so the allowance is each caller's own).
 """
 
 from __future__ import annotations
@@ -125,6 +127,9 @@ async def _form(request: Request) -> dict[str, str] | None:
 @router.post("/oauth/token")
 async def token(request: Request) -> Response:
     settings = _settings(request)
+    ip = ratelimit.client_ip(request)
+    if limited := await _limited(request, "oauth_token_ip", ip):
+        return limited
     form = await _form(request)
     if form is None:
         return _error(OAuthError("invalid_request", "Send a form body, each parameter once."))
@@ -133,7 +138,7 @@ async def token(request: Request) -> Response:
     async with request.app.state.sessionmaker() as session:
         try:
             client = await service.authenticate_client(session, form, authorization)
-            if limited := await _limited(request, "oauth_token", client.client_id):
+            if limited := await _limited(request, "oauth_token", f"{client.client_id}:{ip}"):
                 return limited
             grant = form.get("grant_type")
             if grant == "authorization_code":
@@ -179,6 +184,9 @@ async def register(request: Request) -> Response:
 
 @router.post("/oauth/revoke")
 async def revoke(request: Request) -> Response:
+    ip = ratelimit.client_ip(request)
+    if limited := await _limited(request, "oauth_token_ip", ip):
+        return limited
     form = await _form(request)
     if form is None:
         return _error(OAuthError("invalid_request", "Send a form body, each parameter once."))
@@ -187,7 +195,7 @@ async def revoke(request: Request) -> Response:
             client = await service.authenticate_client(
                 session, form, request.headers.get("authorization")
             )
-            if limited := await _limited(request, "oauth_token", client.client_id):
+            if limited := await _limited(request, "oauth_token", f"{client.client_id}:{ip}"):
                 return limited
             await service.revoke(session, client, form, datetime.now(UTC))
         except OAuthError as error:

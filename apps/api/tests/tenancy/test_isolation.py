@@ -453,6 +453,7 @@ EXAMPLE_BODIES.update(
         ("POST", "/v1/w/{wid}/billing/checkout"): {"plan": "pro"},
         ("PUT", "/v1/w/{wid}/notification-preferences"): {
             "email_digest": False,
+            "email_ai_changes": False,
             "push": {
                 "needs_you": False,
                 "new_lead": False,

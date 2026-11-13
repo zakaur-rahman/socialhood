@@ -30,6 +30,12 @@ class _Kind:
 
 
 _ALWAYS_ON = "These emails can't be turned off while you're an owner or admin."
+# The two below follow the member's own switch (notification_prefs ``email_ai_changes``).
+_AI_CONTEXT = (
+    "An AI app connected to this workspace made this change for that member. Owners and admins "
+    "choose what AI apps may do in Settings, under Connected AI apps."
+)
+_AI_SWITCH = "You can turn these emails off in Notification settings."
 
 KINDS: dict[str, _Kind] = {
     EmailTemplate.ACCOUNT_NEEDS_RECONNECT: _Kind(
@@ -64,6 +70,19 @@ KINDS: dict[str, _Kind] = {
         default_link="/schedule",
         why="You're getting this because a scheduled post in {workspace} didn't publish. "
         + _ALWAYS_ON,
+    ),
+    EmailTemplate.AI_POST_CHANGE: _Kind(
+        context=_AI_CONTEXT,
+        action="Open the post",
+        default_link="/schedule",
+        why="You're getting this because an AI app changed a post in {workspace}. " + _AI_SWITCH,
+    ),
+    EmailTemplate.AI_AUTOMATION_CHANGE: _Kind(
+        context=_AI_CONTEXT,
+        action="Open the automation",
+        default_link="/automations",
+        why="You're getting this because an AI app changed an automation in {workspace}. "
+        + _AI_SWITCH,
     ),
 }
 

@@ -15,7 +15,9 @@ It proves a preview was made by this connection. It can't prove a person read it
 the AI app, and one set to always allow the tools can preview and confirm by itself. A token
 runs its change once: ``claim`` marks it used in Valkey just before the tool runs, and ``release``
 gives it back when the call fails, so a failed call can be retried. A retry of a call that worked
-never gets this far: its idempotency key or the dedupe window returns the first result first.
+gets the first result back when it has an idempotency key or the tool a dedupe window; without
+either it reaches ``claim`` and is told the preview was used, so ``USED`` never says that nothing
+changed.
 """
 
 from __future__ import annotations
@@ -53,7 +55,10 @@ THEN = (
 MISSING = f"This change needs a preview first. {THEN}"
 EXPIRED = f"That preview has expired. {THEN}"
 MISMATCH = f"That confirmation_token isn't for this change on this connection. {THEN}"
-USED = f"That preview has already been used. {THEN}"
+USED = (
+    "That preview has already been used, so the change may already have been made. Check before "
+    "retrying. To change something else, call without confirmed to get a new preview."
+)
 
 
 def next_step(then: str) -> str:

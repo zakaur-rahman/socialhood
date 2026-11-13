@@ -27,6 +27,7 @@ const waiting: McpUploadTicket = {
     timestamp: 1,
     folder: "ws/w/post",
     tags: "mcp_upload_t1",
+    public_id: "t1",
     allowed_formats: "mp4",
     signature: "s",
     upload_url: "https://api.cloudinary.com/v1_1/demo/video/upload",
@@ -47,14 +48,14 @@ describe("UploadTicketPage", () => {
   beforeEach(() => storage.sendToStorage.mockReset());
 
   it("sends the file to storage with the ticket's signature and completes it", async () => {
-    storage.sendToStorage.mockResolvedValue({ public_id: "ws/w/post/abc" });
+    storage.sendToStorage.mockResolvedValue({ public_id: "ws/w/post/t1" });
     const view = setup(waiting);
     const input = await screen.findByLabelText("Choose a file");
     await userEvent.upload(input, new File(["x"], "reel.mp4", { type: "video/mp4" }));
     expect(await screen.findByText("The file is in your media library.")).toBeInTheDocument();
     expect(storage.sendToStorage).toHaveBeenCalledWith(waiting.upload, expect.any(File), expect.anything());
-    const done = view.calls.find((c) => c.method === "POST");
-    expect(done?.body).toEqual({ public_id: "ws/w/post/abc" });
+    // The API reads the file's name from the ticket: the page sends none.
+    expect(view.calls.filter((c) => c.method === "POST")).toHaveLength(1);
   });
 
   it("refuses a file of the wrong kind before uploading", async () => {

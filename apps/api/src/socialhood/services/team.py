@@ -17,8 +17,9 @@ Rules (C-106):
   automations made, audit rows) keep their user id and name. Their conversations go back to
   nobody (GR-20; services/assignment.clear_for_member). The API keys they made in the workspace
   are revoked in the same transaction, one audit row each (C-167); the members list says how
-  many each member has (``active_api_keys``), so the confirm dialog can say so. Moving ownership
-  revokes nothing.
+  many each member has (``active_api_keys``), so the confirm dialog can say so. Their AI app
+  connections are revoked the same way (01-design.md §3.6), so one they made doesn't work again
+  if they are invited back. Moving ownership revokes nothing.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import Role, User, WorkspaceMember
+from socialhood.models.oauth import McpConnection
 from socialhood.models.team import InvitationStatus, WorkspaceInvitation
 from socialhood.notify.email import EmailError, EmailMessage
 from socialhood.notify.registry import get_email_sender
@@ -54,7 +56,7 @@ from socialhood.schemas.team import (
     OwnershipTransfer,
     Seats,
 )
-from socialhood.services import api_keys, assignment, audit
+from socialhood.services import ai_connections, api_keys, assignment, audit
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -402,6 +404,31 @@ async def change_role(
     await session.flush()
 
 
+async def _revoke_ai_connections(
+    session: AsyncSession, ctx: WorkspaceContext, user_id: uuid.UUID, now: datetime
+) -> int:
+    """Revoke every AI app connection ``user_id`` made in the workspace, one audit row each, as
+    ``ctx``'s member. Returns how many."""
+    rows = await session.scalars(
+        select(McpConnection).where(
+            McpConnection.user_id == user_id, McpConnection.revoked_at.is_(None)
+        )
+    )
+    connections = rows.all()
+    for connection in connections:
+        await ai_connections.revoke_one(session, connection, now, ctx.user.id)
+        await audit.record(
+            session,
+            ctx,
+            "ai_connections.revoked",
+            "ai_connection",
+            connection.id,
+            client=connection.client_name,
+            reason=api_keys.REASON_REMOVED,
+        )
+    return len(connections)
+
+
 async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: uuid.UUID) -> None:
     member = await _member_or_404(session, user_id)
     if user_id == ctx.user.id:
@@ -412,9 +439,11 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
         raise ApiError("conflict", OWNER_NEEDED)
     await session.execute(scoped_delete(WorkspaceMember, id=member.id))
     unassigned = await assignment.clear_for_member(session, user_id)
+    now = datetime.now(UTC)
     keys_revoked = await api_keys.revoke_for_member(
-        session, user_id, now=datetime.now(UTC), reason=api_keys.REASON_REMOVED, ctx=ctx
+        session, user_id, now=now, reason=api_keys.REASON_REMOVED, ctx=ctx
     )
+    connections_revoked = await _revoke_ai_connections(session, ctx, user_id, now)
     removed = await session.get(User, user_id)
     if removed is not None and removed.last_workspace_id == ctx.workspace_id:
         # So their next sign-in lands on a workspace they still belong to.
@@ -429,6 +458,7 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
         role=member.role,
         unassigned=unassigned,
         revoked_api_access=keys_revoked,  # how many of their API keys ("key" is never logged)
+        revoked_ai_connections=connections_revoked,
     )
     await session.flush()
 

@@ -52,6 +52,8 @@ function setup({
         create
           ? create(call)
           : json({ ...key({ id: "k-2" }), ...(call.body as object), key: "shk_the-whole-key-shown-once" }, 201),
+      "GET /v1/w/:wid/api-keys/:id/activity": () =>
+        json({ items: [{ id: "t-1", tool: "create_post", outcome: "refused", error_code: "forbidden", created_at: "2026-10-31T08:00:00Z" }] }),
       "DELETE /v1/w/:wid/api-keys/:id": () => json(key({ revoked_at: "2026-10-24T10:00:00Z" })),
       "PATCH /v1/w/:wid/api-keys/:id": (call) => json(key(call.body as Partial<ApiKey>)),
     },
@@ -80,6 +82,19 @@ describe("Settings > API keys (GR-25)", () => {
     expect(within(rows[0]).getByRole("button", { name: "Revoke" })).toBeInTheDocument();
     expect(rows[1]).toHaveTextContent("Revoked");
     expect(within(rows[1]).queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
+  });
+
+  it("shows a key's latest tool calls on demand, a revoked key's too", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ items: [key(), key({ id: "k-3", name: "Old", revoked_at: "2026-10-22T09:00:00Z" })] });
+    const rows = await screen.findAllByTestId("api-key");
+    expect(calls.some((c) => c.path.endsWith("/activity"))).toBe(false); // fetched when opened
+    await user.click(within(rows[0]).getByRole("button", { name: "Activity" }));
+    const list = await within(rows[0]).findByRole("list", { name: "Recent activity of Sheets sync" });
+    expect(list).toHaveTextContent("Refused");
+    expect(list).toHaveTextContent("create_post");
+    expect(calls.some((c) => c.method === "GET" && c.path.endsWith("/api-keys/k-1/activity"))).toBe(true);
+    expect(within(rows[1]).getByRole("button", { name: "Activity" })).toBeInTheDocument();
   });
 
   it("says a key was never used", async () => {
@@ -136,7 +151,7 @@ describe("Settings > API keys (GR-25)", () => {
 
   it("tells a Creator workspace the API is part of Business instead of offering the form (C-172)", async () => {
     setup({ ws: { ...workspace, plan: "pro" } });
-    expect(await screen.findByText("The public API, API keys and Zapier are part of Business.")).toBeInTheDocument();
+    expect(await screen.findByText("The public API, API keys and Zapier are part of Business and Agency.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
@@ -144,12 +159,12 @@ describe("Settings > API keys (GR-25)", () => {
   it("offers API keys on Agency, like Business (C-174)", async () => {
     setup({ ws: { ...workspace, plan: "agency" } });
     expect(await screen.findByRole("button", { name: "Create API key" })).toBeInTheDocument();
-    expect(screen.queryByText("The public API, API keys and Zapier are part of Business.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The public API, API keys and Zapier are part of Business and Agency.")).not.toBeInTheDocument();
   });
 
   it("tells a Free workspace (not Business) the API is part of Business instead of offering the form", async () => {
     setup({ ws: { ...workspace, plan: "free" } });
-    expect(await screen.findByText("The public API, API keys and Zapier are part of Business.")).toBeInTheDocument();
+    expect(await screen.findByText("The public API, API keys and Zapier are part of Business and Agency.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
