@@ -9,7 +9,7 @@ import { THEME_COOKIE } from "@/lib/theme";
 
 export const metadata = pageMetadata({
   title: "Cookies and Storage",
-  description: `Every cookie and browser storage key ${SITE_NAME} sets, what each one is for and how long it lasts. No analytics or advertising tracking.`,
+  description: `Every cookie and storage key ${SITE_NAME} sets, what each is for and how long it lasts. No ad or tracking cookies; site visits are counted without cookies.`,
   path: "/cookies",
 });
 
@@ -144,14 +144,20 @@ function sections(): LegalSection[] {
   return [
     {
       id: "no-tracking",
-      title: "No tracking, so no banner",
+      title: "No tracking cookies, so no banner",
       body: (
         <>
           <p>
             {N} uses only the cookies and storage it needs to work: to sign you in, keep you safe and remember choices you
-            make. We don&apos;t use analytics, advertising or tracking cookies, and we don&apos;t load third-party analytics
-            or ad scripts. That is why there is no cookie banner: the law doesn&apos;t ask for consent to storage that is
-            strictly necessary for a service you asked for.
+            make. We don&apos;t use advertising or tracking cookies, and we don&apos;t load ad scripts. That is why there is
+            no cookie banner: the law doesn&apos;t ask for consent to storage that is strictly necessary for a service you
+            asked for.
+          </p>
+          <p>
+            To see how many people visit the public website, which pages they read and where they came from, we use Umami.
+            It sets no cookie, stores nothing in your browser and builds no profile of you: it counts the page, the site you
+            came from, your browser and device type and your country, worked out from your IP address, which it doesn&apos;t
+            keep. It honours Do Not Track, and it doesn&apos;t run in the app or in the website chat.
           </p>
           <p>
             The public website sets no cookies of its own. If you&apos;re signed in to the app, the website can see
@@ -217,8 +223,8 @@ export default function CookiesPage() {
       summary={
         <p>
           {N} sets only the cookies and storage it needs to sign you in and remember your choices.{" "}
-          <strong>No analytics, no advertising, no tracking</strong>, so there is no cookie banner. Every item is listed
-          below.
+          <strong>No advertising and no tracking cookies</strong>, so there is no cookie banner; the public website counts
+          visits without cookies. Every item is listed below.
         </p>
       }
     />

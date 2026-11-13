@@ -41,8 +41,9 @@ describe("the web CSP (SEC-11)", () => {
       ]),
     );
     expect(directive(csp, "script-src")).toEqual(
-      expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net"]),
+      expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net", "https://cloud.umami.is"]),
     );
+    expect(directive(csp, "connect-src")).toContain("https://gateway.umami.is"); // C-194
     expect(directive(csp, "img-src")).toContain("https://res.cloudinary.com");
   });
 

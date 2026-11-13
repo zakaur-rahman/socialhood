@@ -9756,3 +9756,19 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   inline styles).
 - **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
   API doesn't send yet.
+
+## C-194 · Landing-page analytics with Umami (owner, 2026-11-13)
+
+- **Asked:** analytics for the landing page only; the owner created an Umami Cloud site and asked
+  to merge straight to main.
+- **Done:** the Umami script on the marketing layout only, counting only on `amplychat.com`
+  (`data-domains`), so the dashboard, local runs, CI and e2e send nothing; Do Not Track honoured;
+  every link into sign-up (`CtaLink`) counts a `start_free` goal with its page. CSP allows
+  `cloud.umami.is` (script) and `gateway.umami.is` (collector). /cookies, /privacy and
+  /subprocessors say what is counted; their dates move to 2026-11-13.
+- **Calls made:** the script loads from Umami directly, not through our own domain: a proxy would
+  make every visit look like it came from our server and break the country counts. GTM and GA4
+  stay out (cookies, a consent banner, against the "no tracking" promise); GTM can come with paid
+  ads, behind a consent banner.
+- **Owner to confirm:** the Umami account's data region (the subprocessors page names it as "the
+  region chosen for our account").

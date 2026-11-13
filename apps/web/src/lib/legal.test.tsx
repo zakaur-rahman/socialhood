@@ -198,7 +198,8 @@ describe("the legal pages", () => {
     render(<CookiesPage />);
     expect(screen.getByText("sh_theme")).toBeInTheDocument();
     expect(screen.getByText("__client")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /No tracking, so no banner/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /No tracking cookies, so no banner/ })).toBeInTheDocument();
+    expect(screen.getByText(/we use Umami/)).toBeInTheDocument(); // C-194: the cookieless visit counts are disclosed
   });
 
   it("once the owner fills the config, Terms names the entity and the governing law", async () => {

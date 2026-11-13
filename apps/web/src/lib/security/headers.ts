@@ -3,7 +3,8 @@
  *
  * The CSP allows only the app itself, Clerk (its Frontend API, images, bot protection and
  * telemetry), Cloudinary (uploads and delivery), Instagram's and Facebook's CDNs (profile pictures
- * and platform media), Meta's SDK (WhatsApp Embedded Signup), Sentry (the DSN's host) and the API.
+ * and platform media), Meta's SDK (WhatsApp Embedded Signup), Sentry (the DSN's host), Umami (the
+ * public site's cookieless visit counts, C-194) and the API.
  * Hosts that depend on the environment are read from the NEXT_PUBLIC_* variables at build time.
  *
  * Meta's SDK is allowed app-wide although only Settings → Connections loads it: a CSP belongs to
@@ -17,6 +18,8 @@
  * encodes, so it follows the key; the accounts.amplychat.com Account Portal is only navigated to,
  * never loaded into our pages, so it needs no CSP entry.
  */
+
+import { UMAMI_COLLECTOR, UMAMI_SCRIPT } from "@/lib/analytics";
 
 type Env = Record<string, string | undefined>;
 
@@ -76,6 +79,7 @@ export function contentSecurityPolicy(env: Env): string {
       "https://challenges.cloudflare.com",
       clerkProtect,
       "https://connect.facebook.net",
+      originOf(UMAMI_SCRIPT), // landing-page analytics (C-194)
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "blob:", "data:", "https://res.cloudinary.com", "https://img.clerk.com", ...platformMedia],
@@ -92,6 +96,7 @@ export function contentSecurityPolicy(env: Env): string {
       "https://res.cloudinary.com",
       sentry,
       "https://*.facebook.com",
+      UMAMI_COLLECTOR,
     ],
     "frame-src": ["'self'", "https://challenges.cloudflare.com", clerkProtect, "https://*.facebook.com"],
     "worker-src": ["'self'", "blob:"],
