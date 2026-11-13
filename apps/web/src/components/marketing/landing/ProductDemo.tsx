@@ -621,7 +621,7 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
   return (
     <section className="pd-sec">
       <div className="pd-sec-h">
-        <h3>{title}</h3>
+        <p className="pd-sec-t">{title}</p>
         {aside}
       </div>
       {children}

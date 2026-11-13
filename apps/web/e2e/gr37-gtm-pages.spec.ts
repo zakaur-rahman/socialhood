@@ -9,21 +9,21 @@ import { expect, test } from "./support/fixtures";
 test.use({ storageState: { cookies: [], origins: [] } });
 
 const PAGES = [
-  { path: "/pricing", h1: "Start free, upgrade when you grow", title: "Pricing" },
+  { path: "/pricing", h1: "Amplychat pricing", title: "Amplychat pricing" },
   { path: "/switch-from-manychat", h1: "Move your Instagram automations from Manychat", title: "Switch from Manychat" },
-  { path: "/compare/manychat", h1: "Amplychat vs Manychat", title: "Amplychat vs Manychat" },
-  { path: "/compare/interakt", h1: "Amplychat vs Interakt", title: "Amplychat vs Interakt" },
-  { path: "/compare/linkdm", h1: "Amplychat vs LinkDM", title: "Amplychat vs LinkDM" },
-  { path: "/compare/instantdm", h1: "Amplychat vs InstantDM", title: "Amplychat vs InstantDM" },
-  { path: "/compare/inro", h1: "Amplychat vs Inrō", title: "Amplychat vs Inrō" },
-  { path: "/compare/creatorflow", h1: "Amplychat vs CreatorFlow", title: "Amplychat vs CreatorFlow" },
-  { path: "/compare/wati", h1: "Amplychat vs Wati", title: "Amplychat vs Wati" },
-  { path: "/compare/aisensy", h1: "Amplychat vs AiSensy", title: "Amplychat vs AiSensy" },
-  { path: "/compare/spur", h1: "Amplychat vs Spur", title: "Amplychat vs Spur" },
-  { path: "/compare", h1: "How Amplychat compares", title: "How Amplychat compares" },
-  { path: "/features/comment-intelligence", h1: "Know what your comments are telling you", title: "Comment intelligence for Instagram" },
-  { path: "/features/ai-inbox", h1: "One inbox that answers from what you know", title: "AI inbox that replies from your own knowledge" },
-  { path: "/features/publishing", h1: "Plan your posts where your customers reply", title: "Schedule Instagram posts and Stories" },
+  { path: "/compare/manychat", h1: "Manychat vs Amplychat", title: "Manychat vs Amplychat: features, AI and pricing compared" },
+  { path: "/compare/interakt", h1: "Interakt vs Amplychat", title: "Interakt alternative for Instagram and WhatsApp: Amplychat" },
+  { path: "/compare/linkdm", h1: "LinkDM vs Amplychat", title: "LinkDM alternative with an AI inbox: Amplychat vs LinkDM" },
+  { path: "/compare/instantdm", h1: "InstantDM vs Amplychat", title: "InstantDM alternative with WhatsApp: Amplychat vs InstantDM" },
+  { path: "/compare/inro", h1: "Inrō vs Amplychat", title: "Inrō alternative with WhatsApp and web chat: Amplychat" },
+  { path: "/compare/creatorflow", h1: "CreatorFlow vs Amplychat", title: "CreatorFlow alternative with an AI inbox: Amplychat" },
+  { path: "/compare/wati", h1: "Wati vs Amplychat", title: "Wati alternative with an Instagram inbox: Amplychat vs Wati" },
+  { path: "/compare/aisensy", h1: "AiSensy vs Amplychat", title: "AiSensy alternative: Amplychat vs AiSensy, side by side" },
+  { path: "/compare/spur", h1: "Spur vs Amplychat", title: "Spur alternative with comment analysis: Amplychat vs Spur" },
+  { path: "/compare", h1: "How Amplychat compares", title: "Amplychat vs other Instagram and WhatsApp tools compared" },
+  { path: "/features/comment-intelligence", h1: "Instagram comment analysis", title: "Comment intelligence for Instagram" },
+  { path: "/features/ai-inbox", h1: "Shared inbox for Instagram DMs and WhatsApp", title: "Shared inbox for Instagram DMs and WhatsApp" },
+  { path: "/features/publishing", h1: "Schedule Instagram posts, Reels and Stories", title: "Schedule Instagram posts and Stories" },
 ] as const;
 
 test.describe("GR-37 go-to-market pages", () => {

@@ -102,8 +102,9 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
             <p className={SECTION_EYEBROW}>Developers · MCP</p>
             <h1 className="h-page">{CONNECT_AI_META.title}</h1>
             <p className="lede">
-              Ask your AI assistant to schedule a Reel for Friday at 6 pm, or to sum up this week&apos;s DMs. It works through
-              Amplychat&apos;s own rules, limits and plan, as you, and every action is recorded.
+              Add the Amplychat MCP server to Claude, Claude Code, ChatGPT or Codex in a few steps: paste the server address
+              below, then sign in or use an API key. Once connected, your AI app works as you, through Amplychat&apos;s own rules,
+              limits and plan, and every action is recorded.
             </p>
             <div className="cx-url">
               <p className="cx-url-label">

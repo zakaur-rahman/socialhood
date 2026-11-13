@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { DESCRIPTION_MAX, TITLE_MAX, articleJsonLd } from "../seo";
+import { AUTOMATION_PAGES } from "../automation-pages";
+import { GLOSSARY, glossaryPath } from "../glossary";
 import { SITE_NAME } from "../site";
 import { guidesFeed } from "./feed";
 import { GUIDES, GUIDE_AUTHOR, findGuide, guidePath, guidesUpdated, sectionId } from "./index";
@@ -69,7 +71,7 @@ describe("the guides (C-153)", () => {
     }
     // Internal links go to pages that exist.
     for (const [, href] of html.matchAll(/href="(\/[^"#]*)"/g)) {
-      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", ...GUIDES.map((g) => guidePath(g.slug))]).toContain(href);
+      expect(["/features/ai-inbox", "/features/comment-intelligence", "/pricing", "/compare/interakt", "/switch-from-manychat", ...GUIDES.map((g) => guidePath(g.slug)), ...AUTOMATION_PAGES.map((p) => p.path), ...GLOSSARY.map((t) => glossaryPath(t.slug))]).toContain(href);
     }
   });
 

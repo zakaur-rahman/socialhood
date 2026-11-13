@@ -10,7 +10,7 @@ import { PRICE_AT_SIGN_UP } from "./PlanGrid";
 import { Pricing } from "./Pricing";
 
 function card(name: string) {
-  return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
+  return screen.getByRole("heading", { level: 2, name }).closest("li") as HTMLElement;
 }
 
 /** The API's plan list with billing off: Creator can't be bought and Dodo gave it no price. */
@@ -71,7 +71,7 @@ describe("the pricing section (C-155 layout)", () => {
 
   it("outlines the plan to start on: Creator when it can be bought", () => {
     const { container } = render(<Pricing pricing={buildPricing(plansFixture().items)} />);
-    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Creator");
+    expect(container.querySelector(".plan.main h2")?.textContent).toBe("Creator");
   });
 
   it("C-149: with no billing on the API yet, Creator is coming soon with its features and no trial", () => {
@@ -82,7 +82,7 @@ describe("the pricing section (C-155 layout)", () => {
     expect(pro.getByText("AI Auto mode and suggestions")).toBeInTheDocument();
     expect(pro.queryByText("7-day free trial")).not.toBeInTheDocument();
     expect(pro.queryByRole("link")).not.toBeInTheDocument();
-    expect(container.querySelector(".plan.main h3")?.textContent).toBe("Free");
+    expect(container.querySelector(".plan.main h2")?.textContent).toBe("Free");
     expect(within(card("Free")).getByRole("link", { name: "Start free" })).toBeInTheDocument();
   });
 
@@ -115,6 +115,18 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
     const json = JSON.stringify(softwareApplicationJsonLd(pricing));
     expect(json).toContain('"price":"999.00"');
     expect(json).not.toMatch(/\b30\b|\b15\b/);
+  });
+
+  it("SEO finding 13: every plan on sale with a price is an offer, Business too; Agency off sale is not", () => {
+    const items = plansFixture().items.map((offer) =>
+      offer.plan === "max" ? { ...offer, available: true, price: { amount_minor: 199_900, currency: "INR", interval: "month" as const } } : offer,
+    );
+    const offers = softwareApplicationJsonLd(buildPricing(items)).offers as { name: string; price: string }[];
+    expect(offers.map((offer) => [offer.name, offer.price])).toEqual([
+      ["Free", "0"],
+      ["Creator", "999.00"],
+      ["Business", "1999.00"],
+    ]);
   });
 
   it("C-174: no 6 months switch until something six-month is on sale, and never in structured data", () => {
@@ -165,7 +177,7 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
   it("the Agency card: $70 a month, Coming soon, Contact us mails support, and has no checkout", () => {
     render(<Pricing pricing={buildPricing(billingOff())} />);
     const agency = within(screen.getByTestId("plan-agency"));
-    expect(agency.getByRole("heading", { level: 3, name: "Agency" })).toBeInTheDocument();
+    expect(agency.getByRole("heading", { level: 2, name: "Agency" })).toBeInTheDocument();
     expect(agency.getByText("Coming soon")).toBeInTheDocument();
     expect(agency.getByTestId("planned-price-agency")).toHaveTextContent(/^\$70 a month$/);
     const links = agency.getAllByRole("link");
@@ -180,7 +192,7 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
 
   it("four cards with six or seven lines each, and a quiet 'Need more? Contact us.' under them", () => {
     const { container } = render(<Pricing pricing={buildPricing(billingOff())} />);
-    const plans = within(screen.getByRole("list", { name: "Plans" })).getAllByRole("heading", { level: 3 });
+    const plans = within(screen.getByRole("list", { name: "Plans" })).getAllByRole("heading", { level: 2 });
     expect(plans.map((h) => h.textContent)).toEqual(["Free", "Creator", "Business", "Agency"]);
     const lists = container.querySelectorAll("ul.limits");
     expect(lists).toHaveLength(4);

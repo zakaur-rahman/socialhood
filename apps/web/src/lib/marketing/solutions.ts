@@ -26,7 +26,8 @@ const E = table.entitlements;
 const n = (value: number) => new Intl.NumberFormat("en-US").format(value);
 
 export type Familiar = { before: string; after: string };
-export type SolutionFeature = { title: string; body: string; status?: Status };
+/** `link`: the feature's own page, linked after the body. */
+export type SolutionFeature = { title: string; body: string; status?: Status; link?: { label: string; href: string } };
 export type Tier = { name: string; who: string; plan: "free" | "pro" | "max"; body: string };
 
 export type SolutionPage = {
@@ -65,7 +66,7 @@ const FAQ_WHY_PROFESSIONAL: FaqItem = {
 export const FOR_CREATORS: SolutionPage = {
   path: "/for-creators",
   name: "For creators",
-  title: "For creators",
+  title: "Comment-to-DM tools for Instagram creators",
   description:
     "Comment-to-DM for link drops and freebies, scheduled posts and Reels, AI replies from your own notes, and comment analysis for Instagram creators.",
   eyebrow: "For creators",
@@ -97,6 +98,7 @@ export const FOR_CREATORS: SolutionPage = {
       title: "Comment-to-DM for link drops",
       body: "Someone comments LINK and gets your link by DM: an affiliate link, a booking page, a freebie or a waitlist. Match a keyword or any comment, on one post, every post or your next one, with varied public replies.",
       status: "yes",
+      link: { label: "How comment-to-DM works", href: "/instagram/comment-to-dm" },
     },
     {
       title: "Tap first, and a follow invite after",
@@ -175,7 +177,7 @@ export const FOR_CREATORS: SolutionPage = {
 export const FOR_BUSINESSES: SolutionPage = {
   path: "/for-businesses",
   name: "For businesses",
-  title: "For businesses",
+  title: "Instagram and WhatsApp inbox for small business",
   description:
     "One inbox for Instagram, WhatsApp and website chat, AI replies from your own knowledge with hand-off to your team, lead scores and payment links.",
   eyebrow: "For businesses",

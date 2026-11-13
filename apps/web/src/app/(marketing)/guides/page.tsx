@@ -30,7 +30,10 @@ export default function GuidesPage() {
         <div className="wrap split-head">
           <div>
             <p className={SECTION_EYEBROW}>Guides</p>
-            <h1 className="h-page">Sell better in the DMs</h1>
+            <h1 className="h-page">Instagram and WhatsApp DM guides</h1>
+            <p className="lede" style={{ marginTop: "var(--space-3)" }}>
+              Sell better in the DMs
+            </p>
           </div>
           <div>
             <p className="lede">

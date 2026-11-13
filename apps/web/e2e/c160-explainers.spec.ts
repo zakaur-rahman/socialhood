@@ -87,7 +87,7 @@ test.describe("C-160 explainer pages", () => {
     await expect(footer.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/how-it-works");
     await main.getByRole("link", { name: "How it works" }).click();
     await expect(page).toHaveURL(/\/how-it-works$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("From first message to reply");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("How Amplychat works");
 
     await page.setViewportSize({ width: 375, height: 820 });
     await page.getByRole("button", { name: "Open menu" }).click();

@@ -1,4 +1,6 @@
 import { ArrowRight, Check, Clock } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
@@ -138,7 +140,17 @@ export function SolutionPageView({ page, pricing }: { page: SolutionPage; pricin
                   {feature.title}
                   {feature.status && feature.status !== "yes" ? <StatusChip status={feature.status} /> : null}
                 </h3>
-                <p>{feature.body}</p>
+                <p>
+                  {feature.body}
+                  {feature.link ? (
+                    <>
+                      {" "}
+                      <Link href={feature.link.href as Route} className="tlink">
+                        {feature.link.label}
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
               </li>
             ))}
           </ul>

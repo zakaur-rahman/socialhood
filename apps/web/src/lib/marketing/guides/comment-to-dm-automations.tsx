@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Checklist, GuideH2, StepCards } from "@/components/marketing/guides/blocks";
 import { Callout } from "@/components/site/Callout";
 
+import { glossaryPath } from "../glossary";
 import { SITE_NAME } from "../site";
 import { GUIDE_AUTHOR, type Guide } from "./types";
 
@@ -20,7 +21,7 @@ function Body() {
       </p>
       <p>
         This guide covers how comment-to-DM automations work on Instagram, the rules they have to follow, and how to set one
-        up so it feels helpful rather than spammy.
+        up so it feels helpful rather than spammy. To set one up in Amplychat, see <Link href="/instagram/comment-to-dm">Instagram comment to DM</Link>.
       </p>
 
       <GuideH2>How it works</GuideH2>
@@ -49,9 +50,9 @@ function Body() {
       <GuideH2>The Instagram rules behind it</GuideH2>
       <Callout tone="note" title="Instagram's rule">
         <p>
-          Instagram allows a business to answer a comment with a private message, but only one message per comment, and only
+          Instagram allows a business to answer a comment with a <Link href={glossaryPath("private-replies")}>private message</Link>, but only one message per comment, and only
           within 7 days of the comment. After that one message, you can send more only once the person replies, which
-          opens the usual 24-hour window for DMs.
+          opens the usual <Link href={glossaryPath("24-hour-messaging-window")}>24-hour window</Link> for DMs.
         </p>
       </Callout>
       <p>This shapes good automations in two ways:</p>

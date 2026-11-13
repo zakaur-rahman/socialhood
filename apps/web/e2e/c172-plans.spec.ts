@@ -12,7 +12,7 @@ test.describe("C-172 plans", () => {
     await page.goto("/pricing");
     const plans = page.getByRole("list", { name: "Plans" });
     for (const name of ["Free", "Creator", "Business", "Agency"]) {
-      await expect(plans.getByRole("heading", { name, level: 3 })).toBeVisible();
+      await expect(plans.getByRole("heading", { name, level: 2 })).toBeVisible();
     }
     const agency = page.getByTestId("plan-agency");
     await expect(agency).toContainText("Coming soon");

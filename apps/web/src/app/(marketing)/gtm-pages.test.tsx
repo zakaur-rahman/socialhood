@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PLANNED_PRICE_USD, SUPPORT_EMAIL } from "@/lib/copy";
+import { SUPPORT_EMAIL } from "@/lib/copy";
 import { latestChecked } from "@/lib/marketing/competitor-note";
 import {
   COMPARE_AISENSY,
@@ -44,7 +44,7 @@ import ComparisonWati, { metadata as watiMetadata } from "./compare/wati/page";
 import FeatureAiInbox, { metadata as aiInboxMetadata } from "./features/ai-inbox/page";
 import FeatureComments, { metadata as commentsMetadata } from "./features/comment-intelligence/page";
 import FeaturePublishing, { metadata as publishingMetadata } from "./features/publishing/page";
-import PricingPage, { metadata as pricingMetadata, revalidate } from "./pricing/page";
+import PricingPage, { generateMetadata as pricingMetadata, revalidate } from "./pricing/page";
 import SwitchPage, { metadata as switchMetadata } from "./switch-from-manychat/page";
 
 class IdleObserver {
@@ -109,17 +109,13 @@ describe.each(PAGES)("$page.path", ({ page, Component, metadata }) => {
 });
 
 describe("the content rules (GR-37)", () => {
-  it("never claims a ranking, and puts no price of ours on a page except the planned ones", () => {
-    const planned = new Set(Object.values(PLANNED_PRICE_USD).flatMap((amount) => [`$${amount.month}`, `$${amount.six_month}`]));
+  it("never claims a ranking, and puts no price of ours in a comparison (the pricing page owns them)", () => {
     for (const page of GTM_PAGES) {
       expect(JSON.stringify(page)).not.toMatch(/\bthe best\b|\bcheapest\b|#1|number one|market leader|\bleading\b|best[- ]in[- ]class/i);
       for (const row of page.compare?.rows ?? []) {
         const text = row.ours.text ?? "";
-        expect(text, row.feature).not.toMatch(/[₹€£]\s?\d/);
-        // C-172: a dollar figure of ours is only a planned price from copy.ts, and says it is planned.
-        const dollars = text.match(/\$\d[\d,.]*/g) ?? [];
-        for (const amount of dollars) expect(planned.has(amount), `${row.feature}: ${amount}`).toBe(true);
-        if (dollars.length) expect(text, row.feature).toMatch(/\bPlanned\b/);
+        // SEO finding 25: a typed-in price could drift from /pricing, so a row links there instead.
+        expect(text, row.feature).not.toMatch(/[$₹€£]\s?\d/);
       }
     }
   });
@@ -332,26 +328,42 @@ describe("the pricing page", () => {
     vi.unstubAllGlobals();
   });
 
-  it("has metadata and a literal five-minute revalidate", () => {
-    expect(pricingMetadata.title).toBe("Pricing");
-    expect(pricingMetadata.alternates?.canonical).toBe("/pricing");
+  it("has metadata and a literal five-minute revalidate", async () => {
+    vi.stubGlobal("fetch", vi.fn(plansFetch({ detail: "down" }, 503)));
+    const metadata = await pricingMetadata();
+    expect(metadata.title).toEqual({ absolute: "Amplychat pricing: Free, Creator and Business plans" });
+    expect(metadata.alternates?.canonical).toBe("/pricing");
     expect(PUBLIC_PATHS).toContain("/pricing");
     expect(revalidate).toBe(300);
     expect(readFileSync(join(__dirname, "pricing", "page.tsx"), "utf8")).toMatch(/export const revalidate = 300;/);
+  });
+
+  it("names the monthly prices from the plan list in the title and description, never typed in", async () => {
+    const usd = (amount: number) => ({ amount_minor: amount * 100, currency: "USD", interval: "month" });
+    const body = plansFixture({ proPrice: usd(15) });
+    body.items = body.items.map((offer) => (offer.plan === "max" ? { ...offer, price: usd(30), available: true } : offer));
+    vi.stubGlobal("fetch", vi.fn(plansFetch(body)));
+    const metadata = await pricingMetadata();
+    expect(metadata.title).toEqual({ absolute: "Amplychat pricing: Free, Creator $15, Business $30 a month" });
+    expect(metadata.description).toMatch(/Creator at \$15 and Business at \$30 a month/);
+    // In the default fixture Business is not on sale, so neither price is named.
+    vi.stubGlobal("fetch", vi.fn(plansFetch(plansFixture())));
+    expect((await pricingMetadata()).title).toEqual({ absolute: "Amplychat pricing: Free, Creator and Business plans" });
   });
 
   it("shows Dodo's price with the new entitlements and the full limits table", async () => {
     vi.stubGlobal("fetch", vi.fn(plansFetch(plansFixture())));
     render(await PricingPage());
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("heading", { level: 1, name: "Start free, upgrade when you grow" })).toBeInTheDocument();
-    const pro = within(screen.getByRole("heading", { level: 3, name: "Creator" }).closest("li") as HTMLElement);
+    expect(screen.getByRole("heading", { level: 1, name: "Amplychat pricing" })).toBeInTheDocument();
+    expect(screen.getByText("Start free, upgrade when you grow")).toBeInTheDocument();
+    const pro = within(screen.getByRole("heading", { level: 2, name: "Creator" }).closest("li") as HTMLElement);
     expect(pro.getByText("₹999")).toBeInTheDocument();
     expect(pro.getByText("2 team members")).toBeInTheDocument();
     expect(pro.getByText("100 scheduled posts a month")).toBeInTheDocument();
     // API keys and Zapier are on Business and Agency.
     expect(pro.queryByText("API keys and Zapier")).toBeNull();
-    const business = within(screen.getByRole("heading", { level: 3, name: "Business" }).closest("li") as HTMLElement);
+    const business = within(screen.getByRole("heading", { level: 2, name: "Business" }).closest("li") as HTMLElement);
     expect(business.getByText("API keys and Zapier")).toBeInTheDocument();
     expect(business.getByText("3 team members")).toBeInTheDocument();
     expect(screen.getByTestId("plan-agency")).toHaveTextContent("Contact us");

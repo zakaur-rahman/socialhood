@@ -82,7 +82,8 @@ export default async function AiInfoPage() {
         <>
           1 Instagram, 1 WhatsApp, 1 Facebook and 1 website chat, 2 team members, 25 active automations, 1,500 AI credits a
           month, 100 scheduled posts a month, Auto and Suggest modes, 1M characters of knowledge, full message history, the
-          catalogue and payment links, Google Sheets and full MCP. {table.trial_days.pro}-day free trial once it is on sale.
+          catalogue and payment links, Google Sheets and full MCP. {table.trial_days.pro}-day free trial
+          {card("pro")?.available ? "." : " once it is on sale."}
         </>
       ),
     },

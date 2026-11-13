@@ -101,7 +101,7 @@ function PlanCardView({ card, pricing, main, six }: { card: PlanCard; pricing: P
   return (
     <li className={main ? "plan main" : "plan"} aria-labelledby={`plan-${card.plan}`} data-testid={`plan-${card.plan}`}>
       <div className="plan-top">
-        <h3 id={`plan-${card.plan}`}>{card.name}</h3>
+        <h2 id={`plan-${card.plan}`}>{card.name}</h2>
         {!card.available ? (
           <span className="tag t-plain">Coming soon</span>
         ) : card.plan === "free" ? (

@@ -1,5 +1,5 @@
 /**
- * /developers/mcp (C-165 phase C): "Connect Amplychat to Claude, ChatGPT and Codex", the public
+ * /developers/mcp (C-165 phase C): "Set up the Amplychat MCP server in Claude, ChatGPT, Codex", the public
  * setup guide for the MCP server. Every claim here is about what's built for R1
  * (docs/architecture/mcp/01-design.md §1, §4.1, §7.4): Instagram publishing, inbox and comments
  * read, drafts only for replies. Not to claim: TikTok, sending DMs from the AI, "official" or
@@ -21,9 +21,9 @@ export function mcpUrl(apiBase: string | undefined = process.env.NEXT_PUBLIC_API
 }
 
 export const CONNECT_AI_META = {
-  title: "Connect Amplychat to Claude, ChatGPT and Codex",
+  title: "Set up the Amplychat MCP server in Claude, ChatGPT, Codex",
   description:
-    "Schedule Instagram posts and read your inbox, comments and analytics from Claude, ChatGPT or Codex: setup for the Amplychat MCP server, plans and safety.",
+    "How to add the Amplychat MCP server to Claude, Claude Code, ChatGPT or Codex: the server address, sign-in or an API key, plans and safety.",
 };
 
 export type Step = { text: string; code?: string };

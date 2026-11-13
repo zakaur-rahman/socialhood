@@ -20,7 +20,6 @@
  * - Money: no price of ours is written anywhere; ours comes from Dodo through the plan list.
  */
 
-import { plannedAmount } from "@/lib/copy";
 
 import table from "./plan-table.json";
 
@@ -34,7 +33,8 @@ export const STATUS_LABEL: Record<Status, string> = {
   "not-found": "Not found",
 };
 
-export type Cell = { status: Status; text?: string };
+/** `href`: a cell on our side links to the page about that feature. */
+export type Cell = { status: Status; text?: string; href?: string };
 export type CompareRow = { feature: string; ours: Cell; theirs: Cell };
 export type Item = { title: string; body: string };
 export type Block = { id: string; title: string; intro?: string; items: Item[] };
@@ -78,6 +78,8 @@ export type GtmPage = {
   description: string;
   eyebrow: string;
   h1: string;
+  /** The slogan, as its own line under a plain h1. */
+  subtitle?: string;
   intro: string;
   blocks: Block[];
   compare?: { competitor: string; caption: string; rows: CompareRow[] };
@@ -94,6 +96,7 @@ export type GtmPage = {
 /** C-168: the MCP server (docs/architecture/mcp; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY). */
 const OURS_MCP: Cell = {
   status: "yes",
+  href: "/mcp",
   text: "Claude, ChatGPT and Codex: read and draft on every plan; schedule posts and set up automations on Creator and Business after a preview. AI apps can't send messages themselves.",
 };
 /** C-168: the MCP row was checked later than the rest of each table. */
@@ -243,13 +246,13 @@ export const COMPARE_MANYCHAT: GtmPage = {
   path: "/compare/manychat",
   competitor: "Manychat",
   name: "Amplychat vs Manychat",
-  title: "Amplychat vs Manychat",
+  title: "Manychat vs Amplychat: features, AI and pricing compared",
   description:
     "Amplychat and Manychat side by side for Instagram and WhatsApp: automations, AI, comments, publishing, channels and pricing, with dated sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs Manychat",
+  h1: "Manychat vs Amplychat",
   intro:
-    "Manychat is a mature builder for DM automation with many channels and integrations. Amplychat is an AI inbox for Instagram and WhatsApp that adds comment analysis and publishing. Here is where each is stronger, with sources.",
+    "Manychat is a mature builder for DM automation with many channels and integrations. Amplychat is an AI inbox for Instagram and WhatsApp that adds comment analysis and publishing. If you are weighing Amplychat as a Manychat alternative, here is where each is stronger, with sources.",
   blocks: [
     {
       id: "choose",
@@ -279,7 +282,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Comment to DM",
-        ours: { status: "yes", text: "One post, all posts or the next post; keyword or any comment; public reply variations." },
+        ours: { status: "yes", text: "One post, all posts or the next post; keyword or any comment; public reply variations.", href: "/instagram/comment-to-dm" },
         // source: Manychat help centre "Instagram Post and Reel Comments trigger", read 2026-10-29. It doesn't confirm every option we had listed, so "The same set" is softened.
         theirs: { status: "yes", text: "Comment triggers on posts and Reels, with keyword matching." },
       },
@@ -303,7 +306,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Flow builder",
-        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split." },
+        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split.", href: "/automations" },
         // source: Manychat help centre "How to build a Manychat automation" (Flow Builder, a visual editor on a canvas), read 2026-10-29
         theirs: { status: "yes", text: "A visual editor on a canvas." },
       },
@@ -321,7 +324,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "Team inbox",
-        ours: { status: "yes", text: "Roles, assignment, saved replies and business hours." },
+        ours: { status: "yes", text: "Roles, assignment, saved replies and business hours.", href: "/features/ai-inbox" },
         // source: Manychat help centre "Manychat Inbox", "User roles and team management" and "Conversations auto-assignment", read 2026-10-29
         theirs: { status: "yes", text: "Shared inbox, roles, and manual or automatic assignment, with inbox seats by plan." },
       },
@@ -333,19 +336,19 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "AI answers from your knowledge",
-        ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of questions it couldn't answer." },
+        ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of questions it couldn't answer.", href: "/features/ai-inbox" },
         // source: Manychat product updates "Your new AI hub (beta)" (2025-10-22) and "Knowledge v2" (2026-02-24), read 2026-10-29: AI replies from links and text you add and routes uncertain messages to your team; help centre "Pro plan" lists AI. Replaces the reviews' "paid add-on" wording (Mooon AI, 2026-10-22).
         theirs: { status: "yes", text: "Manychat AI, in beta, replies from links and text you add and can pass uncertain messages to your team." },
       },
       {
         feature: "Comment analysis per post",
-        ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary." },
+        ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary.", href: "/features/comment-intelligence" },
         // source: Manychat help centre "Instagram Post and Reel Comments trigger", read 2026-10-29: comments start automations; analysis of comments not found
         theirs: { status: "not-found", text: "Comments are used as triggers." },
       },
       {
         feature: "Publishing posts",
-        ours: { status: "yes", text: "Instagram images, carousels, Reels and Stories. Facebook publishing waits on Meta's approval." },
+        ours: { status: "yes", text: "Instagram images, carousels, Reels and Stories. Facebook publishing waits on Meta's approval.", href: "/features/publishing" },
         // source: Manychat help centre and product updates, read 2026-10-29: no publishing or post scheduling found
         theirs: { status: "not-found" },
       },
@@ -357,7 +360,7 @@ export const COMPARE_MANYCHAT: GtmPage = {
       },
       {
         feature: "How it is priced",
-        ours: { status: "yes", text: `Flat plans. Limits are on features, never on contacts. Planned: Creator at ${plannedAmount("pro")} a month and Business at ${plannedAmount("max")} once billing opens, with contacts unlimited.` },
+        ours: { status: "yes", text: "Flat plans. Limits are on features, never on contacts, which are unlimited. See the pricing page for Creator and Business.", href: "/pricing" },
         // source: Manychat help centre "Pro plan" and "Active Contacts", read 2026-10-29: plans from 2 March 2026 billed by active contacts a month; Pro $39 a month on monthly billing for 2,500 active contacts; prices can vary by region. Replaces the third-party guides (Chatarmin, Layer3 Labs, DMChamp, 2026-10-22).
         theirs: { status: "yes", text: "By active contacts a month, on plans introduced on 2 March 2026. Pro is $39 a month for 2,500 active contacts on monthly billing." },
       },
@@ -484,13 +487,13 @@ export const COMPARE_INTERAKT: GtmPage = {
   path: "/compare/interakt",
   competitor: "Interakt",
   name: "Amplychat vs Interakt",
-  title: "Amplychat vs Interakt",
+  title: "Interakt alternative for Instagram and WhatsApp: Amplychat",
   description:
     "Amplychat and Interakt side by side for businesses on WhatsApp and Instagram: campaigns, catalogue, AI, comments and publishing, with sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs Interakt",
+  h1: "Interakt vs Amplychat",
   intro:
-    "Interakt is built around WhatsApp: bulk campaigns, catalogues and checkout. Amplychat is built around the conversation and the comment: an AI inbox, comment analysis and Instagram publishing. Here is the detail.",
+    "Interakt is built around WhatsApp: bulk campaigns, catalogues and checkout. Amplychat is built around the conversation and the comment: an AI inbox, comment analysis and Instagram publishing. If you want an Interakt alternative that covers Instagram too, here is the detail.",
   blocks: [
     {
       id: "choose",
@@ -543,31 +546,31 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Comment to DM on Instagram",
-        ours: { status: "yes", text: "Keyword or any comment, on chosen posts or all, with a private reply." },
+        ours: { status: "yes", text: "Keyword or any comment, on chosen posts or all, with a private reply.", href: "/instagram/comment-to-dm" },
         // source: interakt.shop/pricing, read 2026-10-29: Instagram plans list "Unlimited DMs & Comments", "Price Please Automation", giveaway automation and custom auto replies
         theirs: { status: "yes", text: "Comment and DM automations such as price-please replies and giveaways." },
       },
       {
         feature: "AI answers from your knowledge",
-        ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of unanswered questions." },
+        ours: { status: "yes", text: "Off, Suggest or Auto, with escalation rules and a list of unanswered questions.", href: "/features/ai-inbox" },
         // source: interakt.shop/pricing, read 2026-10-29: "WhatsApp AI Agents" (sales, lead qualification, customer support) as an add-on for Growth and Advanced; AnswerBot runs with up to 5 website URLs. Replaces "early, through a partner" from third-party guides (2026-10-22).
         theirs: { status: "yes", text: "WhatsApp AI agents for sales, lead qualification and support, as a paid add-on on the Growth and Advanced plans." },
       },
       {
         feature: "Comment analysis per post",
-        ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary." },
+        ours: { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary.", href: "/features/comment-intelligence" },
         // source: interakt.shop/pricing, read 2026-10-29: the analytics listed are conversation and agent performance analytics; comment analysis not found
         theirs: { status: "not-found" },
       },
       {
         feature: "Publishing Instagram posts",
-        ours: { status: "yes", text: "Images, carousels, Reels and Stories." },
+        ours: { status: "yes", text: "Images, carousels, Reels and Stories.", href: "/features/publishing" },
         // source: interakt.shop/pricing, read 2026-10-29: scheduling or publishing posts not found in the plan features
         theirs: { status: "not-found" },
       },
       {
         feature: "Team inbox",
-        ours: { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan." },
+        ours: { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan.", href: "/features/ai-inbox" },
         // source: interakt.shop/pricing, read 2026-10-29: "Unlimited agents (All Roles)" on the Growth card but "Unlimited Agents (owner role)" in its feature list; all roles on Advanced and Enterprise
         theirs: { status: "yes", text: "Unlimited agents from the Growth plan; the pricing page is unclear which roles Growth includes." },
       },
@@ -579,7 +582,7 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Starting price",
-        ours: { status: "yes", text: "A Free plan with no card. See the pricing page for the paid plans." },
+        ours: { status: "yes", text: "A Free plan with no card. See the pricing page for the paid plans.", href: "/pricing" },
         // source: interakt.shop/pricing, read 2026-10-29: Starter 999 rupees (Instagram only), Growth 2,799, Advanced 3,799, plus taxes. Meta's WhatsApp fees are separate (docs/competitors.md).
         theirs: { status: "yes", text: "₹999 a month for Instagram only and ₹2,799 for WhatsApp and Instagram (Growth), plus taxes." },
       },
@@ -610,17 +613,31 @@ const OURS_CHANNELS: Cell = {
 };
 const OURS_AI: Cell = {
   status: "yes",
+  href: "/features/ai-inbox",
   text: "Answers only from your documents, Q&A, products and website pages. Off, Suggest or Auto, with hand-off to a person and a list of questions it couldn't answer.",
 };
-const OURS_COMMENT_TO_DM: Cell = { status: "yes", text: "One post, all posts or the next post; keyword or any comment; public reply variations." };
-const OURS_COMMENT_ANALYSIS: Cell = { status: "yes", text: "Sentiment, topics, buying signals, spam and a summary for each post." };
+const OURS_COMMENT_TO_DM: Cell = {
+  status: "yes",
+  text: "One post, all posts or the next post; keyword or any comment; public reply variations.",
+  href: "/instagram/comment-to-dm",
+};
+const OURS_COMMENT_ANALYSIS: Cell = {
+  status: "yes",
+  text: "Sentiment, topics, buying signals, spam and a summary for each post.",
+  href: "/features/comment-intelligence",
+};
 const OURS_PUBLISHING: Cell = {
   status: "yes",
+  href: "/features/publishing",
   text: "Instagram images, carousels, Reels and Stories from a calendar. Facebook publishing waits on Meta's approval.",
 };
 const OURS_BROADCASTS: Cell = { status: "soon", text: "WhatsApp broadcasts are built and open after our review of consent rules. Creator and Business." };
-const OURS_TEAM: Cell = { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan." };
-const OURS_PRICE: Cell = { status: "yes", text: "A Free plan with no card. Plans cap features, never contacts. See the pricing page for the paid plans." };
+const OURS_TEAM: Cell = { status: "yes", text: "Roles, assignment, saved replies and business hours. Seats by plan.", href: "/features/ai-inbox" };
+const OURS_PRICE: Cell = {
+  status: "yes",
+  text: "A Free plan with no card. Plans cap features, never contacts. See the pricing page for the paid plans.",
+  href: "/pricing",
+};
 const OURS_META_FEES: Cell = {
   status: "yes",
   text: "You pay Meta directly through your own WhatsApp Business account. Amplychat adds no markup.",
@@ -629,7 +646,11 @@ const OURS_CATALOGUE: Cell = {
   status: "approval",
   text: "Products by hand or CSV, which the AI answers from; product messages in WhatsApp need your Meta catalogue and Meta's approval. Shopify sync is coming soon. Creator and Business.",
 };
-const OURS_LEAD_CAPTURE: Cell = { status: "yes", text: "A flow asks for an email or phone and saves it to the contact. Contacts export as CSV." };
+const OURS_LEAD_CAPTURE: Cell = {
+  status: "yes",
+  text: "A flow asks for an email or phone and saves it to the contact. Contacts export as CSV.",
+  href: "/automations",
+};
 const OURS_INTEGRATIONS: Cell = { status: "yes", text: "Webhooks on every plan. API and Zapier app on Business; Google Sheets on Creator and Business." };
 
 const OURS_HONESTY = "Our column is checked against our own code. Anything that depends on Meta, Shopify or a legal review says so.";
@@ -640,13 +661,13 @@ export const COMPARE_LINKDM: GtmPage = {
   path: "/compare/linkdm",
   competitor: "LinkDM",
   name: "Amplychat vs LinkDM",
-  title: "Amplychat vs LinkDM",
+  title: "LinkDM alternative with an AI inbox: Amplychat vs LinkDM",
   description:
     "Amplychat and LinkDM side by side for Instagram creators and brands: comment-to-DM, lead capture, AI, WhatsApp, comments and pricing, with dated sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs LinkDM",
+  h1: "LinkDM vs Amplychat",
   intro:
-    "LinkDM is a focused comment-to-DM tool for Instagram and Facebook with a low-cost start. Amplychat puts Instagram, WhatsApp and website chat in one inbox, with AI that answers from your own knowledge, comment analysis and publishing.",
+    "LinkDM is a focused comment-to-DM tool for Instagram and Facebook with a low-cost start. As a LinkDM alternative, Amplychat puts Instagram, WhatsApp and website chat in one inbox, with AI that answers from your own knowledge, comment analysis and publishing.",
   blocks: [
     {
       id: "choose",
@@ -768,13 +789,13 @@ export const COMPARE_INSTANTDM: GtmPage = {
   path: "/compare/instantdm",
   competitor: "InstantDM",
   name: "Amplychat vs InstantDM",
-  title: "Amplychat vs InstantDM",
+  title: "InstantDM alternative with WhatsApp: Amplychat vs InstantDM",
   description:
     "Amplychat and InstantDM side by side for Instagram: comment-to-DM, follow-ups, AI, scheduling, WhatsApp and pricing, with dated sources from both sides.",
   eyebrow: "Compare",
-  h1: "Amplychat vs InstantDM",
+  h1: "InstantDM vs Amplychat",
   intro:
-    "InstantDM is an Instagram DM automation tool with low flat prices, follow-up sequences and post scheduling. Amplychat adds WhatsApp and website chat to the same inbox, AI that answers from your own knowledge and comment analysis.",
+    "InstantDM is an Instagram DM automation tool with low flat prices, follow-up sequences and post scheduling. As an InstantDM alternative, Amplychat adds WhatsApp and website chat to the same inbox, AI that answers from your own knowledge and comment analysis.",
   blocks: [
     {
       id: "choose",
@@ -804,7 +825,7 @@ export const COMPARE_INSTANTDM: GtmPage = {
       },
       {
         feature: "Comment to DM, Stories and Live",
-        ours: { status: "yes", text: "Comments and Story replies and mentions. Live comments, ads and entry links are built and wait on Meta's approval." },
+        ours: { status: "yes", text: "Comments and Story replies and mentions. Live comments, ads and entry links are built and wait on Meta's approval.", href: "/instagram/comment-to-dm" },
         // source: instantdm.com home and pricing, read 2026-10-29: comment-to-DM on posts and Reels, story replies and mentions, "Story, Live and next-post triggers" on Legend Pro
         theirs: { status: "yes", text: "Posts and Reels, Story replies and mentions, and Live comments." },
       },
@@ -816,7 +837,7 @@ export const COMPARE_INSTANTDM: GtmPage = {
       },
       {
         feature: "Lead capture and follow-ups",
-        ours: { status: "yes", text: "A flow asks for an email or phone, waits and follows up. Contacts export as CSV." },
+        ours: { status: "yes", text: "A flow asks for an email or phone, waits and follows up. Contacts export as CSV.", href: "/automations" },
         // source: instantdm.com/pricing, read 2026-10-29: "Email and phone number collection" on Legend Pro; "DM sequences, up to 10 messages"; delays and follow-ups up to 24 hours in the Flow Editor
         theirs: { status: "yes", text: "Email and phone capture, and DM sequences of up to 10 messages with delays." },
       },
@@ -893,13 +914,13 @@ export const COMPARE_INRO: GtmPage = {
   path: "/compare/inro",
   competitor: "Inrō",
   name: "Amplychat vs Inrō",
-  title: "Amplychat vs Inrō",
+  title: "Inrō alternative with WhatsApp and web chat: Amplychat",
   description:
     "Amplychat and Inrō side by side for Instagram: AI agents, comment-to-DM, DM campaigns, CRM, WhatsApp, comment analysis and pricing, with dated sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs Inrō",
+  h1: "Inrō vs Amplychat",
   intro:
-    "Inrō is an Instagram-only DM platform with an AI agent, DM campaigns and a CRM. Amplychat brings Instagram, WhatsApp and website chat into one inbox, with AI from your own knowledge, comment analysis and publishing.",
+    "Inrō is an Instagram-only DM platform with an AI agent, DM campaigns and a CRM. As an Inrō alternative, Amplychat brings Instagram, WhatsApp and website chat into one inbox, with AI from your own knowledge, comment analysis and publishing.",
   blocks: [
     {
       id: "choose",
@@ -950,7 +971,7 @@ export const COMPARE_INRO: GtmPage = {
       },
       {
         feature: "Inbox and contacts",
-        ours: { status: "yes", text: "A team inbox with roles and assignment; contacts with tags, fields, consent records and CSV export." },
+        ours: { status: "yes", text: "A team inbox with roles and assignment; contacts with tags, fields, consent records and CSV export.", href: "/features/ai-inbox" },
         // source: inro.social home and pricing, read 2026-10-29: "See DMs, comments and contacts in one place"; unlimited CRM contacts; team members 1 on Free, up to 10 on Pro
         theirs: { status: "yes", text: "DMs, comments and unlimited contacts in one place. One team member on Free, up to 10 on Pro." },
       },
@@ -1013,13 +1034,13 @@ export const COMPARE_CREATORFLOW: GtmPage = {
   path: "/compare/creatorflow",
   competitor: "CreatorFlow",
   name: "Amplychat vs CreatorFlow",
-  title: "Amplychat vs CreatorFlow",
+  title: "CreatorFlow alternative with an AI inbox: Amplychat",
   description:
     "Amplychat and CreatorFlow side by side for Instagram creators: comment-to-DM, follow and email gates, AI, inbox, WhatsApp and pricing, with dated sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs CreatorFlow",
+  h1: "CreatorFlow vs Amplychat",
   intro:
-    "CreatorFlow is a simple comment-to-DM tool for Instagram creators, with flat prices by DMs sent. Amplychat is an inbox for Instagram, WhatsApp and website chat, with AI that answers from your own knowledge, comment analysis and publishing.",
+    "CreatorFlow is a simple comment-to-DM tool for Instagram creators, with flat prices by DMs sent. As a CreatorFlow alternative, Amplychat is an inbox for Instagram, WhatsApp and website chat, with AI that answers from your own knowledge, comment analysis and publishing.",
   blocks: [
     {
       id: "choose",
@@ -1055,7 +1076,7 @@ export const COMPARE_CREATORFLOW: GtmPage = {
       },
       {
         feature: "Follow gate and email gate",
-        ours: { status: "yes", text: "A flow asks for an email before the link. Our follow nudge never holds content back until someone follows." },
+        ours: { status: "yes", text: "A flow asks for an email before the link. Our follow nudge never holds content back until someone follows.", href: "/automations" },
         // source: creatorflow.so home and pricing, read 2026-10-29: "Require a follow before the link goes out"; "can require an email before delivering your link"; both on Pro and Growth
         theirs: { status: "yes", text: "A follow gate and an email gate on Pro and Growth." },
       },
@@ -1129,13 +1150,13 @@ export const COMPARE_WATI: GtmPage = {
   path: "/compare/wati",
   competitor: "Wati",
   name: "Amplychat vs Wati",
-  title: "Amplychat vs Wati",
+  title: "Wati alternative with an Instagram inbox: Amplychat vs Wati",
   description:
     "Amplychat and Wati side by side for WhatsApp and Instagram: broadcasts, AI agents, catalogue, comments, publishing, Meta's fees and pricing, with sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs Wati",
+  h1: "Wati vs Amplychat",
   intro:
-    "Wati is a broad WhatsApp platform with broadcasts, AI agents and many channels and integrations. Amplychat is built around Instagram comments and DMs as much as WhatsApp, with AI from your own knowledge, comment analysis and publishing.",
+    "Wati is a broad WhatsApp platform with broadcasts, AI agents and many channels and integrations. As a Wati alternative, Amplychat is built around Instagram comments and DMs as much as WhatsApp, with AI from your own knowledge, comment analysis and publishing.",
   blocks: [
     {
       id: "choose",
@@ -1265,13 +1286,13 @@ export const COMPARE_AISENSY: GtmPage = {
   path: "/compare/aisensy",
   competitor: "AiSensy",
   name: "Amplychat vs AiSensy",
-  title: "Amplychat vs AiSensy",
+  title: "AiSensy alternative: Amplychat vs AiSensy, side by side",
   description:
     "Amplychat and AiSensy side by side for businesses on WhatsApp: broadcasts, chatbots, AI agents, catalogue, Instagram, Meta's fees and pricing, with sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs AiSensy",
+  h1: "AiSensy vs Amplychat",
   intro:
-    "AiSensy is a WhatsApp marketing platform built for broadcasts, chatbots and selling in WhatsApp. Amplychat puts WhatsApp next to Instagram comments and DMs and website chat, with AI from your own knowledge, comment analysis and publishing.",
+    "AiSensy is a WhatsApp marketing platform built for broadcasts, chatbots and selling in WhatsApp. As an AiSensy alternative, Amplychat puts WhatsApp next to Instagram comments and DMs and website chat, with AI from your own knowledge, comment analysis and publishing.",
   blocks: [
     {
       id: "choose",
@@ -1307,7 +1328,7 @@ export const COMPARE_AISENSY: GtmPage = {
       },
       {
         feature: "Chatbot flows",
-        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split." },
+        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split.", href: "/automations" },
         // source: aisensy.com/pricing, read 2026-10-29: "Drag & Drop Chatbot Builder" add-on ₹2,500/month or ₹2,250/month billed annually, 5 chatbots
         theirs: { status: "yes", text: "A drag-and-drop chatbot builder, an add-on at ₹2,500 a month (₹2,250 billed yearly)." },
       },
@@ -1394,13 +1415,13 @@ export const COMPARE_SPUR: GtmPage = {
   path: "/compare/spur",
   competitor: "Spur",
   name: "Amplychat vs Spur",
-  title: "Amplychat vs Spur",
+  title: "Spur alternative with comment analysis: Amplychat vs Spur",
   description:
     "Amplychat and Spur side by side for WhatsApp, Instagram and website chat: AI agents, comment-to-DM, broadcasts, Shopify, comments and pricing, with sources.",
   eyebrow: "Compare",
-  h1: "Amplychat vs Spur",
+  h1: "Spur vs Amplychat",
   intro:
-    "Spur and Amplychat both put WhatsApp, Instagram and website chat in one inbox with an AI agent. Spur leans into Shopify stores and broadcasts; Amplychat adds comment analysis, publishing and a Free plan.",
+    "Spur and Amplychat both put WhatsApp, Instagram and website chat in one inbox with an AI agent. Spur leans into Shopify stores and broadcasts. As a Spur alternative, Amplychat adds comment analysis, publishing and a Free plan.",
   blocks: [
     {
       id: "choose",
@@ -1448,7 +1469,7 @@ export const COMPARE_SPUR: GtmPage = {
       },
       {
         feature: "Flows",
-        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split." },
+        ours: { status: "yes", text: "A step editor with quick replies, questions, branches, delays and a split.", href: "/automations" },
         // source: spurnow.com/en/pricing, read 2026-10-29: 3 flows on Instagram and Facebook only on AI Acquire ("AI Acquire does not include WhatsApp automation"); 25, 50 or unlimited on WhatsApp, Instagram and Facebook on higher plans
         theirs: { status: "yes", text: "3 flows on Instagram and Facebook on AI Acquire, with no WhatsApp automation; 25 to unlimited on higher plans." },
       },
@@ -1587,7 +1608,8 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
   description:
     "See what people say on each Instagram post: sentiment, topics, buying signals and spam, with a summary per post. Reply, DM, hide or delete from one page.",
   eyebrow: "Comment intelligence",
-  h1: "Know what your comments are telling you",
+  h1: "Instagram comment analysis",
+  subtitle: "Know what your comments are telling you",
   intro:
     "Every comment is read for sentiment, questions, buying signals and spam. Each post gets a summary and topics, so you can find the comments that need a reply without scrolling.",
   blocks: [
@@ -1716,13 +1738,14 @@ export const FEATURE_COMMENT_INTELLIGENCE: GtmPage = {
 export const FEATURE_AI_INBOX: GtmPage = {
   path: "/features/ai-inbox",
   name: "The AI inbox",
-  title: "AI inbox that replies from your own knowledge",
+  title: "Shared inbox for Instagram DMs and WhatsApp",
   description:
     "One inbox for Instagram DMs and WhatsApp chats. AI drafts or sends replies from your knowledge, and hands over the rest.",
   eyebrow: "The AI inbox",
-  h1: "One inbox that answers from what you know",
+  h1: "Shared inbox for Instagram DMs and WhatsApp",
+  subtitle: "One inbox that answers from what you know",
   intro:
-    "Instagram DMs and WhatsApp chats arrive in real time with intent, sentiment and a lead score. The AI replies from your own knowledge base, and when it isn't sure it hands the conversation to a person.",
+    "A shared inbox where Instagram DMs and WhatsApp chats arrive in real time with intent, sentiment and a lead score. It works as a team inbox, with roles and assignment. The AI replies from your own knowledge base, and when it isn't sure it hands the conversation to a person.",
   blocks: [
     {
       id: "inside",
@@ -1881,7 +1904,8 @@ export const FEATURE_PUBLISHING: GtmPage = {
   description:
     "Schedule Instagram images, carousels, Reels and Stories from one calendar, with AI captions, a media library and hashtag groups, next to your inbox.",
   eyebrow: "Publishing",
-  h1: "Plan your posts where your customers reply",
+  h1: "Schedule Instagram posts, Reels and Stories",
+  subtitle: "Plan your posts where your customers reply",
   intro:
     "Schedule Instagram posts from a calendar, then watch the comments and DMs they bring in the same app. Publishing sits next to the inbox, so you can see what each post produced.",
   blocks: [

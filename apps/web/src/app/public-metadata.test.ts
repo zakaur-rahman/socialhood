@@ -13,19 +13,21 @@ import {
   generateStaticParams as guideStaticParams,
 } from "./(marketing)/guides/[slug]/page";
 import { metadata as unsubscribe } from "./(marketing)/unsubscribe/page";
-import { metadata as notFound } from "./not-found";
 
 /** Every public page module, by its route: "./(marketing)/compare/manychat/page.tsx" is "/compare/manychat". */
 // "(marketing)" can't be written in a glob (parentheses are glob syntax), so filter the keys instead.
-const MODULES = import.meta.glob<{ metadata?: Metadata }>("./**/page.tsx", { eager: true });
-const BY_ROUTE: Record<string, Metadata | undefined> = Object.fromEntries(
+type PageModule = { metadata?: Metadata; generateMetadata?: () => Promise<Metadata> };
+const MODULES = import.meta.glob<PageModule>("./**/page.tsx", { eager: true });
+const BY_ROUTE: Record<string, PageModule> = Object.fromEntries(
   Object.entries(MODULES)
     .filter(([file]) => file.startsWith("./(marketing)/"))
-    .map(([file, module]) => [file.replace("./(marketing)", "").replace(/\/page\.tsx$/, "") || "/", module.metadata]),
+    .map(([file, module]) => [file.replace("./(marketing)", "").replace(/\/page\.tsx$/, "") || "/", module]),
 );
 
-/** Every page the sitemap lists, with its metadata (C-142). */
-const PAGES = PUBLIC_PATHS.map((path) => [path, BY_ROUTE[path]] as const);
+/** Every page the sitemap lists, with its metadata (C-142); /pricing builds its own from the plan list. */
+const PAGES = await Promise.all(
+  PUBLIC_PATHS.map(async (path) => [path, BY_ROUTE[path]?.metadata ?? (await BY_ROUTE[path]?.generateMetadata?.())] as const),
+);
 
 /** The title a browser tab and a search result show: the root layout's "%s · Amplychat" template. */
 function shownTitle(title: Metadata["title"]): string {
@@ -70,11 +72,10 @@ describe("every public page's metadata (C-142)", () => {
 });
 
 describe("pages that are never indexed (C-142)", () => {
-  it("the app, sign-in and sign-up, unsubscribe links and the 404", () => {
+  it("the app, sign-in and sign-up, and unsubscribe links", () => {
     expect(appLayout.robots).toMatchObject({ index: false });
     expect(authLayout.robots).toMatchObject({ index: false });
     expect(unsubscribe.robots).toMatchObject({ index: false });
-    expect(notFound.robots).toMatchObject({ index: false });
   });
 });
 

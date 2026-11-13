@@ -68,7 +68,7 @@ describe("/mcp (C-165)", () => {
   it("is in the sitemap lists, the footer and llms.txt", () => {
     for (const path of [MCP_PAGE_PATH, API_KEY_PAGE_PATH]) {
       expect(PUBLIC_PATHS).toContain(path);
-      expect((PAGE_UPDATED as Record<string, string>)[path]).toBe("2026-11-01");
+      expect((PAGE_UPDATED as Record<string, string>)[path]).toBe(path === MCP_PAGE_PATH ? "2026-11-12" : "2026-11-01");
       expect(llmsText()).toContain(path);
     }
     const connect = footerColumns(null).find((c) => c.links.some((l) => l.href === "/developers/mcp"));

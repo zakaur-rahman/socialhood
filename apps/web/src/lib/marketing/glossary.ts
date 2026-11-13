@@ -15,6 +15,8 @@
  * - No numbers of ours that aren't in the code or plan table, no "best", no fake proof.
  */
 
+import type { Route } from "next";
+
 import type { Status } from "./gtm-pages";
 
 export const GLOSSARY_PATH = "/glossary";
@@ -148,6 +150,10 @@ const S = {
 const GUIDE_WHATSAPP = { label: "Guide: WhatsApp Business API vs app", href: "/guides/whatsapp-business-api-vs-app" };
 const GUIDE_COMMENT_TO_DM = { label: "Guide: comment-to-DM automations", href: "/guides/comment-to-dm-automations" };
 const GUIDE_IG_REPLIES = { label: "Guide: auto-reply to Instagram DMs", href: "/guides/instagram-dm-auto-replies" };
+const PRODUCT_COMMENT_TO_DM = { label: "Instagram comment to DM", href: "/instagram/comment-to-dm" };
+const PRODUCT_STARTERS = { label: "Instagram conversation starters", href: "/instagram/conversation-starters" };
+const PRODUCT_STORY = { label: "Instagram story replies", href: "/instagram/story-replies" };
+const PRODUCT_WA = { label: "WhatsApp auto-reply", href: "/whatsapp/auto-reply" };
 
 export const GLOSSARY: GlossaryTerm[] = [
   {
@@ -181,7 +187,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       { status: "yes", title: "Website chat has no window", body: "Your own website chat stays open, because Meta's rules don't apply to it." },
     ],
     related: ["human-agent-tag", "message-templates", "per-message-pricing"],
-    learn: GUIDE_WHATSAPP,
+    learn: PRODUCT_WA,
     sources: [S.pricing, S.templates, S.igMessaging, S.messengerPolicy],
     updated: READ,
   },
@@ -249,7 +255,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       { status: "soon", title: "Templates in broadcasts", body: "WhatsApp broadcasts are built and open after our review of consent rules." },
     ],
     related: ["template-categories", "24-hour-messaging-window", "opt-in"],
-    learn: GUIDE_WHATSAPP,
+    learn: PRODUCT_WA,
     sources: [S.templates, S.pricing],
     updated: READ,
   },
@@ -713,7 +719,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       { status: "yes", title: "Paced for Meta's limits", body: "Private replies go through the send queue at a pace Meta allows, so a viral post doesn't stall." },
     ],
     related: ["comment-to-dm", "quick-replies", "24-hour-messaging-window"],
-    learn: GUIDE_COMMENT_TO_DM,
+    learn: PRODUCT_COMMENT_TO_DM,
     sources: [S.privateReplies],
     updated: READ,
   },
@@ -754,7 +760,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       },
     ],
     related: ["private-replies", "quick-replies", "story-mentions"],
-    learn: GUIDE_COMMENT_TO_DM,
+    learn: PRODUCT_COMMENT_TO_DM,
     sources: [S.privateReplies, S.quickReplies, S.messengerPolicy],
     updated: READ,
   },
@@ -788,7 +794,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       },
     ],
     related: ["quick-replies", "24-hour-messaging-window", "instagram-messaging-api"],
-    learn: GUIDE_IG_REPLIES,
+    learn: PRODUCT_STARTERS,
     sources: [S.iceBreakers, S.igMessaging],
     updated: READ,
   },
@@ -855,7 +861,7 @@ export const GLOSSARY: GlossaryTerm[] = [
       },
     ],
     related: ["comment-to-dm", "24-hour-messaging-window", "instagram-messaging-api"],
-    learn: { label: "For creators", href: "/for-creators" },
+    learn: PRODUCT_STORY,
     sources: [S.webhookExamples, S.igMessaging],
     updated: READ,
   },
@@ -1009,8 +1015,8 @@ export const GLOSSARY: GlossaryTerm[] = [
   },
 ];
 
-export function glossaryPath(slug: string): string {
-  return `${GLOSSARY_PATH}/${slug}`;
+export function glossaryPath(slug: string): Route {
+  return `${GLOSSARY_PATH}/${slug}` as Route; // a slug from GLOSSARY, so a real page
 }
 
 export function findTerm(slug: string): GlossaryTerm | undefined {

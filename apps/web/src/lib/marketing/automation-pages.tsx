@@ -11,6 +11,7 @@
  * CREDIT_COSTS. Every Meta rule cites Meta's own page in `META` with the date it was read.
  */
 import { AtSign, Equal, Hand, Heart, KeyRound, ListChecks, type LucideIcon, MapPin, MessageCircle, MessagesSquare, PanelsTopLeft, Reply, Send, WholeWord, Asterisk } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { ExampleThread } from "@/components/marketing/automations/blocks";
@@ -20,6 +21,7 @@ import { META_WHATSAPP_PRICING_URL } from "@/components/marketing/WhatsAppCharge
 import { Callout } from "@/components/site/Callout";
 
 import type { GuideFaq } from "./guides/types";
+import { glossaryPath } from "./glossary";
 import table from "./plan-table.json";
 import { SITE_NAME } from "./site";
 
@@ -200,7 +202,7 @@ function CommentToDmBody() {
       </Callout>
       <ul>
         <li>
-          <strong>Rate limit.</strong> Meta allows 750 private replies an hour for each Instagram professional account. {N} queues
+          <strong>Rate limit.</strong> Meta allows 750 <Link href={glossaryPath("private-replies")}>private replies</Link> an hour for each Instagram professional account. {N} queues
           the rest and sends them as the limit allows, and drops any that would go out after the 7 days.
         </li>
         <li>
@@ -344,7 +346,7 @@ function StoryRepliesBody() {
       <GuideH2>{"Meta's rules for story messages"}</GuideH2>
       <Callout tone="note" title="The messaging window">
         <p>
-          A story reply or mention is the person writing to you first, which opens Instagram&apos;s standard messaging window:{" "}
+          A story reply or mention is the person writing to you first, which opens Instagram&apos;s standard <Link href={glossaryPath("24-hour-messaging-window")}>messaging window</Link>:{" "}
           <strong>24 hours</strong> in which you can reply. Each new message from them starts it again.
         </p>
       </Callout>
@@ -489,13 +491,13 @@ function DmKeywordsBody() {
       <GuideH2>{"Meta's rules for DMs"}</GuideH2>
       <Callout tone="note" title="The messaging window">
         <p>
-          A business can reply to an Instagram DM within <strong>24 hours</strong> of the customer&apos;s last message. A keyword
+          A business can reply to an Instagram DM within <strong><Link href={glossaryPath("24-hour-messaging-window")}>24 hours</Link></strong> of the customer&apos;s last message. A keyword
           automation always answers a message they just sent, so it is always inside the window.
         </p>
       </Callout>
       <ul>
         <li>
-          Meta also has a 7-day window for replies a person types, the human agent tag. {N} uses it only once Meta approves it for
+          Meta also has a 7-day window for replies a person types, the <Link href={glossaryPath("human-agent-tag")}>human agent tag</Link>. {N} uses it only once Meta approves it for
           our app; until then, a conversation older than 24 hours waits for the customer to write again.
         </li>
         <li>Meta allows 100 text messages a second for each account, and {N} paces sends through a queue.</li>
@@ -620,7 +622,7 @@ function StartersBody() {
   return (
     <>
       <p>
-        Conversation starters, which Meta calls ice breakers, are up to four questions shown when someone opens a new chat with
+        Conversation starters, which Meta calls <Link href={glossaryPath("ice-breakers")}>ice breakers</Link>, are up to four questions shown when someone opens a new chat with
         your account in the Instagram app: “What are your prices?”, “Do you deliver?”, “Book a session”. A tap sends the question,
         and your answer can arrive at once. They help people who don&apos;t know what to ask, and they tell you exactly what each
         person wants.
@@ -668,7 +670,7 @@ function StartersBody() {
       </Callout>
       <ul>
         <li>
-          A tap is the person writing to you, so it opens the standard <strong>24-hour</strong> messaging window and your answer is
+          A tap is the person writing to you, so it opens the standard <strong><Link href={glossaryPath("24-hour-messaging-window")}>24-hour</Link></strong> messaging window and your answer is
           always allowed.
         </li>
         <li>Meta asks automated chats to say so. An automation&apos;s message carries your workspace&apos;s disclosure line.</li>
@@ -785,9 +787,9 @@ function WhatsAppBody() {
       <GuideH2>{"WhatsApp's 24-hour window and templates"}</GuideH2>
       <Callout tone="note" title="The customer service window">
         <p>
-          When a customer messages you, a <strong>24-hour customer service window</strong> starts, and it restarts each time they
+          When a customer messages you, a <strong><Link href={glossaryPath("24-hour-messaging-window")}>24-hour customer service window</Link></strong> starts, and it restarts each time they
           write again. Inside it you can send any reply. Once it closes, you can only send{" "}
-          <strong>templates Meta has approved</strong>.
+          <strong><Link href={glossaryPath("message-templates")}>templates Meta has approved</Link></strong>.
         </p>
       </Callout>
       <ul>
@@ -800,7 +802,7 @@ function WhatsAppBody() {
           conversation in one tap.
         </li>
         <li>
-          <strong>Fees.</strong> Meta charges for templates per delivered message, by category and the recipient&apos;s country. Since 1
+          <strong>Fees.</strong> Meta charges for templates <Link href={glossaryPath("per-message-pricing")}>per delivered message</Link>, by category and the recipient&apos;s country. Since 1
           October 2026, each number also has 1,000 free service messages a month, and Meta charges for service messages after that.
           You pay Meta directly, and {N} adds no markup.
         </li>

@@ -41,7 +41,7 @@ export function Comments() {
           <p className="lede">
             Turn comments into conversations, the way Instagram allows. Replies are queued to stay within Instagram&apos;s
             sending limits, so a busy post is handled safely.{" "}
-            <Link href="/guides/comment-to-dm-automations">Read the comment-to-DM guide</Link>
+            <Link href="/instagram/comment-to-dm">Read the comment-to-DM guide</Link>
           </p>
         </div>
 
