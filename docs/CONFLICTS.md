@@ -9781,3 +9781,24 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   - The 5-minute margin before a reply window closes stays.
 - **AI apps over MCP keep 5 minutes** (`AI_APP_LEAD` in mcp/tools/publish.py). /developers/mcp and the MCP page promise that a post scheduled by an AI app waits 5 minutes, so the team can stop it. That promise stays true.
 - **Time list:** on the earliest allowed day (today), times before the first allowed minute are shown disabled and can't be picked, in the post composer, "Move to…" and Schedule message alike. A typed time is still checked by the form, as before.
+## C-182 · The AI menu explains the Human Agent window (owner, 2026-11-08)
+
+- **Question:** should AI Suggest or Auto be turned off while Human Agent is active? No. The AI
+  acts only when a customer message arrives, and in this window none has arrived for over 24
+  hours. The server already refuses AI and automation sends there (reply_window.py). The mode is
+  kept for the next customer message, which reopens the normal window.
+- **Change:** while the conversation is in the Human Agent window, the "AI in this conversation"
+  menu shows one line under the modes: "Human Agent: only replies you send go out. AI replies
+  resume when the customer writes again." The modes stay selectable.
+- **Kept:** AI polish in the reply box stays. A person writes the text, reviews the rewrite and
+  sends it.
+
+## C-190 · Order updates in the Human Agent week need the member's own words (owner said do your best, 2026-11-11)
+
+- **Rule:** on Instagram and Messenger, between 24 hours and 7 days after the customer last wrote,
+  an order update with the default wording is not sent. The answer says to write your own message.
+  A message the member wrote goes, with the Human Agent tag. The status change happens either way.
+- **Why:** the tag is for a person answering a customer. The default text is an automatic notice,
+  and sending those under the tag risks the permission Meta is reviewing.
+- **Payment links stay as they are.** A member makes the link by hand in a buying conversation.
+- **WhatsApp is unchanged:** after 24 hours it needs an approved utility template.

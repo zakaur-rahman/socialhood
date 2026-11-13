@@ -616,6 +616,24 @@ async def test_a_message_outside_the_window_is_refused_like_the_app_does(
     assert refused.status_code == 409, refused.text
     assert refused.json()["code"] == "reply_window_closed"
     assert await send_jobs() == []
+
+    # Inside the 7 days a person may still reply from the inbox, but an API key is not a person.
+    recent = await make_thread(
+        engine,
+        workspace_id=setup.wid,
+        account_id=setup.account_id,
+        display_name="Quiet Quinn",
+        last_inbound_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    late = await client.post(
+        f"/public/v1/conversations/{recent.conversation_id}/messages",
+        json={"text": "Still there?"},
+        headers=bearer(key),
+    )
+    assert late.status_code == 409, late.text
+    assert late.json()["code"] == "reply_window_closed"
+    assert await send_jobs() == []
+
     empty = await client.post(url, json={"text": ""}, headers=bearer(key))
     assert empty.status_code == 422
 
