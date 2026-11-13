@@ -5,7 +5,8 @@ Retry-After.
 - per API key, every public API request (GR-25, auth/api_key.py): 120 a minute; sending also
   counts against the workspace's 60 sends a minute;
 - MCP tool calls (C-165, mcp/calls.py): 120 a minute per connection and 300 a minute per
-  workspace, refused as a tool error rather than a 429;
+  workspace, refused as a tool error rather than a 429; every authenticated /mcp request, tool
+  call or not: 600 a minute per workspace, a 429 (mcp/http.py);
 - per workspace: 60 sends a minute, 20 AI requests a minute, 120 knowledge changes an hour, and
   200 upload signatures an hour and 1000 a day (api/ratelimit.per_workspace);
 - per client IP on unauthenticated routes: 30 a minute on OAuth callbacks (TR-API-07), 60 a
@@ -65,13 +66,20 @@ LIMITS: dict[str, Limit] = {
         # and per workspace across all its connections.
         Limit("mcp", 120, 60),
         Limit("mcp_workspace", 300, 60),
+        # Every authenticated /mcp request of a workspace (tools/list and refused calls too),
+        # checked before any work (mcp/http.py). Twice the tool-call limit: no honest client
+        # reaches it.
+        Limit("mcp_requests", 600, 60),
         # C-169: posts scheduled from AI apps, per workspace across its connections (mcp/limits.py).
         Limit("mcp_posts", 20, 60),
         # C-165 phase C, the OAuth endpoints (§6.1): authorize per IP, registration per IP (DCR
-        # makes a client each time), token and revoke per client.
+        # makes a client each time), token and revoke per client and IP (many users share one
+        # client id, and a public client needs no secret: one caller must not spend the others'
+        # allowance), and per IP before the client is looked up.
         Limit("oauth_authorize", 30, 60),
         Limit("oauth_register", 10, 3600),
         Limit("oauth_token", 60, 60),
+        Limit("oauth_token_ip", 120, 60),
         # GR-28, the website chat widget (no sign-in): per IP, then per visitor.
         Limit("widget_frame", 120, 60),
         Limit("widget_session", 20, 60),

@@ -8,7 +8,7 @@
 import { PLAN_ROWS, mcpUrl } from "./connect-ai";
 
 export const API_KEY_PAGE_PATH = "/developers/mcp/api-key";
-export const API_KEY_PAGE_UPDATED = "2026-11-01";
+export const API_KEY_PAGE_UPDATED = "2026-11-11";
 
 export const API_KEY_H1 = "Connect an AI app with an API key";
 
@@ -21,7 +21,7 @@ export const API_KEY_META = {
 /** The scopes an AI app's key can carry, in plain words (schemas/api_keys.py SCOPE_DESCRIPTIONS). */
 export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "posts:read", body: "Read published and scheduled posts, the calendar, best times and the media library." },
-  { scope: "posts:write", body: "Create, change, reschedule and cancel posts. Scheduling is Creator and Business." },
+  { scope: "posts:write", body: "Create, change, schedule, publish and cancel posts. Scheduling and publishing are Creator and Business." },
   { scope: "media:write", body: "Upload or import images and videos for posts." },
   { scope: "conversations:read", body: "Read conversations and their messages." },
   { scope: "replies:draft", body: "Prepare a reply for a member to send in Amplychat. It is never sent." },
@@ -30,9 +30,9 @@ export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "knowledge:read", body: "Search the knowledge base." },
   { scope: "knowledge:write", body: "Draft a note or a question and answer for a person to approve." },
   { scope: "automations:read", body: "Read automations and their runs." },
-  { scope: "automations:write", body: "Pause automations." },
-  { scope: "automations:create", body: "Draft and change keyword automations for a person to turn on. Creator and Business." },
-  { scope: "ask", body: "Ask Amplychat's own assistant (uses AI credits)." },
+  { scope: "automations:write", body: "Turn automations on and off. Creator and Business." },
+  { scope: "automations:create", body: "Create keyword automations, saved off, and change ones that are off. Creator and Business." },
+  { scope: "ask", body: "Ask Amplychat's own assistant. It can read anything the key's member can see in Amplychat, including the inbox, and uses AI credits." },
 ];
 
 export type KeyConfig = { id: string; name: string; intro: string; code: string; note?: string };
@@ -101,7 +101,7 @@ export const KEEP_SAFE = [
   },
   {
     title: "Revoke in Settings › API keys",
-    body: "Anything using the key stops on its next request. The list shows when each key was last used.",
+    body: "Anything using the key stops on its next request. The list shows when each key was last used, and Activity shows its recent tool calls.",
   },
   {
     title: "It acts as the member who made it",
@@ -135,6 +135,6 @@ export const API_KEY_FAQ = [
   {
     question: "Why can't the AI app see a tool?",
     answer:
-      "The tool needs a scope the key lacks, or a role the key's member doesn't have. A tool is listed only when the key's scopes open it. Creating and changing automations needs automations:create, so a key made for pausing them needs replacing.",
+      "The tool needs a scope the key lacks, or a role the key's member doesn't have. A tool is listed only when the key's scopes open it. Creating and changing automations needs automations:create, so a key that has only automations:write needs replacing.",
   },
 ] as const;

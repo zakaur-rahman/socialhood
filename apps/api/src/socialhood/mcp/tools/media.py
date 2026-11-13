@@ -10,16 +10,13 @@ from __future__ import annotations
 import uuid
 
 from pydantic import Field
-from sqlalchemy import select
 
-from socialhood.errors import ApiError
 from socialhood.mcp.context import ToolCall
 from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
 from socialhood.mcp.tools.common import moment
 from socialhood.models.identity import Role
-from socialhood.models.mcp import McpUpload, UploadStatus
-
-NOT_FOUND = "No upload with this id. Start a new one with start_media_upload."
+from socialhood.models.mcp import UploadStatus
+from socialhood.services import mcp_uploads
 
 
 class GetMediaUploadInput(ToolInput):
@@ -57,14 +54,9 @@ SUMMARIES = {
     min_role=Role.ADMIN,
 )
 async def get_media_upload(call: ToolCall, args: GetMediaUploadInput) -> UploadResult:
-    upload = (
-        await call.session.scalars(select(McpUpload).where(McpUpload.id == args.upload_id))
-    ).one_or_none()
-    if upload is None:
-        raise ApiError("not_found", NOT_FOUND)
-    status = UploadStatus(upload.status)
-    if status is UploadStatus.WAITING and upload.expires_at <= call.now:
-        status = UploadStatus.EXPIRED  # read as expired; the cleanup job marks the row
+    upload = await mcp_uploads.get(call.session, args.upload_id)
+    # ``expired`` is read from the time, never stored; the daily cleanup deletes the row.
+    status = mcp_uploads.effective_status(upload, call.now)
     return UploadResult(
         summary=SUMMARIES[status],
         upload_id=upload.id,

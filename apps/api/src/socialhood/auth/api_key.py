@@ -3,7 +3,8 @@
 A request is checked in this order, and each refusal stops it:
 
 1. the key's shape, then its hash against api_keys (401 for an unknown, malformed or revoked key;
-   an unknown key also counts against the caller's IP, so guessing is slow);
+   an unknown key also counts against the caller's IP, and past the limit a miss gets 429; a
+   valid key still works, see mcp/http.py);
 2. C-167: not expired (401 "That API key has expired."), then the caller's address is on the
    key's allowlist, when it has one (403 "This API key can't be used from this address.");
    the address is ``ratelimit.client_ip``, which reads X-Forwarded-For from the right behind
@@ -112,8 +113,7 @@ class ApiKeyContext:
 
 async def find_key(session: AsyncSession, raw: str) -> ApiKey | None:
     """The key ``raw`` is, revoked or not; None for anything that isn't one of ours. The one
-    cross-workspace lookup: the key is how we find its workspace. Also used by the MCP server
-    (auth/mcp_credentials.py)."""
+    cross-workspace lookup: the key is how we find its workspace."""
     if not api_keys.looks_like_key(raw):
         return None
     with tenant_bypass_scope():
@@ -122,13 +122,16 @@ async def find_key(session: AsyncSession, raw: str) -> ApiKey | None:
         ).one_or_none()
 
 
-async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKeyContext]:
-    raw = _bearer(request)
+async def usable_key(
+    session: AsyncSession, raw: str, address: str
+) -> tuple[ApiKey, Workspace] | None:
+    """The checks the public API and /mcp (auth/mcp_credentials.py) share, in one place so they
+    can't drift: the key ``raw`` is and its workspace. None when it is no key of ours;
+    ``ApiError`` when it is revoked or expired, ``address`` isn't on its allowlist (the one 403),
+    or its workspace isn't active. What the key's maker must still be is each caller's own rule."""
     key = await find_key(session, raw)
-    address = ratelimit.client_ip(request)
     if key is None:
-        await ratelimit.enforce(request, "public", address)
-        raise ApiError("unauthorized", INVALID)
+        return None
     if key.revoked_at is not None:
         raise ApiError("unauthorized", REVOKED)
     if is_expired(key, datetime.now(UTC)):
@@ -138,6 +141,17 @@ async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKe
     workspace = await session.get(Workspace, key.workspace_id)
     if workspace is None or workspace.status != WorkspaceStatus.ACTIVE:
         raise ApiError("unauthorized", INVALID)
+    return key, workspace
+
+
+async def api_key_ctx(request: Request, session: Session) -> AsyncIterator[ApiKeyContext]:
+    raw = _bearer(request)
+    address = ratelimit.client_ip(request)
+    found = await usable_key(session, raw, address)
+    if found is None:
+        await ratelimit.enforce(request, "public", address)
+        raise ApiError("unauthorized", INVALID)
+    key, workspace = found
     await check_maker(session, key)
 
     token = current_workspace_id.set(workspace.id)

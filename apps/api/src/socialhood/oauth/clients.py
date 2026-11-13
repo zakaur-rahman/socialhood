@@ -34,6 +34,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.oauth import ClientAuth, ClientKind, OAuthClient
@@ -276,9 +277,7 @@ async def cimd_client(
     session: AsyncSession, client_id: str, now: datetime, *, fetch: Fetcher | None = None
 ) -> OAuthClient:
     """The client a metadata document describes, from our copy while it's fresh."""
-    client = (
-        await session.scalars(select(OAuthClient).where(OAuthClient.client_id == client_id))
-    ).one_or_none()
+    client = await find_client(session, client_id)
     fresh = (
         client is not None
         and client.metadata_fetched_at is not None
@@ -301,12 +300,22 @@ async def cimd_client(
             client_id=client_id,
             kind=ClientKind.CIMD.value,
             token_endpoint_auth_method=ClientAuth.NONE.value,
+            metadata_fetched_at=now,
             **meta,
         )
-        session.add(client)
-    else:
-        for name, value in meta.items():
-            setattr(client, name, value)
+        try:
+            async with session.begin_nested():
+                session.add(client)
+                await session.flush()
+        except IntegrityError:
+            # Another request for the same new client saved it during our fetch: use its row.
+            existing = await find_client(session, client_id)
+            if existing is None:
+                raise
+            return existing
+        return client
+    for name, value in meta.items():
+        setattr(client, name, value)
     client.metadata_fetched_at = now
     await session.flush()
     return client

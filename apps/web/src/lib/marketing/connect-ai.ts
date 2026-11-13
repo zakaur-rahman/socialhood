@@ -10,10 +10,11 @@
  * section list both.
  */
 
+import reference from "./mcp-tools.json";
 import { SITE_NAME } from "./site";
 
 export const CONNECT_AI_PATH = "/developers/mcp";
-export const CONNECT_AI_UPDATED = "2026-11-01";
+export const CONNECT_AI_UPDATED = "2026-11-11";
 
 /** The MCP server's address, from the same variable the API reference uses. */
 export function mcpUrl(apiBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE_URL): string {
@@ -52,7 +53,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "claude-code",
       name: "Claude Code",
-      who: "Sign in with your Amplychat account, or use an API key (Business).",
+      who: "Sign in with your Amplychat account, or use an API key (Business and Agency).",
       steps: [
         { text: "Add the server:", code: `claude mcp add --transport http amplychat ${url}` },
         { text: "In Claude Code, run /mcp, pick amplychat and authenticate. Your browser opens Amplychat to choose the workspace and allow it." },
@@ -77,7 +78,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "codex",
       name: "Codex",
-      who: "Use an API key (Business), or sign in with OAuth.",
+      who: "Use an API key (Business and Agency), or sign in with OAuth.",
       steps: [
         {
           text: "Add this to ~/.codex/config.toml (or a trusted project's .codex/config.toml):",
@@ -96,7 +97,7 @@ export type Capability = { title: string; body: string; ai?: boolean };
 export const CAPABILITIES: readonly Capability[] = [
   {
     title: "Schedule Instagram posts",
-    body: "Single photos and videos, carousels, Reels and Stories, with the caption, first comment, collaborators and time, or the next free slot. The same checklist as the composer runs first.",
+    body: "Single photos and videos, carousels, Reels and Stories, with the caption, first comment and collaborators, for a set time, the next free slot or right now. The same checklist as the composer runs first.",
   },
   {
     title: "Edit a video, then post it",
@@ -112,42 +113,65 @@ export const CAPABILITIES: readonly Capability[] = [
   },
   {
     title: "Knowledge and automations",
-    body: "Search what your knowledge base says, see your automations and pause one at any time. Draft a note, a question and answer, or a keyword automation, such as a DM to everyone who comments a word on your last post. You approve them in Amplychat: knowledge is used and an automation runs only after you do.",
+    body: "Search what your knowledge base says and see your automations. Draft a note, a question and answer, or a keyword automation, such as a DM to everyone who comments a word on your last post. Knowledge is used after you approve it in Amplychat. A new automation is saved off, and the AI can turn one on or off after it shows you a preview and you say yes.",
   },
   {
     title: "Ask Amplychat",
-    body: "Ask Amplychat's own assistant, which answers with cited numbers. It uses your plan's AI credits, as in the app.",
+    body: "Ask Amplychat's own assistant, which answers with cited numbers. It can read anything you can see in Amplychat, including the inbox, and it uses your plan's AI credits, as in the app.",
     ai: true,
   },
 ];
 
-export type PlanRow = { label: string; free: string; pro: string; max: string };
+export type PlanRow = { label: string; free: string; pro: string; max: string; agency: string };
 
+/** The numbers are billing/plans.py's (plan-table.json); ConnectAiView.test.tsx checks them. */
 export const PLAN_ROWS: readonly PlanRow[] = [
-  { label: "Connect Claude, ChatGPT or Codex (sign in)", free: "Yes", pro: "Yes", max: "Yes" },
-  { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes" },
-  { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes" },
-  { label: "Schedule, change and cancel posts", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Draft knowledge for you to approve", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Draft automations for you to turn on, and pause them", free: "No", pro: "Yes", max: "Yes" },
-  { label: "Connect with an API key", free: "No", pro: "No", max: "Yes" },
-  { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000" },
-  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "100" },
-  { label: "Files uploaded from AI apps a day", free: "20 (500 MB)", pro: "50 (2,500 MB)", max: "200 (10,000 MB)" },
+  { label: "Connect Claude, ChatGPT or Codex (sign in)", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Schedule, publish, change and cancel posts", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Draft knowledge for you to approve", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Create automations and turn them on and off", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Make an API key", free: "No", pro: "No", max: "Yes", agency: "Yes" },
+  { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000", agency: "10,000" },
+  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "100", agency: "300" },
+  {
+    label: "Files uploaded from AI apps a day",
+    free: "20 (500 MB)",
+    pro: "50 (2,500 MB)",
+    max: "200 (10,000 MB)",
+    agency: "1,000 (50,000 MB)",
+  },
 ];
+
+export type ToolRow = (typeof reference.tools)[number];
+
+const TOOL_ORDER = ["read", "draft", "write"];
+
+/**
+ * Every tool on the server (01-design.md §7.3), reads first. mcp-tools.json is written from the
+ * registry by apps/api/scripts/export_mcp_tools.py, and an API test fails when it is stale, so
+ * this list can't drift from the server.
+ */
+export const TOOLS: readonly ToolRow[] = [...reference.tools].sort(
+  (a, b) => TOOL_ORDER.indexOf(a.access) - TOOL_ORDER.indexOf(b.access),
+);
+
+/** A tool's kind in plain words, and the least mode that lets it run. */
+export const TOOL_KIND: Record<string, string> = { read: "Read", draft: "Draft", write: "Change" };
 
 export const SAFETY: readonly Capability[] = [
   {
     title: "Nothing is sent from your inbox without you",
-    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app sends nothing until you turn it on in Amplychat, and you can pause it at any time.",
+    body: "AI apps can read conversations and prepare replies. Sending a message or a comment reply stays in Amplychat, with a person. An automation set up from an AI app is saved off and sends nothing until it is turned on. The AI app can turn it on after it shows you a preview and you say yes, and you can pause it at any time.",
   },
   {
     title: "You approve what reaches your customers",
-    body: "AI apps do the drafting and you stay in control. An automation stays off until you turn it on in your dashboard, and new knowledge isn't used until you approve it there. An AI app can't do either for you, and it can't change an automation that's on.",
+    body: "AI apps do the drafting and you stay in control. New knowledge isn't used until you approve it in your dashboard. A new automation is saved off, an AI app turns one on or off after a preview and your yes, and it can't change one that's on until it is paused.",
   },
   {
-    title: "A preview first, and posts wait at least 5 minutes",
-    body: "Amplychat refuses a change to a post or an automation until the AI app has fetched a preview of exactly that change. A post scheduled by an AI app is at least 5 minutes out, so your team can see it in the calendar and cancel it. If you set your AI app to always allow Amplychat's tools, it can confirm without asking you, so keep approvals on for changes.",
+    title: "A preview and a yes before a change",
+    body: "Amplychat refuses these until the AI app has fetched a preview to show you: scheduling a post or publishing it now, changing or cancelling a scheduled post, and creating, changing, pausing or turning on an automation. A time such as the next free slot is confirmed when you say yes. Editing a draft post is saved at once. If you set your AI app to always allow Amplychat's tools, it can give the yes itself, so keep approvals on for changes.",
   },
   {
     title: "It acts as you, never more",
@@ -155,11 +179,11 @@ export const SAFETY: readonly Capability[] = [
   },
   {
     title: "Your switch, your list",
-    body: "Owners and admins choose what AI apps may do: off, read only, read and drafts, or everything. Settings › Connected AI apps lists every connection with its recent activity, and Disconnect works at once.",
+    body: "Owners and admins choose what AI apps may do: off, read only, read and drafts, or everything. Settings › Connected AI apps lists every connected app, and Settings › API keys every key, each with its recent tool calls. Disconnecting an app or revoking a key works at once.",
   },
   {
     title: "Every action is recorded",
-    body: "Each tool call is logged with the member, the app, the tool and the outcome, and kept 90 days. We don't store your conversation with the AI.",
+    body: "Each tool call is logged with the member, the app, the tool and the outcome, and kept 90 days. Owners and admins are told when an AI app changes a post or an automation, in Amplychat and by email; each of them can turn the emails off. We don't store your conversation with the AI.",
   },
   {
     title: "Customer messages are labelled",
@@ -170,11 +194,11 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling posts, drafting knowledge and automations for you to approve, and pausing automations from an AI app are part of Creator and Business. API keys are on Business and Agency.`,
+    answer: `Any plan, Free included. On Free, AI apps can read your inbox, comments, analytics and posts and save drafts; scheduling and publishing posts, drafting knowledge for you to approve, and creating automations and turning them on and off from an AI app are part of Creator and Business. API keys are on Business and Agency.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",
-    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can draft a keyword automation on Creator and Business; once you've turned it on in ${SITE_NAME}, the automation sends the DMs, as one made in the app does.`,
+    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Creator and Business. It is saved off; once it is turned on, by you in ${SITE_NAME} or by the AI app after a preview and your yes, the automation sends the DMs, as one made in the app does.`,
   },
   {
     question: "How do I disconnect an AI app?",

@@ -65,16 +65,22 @@ SCOPE_DESCRIPTIONS: dict[str, str] = {
         "AI apps: read published and scheduled posts, the calendar, best times and the media "
         "library."
     ),
-    "posts:write": "AI apps: create, change, reschedule and cancel scheduled posts.",
+    "posts:write": "AI apps: create, change, schedule, publish and cancel posts.",
     "media:write": "AI apps: upload or import images and videos for posts.",
     "replies:draft": "AI apps: prepare a reply for a member to send in Amplychat (never sent).",
     "comments:read": "AI apps: read post comments, their topics and sentiment.",
     "analytics:read": "AI apps: read post and account analytics.",
     "knowledge:read": "AI apps: search the knowledge base.",
     "knowledge:write": "AI apps: draft a note or an FAQ for a person to approve.",
-    "automations:write": "AI apps: pause automations.",
-    "automations:create": "AI apps: draft and change keyword automations for a person to turn on.",
-    "ask": "AI apps: ask Amplychat's own assistant (uses AI credits).",
+    "automations:write": "AI apps: turn automations on and off.",
+    "automations:create": (
+        "AI apps: create keyword automations, saved switched off, and change ones that are off."
+    ),
+    # Ask runs with the member's role, not the key's other scopes.
+    "ask": (
+        "AI apps: ask Amplychat's own assistant. It can read anything the key's member can see "
+        "in Amplychat, including the inbox, and uses AI credits."
+    ),
 }
 
 

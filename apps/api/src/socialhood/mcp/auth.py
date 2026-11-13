@@ -19,7 +19,8 @@ from typing import Protocol
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from socialhood.auth.mcp_credentials import INVALID, CredentialRefused, principal_for_api_key
+from socialhood.auth.api_key import INVALID
+from socialhood.auth.mcp_credentials import CredentialRefused, principal_for_api_key
 from socialhood.auth.mcp_oauth import OAuthRefused, principal_for_access_token
 from socialhood.mcp.principal import McpPrincipal
 from socialhood.oauth.tokens import ACCESS_PREFIX

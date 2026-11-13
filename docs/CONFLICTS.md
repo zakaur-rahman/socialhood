@@ -9816,3 +9816,52 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   it warms slightly; the logo mark itself does not.
 - **Readability:** every text and control pairing was recalculated and meets 4.5:1 for text and 3:1
   for marks and control edges.
+
+## C-191 · MCP audit fixes, the features the design promised, and three owner changes (owner, 2026-11-11)
+
+The owner asked for an audit of the MCP feature, then "fix all the findings and also add the missed
+features", then changed three rules. The audit report is kept outside the repo.
+
+- **Owner changes (they reverse parts of C-169 and C-181):**
+  - **AI apps schedule 1 minute ahead**, the app's own rule. `AI_APP_SCHEDULE_LEAD` is gone.
+  - **Publish now:** `when: "now"` on `create_post` and `update_post`, always after a preview and a
+    yes, through the app's own publish-now path. Paid plan, Full mode, owner or admin.
+  - **Automations on and off:** new tool `activate_automation` (28 tools now), through
+    `definitions.activate`, previewed; the token is also bound to the automation's `updated_at`.
+    `pause_automation` is previewed too. Both stay under `automations:write`, whose words now say
+    "turn automations on and off". No outside connection exists yet, so no grant widens silently.
+  - With the 5-minute wait gone, the preview and the notice to owners and admins are the checks.
+- **Must-fix findings:**
+  - Every authenticated `/mcp` request counts against a workspace limit (600 a minute). A refused
+    call keeps no arguments in the log, and a copy over 4 KB is replaced by a marker.
+  - An upload ticket signs its one file name, so a replayed signature cannot store more files, and
+    cleanup deletes that name. A workspace holds at most 20 unfinished tickets (expired ones count
+    until the daily cleanup).
+  - A link import commits its ticket before storage fetches the file, so a failure leaves a ticket
+    the cleanup finds. Links to our own hosts are refused.
+- **Decisions on the other findings:**
+  - **Key guessing (finding 22):** not changed to refuse before the lookup. That would let one caller
+    lock out everyone behind a shared address (Zapier, the Claude and ChatGPT connectors), and a
+    256-bit key cannot be guessed. The comments now say what the limit does.
+  - **Ask (finding 11):** the scope's words now say Ask can read what the member can see. It is not
+    tied to the other read scopes, which could break a connection that holds only Ask.
+  - **Duplicate check (finding 13):** the 15-minute window's digest now includes the confirmation
+    token, so a new preview is a new request. The idempotency-key fingerprint still ignores it.
+  - **Draft posts** are still edited at once; only scheduling, publishing and scheduled posts preview.
+  - **Token endpoint:** 120 a minute per address before the client is known; the logged 60 a minute
+    is now per client and address.
+  - **Removing a member** revokes their AI app connections, with the existing reason `member`.
+  - **Cloudinary `upload`** still raises the network error as it is: inbound media retries rely on it.
+  - **Per-account captions:** at most 10; the account list is still read once per name (a marked
+    shortcut).
+- **Features the design promised (01-design.md §5.1, §6.7, §7.3):**
+  - **Email on AI changes** to owners and admins, on by default; each person can switch it off
+    under Settings › Notifications (`email_ai_changes`). The in-app notice always stays. No migration.
+  - **Tool reference** on `/developers/mcp`, from `scripts/export_mcp_tools.py`; a test fails when
+    `mcp-tools.json` is stale.
+  - **Activity for API keys:** `GET /v1/w/{wid}/api-keys/{key_id}/activity`.
+  - **Block list:** `scripts/block_oauth_client.py` blocks or unblocks an AI app and revokes its
+    live connections. Not in the production image yet (the Dockerfile copies one script).
+- **Left as they are:** `oauth_tokens.family_id` (needs a migration to drop); no `overwrite=false`
+  on upload signatures; the link probe still holds a database connection for up to 10 seconds; the
+  "later phases" tools (sending a reply, deleting a post, contacts).

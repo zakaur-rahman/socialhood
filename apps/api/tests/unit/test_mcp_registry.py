@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from socialhood.errors import ApiError
 from socialhood.mcp import tools as mcp_tools
-from socialhood.mcp.audit import digest, redact
+from socialhood.mcp.audit import TOO_LARGE, CallRecord, digest, kept_arguments, redact
 from socialhood.mcp.calls import effective_mode, plan_cap
 from socialhood.mcp.confirmations import TTL_S
 from socialhood.mcp.context import ToolCall
@@ -25,6 +25,7 @@ from socialhood.mcp.registry import (
     MCP_SCOPES,
     TOOL_NAME,
     Access,
+    ConfirmedInput,
     McpRegistry,
     McpTool,
     ToolInput,
@@ -39,7 +40,7 @@ from socialhood.mcp.tools import load_tools
 from socialhood.mcp.tools.ask import AskResult
 from socialhood.mcp.tools.common import moment
 from socialhood.models.identity import Role
-from socialhood.models.mcp import AiConnectionsMode
+from socialhood.models.mcp import AiConnectionsMode, CallOutcome
 from socialhood.services import mcp_uploads
 
 R1_READ_TOOLS = {
@@ -59,6 +60,8 @@ R1_READ_TOOLS = {
 }
 # C-169: the posts synced from the accounts, and creating and changing automations.
 C169_TOOLS = {"list_instagram_posts", "create_automation", "update_automation"}
+# C-191 (owner, 2026-11-11): an AI app may turn an automation on, after a preview and a yes.
+C191_TOOLS = {"activate_automation"}
 
 
 # ---------------------------------------------------------------- the catalogue
@@ -79,10 +82,10 @@ R1_WRITE_TOOLS = {
 }
 
 
-def test_the_catalogue_is_27_tools() -> None:
+def test_the_catalogue_is_28_tools() -> None:
     registry = load_tools()
-    everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS
-    assert len(everything) == 27
+    everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS | C191_TOOLS
+    assert len(everything) == 28
     assert {t.name for t in registry} == everything
     assert [t.name for t in registry] == sorted(everything)  # deterministic tools/list
 
@@ -101,6 +104,7 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         "pause_automation": ("automations:write", Role.ADMIN, Access.WRITE, True, False),
         "create_automation": ("automations:create", Role.ADMIN, Access.WRITE, False, False),
         "update_automation": ("automations:create", Role.ADMIN, Access.WRITE, True, False),
+        "activate_automation": ("automations:write", Role.ADMIN, Access.WRITE, False, True),
         "list_instagram_posts": ("posts:read", Role.AGENT, Access.READ, False, False),
         "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
         "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
@@ -122,17 +126,24 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
     assert registry.get("update_automation").dedupe_window_s is None  # type: ignore[union-attr]
 
 
-def test_no_tool_can_turn_an_automation_on() -> None:
-    """A person turns automations on in the dashboard: no tool takes a switch or reaches the
-    app's activation."""
+def test_an_automation_is_turned_on_only_through_the_previewed_tool() -> None:
+    """C-191: activate_automation is the one way on, and it takes a confirmation. Creating or
+    changing one never switches it on."""
     registry = load_tools()
-    assert registry.get("resume_automation") is None
     for name in ("create_automation", "update_automation"):
         fields = registry.get(name).definition().input_schema["properties"]  # type: ignore[union-attr]
         assert "turn_on" not in fields, name
+    switch = registry.get("activate_automation")
+    assert switch is not None
+    assert issubclass(switch.input_model, ConfirmedInput)
+    assert issubclass(registry.get("pause_automation").input_model, ConfirmedInput)  # type: ignore[union-attr]
     tools_dir = Path(mcp_tools.__file__).parent
-    for source in tools_dir.glob("*.py"):
-        assert "activate(" not in source.read_text(encoding="utf-8"), source.name
+    callers = [
+        source.name
+        for source in tools_dir.glob("*.py")
+        if "activate(" in source.read_text(encoding="utf-8")
+    ]
+    assert callers == ["automations_create.py"]
 
 
 def test_every_tool_follows_the_conventions() -> None:
@@ -222,6 +233,7 @@ def _tool(**overrides: Any) -> McpTool[Any, Any]:
         ({"scope": "everything"}, "unknown scope"),
         ({"destructive": True}, "can't be destructive"),
         ({"access": Access.WRITE}, "WriteInput"),
+        ({"access": Access.DRAFT}, "WriteInput"),  # the pipeline replays drafts like writes
         ({"input_model": BaseModel}, "ToolInput"),
         ({"title": " "}, "title"),
     ],
@@ -296,6 +308,36 @@ def test_the_audit_redacts_arguments() -> None:
     assert len(redacted["accounts"]) == 20
     assert redacted["nested"]["a"]["b"] == "[…]"
     assert digest({"b": 1, "a": 2}) == digest({"a": 2, "b": 1})
+    # A link is kept without its query string and fragment, where a share link's secret is.
+    link = "https://www.dropbox.com/scl/fi/abc/reel.mp4?rlkey=secret&dl=0#t=3"
+    assert redact({"url": link}) == {"url": "https://www.dropbox.com/scl/fi/abc/reel.mp4"}
+    assert redact("HTTPS://a.example/x#frag") == "HTTPS://a.example/x"
+    assert redact("see https://a.example/?q=1") == "see https://a.example/?q=1"  # not a link
+
+
+def test_the_audit_keeps_no_copy_of_a_refused_or_oversized_call() -> None:
+    def kept(outcome: CallOutcome, arguments: dict[str, Any]) -> dict[str, Any]:
+        principal: Any = None  # not read
+        return kept_arguments(
+            CallRecord(
+                principal=principal,
+                tool="save_note",
+                arguments=arguments,
+                outcome=outcome,
+                error_code=None,
+                latency_ms=0,
+                client_name=None,
+                client_version=None,
+                request_id=None,
+            )
+        )
+
+    small = {"note": "hello"}
+    big = {f"k{i}": "x" * 200 for i in range(30)}  # 30 full values pass redact: about 6 KB
+    assert kept(CallOutcome.OK, small) == small
+    assert kept(CallOutcome.ERROR, small) == small
+    assert kept(CallOutcome.REFUSED, small) == {}
+    assert kept(CallOutcome.OK, big) == TOO_LARGE
 
 
 def test_the_untrusted_label_comes_with_customer_text_only() -> None:

@@ -17,18 +17,13 @@ export function useMcpUpload(wid: string, id: string) {
   });
 }
 
-/** After the file reached storage: add it to the media library under the ticket. */
+/** After the file reached storage: add the ticket's file to the media library. */
 export function useCompleteMcpUpload(wid: string, id: string) {
   const api = useApi();
   const qc = useQueryClient();
-  return useMutation<McpUploadTicket, Error, string>({
-    mutationFn: (public_id) =>
-      unwrap(
-        api.POST("/v1/w/{wid}/mcp-uploads/{upload_id}/complete", {
-          params: { path: { wid, upload_id: id } },
-          body: { public_id },
-        }),
-      ),
+  return useMutation<McpUploadTicket, Error, void>({
+    mutationFn: () =>
+      unwrap(api.POST("/v1/w/{wid}/mcp-uploads/{upload_id}/complete", { params: { path: { wid, upload_id: id } } })),
     onSuccess: (ticket) => qc.setQueryData(keys.mcpUpload(wid, id), ticket),
   });
 }

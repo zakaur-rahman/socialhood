@@ -18,7 +18,7 @@ from __future__ import annotations
 import uuid
 from typing import Literal
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from socialhood.errors import ApiError, FieldError
 from socialhood.mcp import confirmations
@@ -31,9 +31,8 @@ from socialhood.mcp.registry import (
     registry,
     tool,
 )
-from socialhood.mcp.tools.common import agent_tool, moment
+from socialhood.mcp.tools.common import agent_tool, ai_rate_limit, end_preview, moment
 from socialhood.models.identity import Role
-from socialhood.realtime import events
 from socialhood.schemas.knowledge import KnowledgeSourceCreate
 from socialhood.services import conversations
 from socialhood.services.knowledge import sources
@@ -78,7 +77,7 @@ class DraftReplyResult(WriteOutput):
         "Save a reply as the draft of an inbox conversation, answering the customer's latest "
         "message. A member opens the conversation in Amplychat, reads it, edits it and sends it. "
         "Nothing is sent to the customer. Either send the reply's text, or ask Amplychat to draft "
-        "one from the knowledge base. Refused when the 24-hour reply window has closed."
+        "one from the knowledge base. Refused when the reply window has closed."
     ),
     input_model=DraftReplyInput,
     output_model=DraftReplyResult,
@@ -111,6 +110,7 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
     closes = moment(call, window.closes_at) if window.closes_at else None
     text = args.text
     if text is None:
+        await ai_rate_limit(call)  # the model writes it: the app's limit, as in the inbox
         found = await agent_tool(call, "draft_reply", {"conversation_id": conv.id})
         if not found.can_answer or not found.text:
             return DraftReplyResult(
@@ -141,6 +141,9 @@ async def draft_reply(call: ToolCall, args: DraftReplyInput) -> DraftReplyResult
 
 
 class AddKnowledgeInput(ConfirmedInput):
+    # Stripped here as the app strips them, so a blank title or body is a field error.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     type: Literal["text", "faq"] = Field(
         description="text: a note with a title; faq: a customer question and its answer."
     )
@@ -209,8 +212,7 @@ async def add_knowledge(call: ToolCall, args: AddKnowledgeInput) -> AddKnowledge
         dashboard_url=call.dashboard_url("knowledge"),
     )
     if savepoint is not None:
-        await savepoint.rollback()
-        events.discard(call.session)
+        await end_preview(call, savepoint)
         return result.model_copy(
             update={
                 "summary": "Preview: this would wait under Knowledge for a person to approve it. "

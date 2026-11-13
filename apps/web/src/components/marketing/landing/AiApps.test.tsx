@@ -80,7 +80,8 @@ describe("the AI assistant band (C-168)", () => {
     // Never says the AI sends messages (C-169: it can set up an automation, which sends once on).
     expect(text).not.toMatch(/sends? (a |the )?(DM|message|reply)/i);
     expect(text).toMatch(/doesn't message your customers itself/);
-    expect(text).toMatch(/does nothing until you turn it on in Amplychat/);
+    // Owner, 2026-11-11: an AI app can turn an automation on, after a yes.
+    expect(text).toMatch(/stays off until it is turned on, and your AI app can turn it on after you say yes/);
     expect(text).toMatch(/Keep approvals on in your AI app/);
     expect(text).toMatch(/waits for your yes/);
   });

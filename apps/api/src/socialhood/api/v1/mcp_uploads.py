@@ -4,8 +4,8 @@ ticket here, uploads the file straight to Cloudinary with the ticket's signature
 it. The AI app then sees the ticket as ``uploaded`` (get_media_upload) and uses the media.
 
 Owners and admins, like the tools (``media:write``). A ticket that is not this workspace's is 404.
-Nothing about the file passes through the API: the browser uploads to storage and sends only the
-``public_id`` it got back, which is checked against the ticket's tag (services/mcp_uploads.py).
+Nothing about the file passes through the API: the browser uploads to storage under the name the
+ticket's signature fixes, and completing reads that name from the ticket (services/mcp_uploads.py).
 """
 
 from __future__ import annotations
@@ -15,13 +15,12 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request
-from pydantic import Field
 
 from socialhood.auth.deps import CanManagePublishing, Session
 from socialhood.billing.plans import current_plan
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.models.mcp import McpUpload, UploadStatus
-from socialhood.schemas.common import RequestModel, ResponseModel
+from socialhood.schemas.common import ResponseModel
 from socialhood.services import audit, mcp_uploads
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["media"])
@@ -32,13 +31,14 @@ StatusName = Literal["waiting", "uploaded", "expired", "rejected"]
 
 class DropSignature(ResponseModel):
     """The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,
-    signature) and where to send them."""
+    public_id, signature) and where to send them."""
 
     cloud_name: str
     api_key: str
     timestamp: int
     folder: str
     tags: str
+    public_id: str  # the file's name inside ``folder``: a second upload replaces the first
     allowed_formats: str
     signature: str
     upload_url: str
@@ -53,10 +53,6 @@ class McpUploadTicket(ResponseModel):
     media_asset_id: uuid.UUID | None = None
     limits: dict[str, Any]
     upload: DropSignature | None = None  # only while the ticket waits for a file
-
-
-class McpUploadComplete(RequestModel):
-    public_id: str = Field(max_length=255)  # Cloudinary allows 255
 
 
 def _cloudinary(request: Request) -> Cloudinary:
@@ -106,16 +102,11 @@ async def get_mcp_upload(
 
 @router.post("/mcp-uploads/{upload_id}/complete", operation_id="complete_mcp_upload")
 async def complete_mcp_upload(
-    request: Request,
-    upload_id: uuid.UUID,
-    body: McpUploadComplete,
-    ctx: CanManagePublishing,
-    session: Session,
+    request: Request, upload_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> McpUploadTicket:
-    """After the browser uploaded the file: check it came in with this ticket and add it to the
-    media library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file
-    over a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402
-    quota_exceeded past the plan's daily upload caps."""
+    """After the browser uploaded the file: add the ticket's file to the media library. 409 when
+    no file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``
+    ticket, with the reason); 402 quota_exceeded past the plan's daily upload caps."""
     settings = request.app.state.settings
     finished = await mcp_uploads.finish(
         session,
@@ -125,7 +116,6 @@ async def complete_mcp_upload(
         user_id=ctx.user.id,
         plan=await current_plan(session),
         upload_id=upload_id,
-        public_id=body.public_id,
         post_video_max_mb=settings.post_video_max_mb,
         now=datetime.now(UTC),
     )

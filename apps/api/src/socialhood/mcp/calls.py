@@ -57,6 +57,8 @@ MODE_WORDS = {
     AiConnectionsMode.READ_DRAFTS: "only read and prepare drafts",
 }
 RATE_LIMITED = "Too many requests from AI apps just now. Try again in {s} seconds."
+CLIENT_NAME_CHARS = 60
+CLIENT_VERSION_CHARS = 30
 
 
 @dataclass(frozen=True)
@@ -140,7 +142,7 @@ def _gate(
     principal: McpPrincipal,
     workspace: Workspace,
     plan: str,
-    settings: Settings | None = None,
+    settings: Settings,
 ) -> None:
     """Mode, scope, role and plan, in that order (the first refusal is the one reported).
 
@@ -153,9 +155,7 @@ def _gate(
         raise _Refused(ApiError("forbidden", OFF))
     if tool.scope not in principal.scopes and principal.credential is CredentialKind.OAUTH:
         text = http.insufficient_scope_text(tool.scope)
-        challenge = (
-            http.scope_challenge(settings, principal, tool.scope, text) if settings else None
-        )
+        challenge = http.scope_challenge(settings, principal, tool.scope, text)
         raise _Refused(ApiError("forbidden", text), challenge=challenge)
     if tool.scope not in principal.scopes:
         raise _Refused(
@@ -233,16 +233,23 @@ def _invalid(error: ValidationError) -> ApiError:
     )
 
 
+def _label(value: object, chars: int) -> str | None:
+    """Text the caller wrote about itself, fit for a notification and the audit line: no control
+    or invisible characters, cut to ``chars``."""
+    text = "".join(ch for ch in str(value) if ch.isprintable()).strip()
+    return text[:chars] or None
+
+
 def client_of(
     meta: Mapping[str, Any] | None, user_agent: str | None
 ) -> tuple[str | None, str | None]:
     """The client's name and version: the request's ``clientInfo`` (2026-07-28 ``_meta``), else
-    the User-Agent header."""
+    the User-Agent header. Both are whatever the caller says, so they are cleaned and cut."""
     info = (meta or {}).get(types.CLIENT_INFO_META_KEY)
-    if isinstance(info, Mapping) and info.get("name"):
+    if isinstance(info, Mapping) and (name := _label(info.get("name") or "", CLIENT_NAME_CHARS)):
         version = info.get("version")
-        return str(info["name"]), str(version) if version is not None else None
-    return user_agent, None
+        return name, _label(version, CLIENT_VERSION_CHARS) if version is not None else None
+    return _label(user_agent or "", CLIENT_NAME_CHARS), None
 
 
 async def call_tool(
@@ -346,7 +353,13 @@ async def _run(
             claimed = None
             try:
                 claimed = await confirmations.claim(env.redis, principal.credential_id, args)
-                output = await tool.handler(call, args)
+                try:
+                    output = await tool.handler(call, args)
+                except ValidationError as error:
+                    # The app's own models are stricter than a tool's schema (trimmed text,
+                    # tighter lengths): input the caller can fix, not a fault of ours.
+                    log.warning("mcp_tool_invalid_input", tool=tool.name, model=error.title)
+                    raise _invalid(error) from error
                 if tool.read_only:
                     await session.rollback()
                     events.discard(session)

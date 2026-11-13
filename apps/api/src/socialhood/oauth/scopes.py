@@ -41,7 +41,7 @@ GROUPS: tuple[ScopeGroup, ...] = (
                 "See published and scheduled posts, the calendar, best times and your media "
                 "library",
             ),
-            ("posts:write", "Schedule, change, reschedule and cancel posts"),
+            ("posts:write", "Schedule, publish, change, reschedule and cancel posts"),
             ("media:write", "Upload or import images and videos for posts"),
         ),
     ),
@@ -74,17 +74,24 @@ GROUPS: tuple[ScopeGroup, ...] = (
         "Automations",
         (
             ("automations:read", "See your automations and how they're doing"),
-            ("automations:write", "Pause automations"),
+            ("automations:write", "Turn automations on and off"),
             (
                 "automations:create",
-                "Draft and change keyword automations for you to turn on",
+                "Create keyword automations, saved switched off, and change ones that are off",
             ),
         ),
     ),
     ScopeGroup(
         "ask",
         "Ask Amplychat",
-        (("ask", "Ask Amplychat's assistant questions (uses your plan's AI credits)"),),
+        (
+            (
+                "ask",
+                # Ask runs with the member's role, not this connection's other scopes.
+                "Ask Amplychat's assistant questions. It can read anything you can see in "
+                "Amplychat, including the inbox, and uses your plan's AI credits",
+            ),
+        ),
     ),
 )
 

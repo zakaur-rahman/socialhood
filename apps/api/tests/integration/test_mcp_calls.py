@@ -1,14 +1,17 @@
 """C-165 phase A: the call pipeline with test tools (the write tools arrive in phase B): the plan
-and mode gates on drafts and writes, idempotency keys, the dedupe window, a handler's error and
-an unexpected failure as tool errors, and the audit of each."""
+and mode gates on drafts and writes, idempotency keys, the dedupe window, a handler's error,
+its stricter model and an unexpected failure as tool errors, the audit of each, and the client's
+name."""
 
 from __future__ import annotations
 
 from typing import Any
 
 import httpx
+import mcp_types as types
 import pytest
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -20,8 +23,6 @@ from socialhood.mcp.principal import McpRequest
 from socialhood.mcp.registry import (
     Access,
     McpRegistry,
-    ToolInput,
-    ToolOutput,
     WriteInput,
     WriteOutput,
     tool,
@@ -54,8 +55,14 @@ class NoteOutput(WriteOutput):
     saved: int
 
 
-class DraftInput(ToolInput):
+class DraftInput(WriteInput):
     note: str
+
+
+class StrictNote(BaseModel):
+    """Stands for one of the app's own request models, tighter than the tool's schema."""
+
+    note: str = Field(max_length=3)
 
 
 def make_registry() -> tuple[McpRegistry, list[str]]:
@@ -98,16 +105,18 @@ def make_registry() -> tuple[McpRegistry, list[str]]:
         title="Draft a note",
         description="Drafts a note.",
         input_model=DraftInput,
-        output_model=ToolOutput,
+        output_model=WriteOutput,
         scope="knowledge:read",
         access=Access.DRAFT,
     )
-    async def draft_note(call: ToolCall, args: DraftInput) -> ToolOutput:
+    async def draft_note(call: ToolCall, args: DraftInput) -> WriteOutput:
         if args.note == "refuse":
             raise ApiError("conflict", "That note already exists.")
         if args.note == "crash":
             raise RuntimeError("boom: internal detail")
-        return ToolOutput(summary="Drafted")
+        if args.note == "strict":
+            StrictNote(note=args.note)
+        return WriteOutput(summary="Drafted")
 
     return registry, saved
 
@@ -214,14 +223,39 @@ async def test_errors_are_tool_errors_in_plain_words(harness: Harness, engine: A
     async with engine.connect() as conn:
         rows = (
             await conn.execute(
-                text("SELECT outcome, error_code FROM mcp_tool_calls ORDER BY created_at")
+                text(
+                    "SELECT outcome, error_code, arguments FROM mcp_tool_calls ORDER BY created_at"
+                )
             )
         ).all()
     assert [tuple(r) for r in rows] == [
-        ("error", "conflict"),
-        ("error", "internal"),
-        ("refused", "validation_error"),
+        ("error", "conflict", {"note": "refuse"}),
+        ("error", "internal", {"note": "crash"}),
+        ("refused", "validation_error", {}),  # a refused call keeps no copy of its arguments
     ]
+
+
+async def test_a_handlers_stricter_model_is_invalid_input(
+    harness: Harness, engine: AsyncEngine
+) -> None:
+    invalid = error_of(await harness.call("draft_note", {"note": "strict"}))
+    assert invalid["code"] == "validation_error"
+    assert [f["field"] for f in invalid["field_errors"]] == ["note"]
+    async with engine.connect() as conn:
+        row = (await conn.execute(text("SELECT outcome, error_code FROM mcp_tool_calls"))).one()
+    assert tuple(row) == ("error", "validation_error")
+
+
+def test_the_client_name_is_cleaned_and_cut() -> None:
+    info = {"name": "Claude\x00 Code\n" + "x" * 500, "version": "1.2\u202e" + "9" * 99}
+    name, version = calls.client_of({types.CLIENT_INFO_META_KEY: info}, "curl/8")
+    assert name == ("Claude Code" + "x" * 500)[:60]
+    assert version == ("1.2" + "9" * 99)[:30]
+    assert calls.client_of(None, "curl/8\r\nX-Injected: 1") == ("curl/8X-Injected: 1", None)
+    # A name with nothing printable is no name: the User-Agent stands in.
+    unprintable = {types.CLIENT_INFO_META_KEY: {"name": "\x07"}}
+    assert calls.client_of(unprintable, "curl/8") == ("curl/8", None)
+    assert calls.client_of(None, None) == (None, None)
 
 
 async def test_the_audit_redacts_secrets_and_long_text(

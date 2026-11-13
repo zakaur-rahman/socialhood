@@ -3,8 +3,10 @@
 
 The row says who (member, credential, client), which tool, what it was asked (a digest of the
 canonical arguments plus a redacted copy: short values kept, long text cut, credentials and
-idempotency keys dropped), the outcome and how long it took. Results aren't stored, so no
-customer text reaches the audit; nor does the AI conversation (we never receive it).
+idempotency keys dropped, links without their query string), the outcome and how long it took.
+A refused call keeps no copy, and a copy over about 4 KB is replaced by a marker: anyone with a
+credential can loop refused or oversized calls, and rows stay 90 days. Results aren't stored, so
+no customer text reaches the audit; nor does the AI conversation (we never receive it).
 
 It is written in its own transaction after the call, so a refused or failed call is recorded
 too; an audit write that fails is logged and never fails the call.
@@ -14,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -34,6 +37,8 @@ VALUE_CHARS = 200
 LIST_ITEMS = 20
 MAX_KEYS = 30
 MAX_DEPTH = 3
+MAX_COPY_CHARS = 4096  # of the redacted copy as JSON
+TOO_LARGE = {"_omitted": "too large"}
 # Argument names never copied (their value is replaced by "[redacted]").
 SECRET_KEYS = ("token", "secret", "password", "api_key", "authorization", "idempotency_key")
 
@@ -60,6 +65,9 @@ def redact(value: Any, depth: int = 0) -> Any:
             return "[…]"
         return [redact(item, depth + 1) for item in value[:LIST_ITEMS]]
     if isinstance(value, str):
+        if value[:8].lower().startswith(("http://", "https://")):
+            # A share link's secret is often in its query string (Dropbox's rlkey, a signature).
+            value = re.split(r"[?#]", value, maxsplit=1)[0]
         return value if len(value) <= VALUE_CHARS else value[: VALUE_CHARS - 1] + "…"
     if isinstance(value, bool | int | float) or value is None:
         return value
@@ -79,6 +87,16 @@ class CallRecord:
     request_id: str | None
 
 
+def kept_arguments(call: CallRecord) -> dict[str, Any]:
+    """The copy of the arguments a row keeps."""
+    if call.outcome is CallOutcome.REFUSED:
+        return {}
+    copy: dict[str, Any] = redact(call.arguments)
+    if len(json.dumps(copy, default=str)) > MAX_COPY_CHARS:
+        return TOO_LARGE
+    return copy
+
+
 async def record(sessionmaker: async_sessionmaker[AsyncSession], call: CallRecord) -> None:
     principal = call.principal
     api_key = principal.credential is CredentialKind.API_KEY
@@ -96,7 +114,7 @@ async def record(sessionmaker: async_sessionmaker[AsyncSession], call: CallRecor
                         client_name=(call.client_name or None) and call.client_name[:120],
                         client_version=(call.client_version or None) and call.client_version[:60],
                         tool=call.tool[:64],
-                        arguments=redact(call.arguments),
+                        arguments=kept_arguments(call),
                         arguments_digest=digest(call.arguments),
                         outcome=call.outcome.value,
                         error_code=call.error_code,

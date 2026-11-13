@@ -141,7 +141,9 @@ class Cloudinary:
         filename: str = "upload",
         tags: str | None = None,
     ) -> StoredResource:
-        """Server-side upload of bytes or a fetchable URL (inbound media, TR-MED-03)."""
+        """Server-side upload of bytes or a fetchable URL (inbound media, TR-MED-03). A network
+        failure stays an ``httpx.HTTPError``: the inbound copy retries on it
+        (services/ingest_followups.py)."""
         self._require()
         params: dict[str, Any] = {"folder": folder, "timestamp": int(time.time())}
         if public_id:
@@ -164,10 +166,13 @@ class Cloudinary:
     ) -> StoredResource | None:
         """Admin API lookup of an uploaded asset; None when it does not exist."""
         self._require()
-        response = await self.http.get(
-            f"{API}/{self.cloud}/resources/{resource_type}/upload/{public_id}",
-            auth=(self.api_key, self.secret),
-        )
+        try:
+            response = await self.http.get(
+                f"{API}/{self.cloud}/resources/{resource_type}/upload/{public_id}",
+                auth=(self.api_key, self.secret),
+            )
+        except httpx.HTTPError as error:  # a timeout is a storage failure like any other
+            raise CloudinaryError(f"lookup failed: {type(error).__name__}") from error
         if response.status_code == 404:
             return None
         if response.status_code >= 400:
@@ -195,6 +200,10 @@ class Cloudinary:
         self._require()
         params: dict[str, Any] = {"public_id": public_id, "timestamp": int(time.time())}
         data = {**params, "api_key": self.api_key, "signature": sign(params, self.secret)}
-        response = await self.http.post(f"{API}/{self.cloud}/{resource_type}/destroy", data=data)
+        url = f"{API}/{self.cloud}/{resource_type}/destroy"
+        try:
+            response = await self.http.post(url, data=data)
+        except httpx.HTTPError as error:
+            raise CloudinaryError(f"destroy failed: {type(error).__name__}") from error
         if response.status_code >= 400:
             raise CloudinaryError(f"destroy failed with HTTP {response.status_code}")
