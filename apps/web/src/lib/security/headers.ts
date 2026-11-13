@@ -19,7 +19,10 @@
  * never loaded into our pages, so it needs no CSP entry.
  */
 
-import { UMAMI_COLLECTOR, UMAMI_SCRIPT } from "@/lib/analytics";
+// Umami's hosts (lib/analytics.ts), written here because next.config.ts loads this file and it must
+// import nothing; security.test.tsx holds the two in step.
+const UMAMI_SCRIPT_ORIGIN = "https://cloud.umami.is";
+const UMAMI_COLLECTOR = "https://gateway.umami.is";
 
 type Env = Record<string, string | undefined>;
 
@@ -79,7 +82,7 @@ export function contentSecurityPolicy(env: Env): string {
       "https://challenges.cloudflare.com",
       clerkProtect,
       "https://connect.facebook.net",
-      originOf(UMAMI_SCRIPT), // landing-page analytics (C-194)
+      UMAMI_SCRIPT_ORIGIN, // landing-page analytics (C-194)
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "blob:", "data:", "https://res.cloudinary.com", "https://img.clerk.com", ...platformMedia],
