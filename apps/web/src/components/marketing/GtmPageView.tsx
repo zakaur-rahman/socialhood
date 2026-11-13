@@ -31,7 +31,13 @@ function CellView({ cell }: { cell: Cell }) {
   return (
     <>
       <StatusChip status={cell.status} />
-      {cell.text ? <span className="cell-t">{cell.text}</span> : null}
+      {cell.text && cell.href ? (
+        <Link href={cell.href as Route} className="cell-t tlink">
+          {cell.text}
+        </Link>
+      ) : cell.text ? (
+        <span className="cell-t">{cell.text}</span>
+      ) : null}
     </>
   );
 }
@@ -203,6 +209,7 @@ export function GtmPageView({ page }: { page: GtmPage }) {
           <div>
             <p className={SECTION_EYEBROW}>{page.eyebrow}</p>
             <h1 className="h-page">{page.h1}</h1>
+            {page.subtitle ? <p className="lede">{page.subtitle}</p> : null}
             <p className="lede">{page.intro}</p>
             <div className="ctas pp-ctas">
               <CtaLink href={appUrl(SIGN_UP_PATH)} prefetch={false}>

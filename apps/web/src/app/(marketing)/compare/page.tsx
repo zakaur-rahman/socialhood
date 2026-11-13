@@ -19,7 +19,7 @@ import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME } from "@/lib/marketing/site";
 
 export const metadata = pageMetadata({
-  title: `How ${SITE_NAME} compares`,
+  title: `${SITE_NAME} vs other Instagram and WhatsApp tools compared`,
   description:
     "Amplychat side by side with Instagram DM tools and WhatsApp platforms, from each vendor's own dated pages, with our side checked against our code.",
   path: COMPARE_PATH,

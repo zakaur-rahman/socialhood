@@ -762,7 +762,7 @@ body:has(.site) {
     & .plan > .limits { grid-row: 6; }
     & .plan.main { border-color: var(--s-text); }
     & .plan-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
-    & .plan h3 { margin: 0; font-weight: 700; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); }
+    & .plan :is(h2, h3) { margin: 0; font-weight: 700; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: var(--tr-title); }
     & .plan .for { margin: var(--space-1) 0 0; color: var(--s-text-3); font-size: var(--fs-body-sm); }
     & .price { font-family: var(--display); font-weight: 700; font-size: var(--fs-stat); line-height: var(--lh-stat); letter-spacing: var(--tr-h1); margin: var(--space-8) 0 var(--space-2); font-variant-numeric: tabular-nums; }
     & .price small { font-family: var(--text); font-size: var(--fs-body-sm); letter-spacing: 0; color: var(--s-text-3); font-weight: 400; }
@@ -3266,7 +3266,7 @@ body:has(.site) {
     & .pd-details { min-width: 0; min-height: 0; overflow: hidden; background: var(--app-panel); border-left: 1px solid var(--app-line); }
     & .pd-det { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); min-height: 0; overflow: hidden; }
     & .pd-sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 24px; margin-bottom: var(--space-2); }
-    & .pd-sec-h h3 { margin: 0; font-family: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); }
+    & .pd-sec-h .pd-sec-t { margin: 0; font-family: inherit; font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--app-fg-2); }
     & .pd-link { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--fs-micro); font-weight: 500; color: var(--app-brand-fg); white-space: nowrap; }
     & .pd-inset { min-width: 0; padding: var(--space-3); border-radius: var(--r-sm); background: var(--app-field); }
     & .pd-det-who { display: flex; align-items: center; gap: var(--space-3); }

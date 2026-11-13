@@ -9741,6 +9741,23 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
 
+## C-193 · SEO audit fixes (owner, 2026-11-12)
+
+- **Asked:** fix the findings of the 2026-11-11 SEO audit (report kept outside the repo).
+- **Done:** comparison titles lead with the rival and "alternative" (Manychat one-to-one leads with
+  "Manychat vs"); the MCP pages target "Instagram MCP server" and "set up"; titles and h1s name the
+  thing (pricing title built from the plan list, never a typed price; home tagline inside the h1);
+  /features/ai-inbox is the shared inbox page; footer links to comment-to-DM, WhatsApp auto-reply,
+  website chat and AI inbox; comparison cells link our feature pages; glossary terms linked on first
+  use and their `learn` links point at product pages; demo panel labels and plan names off the
+  heading skips; one robots tag on the 404; /icons cached a day; JSON-LD offers list every plan on
+  sale; llms.txt names plans, prices and limits from the plan list and refreshes hourly; /ai-info's
+  trial line and the Manychat price row agree with /pricing; sitemap dates bumped for changed pages.
+- **Calls made:** the /pricing title shows prices only when Creator and Business are both on sale
+  with a real price; the Manychat price row no longer states a price and links to /pricing.
+- **Not done (need the owner or a measurement):** findings 1, 3, 5, 14, 15, 16, 17, 18, 20, 21, 23, 24.
+  Open question: production is in billing test mode with a waitlist while /pricing reads as on sale;
+  every page now agrees with /pricing.
 ## C-192 · Website chat redesign (owner, 2026-11-12)
 
 - **Asked:** the owner tested the widget on a page and said it needs a redesign. The bubble showed a

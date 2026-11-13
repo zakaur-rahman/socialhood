@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AI_APPS_SCENE_LABEL } from "@/components/marketing/landing/AiApps";
 import { HERO_NEW, HERO_SCENE_LABEL, HERO_TITLE } from "@/components/marketing/landing/Hero";
 import { FAQ, FAQ_ALL } from "@/lib/marketing/faq";
-import { SITE_DESCRIPTION } from "@/lib/marketing/site";
+import { SITE_DESCRIPTION, SITE_TAGLINE } from "@/lib/marketing/site";
 import { plansFetch, plansFixture } from "@/test/plans";
 
 import HomePage, { metadata, revalidate } from "./page";
@@ -45,7 +45,8 @@ describe("the landing page", () => {
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
     // One h1, the headline.
     const h1 = screen.getByRole("heading", { level: 1 });
-    expect(h1).toHaveAccessibleName(HERO_TITLE);
+    // The tagline is the h1's first line (SEO finding 11), then the headline.
+    expect(h1).toHaveAccessibleName(`${SITE_TAGLINE} ${HERO_TITLE}`);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
       "See a day in your inbox",
@@ -176,7 +177,7 @@ describe("the landing page", () => {
       "/features/comment-intelligence",
       "/features/publishing",
       "/compare",
-      "/guides/comment-to-dm-automations",
+      "/instagram/comment-to-dm", // SEO finding 22: the product page leads the comment-to-DM search
       "/security",
     ]) {
       expect(container.querySelector(`main a[href="${href}"]`), href).not.toBeNull();

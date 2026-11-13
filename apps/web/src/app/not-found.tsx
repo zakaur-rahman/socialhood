@@ -8,8 +8,8 @@ import { SiteNotFoundActions } from "@/components/not-found/NotFoundActions";
 import { SiteNotFound } from "@/components/not-found/SiteNotFound";
 import { ThemePin } from "@/components/theme/ThemePin";
 
-// A 404 is never worth indexing; Next answers with status 404 for an unknown URL.
-export const metadata: Metadata = { title: "Page not found", robots: { index: false, follow: true } };
+// Next adds the noindex tag to every 404 itself, so no robots here (a second tag was a duplicate).
+export const metadata: Metadata = { title: "Page not found" };
 
 /**
  * An address that matches no route (and a `notFound()` outside the workspace): the public site's

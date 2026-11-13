@@ -277,7 +277,7 @@ describe("the product demo (C-175)", () => {
     expect(container.querySelector(".pd-side")).toBeNull();
     // The panel's sections, in the app's order (DetailsPanel).
     const maya = container.querySelector<HTMLElement>('[data-p="det-maya"]')!;
-    expect([...maya.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(["Customer", "Assigned to", "Latest message", "Summary"]);
+    expect([...maya.querySelectorAll(".pd-sec-t")].map((h) => h.textContent)).toEqual(["Customer", "Assigned to", "Latest message", "Summary"]);
     const stop = productDemo(container);
     DrivenObserver.last!.arrive();
     const open = () => lit(container).filter((name) => name && /^det-(maya|theo|nina|ana|sam)$/.test(name));

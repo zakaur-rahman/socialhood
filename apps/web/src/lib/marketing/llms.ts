@@ -6,23 +6,27 @@ import { mcpUrl } from "./connect-ai";
 import { GLOSSARY, GLOSSARY_PATH, glossaryPath } from "./glossary";
 import { COMPARE_PATH, GTM_PAGES } from "./gtm-pages";
 import { GUIDES, GUIDES_PATH, guidePath } from "./guides";
+import type { Pricing } from "./plans";
 import { LEGAL_LINKS, SITE_DESCRIPTION, SITE_NAME, absoluteUrl, siteUrl } from "./site";
 
 /**
  * /llms.txt (llmstxt.org): a plain description of the product and links to the public pages, for
- * AI assistants that read the site (C-142). Markdown, from the same data the pages render.
+ * AI assistants that read the site (C-142). Markdown, from the same data the pages render. With
+ * the plan list (the /pricing data), it names each plan, its price and its limits as text, so an
+ * assistant gets the same answer here as on /pricing (SEO finding 25).
  */
-export function llmsText(origin: string = siteUrl()): string {
+export function llmsText(origin: string = siteUrl(), pricing?: Pricing): string {
   const link = (label: string, path: string, note?: string) => `- [${label}](${absoluteUrl(path, origin)})${note ? `: ${note}` : ""}`;
   return [
     `# ${SITE_NAME}`,
     "",
     `> ${SITE_DESCRIPTION}`,
     "",
-    `${SITE_NAME} is a web app for businesses and creators: one inbox for Instagram, WhatsApp and website chat, with AI replies from your own knowledge and comment-to-DM automations. Instagram and WhatsApp connect through Meta's official APIs. It also runs an MCP server (${mcpUrl()}), so Claude, ChatGPT and Codex can read the inbox, comments and analytics and draft replies on every plan, and, on Creator and Business, schedule Instagram posts and set up keyword automations after a preview and the user's confirmation; AI apps can't send messages themselves (an automation sends once the user has turned it on in the dashboard, and knowledge an AI app adds is used once the user has approved it there). There is a Free plan; prices for paid plans are on the pricing page. Questions: ${SUPPORT_EMAIL}.`,
+    `${SITE_NAME} is a web app for businesses and creators: one inbox for Instagram, WhatsApp and website chat, with AI replies from your own knowledge and comment-to-DM automations. Instagram and WhatsApp connect through Meta's official APIs. It also runs an MCP server (${mcpUrl()}), so Claude, ChatGPT and Codex can read the inbox, comments and analytics and draft replies on every plan, and, on Creator and Business, schedule Instagram posts and set up keyword automations after a preview and the user's confirmation; AI apps can't send messages themselves (an automation sends once the user has turned it on in the dashboard, and knowledge an AI app adds is used once the user has approved it there). ${plansSentence(pricing)} Questions: ${SUPPORT_EMAIL}.`,
     "",
     `For a plain fact sheet about ${SITE_NAME} (what it is, who it's for, channels and their status, plans, honest limits and claims to avoid), read the AI info page first.`,
     "",
+    ...plansSection(pricing),
     "## Start here",
     "",
     link("AI info", "/ai-info", "a fact sheet for AI assistants: what is true today, and what not to claim"),
@@ -77,4 +81,26 @@ export function llmsText(origin: string = siteUrl()): string {
     link("Security", "/security", "how we protect data and how to report a vulnerability"),
     "",
   ].join("\n");
+}
+
+/** The plans in one sentence: their prices from the plan list, or a pointer to /pricing without one. */
+function plansSentence(pricing?: Pricing): string {
+  const sold = pricing?.plans.filter((card) => card.plan !== "free" && card.available && card.price) ?? [];
+  if (!sold.length) return "There is a Free plan; prices for paid plans are on the pricing page.";
+  return `Plans: Free, ${sold.map((card) => `${card.name} at ${card.price} a month`).join(", ")}.`;
+}
+
+/** Each plan with its price, trial and limits, as /pricing shows them; nothing when the plan list didn't load. */
+function plansSection(pricing?: Pricing): string[] {
+  if (!pricing || pricing.source !== "api") return [];
+  const line = (card: Pricing["plans"][number]) => {
+    const state =
+      card.plan === "free"
+        ? "free, no card needed"
+        : !card.available
+          ? "not on sale yet"
+          : `${card.price ?? "price shown at sign-up"} a month${card.trialDays ? `, ${card.trialDays}-day free trial` : ""}`;
+    return `- ${card.name}: ${state}${card.features.length ? `. ${card.features.join("; ")}` : ""}`;
+  };
+  return ["## Plans", "", ...pricing.plans.map(line), "", "Prices and every limit side by side are on the pricing page.", ""];
 }

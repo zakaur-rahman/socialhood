@@ -127,17 +127,20 @@ export function webSiteJsonLd(origin: string = siteUrl()): Record<string, unknow
 
 /**
  * schema.org SoftwareApplication with only what is true: the name, what it does, that it runs in a
- * browser, and the offers the plan list priced (none when the API gave no prices, so a site
- * deployed without the API still has valid data). No ratings, reviews or download counts: there
- * are none.
+ * browser, and the offers: Free and every plan on sale with a price (none when the API gave no
+ * prices, so a site deployed without the API still has valid data). No ratings, reviews or download
+ * counts: there are none.
  */
 function softwareApplicationNode(pricing: Pricing, origin: string, publisher: Record<string, unknown>): Record<string, unknown> {
-  const pro = pricing.plans.find((card) => card.plan === "pro" && card.available && card.offer);
-  const offers = pro?.offer
-    ? [
-        { "@type": "Offer", name: "Free", price: "0", priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
-        { "@type": "Offer", name: PLAN_NAME.pro, price: pro.offer.price, priceCurrency: pro.offer.currency, url: `${origin}/pricing` },
-      ]
+  const priced = pricing.plans.flatMap((card) => (card.available && card.offer ? [{ name: card.name, ...card.offer }] : []));
+  const offers = priced.length
+    ? [{ name: PLAN_NAME.free, price: "0", currency: priced[0].currency }, ...priced].map((offer) => ({
+        "@type": "Offer",
+        name: offer.name,
+        price: offer.price,
+        priceCurrency: offer.currency,
+        url: `${origin}/pricing`,
+      }))
     : undefined;
   return {
     "@type": "SoftwareApplication",

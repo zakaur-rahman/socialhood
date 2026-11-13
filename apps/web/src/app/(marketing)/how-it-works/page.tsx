@@ -20,7 +20,7 @@ import { FEATURES_PATH, HOW_IT_WORKS_PATH, SIGN_UP_PATH, SITE_NAME, appUrl } fro
 export const revalidate = 3600;
 
 export const metadata = pageMetadata({
-  title: `How ${SITE_NAME} works`,
+  title: `How ${SITE_NAME} works: connect, add knowledge, reply`,
   description:
     "From connecting Instagram, WhatsApp and website chat to AI replies from your own knowledge, hand-offs, automations and a weekly report, step by step.",
   path: HOW_IT_WORKS_PATH,
@@ -48,8 +48,9 @@ export default async function HowItWorksPage() {
           <div>
             <p className="kicker">How it works</p>
             <h1 id="how-title" className="h-page">
-              From first message to reply
+              How {SITE_NAME} works
             </h1>
+            <p className="lede">From first message to reply</p>
             <p className="lede">
               Connect your accounts, add what your business knows, and every message lands in one inbox where the AI drafts or
               sends the reply and hands the tricky ones to you.
