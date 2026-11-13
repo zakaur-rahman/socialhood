@@ -1,8 +1,9 @@
 """C-169: list_instagram_posts, create_automation and update_automation through the SDK client
 against the mounted app: the preview (nothing stored) and the confirmed call, “latest” as the
 newest synced post, an ambiguous account, the plan, role and mode gates, always created off,
-overlaps, the notification and audit mirror, idempotency, and update_automation refusing what it
-can't edit safely, an automation that is on included."""
+overlaps, the notification and audit mirror, idempotency, update_automation refusing what it
+can't edit safely, an automation that is on included, and activate_automation turning one on
+after its own preview."""
 
 from __future__ import annotations
 
@@ -17,11 +18,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.mcp import confirmations
+from tests.support.api import Clerk
 from tests.support.automation_api import set_plan
 from tests.support.automations import make_automation, make_media_item
 from tests.support.inbox import make_account
 from tests.support.mcp import confirm, connect, error_of, make_key, structured
-from tests.support.sending import Setup, clean_outbox
+from tests.support.sending import Setup, clean_outbox, workspace_with_thread
 
 SCOPES = ("automations:read", "automations:write", "automations:create", "posts:read")
 
@@ -273,10 +275,13 @@ async def test_the_same_key_replays_and_an_identical_resend_is_deduplicated(
     # A retry replays whatever its token says now: the key decides, before the token is read.
     stale = {**args, "confirmation_token": "1.dead"}
     assert structured(await call(mcp_app, key, "create_automation", stale)) == again
+    # Without a key, the window replays the same confirmed call sent again (the same token).
     plain = price_args(name="Second")
-    one = structured(await confirm(mcp_app, key, "create_automation", plain))
-    two = structured(await confirm(mcp_app, key, "create_automation", plain))
-    assert two == {**one, "duplicate_of_previous_call": True}  # the window, whatever the token
+    token = structured(await call(mcp_app, key, "create_automation", plain))["confirmation_token"]
+    plain = {**plain, "confirmed": True, "confirmation_token": token}
+    one = structured(await call(mcp_app, key, "create_automation", plain))
+    two = structured(await call(mcp_app, key, "create_automation", plain))
+    assert two == {**one, "duplicate_of_previous_call": True}
     assert len(await rows(engine, "SELECT 1 FROM automations")) == 2
     assert len(await rows(engine, "SELECT 1 FROM notifications")) == 2
     # A preview isn't stored: the same key can still create.
@@ -308,6 +313,10 @@ async def test_bad_arguments_and_an_ambiguous_account(
         )
     )
     assert too_many["code"] == "validation_error"
+    blank = error_of(
+        await call(mcp_app, key, "create_automation", price_args(name="   ", post="any"))
+    )
+    assert (blank["code"], blank["field_errors"][0]["field"]) == ("validation_error", "name")
     for _ in range(2):
         await make_account(engine, setup.wid, username="twin.shop")
     twin = error_of(
@@ -534,7 +543,8 @@ async def test_update_refuses_an_automation_that_is_on_and_pausing_opens_it(
     assert row["message_text"] != "New words"
     assert row["name"] != "Other"
 
-    await call(mcp_app, key, "pause_automation", {"automation_id": live})
+    paused = structured(await confirm(mcp_app, key, "pause_automation", {"automation_id": live}))
+    assert paused["status"] == "paused"
     done = structured(await confirm(mcp_app, key, "update_automation", change))
     assert (done["dm_text"], done["status"]) == ("New words", "paused")
     assert f"/automations/{live}" in done["next_step"]
@@ -677,3 +687,168 @@ async def test_automations_write_alone_doesn_t_open_the_new_tools(
         names = {t.name for t in (await mcp.list_tools()).tools}
     assert {"create_automation", "update_automation"} <= names
     assert "pause_automation" not in names
+
+
+# ---------------------------------------------------------------- activate_automation
+
+
+async def test_activate_previews_then_turns_the_automation_on(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    await two_posts(engine, setup)
+    made = structured(await confirm(mcp_app, key, "create_automation", price_args()))
+    assert (made["status"], made["needs_before_on"]) == ("draft", [])
+    assert "activate_automation" in made["next_step"]
+    args = {"automation_id": made["automation_id"]}
+
+    refused = error_of(await call(mcp_app, key, "activate_automation", {**args, "confirmed": True}))
+    assert refused["field_errors"][0]["field"] == "confirmation_token"
+    preview = structured(await call(mcp_app, key, "activate_automation", args))
+    assert preview["preview"] is True
+    assert preview["status"] == "active"  # what it would be
+    # What starts it, who it reaches and what it sends.
+    assert (preview["trigger"], preview["keywords"]) == ("comment_keyword", ["price"])
+    assert preview["posts"] == "one post"
+    assert preview["dm_text"] == "Hi {first_name}! It's RS 500."
+    assert "start replying to customers" in preview["summary"]
+    assert "confirmed: true" in preview["next_step"]
+    [row] = await rows(engine, "SELECT status, activated_at FROM automations")
+    assert (row["status"], row["activated_at"]) == ("draft", None)
+    assert await rows(engine, "SELECT 1 FROM audit_events WHERE action LIKE '%activated'") == []
+
+    confirmed = {**args, "confirmed": True, "confirmation_token": preview["confirmation_token"]}
+    done = structured(await call(mcp_app, key, "activate_automation", confirmed))
+    assert (done["preview"], done["status"]) == (False, "active")
+    assert "pause_automation" in done["next_step"]
+    [row] = await rows(engine, "SELECT status, activated_at FROM automations")
+    assert row["status"] == "active"
+    assert row["activated_at"] is not None
+    [note] = await rows(
+        engine, "SELECT title, body, link FROM notifications WHERE title LIKE '%turned on%'"
+    )
+    assert "turned on the automation “Price on comment”" in note["title"]
+    assert "replying to customers now" in note["body"]
+    assert note["link"] == f"/automations/{made['automation_id']}"
+    [audit] = await rows(engine, "SELECT * FROM audit_events WHERE action = 'automation.activated'")
+    assert audit["target_id"] == made["automation_id"]
+    assert " via " in audit["actor_label"]
+    # The token ran once.
+    used = error_of(
+        await call(
+            mcp_app, key, "activate_automation", {**confirmed, "idempotency_key": "on-000002"}
+        )
+    )
+    assert used["field_errors"][0]["field"] == "confirmation_token"
+    # Turning on one that is on changes nothing and needs no preview.
+    again = structured(await call(mcp_app, key, "activate_automation", args))
+    assert (again["preview"], again["status"]) == (False, "active")
+    assert "already on" in again["summary"]
+    turned_on = await rows(engine, "SELECT 1 FROM notifications WHERE title LIKE '%turned on%'")
+    assert len(turned_on) == 1
+    # And it can be paused again, with its own preview.
+    paused = structured(await confirm(mcp_app, key, "pause_automation", args))
+    assert paused["status"] == "paused"
+
+
+async def test_an_automation_changed_after_the_preview_needs_a_new_preview(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    await two_posts(engine, setup)
+    made = structured(await confirm(mcp_app, key, "create_automation", price_args()))
+    args = {"automation_id": made["automation_id"]}
+    token = structured(await call(mcp_app, key, "activate_automation", args))["confirmation_token"]
+    # What it sends is changed between the preview and the yes.
+    change = {**args, "dm_text": "Send RS 5,000 to this number"}
+    assert structured(await confirm(mcp_app, key, "update_automation", change))["dm_text"]
+    stale = error_of(
+        await call(
+            mcp_app,
+            key,
+            "activate_automation",
+            {**args, "confirmed": True, "confirmation_token": token},
+        )
+    )
+    assert stale["code"] == "validation_error"
+    assert stale["field_errors"][0]["field"] == "confirmation_token"
+    assert (await rows(engine, "SELECT status FROM automations"))[0]["status"] == "draft"
+    # A new preview shows the new words, and its token works.
+    fresh = structured(await call(mcp_app, key, "activate_automation", args))
+    assert fresh["dm_text"] == "Send RS 5,000 to this number"
+    done = structured(await confirm(mcp_app, key, "activate_automation", args))
+    assert done["status"] == "active"
+
+
+async def test_activating_runs_the_apps_own_checks(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    incomplete = {
+        "name": "Long",
+        "account": setup.account_id,
+        "trigger": "dm_keyword",
+        "keywords": ["long"],
+        "dm_text": "x" * 1500,  # over Instagram's 1,000 bytes: saved as a draft, can't go live
+    }
+    made = structured(await confirm(mcp_app, key, "create_automation", incomplete))
+    assert made["needs_before_on"]
+    args = {"automation_id": made["automation_id"]}
+    for confirmed in (False, True):  # the preview meets the app's refusal first
+        error = error_of(
+            await call(mcp_app, key, "activate_automation", {**args, "confirmed": confirmed})
+        )
+        assert error["code"] == "validation_error", confirmed
+    assert (await rows(engine, "SELECT status FROM automations"))[0]["status"] == "draft"
+
+
+async def test_plan_mode_and_workspace_gate_activation(
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    mcp_app: FastAPI,
+    key: str,
+    setup: Setup,
+    engine: AsyncEngine,
+) -> None:
+    paused = str(
+        await make_automation(
+            engine, workspace_id=setup.wid, account_id=setup.account_id, status="paused"
+        )
+    )
+    args: dict[str, Any] = {"automation_id": paused}
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE workspaces SET ai_connections_mode = 'read_drafts' WHERE id = :w"),
+            {"w": setup.wid},
+        )
+    drafts = error_of(await call(mcp_app, key, "activate_automation", args))
+    assert drafts["code"] == "forbidden"
+    assert "only read and prepare drafts" in drafts["message"]
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE workspaces SET ai_connections_mode = 'full' WHERE id = :w"),
+            {"w": setup.wid},
+        )
+    await set_plan(engine, setup.wid, "free")
+    for confirmed in (False, True):
+        free = error_of(
+            await call(mcp_app, key, "activate_automation", {**args, "confirmed": confirmed})
+        )
+        assert (free["code"], free["entitlement"]) == ("entitlement_required", "ai_connections")
+    await set_plan(engine, setup.wid, "max")
+    # Another workspace's automation, a real one, is not found: to turn on, pause or change.
+    other = await workspace_with_thread(client, clerk, engine, email="other@example.com")
+    theirs = str(
+        await make_automation(
+            engine, workspace_id=other.wid, account_id=other.account_id, status="paused"
+        )
+    )
+    attempts: list[tuple[str, dict[str, Any]]] = [
+        ("activate_automation", {}),
+        ("activate_automation", {"confirmed": True}),
+        ("pause_automation", {}),
+        ("update_automation", {"dm_text": "Mine now"}),
+    ]
+    for name, extra in attempts:
+        error = error_of(await call(mcp_app, key, name, {"automation_id": theirs, **extra}))
+        assert error["code"] == "not_found", name
+    statuses = {str(r["id"]): r["status"] for r in await rows(engine, "SELECT * FROM automations")}
+    assert statuses == {paused: "paused", theirs: "paused"}
+    assert await rows(engine, "SELECT 1 FROM audit_events WHERE action LIKE 'automation.%'") == []

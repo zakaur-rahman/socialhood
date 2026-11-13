@@ -23,6 +23,7 @@ NEW_AUTH = base64.urlsafe_b64encode(os.urandom(16)).rstrip(b"=").decode()
 
 QUIET = {
     "email_digest": False,
+    "email_ai_changes": False,
     "push": {"needs_you": True, "new_lead": False, "window_closing": True, "account": False},
 }
 
@@ -74,6 +75,7 @@ async def test_a_partial_or_unknown_body_is_refused(
     url = f"/v1/w/{me['workspaces'][0]['id']}/notification-preferences"
     for body in (
         {"email_digest": False},
+        {k: v for k, v in QUIET.items() if k != "email_ai_changes"},
         {**QUIET, "push": {"needs_you": True}},
         {**QUIET, "sms": True},
     ):
@@ -97,6 +99,7 @@ async def test_stored_preferences_missing_a_switch_read_as_on(
     body = (await client.get(url, headers=clerk.headers(clerk_id))).json()
     assert body == {
         "email_digest": True,
+        "email_ai_changes": True,  # newer than the stored row
         "push": {"needs_you": False, "new_lead": True, "window_closing": True, "account": True},
     }
 

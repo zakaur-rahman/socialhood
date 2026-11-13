@@ -2,8 +2,9 @@
 P8 (T8.5…T8.7).
 
 - ``notifications``: one row per recipient. ``channels`` says where it goes: always ``in_app``;
-  ``email`` for the types in EMAIL_TYPES (FR-NOT-02); ``push`` for the types in
-  PUSH_EVENT_OF_TYPE (FR-NOT-03), subject to the member's preferences. ``emailed_at`` and
+  ``email`` for the types in EMAIL_TYPES (FR-NOT-02; the ones in EMAIL_SWITCH_OF_TYPE only
+  while the member's switch is on); ``push`` for the types in PUSH_EVENT_OF_TYPE (FR-NOT-03),
+  subject to the member's preferences. ``emailed_at`` and
   ``pushed_at`` record delivery, so a sweeper can find what a lost job never sent.
 - ``email_deliveries``: the email outbox. One row per email, unique per (workspace, dedupe_key),
   inserted in the same transaction as what caused it, sent by deliver_email; the dedupe key is
@@ -15,8 +16,9 @@ P8 (T8.5…T8.7).
   time zone), so send_weekly_digests sends once per week however often it runs (T8.7).
 
 Preferences are ``workspace_members.notification_prefs`` (§5.3, DEFAULT_NOTIFICATION_PREFS in
-models/identity.py): the weekly digest switch and one push switch per PushEvent. In-app
-notifications are always on (FR-NOT-01); account and payment emails (FR-NOT-02) are not optional.
+models/identity.py): the weekly digest switch, the switch for emails about what AI apps changed,
+and one push switch per PushEvent. In-app notifications are always on (FR-NOT-01); account and
+payment emails (FR-NOT-02) are not optional.
 Unsubscribe links carry a signed token (notify/unsubscribe.py), so they need no table.
 """
 
@@ -81,8 +83,10 @@ class NotificationType(StrEnum):
     SHEETS_FAILING = "sheets_failing"  # Google Sheets lost access or its sheet (GR-27), in app only
     PAYMENT_PROBLEM = "payment_problem"  # subscription on hold or a failed payment (FR-BIL-06)
     PLAN_ACTIVATED = "plan_activated"  # "We'll email you when Pro is active" (F-15)
-    AI_POST_CHANGE = "ai_post_change"  # an AI app scheduled, changed or cancelled a post (C-165)
-    AI_AUTOMATION_CHANGE = "ai_automation_change"  # an AI app created or changed one (C-169)
+    # An AI app scheduled, changed or cancelled a post (C-165), or created or changed an
+    # automation (C-169). Emailed to owners and admins unless they turn it off.
+    AI_POST_CHANGE = "ai_post_change"
+    AI_AUTOMATION_CHANGE = "ai_automation_change"
     PLAN_DOWNGRADED = "plan_downgraded"  # expired: what the downgrade changed (FR-BIL-07)
     API_KEY_EXPIRING = "api_key_expiring"  # C-167: a key expires within 7 days, in app only
     API_KEY_LEAKED = "api_key_leaked"  # C-167: GitHub found a key in public; we revoked it
@@ -109,7 +113,8 @@ PUSH_EVENT_OF_TYPE: dict[str, PushEvent] = {
     NotificationType.ACCOUNT_DISCONNECTED: PushEvent.ACCOUNT,
 }
 
-# Which notification types are also emailed (FR-NOT-02, F-15). Not optional for the member.
+# Which notification types are also emailed (FR-NOT-02, F-15). Not optional for the member,
+# except the ones in EMAIL_SWITCH_OF_TYPE.
 EMAIL_TYPES: frozenset[str] = frozenset(
     {
         NotificationType.ACCOUNT_NEEDS_RECONNECT,
@@ -117,8 +122,17 @@ EMAIL_TYPES: frozenset[str] = frozenset(
         NotificationType.PLAN_ACTIVATED,
         NotificationType.PLAN_DOWNGRADED,
         NotificationType.POST_FAILED,
+        NotificationType.AI_POST_CHANGE,
+        NotificationType.AI_AUTOMATION_CHANGE,
     }
 )
+
+# The emailed types a member can turn off, and the notification_prefs switch of each
+# (01-design.md §6.7 "Notify on AI writes": on by default).
+EMAIL_SWITCH_OF_TYPE: dict[str, str] = {
+    NotificationType.AI_POST_CHANGE: "email_ai_changes",
+    NotificationType.AI_AUTOMATION_CHANGE: "email_ai_changes",
+}
 
 
 class Notification(IdMixin, CreatedAtMixin, TenantScoped, Base):
@@ -194,6 +208,8 @@ class EmailTemplate(StrEnum):
     PLAN_ACTIVATED = "plan_activated"
     PLAN_DOWNGRADED = "plan_downgraded"
     POST_FAILED = "post_failed"
+    AI_POST_CHANGE = "ai_post_change"
+    AI_AUTOMATION_CHANGE = "ai_automation_change"
     WEEKLY_DIGEST = "weekly_digest"
 
 

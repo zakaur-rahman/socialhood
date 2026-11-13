@@ -79,14 +79,16 @@ function Section({
 }
 
 /**
- * UX-SCR-07 Notifications (FR-NOT-03, FR-NOT-04, F-19): the member's weekly digest switch, this
- * device's push state, and a switch per push event. The switches are the member's own, for this
+ * UX-SCR-07 Notifications (FR-NOT-03, FR-NOT-04, F-19): the member's weekly digest switch, the
+ * switch for emails about what AI apps changed (owners and admins), this device's push state, and
+ * a switch per push event. The switches are the member's own, for this
  * workspace (C-049); PUT sends the whole object, and a switch that fails to save moves back.
  * C-066: the settings header and cards; switches still save as they change (D-08): an inline
  * "Saved" status, and the save bar only if a change fails, with the reason.
  */
 export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBrowser }) {
   const workspace = useCurrentWorkspace();
+  const admin = workspace.role === "owner" || workspace.role === "admin";
   const prefs = useNotificationPreferences(workspace.id);
   const update = useUpdateNotificationPreferences(workspace.id);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -133,13 +135,25 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
           ) : prefs.isError ? (
             failed
           ) : (
-            <SwitchRow
-              id="email-digest"
-              label="Weekly digest"
-              hint={`Mondays at 09:00 (${workspace.timezone}): messages, reply rate, response time, top questions and conversations that still need you.`}
-              checked={prefs.data.email_digest}
-              onChange={(on) => save({ ...prefs.data, email_digest: on })}
-            />
+            <div className="divide-y divide-line-subtle">
+              <SwitchRow
+                id="email-digest"
+                label="Weekly digest"
+                hint={`Mondays at 09:00 (${workspace.timezone}): messages, reply rate, response time, top questions and conversations that still need you.`}
+                checked={prefs.data.email_digest}
+                onChange={(on) => save({ ...prefs.data, email_digest: on })}
+              />
+              {/* Only owners and admins are emailed about these, so only they get the switch. */}
+              {admin ? (
+                <SwitchRow
+                  id="email-ai-changes"
+                  label="Changes by AI apps"
+                  hint="An email when a connected AI app, such as Claude or ChatGPT, changes a post or an automation. You still get the notification in Amplychat."
+                  checked={prefs.data.email_ai_changes}
+                  onChange={(on) => save({ ...prefs.data, email_ai_changes: on })}
+                />
+              ) : null}
+            </div>
           )}
         </Section>
 

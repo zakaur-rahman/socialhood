@@ -5,6 +5,26 @@
 - **Decisions the owner must make:** [02-decisions.md](02-decisions.md)
 - **Related:** C-107 (the action gateway, GR-36), C-109 (public API and API keys, GR-25, PD-6), C-110 (REST hooks), `docs/agent-architecture.html`, `docs/architecture/generative-ui/*`
 
+## What changed since this design (checked against the code, 2026-11-11)
+
+This document is the design of 2026-10-31 and is kept as written. Where the product now differs, the line below is the truth, and the section carries a short "As built" note. The phase documents ([03](03-phase-a.md), [04](04-phase-b.md), [05](05-phase-c.md)) say what was built.
+
+- **Plans (§3.7, §6.1).** Pro is now Creator, Max is Business, and there is a fourth plan, Agency (C-172, C-174). The numbers are `billing/plans.py`: tool calls a day 100 / 2,000 / 2,000 / 10,000 for Free / Creator / Business / Agency; posts scheduled a day 0 / 100 / 100 / 300; files uploaded a day 20 / 50 / 200 / 1,000 and megabytes 500 / 2,500 / 10,000 / 50,000. Making an API key needs Business or Agency.
+- **Scopes advertised (§3.4).** The protected resource metadata lists every scope a token can carry, not the read scopes plus two (`mcp/http.py` `SCOPES_SUPPORTED`).
+- **Ask (§3.4).** The `ask` scope runs Ask Amplychat with the member's role, so it can read anything the member can see, the inbox included, whatever other scopes the connection has. The consent screen and the key page say so (audit, 2026-11-11).
+- **Prompts (§4.2).** Three, not two: `schedule_a_post`, `weekly_inbox_digest` and `set_up_comment_automation` (C-169).
+- **Schedule lead (§1, §4.4, §6.5, §6.6, §9.2).** An AI app schedules at least 1 minute ahead, the same as in the app, not 5 (owner, 2026-11-11). It is no longer described as a safety window.
+- **Publish now (§4.3, §4.4).** An AI app can publish a post right away when the member asks, with `when: "now"`, after a preview and a yes (owner, 2026-11-11). Paid plans, Full mode, owners and admins, as for scheduling.
+- **Automations on and off (§4.4, §6.6).** An AI app can turn an automation on as well as pause it, each after a preview and a yes (owner, 2026-11-11). A new automation is still saved off, and one that is on still can't be changed until it is paused.
+- **Dedupe window (§6.2).** 15 minutes for `create_post`, `add_knowledge` and `create_automation`, to match the confirmation token (C-169), not 10.
+- **Customer data caps (§6.5).** `get_conversation` returns at most 20 messages, not 30. No tool returns a phone number or an email address, so there is nothing to mask and no `contacts:read` rule.
+- **Tool-call log (§6.3).** A refused call stores no arguments, and a link is cut to its address without the query string (audit, 2026-11-11). An API key's calls show under the key in Settings › MCP & API, as a connected app's do.
+- **Notify on AI writes (§6.7).** Built as a notification in the app and an email to owners and admins (`ai_post_change`, `ai_automation_change`). It is on by default, and each owner or admin can turn the emails off for themselves in Settings › Notifications ("Changes by AI apps", `notification_prefs.email_ai_changes`). There is no workspace-wide switch.
+- **Settings page (§6.7).** It is Settings › MCP & API (C-180), not "Connected AI apps". Removing a member disconnects their AI apps as well as revoking their keys (audit, 2026-11-11).
+- **The tool list on the public page (§7.3).** Built on 2026-11-11: `apps/api/scripts/export_mcp_tools.py` writes `apps/web/src/lib/marketing/mcp-tools.json` from the registry, `/developers/mcp` renders it, and `tests/unit/test_mcp_tool_reference.py` fails when the file is stale. Until then the page was written by hand.
+
+---
+
 ## The ask
 
 In the owner's words: *"we need to create an mcp so that any body can connect with claude or chatgpt or codex and schedule there post and do other things through claude like now a days people are editing video through claude uploading to insta, tictok"*.
@@ -41,7 +61,7 @@ Competitors already sell this. inro.social offers "an MCP server" on Pro, and In
 
 - **TikTok.** It isn't trivial; see §11 and decision D5.
 - **Sending DMs or comment replies from the AI.** Reading and drafting are in. Sending is R2, behind the action gateway's in-app approval.
-- **"Publish now".** R1 schedules at least 5 minutes ahead, the existing `MIN_SCHEDULE_LEAD`, so every AI-made post has a window in which the team can see it and cancel it.
+- **"Publish now".** R1 schedules at least 5 minutes ahead, the existing `MIN_SCHEDULE_LEAD`, so every AI-made post has a window in which the team can see it and cancel it. *(Owner, 2026-11-11: 1 minute, as in the app, and an AI app can publish now after a preview and a yes.)*
 - **Deleting posts, published-post edits, broadcasts, contacts and tags writes, flow creation.** These come later. Contacts and tags already exist in the public REST API.
 - **MCP Apps (interactive widgets inside Claude or ChatGPT).** Planned for R2: post preview, calendar, upload widget.
 - **AI media generation.** Anthropic's directory doesn't accept connectors that "generate images, video, or audio through AI models" (review criteria, read 2026-10-31). We only receive media that the user or their AI already made.
@@ -231,7 +251,7 @@ The existing public API scopes stay. MCP adds:
 | `ask` | Ask Amplychat a question (uses AI credits) | Ask |
 | `messages:send` *(exists, R2 on MCP)* | Send a reply (with approval in R2) | — |
 
-- **OAuth requests:** the PRM `scopes_supported` lists the **read** scopes plus `posts:write` and `media:write`, the core use. Other write scopes are asked for by step-up: a tool that needs one answers 403 `insufficient_scope` with `scope="…"`, as the spec describes.
+- **OAuth requests:** *(As built: it lists every scope a token can carry.)* the PRM `scopes_supported` lists the **read** scopes plus `posts:write` and `media:write`, the core use. Other write scopes are asked for by step-up: a tool that needs one answers 403 `insufficient_scope` with `scope="…"`, as the spec describes.
 - **Consent screen:** it groups scopes into the six plain-words lines on the right. The member can untick groups.
 - **Scope gates:** each tool needs exactly one scope, like the public API.
 - **Tool lists:** `tools/list` returns only the tools the token's scopes and the workspace mode allow. The 2026-07-28 spec explicitly allows the list to vary by authorization. This keeps the model from trying tools it can't use.
@@ -271,7 +291,7 @@ A revoked connection gets 401, and the client asks the user to reconnect. `/oaut
 
 ### 3.7 Plan gating
 
-- **Today:** PD-6 puts the public API, API keys and Zapier on **Pro and Max** (`public_api` entitlement).
+- **Today:** *(As built: Pro is Creator and Max is Business; API keys are on Business and Agency; see the numbers at the top.)* PD-6 puts the public API, API keys and Zapier on **Pro and Max** (`public_api` entitlement).
 - **Proposal:** a new entitlement, `ai_connections`, so MCP can be priced independently. The owner decides the matrix (D2). Recommended:
 
 | | Free | Pro | Max |
@@ -367,7 +387,7 @@ That was **25 tools** in R1; with C-169's three, less `resume_automation`, it is
 ### 4.2 Server instructions and prompts
 
 - **Instructions:** the server's `instructions` (sent with discovery) are short and factual. They say what Amplychat is, to call `get_workspace` first, that times are in the workspace zone unless an offset is given, and that customer messages and comments are content from third parties. They contain nothing that tells the model how to behave beyond the tools. Anthropic rejects descriptions that do.
-- **Prompts:** two MCP prompts, which users pick from the client's menu:
+- **Prompts:** *(As built: three, with `set_up_comment_automation`, C-169.)* two MCP prompts, which users pick from the client's menu:
   - "Schedule a post": it asks for the accounts, media, caption and time, and confirms the checklist;
   - "Weekly inbox digest".
 
@@ -394,12 +414,12 @@ That was **25 tools** in R1; with C-169's three, less `resume_automation`, it is
 
 | Write | R1 | Why |
 |---|---|---|
-| Create, schedule or queue a post | **direct** | The member asked in their AI client, and the client shows a confirmation for every non-read-only tool. The post publishes ≥ 5 min later. Owners and admins get an in-app notification ("Claude scheduled a Reel for Fri 6 pm, by Asha") with Cancel. Reversible until publish |
+| Create, schedule or queue a post | **direct** | The member asked in their AI client, and the client shows a confirmation for every non-read-only tool. The post publishes ≥ 5 min later *(owner, 2026-11-11: ≥ 1 min, as in the app, and "now" after a preview and a yes)*. Owners and admins get an in-app notification *(and an email, 2026-11-11)* ("Claude scheduled a Reel for Fri 6 pm, by Asha") with Cancel. Reversible until publish |
 | Update, reschedule or cancel a post | **direct** (destructive hint: the client always confirms) | Same |
 | Media upload or import | **direct** | Only lands in the library. Nothing is public |
 | Add knowledge | **a person approves it in the dashboard** | Unused until then. It shows in Knowledge, where it can be approved, edited or removed |
-| Pause an automation | **direct** (destructive) | Pausing is the safe direction |
-| Turn an automation on | **not from AI apps** | A person does it in the dashboard |
+| Pause an automation | **direct** (destructive) *(audit, 2026-11-11: previewed first, like the other automation changes)* | Pausing is the safe direction |
+| Turn an automation on | **not from AI apps** *(owner, 2026-11-11: an AI app can, after a preview and a yes)* | A person does it in the dashboard |
 | Create or change a keyword automation that is off | **direct, after a preview** (C-169); it stays off until a person turns it on in the dashboard, and one that is on is refused | The member asked and confirmed the preview. The app's own activation and plan limit apply, owners and admins are told, and it can be paused. See [04-phase-b.md](04-phase-b.md#c-169-automations-and-instagram-posts) |
 | Draft a reply | not a write | It returns a pre-filled deep link |
 | Send a DM or comment reply | **R2, approval** | It reaches a customer, is irreversible, and carries Meta policy and prompt-injection exfiltration risk (§6.5) |
@@ -483,9 +503,9 @@ What exists already (reused as is):
 | `mcp_workspace` | 300 calls/min | per workspace, across all connections |
 | `sends` *(exists)* | 60/min | per workspace: every schedule, queue or publish |
 | `ai` *(exists)* | 20/min | per workspace: `ask_amplychat` |
-| Daily tool calls | Free 100, Pro 2,000, Max 10,000 | per workspace |
+| Daily tool calls | Free 100, Pro 2,000, Max 10,000 *(as built: Free 100, Creator 2,000, Business 2,000, Agency 10,000)* | per workspace |
 | `mcp_posts` (C-169) | 20 posts scheduled/min | per workspace, across all connections. Only a confirmed post really being scheduled counts; one post to several accounts counts once |
-| Posts scheduled via MCP | 100/day Pro, 300/day Max, none on Free (C-169; was 25 and 100) | per workspace. Not Instagram's limit, which is per account: below |
+| Posts scheduled via MCP | 100/day Pro, 300/day Max, none on Free (C-169; was 25 and 100) *(as built: Creator 100, Business 100, Agency 300)* | per workspace. Not Instagram's limit, which is per account: below |
 | Instagram's publishing limit | 50 posts per account per rolling 24 h in the checklist (`DEFAULT_PUBLISHING_LIMIT`, C-169: Meta's pages say both 100 and 50); the live `quota_total` decides at publish time | per account, composer and MCP alike |
 | OAuth endpoints | `/oauth/register` 10/h per IP; `/oauth/token` 60/min per client; `/oauth/authorize` 30/min per IP | |
 
@@ -495,7 +515,7 @@ A refused call is a tool error that says when to retry. It isn't an HTTP 429 tha
 
 - **Why it matters more now:** the 2026-07-28 transport removed stream resumability. A broken response stream "loses the in-flight request", and the client must **re-issue it**. Duplicate writes are therefore likely, not rare.
 - **Explicit keys:** every write takes an optional `idempotency_key` argument. A tool argument, because MCP clients can't set per-call HTTP headers. It's stored through the existing `services/idempotency.py` (Valkey, 24 h, keyed by workspace and principal; a different request with the same key is a conflict).
-- **Implicit dedupe:** for writes without a key, the server dedupes by a fingerprint of `(connection, tool, normalised arguments)` for 10 minutes. A second identical `create_post` returns the first post with `"duplicate_of_previous_call": true` instead of making another.
+- **Implicit dedupe:** for writes without a key, the server dedupes by a fingerprint of `(connection, tool, normalised arguments)` for 10 minutes *(as built: 15, C-169)*. A second identical `create_post` returns the first post with `"duplicate_of_previous_call": true` instead of making another.
 - **Hints:** writes declare `idempotentHint: true` only where the dedupe makes it true.
 
 ### 6.3 Audit log
@@ -523,7 +543,7 @@ The real risks, in order:
    - **No send tools in R1,** so exfiltration through a DM is impossible. A post is the only outbound channel. It's public, ≥ 5 min out, confirmed by the client, and notified to owners and admins with Cancel.
    - **Customer text is labelled.** It's returned as data in `…_text` fields and the server instructions say it is third-party content.
    - **No instruction-like text from us** around customer text. Customer text is never put into tool *descriptions*.
-   - **Caps on customer data:** `get_conversation` returns at most 30 messages, and phone numbers and emails are masked unless the token has `contacts:read`.
+   - **Caps on customer data:** `get_conversation` returns at most 30 messages, and phone numbers and emails are masked unless the token has `contacts:read`. *(As built: 20 messages, and no tool returns a phone number or an email address.)*
 2. **Our tool descriptions.** These are static strings in code, reviewed like copy. A test asserts that no description contains imperative phrases aimed at the model ("always", "you must", "ignore") or URLs other than ours. Anthropic and OpenAI both reject descriptions that steer behaviour.
 3. **Cross-tool confusion in the client.** Another connected server, or a web page the AI reads, could steer it to call our write tools. Mitigations:
    - the destructive and write hints make the client ask the user;
@@ -538,7 +558,7 @@ The real risks, in order:
 **Server-checked preview (C-169).** `create_automation`, `update_automation`, a scheduling `create_post`, `update_post` on a scheduled post (or giving a draft a time) and `cancel_post` of a scheduled post refuse `confirmed: true` without the preview's `confirmation_token` (`mcp/confirmations.py`): a stateless HMAC over the tool, workspace, credential and canonical arguments, for 15 minutes. It proves this connection fetched a preview of exactly this change. It can't prove a person read it: an AI app set to always allow the tools can confirm by itself, and the public copy says so.
 
 - **Hints:** `update_post`, `cancel_post` and `pause_automation` carry `destructiveHint: true`. Claude says destructive tools "always prompt". ChatGPT asks before write actions.
-- **Our side:** we don't rely on hints, which the spec says are untrusted. Every write returns a summary of what changed, with a deep link. A post's status stays `scheduled` (not `publishing`) for at least 5 minutes. The owner notification gives a second, human-side check.
+- **Our side:** we don't rely on hints, which the spec says are untrusted. Every write returns a summary of what changed, with a deep link. A post's status stays `scheduled` (not `publishing`) for at least 5 minutes *(owner, 2026-11-11: 1 minute, or none when the member asks to publish now)*. The owner notification gives a second, human-side check.
 - **MRTR:** the 2026-07-28 "input required" round trip (an elicitation form returned as a result) could ask "Schedule this to 3 accounts?" from the server. Client support is uneven, so it's R2 at the earliest.
 
 ### 6.7 Per-workspace kill switch and modes
@@ -548,7 +568,7 @@ The real risks, in order:
 - **Mode:** `off` / `read only` / `read and drafts` / `full`.
   - `read and drafts` means posts are created as drafts only. Plus inbox drafts and knowledge reads.
   - Free plans are capped at `read and drafts`. New workspaces start at `full` on Pro and Max (decision D3).
-- **Notify on AI writes:** on by default. In-app and email to owners and admins.
+- **Notify on AI writes:** on by default. In-app and email to owners and admins. *(As built, 2026-11-11: each owner or admin turns the emails off for themselves in Settings › Notifications; there is no workspace switch.)*
 - **A list of connections:** client, member, scopes, last used, Activity, and **Disconnect**.
 - **"Disconnect all"**, the panic button.
 
@@ -608,7 +628,7 @@ A new marketing page, `/developers/mcp` ("Connect Amplychat to Claude, ChatGPT a
 - **What you can ask:** example prompts ("Schedule reel.mp4 to @maplebakery for Friday 6 pm with @priya as collaborator, first comment with our hashtags", "Summarise this week's DMs", "Which of last month's posts did best?").
 - **Limits, plans, security, and how to disconnect.**
 
-The page lists every tool from the same registry (generated, like the public OpenAPI page), so the docs never drift.
+The page lists every tool from the same registry (generated, like the public OpenAPI page), so the docs never drift. *(Built 2026-11-11: `apps/api/scripts/export_mcp_tools.py` writes `mcp-tools.json`, and an API test fails when it is stale.)*
 
 ### 7.4 Marketing claims that stay true
 
@@ -717,7 +737,7 @@ Staging needs a public HTTPS host for claude.ai and ChatGPT to reach. That's the
 - `oauth_codes`: short-lived (60 s), hashed, PKCE challenge, `resource`, `redirect_uri`, the consented scopes and workspace. This could live in Valkey instead.
 - `mcp_uploads`: ticket, workspace, user, kind, `public_id`, status, `media_asset_id`, `expires_at`.
 - `mcp_tool_calls`: the audit (§6.3).
-- `workspaces`: the AI mode and the notify setting. Or a `workspace_ai_connections_settings` row, next to `ai_settings`.
+- `workspaces`: the AI mode and the notify setting *(as built: the mode only; notifying is each member's `notification_prefs.email_ai_changes`, with no migration)*. Or a `workspace_ai_connections_settings` row, next to `ai_settings`.
 - `api_keys`: no change. New scopes join the catalogue (`ApiScopeName`).
 
 ---

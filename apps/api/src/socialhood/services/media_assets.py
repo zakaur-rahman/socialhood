@@ -275,13 +275,15 @@ async def register(
     public_id: str,
     resource_type: ResourceType,
     post_video_max_mb: int = 100,
+    resource: StoredResource | None = None,
 ) -> MediaAsset:
-    """Store an uploaded asset once (registering it again returns the same row) and commit."""
+    """Store an uploaded asset once (registering it again returns the same row) and commit.
+    ``resource``: the file as storage holds it, when the caller has just read it."""
     purpose = purpose_of(public_id, workspace_id)
     existing = await find_by_public_id(session, public_id)
     if existing is not None:
         return existing
-    resource = await _lookup(cloudinary, public_id, resource_type)
+    resource = resource or await _lookup(cloudinary, public_id, resource_type)
     check_limits(resource, purpose, post_video_max_bytes=post_video_max_mb * MB)
     await _check_delivery(cloudinary, resource)
     asset = MediaAsset(

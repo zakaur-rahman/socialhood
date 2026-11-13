@@ -121,7 +121,7 @@ export const MATRIX: MatrixGroup[] = [
         key: "ai_connections",
         label: "Connect Claude, ChatGPT and Codex (MCP)",
         format: { kind: "ai-apps" },
-        note: "Full adds scheduling posts, drafting knowledge and automations for you to approve, and pausing automations. AI apps never send messages themselves.",
+        note: "Full adds scheduling and publishing posts, drafting knowledge for you to approve, and creating automations and turning them on and off. AI apps never send messages themselves.",
       },
       { key: "webhook_endpoints", label: "Outbound webhook endpoints", format: { kind: "count" } },
       { key: "public_api", label: "Public API, API keys and the Zapier app", format: { kind: "flag" } },

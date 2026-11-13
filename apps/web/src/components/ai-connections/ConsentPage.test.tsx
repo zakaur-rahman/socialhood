@@ -31,7 +31,7 @@ function request(values: Partial<ConnectRequest> = {}): ConnectRequest {
         label: "Publishing",
         scopes: [
           { scope: "posts:read", description: "See scheduled posts" },
-          { scope: "posts:write", description: "Schedule, change, reschedule and cancel posts" },
+          { scope: "posts:write", description: "Schedule, publish, change, reschedule and cancel posts" },
         ],
       },
       { id: "inbox", label: "Inbox", scopes: [{ scope: "conversations:read", description: "Read your inbox conversations" }] },
@@ -70,7 +70,7 @@ describe("AI app consent page (C-165)", () => {
     expect(await screen.findByRole("heading", { name: "Claude wants to connect to Amplychat" })).toBeInTheDocument();
     expect(screen.getByText(/Signed in as asha@maple.test/)).toHaveTextContent("Goes back to claude.ai");
     expect(screen.getByText("Details from claude.ai")).toBeInTheDocument();
-    expect(screen.getByText("Schedule, change, reschedule and cancel posts")).toBeInTheDocument();
+    expect(screen.getByText("Schedule, publish, change, reschedule and cancel posts")).toBeInTheDocument();
     const img = document.querySelector("img");
     expect(img).toHaveAttribute("referrerpolicy", "no-referrer");
     expect(screen.queryByRole("note")).not.toBeInTheDocument();

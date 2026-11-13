@@ -246,6 +246,7 @@ class PostFiguresOut(BaseModel):
     format: str
     posted_at: str | None = None
     age: str
+    captured_at: str | None = None  # when the figures were read from the platform
     insights_granted: bool
     reach: int | None = None
     views: int | None = None
@@ -352,6 +353,7 @@ async def get_analytics_summary(call: ToolCall, args: AnalyticsInput) -> Analyti
                 format=perf.format,
                 posted_at=moment(call, perf.posted_at),
                 age=perf.age_label,
+                captured_at=moment(call, perf.captured_at),
                 insights_granted=perf.insights_granted,
                 reach=figures.reach,
                 views=figures.views,

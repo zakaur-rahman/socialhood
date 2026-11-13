@@ -3,10 +3,11 @@ their AI app's menu. A prompt is text the member sends, so it may ask the model 
 tools' own descriptions stay free of such wording (mcp/registry.py).
 
 - ``schedule_a_post``: gather the accounts, media, caption and time, check the checklist, show
-  the preview and schedule only after the member agrees.
+  the preview and schedule (or publish now, if the member asked for that) only after the member
+  agrees.
 - ``weekly_inbox_digest``: summarise the week's conversations and comments.
 - ``set_up_comment_automation`` (C-169): find the post, preview the automation and create it only
-  after the member agrees; on only if they ask.
+  after the member agrees. It is created off; turning it on is a second preview and a second yes.
 """
 
 from __future__ import annotations
@@ -95,7 +96,8 @@ def _schedule(arguments: Mapping[str, str] | None) -> str:
         "create_post without confirmed first and show me "
         "the preview: the time in my time zone, the accounts and the checklist, fixing any "
         "failing item with me. Schedule it with confirmed: true and the preview's "
-        "confirmation_token only after I say yes."
+        "confirmation_token only after I say yes. Use when “now” only if I ask you to publish "
+        "it immediately: it can't be undone."
     )
 
 
@@ -127,8 +129,10 @@ def _comment_automation(arguments: Mapping[str, str] | None) -> str:
         "DM people get, any overlap with live automations and what it still needs, fixing "
         "anything with me. Create it with confirmed: true and the preview's "
         "confirmation_token only after I say yes. It is saved off, so give me its "
-        "dashboard_url: I review it and turn it on in Amplychat. Once it's on, you can pause it "
-        "with pause_automation."
+        "dashboard_url to review it. Turn it on with activate_automation only when I ask: show "
+        "me that preview too, and confirm it only after I say yes. I can also turn it on in "
+        "Amplychat. Once it's on, pause_automation turns it off, with a preview and my yes as "
+        "well."
     )
 
 

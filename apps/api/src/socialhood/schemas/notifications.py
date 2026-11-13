@@ -28,6 +28,7 @@ class NotificationPreferences(RequestModel):
     back. Fields are required both ways, so the request and response share one schema."""
 
     email_digest: bool
+    email_ai_changes: bool  # emails when an AI app changes a post or an automation
     push: PushPreferences
 
 

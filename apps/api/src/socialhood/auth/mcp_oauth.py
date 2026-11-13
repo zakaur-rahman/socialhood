@@ -23,6 +23,7 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.auth.api_key import LAST_USED_EVERY_S
 from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
 from socialhood.mcp.principal import ALWAYS_GRANTED, McpPrincipal
 from socialhood.models.identity import Role, Workspace, WorkspaceMember, WorkspaceStatus
@@ -34,7 +35,6 @@ INVALID = "That access token isn't valid."
 EXPIRED_TOKEN = "That access token has expired."  # noqa: S105  (a message)
 WRONG_AUDIENCE = "That access token is for another server."
 MEMBER_LEFT = "You're no longer a member of this workspace."
-LAST_USED_EVERY_S = 60
 # ChatGPT's linking UI wants the step-up on the tool result (_meta["mcp/www_authenticate"]);
 # a client that follows the MCP spec gets an HTTP 403 with the scope challenge.
 TOOL_RESULT_CHALLENGE_HOSTS = ("chatgpt.com", "openai.com")

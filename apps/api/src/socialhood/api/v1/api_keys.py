@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter
 
 from socialhood.auth.deps import CanManageIntegrations, Session
+from socialhood.schemas.ai_connections import AiConnectionActivity
 from socialhood.schemas.api_keys import (
     ApiKey,
     ApiKeyCreate,
@@ -35,12 +36,21 @@ async def create_api_key(
     body: ApiKeyCreate, ctx: CanManageIntegrations, session: Session
 ) -> ApiKeyWithKey:
     """The key is in this response only. 402 entitlement_required on a plan without the public
-    API (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:
+    API (Free and Creator; it is part of Business and Agency); 409 at 20 active keys. C-167:
     ``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and
     CIDRs; empty for any address)."""
     out = await service.create(session, body, user_id=ctx.user.id, now=datetime.now(UTC))
     await session.commit()
     return out
+
+
+@router.get("/api-keys/{key_id}/activity", operation_id="get_api_key_activity")
+async def get_api_key_activity(
+    key_id: uuid.UUID, ctx: CanManageIntegrations, session: Session
+) -> AiConnectionActivity:
+    """The key's latest 50 tool calls over MCP (the MCP audit keeps 90 days), as for a connected
+    AI app: tool, outcome and time."""
+    return AiConnectionActivity(items=await service.activity(session, key_id))
 
 
 @router.patch("/api-keys/{key_id}", operation_id="update_api_key")

@@ -1,11 +1,12 @@
 """A member's notification preferences (FR-NOT-03, FR-NOT-04, F-19, UX-SCR-07; T8.6, T8.7):
 ``workspace_members.notification_prefs``, one per membership (C-049).
 
-The stored shape is models/identity.DEFAULT_NOTIFICATION_PREFS: the weekly digest switch and one
-push switch per PushEvent. ``normalize`` reads any stored value as that shape, a missing or
-malformed key taking its default (on), so a row written before a switch existed still reads
-whole. In-app notifications are always on (FR-NOT-01) and the account and billing emails are not
-optional (FR-NOT-02), so neither has a switch.
+The stored shape is models/identity.DEFAULT_NOTIFICATION_PREFS: the weekly digest switch, the
+switch for emails about what AI apps changed (01-design.md §6.7), and one push switch per
+PushEvent. ``normalize`` reads any stored value as that shape, a missing or malformed key taking
+its default (on), so a row written before a switch existed still reads whole. In-app
+notifications are always on (FR-NOT-01) and the account and billing emails are not optional
+(FR-NOT-02), so neither has a switch.
 """
 
 from __future__ import annotations
@@ -18,10 +19,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.identity import DEFAULT_NOTIFICATION_PREFS, WorkspaceMember
-from socialhood.models.notifications import PushEvent
+from socialhood.models.notifications import EMAIL_SWITCH_OF_TYPE, PushEvent
 
 DIGEST = "email_digest"
+AI_CHANGES = "email_ai_changes"
 PUSH = "push"
+
+
+def _switch(raw: Mapping[str, Any], key: str) -> bool:
+    value = raw.get(key)
+    return value if isinstance(value, bool) else bool(DEFAULT_NOTIFICATION_PREFS[key])
 
 
 def normalize(raw: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -30,9 +37,9 @@ def normalize(raw: Mapping[str, Any] | None) -> dict[str, Any]:
     push_raw = raw.get(PUSH)
     push_raw = push_raw if isinstance(push_raw, Mapping) else {}
     defaults: Mapping[str, bool] = DEFAULT_NOTIFICATION_PREFS[PUSH]
-    digest = raw.get(DIGEST)
     return {
-        DIGEST: digest if isinstance(digest, bool) else bool(DEFAULT_NOTIFICATION_PREFS[DIGEST]),
+        DIGEST: _switch(raw, DIGEST),
+        AI_CHANGES: _switch(raw, AI_CHANGES),
         PUSH: {
             event.value: (
                 push_raw[event.value]
@@ -51,6 +58,13 @@ def pushes(prefs: Mapping[str, Any] | None, event: PushEvent | str) -> bool:
 
 def wants_digest(prefs: Mapping[str, Any] | None) -> bool:
     return bool(normalize(prefs)[DIGEST])
+
+
+def emails(prefs: Mapping[str, Any] | None, type: str) -> bool:
+    """Whether the member gets this notification type's email: yes, unless the type has a
+    switch (EMAIL_SWITCH_OF_TYPE) and theirs is off."""
+    switch = EMAIL_SWITCH_OF_TYPE.get(type)
+    return switch is None or bool(normalize(prefs)[switch])
 
 
 async def member(session: AsyncSession, user_id: uuid.UUID) -> WorkspaceMember | None:

@@ -8,12 +8,15 @@ Every request needs ``Authorization: Bearer <credential>``:
   credentials);
 - one that doesn't authenticate: 401 with ``error="invalid_token"``, its reason and the same
   ``resource_metadata``. A token that isn't any credential of ours also counts against the
-  caller's IP (``public``, 60 a minute) like the public API, so guessing keys is slow; past it,
-  429 with ``Retry-After``.
+  caller's IP (``public``, 60 a minute) like the public API; past it, a miss gets 429 with
+  ``Retry-After``. A valid token still works: refusing before the lookup would let one caller
+  lock out everyone behind a shared address, and a 256-bit key can't be guessed (C-191).
 
-Then the principal is put in context (mcp/principal.py) and the request goes to the SDK, which
-serves it inside that context. Responses carry ``X-Robots-Tag: noindex`` (Caddy adds it for the
-whole API host too).
+Then the request counts against its workspace (``mcp_requests``, 600 a minute across all its
+connections; 429 past it, before any other work: listing tools and refused calls have no other
+limit). Then the principal is put in context (mcp/principal.py) and the request goes to the SDK,
+which serves it inside that context. Responses carry ``X-Robots-Tag: noindex`` (Caddy adds it for
+the whole API host too).
 
 The protected resource metadata (RFC 9728) is served at
 ``/.well-known/oauth-protected-resource/mcp`` and, as the fallback Claude probes, at
@@ -167,13 +170,16 @@ class McpEndpoint:
         try:
             principal = await resolve_bearer(token, self.auth, self.resolvers, client_ip=client_ip)
         except CredentialRefused as refused:
-            if refused.unknown and (wait := await self._guessing(request)):
+            if refused.unknown and (wait := await self._wait("public", client_ip)):
                 await self._too_many(scope, receive, send, wait)
                 return
             if refused.forbidden:
                 await self._forbidden(scope, receive, send, refused.message)
                 return
             await self._challenge(scope, receive, send, refused.message)
+            return
+        if wait := await self._wait("mcp_requests", str(principal.workspace_id)):
+            await self._too_many(scope, receive, send, wait)
             return
         context = McpRequest(
             principal=principal,
@@ -231,14 +237,13 @@ class McpEndpoint:
         )
         await response(scope, receive, send)
 
-    async def _guessing(self, request: Request) -> float:
-        """Count an unknown token against the caller's IP; the seconds to wait when over."""
+    async def _wait(self, name: str, subject: str) -> float:
+        """Count this request against ``subject`` under the named limit; the seconds to wait
+        when over, 0 when it may go on (also with limits off or Valkey down)."""
         if not self.settings.rate_limits_enabled:
             return 0.0
         try:
-            return await ratelimit.hit(
-                self.auth.redis, ratelimit.LIMITS["public"], ratelimit.client_ip(request)
-            )
+            return await ratelimit.hit(self.auth.redis, ratelimit.LIMITS[name], subject)
         except Exception:
             return 0.0
 

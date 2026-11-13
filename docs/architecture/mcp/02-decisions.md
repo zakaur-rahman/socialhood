@@ -3,6 +3,7 @@
 - **Status:** approved 2026-10-31. The owner said "do your best" to all eight recommendations, so every decision below takes its recommended option.
 - **Date:** 2026-10-31
 - **Design:** [01-design.md](01-design.md)
+- **Changed since (2026-11-11):** these are the decisions as taken on 2026-10-31 and are kept as written. The owner has since decided that AI apps schedule at least 1 minute ahead (not 5), may publish a post now, and may turn an automation on, each after a preview and a yes; plan names and daily caps have changed too. The current facts are listed at the top of [01-design.md](01-design.md).
 
 ---
 

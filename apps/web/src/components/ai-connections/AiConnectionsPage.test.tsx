@@ -99,6 +99,11 @@ describe("Settings › Connected AI apps (C-165)", () => {
     const { calls } = setup();
     expect(await screen.findByRole("radio", { name: /^Full/ })).toBeChecked();
     expect(screen.getByText(/Replies are never sent by an AI app/)).toBeInTheDocument();
+    // The audit of 2026-11-11: each mode says what the server really allows in it.
+    expect(screen.getByText(/They can still see the workspace's name and plan/)).toBeInTheDocument();
+    expect(screen.getByText(/ask Amplychat's assistant, which uses AI credits/)).toBeInTheDocument();
+    expect(screen.getByText(/reply drafts that a person finishes in Amplychat, and uploading media for them/)).toBeInTheDocument();
+    expect(screen.getByText(/publishing them now.*turning automations on and off/)).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /^Read only/ }));
     await waitFor(() => expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ mode: "read_only" }));
   });

@@ -3,8 +3,9 @@ subject, an HTML body and a plain-text body from an email_deliveries row's ``dat
 specific copy (UX-COPY-01); every link is absolute on WEB_BASE_URL; the digest's footer carries
 the one-click unsubscribe link.
 
-- notifications.py: account_needs_reconnect, payment_problem, plan_activated, plan_downgraded and
-  post_failed, from the notification's title, body and link.
+- notifications.py: account_needs_reconnect, payment_problem, plan_activated, plan_downgraded,
+  post_failed, ai_post_change and ai_automation_change, from the notification's title, body and
+  link.
 - digest.py: weekly_digest, from the week's numbers (services/overview_stats.py).
 - layout.py: the shared, accessible layout and the plain-text twin.
 

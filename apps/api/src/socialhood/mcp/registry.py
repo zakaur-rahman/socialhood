@@ -219,11 +219,13 @@ class McpRegistry:
             raise ToolRegistryError(f"tool {name!r}: the output model must extend ToolOutput")
         if tool.access is Access.READ and (tool.destructive or tool.dedupe_window_s):
             raise ToolRegistryError(f"read tool {name!r} can't be destructive or deduplicated")
-        if tool.access is Access.WRITE and not (
+        # Drafts too: the pipeline guards and replays every tool that isn't a read (mcp/calls.py).
+        if tool.access is not Access.READ and not (
             issubclass(tool.input_model, WriteInput) and issubclass(tool.output_model, WriteOutput)
         ):
             raise ToolRegistryError(
-                f"write tool {name!r}: the input must extend WriteInput, the output WriteOutput"
+                f"{tool.access} tool {name!r}: the input must extend WriteInput, the output "
+                "WriteOutput"
             )
         if tool.always_listed and tool.access is not Access.READ:
             raise ToolRegistryError(f"tool {name!r}: only a read tool can be always listed")

@@ -487,13 +487,7 @@ async def schedule(
     return await _changed(session, post, env)
 
 
-async def queue(
-    session: AsyncSession,
-    scheduled_post_id: uuid.UUID,
-    env: Env,
-    *,
-    lead: timedelta = MIN_SCHEDULE_LEAD,
-) -> ScheduledPost:
+async def queue(session: AsyncSession, scheduled_post_id: uuid.UUID, env: Env) -> ScheduledPost:
     """Add to queue (FR-PUB-09): the earliest free posting time shared by the post's accounts,
     then as Schedule."""
     post = await _locked(session, scheduled_post_id)
@@ -506,7 +500,6 @@ async def queue(
         timezone=env.timezone,
         now=env.now,
         post_id=post.id,
-        lead=lead,
     )
     await _schedule(session, post, at, env)
     return await _changed(session, post, env)

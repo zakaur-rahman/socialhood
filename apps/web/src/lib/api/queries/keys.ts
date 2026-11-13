@@ -54,6 +54,7 @@ export const keys = {
   accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
   apiKeys: (wid: string) => ["w", wid, "api-keys"] as const,
+  apiKeyActivity: (wid: string, id: string) => ["w", wid, "api-keys", "activity", id] as const,
   mcpUpload: (wid: string, id: string) => ["w", wid, "mcp-uploads", id] as const,
   aiConnectionsSettings: (wid: string) => ["w", wid, "ai-connections", "settings"] as const,
   aiConnections: (wid: string) => ["w", wid, "ai-connections", "list"] as const,

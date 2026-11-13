@@ -41,10 +41,8 @@ def has_untrusted_text(value: Any) -> bool:
     return False
 
 
-def success(output: ToolOutput, *, extra: dict[str, Any] | None = None) -> types.CallToolResult:
+def success(output: ToolOutput) -> types.CallToolResult:
     structured = output.model_dump(mode="json")
-    if extra:
-        structured.update(extra)
     lines = [UNTRUSTED_NOTE] if has_untrusted_text(structured) else []
     lines.append(output.summary)
     lines.append(json.dumps(structured, ensure_ascii=False, separators=(",", ":")))

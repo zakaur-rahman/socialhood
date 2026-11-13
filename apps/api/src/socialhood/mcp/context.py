@@ -53,10 +53,10 @@ class ToolCall:
     call_id: uuid.UUID = field(default_factory=uuid.uuid4)
     tool_name: str = ""  # the tool being called (what a confirmation token is bound to)
     client_name: str | None = None  # the AI app (clientInfo, else the User-Agent)
-    # Work for after the commit (an enqueue that needs the committed row), run by the pipeline in
-    # order; a failing one is logged and never fails the call.
-    after_commit: list[Callable[[], Awaitable[None]]] = field(default_factory=list)
     audit_notes: list[AuditNote] = field(default_factory=list)
+    # Work for after the commit (publish now hands the post over, activation restarts held
+    # replies), run by the pipeline in order; a failing one is logged and never fails the call.
+    after_commit: list[Callable[[], Awaitable[None]]] = field(default_factory=list)
 
     def note(
         self, action: str, target_type: str, target_id: uuid.UUID | str | None = None, **detail: Any

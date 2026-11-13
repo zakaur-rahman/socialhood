@@ -9,10 +9,13 @@ request and the client sends it again, so duplicate writes are expected, not rar
   ``idempotency_conflict``. Only successful results are stored, so a refused call can be retried
   with the same key once fixed.
 - **Implicit dedupe** for a tool with ``dedupe_window_s``: without a key, an identical call
-  (same connection, tool and arguments) inside the window returns the first result.
+  (same connection, tool, arguments and confirmation token) inside the window returns the first
+  result. A new preview gives a new token, so asking for the same thing again after a new preview
+  is a new request, while a retry of a lost response carries the same token and replays.
 
-Either way the replayed result has ``duplicate_of_previous_call: true``. Valkey being down never
-blocks a write (both guards then let it through, as the app's own sends do).
+Either way the replayed result has ``duplicate_of_previous_call: true``. While the first of two
+such calls is still running, the second is refused (``conflict``) instead of running too. Valkey
+being down never blocks a write (the guards then let it through, as the app's own sends do).
 """
 
 from __future__ import annotations
@@ -23,16 +26,19 @@ from typing import Any
 
 from redis.asyncio import Redis
 
+from socialhood.errors import ApiError
 from socialhood.mcp.audit import digest
 from socialhood.mcp.principal import McpPrincipal
 from socialhood.observability.logging import get_logger
-from socialhood.services.idempotency import IdempotencyKey, fingerprint
+from socialhood.services.idempotency import PENDING_TTL_S, IdempotencyKey, fingerprint
 
 log = get_logger(__name__)
 
 KEY_ARGUMENT = "idempotency_key"
-# Each preview gives a new token: a retry after another preview is still the same call.
-NOT_THE_CALL = frozenset({KEY_ARGUMENT, "confirmation_token"})
+TOKEN_ARGUMENT = "confirmation_token"  # noqa: S105  (a field name)
+# An explicit key names the call whatever its token says now: the key decides.
+NOT_THE_CALL = frozenset({KEY_ARGUMENT, TOKEN_ARGUMENT})
+STILL_RUNNING = "The same call is still running. Wait a few seconds and try again."
 
 
 @dataclass
@@ -58,13 +64,30 @@ class WriteGuard:
                 key=f"mcp:{key}",
                 fingerprint=fingerprint("MCP", self.tool, body),
             )
+        # The window's digest keeps the token: a new preview is a new request.
+        windowed = digest({**body, TOKEN_ARGUMENT: self.arguments.get(TOKEN_ARGUMENT)})
+        prefix = f"{self.principal.credential_id}:{self.tool}"
         self._dedupe_name = (
-            f"mcp-dedupe:{self.principal.credential_id}:{self.tool}:{digest(body)}"
-            if not key and self.dedupe_window_s
-            else None
+            f"mcp-dedupe:{prefix}:{windowed}" if not key and self.dedupe_window_s else None
         )
+        # What marks this call as running: its key, else (a tool with a window) its digest.
+        same = digest({KEY_ARGUMENT: key}) if key else windowed if self.dedupe_window_s else None
+        self._running_name = f"mcp-running:{prefix}:{same}" if same else None
 
     async def begin(self) -> dict[str, Any] | None:
+        stored = await self._stored()
+        if stored is None and self._running_name is not None:
+            try:
+                # A call that died frees its place when a pending key does.
+                first = await self.redis.set(self._running_name, "1", nx=True, ex=PENDING_TTL_S)
+            except Exception:
+                log.warning("mcp_dedupe_unavailable")
+                first = True
+            if not first:
+                raise ApiError("conflict", STILL_RUNNING)
+        return stored
+
+    async def _stored(self) -> dict[str, Any] | None:
         if self._explicit is not None:
             stored = await self._explicit.begin()  # idempotency_conflict for other arguments
             return stored.body if stored is not None else None
@@ -77,6 +100,13 @@ class WriteGuard:
             return dict(json.loads(raw)) if raw else None
         return None
 
+    async def _ran(self) -> None:
+        if self._running_name is not None:
+            try:
+                await self.redis.delete(self._running_name)
+            except Exception:
+                log.warning("mcp_dedupe_unavailable")
+
     async def complete(self, structured: dict[str, Any]) -> None:
         if self._explicit is not None:
             await self._explicit.complete(200, structured)
@@ -87,7 +117,9 @@ class WriteGuard:
                 )
             except Exception:
                 log.warning("mcp_dedupe_unavailable")
+        await self._ran()  # after the result is stored, so a retry finds one or the other
 
     async def release(self) -> None:
         if self._explicit is not None:
             await self._explicit.release()
+        await self._ran()

@@ -10,10 +10,10 @@ import { CtaLink } from "../primitives";
 /*
  * C-168: the MCP highlight. Every line is true of the server today (docs/architecture/mcp
  * 03-phase-a.md, 04-phase-b.md, 05-phase-c.md; lib/marketing/connect-ai.ts PLAN_ROWS and SAFETY):
- * the preview and the yes before anything is scheduled (CONFIRM_LINE in full on /mcp), no DMs or
- * comment replies from an AI app, reading and drafts on every plan. Each point is its title and one
- * sentence (the design audit, 2026-11-06); the detail lives on /mcp. C-169: keyword automations can be set up from an AI app (Creator and Business); the automation sends,
- * after a person turns it on in the dashboard. Not claimed: the AI sending messages, TikTok, a listing in
+ * the preview and the yes before anything is scheduled or published (CONFIRM_LINE in full on /mcp), no DMs or
+ * comment replies from an AI app, reading and drafts on every plan. Each point is its title and a
+ * sentence or two (the design audit, 2026-11-06); the detail lives on /mcp. C-169: keyword automations can be set up from an AI app (Creator and Business); the automation sends
+ * once it is on. Owner, 2026-11-11: an AI app can turn one on or off, and publish a post now, each after a preview and a yes. Not claimed: the AI sending messages, TikTok, a listing in
  * Anthropic's or OpenAI's directories, or that we are the only or first tool with an MCP server
  * (C-168: four of the nine competitors we compare have one).
  */
@@ -33,17 +33,17 @@ export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[]
   {
     title: "You confirm first",
     icon: CircleCheck,
-    body: "The AI shows you a preview and waits for your yes before it schedules or changes a post or an automation. Keep approvals on in your AI app for changes. If it's set to always allow, it can confirm without asking you.",
+    body: "The AI shows you a preview and waits for your yes before it schedules or publishes a post, changes a scheduled one, or sets up, changes or switches an automation. Keep approvals on in your AI app for changes. If it's set to always allow, it can confirm without asking you.",
   },
   {
     title: "It doesn't message your customers itself",
     icon: MessageSquareOff,
-    body: `Sending a DM or a comment reply stays in ${SITE_NAME} with a person, and an automation set up from your AI app does nothing until you turn it on in ${SITE_NAME}.`,
+    body: `Sending a DM or a comment reply stays in ${SITE_NAME} with a person. An automation set up from your AI app stays off until it is turned on, and your AI app can turn it on after you say yes.`,
   },
   {
     title: "Reading and drafts on every plan",
     icon: BookOpen,
-    body: "Included on Free. Scheduling posts, drafting knowledge and automations for you to approve, and pausing automations are on Creator and Business.",
+    body: "Included on Free. Scheduling and publishing posts, drafting knowledge for you to approve, and setting up automations and turning them on and off are on Creator and Business.",
   },
 ];
 

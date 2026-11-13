@@ -765,7 +765,7 @@ export interface paths {
         /**
          * Create Api Key
          * @description The key is in this response only. 402 entitlement_required on a plan without the public
-         *     API (Free and Creator; it is part of Business); 409 at 20 active keys. C-167:
+         *     API (Free and Creator; it is part of Business and Agency); 409 at 20 active keys. C-167:
          *     ``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and
          *     CIDRs; empty for any address).
          */
@@ -800,6 +800,27 @@ export interface paths {
          *     409 for a revoked key.
          */
         patch: operations["update_api_key"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys/{key_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Api Key Activity
+         * @description The key's latest 50 tool calls over MCP (the MCP audit keeps 90 days), as for a connected
+         *     AI app: tool, outcome and time.
+         */
+        get: operations["get_api_key_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/assignment": {
@@ -3079,10 +3100,9 @@ export interface paths {
         put?: never;
         /**
          * Complete Mcp Upload
-         * @description After the browser uploaded the file: check it came in with this ticket and add it to the
-         *     media library. 422 on ``public_id`` for a file that isn't this ticket's; 415 never (a file
-         *     over a limit is a ``rejected`` ticket, with the reason); 409 for an expired ticket; 402
-         *     quota_exceeded past the plan's daily upload caps.
+         * @description After the browser uploaded the file: add the ticket's file to the media library. 409 when
+         *     no file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``
+         *     ticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.
          */
         post: operations["complete_mcp_upload"];
         delete?: never;
@@ -3277,7 +3297,8 @@ export interface paths {
         };
         /**
          * Get Notification Preferences
-         * @description The signed-in member's weekly digest switch and push switches in this workspace.
+         * @description The signed-in member's email switches (the weekly digest, changes by AI apps) and push
+         *     switches in this workspace.
          */
         get: operations["get_notification_preferences"];
         /**
@@ -8485,7 +8506,7 @@ export interface components {
         /**
          * DropSignature
          * @description The signed fields of the ticket's one upload (cloud_name, api_key, timestamp, folder, tags,
-         *     signature) and where to send them.
+         *     public_id, signature) and where to send them.
          */
         DropSignature: {
             /** Allowed Formats */
@@ -8496,6 +8517,8 @@ export interface components {
             cloud_name: string;
             /** Folder */
             folder: string;
+            /** Public Id */
+            public_id: string;
             /** Signature */
             signature: string;
             /** Tags */
@@ -9796,11 +9819,6 @@ export interface components {
             /** Ids */
             ids?: string[] | null;
         };
-        /** McpUploadComplete */
-        McpUploadComplete: {
-            /** Public Id */
-            public_id: string;
-        };
         /** McpUploadTicket */
         McpUploadTicket: {
             /**
@@ -10262,6 +10280,8 @@ export interface components {
          *     back. Fields are required both ways, so the request and response share one schema.
          */
         NotificationPreferences: {
+            /** Email Ai Changes */
+            email_ai_changes: boolean;
             /** Email Digest */
             email_digest: boolean;
             push: components["schemas"]["PushPreferences"];
@@ -16359,6 +16379,47 @@ export interface operations {
             };
         };
     };
+    get_api_key_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiConnectionActivity"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_assignment: {
         parameters: {
             query?: never;
@@ -22285,11 +22346,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["McpUploadComplete"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

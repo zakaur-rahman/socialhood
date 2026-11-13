@@ -21,7 +21,7 @@
 - no token: `401` with `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/mcp"`. A bad, revoked or orphaned key: the same with `error="invalid_token"` and the reason. Unknown keys also count against the caller's IP (60 a minute), as on the public API;
 - the protected resource metadata (RFC 9728) is served at `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-protected-resource`. Its authorization server, the API's own origin, answers from phase C.
 
-**Every call goes through one path** (`mcp/calls.py`): the workspace's mode, the scope, the role, the plan, the rate limits (`mcp` 120 a minute per key, `mcp_workspace` 300 a minute per workspace), the daily cap (`mcp_calls_daily`: Free 100, Pro 2,000, Max 10,000), the arguments, idempotency for writes, the tool, then the audit. Refusals are tool errors (`isError`) in the app's own words, never HTTP errors.
+**Every call goes through one path** (`mcp/calls.py`): the workspace's mode, the scope, the role, the plan, the rate limits (`mcp` 120 a minute per key, `mcp_workspace` 300 a minute per workspace), the daily cap (`mcp_calls_daily`: Free 100, Creator 2,000, Business 2,000, Agency 10,000; at the time of phase A, Pro 2,000 and Max 10,000), the arguments, idempotency for writes, the tool, then the audit. Refusals are tool errors (`isError`) in the app's own words, never HTTP errors.
 
 **The kill switch.** `workspaces.ai_connections_mode`: `off`, `read_only`, `read_drafts` or `full` (default). The plan caps it (`ai_connections`, D2): Free goes up to `read_drafts`. Owners and admins set it with `GET/PUT /v1/w/{wid}/ai-connections/settings`. When it's `off`, only `get_workspace` is listed, and it says why.
 
@@ -72,7 +72,7 @@ migrations/versions/0054_mcp_server.py
 ## Run it locally
 
 1. Start the API as usual (`uv run uvicorn socialhood.main:app --port 8000`, no `--reload`). `/mcp` is on by default.
-2. In the app, make an API key in Settings › API keys with the scopes you want. The workspace must be on Pro or Max to make a key (PD-6).
+2. In the app, make an API key in Settings › API keys with the scopes you want. The workspace must be on Business or Agency to make a key (C-172, C-174; Pro or Max under PD-6 when phase A was built).
 3. Check it:
 
    ```bash

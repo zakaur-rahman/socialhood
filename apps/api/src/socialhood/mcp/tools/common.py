@@ -6,6 +6,8 @@
   (01-design.md §2.4). Their own role bound (``min_role``) still applies.
 - ``moment``: a stored time as both the workspace's local time and UTC, so a wrong time-zone
   guess is visible (§2.5).
+- ``ai_rate_limit``: the workspace's ``ai`` limit, as the app's own AI routes apply it, for a
+  tool that has a model write something (Ask, a drafted reply).
 - ``resolve_post``: a synced post (``media_items``) from an id or “latest”, the one way every tool
   that takes ``post`` reads it (C-169), so “my last post” means the same post everywhere.
 - Field names: customer-written text is in fields ending in ``_text`` (mcp/results.py).
@@ -13,19 +15,26 @@
 
 from __future__ import annotations
 
+import math
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSessionTransaction
 
 from socialhood.agent.tools import load_tools as load_agent_tools
 from socialhood.agent.tools.common import find_account
 from socialhood.errors import ApiError, FieldError
 from socialhood.mcp.context import ToolCall
 from socialhood.models.media import MediaItem
+from socialhood.observability.logging import get_logger
+from socialhood.realtime import events
 from socialhood.repositories import comments as comments_repo
+from socialhood.security import ratelimit
 from socialhood.services.comments.queries import find_posts
+
+log = get_logger(__name__)
 
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -50,6 +59,30 @@ async def agent_tool(call: ToolCall, name: str, arguments: dict[str, Any]) -> An
             ],
         ) from error
     return await spec.handler(call.agent_context(), args)
+
+
+async def ai_rate_limit(call: ToolCall) -> None:
+    if not call.settings.rate_limits_enabled:
+        return
+    try:
+        wait = await ratelimit.hit(call.redis, ratelimit.LIMITS["ai"], str(call.workspace.id))
+    except Exception as error:
+        log.warning("rate_limit_unavailable", limit="ai", error=type(error).__name__)
+        return
+    if wait > 0:
+        seconds = max(1, math.ceil(wait))
+        raise ApiError(
+            "rate_limited",
+            f"Too many requests to Amplychat's AI just now. Try again in {seconds} seconds.",
+            headers={"Retry-After": str(seconds)},
+        )
+
+
+async def end_preview(call: ToolCall, savepoint: AsyncSessionTransaction) -> None:
+    """End a preview: everything the call wrote is rolled back, and the events it queued are
+    dropped."""
+    await savepoint.rollback()
+    events.discard(call.session)
 
 
 def clock(at: datetime) -> str:
