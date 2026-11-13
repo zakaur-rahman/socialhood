@@ -321,7 +321,8 @@ async def test_a_time_after_the_window_is_not_moved_silently(shop: Shop) -> None
     )
     assert soon.send_at is None
     assert soon.action_card.note is not None
-    assert soon.action_card.note.startswith("Pick a time from Tue 29 Sep, 8:03 PM")
+    # The earliest time is 1 minute ahead (C-181), rounded up to the next minute.
+    assert soon.action_card.note.startswith("Pick a time from Tue 29 Sep, 8:02 PM")
 
 
 async def test_a_closed_window_and_unclear_contacts_are_refused(shop: Shop) -> None:
