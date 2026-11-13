@@ -7,5 +7,6 @@
 !src/
 !migrations/
 !scripts/worker.sh
+!scripts/block_oauth_client.py
 **/__pycache__
 **/*.py[cod]
