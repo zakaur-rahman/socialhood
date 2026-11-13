@@ -19,7 +19,6 @@ export const TITLE_MAX = 40;
 export const GREETING_MAX = 300;
 export const EMAIL_PROMPT_MAX = 200;
 export const CONSENT_TEXT_MAX = 300;
-export const DOMAINS_MAX = 20;
 export const DOMAIN_MAX_CHARS = 253;
 
 export const EMAIL_CAPTURE_LABEL: Record<WidgetEmailCapture, string> = {

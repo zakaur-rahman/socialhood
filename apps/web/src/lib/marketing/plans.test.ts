@@ -96,7 +96,7 @@ describe("the card lines (C-173)", () => {
       "AI suggestions only",
     ]);
     expect(pro.features).toEqual([
-      "1 each of Instagram, WhatsApp, Facebook and web chat",
+      "2 Instagram; 1 each of WhatsApp, Facebook and web chat",
       "2 team members",
       "25 active automations",
       "1,500 AI credits a month, up to about 750 AI replies",
@@ -105,7 +105,7 @@ describe("the card lines (C-173)", () => {
       "AI Auto mode and suggestions",
     ]);
     expect(max.features).toEqual([
-      "3 each of Instagram, WhatsApp and Facebook; 1 web chat",
+      "4 Instagram; 3 each of WhatsApp and Facebook; 1 web chat",
       "3 team members",
       "50 active automations",
       "5,000 AI credits a month, up to about 2,500 AI replies",

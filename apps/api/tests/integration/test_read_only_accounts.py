@@ -56,7 +56,7 @@ def assert_read_only(response: httpx.Response, username: str = "maple.cakes") ->
     body = response.json()
     assert (body["code"], body["entitlement"], body["limit"]) == (
         "quota_exceeded",
-        "accounts_per_platform",
+        "instagram_accounts",
         1,
     )
     assert body["detail"] == read_only(username)

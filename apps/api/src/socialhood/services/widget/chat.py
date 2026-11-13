@@ -101,6 +101,12 @@ class Widget:
         self.row = row
 
 
+async def live_sites(session: AsyncSession, row: WidgetSettings) -> list[str]:
+    """The sites the plan covers: after a downgrade the first ones keep working (C-185)."""
+    limit = int(entitlement(await current_plan(session), "widget_sites"))
+    return list(row.allowed_domains or [])[:limit]
+
+
 async def load(session: AsyncSession, routed: RoutedAccount, host: str | None) -> Widget:
     """The widget for ``routed``, or 404 (gone, switched off, workspace deleting) and 403 (a site
     that is not allowed). Runs in the workspace scope."""
@@ -112,7 +118,7 @@ async def load(session: AsyncSession, routed: RoutedAccount, host: str | None) -
     row = await repo.get_settings(session, acct.id)
     if row is None or not row.enabled:
         raise ApiError("not_found", NOT_AVAILABLE)
-    if not origin.host_allowed(host, list(row.allowed_domains or [])):
+    if not origin.host_allowed(host, await live_sites(session, row)):
         raise ApiError("forbidden", WRONG_SITE)
     return Widget(acct, row)
 

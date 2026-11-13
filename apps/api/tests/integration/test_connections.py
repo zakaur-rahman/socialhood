@@ -320,7 +320,7 @@ async def test_a_reconnect_slot_cannot_be_used_for_a_different_account(
     problem = response.json()
     assert (problem["code"], problem["entitlement"], problem["limit"]) == (
         "quota_exceeded",
-        "accounts_per_platform",
+        "instagram_accounts",
         1,
     )
     assert problem["detail"] == "Your plan includes 1 Instagram account."

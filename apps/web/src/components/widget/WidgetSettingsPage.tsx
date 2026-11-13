@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import {
   CONSENT_TEXT_MAX,
   DOMAIN_MAX_CHARS,
-  DOMAINS_MAX,
   EMAIL_CAPTURE_LABEL,
   EMAIL_PROMPT_MAX,
   GREETING_MAX,
@@ -45,6 +44,8 @@ import { MONO } from "@/styles/tokens";
 import { widgetAccents } from "./accents";
 
 const BRANDING_UPGRADE = { code: "entitlement_required", entitlement: "widget_remove_branding" } as const;
+/** Agency's limit is the most the widget takes, so there is nothing to upgrade to (C-185). */
+const MOST_SITES = 20;
 
 /**
  * GR-28: Settings → Website chat. Owners and admins add the sites that may show the chat, copy the
@@ -54,7 +55,9 @@ const BRANDING_UPGRADE = { code: "entitlement_required", entitlement: "widget_re
  */
 export function WidgetSettingsPage() {
   const workspace = useCurrentWorkspace();
-  const settings = useWidgetSettings(workspace.id);
+  // The settings are owners' and admins' (the API refuses agents), so an agent isn't sent a request.
+  const canManage = workspace.role !== "agent";
+  const settings = useWidgetSettings(workspace.id, canManage);
 
   return (
     <SettingsFrame
@@ -65,7 +68,9 @@ export function WidgetSettingsPage() {
         />
       }
     >
-      {settings.isPending ? (
+      {!canManage ? (
+        <p className="text-sm text-fg-secondary">Only owners and admins can set up the website chat.</p>
+      ) : settings.isPending ? (
         <PageSkeleton rows={3} />
       ) : settings.isError ? (
         <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />
@@ -112,7 +117,13 @@ function WidgetForm({ saved }: { saved: WidgetSettings }) {
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <InstallCard saved={saved} form={form} onChange={change} domainError={domainError} />
+      <InstallCard
+        saved={saved}
+        form={form}
+        onChange={change}
+        domainError={domainError}
+        onUpgrade={() => upgrade.open({ code: "quota_exceeded", entitlement: "widget_sites", limit: saved.sites_limit })}
+      />
       <LookCard form={form} onChange={change} />
       <VisitorCard form={form} onChange={change} errors={errors} />
       <BrandingCard
@@ -140,7 +151,14 @@ function WidgetForm({ saved }: { saved: WidgetSettings }) {
 
 type CardProps = { form: Form; onChange: (patch: Partial<Form>) => void };
 
-function InstallCard({ saved, form, onChange, domainError }: CardProps & { saved: WidgetSettings; domainError?: string }) {
+function InstallCard({
+  saved,
+  form,
+  onChange,
+  domainError,
+  onUpgrade,
+}: CardProps & { saved: WidgetSettings; domainError?: string; onUpgrade: () => void }) {
+  const limit = saved.sites_limit;
   const live = isLive(form);
 
   async function copy() {
@@ -174,14 +192,23 @@ function InstallCard({ saved, form, onChange, domainError }: CardProps & { saved
           onValueChange={(domains) => onChange({ domains })}
           listLabel="Allowed sites"
           placeholder="example.com"
-          max={DOMAINS_MAX}
+          max={limit}
           maxLength={DOMAIN_MAX_CHARS}
           separator="comma"
           error={domainError}
         />
         <FieldDescription>
-          Add each site by its address, like example.com (www.example.com is included) or *.example.com for every
+          Add each site by its address, like example.com (www.example.com is included) or *.example.com for the domain and every
           subdomain. The chat refuses to load anywhere else.
+        </FieldDescription>
+        <FieldDescription>
+          Your plan includes {limit} {limit === 1 ? "site" : "sites"}.
+          {saved.allowed_domains.length > limit ? ` Only the first ${limit === 1 ? "one works" : `${limit} work`}.` : ""}{" "}
+          {limit < MOST_SITES ? (
+            <Button type="button" variant="link" className="h-auto px-0 text-xs" onClick={onUpgrade}>
+              Upgrade for more
+            </Button>
+          ) : null}
         </FieldDescription>
       </Field>
 

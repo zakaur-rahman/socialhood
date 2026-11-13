@@ -49,8 +49,8 @@ import { LogoMark } from "../primitives";
 export const PRODUCT_DEMO_ID = "product-demo";
 export const PRODUCT_DEMO_TITLE = "See a day in your inbox";
 export const PRODUCT_DEMO_NOTE = "Example, with made-up data";
-/** plans.py: accounts_per_platform is 1, 1, 3 (Free, Creator, Business); members is 1, 2, 3. */
-export const PRODUCT_DEMO_PLAN_NOTE = "Two accounts on one platform need the Business plan, and teammates a paid plan.";
+/** plans.py: instagram_accounts is 1, 2, 4 (Free, Creator, Business); members is 1, 2, 3. */
+export const PRODUCT_DEMO_PLAN_NOTE = "Two Instagram accounts and teammates need a paid plan.";
 
 export const PRODUCT_DEMO_STEPS = [
   "A DM arrives",
@@ -232,8 +232,17 @@ function ListPane() {
         <div className="pd-track">
           {STRIP.map(({ key, label }) => (
             <span key={key} className="pd-seg" data-seg={key} {...at(`seg-${key}`)}>
-              {key === "all" ? <Layers className="size-3.5" /> : <i className={PLATFORM_LOGO_BG[key]} />}
-              <span className="pd-seg-t">{label}</span>
+              {/* As the app's PlatformStrip: "All" in words, each platform as its mark on its colours (C-188). */}
+              {key === "all" ? (
+                <>
+                  <Layers className="size-3.5" />
+                  <span className="pd-seg-t">{label}</span>
+                </>
+              ) : (
+                <span className={`pd-seg-mark ${PLATFORM_LOGO_BG[key]}`} title={label}>
+                  <PlatformGlyph platform={key} />
+                </span>
+              )}
             </span>
           ))}
         </div>

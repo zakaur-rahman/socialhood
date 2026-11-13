@@ -9816,6 +9816,48 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   it warms slightly; the logo mark itself does not.
 - **Readability:** every text and control pairing was recalculated and meets 4.5:1 for text and 3:1
   for marks and control edges.
+## C-185 · Website chat: sites per plan (owner, 2026-11-08; local only so far)
+
+- **Why:** one widget could run on 20 sites on every plan, so $15 covered 20 client sites. The limit
+  now matches the other channel limits: Free 1, Creator 1, Business 3, Agency 20. A wildcard entry
+  such as `*.example.com` counts as one.
+- **After a downgrade:** the first sites in the list keep working and the rest stop, like extra
+  accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
+- **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
+  route creates another, so limits can only be bypassed by signing up again with another email.
+## C-186 · Inbox rows name their account when a platform has several (owner, 2026-11-08; local only so far)
+
+- **Why:** the main idea is many platforms and accounts in one workspace. The account filter already
+  existed beside the search, but with several accounts on a platform the rows looked the same until
+  opened.
+- **Change:** a row shows its account's handle next to the contact, only when that platform has more
+  than one account, and not once the list is filtered to one account. Row height is unchanged.
+## C-187 · Instagram has its own account limit (owner, 2026-11-08; local only so far)
+
+- **Limits:** Instagram: Free 1, Creator 2, Business 4, Agency 10 (`instagram_accounts`). WhatsApp and
+  Facebook keep `accounts_per_platform`: 1, 1, 3, 10. This replaces my earlier advice to keep Creator
+  at 1: the product is one workspace, and a person cannot buy a second one for a second brand.
+- **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
+  be cheaper per account than Agency.
+- **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.
+
+## C-188 · Inbox: account pictures in the filter; the view chips on one row (owner, 2026-11-08; local only so far)
+
+- **Account filter:** each option, and the closed Select, shows the picture (or an initial) beside the
+  handle. The picture is decorative for screen readers.
+- **View chips:** one row that scrolls sideways at every width; they used to wrap from md. A plain mouse
+  wheel scrolls the row too, since its scrollbar is hidden.
+## C-189 · Website chat wildcards: the whole domain, never a shared host (owner said do your best, 2026-11-11)
+
+- **Shared hosts are refused.** A wildcard on a shared address (`*.myshopify.com`, `*.vercel.app`,
+  `*.co.uk`) covered everyone's sites there and counted as one, so one plan could cover any number
+  of shops. The message suggests the shop's own address (`yourshop.myshopify.com`). The list is kept
+  by hand in `services/widget/origin.SHARED_HOSTS`; move to the Public Suffix List if someone gets
+  round it.
+- **A wildcard covers the domain too.** `*.example.com` now also allows `example.com`. A business
+  needed two entries for its own site before, which Free and Creator (one site) could not have.
+- **Production, checked before release:** one website chat, on Creator, with no sites and no
+  wildcards. So the site limit (C-185) and this rule cut nobody at release.
 
 ## C-191 · MCP audit fixes, the features the design promised, and three owner changes (owner, 2026-11-11)
 

@@ -42,6 +42,8 @@ class WidgetSettingsOut(ResponseModel):
     show_branding: bool
     # Free cannot turn the branding off; the settings page shows the switch locked.
     can_remove_branding: bool
+    # How many sites the plan covers (C-185); the settings page says so and caps the list.
+    sites_limit: int
     ai_mode: AiModeName
     script_url: str  # https://…/widget.js
     embed_snippet: str

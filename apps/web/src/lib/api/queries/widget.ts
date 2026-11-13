@@ -11,10 +11,11 @@ import { unwrap } from "./unwrap";
  * GR-28: the website chat widget's settings and embed code. The first read by an owner or admin
  * makes the widget (one per workspace), so an agent never calls it (the tab is hidden for them).
  */
-export function useWidgetSettings(wid: string) {
+export function useWidgetSettings(wid: string, enabled = true) {
   const api = useApi();
   return useQuery<WidgetSettings>({
     queryKey: keys.widget(wid),
+    enabled,
     queryFn: () => unwrap(api.GET("/v1/w/{wid}/widget", { params: { path: { wid } } })),
   });
 }

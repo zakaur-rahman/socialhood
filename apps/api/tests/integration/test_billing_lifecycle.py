@@ -270,7 +270,8 @@ async def test_max_to_pro_applies_the_lower_limits(owner: Owner, engine: AsyncEn
     [notice] = await owner.rows(
         "SELECT body FROM notifications WHERE workspace_id = :w AND type = 'plan_downgraded'"
     )
-    assert notice["body"] == "3 accounts can no longer send."
+    # Four Instagram accounts; Creator keeps 2 of them (C-187), so 2 can no longer send.
+    assert notice["body"] == "2 accounts can no longer send."
 
 
 # ---------------------------------------------------------------- workspace deletion (F-16)

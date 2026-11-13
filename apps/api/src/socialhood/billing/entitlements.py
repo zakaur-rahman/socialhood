@@ -5,7 +5,7 @@ Every 402 comes from here, so each carries its code and the §1.7 key (errors.Pl
 - ``entitlement_required``: a feature the plan lacks (``PlanLimit(entitlement=key)``, limit null),
   e.g. Auto mode ("ai_modes") or AI-reply automations ("ai_reply_automations").
 - ``quota_exceeded``: a limit the workspace has reached (``PlanLimit(entitlement=key, limit=n)``):
-  a capacity counted live (accounts_per_platform, active_automations, knowledge_characters,
+  a capacity counted live (the account limits, active_automations, knowledge_characters,
   pending_scheduled_messages) or a monthly allowance from usage_counters (ai_credits_monthly,
   scheduled_posts_monthly; billing/usage.py has the periods).
 
@@ -24,14 +24,14 @@ Three forms, the same 402 whichever answers:
   that is off stays a 409): the routes §2.15 marks "credits" whose services predate P8.
 
 The plan is always the workspace's subscription (billing/plans.py, never a copy). Accounts beyond
-the plan's accounts_per_platform (after a downgrade, FR-BIL-07) are read-only: the earliest
+the plan's limit for their platform (after a downgrade, FR-BIL-07) are read-only: the earliest
 connected accounts of each platform keep the plan's slots; the rest can be read, synced and
 disconnected but not send (``check_account_writable``): replies and retries
 (services/sending.queue_outbound, so AI, automation and scheduled sends too), comment replies,
 scheduled messages and automation activations refuse them, and the automation runtime skips them
 (``read_only_error``). Publishing is not gated (C-050).
 
-C-172 adds two channel rules on top of accounts_per_platform: ``channels_total`` (Free: 2 channels
+C-172 adds two channel rules on top of the per-platform limits: ``channels_total`` (Free: 2 channels
 across Instagram, Facebook and the website chat) and ``whatsapp`` (not on Free). Both are checked
 where a channel is added (``check_new_channel``: connecting an account, the website chat's first
 open) and both feed ``read_only_accounts``, so an existing Free workspace with WhatsApp, or with
@@ -53,7 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.ai.metering import Quota, quota
 from socialhood.auth.deps import Session, WorkspaceContext, require_role
-from socialhood.billing.plans import current_plan, entitlement
+from socialhood.billing.plans import accounts_key, accounts_limit, current_plan, entitlement
 from socialhood.billing.usage import PERIOD_KEYS, live_used, period_used
 from socialhood.errors import ApiError, PlanLimit
 from socialhood.models.connections import AccountStatus, SocialAccount
@@ -204,7 +204,7 @@ async def check_new_channel(
     """The C-172 channel rules for a channel about to be added (not for a reconnect of a live
     one, which keeps its slot): 402 entitlement_required for WhatsApp on a plan without it, 402
     quota_exceeded (channels_total) when the plan's channels in total are all in use. The
-    per-platform limit (accounts_per_platform) is the caller's own check."""
+    per-platform limit (plans.accounts_limit) is the caller's own check."""
     if platform == "whatsapp" and not allows(plan, "whatsapp"):
         raise entitlement_error("whatsapp")
     total = entitlement(plan, "channels_total")
@@ -227,13 +227,10 @@ def _noun(limit: int, platform: str) -> str:
 
 async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID, str]:
     """Each read-only account and why: ``whatsapp`` (the plan has none), ``platform`` (beyond
-    accounts_per_platform) or ``total`` (beyond channels_total). The earliest connected accounts
-    keep the slots."""
-    limit = entitlement(plan, "accounts_per_platform")
+    the platform's account limit) or ``total`` (beyond channels_total). The earliest connected
+    accounts keep the slots."""
     total = entitlement(plan, "channels_total")
     whatsapp = allows(plan, "whatsapp")
-    if limit is None and total is None and whatsapp:
-        return {}
     rows = (
         await session.execute(
             select(SocialAccount.id, SocialAccount.platform)
@@ -253,6 +250,7 @@ async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID
             extra[account_id] = "whatsapp"
             continue
         seen[platform] = seen.get(platform, 0) + 1
+        limit = accounts_limit(plan, platform)
         if limit is not None and seen[platform] > int(limit):
             extra[account_id] = "platform"
             continue
@@ -293,9 +291,9 @@ async def read_only_error(
             f"Your plan includes {total} channels in total. {name} is read-only until you "
             "upgrade or disconnect another channel.",
         )
-    limit = int(entitlement(plan, "accounts_per_platform"))
+    limit = int(accounts_limit(plan, account.platform))
     return quota_error(
-        "accounts_per_platform",
+        accounts_key(account.platform),
         limit,
         f"Your plan includes {_noun(limit, account.platform)}. {name} is read-only until you "
         "upgrade or disconnect another.",

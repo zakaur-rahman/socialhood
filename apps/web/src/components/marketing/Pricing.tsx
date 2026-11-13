@@ -33,7 +33,7 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
             </p>
           </div>
           <p className="lede">
-            Contacts are unlimited on every plan. Creator adds Auto replies, WhatsApp,{" "}
+            Contacts are unlimited on every plan. Creator adds Auto replies, WhatsApp, a second Instagram account,{" "}
             <Link href="/automations">more automations</Link> and more AI credits.
             Cancel anytime: a paid plan stays until the end of the period you&apos;ve paid for.
           </p>

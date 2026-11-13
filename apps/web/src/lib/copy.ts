@@ -464,10 +464,20 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => counted(n, "active automation", "active automations"),
     unlimited: "active automations",
   },
+  widget_sites: {
+    limitTitle: "Website limit reached",
+    includes: (n) => counted(n, "website", "websites"),
+    unlimited: "websites",
+  },
   accounts_per_platform: {
     limitTitle: "Account limit reached",
-    includes: (n) => `${counted(n, "account", "accounts")} per platform`,
+    includes: (n) => `${counted(n, "WhatsApp number", "WhatsApp numbers")} and ${counted(n, "Facebook Page", "Facebook Pages")}`,
     unlimited: "connected accounts",
+  },
+  instagram_accounts: {
+    limitTitle: "Account limit reached",
+    includes: (n) => counted(n, "Instagram account", "Instagram accounts"),
+    unlimited: "Instagram accounts",
   },
   channels_total: {
     limitTitle: "Channel limit reached",
@@ -587,8 +597,13 @@ const FEATURE_COPY: Record<string, { feature: string; plans: string; body: strin
   },
 };
 
-/** The plan an upgrade for this 402 should offer: Business for what only Business has (C-172), else Creator. */
-export function upgradeTarget(entitlement: string | null | undefined): "pro" | "max" {
+/**
+ * The plan an upgrade for this 402 should offer: Business for what only Business has (C-172), else
+ * Creator. Someone on Creator is offered Business, and so is anyone short of websites: Creator has
+ * the same one site as Free (C-185).
+ */
+export function upgradeTarget(entitlement: string | null | undefined, plan?: PlanName | null): "pro" | "max" {
+  if (plan === "pro" || entitlement === "widget_sites") return "max";
   return (entitlement && FEATURE_COPY[entitlement]?.target) || "pro";
 }
 
@@ -634,7 +649,7 @@ export function upgradeCopy(
     if (key === "pro") {
       return {
         title: "Upgrade to Creator",
-        body: "Creator adds Auto replies, WhatsApp, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
+        body: "Creator adds Auto replies, WhatsApp, a second Instagram account, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
       };
     }
     const feature = FEATURE_COPY[key];

@@ -3,9 +3,10 @@
 When a workspace moves to Free (or any plan with lower limits): accounts in Auto move to Suggest;
 AI-reply automations pause; automations of read-only accounts pause; automations still over the
 active_automations limit pause, keeping the most recently updated active; connected accounts
-beyond accounts_per_platform become read-only (billing/entitlements.read_only_accounts: each
+beyond their platform's limit become read-only (billing/entitlements.read_only_accounts: each
 platform's earliest connected accounts keep the plan's slots; the others refuse scheduled
-messages and automation activations with 402). Nothing is deleted, and nothing comes back on its
+messages and automation activations with 402). A website chat's sites beyond widget_sites stop
+showing it (services/widget/chat.live_sites). Nothing is deleted, and nothing comes back on its
 own after an upgrade.
 The report feeds the plan_downgraded notification ("2 accounts switched from Auto to Suggest. 4
 automations paused.").
@@ -17,13 +18,14 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import allows, read_only_accounts
 from socialhood.billing.plans import entitlement
 from socialhood.models.automations import Automation, AutomationStatus
 from socialhood.models.connections import AiMode, SocialAccount
+from socialhood.models.widget import WidgetSettings
 from socialhood.services.automations.definitions import pause_rows
 
 
@@ -32,10 +34,16 @@ class DowngradeReport:
     accounts_to_suggest: list[uuid.UUID] = field(default_factory=list)
     automations_paused: list[uuid.UUID] = field(default_factory=list)
     accounts_read_only: list[uuid.UUID] = field(default_factory=list)
+    sites_cut: int = 0
 
     @property
     def changed(self) -> bool:
-        return bool(self.accounts_to_suggest or self.automations_paused or self.accounts_read_only)
+        return bool(
+            self.accounts_to_suggest
+            or self.automations_paused
+            or self.accounts_read_only
+            or self.sites_cut
+        )
 
     def summary(self) -> str:
         """The notification's list of what changed (F-15)."""
@@ -46,6 +54,8 @@ class DowngradeReport:
             parts.append(f"{n} automation{'' if n == 1 else 's'} paused.")
         if n := len(self.accounts_read_only):
             parts.append(f"{n} account{'' if n == 1 else 's'} can no longer send.")
+        if n := self.sites_cut:
+            parts.append(f"{n} website{'' if n == 1 else 's'} stopped showing the chat.")
         return " ".join(parts) or "Nothing needed to change."
 
 
@@ -82,8 +92,10 @@ async def apply_downgrade(session: AsyncSession, *, plan: str, now: datetime) ->
         stopped += keep[limit:]
     paused = pause_rows(stopped, now)
     await session.flush()
+    sites = await session.scalar(select(func.cardinality(WidgetSettings.allowed_domains))) or 0
     return DowngradeReport(
         accounts_to_suggest=to_suggest,
         automations_paused=paused,
         accounts_read_only=sorted(read_only),
+        sites_cut=max(0, sites - int(entitlement(plan, "widget_sites"))),
     )
