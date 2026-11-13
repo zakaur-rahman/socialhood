@@ -9907,3 +9907,19 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Left as they are:** `oauth_tokens.family_id` (needs a migration to drop); no `overwrite=false`
   on upload signatures; the link probe still holds a database connection for up to 10 seconds; the
   "later phases" tools (sending a reply, deleting a post, contacts).
+
+## C-194 · Landing-page analytics with Umami (owner, 2026-11-13)
+
+- **Asked:** analytics for the landing page only; the owner created an Umami Cloud site and asked
+  to merge straight to main.
+- **Done:** the Umami script on the marketing layout only, counting only on `amplychat.com`
+  (`data-domains`), so the dashboard, local runs, CI and e2e send nothing; Do Not Track honoured;
+  every link into sign-up (`CtaLink`) counts a `start_free` goal with its page. CSP allows
+  `cloud.umami.is` (script) and `gateway.umami.is` (collector). /cookies, /privacy and
+  /subprocessors say what is counted; their dates move to 2026-11-13.
+- **Calls made:** the script loads from Umami directly, not through our own domain: a proxy would
+  make every visit look like it came from our server and break the country counts. GTM and GA4
+  stay out (cookies, a consent banner, against the "no tracking" promise); GTM can come with paid
+  ads, behind a consent banner.
+- **Owner to confirm:** the Umami account's data region (the subprocessors page names it as "the
+  region chosen for our account").
