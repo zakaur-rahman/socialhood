@@ -67,4 +67,11 @@ export const SUBPROCESSORS: readonly Subprocessor[] = [
     terms: { label: "Sentry DPA", href: "https://sentry.io/legal/dpa/" },
     note: "Only while error tracking is turned on.",
   },
+  {
+    name: "Umami",
+    purpose: "Visit counts on the public website, without cookies (C-194)",
+    data: "The page, the referring site, browser and device type, and the country worked out from the IP address, which isn't stored. Only for visitors of amplychat.com, never app or customer data",
+    location: "The region chosen for our Umami Cloud account (EU or United States)",
+    terms: { label: "Umami privacy policy", href: "https://umami.is/privacy" },
+  },
 ];

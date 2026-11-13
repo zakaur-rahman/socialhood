@@ -1,10 +1,12 @@
 import "@/components/site/site.css";
 
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { ThemePin } from "@/components/theme/ThemePin";
+import { UMAMI_DOMAINS, UMAMI_SCRIPT, UMAMI_WEBSITE_ID } from "@/lib/analytics";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/marketing/site";
 import { colorValue } from "@/styles/token-values";
 
@@ -42,6 +44,14 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         <div className="flex flex-1 flex-col">{children}</div>
       </div>
       <SiteFooter />
+      {/* Cookieless visit counts on amplychat.com only (C-194, lib/analytics.ts); Do Not Track is honoured. */}
+      <Script
+        src={UMAMI_SCRIPT}
+        data-website-id={UMAMI_WEBSITE_ID}
+        data-domains={UMAMI_DOMAINS}
+        data-do-not-track="true"
+        strategy="afterInteractive"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AnswerText } from "@/components/agent/AnswerText";
+import { UMAMI_COLLECTOR, UMAMI_SCRIPT } from "@/lib/analytics";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { browser, webUrl } from "@/lib/billing/browser";
 import { message } from "@/test/api";
@@ -41,8 +42,11 @@ describe("the web CSP (SEC-11)", () => {
       ]),
     );
     expect(directive(csp, "script-src")).toEqual(
-      expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net"]),
+      expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net", "https://cloud.umami.is"]),
     );
+    expect(directive(csp, "connect-src")).toContain("https://gateway.umami.is"); // C-194
+    expect(new URL(UMAMI_SCRIPT).origin).toBe("https://cloud.umami.is"); // the CSP's copy of lib/analytics.ts
+    expect(UMAMI_COLLECTOR).toBe("https://gateway.umami.is");
     expect(directive(csp, "img-src")).toContain("https://res.cloudinary.com");
   });
 

@@ -2,6 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ctaEvent } from "@/lib/analytics";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { cx } from "@/lib/cx";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,8 @@ export function ctaClass(variant: CtaVariant = "primary", className?: string): s
 /**
  * A link styled as a button. Links to Clerk's pages aren't prefetched: their scripts are heavy and
  * most visitors only read the page. Nor are links to a section of the page being read (`#…`):
- * prefetching them fetched that page again (C-152).
+ * prefetching them fetched that page again (C-152). A link into sign-up counts as a "Start free"
+ * click in the landing-page analytics (C-194).
  */
 export function CtaLink({
   href,
@@ -92,6 +94,7 @@ export function CtaLink({
       prefetch={href.startsWith("#") ? false : prefetch}
       onClick={onClick}
       data-variant={variant}
+      data-umami-event={ctaEvent(href)}
       className={ctaClass(variant, className)}
     >
       {children}

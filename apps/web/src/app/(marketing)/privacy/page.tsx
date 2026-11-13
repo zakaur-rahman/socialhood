@@ -728,9 +728,11 @@ function sections(): LegalSection[] {
       body: (
         <p>
           We only use cookies and browser storage that {N} needs to work: Clerk&apos;s sign-in cookies, a theme cookie, and
-          a few view preferences and the website chat&apos;s visitor ID in local storage. We don&apos;t use analytics,
-          advertising or tracking cookies, so there is no cookie banner. Every item, what it&apos;s for and how long it
-          lasts is on our <Link href="/cookies">cookies page</Link>.
+          a few view preferences and the website chat&apos;s visitor ID in local storage. We don&apos;t use advertising or
+          tracking cookies, so there is no cookie banner. On the public website we count visits with Umami, which sets no
+          cookie: it records the page, the referring site, the browser and device type and the country (from the IP
+          address, which isn&apos;t kept), so we can see which pages people read. Every item, what it&apos;s for and how long
+          it lasts is on our <Link href="/cookies">cookies page</Link>.
         </p>
       ),
     },
