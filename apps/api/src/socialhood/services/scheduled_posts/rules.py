@@ -115,7 +115,7 @@ REEL_OPTIONS_ONLY_REEL = "Reel options only apply to a single Instagram video. R
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."
 NOT_SCHEDULED = "This post isn't scheduled."
-TIME_TOO_SOON = "Pick a time at least 5 minutes from now."
+TIME_TOO_SOON = "Pick a time at least 1 minute from now."
 
 
 # ---------------------------------------------------------------- format (§5.7)
@@ -715,7 +715,7 @@ def checklist(
         if post.publish_at < now + MIN_SCHEDULE_LEAD:
             items.append(_item("publish_at", TIME_TOO_SOON, ok=False, field="publish_at"))
         else:
-            items.append(_item("publish_at", "At least 5 minutes from now"))
+            items.append(_item("publish_at", "At least 1 minute from now"))
     return items
 
 

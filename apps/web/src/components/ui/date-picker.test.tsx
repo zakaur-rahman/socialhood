@@ -140,6 +140,30 @@ describe("DateTimePicker", () => {
     await pickDate(user, "Date", "2026-10-01");
     expect(screen.getByText("Saved: 2026-10-01 21:00")).toBeInTheDocument();
   });
+
+  it("on the first allowed day, times before minTime are disabled in the list; other days offer them all", async () => {
+    const user = userEvent.setup();
+    function Today() {
+      const [value, setValue] = useState({ date: "2026-09-28", time: "" });
+      return (
+        <>
+          <p>Saved: {value.date} {value.time}</p>
+          <DateTimePicker idPrefix="when" value={value} onChange={setValue} min="2026-09-28" minTime="14:07" today="2026-09-28" />
+        </>
+      );
+    }
+    render(<Today />);
+    await user.click(screen.getByRole("button", { name: "Choose a time" }));
+    const past = await screen.findByRole("option", { name: "14:00" });
+    expect(past).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("option", { name: "14:15" })).not.toHaveAttribute("aria-disabled");
+    await user.click(screen.getByRole("option", { name: "14:15" }));
+    expect(screen.getByText("Saved: 2026-09-28 14:15")).toBeInTheDocument();
+
+    await pickDate(user, "Date", "2026-09-29");
+    await user.click(screen.getByRole("button", { name: "Choose a time" }));
+    expect(await screen.findByRole("option", { name: "09:00" })).not.toHaveAttribute("aria-disabled");
+  });
 });
 
 describe("DatePicker with jumpMonths", () => {

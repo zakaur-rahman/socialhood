@@ -9773,3 +9773,11 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   inline styles).
 - **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
   API doesn't send yet.
+## C-181 · Schedule a post or a message 1 minute ahead; no past times in the time list (owner, 2026-11-08)
+
+- **Minimum lead: 1 minute.**
+  - Posts: down from 5 minutes, in both the API (`MIN_SCHEDULE_LEAD`) and the app (`MIN_SCHEDULE_LEAD_MS`, the calendar's `MIN_LEAD_MS`, the week view's clickable rows). Covers schedule, reschedule, "Move to…", calendar drags and bulk shifts.
+  - Messages: down from 2 minutes in the app's picker (`ScheduleFields`). The API's `MIN_LEAD` already allowed 1 minute.
+  - The 5-minute margin before a reply window closes stays.
+- **AI apps over MCP keep 5 minutes** (`AI_APP_LEAD` in mcp/tools/publish.py). /developers/mcp and the MCP page promise that a post scheduled by an AI app waits 5 minutes, so the team can stop it. That promise stays true.
+- **Time list:** on the earliest allowed day (today), times before the first allowed minute are shown disabled and can't be picked, in the post composer, "Move to…" and Schedule message alike. A typed time is still checked by the form, as before.

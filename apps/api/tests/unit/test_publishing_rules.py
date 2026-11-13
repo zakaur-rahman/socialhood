@@ -167,7 +167,7 @@ def test_a_passing_post_lists_each_check_once_in_order() -> None:
 
 
 def test_publish_at_is_checked_only_when_there_is_a_time_and_asked() -> None:
-    soon = _post(publish_at=NOW + timedelta(minutes=4))
+    soon = _post(publish_at=NOW + timedelta(seconds=30))
     keys = [i.key for i in rules.checklist(_post(), now=NOW, publishing_limit=100)]
     assert "publish_at" not in keys
     [item] = [

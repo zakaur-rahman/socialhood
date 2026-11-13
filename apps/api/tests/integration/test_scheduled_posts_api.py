@@ -340,10 +340,10 @@ async def test_invalid_formats_are_rejected_with_field_errors(shop: Shop) -> Non
     tall = await shop.image(width=1080, height=1920)
     bad = await shop.ready_draft(asset_ids=[long_video, tall])
     errors = await shop.fields(
-        "POST", f"/scheduled-posts/{bad['id']}/schedule", {"publish_at": iso(later(minutes=2))}
+        "POST", f"/scheduled-posts/{bad['id']}/schedule", {"publish_at": iso(later(seconds=30))}
     )
     assert set(errors) == {"asset_ids.0", "asset_ids.1", "publish_at"}
-    assert errors["publish_at"] == "Pick a time at least 5 minutes from now."
+    assert errors["publish_at"] == "Pick a time at least 1 minute from now."
 
     nothing = await shop.draft()
     errors = await shop.fields(
@@ -440,7 +440,7 @@ async def test_a_scheduled_post_can_be_updated_only_while_it_still_passes(shop: 
     )
     assert errors == {
         "asset_ids": "Add an image or video.",
-        "publish_at": "Pick a time at least 5 minutes from now.",
+        "publish_at": "Pick a time at least 1 minute from now.",
     }
     row = await shop.one("SELECT caption, format FROM scheduled_posts WHERE id = :p", p=post["id"])
     assert row == {"caption": "Updated caption", "format": "image"}
@@ -535,7 +535,7 @@ async def test_edit_and_retry_makes_a_failed_post_a_draft_again(shop: Shop) -> N
 # ---------------------------------------------------------------- reschedule and unschedule
 
 
-async def test_reschedule_moves_a_scheduled_post_at_least_five_minutes_ahead(shop: Shop) -> None:
+async def test_reschedule_moves_a_scheduled_post_at_least_a_minute_ahead(shop: Shop) -> None:
     post = await shop.scheduled()
     new_at = later(days=4).replace(microsecond=0)
 
@@ -545,9 +545,9 @@ async def test_reschedule_moves_a_scheduled_post_at_least_five_minutes_ahead(sho
     assert (moved["status"], parse(moved["publish_at"])) == ("scheduled", new_at)
 
     errors = await shop.fields(
-        "POST", f"/scheduled-posts/{post['id']}/reschedule", {"publish_at": iso(later(minutes=3))}
+        "POST", f"/scheduled-posts/{post['id']}/reschedule", {"publish_at": iso(later(seconds=30))}
     )
-    assert errors == {"publish_at": "Pick a time at least 5 minutes from now."}
+    assert errors == {"publish_at": "Pick a time at least 1 minute from now."}
 
     draft = await shop.ready_draft()
     problem = await shop.problem(
@@ -786,7 +786,7 @@ async def test_a_published_target_shows_its_post_and_first_comment_result(shop: 
 
 
 async def test_bulk_shift_moves_scheduled_posts_and_skips_the_rest(shop: Shop) -> None:
-    soon = await shop.scheduled(at=later(minutes=30))
+    soon = await shop.scheduled(at=later(minutes=29, seconds=30))  # 30 s ahead after the shift
     later_post = await shop.scheduled(at=later(days=1))
     draft = await shop.ready_draft()
     publishing = await make_scheduled_post(
@@ -803,13 +803,13 @@ async def test_bulk_shift_moves_scheduled_posts_and_skips_the_rest(shop: Shop) -
         {
             "ids": [later_post["id"], soon["id"], draft["id"], str(publishing.id)],
             "action": "shift",
-            "shift_minutes": -28,
+            "shift_minutes": -29,
         },
     )
 
     assert [p["id"] for p in result["updated"]] == [later_post["id"]]
     assert parse(result["updated"][0]["publish_at"]) == parse(later_post["publish_at"]) - (
-        timedelta(minutes=28)
+        timedelta(minutes=29)
     )
     assert result["deleted_ids"] == []
     assert {(s["id"], s["code"]) for s in result["skipped"]} == {

@@ -2,7 +2,7 @@
 
 An account's posting times are weekly local times in the workspace time zone. A time is free when
 no scheduled or publishing post of the account is within 30 minutes of it (SLOT_BUSY_WITHIN), and
-usable when it is at least 5 minutes away (MIN_SCHEDULE_LEAD). A post has one ``publish_at``, so
+usable when it is at least 1 minute away (MIN_SCHEDULE_LEAD). A post has one ``publish_at``, so
 Add to queue takes the earliest time that is a free posting time of every selected account within
 8 weeks (C-043). Changing the times never moves posts already scheduled.
 """
@@ -103,13 +103,14 @@ async def next_free(
     timezone: str,
     now: datetime,
     count: int = NEXT_FREE_COUNT,
+    lead: timedelta = MIN_SCHEDULE_LEAD,
 ) -> dict[uuid.UUID, list[datetime]]:
     """Each account's next ``count`` usable free times (Add to queue's preview)."""
     free = await free_times(
         session,
         account_ids,
         timezone=timezone,
-        start=now + MIN_SCHEDULE_LEAD,
+        start=now + lead,
         end=now + QUEUE_HORIZON,
     )
     return {account_id: times[:count] for account_id, times in free.items()}
@@ -122,6 +123,7 @@ async def queue_time(
     timezone: str,
     now: datetime,
     post_id: uuid.UUID,
+    lead: timedelta = MIN_SCHEDULE_LEAD,
 ) -> datetime:
     """Add to queue: the earliest time within 8 weeks that is a free posting time of every
     account (C-043). 422 on ``targets`` without accounts or without a shared free time, on
@@ -146,7 +148,7 @@ async def queue_time(
         session,
         ids,
         timezone=timezone,
-        start=now + MIN_SCHEDULE_LEAD,
+        start=now + lead,
         end=now + QUEUE_HORIZON,
         exclude_post_id=post_id,
     )

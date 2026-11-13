@@ -132,7 +132,7 @@ describe("the product demo (C-175)", () => {
     }
   });
 
-  it("schedules inside the reply window: at least 2 minutes away, and before it closes (checkSchedule)", () => {
+  it("schedules inside the reply window: at least 1 minute away, and before it closes (checkSchedule)", () => {
     const { container } = render(<ProductDemo />);
     expect(container.querySelector(".pd-sched")).toHaveTextContent("Fri 6 Nov 2026");
     expect(container.querySelector(".pd-sched")).toHaveTextContent("18:30");

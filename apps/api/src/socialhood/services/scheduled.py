@@ -47,7 +47,7 @@ from socialhood.services import sending
 from socialhood.services.notifications import notify_admins
 from socialhood.services.reply_window import may_send, reply_window
 
-MIN_LEAD = timedelta(minutes=1)  # the picker offers now + 2 minutes; this allows the round trip
+MIN_LEAD = timedelta(minutes=1)  # the picker offers the next whole minute after this
 WINDOW_MARGIN = timedelta(minutes=5)  # F-10: at the latest 5 minutes before the window closes
 RECENT = timedelta(days=7)  # sent, failed and expired messages stay on the Scheduled tab this long
 CONVERSATION_LIMIT = 100
@@ -304,7 +304,7 @@ def send_window(
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
     if not may_send(window, "human") or window.closes_at is None:
         return None
-    earliest = (now + 2 * MIN_LEAD).replace(second=0, microsecond=0) + MIN_LEAD
+    earliest = (now + MIN_LEAD).replace(second=0, microsecond=0) + MIN_LEAD
     # The last whole minute that is still 5 minutes before the window closes.
     latest = (window.closes_at - WINDOW_MARGIN - timedelta(microseconds=1)).replace(
         second=0, microsecond=0
@@ -324,7 +324,7 @@ def _check_send_at(
         raise ApiError("reply_window_closed", WINDOW_CLOSED_COPY.get(conv.platform))
     at = send_at if send_at.tzinfo is not None else send_at.replace(tzinfo=UTC)
     if at < now + MIN_LEAD:
-        raise _field_error("send_at", "Pick a time at least 2 minutes from now.")
+        raise _field_error("send_at", "Pick a time at least 1 minute from now.")
     later = reply_window(
         conv.platform, conv.last_inbound_at, human_agent=human_agent, now=at + WINDOW_MARGIN
     )

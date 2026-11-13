@@ -331,11 +331,11 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     expect(within(day("Thursday 1 October")).queryByRole("link", { name: /^Linen styles/ })).not.toBeInTheDocument();
   });
 
-  it("refuses a move to less than 5 minutes from now, and the card stays", async () => {
+  it("refuses a move to less than 1 minute from now, and the card stays", async () => {
     mockLayout();
     const { calls } = setup();
     drag(await card("p-linen"), weekPoint("2026-09-29", "10:00"));
-    expect(toast.error).toHaveBeenCalledWith("Pick a time at least 5 minutes from now.");
+    expect(toast.error).toHaveBeenCalledWith("Pick a time at least 1 minute from now.");
     expect(calls.filter((call) => call.method === "POST")).toHaveLength(0);
     expect(within(day("Tuesday 29 September")).getByRole("link", { name: /^Linen styles/ })).toBeInTheDocument();
   });
@@ -447,16 +447,16 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     expect(callsTo(calls, "DELETE", /p-linen$/)).toHaveLength(0);
   });
 
-  it('"Move to…" refuses a time less than 5 minutes away and says so', async () => {
+  it('"Move to…" refuses a time less than 1 minute away and says so', async () => {
     const user = userEvent.setup();
     const { calls } = setup();
     await card("p-linen");
     await user.click(within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" }));
     await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
     const dialog = await screen.findByRole("dialog", { name: "Move to…" });
-    fireEvent.change(within(dialog).getByLabelText("Time"), { target: { value: "10:02" } });
+    fireEvent.change(within(dialog).getByLabelText("Time"), { target: { value: "10:00" } });
     await user.click(within(dialog).getByRole("button", { name: "Move" }));
-    expect(within(dialog).getByRole("alert")).toHaveTextContent("Pick a time at least 5 minutes from now.");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Pick a time at least 1 minute from now.");
     expect(callsTo(calls, "POST", /reschedule$/)).toHaveLength(0);
   });
 

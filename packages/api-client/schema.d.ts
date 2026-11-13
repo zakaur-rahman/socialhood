@@ -2139,7 +2139,7 @@ export interface paths {
         put?: never;
         /**
          * Create Scheduled Message
-         * @description send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+         * @description send_at must be at least 1 minute away and 5 minutes before the reply window closes.
          *
          *     With an Idempotency-Key (TR-API-05), repeating the request returns the first response and
          *     schedules nothing more; the same key with a different body is 409 idempotency_conflict.
@@ -3997,7 +3997,7 @@ export interface paths {
         put?: never;
         /**
          * Publish Post Now
-         * @description F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and
+         * @description F-13 Publish now: the Schedule checks without the 1-minute rule, ``publish_at`` = now, and
          *     publish_target is enqueued for every target at once (202; scheduled_post.updated follows
          *     each step). 402 quota_exceeded past scheduled_posts_monthly.
          */
@@ -4042,8 +4042,8 @@ export interface paths {
         put?: never;
         /**
          * Reschedule Post
-         * @description A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5
-         *     minutes away (422 on ``publish_at``: "Pick a time at least 5 minutes from now."). A draft is
+         * @description A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 1
+         *     minute away (422 on ``publish_at``: "Pick a time at least 1 minute from now."). A draft is
          *     409 (drafts are scheduled with /schedule).
          */
         post: operations["reschedule_post"];
@@ -4065,7 +4065,7 @@ export interface paths {
         /**
          * Schedule Post
          * @description F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
-         *     ``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are
+         *     ``publish_at`` be at least 1 minute away (422 with every failing field); then the targets are
          *     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A
          *     scheduled post takes the new time the same way.
          */
@@ -7152,7 +7152,7 @@ export interface components {
         /**
          * BulkSkipped
          * @description A post the action could not apply to, and why (``conflict``: publishing started or
-         *     published; ``validation_error``: the shifted time would be less than 5 minutes away).
+         *     published; ``validation_error``: the shifted time would be less than 1 minute away).
          */
         BulkSkipped: {
             /** Code */
@@ -12220,7 +12220,7 @@ export interface components {
         };
         /**
          * ScheduleRequest
-         * @description POST …/schedule and …/reschedule: at least 5 minutes from now (else 422 on
+         * @description POST …/schedule and …/reschedule: at least 1 minute from now (else 422 on
          *     ``publish_at``).
          */
         ScheduleRequest: {
@@ -12387,7 +12387,7 @@ export interface components {
          *     workspace's post uploads (else 422 on ``asset_ids.{i}``).
          *
          *     On a scheduled post (Update schedule) the saved result must still pass the checklist and
-         *     ``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);
+         *     ``publish_at`` must be set and at least 1 minute away (else 422 with every failing field);
          *     its targets stay pending.
          */
         ScheduledPostDraft: {

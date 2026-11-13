@@ -19,7 +19,7 @@ import { composerHref } from "./PostComposer";
 
 /**
  * The new draft (F-13): an empty post, with the time of a calendar click (``at``, an ISO instant
- * at least 5 minutes away) and the only account when just one can publish.
+ * at least 1 minute away) and the only account when just one can publish.
  */
 export function newDraftBody(accounts: SocialAccount[], at: string | null, now: Date): ScheduledPostDraft {
   const ready = publishingAccounts(accounts).filter((account) => !cannotPublishReason(account));

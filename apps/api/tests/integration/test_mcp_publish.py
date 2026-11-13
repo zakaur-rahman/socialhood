@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
@@ -683,3 +684,55 @@ async def test_an_account_with_a_full_24_hours_is_refused_per_account_by_the_che
     alone = post_args(setup, media, when=when.isoformat(), accounts=[str(roomy)])
     assert structured(await confirm(mcp_app, key, "create_post", alone))["status"] == "scheduled"
     assert views.DEFAULT_PUBLISHING_LIMIT == 50
+
+
+async def test_ai_apps_keep_five_minutes_through_the_queue_and_when_editing(
+    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+) -> None:
+    """C-181: the app's minimum is 1 minute; AI apps keep the 5 minutes the MCP pages promise."""
+    # A posting time 3 minutes from now, every day: an AI app must skip today's and take tomorrow's.
+    async with engine.connect() as conn:
+        zone = (
+            await conn.execute(
+                text("SELECT timezone FROM workspaces WHERE id = :w"), {"w": setup.wid}
+            )
+        ).scalar_one()
+    soon = (datetime.now(UTC) + timedelta(minutes=3)).astimezone(ZoneInfo(zone))
+    for weekday in range(7):
+        await make_posting_slot(
+            engine,
+            workspace_id=setup.wid,
+            account_id=setup.account_id,
+            weekday=weekday,
+            local_time=soon.time().replace(second=0, microsecond=0),
+        )
+    media = await image(engine, setup)
+    queued = structured(
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when="next_free_slot"))
+    )
+    post_id = queued["post_id"]
+    async with engine.connect() as conn:
+        at = (
+            await conn.execute(
+                text("SELECT publish_at FROM scheduled_posts WHERE id = :p"), {"p": post_id}
+            )
+        ).scalar_one()
+    assert at - datetime.now(UTC) > timedelta(hours=23)
+
+    # A post due in 2 minutes can't be edited by an AI app.
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "UPDATE scheduled_posts SET publish_at = now() + interval '2 minutes' WHERE id = :p"
+            ),
+            {"p": post_id},
+        )
+    refused = error_of(
+        await call(
+            mcp_app,
+            key,
+            "update_post",
+            {"post_id": post_id, "caption": "New words", "confirmed": True},
+        )
+    )
+    assert "at least 5 minutes" in refused["field_errors"][0]["message"]

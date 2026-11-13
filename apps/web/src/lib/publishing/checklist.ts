@@ -378,8 +378,8 @@ function finishChecklist(items: ChecklistItem[], draft: ScheduledPostDraft, now:
     const at = new Date(draft.publish_at).getTime();
     items.push(
       at - now.getTime() < MIN_SCHEDULE_LEAD_MS
-        ? fail("publish_at", "Pick a time at least 5 minutes from now.", "publish_at")
-        : pass("publish_at", "Time is at least 5 minutes away"),
+        ? fail("publish_at", "Pick a time at least 1 minute from now.", "publish_at")
+        : pass("publish_at", "Time is at least 1 minute away"),
     );
   }
   return items;

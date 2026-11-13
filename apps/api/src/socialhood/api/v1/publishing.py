@@ -147,7 +147,7 @@ async def schedule_post(
     session: Session,
 ) -> ScheduledPost:
     """F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
-    ``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are
+    ``publish_at`` be at least 1 minute away (422 with every failing field); then the targets are
     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A
     scheduled post takes the new time the same way."""
     out = await posts.schedule(session, scheduled_post_id, body.publish_at, _env(request, ctx))
@@ -174,7 +174,7 @@ async def unschedule_post(
 async def publish_post_now(
     request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
-    """F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and
+    """F-13 Publish now: the Schedule checks without the 1-minute rule, ``publish_at`` = now, and
     publish_target is enqueued for every target at once (202; scheduled_post.updated follows
     each step). 402 quota_exceeded past scheduled_posts_monthly."""
     out, handover = await posts.publish_now(session, scheduled_post_id, _env(request, ctx))
@@ -191,8 +191,8 @@ async def reschedule_post(
     ctx: CanManagePublishing,
     session: Session,
 ) -> ScheduledPost:
-    """A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5
-    minutes away (422 on ``publish_at``: "Pick a time at least 5 minutes from now."). A draft is
+    """A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 1
+    minute away (422 on ``publish_at``: "Pick a time at least 1 minute from now."). A draft is
     409 (drafts are scheduled with /schedule)."""
     out = await posts.reschedule(session, scheduled_post_id, body.publish_at, _env(request, ctx))
     await commit_and_publish(session, request.app.state.redis)

@@ -34,7 +34,7 @@ describe("newDraftBody (F-13)", () => {
   });
 
   it("leaves accounts to the user when several can publish, and drops a time too soon or invalid", () => {
-    const body = newDraftBody([ready, account({ id: "a2", capabilities: ["publish"] })], "2026-09-29T12:03:00Z", now);
+    const body = newDraftBody([ready, account({ id: "a2", capabilities: ["publish"] })], "2026-09-29T12:00:30Z", now);
     expect(body.targets).toEqual([]);
     expect(body.publish_at).toBeNull();
     expect(newDraftBody([ready], "not a date", now).publish_at).toBeNull();
