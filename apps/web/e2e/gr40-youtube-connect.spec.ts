@@ -2,8 +2,8 @@ import { expect, test } from "./support/fixtures";
 
 /**
  * YouTube connect on the sandbox (no Google call): the channel shows on Connections with YouTube's
- * name and no AI controls, and the Add account menu offers nothing about YouTube while the
- * workspace's youtube feature is off. The real connect (Google sign-in, the channel list) needs
+ * name and no AI controls, and the Add account menu offers a YouTube channel (the e2e stack turns
+ * the youtube feature on everywhere). The real connect (Google sign-in, the channel list) needs
  * Google; its steps are covered by the API's integration tests and the web unit tests.
  */
 test.describe("YouTube connect", () => {
@@ -18,10 +18,12 @@ test.describe("YouTube connect", () => {
     await expect(card.getByText("AI replies")).toHaveCount(0);
   });
 
-  test("the Add account menu has no YouTube item while the feature is off", async ({ page, youtube }) => {
+  test("the Add account menu offers a YouTube channel while the feature is on", async ({ page, youtube }) => {
+    // The e2e stack turns YouTube on everywhere (YOUTUBE_WORKSPACES=*); the "off" state is covered by
+    // the web unit test and the API's 404 test.
     await page.goto(`/w/${youtube.workspace.slug}/settings/connections`);
     await page.getByRole("button", { name: "Add account", exact: true }).click();
     await expect(page.getByRole("menuitem", { name: /Facebook/ })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: /YouTube/ })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: /YouTube channel/ })).toBeVisible();
   });
 });

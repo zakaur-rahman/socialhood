@@ -80,7 +80,7 @@ test.describe("GR-41 YouTube publishing", () => {
     const started = page.waitForResponse((r) => /\/youtube-upload$/.test(r.url()) && r.request().method() === "POST");
     const completed = page.waitForResponse((r) => /\/youtube-upload\/complete$/.test(r.url()));
     await page.getByRole("region", { name: "Post actions" }).getByRole("button", { name: "Schedule" }).click();
-    expect((await started).status()).toBe(200);
+    expect((await started).status()).toBe(201); // start_youtube_upload answers 201 Created
     // SANDBOX: the browser PUTs the file to the sandbox upload_url between these two calls.
     expect((await completed).status()).toBe(200);
 
