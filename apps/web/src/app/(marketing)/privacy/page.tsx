@@ -82,7 +82,9 @@ function sections(): LegalSection[] {
             When you connect an Instagram professional account, a Facebook Page or a WhatsApp Business number, Meta gives us
             the account&apos;s ID, username, Page name or phone number, name and profile picture, the permissions you
             granted, and access tokens that let {N} act for the account. We never ask for or receive your Instagram or
-            Facebook password, and we store access tokens encrypted.
+            Facebook password, and we store access tokens encrypted. When you connect a YouTube channel, Google gives us the
+            channel&apos;s ID, name, handle and picture, and a token we store encrypted; see{" "}
+            <a href="#google-user-data">Google user data</a>.
           </p>
           <h3>Messages, comments and the people who send them</h3>
           <ul>
@@ -375,7 +377,7 @@ function sections(): LegalSection[] {
       title: "Google user data",
       body: (
         <>
-          <p>We receive data from Google&apos;s APIs in two cases:</p>
+          <p>We receive data from Google&apos;s APIs in three cases:</p>
           <ul>
             <li>
               <strong>Google sign-in</strong> (through Clerk): your name, email address and profile photo, used only to
@@ -387,7 +389,37 @@ function sections(): LegalSection[] {
               <code>drive.file</code> permission). We use it only to add the business&apos;s new leads as rows to its
               chosen sheet. We can&apos;t see the rest of its Google Drive.
             </li>
+            <li>
+              <strong>YouTube</strong>, if a business connects a channel. {N} uses YouTube API Services, with the one
+              permission Google calls <code>youtube.force-ssl</code>. We receive and store the channel&apos;s ID, name,
+              handle and picture, a token that lets {N} act for the channel (stored encrypted), and the IDs and processing
+              status of the videos {N} uploads. We use them only to upload, schedule, update and delete the videos the
+              business asks for, with the title, description, tags, category, visibility and the &quot;made for kids&quot;
+              and altered-content answers it gives. A video posted only to YouTube goes from the business&apos;s browser or
+              AI app straight to YouTube and isn&apos;t stored by us; a video posted to YouTube and other platforms is kept
+              in our media storage like any other post. To show how they do, we read the view, like and comment counts of
+              the videos {N} posts and the channel&apos;s subscriber count. If an upload is interrupted, we check the
+              titles and times of the channel&apos;s latest uploads so the same video isn&apos;t posted twice. We don&apos;t
+              read the text of comments or who the subscribers are.
+            </li>
           </ul>
+          <p>
+            By connecting a YouTube channel you agree to the{" "}
+            <a href="https://www.youtube.com/t/terms" rel="noopener noreferrer">
+              YouTube Terms of Service
+            </a>
+            , and Google handles your data under the{" "}
+            <a href="https://policies.google.com/privacy" rel="noopener noreferrer">
+              Google Privacy Policy
+            </a>
+            . Disconnecting the channel in {N} revokes our access with Google and deletes the token at once; deleting its
+            data removes everything else we stored for it within 24 hours. You can also remove {N}&apos;s access at any
+            time on Google&apos;s{" "}
+            <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer">
+              third-party connections page
+            </a>
+            . {N} doesn&apos;t place cookies or similar technology on your device to collect YouTube data.
+          </p>
           <p>
             {N}&apos;s use and transfer to any other app of information received from Google APIs will adhere to the{" "}
             <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer">
@@ -409,6 +441,10 @@ function sections(): LegalSection[] {
           <p>
             <strong>Meta.</strong> Your replies, automated messages and posts go to Instagram, Facebook and WhatsApp through
             Meta&apos;s official APIs.
+          </p>
+          <p>
+            <strong>Google (YouTube).</strong> If you connect a YouTube channel, the videos you post there and their
+            details go to YouTube through Google&apos;s official API.
           </p>
           <p>
             <strong>Our subprocessors</strong>, the service providers that process data for us, only to run {N}. The list is

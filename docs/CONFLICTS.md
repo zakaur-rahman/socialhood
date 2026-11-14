@@ -10036,3 +10036,23 @@ features", then changed three rules. The audit report is kept outside the repo.
   prepare_youtube_upload); a custom thumbnail waits for Phase 3; a direct "now" upload whose
   complete never arrives stays on YouTube (it went out with the chosen privacy) while the post
   returns to a draft.
+
+## C-198 · YouTube in the legal pages (owner, 2026-11-14)
+
+- **Why:** Google's YouTube API Services policies ask the app's terms to bind users to the YouTube
+  Terms of Service, and its privacy policy to say it uses YouTube API Services, link the Google
+  Privacy Policy, say what YouTube data it reads, stores and shares, and how to revoke access
+  (Google's third-party connections page) and have the data deleted. Needed before Google's
+  verification of the `youtube.force-ssl` scope.
+- **Decided:**
+  - Privacy Policy: the YouTube channel under "The accounts you connect"; a third case in "Google
+    user data" (what we read and store, the direct route that never stores the file, the stats,
+    the duplicate-upload check), the YouTube ToS and Google Privacy Policy links, revoke and
+    delete, and no cookies for YouTube data; Google (YouTube) under "Who we share it with".
+  - Terms: one paragraph in "Meta's platforms and other services" binding YouTube users to the
+    YouTube ToS. Subprocessors: Google (YouTube) under "Others who receive data", like Meta, not a
+    subprocessor. DPA: the nature of processing names videos sent to a connected channel.
+  - Last-updated dates of the four pages move to 2026-11-14.
+- **Left as they are:** the pages say what the code does with the flag on; with
+  `YOUTUBE_WORKSPACES` empty nobody can connect a channel, and the text is still accurate. Not
+  reviewed by a lawyer (C-156).
