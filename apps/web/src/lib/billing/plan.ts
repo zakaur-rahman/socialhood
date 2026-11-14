@@ -195,6 +195,7 @@ const METERS: Record<string, { label: string; unit: string; periodic?: boolean }
   instagram_accounts: { label: "Instagram accounts", unit: "connected" },
   whatsapp_accounts: { label: "WhatsApp accounts", unit: "connected" },
   facebook_accounts: { label: "Facebook Pages", unit: "connected" },
+  youtube_accounts: { label: "YouTube channels", unit: "connected" },
   accounts_per_platform: { label: "Accounts per platform", unit: "accounts" },
   members: { label: "Members", unit: "members" },
 };

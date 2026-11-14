@@ -203,6 +203,40 @@ export function useComposerSchedule(wid: string, id: string) {
   });
 }
 
+/**
+ * C-195 direct route, step 1: the API checks the saved post and opens a resumable session on
+ * YouTube; the answer is the one-time upload address. 409 for a post that isn't YouTube alone, 429
+ * when YouTube's daily upload limit is reached (its message says when to try again).
+ */
+export function useStartYouTubeUpload(wid: string, id: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (body: { target_id: string; file_size: number; content_type: string; file_name: string }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload", {
+          params: { path: { wid, scheduled_post_id: id } },
+          body,
+        }),
+      ),
+  });
+}
+
+/** Step 3, after the file reached YouTube: the API saves the video id and schedules the post there. */
+export function useCompleteYouTubeUpload(wid: string, id: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<ScheduledPost, Error, { target_id: string; video_id: string }>({
+    mutationFn: (body) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete", {
+          params: { path: { wid, scheduled_post_id: id } },
+          body,
+        }),
+      ),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
+  });
+}
+
 type BodylessAction = "queue" | "publish-now" | "unschedule";
 
 function usePostAction(wid: string, id: string, action: BodylessAction) {

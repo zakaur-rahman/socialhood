@@ -24,6 +24,7 @@ from socialhood.platforms.http import PlatformHttp
 from socialhood.platforms.instagram import oauth
 from socialhood.platforms.registry import adapter_for
 from socialhood.platforms.sandbox.adapter import SANDBOX_PREFIX, is_sandbox
+from socialhood.platforms.youtube.oauth import SCOPE as YOUTUBE_SCOPE
 from socialhood.repositories import social_accounts as accounts
 from socialhood.repositories import workspaces
 from socialhood.schemas.accounts import SocialAccountOut, SocialAccountPatch
@@ -100,10 +101,11 @@ async def _at_capacity(session: AsyncSession, platform: str, plan: str) -> int |
 
 def _quota_error(limit: int, platform: str) -> ApiError:
     noun = "account" if limit == 1 else "accounts"
+    label = PLATFORM_LABELS.get(platform, platform.capitalize())
     return quota_error(
         accounts_key(platform),
         limit,
-        f"Your plan includes {limit} {platform.capitalize()} {noun}.",
+        f"Your plan includes {limit} {label} {noun}.",
     )
 
 
@@ -349,8 +351,9 @@ async def connect_sandbox(
     plan: str,
     platform: str = Platform.INSTAGRAM,
 ) -> SocialAccount:
-    """A sandbox Instagram account, a sandbox Facebook Page (GR-29) or a sandbox WhatsApp number
-    with approved templates (GR-23), for local development (TR-PL-07)."""
+    """A sandbox Instagram account, a sandbox Facebook Page (GR-29), a sandbox WhatsApp number
+    with approved templates (GR-23) or a sandbox YouTube channel (C-195), for local development
+    (TR-PL-07)."""
     if not deps.settings.sandbox_platform_enabled:
         raise ApiError("not_found")
     whatsapp = platform == Platform.WHATSAPP
@@ -360,6 +363,7 @@ async def connect_sandbox(
     suffix = secrets.token_hex(4)
     now = datetime.now(UTC)
     facebook = platform == Platform.FACEBOOK
+    youtube = platform == Platform.YOUTUBE
     acct = SocialAccount(
         platform=platform,
         platform_account_id=f"{SANDBOX_PREFIX}{suffix}",
@@ -369,19 +373,29 @@ async def connect_sandbox(
             if whatsapp
             else f"sandbox.page.{suffix[:4]}"
             if facebook
+            else f"sandbox.channel.{suffix[:4]}"
+            if youtube
             else f"sandbox.shop.{suffix[:4]}"
         ),
         display_name=(
-            "Sandbox WhatsApp shop" if whatsapp else "Sandbox page" if facebook else "Sandbox shop"
+            "Sandbox WhatsApp shop"
+            if whatsapp
+            else "Sandbox page"
+            if facebook
+            else "Sandbox channel"
+            if youtube
+            else "Sandbox shop"
         ),
         access_token_enc=deps.cipher.encrypt(f"sandbox-{secrets.token_hex(8)}"),
-        token_expires_at=None if facebook else now + timedelta(days=60),
+        token_expires_at=None if facebook or youtube else now + timedelta(days=60),
         token_refreshed_at=now,
         scopes=(
             []
             if whatsapp
             else [*facebook_oauth.SCOPES, facebook_oauth.INSIGHTS_SCOPE]
             if facebook
+            else [YOUTUBE_SCOPE]
+            if youtube
             else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
         ),
         status=AccountStatus.ACTIVE,
@@ -449,6 +463,9 @@ async def _clear_caches(redis: Redis, account_id: uuid.UUID) -> None:
 
 
 def refresh_due(acct: SocialAccount, now: datetime) -> bool:
+    # C-195: a YouTube channel keeps a Google refresh token (no expiry) and mints access per use.
+    if acct.platform == Platform.YOUTUBE:
+        return False
     if acct.status != AccountStatus.ACTIVE or acct.token_expires_at is None:
         return False
     old_enough = acct.token_refreshed_at is None or now - acct.token_refreshed_at >= REFRESH_MIN_AGE
@@ -529,6 +546,7 @@ PLATFORM_LABELS = {
     "whatsapp": "WhatsApp",
     "facebook": "Facebook",
     "web": "Website chat",
+    "youtube": "YouTube",
 }
 
 

@@ -62,6 +62,8 @@ R1_READ_TOOLS = {
 C169_TOOLS = {"list_instagram_posts", "create_automation", "update_automation"}
 # C-191 (owner, 2026-11-11): an AI app may turn an automation on, after a preview and a yes.
 C191_TOOLS = {"activate_automation"}
+# C-196: YouTube uploads straight from the member's computer.
+C196_TOOLS = {"prepare_youtube_upload", "get_youtube_upload_status"}
 
 
 # ---------------------------------------------------------------- the catalogue
@@ -82,10 +84,10 @@ R1_WRITE_TOOLS = {
 }
 
 
-def test_the_catalogue_is_28_tools() -> None:
+def test_the_catalogue_is_30_tools() -> None:
     registry = load_tools()
-    everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS | C191_TOOLS
-    assert len(everything) == 28
+    everything = R1_READ_TOOLS | R1_WRITE_TOOLS | C169_TOOLS | C191_TOOLS | C196_TOOLS
+    assert len(everything) == 30
     assert {t.name for t in registry} == everything
     assert [t.name for t in registry] == sorted(everything)  # deterministic tools/list
 
@@ -108,6 +110,8 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         "list_instagram_posts": ("posts:read", Role.AGENT, Access.READ, False, False),
         "ask_amplychat": ("ask", Role.AGENT, Access.READ, False, False),
         "get_ask_answer": ("ask", Role.AGENT, Access.READ, False, False),
+        "prepare_youtube_upload": ("posts:write", Role.ADMIN, Access.WRITE, False, True),
+        "get_youtube_upload_status": ("posts:write", Role.ADMIN, Access.WRITE, False, False),
     }
     registry = load_tools()
     for name, (scope, role, access, destructive, open_world) in expected.items():
@@ -122,6 +126,9 @@ def test_the_write_tools_declare_scope_role_access_and_hints() -> None:
         ), name
     # As long as a confirmation token lasts, so the same token can't do it twice.
     assert registry.get("create_post").dedupe_window_s == TTL_S  # type: ignore[union-attr]
+    prepare = registry.get("prepare_youtube_upload")
+    assert prepare is not None
+    assert prepare.dedupe_window_s == TTL_S
     assert registry.get("create_automation").dedupe_window_s == TTL_S  # type: ignore[union-attr]
     assert registry.get("update_automation").dedupe_window_s is None  # type: ignore[union-attr]
 

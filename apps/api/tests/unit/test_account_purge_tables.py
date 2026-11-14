@@ -39,6 +39,7 @@ EXPECTED = {
     "entry_links",
     "ice_breakers",
     "lead_stage_changes",
+    "mcp_uploads",  # C-196: an AI-app YouTube ticket, through its post target
     "media_items",
     "message_analyses",
     "messages",

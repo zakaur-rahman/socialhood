@@ -4,6 +4,7 @@ logged by endpoint name (never the full URL or the token), failures mapped (TR-P
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -16,9 +17,18 @@ log = get_logger("socialhood.platforms")
 
 
 class PlatformHttp:
-    def __init__(self, client: httpx.AsyncClient, platform: str) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        platform: str,
+        *,
+        mapper: Callable[[int, Any, dict[str, str]], PlatformError] = map_graph_error,
+    ) -> None:
+        """``mapper`` turns a failed response into a PlatformError: Meta's Graph errors unless a
+        platform has its own (YouTube: platforms/youtube/client.map_google_error)."""
         self.client = client
         self.platform = platform
+        self.mapper = mapper
 
     async def request(
         self,
@@ -61,7 +71,7 @@ class PlatformHttp:
         except ValueError:
             body = None
         if response.status_code >= 400:
-            mapped = map_graph_error(response.status_code, body, dict(response.headers))
+            mapped = self.mapper(response.status_code, body, dict(response.headers))
             self._log(endpoint, response.status_code, started, mapped.code, mapped.platform_code)
             raise mapped
         self._log(endpoint, response.status_code, started, "ok")

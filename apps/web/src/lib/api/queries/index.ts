@@ -7,6 +7,7 @@ export * from "./sending";
 export * from "./scheduled";
 export * from "./whatsapp";
 export * from "./facebook";
+export * from "./youtube";
 export * from "./automations";
 export * from "./flows";
 export * from "./ai";

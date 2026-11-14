@@ -267,25 +267,149 @@ export function assetLabel(asset: Pick<AssetInfo, "resource_type">, index: numbe
 
 // ---- accounts
 
-/** Instagram accounts are the ones that can publish (WhatsApp can't, C-043). */
-export function publishingAccounts(accounts: SocialAccount[]): SocialAccount[] {
-  return accounts.filter((account) => account.platform === "instagram" || account.platform === "facebook");
+/**
+ * The accounts that can publish: Instagram accounts and Facebook Pages (WhatsApp can't, C-043),
+ * and YouTube channels while the workspace has the youtube switch (C-195).
+ */
+export function publishingAccounts(accounts: SocialAccount[], features: readonly string[] = []): SocialAccount[] {
+  const youtube = features.includes("youtube");
+  return accounts.filter(
+    (account) => account.platform === "instagram" || account.platform === "facebook" || (youtube && account.platform === "youtube"),
+  );
 }
 
 /** GR-30: the platforms the post goes to; before the accounts load, Instagram's rules apply. */
-export function postPlatforms(accounts: Pick<SocialAccount, "platform">[]): { instagram: boolean; facebook: boolean } {
+export function postPlatforms(accounts: Pick<SocialAccount, "platform">[]): { instagram: boolean; facebook: boolean; youtube: boolean } {
   const facebook = accounts.some((account) => account.platform === "facebook");
   const instagram = accounts.some((account) => account.platform === "instagram") || accounts.length === 0;
-  return { instagram, facebook };
+  const youtube = accounts.some((account) => account.platform === "youtube");
+  return { instagram, facebook, youtube };
 }
 
 /**
  * The caption length for a post to these platforms (the API's ``caption_limit``): Instagram's
- * 2,200 unless every account is a Facebook Page; a cross-posted post is held to the strictest.
- * No accounts yet: Instagram's.
+ * 2,200, a Facebook Page's 63,206, YouTube's 5,000 (bytes, see ``YOUTUBE_DESCRIPTION_MAX_BYTES``);
+ * a cross-posted post is held to the strictest. No accounts yet: Instagram's.
  */
 export function captionLimit(platforms: readonly string[]): number {
-  return platforms.length > 0 && platforms.every((platform) => platform === "facebook") ? FACEBOOK_CAPTION_MAX_CHARS : CAPTION_MAX_CHARS;
+  if (platforms.length === 0) return CAPTION_MAX_CHARS;
+  return Math.min(
+    ...platforms.map((platform) =>
+      platform === "facebook" ? FACEBOOK_CAPTION_MAX_CHARS : platform === "youtube" ? YOUTUBE_DESCRIPTION_MAX_BYTES : CAPTION_MAX_CHARS,
+    ),
+  );
+}
+
+// ---- YouTube (C-195 Phase 2; YouTube Data API videos resource, checked 2026-11-14)
+
+export const YOUTUBE_TITLE_MAX_CHARS = 100;
+/** The description is the caption; YouTube counts its 5,000 in UTF-8 bytes. */
+export const YOUTUBE_DESCRIPTION_MAX_BYTES = 5000;
+/** Tags count toward 500 characters in total. */
+export const YOUTUBE_TAGS_MAX_CHARS = 500;
+/** A Short is vertical (or square) and up to 3 minutes. */
+export const SHORT_MAX_SECONDS = 180;
+export const YOUTUBE_KIDS_HELP_URL = "https://support.google.com/youtube/answer/9528076";
+export const YOUTUBE_AI_HELP_URL = "https://support.google.com/youtube/answer/14328491";
+/** The formats YouTube takes, offered by the YouTube dropzone. */
+export const YOUTUBE_VIDEO_EXTENSIONS = ["mp4", "mov", "m4v", "webm", "avi", "mkv", "wmv", "flv", "3gp", "mpg", "mpeg"];
+
+/** The options every YouTube target carries (the API's YouTubeOptions); the two questions start unanswered. */
+export type YouTubeOptions = {
+  title: string;
+  privacy: "public" | "unlisted" | "private";
+  /** null until answered: YouTube requires the answer, and there is no default (D4). */
+  made_for_kids: boolean | null;
+  synthetic_media: boolean | null;
+  category_id: string | null;
+  tags: string[];
+  notify_subscribers: boolean;
+  format: "video" | "short";
+};
+
+export const DEFAULT_YOUTUBE_OPTIONS: YouTubeOptions = {
+  title: "",
+  privacy: "public",
+  made_for_kids: null,
+  synthetic_media: null,
+  category_id: null,
+  tags: [],
+  notify_subscribers: true,
+  format: "video",
+};
+
+/** YouTube's video categories that work in most regions (videoCategories.list, assignable ones). */
+export const YOUTUBE_CATEGORIES: { id: string; label: string }[] = [
+  { id: "1", label: "Film & Animation" },
+  { id: "2", label: "Autos & Vehicles" },
+  { id: "10", label: "Music" },
+  { id: "15", label: "Pets & Animals" },
+  { id: "17", label: "Sports" },
+  { id: "19", label: "Travel & Events" },
+  { id: "20", label: "Gaming" },
+  { id: "22", label: "People & Blogs" },
+  { id: "23", label: "Comedy" },
+  { id: "24", label: "Entertainment" },
+  { id: "25", label: "News & Politics" },
+  { id: "26", label: "Howto & Style" },
+  { id: "27", label: "Education" },
+  { id: "28", label: "Science & Technology" },
+  { id: "29", label: "Nonprofits & Activism" },
+];
+
+export function byteCount(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+/** Tags as YouTube counts them: a tag with a space is quoted, and tags are joined by commas. */
+export function tagsLength(tags: readonly string[]): number {
+  return tags.reduce((sum, tag, index) => sum + charCount(tag) + (/\s/.test(tag) ? 2 : 0) + (index > 0 ? 1 : 0), 0);
+}
+
+/**
+ * Whether the API will take these options (its YouTubeOptions): a title of 1 to 100 characters
+ * without < or >, both questions answered, tags within 500 characters. Until then the draft saves
+ * the target without options, and the checklist says what's missing.
+ */
+export function youtubeOptionsReady(options: YouTubeOptions | null | undefined): options is YouTubeOptions & { made_for_kids: boolean; synthetic_media: boolean } {
+  if (!options) return false;
+  const title = options.title.trim();
+  return (
+    title.length > 0 &&
+    charCount(title) <= YOUTUBE_TITLE_MAX_CHARS &&
+    !/[<>]/.test(title) &&
+    options.made_for_kids != null &&
+    options.synthetic_media != null &&
+    tagsLength(options.tags) <= YOUTUBE_TAGS_MAX_CHARS
+  );
+}
+
+/**
+ * Where a post's video goes (the plan's Approach): ``direct`` when every chosen account is a
+ * YouTube channel (the browser uploads straight to YouTube), ``media`` when YouTube shares the post
+ * with Instagram or Facebook (the media tray, then our scheduler), null without a channel.
+ */
+export function youtubeRoute(accounts: Pick<SocialAccount, "platform">[]): "direct" | "media" | null {
+  if (!accounts.some((account) => account.platform === "youtube")) return null;
+  return accounts.every((account) => account.platform === "youtube") ? "direct" : "media";
+}
+
+/** A file the YouTube dropzone can send: a video YouTube takes. Any size (YouTube's 256 GB, D2). */
+export function checkYouTubeFile(file: Pick<File, "name" | "type" | "size">): string | null {
+  if (file.size === 0) return "This file is empty.";
+  if (!YOUTUBE_VIDEO_EXTENSIONS.includes(extensionOf(file.name)) && !file.type.startsWith("video/")) {
+    return "YouTube takes video files, such as MP4, MOV or WebM.";
+  }
+  return null;
+}
+
+/** Why a video can't be a Short, or null: vertical (or square) and up to 3 minutes. */
+export function shortProblem(asset: Pick<AssetInfo, "width" | "height" | "duration_s">): string | null {
+  if (asset.width && asset.height && asset.width > asset.height) return "A Short must be vertical or square. This video is wider than it is tall.";
+  if (asset.duration_s != null && asset.duration_s > SHORT_MAX_SECONDS) {
+    return `A Short can be up to 3 minutes. This video is ${formatDuration(asset.duration_s)} long.`;
+  }
+  return null;
 }
 
 /** No media and some text, for Facebook Pages alone: a text post (GR-30). */

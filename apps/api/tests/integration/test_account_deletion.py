@@ -402,6 +402,14 @@ async def test_the_purge_leaves_nothing_of_the_account_and_spares_everything_els
     only_scheduled = await make_scheduled_post(
         engine, workspace_id=wid, account_ids=[doomed], status="scheduled"
     )
+    await execute(  # C-196: an AI-app YouTube upload ticket for that post's target
+        engine,
+        "INSERT INTO mcp_uploads (workspace_id, kind, expires_at, scheduled_post_target_id)"
+        " SELECT :w, 'youtube', now() + interval '1 hour', id FROM scheduled_post_targets"
+        " WHERE scheduled_post_id = :p",
+        w=wid,
+        p=only_scheduled.id,
+    )
 
     # Files: which the doomed account's messages own, and which something else also names.
     inbound = await make_asset(engine, workspace_id=wid, purpose="inbound")

@@ -68,6 +68,8 @@ export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
 export type FacebookPageOption = Schemas["FacebookPageOption"];
 export type FacebookPageList = Schemas["FacebookPageList"];
+export type YouTubeChannel = Schemas["YouTubeChannel"];
+export type YouTubeChannelList = Schemas["YouTubeChannelList"];
 export type SandboxAccountCreate = Schemas["SandboxAccountCreate"];
 
 // ---- automations (P4: FR-AUT-01…19, UX-SCR-02, 03, 11, 12)

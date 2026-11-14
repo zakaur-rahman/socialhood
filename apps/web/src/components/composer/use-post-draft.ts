@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { toApiError, type ApiError } from "@/lib/api/errors";
 import { useSaveComposerPost } from "@/lib/api/queries/scheduledPosts";
-import type { ScheduledPost, ScheduledPostDraft, UserTagIn } from "@/lib/publishing/types";
+import { youtubeOptionsReady, type YouTubeOptions } from "@/lib/publishing/rules";
+import type { ScheduledPost, ScheduledPostDraft, TargetIn, UserTagIn } from "@/lib/publishing/types";
 
 export const AUTOSAVE_DELAY_MS = 1000;
 
@@ -16,7 +17,8 @@ export const AUTOSAVE_DELAY_MS = 1000;
 export type PostSaveStatus = "saved" | "saving" | "unsaved" | "error";
 
 export type Draft = {
-  targets: { social_account_id: string; caption_override: string | null }[];
+  /** ``options``: a YouTube channel's title, privacy and answers (C-195); null for other platforms. */
+  targets: { social_account_id: string; caption_override: string | null; options: YouTubeOptions | null }[];
   asset_ids: string[];
   caption: string;
   first_comment: string | null;
@@ -40,6 +42,7 @@ export function toDraft(post: ScheduledPost): Draft {
     targets: post.targets.map((target) => ({
       social_account_id: target.social_account_id,
       caption_override: target.caption_override ?? null,
+      options: (target.options as YouTubeOptions | null | undefined) ?? null,
     })),
     asset_ids: [...post.assets].sort((a, b) => a.position - b.position).map((asset) => asset.id),
     caption: post.caption,
@@ -61,7 +64,13 @@ export function toDraft(post: ScheduledPost): Draft {
 /** What the PUT sends: an empty first comment is no first comment. */
 export function toRequest(draft: Draft): ScheduledPostDraft {
   return {
-    targets: draft.targets.map((target) => ({ ...target })),
+    // The API takes a YouTube target's options only when complete (a title, both answers): until
+    // then the target saves without them, and the checklist says what's missing.
+    // shortcut: half-filled options live only in this tab until complete; save them if the API ever takes drafts of them.
+    targets: draft.targets.map((target) => ({
+      ...target,
+      options: youtubeOptionsReady(target.options) ? ({ ...target.options, title: target.options.title.trim() } as TargetIn["options"]) : null,
+    })),
     asset_ids: [...draft.asset_ids],
     caption: draft.caption,
     first_comment: draft.first_comment?.trim() ? draft.first_comment : null,
@@ -76,6 +85,12 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
     share_to_feed: draft.share_to_feed,
     audio_name: draft.audio_name?.trim() ? draft.audio_name.trim() : null,
   };
+}
+
+/** A YouTube target's options in a fixed order: the API may answer its keys in another. */
+function optionsKey(options: unknown): string {
+  const o = options as YouTubeOptions | null | undefined;
+  return o ? JSON.stringify([o.title, o.privacy, o.made_for_kids, o.synthetic_media, o.category_id, o.tags, o.notify_subscribers, o.format]) : "null";
 }
 
 const instant = (at: string | null) => (at ? new Date(at).getTime() : null);
@@ -100,7 +115,8 @@ export function sameDraft(a: Draft, b: Draft): boolean {
     (x.targets ?? []).every(
       (target, index) =>
         target.social_account_id === y.targets?.[index]?.social_account_id &&
-        (target.caption_override ?? null) === (y.targets?.[index]?.caption_override ?? null),
+        (target.caption_override ?? null) === (y.targets?.[index]?.caption_override ?? null) &&
+        optionsKey(target.options) === optionsKey(y.targets?.[index]?.options),
     )
   );
 }

@@ -54,6 +54,7 @@ from socialhood.models.billing import Plan
 from socialhood.models.connections import Platform
 from socialhood.models.identity import Workspace
 from socialhood.observability.logging import get_logger
+from socialhood.platforms.youtube.switch import youtube_enabled
 from socialhood.realtime import events
 from socialhood.repositories import payments, social_accounts, subscriptions, workspaces
 from socialhood.repositories.subscriptions import LIVE_STATUSES
@@ -249,6 +250,15 @@ async def billing_state(
                 metric=f"{platform.value}_accounts",
                 used=await social_accounts.count_live(session, platform),
                 limit=accounts_limit(plan, platform),
+            )
+        )
+    if youtube_enabled(settings, workspace.id, workspace.slug):
+        # C-195: one channel on every plan, its own limit even where the "channels" tile shows.
+        meters.append(
+            UsageMeter(
+                metric="youtube_accounts",
+                used=await social_accounts.count_live(session, Platform.YOUTUBE),
+                limit=accounts_limit(plan, Platform.YOUTUBE),
             )
         )
     return BillingState(

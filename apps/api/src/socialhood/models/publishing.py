@@ -86,6 +86,15 @@ STORY_VIDEO_MAX_S = 60
 FACEBOOK_REEL_MIN_S = 3
 FACEBOOK_REEL_MAX_S = 90
 
+# YouTube (C-196; YouTube Data API videos resource, checked 2026-11-14): a title of 1 to 100
+# characters, a description (the caption) of up to 5,000 bytes, tags of 500 characters in all,
+# none of them with "<" or ">". A Short is a vertical video of up to 3 minutes (YouTube's help
+# page "Upload YouTube Shorts", 2026-11-14: Shorts can be up to 3 minutes long).
+YOUTUBE_TITLE_MAX_CHARS = 100
+YOUTUBE_DESCRIPTION_MAX_BYTES = 5000
+YOUTUBE_TAGS_MAX_CHARS = 500
+YOUTUBE_SHORT_MAX_S = 180
+
 # Instagram extras (FR-PUB-07, C-134; Meta's IG User Media and IG Media Collaborators references,
 # checked 2026-10-25). The publishing reference allows up to 3 collaborators and the
 # collaborators reference says up to 5: we allow 3. Meta states no limit on user tags; 20 per
@@ -283,6 +292,16 @@ class ScheduledPostTarget(IdMixin, TimestampMixin, TenantScoped, Base):
         JSONB, server_default=sql("'[]'")
     )
     collaborators_checked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # C-195/C-196: per-target choices a platform needs beyond the caption (YouTube's title,
+    # privacy and the like: schemas/publishing.YouTubeOptions); None for every other platform.
+    options: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # C-196, a direct YouTube upload: when the opened session runs out (None once the video is
+    # there, or never opened). ``container_id`` holds the session's address meanwhile, and
+    # ``platform_media_id`` the video id once the upload finished.
+    upload_expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # C-196: what YouTube was last sent for the target's video (title, description, privacy,
+    # publish time...), so an edit calls videos.update only when something there changed.
+    sent_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     __table_args__ = (
         UniqueConstraint("scheduled_post_id", "social_account_id"),
@@ -295,6 +314,12 @@ class ScheduledPostTarget(IdMixin, TimestampMixin, TenantScoped, Base):
         # An account's targets: free posting times (FR-PUB-09), posts published in the last 24 h
         # against the publishing limit (FR-PUB-10, UX-SCR-04).
         Index("ix_scheduled_post_targets_account_status", "social_account_id", "status"),
+        # The expiry job: direct YouTube uploads opened and never finished (C-196).
+        Index(
+            "ix_scheduled_post_targets_upload_expires_at",
+            "upload_expires_at",
+            postgresql_where=sql("upload_expires_at IS NOT NULL"),
+        ),
         CheckConstraint(_in("status", TargetStatus), name="status"),
         CheckConstraint(
             "caption_override IS NULL OR "

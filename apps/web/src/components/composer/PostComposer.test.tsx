@@ -171,7 +171,7 @@ describe("PostComposer autosave (F-13)", () => {
     expect(puts).toHaveLength(0);
     await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
     expect(puts[0].body).toEqual({
-      targets: [{ social_account_id: "a1", caption_override: null }],
+      targets: [{ social_account_id: "a1", caption_override: null, options: null }],
       asset_ids: [],
       caption: "Hello",
       first_comment: null,
@@ -338,7 +338,7 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
     expect(chip).toHaveAttribute("aria-pressed", "true");
     expect(within(checklist()).queryByRole("link", { name: /Choose at least one account/ })).not.toBeInTheDocument();
     await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
-    expect((puts[0].body as ScheduledPostDraft).targets).toEqual([{ social_account_id: "a1", caption_override: null }]);
+    expect((puts[0].body as ScheduledPostDraft).targets).toEqual([{ social_account_id: "a1", caption_override: null, options: null }]);
   });
 
   it("disables an account that can't publish, with the reason, and flags one already chosen", async () => {
@@ -623,8 +623,8 @@ describe("PostComposer captions", () => {
     await waitFor(() => expect(puts.length).toBeGreaterThan(0), { timeout: 3000 });
     await waitFor(() =>
       expect((puts.at(-1)?.body as ScheduledPostDraft).targets).toEqual([
-        { social_account_id: "a1", caption_override: "Hello" },
-        { social_account_id: "a2", caption_override: "Studio hello" },
+        { social_account_id: "a1", caption_override: "Hello", options: null },
+        { social_account_id: "a2", caption_override: "Studio hello", options: null },
       ]),
     );
     await user.click(screen.getByRole("combobox", { name: "Account" }));

@@ -204,6 +204,17 @@ class Settings(BaseSettings):
     google_redirect_uri: str | None = None
     google_provider: Literal["google", "fake"] = "google"
 
+    # C-195: YouTube channels (publish only). The same Google OAuth client as Clerk's Google
+    # sign-in, with the youtube.force-ssl scope and its own redirect address. Unset: connecting
+    # YouTube answers 503 "not configured". fake: a built-in channel (platforms/youtube/fake.py);
+    # refused in production. YOUTUBE_WORKSPACES is the feature switch: "" off everywhere, "*" on
+    # for all, otherwise a comma list of workspace slugs or ids.
+    youtube_client_id: str | None = None
+    youtube_client_secret: SecretStr | None = None
+    youtube_redirect_uri: str | None = None
+    youtube_provider: Literal["google", "fake"] = "google"
+    youtube_workspaces: str = ""
+
     # GR-31: the Shopify app (owner track O-10: a Partner account and an app listing). All unset by
     # default: connecting Shopify then answers 503 "not configured" and the webhook route refuses.
     # The API key and secret are the app's client credentials (the secret also signs the webhooks
@@ -314,6 +325,7 @@ class Settings(BaseSettings):
             "push_provider",
             "clerk_invitations_provider",
             "google_provider",
+            "youtube_provider",
             "shopify_provider",
             "razorpay_provider",
         ):

@@ -18,6 +18,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
+import { YouTubeGlyph } from "@/components/connections/YouTubeGlyph";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import type { ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
 import { plural } from "@/lib/copy";
 import { initial } from "@/lib/inbox/format";
-import { captionLine, POST_STATUS } from "@/lib/schedule/format";
+import { captionLine, POST_STATUS, youtubeStatus } from "@/lib/schedule/format";
 import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,8 @@ export function PostThumbnail({
   const schedule = useSchedule();
   const [failed, setFailed] = useState(false);
   const color = accountColor(schedule, post.targets[0]?.social_account_id);
+  // A video uploaded straight to YouTube has no thumbnail of ours: YouTube's mark stands in.
+  const youtube = isYouTubePost(post, schedule.accounts);
   const Icon = post.format === "reel" ? Clapperboard : post.format === "carousel" ? GalleryHorizontal : ImageOff;
   return (
     <span
@@ -77,6 +80,8 @@ export function PostThumbnail({
           onError={() => setFailed(true)}
           className="size-full object-cover"
         />
+      ) : youtube ? (
+        <YouTubeGlyph className={size === 24 ? "size-3 text-fg-secondary" : "size-4 text-fg-secondary"} />
       ) : (
         <Icon className={size === 24 ? "size-3 text-fg-secondary" : "size-4 text-fg-secondary"} aria-hidden />
       )}
@@ -110,9 +115,26 @@ export function AccountAvatar({ account, accountId, size = 20 }: { account?: Soc
           size === 36 ? "text-sm" : "text-2xs",
         )}
       >
-        {initial(name)}
+        {/* A YouTube channel past the three identities shows YouTube's mark; its name is beside it. */}
+        {account?.platform === "youtube" && !color.gradient ? <YouTubeGlyph className="size-3/5" /> : initial(name)}
       </AvatarFallback>
     </Avatar>
+  );
+}
+
+/** The post goes to a YouTube channel. */
+export function isYouTubePost(post: Pick<ScheduledPostSummary, "targets">, accounts: Map<string, SocialAccount>): boolean {
+  return post.targets.some((t) => t.youtube || accounts.get(t.social_account_id)?.platform === "youtube");
+}
+
+/** C-195: YouTube's mark on a post for a YouTube channel, named for screen readers. Nothing for other posts. */
+export function YouTubeMark({ post, className }: { post: Pick<ScheduledPostSummary, "targets">; className?: string }) {
+  const schedule = useSchedule();
+  if (!isYouTubePost(post, schedule.accounts)) return null;
+  return (
+    <span className={cn("inline-flex text-youtube", className)} role="img" aria-label="YouTube" data-testid="youtube-mark">
+      <YouTubeGlyph className="size-3" />
+    </span>
   );
 }
 
@@ -147,24 +169,26 @@ export function StoryBadge({ post, className }: { post: Pick<ScheduledPostSummar
   );
 }
 
-export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummary, "status">; className?: string }) {
+export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummary, "status"> & { targets?: ScheduledPostSummary["targets"] }; className?: string }) {
   const status = POST_STATUS[post.status];
   return (
     <Badge tone={status.tone} size="md" className={className}>
-      {status.label}
+      {(post.targets && youtubeStatus({ status: post.status, targets: post.targets })) ?? status.label}
     </Badge>
   );
 }
 
 /** The first published account's link on its platform. */
 export function permalinkOf(post: Pick<ScheduledPostSummary, "targets">): string | null {
-  return post.targets.find((t) => t.permalink)?.permalink ?? null;
+  const target = post.targets.find((t) => t.permalink || t.youtube?.url);
+  return target ? (target.permalink ?? target.youtube?.url ?? null) : null;
 }
 
-/** "View on Facebook" for a Page post, "View on Instagram" otherwise: the platform of the account the link is from. */
+/** "View on Facebook", "View on YouTube" or "View on Instagram": the platform of the account the link is from. */
 export function viewLabelOf(post: Pick<ScheduledPostSummary, "targets">, accounts: Map<string, SocialAccount>): string {
-  const target = post.targets.find((t) => t.permalink);
+  const target = post.targets.find((t) => t.permalink || t.youtube?.url);
   const platform = target ? accounts.get(target.social_account_id)?.platform : undefined;
+  if (target?.youtube?.url || platform === "youtube") return "View on YouTube";
   return platform === "facebook" ? "View on Facebook" : "View on Instagram";
 }
 

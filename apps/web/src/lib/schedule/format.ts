@@ -11,9 +11,9 @@ import type {
   ScheduledPostView,
   SocialAccount,
 } from "@/lib/api/types";
-import { errorMessage, plural } from "@/lib/copy";
+import { errorMessage, plural, youtubeStateLabel } from "@/lib/copy";
 import type { Tone } from "@/lib/inbox/format";
-import { type Identity, identityAt } from "@/lib/ui/identity";
+import { type Identity, IDENTITIES, identityAt } from "@/lib/ui/identity";
 
 import { formatMinutes, TOO_SOON_MESSAGE, WEEKDAYS_SHORT } from "./dates";
 
@@ -106,12 +106,28 @@ export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string
 
 /**
  * The identities from the workspace's whole account list: its connected Instagram accounts and
- * Facebook Pages (GR-30), in order. Schedule and the post composer both read this, so an account looks the same in both.
+ * Facebook Pages (GR-30), in order, then its YouTube channels (C-195). Schedule and the post
+ * composer both read this, so an account looks the same in both. There are only three identities
+ * (lib/ui/identity): a channel that would be a fourth gets none, and shows YouTube's mark beside
+ * its name instead, so the Instagram and Facebook accounts keep the identities they had.
  */
 export function instagramAccountColors(accounts: SocialAccount[]): Map<string, AccountColor> {
-  return accountColors(
-    accounts.filter((a) => (a.platform === "instagram" || a.platform === "facebook") && a.status !== "disconnected"),
-  );
+  const connected = accounts.filter((a) => a.status !== "disconnected");
+  const meta = connected.filter((a) => a.platform === "instagram" || a.platform === "facebook");
+  const colors = accountColors(meta);
+  connected
+    .filter((a) => a.platform === "youtube")
+    .forEach((a, i) => {
+      if (meta.length + i < IDENTITIES.length) colors.set(a.id, identityAt(meta.length + i));
+    });
+  return colors;
+}
+
+/** "Scheduled on YouTube" (or where the video is) for a draft or scheduled post uploaded straight to YouTube, else null. */
+export function youtubeStatus(post: Pick<ScheduledPostSummary, "status" | "targets">): string | null {
+  if (post.status !== "draft" && post.status !== "scheduled") return null;
+  const state = post.targets.find((t) => t.youtube?.route === "direct")?.youtube?.state;
+  return state ? youtubeStateLabel(state) : null;
 }
 
 /** An account the page doesn't know (disconnected): a neutral ring, no identity. */

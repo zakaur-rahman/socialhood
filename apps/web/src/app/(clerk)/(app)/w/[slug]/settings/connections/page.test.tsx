@@ -341,3 +341,62 @@ describe("connecting Facebook Pages (GR-29)", () => {
     expect(within(card).getByText("@maplebakery")).toBeInTheDocument();
   });
 });
+
+describe("connecting YouTube", () => {
+  const withFeature = { ...workspace, features: ["youtube" as const] };
+  const channels = [{ channel_id: "UC1", title: "Maple Bakery", handle: "@maplebakery", avatar_url: null, connected: false }];
+
+  it("Add account lists YouTube channel only when the workspace has the feature", async () => {
+    const user = userEvent.setup();
+    const handlers = { "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }) };
+    const off = renderWithApi(<ConnectionsPage />, { handlers });
+    await user.click(await screen.findByRole("button", { name: /Add account/ }));
+    expect(await screen.findByRole("menuitem", { name: /Facebook/ })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /YouTube/ })).toBeNull();
+    off.unmount();
+
+    renderWithApi(<ConnectionsPage />, { handlers, ws: withFeature });
+    await user.click(await screen.findByRole("button", { name: /Add account/ }));
+    expect(await screen.findByRole("menuitem", { name: /YouTube channel/ })).toBeInTheDocument();
+  });
+
+  it("Add account to YouTube asks the API to start, and a refusal is a toast", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      ws: withFeature,
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }),
+        "POST /v1/w/:wid/social-accounts/youtube/connect": () =>
+          problem(503, "service_unavailable", "YouTube connections are not configured."),
+      },
+    });
+    await user.click(await screen.findByRole("button", { name: /Add account/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /YouTube channel/ }));
+    await waitFor(() => expect(calls.some((c) => c.path === "/v1/w/w1/social-accounts/youtube/connect")).toBe(true));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it("opens the channel dialog with the nonce Google sent back, and drops it from the address", async () => {
+    nav.search = "youtube=n0nce";
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      ws: withFeature,
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [] }),
+        "POST /v1/w/:wid/social-accounts/youtube/channels": () => json({ items: channels }),
+      },
+    });
+    expect(await screen.findByRole("radiogroup", { name: "Your YouTube channels" })).toBeInTheDocument();
+    expect(calls.find((c) => c.path.endsWith("/youtube/channels"))?.body).toEqual({ nonce: "n0nce" });
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/settings/connections", { scroll: false });
+  });
+
+  it("a cancelled Google sign-in is explained, and nothing starts on its own", async () => {
+    nav.search = "error=access_denied&platform=youtube";
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      ws: withFeature,
+      handlers: { "GET /v1/w/:wid/social-accounts": () => json({ items: [] }) },
+    });
+    expect(await screen.findByText("Connection cancelled")).toBeInTheDocument();
+    expect(calls.filter((c) => c.path.endsWith("/connect"))).toEqual([]);
+  });
+});

@@ -85,7 +85,7 @@ export function contentSecurityPolicy(env: Env): string {
       UMAMI_SCRIPT_ORIGIN, // landing-page analytics (C-194)
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:", "https://res.cloudinary.com", "https://img.clerk.com", ...platformMedia],
+    "img-src": ["'self'", "blob:", "data:", "https://res.cloudinary.com", "https://img.clerk.com", "https://i.ytimg.com", "https://yt3.ggpht.com", ...platformMedia],
     "media-src": ["'self'", "blob:", "https://res.cloudinary.com", ...platformMedia],
     "font-src": ["'self'"],
     "connect-src": [
@@ -96,6 +96,7 @@ export function contentSecurityPolicy(env: Env): string {
       "https://*.clerk-telemetry.com",
       clerkProtect,
       "https://api.cloudinary.com",
+      "https://www.googleapis.com", // the browser uploads a video straight to YouTube
       "https://res.cloudinary.com",
       sentry,
       "https://*.facebook.com",

@@ -29,6 +29,7 @@ describe("PlatformGlyph (GR-29)", () => {
       whatsapp: "bg-whatsapp-logo",
       facebook: "bg-facebook-logo",
       web: "bg-web",
+      youtube: "bg-youtube-logo",
     });
   });
 });

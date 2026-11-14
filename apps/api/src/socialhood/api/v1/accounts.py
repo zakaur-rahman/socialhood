@@ -40,7 +40,7 @@ from socialhood.schemas.accounts import (
     SocialAccountOut,
     SocialAccountPatch,
 )
-from socialhood.services import account_deletion, audit
+from socialhood.services import account_deletion, audit, youtube_connect
 from socialhood.services import connections as service
 from socialhood.services.webhook_intake import store_and_enqueue
 
@@ -138,6 +138,7 @@ async def disconnect_social_account(
     mismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``
     true; it is gone from the list once done (a ``resync`` event follows)."""
     acct = await service.get_or_404(session, account_id)
+    credential = acct.access_token_enc  # C-195: revoked with Google once it is deleted here
     if delete_data or confirm is not None:
         await account_deletion.request(
             session,
@@ -150,6 +151,7 @@ async def disconnect_social_account(
         )
     else:
         await service.disconnect(session, request.app.state.redis, acct)
+    await youtube_connect.revoke(acct, _deps(request), credential)
     await audit.record(
         session,
         ctx,
@@ -194,7 +196,7 @@ async def create_sandbox_account(
 ) -> SocialAccountOut:
     """Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
-    templates (GR-23)."""
+    templates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195)."""
     _require_sandbox(request)
     acct = await service.connect_sandbox(
         session,

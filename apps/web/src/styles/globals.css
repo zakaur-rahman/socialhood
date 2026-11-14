@@ -111,6 +111,7 @@
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
   --color-web: #0F766E;  /* the website chat widget (GR-28): 5.5:1 with on-brand */
+  --color-youtube: #CC0000;  /* white on it is 5.9:1 */
   /* The platforms' own logo colours, for logo tiles only (Add account): the fills above are
      darkened for white text (most pass 4.5:1; WhatsApp green is lower, so keep its text large
      or bold); a logo tile carries no text. */
@@ -120,6 +121,7 @@
   --color-instagram-logo-4: #515BD4;
   --color-facebook-logo: #0866FF;
   --color-whatsapp-logo: #25D366;
+  --color-youtube-logo: #FF0000;
 
   /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
      series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */

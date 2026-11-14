@@ -2,14 +2,18 @@
 
 import { useRef, useState } from "react";
 
+import { useYouTubeUpload, YouTubeDropzone } from "@/components/composer/YouTubeDropzone";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ApiError } from "@/lib/api/errors";
 import { useCompleteMcpUpload, useMcpUpload } from "@/lib/api/queries";
+import { errorMessage } from "@/lib/copy";
 import { extensionOf, resourceTypeFor, sendToStorage } from "@/lib/media/upload";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import type { Uploader } from "@/lib/youtube/upload";
 
 const MB = 1024 * 1024;
 
@@ -26,19 +30,36 @@ function formatList(formats: string[]): string {
  * signature names the one file, so a second try replaces the first), then the page tells the API,
  * which adds the ticket's file to the media library. The AI app finds it with its next
  * check. The page keeps to the ticket's kind and limits, which the API enforces again.
+ *
+ * A YouTube ticket (C-195 S-7) names the video and the channel: the file goes from this browser
+ * straight to YouTube's one-time upload address (never to storage or our servers), and the page
+ * tells the API the video's id.
  */
-export function UploadTicketPage({ ticketId }: { ticketId: string }) {
+export function UploadTicketPage({ ticketId, youtubeUploader }: { ticketId: string; youtubeUploader?: Uploader }) {
   const wid = useCurrentWorkspace().id;
   const ticket = useMcpUpload(wid, ticketId);
   const complete = useCompleteMcpUpload(wid, ticketId);
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const youtubeUpload = useYouTubeUpload(youtubeUploader);
 
   const data = ticket.data;
   const kind = data?.kind;
   const limits = data?.limits as { formats?: string[]; max_mb?: number } | undefined;
   const accept = (limits?.formats ?? []).map((f) => `.${f}`).join(",");
+  const youtube = kind === "youtube" ? data?.youtube : null;
+
+  async function sendToYouTube(file: File) {
+    if (!youtube) return;
+    try {
+      const videoId = await youtubeUpload.run(youtube.upload_url, youtube.chunk_bytes, file);
+      await complete.mutateAsync({ video_id: videoId });
+    } catch (error) {
+      // An upload failure already shows in the dropzone; the API's answer (an expired ticket) does too.
+      if (error instanceof ApiError) youtubeUpload.failWith(errorMessage(error));
+    }
+  }
 
   async function send(file: File) {
     if (!data?.upload || !kind) return;
@@ -71,6 +92,13 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
     body = <Skeleton className="h-32 w-full" role="status" aria-busy="true" aria-label="Loading the upload" />;
   } else if (ticket.isError) {
     body = <ErrorState error={ticket.error} onRetry={() => void ticket.refetch()} />;
+  } else if (data?.status === "uploaded" && kind === "youtube") {
+    body = (
+      <Card padding="roomy" className="space-y-1" role="status">
+        <p className="font-medium text-fg">The video is on YouTube.</p>
+        <p className="text-sm text-fg-secondary">Go back to your AI app. It can check the upload and tell you when YouTube has processed it.</p>
+      </Card>
+    );
   } else if (data?.status === "uploaded") {
     body = (
       <Card padding="roomy" className="space-y-1" role="status">
@@ -92,6 +120,25 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
       <Card padding="roomy" className="space-y-1" role="alert">
         <p className="font-medium text-fg">This upload expired.</p>
         <p className="text-sm text-fg-secondary">Ask your AI app to start a new one.</p>
+      </Card>
+    );
+  } else if (youtube) {
+    body = (
+      <Card padding="roomy" className="space-y-4">
+        <div>
+          <p className="font-medium text-fg" data-testid="youtube-ticket-title">
+            Upload to YouTube: {youtube.title} on {youtube.channel_name}
+          </p>
+          <p className="text-sm text-fg-secondary">
+            The video goes straight from this computer to YouTube. It never passes through Amplychat. Keep this tab open until it finishes.
+          </p>
+        </div>
+        <YouTubeDropzone
+          upload={youtubeUpload}
+          channelName={youtube.channel_name}
+          onPicked={(file) => void sendToYouTube(file)}
+          onRetry={() => (youtubeUpload.file ? void sendToYouTube(youtubeUpload.file) : undefined)}
+        />
       </Card>
     );
   } else {
@@ -129,7 +176,7 @@ export function UploadTicketPage({ ticketId }: { ticketId: string }) {
   }
 
   return (
-    <PageFrame title="Upload a file">
+    <PageFrame title={kind === "youtube" ? "Upload to YouTube" : "Upload a file"}>
       <div className="max-w-xl">{body}</div>
     </PageFrame>
   );

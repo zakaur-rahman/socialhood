@@ -2245,7 +2245,7 @@ export interface paths {
          * Create Sandbox Account
          * @description Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
          *     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
-         *     templates (GR-23).
+         *     templates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195).
          */
         post: operations["create_sandbox_account"];
         delete?: never;
@@ -3078,7 +3078,8 @@ export interface paths {
         /**
          * Get Mcp Upload
          * @description The upload an AI app asked for, with the signed fields to send the file to storage while it
-         *     waits. 404 for a ticket that isn't this workspace's.
+         *     waits (a ``youtube`` ticket: its YouTube upload address instead). 404 for a ticket that isn't
+         *     this workspace's.
          */
         get: operations["get_mcp_upload"];
         put?: never;
@@ -3103,6 +3104,10 @@ export interface paths {
          * @description After the browser uploaded the file: add the ticket's file to the media library. 409 when
          *     no file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``
          *     ticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.
+         *
+         *     A ``youtube`` ticket takes ``{video_id}`` and completes the post's YouTube upload as the
+         *     composer does (complete_youtube_upload's answers: 422 for a video that isn't the upload's,
+         *     409 when the upload expired).
          */
         post: operations["complete_mcp_upload"];
         delete?: never;
@@ -4117,6 +4122,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Youtube Upload
+         * @description C-196: open a direct upload of the video for a post whose accounts are all YouTube
+         *     channels (``target_id``: the channel's ``social_account_id``). The browser then PUTs the file
+         *     to ``upload_url`` itself; the channel's token is never sent. A post with a time uploads as
+         *     private and YouTube publishes it then; a post without one ("now") uploads with the chosen
+         *     privacy. One of YouTube's daily uploads is counted. 409 conflict for a post that also goes to
+         *     other platforms ("Posts to several platforms use the media tray"), has media in the tray or
+         *     can't be edited, or when the workspace has 3 uploads open; 422 for missing YouTube options
+         *     (``targets.{i}.options``) or a time under a minute away (``publish_at``); 429 rate_limited
+         *     when YouTube's daily uploads are used up ("Try again after …", with Retry-After).
+         */
+        post: operations["start_youtube_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Youtube Upload
+         * @description C-196: the browser finished the upload; ``video_id`` is the id in YouTube's answer. The
+         *     video is read on the channel (it must be there, with the upload's title), kept on the
+         *     target, and the post is scheduled (the checklist and scheduled_posts_monthly apply: 422, 402)
+         *     or, for a post without a time, published now. 409 when no upload is open for the channel.
+         *     Sending the same video again returns the post as it is.
+         */
+        post: operations["complete_youtube_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/sequences": {
         parameters: {
             query?: never;
@@ -4433,6 +4490,73 @@ export interface paths {
          *     over accounts_per_platform, 502 when Meta fails.
          */
         post: operations["complete_whatsapp_signup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List Youtube Channels
+         * @description The channels of the Google account that consented, from the nonce the OAuth callback
+         *     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
+         *     expired (10 minutes), 422 when the account has no channel or the permission was not given,
+         *     502 when Google fails. Asking again returns the same list.
+         */
+        post: operations["list_youtube_channels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Youtube Connect
+         * @description Google's authorize URL (youtube.force-ssl, offline, consent). 503 until YouTube connections
+         *     are configured, 402 over youtube_accounts or Free's channels in total.
+         */
+        post: operations["start_youtube_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Youtube Channels
+         * @description Connect the picked channel. 422 channel_ids for a channel that wasn't listed, 409
+         *     account_in_use when it is connected to another workspace, 402 over youtube_accounts (one per
+         *     workspace) or Free's channels in total (nothing is added, the nonce stays valid), 404 when it
+         *     expired.
+         */
+        post: operations["connect_youtube_channels"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4936,7 +5060,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /**
              * Status
              * @enum {string}
@@ -7430,7 +7554,7 @@ export interface components {
              * Key
              * @enum {string}
              */
-            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "extras" | "publishing_limit" | "publish_at";
+            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "extras" | "youtube" | "publishing_limit" | "publish_at";
             /** Message */
             message: string;
             /** Ok */
@@ -9819,6 +9943,15 @@ export interface components {
             /** Ids */
             ids?: string[] | null;
         };
+        /**
+         * McpUploadCompletion
+         * @description A ``youtube`` ticket's finished upload: the video id from YouTube's answer. Other tickets
+         *     send no body.
+         */
+        McpUploadCompletion: {
+            /** Video Id */
+            video_id?: string | null;
+        };
         /** McpUploadTicket */
         McpUploadTicket: {
             /**
@@ -9835,7 +9968,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "image" | "video";
+            kind: "image" | "video" | "youtube";
             /** Limits */
             limits: {
                 [key: string]: unknown;
@@ -9844,12 +9977,15 @@ export interface components {
             media_asset_id?: string | null;
             /** Reason */
             reason?: string | null;
+            /** Scheduled Post Id */
+            scheduled_post_id?: string | null;
             /**
              * Status
              * @enum {string}
              */
             status: "waiting" | "uploaded" | "expired" | "rejected";
             upload?: components["schemas"]["DropSignature"] | null;
+            youtube?: components["schemas"]["YouTubeTicket"] | null;
         };
         /** Me */
         Me: {
@@ -10638,7 +10774,7 @@ export interface components {
             /** Oldest Waiting Since */
             oldest_waiting_since: string | null;
             /** Platforms Connected */
-            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web")[];
+            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web" | "youtube")[];
             previous: components["schemas"]["OverviewPeriod"];
             /** Priority Queue */
             priority_queue: components["schemas"]["PriorityConversation"][];
@@ -12047,8 +12183,9 @@ export interface components {
         };
         /**
          * SandboxAccountCreate
-         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
-         *     or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.
+         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),
+         *     a WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes
+         *     an Instagram one.
          */
         SandboxAccountCreate: {
             /**
@@ -12056,7 +12193,7 @@ export interface components {
              * @default instagram
              * @enum {string}
              */
-            platform: "instagram" | "facebook" | "whatsapp";
+            platform: "instagram" | "facebook" | "whatsapp" | "youtube";
         };
         /** SandboxCartItem */
         SandboxCartItem: {
@@ -12516,6 +12653,7 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
             first_comment?: components["schemas"]["FirstCommentResult"] | null;
+            options?: components["schemas"]["YouTubeOptions"] | null;
             /** Permalink */
             permalink?: string | null;
             /** Platform Media Id */
@@ -12534,6 +12672,7 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
+            youtube?: components["schemas"]["YouTubeTargetState"] | null;
         };
         /**
          * Seats
@@ -13186,7 +13325,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**
@@ -13624,11 +13763,14 @@ export interface components {
         };
         /**
          * TargetIn
-         * @description An account to publish to, with an optional caption for it alone.
+         * @description An account to publish to, with an optional caption for it alone. ``options``: a YouTube
+         *     channel's choices (C-196), needed before the post is scheduled (the checklist's ``youtube``
+         *     item); null for every other platform (else 422 on ``targets.{i}.options``).
          */
         TargetIn: {
             /** Caption Override */
             caption_override?: string | null;
+            options?: components["schemas"]["YouTubeOptions"] | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -14423,6 +14565,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14485,6 +14629,8 @@ export interface components {
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14506,6 +14652,187 @@ export interface components {
             slug: string;
             /** Timezone */
             timezone: string;
+        };
+        /** YouTubeChannel */
+        YouTubeChannel: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Channel Id */
+            channel_id: string;
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Handle */
+            handle?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** YouTubeChannelList */
+        YouTubeChannelList: {
+            /** Items */
+            items: components["schemas"]["YouTubeChannel"][];
+        };
+        /**
+         * YouTubeChannelsRequest
+         * @description The nonce the OAuth callback put in the Connections page's URL (?youtube=…).
+         */
+        YouTubeChannelsRequest: {
+            /** Nonce */
+            nonce: string;
+        };
+        /**
+         * YouTubeConnectChannels
+         * @description The channel to connect, picked from the list the same nonce returned. One per workspace.
+         */
+        YouTubeConnectChannels: {
+            /** Channel Ids */
+            channel_ids: string[];
+            /** Nonce */
+            nonce: string;
+        };
+        /** YouTubeConnectStart */
+        YouTubeConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /**
+         * YouTubeOptions
+         * @description A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the
+         *     post's target. The description is the caption (or the target's ``caption_override``).
+         *     Stored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have
+         *     no default: the person answers both (COPPA; realistic AI-altered content).
+         *
+         *     - ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);
+         *     - ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts
+         *       its quotes, and each comma between tags counts);
+         *     - ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from
+         *       the file's shape and length; there is no separate call).
+         */
+        YouTubeOptions: {
+            /** Category Id */
+            category_id?: string | null;
+            /**
+             * Format
+             * @default video
+             * @enum {string}
+             */
+            format: "video" | "short";
+            /** Made For Kids */
+            made_for_kids: boolean;
+            /**
+             * Notify Subscribers
+             * @default true
+             */
+            notify_subscribers: boolean;
+            /**
+             * Privacy
+             * @default public
+             * @enum {string}
+             */
+            privacy: "public" | "unlisted" | "private";
+            /** Synthetic Media */
+            synthetic_media: boolean;
+            /** Tags */
+            tags?: string[];
+            /** Title */
+            title: string;
+        };
+        /**
+         * YouTubeTargetState
+         * @description Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was
+         *     opened and not finished runs out then (the post goes back to a draft: "The upload didn't
+         *     finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).
+         */
+        YouTubeTargetState: {
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "direct" | "media";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "waiting_for_file" | "uploading" | "processing" | "scheduled" | "published" | "failed";
+            /** Upload Expires At */
+            upload_expires_at?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Video Id */
+            video_id?: string | null;
+        };
+        /**
+         * YouTubeTicket
+         * @description A ``youtube`` ticket's upload while it waits (C-196): PUT the file to ``upload_url`` in
+         *     pieces of ``chunk_bytes`` (``Content-Range``; 308 go on, 200/201 done with the video's id),
+         *     then complete with that id.
+         */
+        YouTubeTicket: {
+            /** Channel Name */
+            channel_name: string;
+            /** Chunk Bytes */
+            chunk_bytes: number;
+            /** Title */
+            title: string;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
+         * YouTubeUploadComplete
+         * @description POST …/youtube-upload/complete: the finished upload's video id (from YouTube's answer).
+         */
+        YouTubeUploadComplete: {
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Video Id */
+            video_id: string;
+        };
+        /**
+         * YouTubeUploadSession
+         * @description Where the file goes: PUT it to ``upload_url`` in pieces of ``chunk_bytes`` (the last may be
+         *     shorter) with ``Content-Range: bytes {first}-{last}/{total}``. 308 means "go on" (its
+         *     ``Range`` header says what arrived); 200 or 201 means done, with the video's JSON (its
+         *     ``id``). To resume, PUT nothing with ``Content-Range: bytes *\/{total}``. The address works
+         *     for this one file until ``expires_at``; no token is needed or given.
+         */
+        YouTubeUploadSession: {
+            /** Chunk Bytes */
+            chunk_bytes: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
+         * YouTubeUploadStart
+         * @description POST …/scheduled-posts/{id}/youtube-upload: open a direct upload for the post's YouTube
+         *     target. ``target_id`` is the target's channel (its ``social_account_id``).
+         */
+        YouTubeUploadStart: {
+            /** Content Type */
+            content_type: string;
+            /** File Name */
+            file_name?: string | null;
+            /** File Size */
+            file_size: number;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
         };
     };
     responses: never;
@@ -22346,7 +22673,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["McpUploadCompletion"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -24916,6 +25247,96 @@ export interface operations {
             };
         };
     };
+    start_youtube_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeUploadStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeUploadSession"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_youtube_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeUploadComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_sequences: {
         parameters: {
             query?: never;
@@ -25653,6 +26074,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeChannelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeChannelList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_youtube_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeConnectChannels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountList"];
                 };
             };
             /** @description Validation error */

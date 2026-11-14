@@ -108,6 +108,7 @@ export const workspace: WorkspaceSummary = {
   plan: "pro",
   role: "owner",
   timezone: "Asia/Kolkata",
+  features: [],
 };
 
 export function renderWithApi(

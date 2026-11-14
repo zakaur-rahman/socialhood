@@ -75,6 +75,8 @@ const RULES: Record<Platform, Partial<Record<FileKind, Rule>>> = {
   },
   // The website chat takes text only (GR-28, C-111: no attachments).
   web: {},
+  // YouTube has no DMs; its videos are uploaded from the composer, not attached to a message.
+  youtube: {},
 };
 
 const PLATFORM_NAME: Record<Platform, string> = {
@@ -82,6 +84,7 @@ const PLATFORM_NAME: Record<Platform, string> = {
   whatsapp: "WhatsApp",
   facebook: "Facebook",
   web: "Website chat",
+  youtube: "YouTube",
 };
 
 export function extensionOf(name: string): string {
@@ -135,6 +138,7 @@ export const ATTACHMENT_RULES: Record<Platform, { accept: string; check: (file: 
   whatsapp: { accept: acceptFor("whatsapp"), check: checkFor("whatsapp") },
   facebook: { accept: acceptFor("facebook"), check: checkFor("facebook") },
   web: { accept: acceptFor("web"), check: checkFor("web") },
+  youtube: { accept: acceptFor("youtube"), check: checkFor("youtube") },
 };
 
 /** WhatsApp stickers: 512 x 512 WebP up to 500 KB (the API checks the size in pixels). */

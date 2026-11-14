@@ -145,6 +145,15 @@
       "preview": false
     },
     {
+      "name": "get_youtube_upload_status",
+      "title": "Check a YouTube upload",
+      "access": "write",
+      "scope": "posts:write",
+      "role": "admin",
+      "free": false,
+      "preview": false
+    },
+    {
       "name": "import_media_from_url",
       "title": "Import media from a link",
       "access": "draft",
@@ -212,6 +221,15 @@
       "title": "Pause an automation",
       "access": "write",
       "scope": "automations:write",
+      "role": "admin",
+      "free": false,
+      "preview": true
+    },
+    {
+      "name": "prepare_youtube_upload",
+      "title": "Prepare a YouTube upload",
+      "access": "write",
+      "scope": "posts:write",
       "role": "admin",
       "free": false,
       "preview": true

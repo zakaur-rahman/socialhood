@@ -22,6 +22,7 @@ function settings(overrides: Partial<Workspace> = {}): Workspace {
     id: workspace.id,
     name: workspace.name,
     slug: workspace.slug,
+    features: [],
     timezone: "Asia/Kolkata",
     reply_language: "auto",
     status: "active",

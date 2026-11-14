@@ -17,6 +17,7 @@ import {
 import { Fragment, useState, type ReactNode } from "react";
 
 import { PostThumb } from "@/components/comments/PostThumb";
+import { YouTubeGlyph } from "@/components/connections/YouTubeGlyph";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +94,9 @@ function NoMedia({
   );
 }
 
+/** C-195: what the YouTube preview shows; ``videoUrl`` is the picked file (a local URL) or the uploaded video. */
+export type PreviewYouTube = { title: string; format: "video" | "short"; videoUrl: string | null };
+
 /** FR-PUB-07: what the Instagram options add to the preview. */
 export type PreviewExtras = {
   collaborators: string[];
@@ -144,8 +148,10 @@ export function PostPreview({
   format,
   firstComment,
   extras,
+  youtube,
 }: {
   extras?: PreviewExtras;
+  youtube?: PreviewYouTube;
   wid: string;
   /** The post's accounts, in order; the first leads the preview. */
   accounts: SocialAccount[];
@@ -192,6 +198,8 @@ export function PostPreview({
       </CardHeader>
       {format === "story" ? (
         <StoryPreview account={account} identity={identity} asset={assets[0]} />
+      ) : account?.platform === "youtube" ? (
+        <YouTubePreview account={account} identity={identity} caption={caption} youtube={youtube ?? { title: "", format: "video", videoUrl: assets[0]?.url ?? null }} />
       ) : account?.platform === "facebook" ? (
         <FacebookPreview account={account} identity={identity} caption={caption} assets={assets} />
       ) : (
@@ -277,6 +285,54 @@ function FacebookPreview({
         <span className="flex items-center gap-1.5">
           <Send className="size-4" /> Share
         </span>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * C-195: the video as YouTube lists it: the picked file's first frame (YouTube makes the real
+ * thumbnail; custom thumbnails come later), the title and the channel. A Short is 9:16.
+ */
+function YouTubePreview({
+  account,
+  identity,
+  caption,
+  youtube,
+}: {
+  account: SocialAccount;
+  identity?: AccountColor;
+  caption: string;
+  youtube: PreviewYouTube;
+}) {
+  const short = youtube.format === "short";
+  const channel = account.display_name ?? account.username ?? "Your channel";
+  return (
+    <article aria-label="YouTube preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
+      <div className={cn("relative mx-auto bg-media-scrim", short ? "aspect-[9/16] max-h-[420px]" : "aspect-video w-full")}>
+        {youtube.videoUrl ? (
+          <video src={youtube.videoUrl} muted playsInline preload="metadata" aria-label="Video" className="size-full object-cover" />
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-on-brand">
+            <YouTubeGlyph className="size-8" />
+            Add the video to see the preview. YouTube picks the thumbnail.
+          </div>
+        )}
+        {short ? (
+          <Badge tone="media" size="md" className="absolute top-2 left-2">
+            Short
+          </Badge>
+        ) : null}
+      </div>
+      <div className="flex gap-3 p-3">
+        <AccountPicture account={account} identity={identity} />
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className={cn("line-clamp-2 text-sm font-semibold break-words", !youtube.title.trim() && "text-fg-secondary")} data-testid="youtube-preview-title">
+            {youtube.title.trim() || "Your title shows here"}
+          </p>
+          <p className="truncate text-xs text-fg-secondary">{channel}</p>
+          {caption.trim() ? <p className="line-clamp-2 text-xs break-words whitespace-pre-line text-fg-secondary">{caption}</p> : null}
+        </div>
       </div>
     </article>
   );

@@ -8,11 +8,11 @@ import type { AccountAttention } from "@/lib/api/types";
 function problem(account: AccountAttention): string {
   const fallback = {
     whatsapp: "Your WhatsApp number", facebook: "Your Facebook Page", instagram: "Your Instagram account",
-    web: "Your website chat",
+    web: "Your website chat", youtube: "Your YouTube channel",
   };
   const name = account.username ? `@${account.username}` : fallback[account.platform];
   return account.status === "needs_reconnect"
-    ? `${name} needs reconnecting to keep receiving messages`
+    ? `${name} needs reconnecting to keep ${account.platform === "youtube" ? "publishing" : "receiving messages"}`
     : `${name} has a connection error`;
 }
 

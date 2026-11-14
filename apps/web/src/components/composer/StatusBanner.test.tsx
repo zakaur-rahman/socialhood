@@ -174,3 +174,45 @@ describe("a published post shows its collaborators' invites (FR-PUB-07, C-134)",
     await waitFor(() => expect(view.calls.some((call) => call.method === "POST" && /collaborators\/refresh$/.test(call.path))).toBe(true));
   });
 });
+
+describe("YouTube states (C-195)", () => {
+  const channel = account({ id: "y1", platform: "youtube", username: "maplebakery", display_name: "Maple Bakery" });
+  type State = "waiting_for_file" | "uploading" | "processing" | "scheduled" | "published" | "failed";
+  const youtube = (state: State, url: string | null = null) => ({ route: "direct", state, video_id: "vid1", upload_expires_at: null, url });
+
+  function show(post: Parameters<typeof StatusBanner>[0]["post"], progress: number | null = null) {
+    return renderWithApi(
+      <StatusBanner post={post} accounts={[channel]} timeZone="UTC" now={NOW} onEditAndRetry={() => {}} retrying={false} youtubeProgress={progress} />,
+    );
+  }
+
+  it.each([
+    ["waiting_for_file", "Waiting for the file"],
+    ["processing", "Processing on YouTube"],
+    ["scheduled", "Scheduled on YouTube"],
+  ] as const)("says %s", (state, label) => {
+    show(scheduledPost({ status: "scheduled", publish_at: "2026-10-01T10:00:00Z", targets: [target({ social_account_id: "y1", youtube: youtube(state) } as never)] }));
+    expect(screen.getByTestId("youtube-banner")).toHaveTextContent(label);
+  });
+
+  it("shows this tab's upload progress", () => {
+    show(scheduledPost({ targets: [target({ social_account_id: "y1" })] }), 42);
+    expect(screen.getByTestId("youtube-banner")).toHaveTextContent("Uploading 42%");
+  });
+
+  it("links a published video to YouTube", () => {
+    show(
+      scheduledPost({
+        status: "published",
+        published_at: "2026-09-29T10:00:00Z",
+        targets: [target({ social_account_id: "y1", status: "published", youtube: youtube("published", "https://www.youtube.com/watch?v=vid1") } as never)],
+      }),
+    );
+    expect(screen.getByRole("link", { name: /View on YouTube/ })).toHaveAttribute("href", "https://www.youtube.com/watch?v=vid1");
+  });
+
+  it("shows nothing for a draft without YouTube", () => {
+    show(scheduledPost({ targets: [target()] }));
+    expect(screen.queryByTestId("youtube-banner")).not.toBeInTheDocument();
+  });
+});

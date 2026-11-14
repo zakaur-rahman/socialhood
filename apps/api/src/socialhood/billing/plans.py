@@ -42,7 +42,10 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "accounts_per_platform": {"free": 1, "pro": 1, "max": 3, "agency": 10},
     # Instagram has its own limit (C-187): it is where people most often run a second account.
     "instagram_accounts": {"free": 1, "pro": 2, "max": 4, "agency": 10},
-    # Channels in total across Instagram, Facebook, WhatsApp and the website chat (C-172): Free
+    # YouTube (C-195, D1): one channel per workspace on every plan. It counts toward Free's
+    # channels_total like the others.
+    "youtube_accounts": {"free": 1, "pro": 1, "max": 1, "agency": 1},
+    # Channels in total across Instagram, Facebook, WhatsApp, YouTube and the website chat: Free
     # has 2 of them; the paid plans have no total beyond the per-platform limit.
     "channels_total": {"free": 2, "pro": None, "max": None, "agency": None},
     # WhatsApp (C-172): not on Free. Same 402 entitlement_required as the other features.
@@ -166,8 +169,10 @@ def entitlement(plan: str, key: str) -> Any:
 
 
 def accounts_key(platform: str) -> str:
-    """The entitlement that limits a platform's accounts (C-187)."""
-    return "instagram_accounts" if platform == "instagram" else "accounts_per_platform"
+    """The entitlement that limits a platform's accounts (C-187, C-195)."""
+    if platform in ("instagram", "youtube"):
+        return f"{platform}_accounts"
+    return "accounts_per_platform"
 
 
 def accounts_limit(plan: str, platform: str) -> Any:
