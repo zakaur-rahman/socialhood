@@ -146,7 +146,7 @@ class YouTubeOptions(RequestModel):
     privacy: Literal["public", "unlisted", "private"] = "public"
     made_for_kids: bool
     synthetic_media: bool
-    category_id: str | None = Field(default=None, pattern=r"^\d{1,4}$")
+    category_id: str | None = Field(default=None, max_length=4, pattern=r"^\d{1,4}$")
     tags: list[Annotated[str, Field(min_length=1, max_length=YOUTUBE_TAGS_MAX_CHARS)]] = Field(
         default_factory=list, max_length=100
     )
