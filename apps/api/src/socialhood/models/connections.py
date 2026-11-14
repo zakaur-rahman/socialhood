@@ -31,6 +31,7 @@ class Platform(StrEnum):
     FACEBOOK = "facebook"
     LINKEDIN = "linkedin"
     WEB = "web"  # the website chat widget (GR-28)
+    YOUTUBE = "youtube"  # a YouTube channel, publish only (C-195)
 
 
 class AccountStatus(StrEnum):

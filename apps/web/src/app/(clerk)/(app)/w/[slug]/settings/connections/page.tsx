@@ -20,6 +20,7 @@ import {
   type AccountFilter,
 } from "@/components/connections/filters";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
+import { YouTubeChannelsDialog } from "@/components/connections/YouTubeChannelsDialog";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { STICKY_PAGE_TOOLBAR } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -40,6 +41,7 @@ import {
   useSocialAccounts,
   useStartFacebookConnect,
   useStartInstagramConnect,
+  useStartYouTubeConnect,
   useUpdateAccount,
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
@@ -73,6 +75,9 @@ function Connections() {
   const accounts = useSocialAccounts(wid);
   const connect = useStartInstagramConnect(wid);
   const connectFacebook = useStartFacebookConnect(wid);
+  const connectYouTube = useStartYouTubeConnect(wid);
+  // YouTube is behind a switch: without it nothing about YouTube is offered (an existing account still shows).
+  const youtubeOn = (workspace.features ?? []).includes("youtube");
   const update = useUpdateAccount(wid);
   const resubscribe = useResubscribeAccount(wid);
   const disconnect = useDisconnectAccount(wid);
@@ -102,7 +107,16 @@ function Connections() {
       onError: (error) => toastError(error),
     });
   }, [connectFacebook]);
-  const [facebookNonce, setFacebookNonce] = useFacebookNonce();
+  const [facebookNonce, setFacebookNonce] = useQueryNonce("facebook");
+
+  const startYouTube = useCallback(() => {
+    setConnectError(null);
+    connectYouTube.mutate(undefined, {
+      onSuccess: (url) => browser.assign(url),
+      onError: (error) => toastError(error),
+    });
+  }, [connectYouTube]);
+  const [youtubeNonce, setYouTubeNonce] = useQueryNonce("youtube");
 
   const finishing = useConnectResult(wid, accounts.data, accounts.isError, setConnectError);
 
@@ -118,6 +132,7 @@ function Connections() {
     setConnectError(null);
     if (platform === "whatsapp") whatsapp.connect();
     else if (platform === "facebook") startFacebook();
+    else if (platform === "youtube") startYouTube();
     else startConnect();
   };
   const connectAlert = connectError ? (
@@ -165,7 +180,8 @@ function Connections() {
             onFacebook={startFacebook}
             onWhatsApp={whatsapp.connectNew}
             whatsAppConfigured={whatsapp.configured}
-            busy={connect.isPending || finishing || connectFacebook.isPending || whatsapp.busy}
+            busy={connect.isPending || finishing || connectFacebook.isPending || connectYouTube.isPending || whatsapp.busy}
+            onYouTube={youtubeOn ? startYouTube : undefined}
           />
         </>
       )}
@@ -276,7 +292,9 @@ function Connections() {
                         ? whatsapp.busy
                         : account.platform === "facebook"
                           ? connectFacebook.isPending
-                          : connect.isPending,
+                          : account.platform === "youtube"
+                            ? connectYouTube.isPending
+                            : connect.isPending,
                     retrying: resubscribe.isPending && resubscribe.variables === account.id,
                     disconnecting: disconnect.isPending && disconnect.variables?.id === account.id,
                     deleting: deleteData.isPending && deleteData.variables?.id === account.id,
@@ -301,7 +319,9 @@ function Connections() {
                         ? whatsapp.connect
                         : account.platform === "facebook"
                           ? startFacebook
-                          : startConnect,
+                          : account.platform === "youtube"
+                            ? startYouTube
+                            : startConnect,
                     onRetrySubscribe: () =>
                       resubscribe.mutate(account.id, {
                         onSuccess: (saved) =>
@@ -336,6 +356,7 @@ function Connections() {
           )}
         </>
       )}
+      <YouTubeChannelsDialog key={youtubeNonce ?? "closed"} wid={wid} nonce={youtubeNonce} onClose={() => setYouTubeNonce(null)} />
       <FacebookPagesDialog key={facebookNonce ?? "closed"} wid={wid} nonce={facebookNonce} onClose={() => setFacebookNonce(null)} />
       <AutoConfirmDialog
         open={Boolean(confirmAuto)}
@@ -366,34 +387,34 @@ function isConfirmError(error: unknown): boolean {
 }
 
 /** UI-061: the last connect error, shown inline until dismissed; `retry` is the platform to try again. */
-type ConnectFailure = { message: string; retry: "instagram" | "facebook" | "whatsapp" | null };
+type ConnectFailure = { message: string; retry: "instagram" | "facebook" | "youtube" | "whatsapp" | null };
 
 function showConnectResult(
   result: ConnectResult | null,
   fail: (failure: ConnectFailure) => void,
-  platform: "instagram" | "facebook" = "instagram",
+  platform: "instagram" | "facebook" | "youtube" = "instagram",
 ) {
   if (result?.kind === "success") toast.success(result.message);
   else if (result) fail({ message: result.message, retry: result.retry ? platform : null });
 }
 
 /**
- * GR-29: Facebook's callback redirects here with ?facebook=<nonce> (X-1, as for Instagram). The
- * page opens with it, so the dialog takes the nonce at once; the parameter is dropped straight away
- * so a refresh doesn't open the dialog again.
+ * GR-29: Facebook's (and YouTube's) callback redirects here with ?facebook=<nonce> (X-1, as for
+ * Instagram). The page opens with it, so the dialog takes the nonce at once; the parameter is
+ * dropped straight away so a refresh doesn't open the dialog again.
  */
-function useFacebookNonce() {
+function useQueryNonce(name: "facebook" | "youtube") {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [nonce, setNonce] = useState<string | null>(() => params.get("facebook"));
+  const [nonce, setNonce] = useState<string | null>(() => params.get(name));
   const dropped = useRef(false);
 
   useEffect(() => {
-    if (dropped.current || !params.has("facebook")) return;
+    if (dropped.current || !params.has(name)) return;
     dropped.current = true;
     router.replace(pathname as Route, { scroll: false });
-  }, [params, router, pathname]);
+  }, [params, router, pathname, name]);
 
   return [nonce, setNonce] as const;
 }
@@ -420,7 +441,8 @@ function useConnectResult(
   useEffect(() => {
     if (shown.current || !(params.has("instagram") || params.has("connected") || params.has("error"))) return;
     const nonce = params.get("instagram");
-    const platform = params.get("platform") === "facebook" ? "facebook" : "instagram";
+    const platformParam = params.get("platform");
+    const platform = platformParam === "facebook" || platformParam === "youtube" ? platformParam : "instagram";
     if (!nonce && params.has("connected") && accounts === undefined && !failed) return;
     shown.current = true;
     router.replace(pathname as Route, { scroll: false });

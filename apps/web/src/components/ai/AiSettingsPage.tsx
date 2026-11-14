@@ -48,6 +48,7 @@ const API_NAME = {
   facebook: "Facebook Messenger",
   whatsapp: "WhatsApp Cloud API",
   web: "Website chat widget",
+  youtube: "YouTube Data API",
 } as const;
 
 const STATUS_DOT: Record<AccountStatus, string> = {
@@ -77,7 +78,8 @@ export function AiSettingsPage() {
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
   if (canManage && settings.isError) return <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />;
 
-  const live = accounts.data.filter((a) => a.status !== "disconnected");
+  // A YouTube channel only publishes: it has no AI replies (C-195).
+  const live = accounts.data.filter((a) => a.status !== "disconnected" && a.platform !== "youtube");
   const header = (
     <SettingsPageHeader
       title="AI rules and takeover"

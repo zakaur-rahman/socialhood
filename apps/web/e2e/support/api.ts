@@ -165,8 +165,8 @@ export class Api {
 
   // ---------------------------------------------------------------- the app's own endpoints
 
-  /** A sandbox Instagram account, a Facebook Page (GR-29) or a WhatsApp number with approved templates (GR-23). */
-  connectSandbox(wid: string, platform: "instagram" | "facebook" | "whatsapp" = "instagram"): Promise<SandboxAccount> {
+  /** A sandbox Instagram account, a Facebook Page (GR-29), a YouTube channel or a WhatsApp number with approved templates (GR-23). */
+  connectSandbox(wid: string, platform: "instagram" | "facebook" | "whatsapp" | "youtube" = "instagram"): Promise<SandboxAccount> {
     return this.call<SandboxAccount>(
       "POST",
       `/v1/w/${wid}/dev/sandbox/accounts`,

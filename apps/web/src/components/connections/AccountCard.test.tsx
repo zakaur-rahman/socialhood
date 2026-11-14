@@ -106,6 +106,16 @@ describe("AccountCard (UX-SCR-07)", () => {
     expect(within(card).queryByRole("button", { name: "Disconnect" })).not.toBeInTheDocument();
   });
 
+  it("a YouTube channel has no AI controls and names its API", () => {
+    const { card } = renderCard({ platform: "youtube", username: "maplebakery" });
+    expect(within(card).getByRole("img", { name: "YouTube" })).toBeInTheDocument();
+    expect(within(card).getByText("YouTube Data API")).toBeInTheDocument();
+    expect(within(card).queryByText("AI replies")).toBeNull();
+    expect(within(card).queryByText("AI analysis")).toBeNull();
+    expect(within(card).queryByText("Hide spam comments")).toBeNull();
+    expect(within(card).getByRole("button", { name: /Disconnect/ })).toBeInTheDocument();
+  });
+
   it("marks sandbox accounts", () => {
     const { card } = renderCard({ sandbox: true });
     expect(within(card).getByText("Sandbox")).toBeInTheDocument();

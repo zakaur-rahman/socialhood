@@ -29,7 +29,7 @@ export function useConversations(wid: string, filters: ConversationFilters) {
             path: { wid },
             query: {
               view: filters.view,
-              platform: filters.platform ?? undefined,
+              platform: filters.platform && filters.platform !== "youtube" ? filters.platform : undefined, // no YouTube conversations
               account_id: filters.accountId ?? undefined,
               q: filters.q.trim() || undefined,
               cursor: pageParam ?? undefined,

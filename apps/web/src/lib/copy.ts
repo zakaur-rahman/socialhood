@@ -104,7 +104,7 @@ export function scheduledPlatformEmpty(platformLabel: string): { title: string; 
 // ---- sending (§4.7 error codes, F-07)
 
 type SendContext = {
-  platform: "instagram" | "whatsapp" | "facebook" | "web";
+  platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
   /** @username on Instagram and Facebook; the display name or number on WhatsApp; the widget's name on the website. */
   handle?: string | null;
 };
@@ -124,6 +124,7 @@ const PLATFORM_NAME = {
   whatsapp: "WhatsApp",
   facebook: "Facebook",
   web: "The website chat",
+  youtube: "YouTube",
 } as const;
 
 /**
@@ -276,6 +277,23 @@ export function facebookListError(error: unknown): string {
     if (error.status === 422 && error.detail) return error.detail;
   }
   return "Facebook didn't respond. Close this and connect Facebook again.";
+}
+
+/** YouTube: the channel was connected from Google's list. */
+export function youtubeConnected(name: string): string {
+  return `YouTube connected: ${name}`;
+}
+
+/** Why the channel list didn't load: the nonce lives 10 minutes (404) and belongs to the member who started the connect (403). */
+export function youtubeListError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) return "That connection link expired. Close this and connect YouTube again.";
+    if (error.status === 403) {
+      return "This YouTube connection was started by someone else, so it wasn't added. To connect your own channel, use Add account.";
+    }
+    if (error.status === 422 && error.detail) return error.detail;
+  }
+  return "YouTube didn't respond. Close this and connect YouTube again.";
 }
 
 /** The toast for the ?connected= / ?error= the callback redirected with, or null for none. */

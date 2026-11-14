@@ -9923,3 +9923,45 @@ features", then changed three rules. The audit report is kept outside the repo.
   ads, behind a consent banner.
 - **Owner to confirm:** the Umami account's data region (the subprocessors page names it as "the
   region chosen for our account").
+
+## C-195 · YouTube Phase 1: connect a channel (owner, 2026-11-14)
+
+- **Asked:** connect a YouTube channel (plan: plans/youtube-plan-2026-11-14.html, Phase 1). API
+  side here; the web side in the same branch.
+- **Decided by the owner:**
+  - YouTube is publish only (no DMs, no comments yet): capabilities `publish` and `post_insights`,
+    both only when the grant holds `youtube.force-ssl`.
+  - OAuth: the same Google OAuth client as Clerk's Google sign-in, our own settings
+    (`YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`, `YOUTUBE_PROVIDER`
+    google or fake, fake refused in production). One scope, `youtube.force-ssl` (uploads, and
+    editing or deleting them; `youtube.upload` alone can't), with `access_type=offline`,
+    `prompt=consent`, `include_granted_scopes=false`.
+  - The refresh token is stored encrypted in `social_accounts.access_token_enc` with
+    `token_expires_at` NULL; the adapter mints a short-lived access token per use. The daily
+    `refresh_tokens` job skips YouTube (`connections.refresh_due`). `invalid_grant` is
+    `account_needs_reconnect`.
+  - Feature switch `YOUTUBE_WORKSPACES`: empty is off everywhere, `*` on for all, otherwise a comma
+    list of workspace slugs or ids. `WorkspaceOut` and `WorkspaceSummary` carry
+    `features: ["youtube"]` where it is on; the YouTube connect routes answer 404 elsewhere.
+  - Plans (D1): one YouTube channel per workspace on every plan (`youtube_accounts` = 1); it counts
+    toward Free's 2 channels in total and the read-only rules (`CHANNEL_PLATFORMS`). A
+    `youtube_accounts` usage meter shows where YouTube is on.
+  - Disconnect revokes the grant with Google (best effort), after the normal disconnect.
+- **Calls made:**
+  - Google errors get their own mapper (`platforms/youtube/client.map_google_error`):
+    `PlatformHttp` takes a `mapper`, Meta's stays the default.
+  - The callback sends the browser to `/w/{slug}/settings/connections?youtube=<nonce>` (or
+    `?error=…&platform=youtube`), where the Connections page lives, as Facebook's does.
+  - A connect whose grant lacks `youtube.force-ssl` is refused at the channel list (422) rather
+    than connecting a channel that can't publish.
+  - Account platform names: a new `AccountPlatformName` (with `youtube`) for account-shaped
+    answers (`SocialAccountOut`, the overview's accounts); conversation, contact and inbox filters
+    keep `PlatformName` without it. The public API's account list leaves YouTube channels out
+    (they hold no contacts).
+  - Migration 0060 also adds the nullable `scheduled_post_targets.options` (JSONB) that Phase 2
+    uses for a video's title and privacy.
+  - Publishing methods answer `capability_unavailable` ("YouTube publishing arrives in the next
+    step") until Phase 2.
+- **Left as they are:** workspace deletion drops tokens without revoking them with Google (as for
+  every platform); a grant exchanged but never connected stays valid at Google until it expires
+  or is removed.

@@ -2245,7 +2245,7 @@ export interface paths {
          * Create Sandbox Account
          * @description Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
          *     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
-         *     templates (GR-23).
+         *     templates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195).
          */
         post: operations["create_sandbox_account"];
         delete?: never;
@@ -4439,6 +4439,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/social-accounts/youtube/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List Youtube Channels
+         * @description The channels of the Google account that consented, from the nonce the OAuth callback
+         *     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
+         *     expired (10 minutes), 422 when the account has no channel or the permission was not given,
+         *     502 when Google fails. Asking again returns the same list.
+         */
+        post: operations["list_youtube_channels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Youtube Connect
+         * @description Google's authorize URL (youtube.force-ssl, offline, consent). 503 until YouTube connections
+         *     are configured, 402 over youtube_accounts or Free's channels in total.
+         */
+        post: operations["start_youtube_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Youtube Channels
+         * @description Connect the picked channel. 422 channel_ids for a channel that wasn't listed, 409
+         *     account_in_use when it is connected to another workspace, 402 over youtube_accounts (one per
+         *     workspace) or Free's channels in total (nothing is added, the nonce stays valid), 404 when it
+         *     expired.
+         */
+        post: operations["connect_youtube_channels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts/{account_id}": {
         parameters: {
             query?: never;
@@ -4936,7 +5003,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /**
              * Status
              * @enum {string}
@@ -10638,7 +10705,7 @@ export interface components {
             /** Oldest Waiting Since */
             oldest_waiting_since: string | null;
             /** Platforms Connected */
-            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web")[];
+            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web" | "youtube")[];
             previous: components["schemas"]["OverviewPeriod"];
             /** Priority Queue */
             priority_queue: components["schemas"]["PriorityConversation"][];
@@ -12047,8 +12114,9 @@ export interface components {
         };
         /**
          * SandboxAccountCreate
-         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
-         *     or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.
+         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),
+         *     a WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes
+         *     an Instagram one.
          */
         SandboxAccountCreate: {
             /**
@@ -12056,7 +12124,7 @@ export interface components {
              * @default instagram
              * @enum {string}
              */
-            platform: "instagram" | "facebook" | "whatsapp";
+            platform: "instagram" | "facebook" | "whatsapp" | "youtube";
         };
         /** SandboxCartItem */
         SandboxCartItem: {
@@ -13186,7 +13254,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**
@@ -14423,6 +14491,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14485,6 +14555,8 @@ export interface components {
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14506,6 +14578,50 @@ export interface components {
             slug: string;
             /** Timezone */
             timezone: string;
+        };
+        /** YouTubeChannel */
+        YouTubeChannel: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Channel Id */
+            channel_id: string;
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Handle */
+            handle?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** YouTubeChannelList */
+        YouTubeChannelList: {
+            /** Items */
+            items: components["schemas"]["YouTubeChannel"][];
+        };
+        /**
+         * YouTubeChannelsRequest
+         * @description The nonce the OAuth callback put in the Connections page's URL (?youtube=…).
+         */
+        YouTubeChannelsRequest: {
+            /** Nonce */
+            nonce: string;
+        };
+        /**
+         * YouTubeConnectChannels
+         * @description The channel to connect, picked from the list the same nonce returned. One per workspace.
+         */
+        YouTubeConnectChannels: {
+            /** Channel Ids */
+            channel_ids: string[];
+            /** Nonce */
+            nonce: string;
+        };
+        /** YouTubeConnectStart */
+        YouTubeConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
         };
     };
     responses: never;
@@ -25653,6 +25769,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeChannelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeChannelList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_youtube_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeConnectChannels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountList"];
                 };
             };
             /** @description Validation error */

@@ -58,6 +58,7 @@ from socialhood.api.v1 import (
     widget_public,
     workspace_deletion,
     workspaces,
+    youtube,
 )
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -79,6 +80,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     events.router,
     whatsapp.router,
     facebook.router,
+    youtube.router,  # C-195
     automations.router,
     posts.router,
     ai.router,

@@ -283,6 +283,9 @@ class ScheduledPostTarget(IdMixin, TimestampMixin, TenantScoped, Base):
         JSONB, server_default=sql("'[]'")
     )
     collaborators_checked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # C-195: per-target choices a platform needs beyond the caption (YouTube's title, privacy and
+    # the like, filled in its next step); None for every other platform.
+    options: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     __table_args__ = (
         UniqueConstraint("scheduled_post_id", "social_account_id"),

@@ -339,7 +339,7 @@ describe("Not in your knowledge (FR-SUG-03, F-08)", () => {
     const user = userEvent.setup();
     const conv = conversation({ pending_suggestion: gap });
     renderWithApi(<ThreadView key="c1" conversationId="c1" />, {
-      ws: { id: "w1", name: "Maple Bakery", slug: "maple", plan: "pro", role: "agent", timezone: "Asia/Kolkata" },
+      ws: { id: "w1", name: "Maple Bakery", slug: "maple", plan: "pro", role: "agent", timezone: "Asia/Kolkata", features: [] },
       handlers: {
         "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }),
         "GET /v1/w/:wid/conversations/:id": () => json(conv),

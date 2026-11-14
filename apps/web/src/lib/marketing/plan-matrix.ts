@@ -174,6 +174,8 @@ export const NOT_SHOWN: EntitlementKey[] = [
   "mcp_posts_daily",
   "mcp_uploads_daily",
   "mcp_upload_mb_daily",
+  // C-195: YouTube is behind YOUTUBE_WORKSPACES until it launches; then a row "YouTube channels: 1".
+  "youtube_accounts",
 ];
 
 export const PLAN_TABLE_KEYS = Object.keys(table.entitlements) as EntitlementKey[];

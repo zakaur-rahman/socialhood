@@ -42,12 +42,12 @@ export const colourExceptions: ColourException[] = [
   // Intentional hues: tokens, listed so the palette's fixed colours are visible in one place.
   {
     kind: "tokens",
-    tokens: ["instagram", "whatsapp", "facebook", "linkedin"],
+    tokens: ["instagram", "whatsapp", "facebook", "linkedin", "youtube"],
     reason: "Platform brand colours: the identity of third parties, used for glyphs and fills only, never text.",
   },
   {
     kind: "tokens",
-    tokens: ["instagram-logo-1", "instagram-logo-2", "instagram-logo-3", "instagram-logo-4", "facebook-logo", "whatsapp-logo"],
+    tokens: ["instagram-logo-1", "instagram-logo-2", "instagram-logo-3", "instagram-logo-4", "facebook-logo", "whatsapp-logo", "youtube-logo"],
     reason:
       "The platforms' exact logo colours, for logo tiles that carry no text (Add account). The fills above are darkened for white text; these match the real marks.",
   },

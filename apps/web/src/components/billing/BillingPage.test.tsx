@@ -545,6 +545,24 @@ describe("plan hero and quotas (C-066)", () => {
   });
 });
 
+describe("YouTube channels meter", () => {
+  it("has its own tile, with the YouTube mark", async () => {
+    setup({
+      billing: billingState({
+        usage: [
+          { metric: "instagram_accounts", used: 1, limit: 1 },
+          { metric: "youtube_accounts", used: 1, limit: 1 },
+        ],
+      }),
+    });
+    const usage = await screen.findByRole("list", { name: "Usage" });
+    const tile = within(usage).getAllByRole("listitem")[1];
+    expect(tile).toHaveTextContent("YouTube channels");
+    expect(within(tile).getByRole("meter", { name: "YouTube channels" })).toHaveAttribute("aria-valuetext", "1 of 1 connected");
+    expect(tile.querySelector(".bg-youtube-logo")).not.toBeNull();
+  });
+});
+
 describe("the Usage and Billing tabs (C-171)", () => {
   it("says tax is added at checkout (C-172)", async () => {
     nav.search = "tab=billing";

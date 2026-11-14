@@ -8,11 +8,14 @@ from typing import Literal
 
 from pydantic import Field
 
+from socialhood.schemas.accounts import AccountPlatformName
 from socialhood.schemas.common import RequestModel, ResponseModel
 from socialhood.schemas.inbox import ContactSummary, EscalationReason, IntentName, PlatformName
 from socialhood.schemas.posts import CommentStats
 
 RoleName = Literal["owner", "admin", "agent"]
+# Features switched on per workspace by the operator (C-195: YOUTUBE_WORKSPACES).
+FeatureName = Literal["youtube"]
 PlanName = Literal["free", "pro", "max", "agency"]
 
 
@@ -23,6 +26,7 @@ class WorkspaceSummary(ResponseModel):
     timezone: str
     role: RoleName
     plan: PlanName
+    features: list[FeatureName]
 
 
 class Me(ResponseModel):
@@ -52,6 +56,7 @@ class WorkspaceOut(ResponseModel):
     checklist_dismissed_at: datetime | None = None
     created_at: datetime
     member_count: int  # Settings → Workspace's summary (C-066)
+    features: list[FeatureName]
 
 
 class WorkspacePatch(RequestModel):
@@ -189,7 +194,7 @@ class PriorityConversation(ResponseModel):
 
 class AccountAttention(ResponseModel):
     id: uuid.UUID
-    platform: PlatformName
+    platform: AccountPlatformName
     username: str | None
     status: Literal["needs_reconnect", "error"]
 
@@ -213,7 +218,7 @@ class Overview(ResponseModel):
     latest_gap: OverviewGap | None
     accounts_needing_attention: list[AccountAttention]
     accounts_connected: int  # active accounts
-    platforms_connected: list[PlatformName]  # of the active accounts
+    platforms_connected: list[AccountPlatformName]  # of the active accounts
     priority_queue: list[PriorityConversation]  # up to 5
     # flows
     messages_today: int

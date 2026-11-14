@@ -44,6 +44,7 @@ const API_NAME = {
   whatsapp: "WhatsApp Cloud API",
   facebook: "Facebook Pages API",
   web: "Website chat widget",
+  youtube: "YouTube Data API",
 } as const;
 
 export type AccountActions = {
@@ -144,7 +145,8 @@ export function AccountCard({
         </p>
       ) : null}
 
-      {live ? (
+      {/* YouTube is publish-only: no DMs, comments or AI replies, so no AI settings. */}
+      {live && account.platform !== "youtube" ? (
         <CardInset className="space-y-4">
           <Setting
             id={`ai-mode-${account.id}`}

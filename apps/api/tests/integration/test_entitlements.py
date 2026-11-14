@@ -16,7 +16,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.auth.deps import WorkspaceContext
-from socialhood.billing.entitlements import require_capacity, require_entitlement
+from socialhood.billing.entitlements import (
+    CHANNEL_PLATFORMS,
+    require_capacity,
+    require_entitlement,
+)
+from socialhood.billing.plans import PLANS, accounts_key, accounts_limit
 from socialhood.settings import Settings
 from tests.support.ai import make_source
 from tests.support.analysis import use_credits
@@ -404,3 +409,22 @@ async def test_api_keys_are_business_only(shop: Shop) -> None:
         )
     await set_plan(shop.engine, shop.wid, "max")
     assert (await shop.call("POST", "/api-keys", body)).status_code == 201
+
+
+# ---------------------------------------------------------------- C-195 YouTube
+
+
+def test_one_youtube_channel_on_every_plan_counted_as_a_channel() -> None:
+    assert accounts_key("youtube") == "youtube_accounts"
+    assert accounts_key("instagram") == "instagram_accounts"
+    assert accounts_key("facebook") == "accounts_per_platform"
+    assert [accounts_limit(plan, "youtube") for plan in PLANS] == [1, 1, 1, 1]
+    assert "youtube" in CHANNEL_PLATFORMS
+
+
+async def test_a_youtube_channel_takes_one_of_frees_two_channels(shop: Shop) -> None:
+    """The shop has Instagram; a YouTube channel makes two, so the website chat is refused."""
+    await make_account(
+        shop.engine, shop.wid, platform="youtube", platform_account_id="UC1", username="maple"
+    )
+    assert_402(await shop.call("GET", "/widget"), "quota_exceeded", "channels_total", 2)
