@@ -13,7 +13,8 @@
               "instagram",
               "whatsapp",
               "facebook",
-              "web"
+              "web",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -7345,6 +7346,7 @@
               "hashtags",
               "mentions",
               "extras",
+              "youtube",
               "publishing_limit",
               "publish_at"
             ],
@@ -14140,6 +14142,27 @@
         "title": "MarkRead",
         "type": "object"
       },
+      "McpUploadCompletion": {
+        "additionalProperties": false,
+        "description": "A ``youtube`` ticket's finished upload: the video id from YouTube's answer. Other tickets\nsend no body.",
+        "properties": {
+          "video_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id"
+          }
+        },
+        "title": "McpUploadCompletion",
+        "type": "object"
+      },
       "McpUploadTicket": {
         "properties": {
           "expires_at": {
@@ -14155,7 +14178,8 @@
           "kind": {
             "enum": [
               "image",
-              "video"
+              "video",
+              "youtube"
             ],
             "title": "Kind",
             "type": "string"
@@ -14188,6 +14212,18 @@
             ],
             "title": "Reason"
           },
+          "scheduled_post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Post Id"
+          },
           "status": {
             "enum": [
               "waiting",
@@ -14202,6 +14238,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DropSignature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "youtube": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeTicket"
               },
               {
                 "type": "null"
@@ -16500,7 +16546,8 @@
                 "instagram",
                 "whatsapp",
                 "facebook",
-                "web"
+                "web",
+                "youtube"
               ],
               "type": "string"
             },
@@ -20402,14 +20449,15 @@
       },
       "SandboxAccountCreate": {
         "additionalProperties": false,
-        "description": "Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)\nor a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.",
+        "description": "Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),\na WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes\nan Instagram one.",
         "properties": {
           "platform": {
             "default": "instagram",
             "enum": [
               "instagram",
               "facebook",
-              "whatsapp"
+              "whatsapp",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -21797,6 +21845,16 @@
               }
             ]
           },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "permalink": {
             "anyOf": [
               {
@@ -21859,6 +21917,16 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "youtube": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeTargetState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -23718,7 +23786,8 @@
               "instagram",
               "whatsapp",
               "facebook",
-              "web"
+              "web",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -24885,7 +24954,7 @@
       },
       "TargetIn": {
         "additionalProperties": false,
-        "description": "An account to publish to, with an optional caption for it alone.",
+        "description": "An account to publish to, with an optional caption for it alone. ``options``: a YouTube\nchannel's choices (C-196), needed before the post is scheduled (the checklist's ``youtube``\nitem); null for every other platform (else 422 on ``targets.{i}.options``).",
         "properties": {
           "caption_override": {
             "anyOf": [
@@ -24898,6 +24967,16 @@
               }
             ],
             "title": "Caption Override"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "social_account_id": {
             "format": "uuid",
@@ -27311,6 +27390,14 @@
             "title": "Created At",
             "type": "string"
           },
+          "features": {
+            "items": {
+              "const": "youtube",
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -27374,7 +27461,8 @@
           "role",
           "plan",
           "created_at",
-          "member_count"
+          "member_count",
+          "features"
         ],
         "title": "WorkspaceOut",
         "type": "object"
@@ -27488,6 +27576,14 @@
       },
       "WorkspaceSummary": {
         "properties": {
+          "features": {
+            "items": {
+              "const": "youtube",
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -27531,9 +27627,395 @@
           "slug",
           "timezone",
           "role",
-          "plan"
+          "plan",
+          "features"
         ],
         "title": "WorkspaceSummary",
+        "type": "object"
+      },
+      "YouTubeChannel": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "connected": {
+            "default": false,
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "title"
+        ],
+        "title": "YouTubeChannel",
+        "type": "object"
+      },
+      "YouTubeChannelList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/YouTubeChannel"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "YouTubeChannelList",
+        "type": "object"
+      },
+      "YouTubeChannelsRequest": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Connections page's URL (?youtube=\u2026).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "YouTubeChannelsRequest",
+        "type": "object"
+      },
+      "YouTubeConnectChannels": {
+        "additionalProperties": false,
+        "description": "The channel to connect, picked from the list the same nonce returned. One per workspace.",
+        "properties": {
+          "channel_ids": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "title": "Channel Ids",
+            "type": "array"
+          },
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "channel_ids"
+        ],
+        "title": "YouTubeConnectChannels",
+        "type": "object"
+      },
+      "YouTubeConnectStart": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "YouTubeConnectStart",
+        "type": "object"
+      },
+      "YouTubeOptions": {
+        "additionalProperties": false,
+        "description": "A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the\npost's target. The description is the caption (or the target's ``caption_override``).\nStored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have\nno default: the person answers both (COPPA; realistic AI-altered content).\n\n- ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);\n- ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts\n  its quotes, and each comma between tags counts);\n- ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from\n  the file's shape and length; there is no separate call).",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "format": {
+            "default": "video",
+            "enum": [
+              "video",
+              "short"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "made_for_kids": {
+            "title": "Made For Kids",
+            "type": "boolean"
+          },
+          "notify_subscribers": {
+            "default": true,
+            "title": "Notify Subscribers",
+            "type": "boolean"
+          },
+          "privacy": {
+            "default": "public",
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ],
+            "title": "Privacy",
+            "type": "string"
+          },
+          "synthetic_media": {
+            "title": "Synthetic Media",
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "made_for_kids",
+          "synthetic_media"
+        ],
+        "title": "YouTubeOptions",
+        "type": "object"
+      },
+      "YouTubeTargetState": {
+        "description": "Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was\nopened and not finished runs out then (the post goes back to a draft: \"The upload didn't\nfinish\"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).",
+        "properties": {
+          "route": {
+            "enum": [
+              "direct",
+              "media"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "waiting_for_file",
+              "uploading",
+              "processing",
+              "scheduled",
+              "published",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "upload_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Expires At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id"
+          }
+        },
+        "required": [
+          "route",
+          "state"
+        ],
+        "title": "YouTubeTargetState",
+        "type": "object"
+      },
+      "YouTubeTicket": {
+        "description": "A ``youtube`` ticket's upload while it waits (C-196): PUT the file to ``upload_url`` in\npieces of ``chunk_bytes`` (``Content-Range``; 308 go on, 200/201 done with the video's id),\nthen complete with that id.",
+        "properties": {
+          "channel_name": {
+            "title": "Channel Name",
+            "type": "string"
+          },
+          "chunk_bytes": {
+            "title": "Chunk Bytes",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_url",
+          "chunk_bytes",
+          "title",
+          "channel_name"
+        ],
+        "title": "YouTubeTicket",
+        "type": "object"
+      },
+      "YouTubeUploadComplete": {
+        "additionalProperties": false,
+        "description": "POST \u2026/youtube-upload/complete: the finished upload's video id (from YouTube's answer).",
+        "properties": {
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "video_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "video_id"
+        ],
+        "title": "YouTubeUploadComplete",
+        "type": "object"
+      },
+      "YouTubeUploadSession": {
+        "description": "Where the file goes: PUT it to ``upload_url`` in pieces of ``chunk_bytes`` (the last may be\nshorter) with ``Content-Range: bytes {first}-{last}/{total}``. 308 means \"go on\" (its\n``Range`` header says what arrived); 200 or 201 means done, with the video's JSON (its\n``id``). To resume, PUT nothing with ``Content-Range: bytes */{total}``. The address works\nfor this one file until ``expires_at``; no token is needed or given.",
+        "properties": {
+          "chunk_bytes": {
+            "title": "Chunk Bytes",
+            "type": "integer"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "upload_url",
+          "chunk_bytes",
+          "expires_at"
+        ],
+        "title": "YouTubeUploadSession",
+        "type": "object"
+      },
+      "YouTubeUploadStart": {
+        "additionalProperties": false,
+        "description": "POST \u2026/scheduled-posts/{id}/youtube-upload: open a direct upload for the post's YouTube\ntarget. ``target_id`` is the target's channel (its ``social_account_id``).",
+        "properties": {
+          "content_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^video/[\\w.+-]+$",
+            "title": "Content Type",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "maximum": 274877906944.0,
+            "minimum": 1.0,
+            "title": "File Size",
+            "type": "integer"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "file_size",
+          "content_type"
+        ],
+        "title": "YouTubeUploadStart",
         "type": "object"
       }
     }
@@ -37521,7 +38003,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/accounts": {
       "post": {
-        "description": "Connect a fake Instagram account for local development: with ``platform: facebook`` a fake\nFacebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved\ntemplates (GR-23).",
+        "description": "Connect a fake Instagram account for local development: with ``platform: facebook`` a fake\nFacebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved\ntemplates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195).",
         "operationId": "create_sandbox_account",
         "parameters": [
           {
@@ -40880,7 +41362,7 @@
     },
     "/v1/w/{wid}/mcp-uploads/{upload_id}": {
       "get": {
-        "description": "The upload an AI app asked for, with the signed fields to send the file to storage while it\nwaits. 404 for a ticket that isn't this workspace's.",
+        "description": "The upload an AI app asked for, with the signed fields to send the file to storage while it\nwaits (a ``youtube`` ticket: its YouTube upload address instead). 404 for a ticket that isn't\nthis workspace's.",
         "operationId": "get_mcp_upload",
         "parameters": [
           {
@@ -40944,7 +41426,7 @@
     },
     "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
       "post": {
-        "description": "After the browser uploaded the file: add the ticket's file to the media library. 409 when\nno file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``\nticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.",
+        "description": "After the browser uploaded the file: add the ticket's file to the media library. 409 when\nno file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``\nticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.\n\nA ``youtube`` ticket takes ``{video_id}`` and completes the post's YouTube upload as the\ncomposer does (complete_youtube_upload's answers: 422 for a video that isn't the upload's,\n409 when the upload expired).",
         "operationId": "complete_mcp_upload",
         "parameters": [
           {
@@ -40968,6 +41450,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/McpUploadCompletion"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -45302,6 +45801,154 @@
         ]
       }
     },
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload": {
+      "post": {
+        "description": "C-196: open a direct upload of the video for a post whose accounts are all YouTube\nchannels (``target_id``: the channel's ``social_account_id``). The browser then PUTs the file\nto ``upload_url`` itself; the channel's token is never sent. A post with a time uploads as\nprivate and YouTube publishes it then; a post without one (\"now\") uploads with the chosen\nprivacy. One of YouTube's daily uploads is counted. 409 conflict for a post that also goes to\nother platforms (\"Posts to several platforms use the media tray\"), has media in the tray or\ncan't be edited, or when the workspace has 3 uploads open; 422 for missing YouTube options\n(``targets.{i}.options``) or a time under a minute away (``publish_at``); 429 rate_limited\nwhen YouTube's daily uploads are used up (\"Try again after \u2026\", with Retry-After).",
+        "operationId": "start_youtube_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scheduled_post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scheduled Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeUploadStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeUploadSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Youtube Upload",
+        "tags": [
+          "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete": {
+      "post": {
+        "description": "C-196: the browser finished the upload; ``video_id`` is the id in YouTube's answer. The\nvideo is read on the channel (it must be there, with the upload's title), kept on the\ntarget, and the post is scheduled (the checklist and scheduled_posts_monthly apply: 422, 402)\nor, for a post without a time, published now. 409 when no upload is open for the channel.\nSending the same video again returns the post as it is.",
+        "operationId": "complete_youtube_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scheduled_post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scheduled Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeUploadComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledPost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Youtube Upload",
+        "tags": [
+          "publishing"
+        ]
+      }
+    },
     "/v1/w/{wid}/sequences": {
       "get": {
         "description": "Newest first, each with its enrolment counts, and the plan's limits.",
@@ -46460,6 +47107,188 @@
         "summary": "Complete Whatsapp Signup",
         "tags": [
           "whatsapp"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/channels": {
+      "post": {
+        "description": "The channels of the Google account that consented, from the nonce the OAuth callback\nredirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it\nexpired (10 minutes), 422 when the account has no channel or the permission was not given,\n502 when Google fails. Asking again returns the same list.",
+        "operationId": "list_youtube_channels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeChannelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeChannelList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Youtube Channels",
+        "tags": [
+          "youtube"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/connect": {
+      "post": {
+        "description": "Google's authorize URL (youtube.force-ssl, offline, consent). 503 until YouTube connections\nare configured, 402 over youtube_accounts or Free's channels in total.",
+        "operationId": "start_youtube_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeConnectStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Youtube Connect",
+        "tags": [
+          "youtube"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/connect-channels": {
+      "post": {
+        "description": "Connect the picked channel. 422 channel_ids for a channel that wasn't listed, 409\naccount_in_use when it is connected to another workspace, 402 over youtube_accounts (one per\nworkspace) or Free's channels in total (nothing is added, the nonce stays valid), 404 when it\nexpired.",
+        "operationId": "connect_youtube_channels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeConnectChannels"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialAccountList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Connect Youtube Channels",
+        "tags": [
+          "youtube"
         ]
       }
     },

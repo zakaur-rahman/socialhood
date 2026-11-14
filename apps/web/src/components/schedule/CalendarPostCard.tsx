@@ -5,18 +5,18 @@ import Link from "next/link";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ScheduledPostSummary } from "@/lib/api/types";
-import { canMove, postLine, POST_STATUS } from "@/lib/schedule/format";
+import { canMove, postLine, POST_STATUS, youtubeStatus } from "@/lib/schedule/format";
 import { formatDayTime, formatTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
 import { useCalendarDnd, useDragSelector } from "./calendar-dnd";
-import { PostMenu, PostThumbnail, PublishedPeek } from "./post-parts";
+import { PostMenu, PostThumbnail, PublishedPeek, YouTubeMark } from "./post-parts";
 import { useSchedule } from "./schedule-context";
 
 /** "Linen styles, Scheduled, Wed 30 Sep 18:00" for the card's link. */
 export function postLabel(post: ScheduledPostSummary, timeZone: string, now: Date): string {
   const when = post.publish_at ? `, ${formatDayTime(post.publish_at, timeZone, now)}` : "";
-  return `${postLine(post)}, ${POST_STATUS[post.status].label}${when}`;
+  return `${postLine(post)}, ${youtubeStatus(post) ?? POST_STATUS[post.status].label}${when}`;
 }
 
 /**
@@ -37,6 +37,7 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
   const badges = (
     <>
       {published ? <Check className="size-3 text-success" aria-hidden /> : null}
+      <YouTubeMark post={post} />
       {post.format === "story" ? <span data-testid="story-badge">· Story</span> : null}
       {post.status === "failed" ? <span className="text-danger-fg">· Failed</span> : null}
       {post.status === "publishing" ? <Lock className="size-3 text-fg-secondary" aria-hidden /> : null}

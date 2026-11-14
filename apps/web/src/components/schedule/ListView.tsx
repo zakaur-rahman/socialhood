@@ -36,7 +36,7 @@ import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
 import { postLabel } from "./CalendarPostCard";
-import { PostMenu, PostThumbnail, StatusChip, StoryBadge, TargetAvatars } from "./post-parts";
+import { PostMenu, PostThumbnail, StatusChip, StoryBadge, TargetAvatars, YouTubeMark } from "./post-parts";
 import { useSchedule } from "./schedule-context";
 
 const EMPTY: Record<ScheduledPostView, { title: string; body: string }> = {
@@ -275,6 +275,7 @@ function ListRow({
         <TargetAvatars post={post} />
       </span>
       <StoryBadge post={post} className="hidden sm:inline-flex" />
+      <YouTubeMark post={post} />
       <StatusChip post={post} className="hidden sm:inline-flex" />
       <PostMenu post={post} size="lg" />
     </li>

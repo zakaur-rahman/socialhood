@@ -79,6 +79,8 @@ RECOVERY: dict[str, Recovery] = {
     "dispatch_due_posts": R,
     "sweep_stuck_posts": R,
     "refresh_collaborator_invites": R,  # FR-PUB-07: a read of the last answer, harmless to repeat
+    "sync_youtube_video": R,  # C-196: compares before videos.update; a deleted video is fine
+    "expire_youtube_uploads": R,
     "sweep_agent_runs": R,
     "expire_agent_approvals": R,  # an expired approval is no longer pending
     "reconcile_billing": R,
@@ -125,6 +127,8 @@ RECOVERY: dict[str, Recovery] = {
     "send_scheduled": S,  # sweep_stuck_scheduled: the claim goes back to scheduled, or fails
     "publish_target": S,  # sweep_stuck_posts: back to pending (or failed after 3 claims)
     "poll_container": S,  # sweep_stuck_posts: the next poll is queued
+    # sweep_stuck_posts: back to pending; the claim resumes the kept YouTube session (C-196)
+    "upload_youtube_video": S,
     "run_agent": S,  # sweep_agent_runs: resumes from its last step, or fails the run
     "process_webhook_event": S,  # sweep_stuck: the event is still ``received``
     "deliver_email": S,  # sweep_email_outbox: still ``queued``; the resend has the same key

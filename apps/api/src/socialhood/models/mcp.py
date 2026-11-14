@@ -5,7 +5,8 @@
   outcome and how long it took. Never the AI conversation, never customer text (the arguments
   are what the AI sent us; the results aren't stored). Kept 90 days (jobs/tasks/retention).
 - ``mcp_uploads``: a media upload ticket (§5). Phase B's ``start_media_upload`` makes them;
-  ``get_media_upload`` reads them. A ticket is a handle the model passes back, re-authorised on
+  ``get_media_upload`` reads them. ``prepare_youtube_upload`` (C-196) makes ``youtube`` tickets,
+  whose file goes straight to YouTube. A ticket is a handle the model passes back, re-authorised on
   every call (tenancy), never a capability.
 
 The workspace's own switch is ``workspaces.ai_connections_mode`` (models/identity.py).
@@ -95,7 +96,7 @@ class McpUpload(IdMixin, TimestampMixin, TenantScoped, Base):
     __tablename__ = "mcp_uploads"
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    kind: Mapped[str] = mapped_column(Text)  # image, video
+    kind: Mapped[str] = mapped_column(Text)  # image, video, youtube (C-196)
     status: Mapped[str] = mapped_column(Text, server_default=text("'waiting'"))
     public_id: Mapped[str | None] = mapped_column(Text)
     media_asset_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -103,8 +104,13 @@ class McpUpload(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     reason: Mapped[str | None] = mapped_column(Text)  # why it was rejected, in plain words
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # C-196, a ``youtube`` ticket: the post's YouTube target the file goes to (straight to
+    # YouTube, never to storage).
+    scheduled_post_target_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("scheduled_post_targets.id", ondelete="CASCADE"), index=True
+    )
 
     __table_args__ = (
-        CheckConstraint("kind IN ('image', 'video')", name="kind"),
+        CheckConstraint("kind IN ('image', 'video', 'youtube')", name="kind"),
         CheckConstraint(_in("status", UploadStatus), name="status"),
     )

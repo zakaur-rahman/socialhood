@@ -58,6 +58,7 @@ from socialhood.api.v1 import (
     widget_public,
     workspace_deletion,
     workspaces,
+    youtube,
 )
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -79,6 +80,8 @@ ROUTERS: tuple[APIRouter, ...] = (
     events.router,
     whatsapp.router,
     facebook.router,
+    youtube.router,  # C-195
+    youtube.dev_router,  # C-196: the sandbox channel's upload address (dev only)
     automations.router,
     posts.router,
     ai.router,

@@ -144,7 +144,8 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
   // ---- data
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => publishingAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const features = workspace.features;
+  const accounts = useMemo(() => publishingAccounts(allAccounts.data ?? [], features ?? []), [allAccounts.data, features]);
   // Read in the List view too: the right rail's figures come from it.
   const calendar = useCalendar(wid, range.from, range.to);
   const drafts = useScheduledPostList(wid, "drafts");

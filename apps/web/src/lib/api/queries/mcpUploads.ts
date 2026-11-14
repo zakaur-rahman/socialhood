@@ -17,13 +17,21 @@ export function useMcpUpload(wid: string, id: string) {
   });
 }
 
-/** After the file reached storage: add the ticket's file to the media library. */
+/**
+ * After the file reached storage: add the ticket's file to the media library. A YouTube ticket
+ * (C-195) sends the video id YouTube answered with instead.
+ */
 export function useCompleteMcpUpload(wid: string, id: string) {
   const api = useApi();
   const qc = useQueryClient();
-  return useMutation<McpUploadTicket, Error, void>({
-    mutationFn: () =>
-      unwrap(api.POST("/v1/w/{wid}/mcp-uploads/{upload_id}/complete", { params: { path: { wid, upload_id: id } } })),
+  return useMutation<McpUploadTicket, Error, { video_id: string } | void>({
+    mutationFn: (body) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/mcp-uploads/{upload_id}/complete", {
+          params: { path: { wid, upload_id: id } },
+          ...(body ? { body } : {}),
+        }),
+      ),
     onSuccess: (ticket) => qc.setQueryData(keys.mcpUpload(wid, id), ticket),
   });
 }

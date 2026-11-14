@@ -50,7 +50,8 @@ export function AccountPicture({
 }
 
 /**
- * UX-SCR-13 Accounts: a toggle chip per Instagram account or Facebook Page (GR-30), in the order
+ * UX-SCR-13 Accounts: a toggle chip per Instagram account, Facebook Page (GR-30) or YouTube channel
+ * (C-195, only with the workspace's youtube switch: the caller passes ``publishingAccounts``), in the order
  * chosen (the first one's name and picture lead the preview). Choosing both posts to both at once. An account that can't publish is disabled with the reason;
  * one already on the post stays clickable so it can be taken off.
  */
@@ -111,6 +112,10 @@ export function AccountPicker({
                   {account.platform === "facebook" ? (
                     <span className="text-xs font-normal text-fg-secondary" data-testid="page-tag">
                       Facebook Page
+                    </span>
+                  ) : account.platform === "youtube" ? (
+                    <span className="text-xs font-normal text-fg-secondary" data-testid="youtube-tag">
+                      YouTube
                     </span>
                   ) : null}
                   {isSelected ? <Check className="size-4" aria-hidden /> : null}

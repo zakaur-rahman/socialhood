@@ -26,5 +26,5 @@ export function accountLabel(
   account: Pick<SocialAccount, "username" | "display_name"> & { platform?: string },
 ): string {
   if (account.username) return `@${account.username}`;
-  return account.display_name ?? (account.platform === "facebook" ? "Facebook Page" : "Instagram account");
+  return account.display_name ?? (account.platform === "facebook" ? "Facebook Page" : account.platform === "youtube" ? "YouTube channel" : "Instagram account");
 }

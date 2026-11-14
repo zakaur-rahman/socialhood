@@ -10,7 +10,7 @@ import { extrasUnavailable, InstagramExtras, pruneExtras } from "./InstagramExtr
 import type { Draft } from "./use-post-draft";
 
 const BASE: Draft = {
-  targets: [{ social_account_id: "a1", caption_override: null }],
+  targets: [{ social_account_id: "a1", caption_override: null, options: null }],
   asset_ids: ["as1"],
   caption: "",
   first_comment: null,
@@ -180,7 +180,7 @@ describe("pruneExtras", () => {
   it("drops everything for a Story and for a post to a Page only", () => {
     const story = pruneExtras({ ...full, kind: "story" }, [ig], assets);
     expect(story).toMatchObject({ collaborators: [], location: null, user_tags: [], audio_name: null, cover_offset_ms: null, share_to_feed: true });
-    const pageOnly = pruneExtras({ ...full, targets: [{ social_account_id: "p1", caption_override: null }] }, [ig, page], assets);
+    const pageOnly = pruneExtras({ ...full, targets: [{ social_account_id: "p1", caption_override: null, options: null }] }, [ig, page], assets);
     expect(pageOnly).toMatchObject({ collaborators: [], location: null, user_tags: [], audio_name: null });
   });
 

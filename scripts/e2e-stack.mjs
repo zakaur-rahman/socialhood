@@ -263,6 +263,9 @@ async function main() {
     PUSH_PROVIDER: "fake",
     CLERK_INVITATIONS_PROVIDER: "fake",
     GOOGLE_PROVIDER: "fake", // GR-27: sheets live in Redis, shared by the API and the worker
+    // C-195/C-196: YouTube is on for every e2e workspace (the "off" state is covered by unit and API tests).
+    YOUTUBE_WORKSPACES: "*",
+    YOUTUBE_PROVIDER: "fake",
     GOOGLE_REDIRECT_URI: `${apiUrl}/v1/oauth/google/callback`,
     SHOPIFY_PROVIDER: "fake", // GR-31: a built-in store, its products in Redis (API and worker share it)
     SHOPIFY_API_KEY: "e2e-shopify-key",

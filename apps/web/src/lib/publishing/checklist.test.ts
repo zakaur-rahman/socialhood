@@ -433,3 +433,75 @@ describe("localChecklist for the Instagram options (FR-PUB-07, C-134)", () => {
     expect(keyOfField("asset_ids.2")).toBe("media_files");
   });
 });
+
+describe("localChecklist for YouTube (C-195)", () => {
+  const channel = account({ id: "y1", platform: "youtube", username: "maplebakery", capabilities: ["publish"] });
+  const answered = {
+    title: "Sourdough at dawn",
+    privacy: "public" as const,
+    made_for_kids: false,
+    synthetic_media: false,
+    category_id: null,
+    tags: [],
+    notify_subscribers: true,
+    format: "video" as "video" | "short",
+  };
+  const toChannel = (options: Partial<typeof answered> | null = answered) => ({
+    targets: [{ social_account_id: "y1", caption_override: null, options: options ? { ...answered, ...options } : null }],
+    asset_ids: [] as string[],
+  });
+  const file = assetInfo({ id: "youtube-file", resource_type: "video", width: 1080, height: 1920, duration_s: 50 });
+
+  it("passes a YouTube-only post with its answers and a picked file", () => {
+    expect(failures(localChecklist(input(toChannel(), { accounts: [channel], assets: {}, youtubeFile: file })))).toEqual([]);
+  });
+
+  it("needs the video, a title and both answers before scheduling", () => {
+    const options = { title: "", made_for_kids: null as unknown as boolean, synthetic_media: null as unknown as boolean };
+    expect(failures(localChecklist(input(toChannel(options), { accounts: [channel], assets: {} })))).toEqual([
+      ["youtube", "youtube_file", "Add the video for YouTube."],
+      ["youtube", "targets.0.options.title", "Add a title for YouTube."],
+      ["youtube", "targets.0.options.made_for_kids", "Say whether the video is made for kids."],
+      ["youtube", "targets.0.options.synthetic_media", "Say whether the video has realistic AI-made or altered content."],
+    ]);
+  });
+
+  it("needs no file once the video is on YouTube", () => {
+    expect(failures(localChecklist(input(toChannel(), { accounts: [channel], assets: {}, youtubeUploaded: true })))).toEqual([]);
+  });
+
+  it("checks a Short's shape and length", () => {
+    const wide = { ...file, width: 1920, height: 1080 };
+    const long = { ...file, duration_s: 200 };
+    const short = toChannel({ format: "short" });
+    expect(failures(localChecklist(input(short, { accounts: [channel], assets: {}, youtubeFile: wide })))[0][2]).toContain("vertical or square");
+    expect(failures(localChecklist(input(short, { accounts: [channel], assets: {}, youtubeFile: long })))[0][2]).toContain("3:20 long");
+  });
+
+  it("holds the description to 5,000 bytes and the title to 100 characters", () => {
+    const hindi = "नमस्ते ".repeat(300); // 2,100 characters, 5,700 bytes
+    expect(failures(localChecklist(input({ ...toChannel(), caption: hindi }, { accounts: [channel], assets: {}, youtubeFile: file })))).toEqual([
+      ["caption", "caption", "The description is 5,700 bytes. YouTube allows 5,000."],
+    ]);
+    const longTitle = toChannel({ title: "a".repeat(101) });
+    expect(failures(localChecklist(input(longTitle, { accounts: [channel], assets: {}, youtubeFile: file })))[0][2]).toContain("100 characters");
+  });
+
+  it("with Instagram too, uses the media tray: one video, and says the route", () => {
+    const both = {
+      targets: [
+        { social_account_id: "a1", caption_override: null, options: null },
+        { social_account_id: "y1", caption_override: null, options: answered },
+      ],
+    };
+    const video = assetInfo({ resource_type: "video", width: 1080, height: 1920, duration_s: 30 });
+    const items = localChecklist(input(both, { accounts: [ready, channel], assets: { as1: video } }));
+    expect(failures(items)).toEqual([]);
+    expect(items.find((item) => item.key === "media")?.message).toBe("Posting to several platforms: the video is stored once and sent to each.");
+    expect(failures(localChecklist(input(both, { accounts: [ready, channel] })))[0][2]).toContain("YouTube needs exactly one video");
+  });
+
+  it("links a YouTube option's field to the youtube item", () => {
+    expect(keyOfField("targets.0.options.title")).toBe("youtube");
+  });
+});

@@ -38,9 +38,11 @@ from socialhood.models.publishing import (
     STORY_VIDEO_MAX_S,
     STORY_VIDEO_MIN_S,
     USER_TAGS_MAX_PER_IMAGE,
+    YOUTUBE_DESCRIPTION_MAX_BYTES,
+    YOUTUBE_SHORT_MAX_S,
     PostFormat,
 )
-from socialhood.schemas.publishing import ChecklistItem, ChecklistKey
+from socialhood.schemas.publishing import ChecklistItem, ChecklistKey, YouTubeOptions
 from socialhood.services.media_assets import IMAGE, MB, POST_VIDEO, file_format
 
 
@@ -111,6 +113,23 @@ EXTRAS_NEED_INSTAGRAM = (
 )
 EXTRAS_NOT_ON_STORIES = "{what} are not available on Stories. Remove them or publish a post."
 REEL_OPTIONS_ONLY_REEL = "Reel options only apply to a single Instagram video. Remove them."
+
+# YouTube (C-196): one video, its options, a Short's shape and length, the description.
+YOUTUBE_ONE_VIDEO = "YouTube needs exactly one video."
+YOUTUBE_NO_STORY = "YouTube doesn't take Stories. Publish a post instead."
+YOUTUBE_OPTIONS = (
+    "Fill in {handle}'s YouTube details: a title, whether it's made for kids, and whether it "
+    "has realistic AI-made content."
+)
+YOUTUBE_UPLOAD = "Upload the video to YouTube for {handle}."
+YOUTUBE_DESCRIPTION_LONG = (
+    "Shorten the YouTube description to {limit:,} bytes (now {n:,}). Emoji and accented letters "
+    "take more than one."
+)
+YOUTUBE_DESCRIPTION_BRACKETS = "A YouTube description can't contain < or >."
+YOUTUBE_SHORT_SHAPE = "A Short is a vertical video. Use a portrait video or choose Video."
+YOUTUBE_SHORT_LENGTH = f"A Short can be up to {YOUTUBE_SHORT_MAX_S // 60} minutes. Choose Video."
+YOUTUBE_DIRECT = "Video: straight to YouTube"
 
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."
@@ -229,6 +248,10 @@ class TargetFacts:
     # The account's other posts published or due in the 24 hours up to the post's time.
     recent_posts: int
     platform: str = "instagram"  # "instagram", "facebook", ...
+    # A YouTube channel (C-196): its choices, and whether its video is already on YouTube (a
+    # direct upload that finished).
+    options: YouTubeOptions | None = None
+    video_uploaded: bool = False
 
 
 @dataclass(frozen=True)
@@ -303,11 +326,13 @@ def asset_problem(
     reel: bool = False,
     ig_reel: bool = False,
     video_max_bytes: int = POST_VIDEO.max_bytes,
+    any_length: bool = False,
 ) -> str | None:
     """TR-MED-02: type, size, aspect ratio and video length. A Story takes any image shape (9:16
     is only recommended) and a video of 3 to 60 seconds; a Facebook Reel a video of 3 to 90. An
     Instagram Reel (``ig_reel``: the post's one video, for Instagram only) runs 3 seconds to 15
-    minutes (Meta's IG User Media reference, C-134); other videos stay at 90 seconds."""
+    minutes (Meta's IG User Media reference, C-134); other videos stay at 90 seconds. A post for
+    YouTube channels only (``any_length``, C-196) has no length limit of ours."""
     fmt = (asset.format or "").lower()
     if asset.resource_type == "image":
         if fmt and fmt not in IMAGE.formats:
@@ -325,6 +350,8 @@ def asset_problem(
         if asset.bytes > video_max_bytes:
             return f"Videos can be up to {video_max_bytes // MB} MB."
         limit: float | None = IG_REEL_MAX_S if ig_reel else EXTRA_VIDEO_MAX_S
+        if any_length:
+            limit = None
         if story:
             limit = STORY_VIDEO_MAX_S
         if limit is not None and asset.duration_s is not None and asset.duration_s > limit:
@@ -374,9 +401,10 @@ def _item(
 
 def caption_limit(platforms: Iterable[str]) -> int:
     """The caption length a post to these platforms may have: Instagram's 2,200 unless every
-    account is a Facebook Page (C-131). No accounts yet: Instagram's, the strictest."""
+    account is a Facebook Page (C-131) or a YouTube channel, whose own limit is in bytes (the
+    ``youtube`` item, C-196). No accounts yet: Instagram's, the strictest."""
     kinds = list(platforms)
-    if kinds and all(kind == "facebook" for kind in kinds):
+    if kinds and all(kind in ("facebook", "youtube") for kind in kinds):
         return FACEBOOK_CAPTION_MAX_CHARS
     return CAPTION_MAX_CHARS
 
@@ -579,6 +607,63 @@ def _reel_option_problems(post: PostFacts, options: ReelFacts) -> list[Checklist
     return out
 
 
+def youtube_direct(post: PostFacts) -> bool:
+    """The direct route (C-196): only YouTube channels and no media in the tray; the file goes
+    straight to YouTube."""
+    return (
+        bool(post.targets)
+        and not post.assets
+        and all(t.platform == "youtube" for t in post.targets)
+    )
+
+
+def youtube_items(post: PostFacts) -> list[ChecklistItem]:
+    """C-196: each YouTube channel's options, its video (uploaded, on the direct route), the
+    description in bytes and without < or >, a Short's shape and length. Nothing is listed for a
+    post without a YouTube channel."""
+    channels = [(i, t) for i, t in enumerate(post.targets) if t.platform == "youtube"]
+    if not channels:
+        return []
+    items: list[ChecklistItem] = []
+
+    def fail(message: str, field: str) -> None:
+        items.append(_item("youtube", message, ok=False, field=field))
+
+    direct = youtube_direct(post)
+    if post.story:
+        fail(YOUTUBE_NO_STORY, "kind")
+    elif not direct and (len(post.assets) != 1 or post.assets[0].resource_type != "video"):
+        fail(YOUTUBE_ONE_VIDEO, "asset_ids")
+    for i, target in channels:
+        if target.options is None:
+            fail(YOUTUBE_OPTIONS.format(handle=target.handle), f"targets.{i}.options")
+        elif target.options.format == "short" and len(post.assets) == 1:
+            video = post.assets[0]
+            if video.width and video.height and video.height <= video.width:
+                fail(YOUTUBE_SHORT_SHAPE, "asset_ids.0")
+            if video.duration_s is not None and video.duration_s > YOUTUBE_SHORT_MAX_S:
+                fail(YOUTUBE_SHORT_LENGTH, "asset_ids.0")
+        if direct and not target.video_uploaded:
+            fail(YOUTUBE_UPLOAD.format(handle=target.handle), f"targets.{i}")
+        own = target.caption_override is not None
+        text = target.caption_override if own else post.caption
+        field = f"targets.{i}.caption_override" if own else "caption"
+        size = len((text or "").encode())
+        if size > YOUTUBE_DESCRIPTION_MAX_BYTES:
+            limit = YOUTUBE_DESCRIPTION_MAX_BYTES
+            fail(YOUTUBE_DESCRIPTION_LONG.format(limit=limit, n=size), field)
+        if "<" in (text or "") or ">" in (text or ""):
+            fail(YOUTUBE_DESCRIPTION_BRACKETS, field)
+    # one line per problem, but each problem once (a shared caption fails for every channel)
+    seen: set[tuple[str, str | None]] = set()
+    unique_items = []
+    for item in items:
+        if (item.message, item.field) not in seen:
+            seen.add((item.message, item.field))
+            unique_items.append(item)
+    return unique_items or [_item("youtube", "YouTube details set")]
+
+
 def checklist(
     post: PostFacts,
     *,
@@ -593,6 +678,8 @@ def checklist(
 
     ig = any(t.platform == "instagram" for t in post.targets)
     fb = any(t.platform == "facebook" for t in post.targets)
+    yt = any(t.platform == "youtube" for t in post.targets)
+    direct = youtube_direct(post)
     text_post = bool(post.caption.strip()) and fb and not ig and not post.story and not post.reel
     fmt = derive_format(
         [a.resource_type for a in post.assets],
@@ -628,6 +715,8 @@ def checklist(
     )
     if fmt == PostFormat.TEXT:
         items.append(_item("media", format_label(fmt, 0)))
+    elif direct:  # the video goes straight to YouTube: the ``youtube`` item checks it is there
+        items.append(_item("media", YOUTUBE_DIRECT))
     elif not post.assets:
         items.append(
             _item(
@@ -669,11 +758,20 @@ def checklist(
                 reel=post.reel and fb,
                 ig_reel=ig and not fb and len(post.assets) == 1 and not post.story,
                 video_max_bytes=post.video_max_bytes,
+                any_length=yt and not ig and not fb,
             )
         )
         is not None
     ]
-    names = "Instagram's and Facebook's" if ig and fb else "Facebook's" if fb else "Instagram's"
+    names = (
+        "Instagram's and Facebook's"
+        if ig and fb
+        else "Facebook's"
+        if fb
+        else "YouTube's"
+        if yt and not ig
+        else "Instagram's"
+    )
     who = "Instagram and Facebook" if ig and fb else "Facebook" if fb else "Instagram"
     note = None
     if len(post.assets) == 1 and (post.story or post.reel):
@@ -688,9 +786,11 @@ def checklist(
         # never sent, so there is nothing to check.
         items.append(_item("caption", STORY_NO_CAPTION))
     else:
-        items += _text_items(post, hashtags_and_mentions=ig or not fb)
+        # Instagram's hashtag and mention limits: a post for Pages or channels only skips them.
+        items += _text_items(post, hashtags_and_mentions=ig or not (fb or yt))
 
     items += extras_items(post, ig=ig, fmt=fmt)
+    items += youtube_items(post)
 
     # publishing_limit: this post plus the account's others in the 24 hours up to its time
     # (Instagram only: Facebook Pages have no such limit)

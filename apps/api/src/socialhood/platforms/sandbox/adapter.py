@@ -37,6 +37,7 @@ from socialhood.platforms.instagram.adapter import CAPABILITIES
 from socialhood.platforms.whatsapp.adapter import CAPABILITIES as WHATSAPP_CAPABILITIES
 from socialhood.platforms.whatsapp.health import NumberHealth
 from socialhood.platforms.whatsapp.templates import MessageTemplate
+from socialhood.platforms.youtube.adapter import CAPABILITIES as YOUTUBE_CAPABILITIES
 
 SANDBOX_PREFIX = "sandbox_"
 
@@ -59,6 +60,9 @@ class SandboxAdapter:
             return FACEBOOK_CAPABILITIES | {Capability.HUMAN_AGENT}
         if acct.platform == "whatsapp":
             return WHATSAPP_CAPABILITIES
+        if acct.platform == "youtube":
+            # C-196: the registry gives sandbox channels the YouTube adapter (SandboxVideos)
+            return YOUTUBE_CAPABILITIES
         return CAPABILITIES
 
     async def list_templates(self, acct: SocialAccount) -> list[MessageTemplate]:

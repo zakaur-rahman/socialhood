@@ -48,6 +48,8 @@ describe("the web CSP (SEC-11)", () => {
     expect(new URL(UMAMI_SCRIPT).origin).toBe("https://cloud.umami.is"); // the CSP's copy of lib/analytics.ts
     expect(UMAMI_COLLECTOR).toBe("https://gateway.umami.is");
     expect(directive(csp, "img-src")).toContain("https://res.cloudinary.com");
+    expect(directive(csp, "img-src")).toEqual(expect.arrayContaining(["https://i.ytimg.com", "https://yt3.ggpht.com"]));
+    expect(directive(csp, "connect-src")).toContain("https://www.googleapis.com"); // the YouTube upload
   });
 
   it("cannot be framed, has no plugins or base rewrites, and is strict in production", () => {

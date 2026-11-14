@@ -61,8 +61,9 @@ from socialhood.models.identity import Role
 
 CREDITS = "ai_credits_monthly"
 
-# The channels the Free total counts (C-172): the website chat's account is platform "web".
-CHANNEL_PLATFORMS: tuple[str, ...] = ("instagram", "facebook", "whatsapp", "web")
+# The channels the Free total counts (C-172): the website chat's account is platform "web";
+# a YouTube channel counts too (C-195).
+CHANNEL_PLATFORMS: tuple[str, ...] = ("instagram", "facebook", "whatsapp", "web", "youtube")
 
 # §4.7 entitlement_required: "{Feature} is part of {plans}." (C-172: Free, Creator, Business.)
 FEATURES = {
@@ -222,7 +223,8 @@ async def check_new_channel(
 
 
 def _noun(limit: int, platform: str) -> str:
-    return f"{limit} {platform.capitalize()} account{'' if limit == 1 else 's'}"
+    label = "YouTube" if platform == "youtube" else platform.capitalize()
+    return f"{limit} {label} account{'' if limit == 1 else 's'}"
 
 
 async def _read_only_reasons(session: AsyncSession, plan: str) -> dict[uuid.UUID, str]:

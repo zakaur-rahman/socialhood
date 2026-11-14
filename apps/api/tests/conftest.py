@@ -34,6 +34,7 @@ pytest_plugins = [
     "tests.support.api",
     "tests.support.instagram",
     "tests.support.facebook",
+    "tests.support.youtube",  # C-195: a fake Google for YouTube in every test
     "tests.support.ai",
     "tests.support.mcp",  # C-165: the MCP server under test
 ]
