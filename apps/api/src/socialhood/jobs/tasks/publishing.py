@@ -63,6 +63,7 @@ from datetime import UTC, datetime, timedelta
 
 from procrastinate import JobContext
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
@@ -74,6 +75,7 @@ from socialhood.models.publishing import (
     COLLABORATOR_CHECK_EVERY,
     COLLABORATOR_CHECK_FOR,
     PUBLISH_ATTEMPTS,
+    ScheduledPostTarget,
 )
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps, deps_from
@@ -303,7 +305,27 @@ async def sync_youtube_video(
 @app.task(name="expire_youtube_uploads", queue=INTERACTIVE, queueing_lock="expire_youtube_uploads")
 async def expire_youtube_uploads(timestamp: int) -> None:
     rt = runtime()
-    await youtube_direct.expire(rt.sessionmaker, rt.redis, _deps())
+    await expire_direct_uploads(rt.sessionmaker, rt.redis)
+
+
+async def expire_direct_uploads(
+    sessionmaker: async_sessionmaker[AsyncSession], redis: Redis, now: datetime | None = None
+) -> int:
+    """Finds direct YouTube uploads past their deadline in any workspace; the service ends each."""
+    now = now or datetime.now(UTC)
+    async with sessionmaker() as session:
+        with tenant_bypass_scope():
+            due = list(
+                await session.scalars(
+                    select(ScheduledPostTarget)
+                    .where(
+                        ScheduledPostTarget.upload_expires_at <= now,
+                        ScheduledPostTarget.platform_media_id.is_(None),
+                    )
+                    .limit(200)
+                )
+            )
+    return await youtube_direct.expire(sessionmaker, redis, due, now)
 
 
 async def refresh_collaborator_invites(

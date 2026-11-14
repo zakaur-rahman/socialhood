@@ -156,9 +156,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
-    ("POST", "/v1/w/{wid}/mcp-uploads/{upload_id}/complete"): {
-        "public_id": "ws/00000000-0000-4000-8000-000000000000/post/x1"
-    },
+    ("POST", "/v1/w/{wid}/mcp-uploads/{upload_id}/complete"): {"video_id": "abc123"},
     # GR-29: Facebook Pages connect (the nonce is bound to the member and workspace) and a
     # sandbox Facebook Page.
     ("POST", "/v1/w/{wid}/social-accounts/facebook/pages"): {"nonce": "not-yours"},
@@ -167,6 +165,12 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "page_ids": ["1"],
     },
     ("POST", "/v1/w/{wid}/dev/sandbox/accounts"): {"platform": "facebook"},
+    # C-195: YouTube connect (the nonce is bound to the member and workspace, like Facebook's).
+    ("POST", "/v1/w/{wid}/social-accounts/youtube/channels"): {"nonce": "not-yours"},
+    ("POST", "/v1/w/{wid}/social-accounts/youtube/connect-channels"): {
+        "nonce": "not-yours",
+        "channel_ids": ["UCxxxxxxxxxxxxxxxxxxxxxx"],
+    },
     # GR-02: contacts, tags, custom fields, consent.
     ("PATCH", "/v1/w/{wid}/contacts/{contact_id}"): {"email": "taken@example.com"},
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},
@@ -392,6 +396,15 @@ EXAMPLE_BODIES.update(
         },
         ("POST", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule"): {
             "publish_at": "2030-01-01T09:00:00Z"
+        },
+        ("POST", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload"): {
+            "target_id": "{account_id}",
+            "file_size": 1024,
+            "content_type": "video/mp4",
+        },
+        ("POST", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete"): {
+            "target_id": "{account_id}",
+            "video_id": "abc123",
         },
         ("POST", "/v1/w/{wid}/scheduled-posts/bulk"): {
             "ids": ["{scheduled_post_id}"],

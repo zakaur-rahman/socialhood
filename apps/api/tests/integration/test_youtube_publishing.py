@@ -435,7 +435,7 @@ async def test_an_unfinished_upload_expires_after_a_day(tube: Tube) -> None:
     await tube.shop.execute(
         "UPDATE scheduled_post_targets SET upload_expires_at = now() - interval '1 minute'"
     )
-    assert await youtube_direct.expire(tube.maker, tube.redis, tube.deps) == 1
+    assert await publish_jobs.expire_direct_uploads(tube.maker, tube.redis) == 1
     got = await tube.shop.ok("GET", f"/scheduled-posts/{post['id']}")
     target = got["targets"][0]
     assert got["status"] == "draft"
@@ -444,7 +444,7 @@ async def test_an_unfinished_upload_expires_after_a_day(tube: Tube) -> None:
         "message": "The upload didn't finish. Upload the video again.",
     }
     assert target["youtube"]["state"] == "waiting_for_file"
-    assert await youtube_direct.expire(tube.maker, tube.redis, tube.deps) == 0
+    assert await publish_jobs.expire_direct_uploads(tube.maker, tube.redis) == 0
 
 
 # ---------------------------------------------------------------- at the publish time

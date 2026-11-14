@@ -45,7 +45,7 @@ from sqlalchemy.orm import Session, SessionTransaction
 from sqlalchemy.util import await_only
 from sqlalchemy.util.concurrency import in_greenlet
 
-from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
+from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.publishing import (
@@ -554,24 +554,12 @@ async def sync(
 async def expire(
     sessionmaker: async_sessionmaker[AsyncSession],
     redis: Redis,
-    deps: PlatformDeps,
-    now: datetime | None = None,
+    due: list[ScheduledPostTarget],
+    now: datetime,
 ) -> int:
     """Direct uploads opened and not finished in time: the session is dropped, the post goes back
-    to a draft with "The upload didn't finish". Returns how many."""
-    now = now or datetime.now(UTC)
-    async with sessionmaker() as session:
-        with tenant_bypass_scope():
-            due = list(
-                await session.scalars(
-                    select(ScheduledPostTarget)
-                    .where(
-                        ScheduledPostTarget.upload_expires_at <= now,
-                        ScheduledPostTarget.platform_media_id.is_(None),
-                    )
-                    .limit(200)
-                )
-            )
+    to a draft with "The upload didn't finish". ``due`` comes from the job's cross-workspace query
+    (TR-TEN-04); each row is re-checked under its own workspace. Returns how many."""
     expired = 0
     for row in due:
         with workspace_scope(row.workspace_id):
