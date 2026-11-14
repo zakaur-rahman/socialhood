@@ -4,17 +4,34 @@ YouTube on for every workspace; the connect helpers run the API's steps."""
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import httpx
 import pytest
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from socialhood.platforms.youtube.fake import FakeYouTube
-from socialhood.platforms.youtube.oauth import use_youtube
+from socialhood.db.tenancy import workspace_scope
+from socialhood.models.connections import SocialAccount
+from socialhood.platforms.buckets import YOUTUBE_UPLOADS
+from socialhood.platforms.youtube.fake import CHANNEL, REFRESH_PREFIX, FakeYouTube
+from socialhood.platforms.youtube.oauth import SCOPE, use_youtube
+from socialhood.security.crypto import TokenCipher
 from socialhood.settings import Settings
-from tests.support.api import Clerk
+from tests.support.api import TOKEN_KEY, Clerk
 from tests.support.instagram import redirect_query, state_from
+
+# C-196: a YouTube channel's choices as the composer sends them.
+OPTIONS: dict[str, Any] = {
+    "title": "Sourdough in 60 seconds",
+    "privacy": "public",
+    "made_for_kids": False,
+    "synthetic_media": False,
+}
 
 
 @pytest.fixture(autouse=True)
@@ -86,3 +103,34 @@ async def connect(
     assert listed.status_code == 200, listed.text
     first = listed.json()["items"][0]["channel_id"]
     return await connect_channels(client, clerk, clerk_id, wid, nonce, [first])
+
+
+# ---------------------------------------------------------------- publishing (C-196)
+
+
+async def make_channel(
+    engine: AsyncEngine, workspace_id: uuid.UUID | str, *, refresh: str = "test"
+) -> uuid.UUID:
+    """The fake's channel, connected with a refresh token the fake accepts (no connect flow)."""
+    with workspace_scope(uuid.UUID(str(workspace_id))):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            acct = SocialAccount(
+                platform="youtube",
+                platform_account_id=CHANNEL.id,
+                username=CHANNEL.handle,
+                display_name=CHANNEL.title,
+                status="active",
+                scopes=[SCOPE],
+                access_token_enc=TokenCipher([TOKEN_KEY]).encrypt(REFRESH_PREFIX + refresh),
+                connected_at=datetime.now(UTC),
+            )
+            session.add(acct)
+            await session.commit()
+            return acct.id
+
+
+async def clear_upload_quota(redis: Redis) -> None:
+    """YouTube's daily upload count starts empty (it is shared by the whole project)."""
+    stale = [key async for key in redis.scan_iter(f"bucket:{YOUTUBE_UPLOADS}:*")]
+    if stale:
+        await redis.delete(*stale)

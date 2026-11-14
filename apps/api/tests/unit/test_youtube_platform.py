@@ -17,7 +17,7 @@ from socialhood.platforms.capabilities import Capability
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.registry import adapter_for
-from socialhood.platforms.youtube.adapter import NEXT_STEP, YouTubeAdapter
+from socialhood.platforms.youtube.adapter import OWN_UPLOAD, YouTubeAdapter
 from socialhood.platforms.youtube.client import UPLOAD_LIMIT, map_google_error
 from socialhood.platforms.youtube.fake import FakeYouTube
 from socialhood.platforms.youtube.oauth import SCOPE, HttpYouTubeOAuth
@@ -113,7 +113,7 @@ def test_the_registry_routes_youtube_to_its_adapter() -> None:
     assert isinstance(adapter_for(channel(), deps()), YouTubeAdapter)
 
 
-async def test_messages_and_comments_are_unavailable_and_publishing_waits() -> None:
+async def test_messages_and_comments_are_unavailable_and_uploads_are_youtube_s_own() -> None:
     adapter = YouTubeAdapter(deps())
     with pytest.raises(PlatformError) as dm:
         await adapter.send_message(channel(), "x", MagicMock())
@@ -121,9 +121,11 @@ async def test_messages_and_comments_are_unavailable_and_publishing_waits() -> N
     with pytest.raises(PlatformError) as comment:
         await adapter.reply_to_comment(channel(), "c", "hi")
     assert comment.value.code == "capability_unavailable"
-    with pytest.raises(PlatformError) as publish:
-        await adapter.publish_container(channel(), "v")
-    assert (publish.value.code, publish.value.message) == ("capability_unavailable", NEXT_STEP)
+    with pytest.raises(PlatformError) as create:
+        await adapter.create_reel_container(channel(), video_url="https://x/v.mp4", caption="")
+    assert (create.value.code, create.value.message) == ("capability_unavailable", OWN_UPLOAD)
+    # C-196: the video id is the container; publishing it changes nothing on YouTube.
+    assert await adapter.publish_container(channel(), "v") == "v"
     assert await adapter.list_media(channel()) == []
     assert await adapter.get_media_counts(channel(), "v") is None
     await adapter.subscribe_webhooks(channel())  # nothing to subscribe

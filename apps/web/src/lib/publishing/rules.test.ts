@@ -4,6 +4,14 @@ import { account } from "@/test/api";
 import { assetInfo, mediaAsset } from "@/test/composer-fixtures";
 
 import {
+  byteCount,
+  captionLimit,
+  checkYouTubeFile,
+  postPlatforms,
+  publishingAccounts,
+  shortProblem,
+  tagsLength,
+  youtubeRoute,
   appendHashtags,
   cannotPublishReason,
   charCount,
@@ -158,5 +166,42 @@ describe("Instagram options (FR-PUB-07, C-134)", () => {
     expect(checkPostFile(big)).toBe("Videos can be up to 100 MB on Instagram.");
     expect(checkPostFile(big, 200)).toBeNull();
     expect(checkPostFile({ name: "clip.mp4", type: "", size: 201 * MB }, 200)).toBe("Videos can be up to 200 MB on Instagram.");
+  });
+});
+
+describe("YouTube rules (C-195)", () => {
+  const ig = account({ id: "a1" });
+  const channel = account({ id: "y1", platform: "youtube" });
+  const page = account({ id: "p1", platform: "facebook" });
+
+  it("lists YouTube channels only with the workspace's switch", () => {
+    expect(publishingAccounts([ig, channel]).map((a) => a.id)).toEqual(["a1"]);
+    expect(publishingAccounts([ig, channel], ["youtube"]).map((a) => a.id)).toEqual(["a1", "y1"]);
+  });
+
+  it("routes YouTube alone straight to YouTube, and mixed posts through the media tray", () => {
+    expect(youtubeRoute([channel])).toBe("direct");
+    expect(youtubeRoute([channel, ig])).toBe("media");
+    expect(youtubeRoute([ig, page])).toBeNull();
+    expect(postPlatforms([channel])).toEqual({ instagram: false, facebook: false, youtube: true });
+  });
+
+  it("holds the caption to the strictest platform", () => {
+    expect(captionLimit(["youtube"])).toBe(5000);
+    expect(captionLimit(["youtube", "facebook"])).toBe(5000);
+    expect(captionLimit(["youtube", "instagram"])).toBe(2200);
+    expect(captionLimit(["facebook"])).toBe(63206);
+  });
+
+  it("checks a YouTube file and a Short", () => {
+    expect(checkYouTubeFile({ name: "a.mkv", type: "", size: 10 })).toBeNull();
+    expect(checkYouTubeFile({ name: "a.pdf", type: "application/pdf", size: 10 })).toContain("video files");
+    expect(shortProblem({ width: 1080, height: 1920, duration_s: 180 })).toBeNull();
+    expect(shortProblem({ width: 1920, height: 1080, duration_s: 30 })).toContain("vertical");
+  });
+
+  it("counts tags as YouTube does", () => {
+    expect(tagsLength(["bread", "sour dough"])).toBe(5 + 1 + 12);
+    expect(byteCount("नमस्ते")).toBe(18);
   });
 });

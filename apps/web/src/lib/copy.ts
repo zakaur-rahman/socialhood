@@ -296,6 +296,42 @@ export function youtubeListError(error: unknown): string {
   return "YouTube didn't respond. Close this and connect YouTube again.";
 }
 
+/** C-195 Phase 2: scheduling YouTube videos and Shorts. */
+export const youtubeCopy = {
+  directRoute: "Posting to YouTube only: the video goes straight from your computer to YouTube. It never passes through Amplychat.",
+  mediaRoute: "Posting to several platforms: the video is stored once and sent to each.",
+  addToTray:
+    "This video is already uploaded to YouTube. To post it to Instagram or Facebook too, add the same file to the media tray. Nothing is moved for you.",
+  kidsHelp: "YouTube asks every channel this. Made for kids means it's aimed at children, not just that children might watch it.",
+  aiHelp:
+    "Yes if it shows realistic people, places or events that were made or changed with AI. Ordinary edits like cuts, colour, filters or captions don't count.",
+  shortHint: "Shorts are vertical or square and up to 3 minutes.",
+  removedFromChannel: "The video will also be removed from your YouTube channel.",
+  stillOnYouTube: "It stays on YouTube; only the Schedule copy is removed.",
+  noPublishNow: "The video is already on YouTube, set to go live at its time. Change the time and Update schedule.",
+  publishing: "Uploaded to YouTube. It goes live once YouTube has processed it.",
+  leaveWarning: "The video is still uploading to YouTube. If you leave now, the upload stops.",
+  scheduled: (when: string) => `Scheduled on YouTube for ${when}.`,
+} as const;
+
+/** What a YouTube target is doing, as the composer and Schedule say it. */
+export function youtubeStateLabel(state: string, percent?: number | null): string {
+  switch (state) {
+    case "waiting_for_file":
+      return "Waiting for the file";
+    case "uploading":
+      return percent == null ? "Uploading" : `Uploading ${percent}%`;
+    case "processing":
+      return "Processing on YouTube";
+    case "scheduled":
+      return "Scheduled on YouTube";
+    case "published":
+      return "Published";
+    default:
+      return "Failed";
+  }
+}
+
 /** The toast for the ?connected= / ?error= the callback redirected with, or null for none. */
 export function connectResult(params: URLSearchParams, username?: string | null): ConnectResult | null {
   if (params.get("connected") === "instagram") return instagramConnected(username);

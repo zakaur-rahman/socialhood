@@ -12,7 +12,8 @@ scheduled_posts_monthly: 402 quota_exceeded ("Your plan includes N scheduled pos
 post counts once per billing period.
 
 The rules are in services/scheduled_posts/ (T7.1); publishing itself (the dispatcher and the
-publish jobs) is T7.3.
+publish jobs) is T7.3. A YouTube-only post's direct upload (C-196) is opened and completed here
+(services/post_publishing/youtube_direct.py).
 """
 
 from __future__ import annotations
@@ -44,7 +45,11 @@ from socialhood.schemas.publishing import (
     ScheduledPostList,
     ScheduledPostView,
     ScheduleRequest,
+    YouTubeUploadComplete,
+    YouTubeUploadSession,
+    YouTubeUploadStart,
 )
+from socialhood.services.post_publishing import youtube_direct
 from socialhood.services.scheduled_posts import best_times as best_times_service
 from socialhood.services.scheduled_posts import calendar as calendar_service
 from socialhood.services.scheduled_posts import hashtag_groups, posts, slots
@@ -180,6 +185,70 @@ async def publish_post_now(
     out, handover = await posts.publish_now(session, scheduled_post_id, _env(request, ctx))
     await commit_and_publish(session, request.app.state.redis)
     await posts.hand_over(handover)
+    return out
+
+
+@router.post(
+    "/scheduled-posts/{scheduled_post_id}/youtube-upload",
+    status_code=201,
+    operation_id="start_youtube_upload",
+)
+async def start_youtube_upload(
+    request: Request,
+    scheduled_post_id: uuid.UUID,
+    body: YouTubeUploadStart,
+    ctx: CanManagePublishing,
+    session: Session,
+) -> YouTubeUploadSession:
+    """C-196: open a direct upload of the video for a post whose accounts are all YouTube
+    channels (``target_id``: the channel's ``social_account_id``). The browser then PUTs the file
+    to ``upload_url`` itself; the channel's token is never sent. A post with a time uploads as
+    private and YouTube publishes it then; a post without one ("now") uploads with the chosen
+    privacy. One of YouTube's daily uploads is counted. 409 conflict for a post that also goes to
+    other platforms ("Posts to several platforms use the media tray"), has media in the tray or
+    can't be edited, or when the workspace has 3 uploads open; 422 for missing YouTube options
+    (``targets.{i}.options``) or a time under a minute away (``publish_at``); 429 rate_limited
+    when YouTube's daily uploads are used up ("Try again after …", with Retry-After)."""
+    env = _env(request, ctx)
+    out = await youtube_direct.start(
+        session,
+        request.app.state.redis,
+        env.deps,
+        scheduled_post_id=scheduled_post_id,
+        target_id=body.target_id,
+        file_size=body.file_size,
+        content_type=body.content_type,
+        now=env.now,
+        timezone=ctx.workspace.timezone,
+    )
+    await commit_and_publish(session, request.app.state.redis)
+    return out
+
+
+@router.post(
+    "/scheduled-posts/{scheduled_post_id}/youtube-upload/complete",
+    operation_id="complete_youtube_upload",
+)
+async def complete_youtube_upload(
+    request: Request,
+    scheduled_post_id: uuid.UUID,
+    body: YouTubeUploadComplete,
+    ctx: CanManagePublishing,
+    session: Session,
+) -> ScheduledPost:
+    """C-196: the browser finished the upload; ``video_id`` is the id in YouTube's answer. The
+    video is read on the channel (it must be there, with the upload's title), kept on the
+    target, and the post is scheduled (the checklist and scheduled_posts_monthly apply: 422, 402)
+    or, for a post without a time, published now. 409 when no upload is open for the channel.
+    Sending the same video again returns the post as it is."""
+    env = _env(request, ctx)
+    done, handover = await youtube_direct.complete(
+        session, env.deps, scheduled_post_id=scheduled_post_id, body=body, env=env
+    )
+    out: ScheduledPost = done
+    await commit_and_publish(session, request.app.state.redis)
+    if handover is not None:
+        await posts.hand_over(handover)
     return out
 
 

@@ -61,7 +61,8 @@ class SandboxAdapter:
         if acct.platform == "whatsapp":
             return WHATSAPP_CAPABILITIES
         if acct.platform == "youtube":
-            return YOUTUBE_CAPABILITIES  # C-195: publishes through the sandbox's containers
+            # C-196: the registry gives sandbox channels the YouTube adapter (SandboxVideos)
+            return YOUTUBE_CAPABILITIES
         return CAPABILITIES
 
     async def list_templates(self, acct: SocialAccount) -> list[MessageTemplate]:

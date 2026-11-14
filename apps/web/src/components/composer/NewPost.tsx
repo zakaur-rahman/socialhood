@@ -11,22 +11,32 @@ import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { useSocialAccounts } from "@/lib/api/queries";
 import { useCreatePostDraft } from "@/lib/api/queries/scheduledPosts";
 import type { SocialAccount } from "@/lib/api/types";
-import { cannotPublishReason, MIN_SCHEDULE_LEAD_MS, publishingAccounts } from "@/lib/publishing/rules";
-import type { ScheduledPostDraft } from "@/lib/publishing/types";
+import { cannotPublishReason, DEFAULT_YOUTUBE_OPTIONS, MIN_SCHEDULE_LEAD_MS, publishingAccounts } from "@/lib/publishing/rules";
+import type { ScheduledPostDraft, TargetIn } from "@/lib/publishing/types";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { composerHref } from "./PostComposer";
 
 /**
  * The new draft (F-13): an empty post, with the time of a calendar click (``at``, an ISO instant
- * at least 1 minute away) and the only account when just one can publish.
+ * at least 1 minute away) and the only account when just one can publish (a YouTube channel, with
+ * the workspace's youtube switch, starts with YouTube's default options).
  */
-export function newDraftBody(accounts: SocialAccount[], at: string | null, now: Date): ScheduledPostDraft {
-  const ready = publishingAccounts(accounts).filter((account) => !cannotPublishReason(account));
+export function newDraftBody(accounts: SocialAccount[], at: string | null, now: Date, features: readonly string[] = []): ScheduledPostDraft {
+  const ready = publishingAccounts(accounts, features).filter((account) => !cannotPublishReason(account));
   const time = at ? new Date(at) : null;
   const publishAt = time && !Number.isNaN(time.getTime()) && time.getTime() - now.getTime() >= MIN_SCHEDULE_LEAD_MS ? time.toISOString() : null;
   return {
-    targets: ready.length === 1 ? [{ social_account_id: ready[0].id, caption_override: null }] : [],
+    targets:
+      ready.length === 1
+        ? [
+            {
+              social_account_id: ready[0].id,
+              caption_override: null,
+              ...(ready[0].platform === "youtube" ? { options: DEFAULT_YOUTUBE_OPTIONS as TargetIn["options"] } : {}),
+            },
+          ]
+        : [],
     asset_ids: [],
     caption: "",
     kind: "post",
@@ -51,13 +61,13 @@ export function NewPost({ at, when = null }: { at: string | null; when?: string 
 
   const start = useCallback(
     (list: SocialAccount[]) =>
-      mutate(newDraftBody(list, at, new Date()), {
+      mutate(newDraftBody(list, at, new Date(), workspace.features ?? []), {
         onSuccess: (post) => {
           const href = composerHref(workspace.slug, post.id);
           router.replace(when === "queue" ? (`${href}?when=queue` as Route) : href);
         },
       }),
-    [at, mutate, router, when, workspace.slug],
+    [at, mutate, router, when, workspace.slug, workspace.features],
   );
 
   const loaded = accounts.isSuccess || accounts.isError;

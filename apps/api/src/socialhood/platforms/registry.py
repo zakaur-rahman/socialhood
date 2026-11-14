@@ -18,6 +18,8 @@ def adapter_for(acct: SocialAccount, deps: PlatformDeps) -> PlatformAdapter:
     if is_sandbox(acct):
         if not deps.settings.sandbox_platform_enabled:
             raise PlatformError("platform_rejected", message="The sandbox platform is disabled")
+        if acct.platform == "youtube":  # C-196: YouTube's own steps, with publishing.SandboxVideos
+            return YouTubeAdapter(deps)
         return SandboxAdapter(deps)
     if acct.platform == "instagram":
         return InstagramAdapter(deps)

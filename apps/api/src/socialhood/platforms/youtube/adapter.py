@@ -2,14 +2,24 @@
 
 A connected channel publishes; it has no DMs and (for now) no comments. The stored credential is a
 Google refresh token with no expiry (``token_expires_at`` NULL), so ``refresh_token`` has nothing to
-do: ``access_token`` mints a short-lived access token for each use instead. Publishing arrives in
-the next step (platforms/youtube/publishing.py); until then its methods say so.
+do: ``access_token`` mints a short-lived access token for each use instead.
+
+Publishing (C-196): the upload itself is YouTube's own (services/post_publishing/youtube_*.py with
+platforms/youtube/publishing.py), so the container methods that create something answer
+``capability_unavailable``. Once a video exists its id is the "container": ``get_container_status``
+maps YouTube's processing (``status.uploadStatus``, ``processingDetails.processingStatus``) and a
+pending ``publishAt`` to the ContainerStatus codes, ``publish_container`` changes nothing (privacy
+and time were set with the upload) and returns the id, ``get_published_media`` reads it back. Stats
+(D5): views, likes and comments per video (videos.list, 1 unit) and the channel's subscribers.
+
+The sandbox channel (C-196) is served by this adapter too (platforms/registry.py), with
+publishing.SandboxVideos: no Google, no token.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
@@ -36,11 +46,51 @@ from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.youtube.oauth import SCOPE, youtube_for
+from socialhood.platforms.youtube.publishing import Video, is_sandbox_channel, videos_for
 
 CAPABILITIES = frozenset({Capability.PUBLISH, Capability.POST_INSIGHTS})
 NO_MESSAGES = "YouTube channels have no direct messages"
 NO_COMMENTS = "YouTube comments aren't supported yet"
-NEXT_STEP = "YouTube publishing arrives in the next step"
+OWN_UPLOAD = "YouTube videos are uploaded by the YouTube publishing step"
+NOT_PROCESSED = "YouTube couldn't process the video"
+GONE = "The video is no longer on YouTube."
+FAILED_UPLOADS = frozenset({"failed", "rejected", "deleted"})
+FAILED_PROCESSING = frozenset({"failed", "terminated"})
+SANDBOX_TOKEN = "sandbox"  # noqa: S105 (the sandbox channel needs no token)
+
+
+def container_status(video: Video | None, now: datetime) -> ContainerStatus:
+    """A video's state as the publish jobs read a container: gone or failed is ERROR, still
+    processing or waiting for its ``publishAt`` is IN_PROGRESS, else FINISHED."""
+    if video is None:
+        return ContainerStatus(status_code="ERROR", detail=GONE)
+    if video.upload_status in FAILED_UPLOADS or video.processing in FAILED_PROCESSING:
+        why = f" ({video.failure})" if video.failure else ""
+        return ContainerStatus(status_code="ERROR", detail=f"{NOT_PROCESSED}{why}.")
+    if video.upload_status != "processed" and video.processing != "succeeded":
+        return ContainerStatus(status_code="IN_PROGRESS")
+    if video.privacy == "private" and video.publish_at is not None and video.publish_at > now:
+        return ContainerStatus(status_code="IN_PROGRESS")
+    return ContainerStatus(status_code="FINISHED")
+
+
+def published_media(video: Video, *, short: bool = False) -> PlatformMedia:
+    url = (
+        f"https://www.youtube.com/shorts/{video.id}"
+        if short
+        else f"https://www.youtube.com/watch?v={video.id}"
+    )
+    return PlatformMedia(
+        platform_media_id=video.id,
+        media_type="reel" if short else "video",
+        caption=video.description or None,
+        media_url=None,
+        thumbnail_url=video.thumbnail_url,
+        permalink=url,
+        posted_at=video.published_at or datetime.now(UTC),
+        like_count=video.likes,
+        comments_count=video.comments,
+    )
 
 
 def _unavailable(message: str) -> PlatformError:
@@ -54,11 +104,15 @@ class YouTubeAdapter:
         self.deps = deps
 
     def capabilities_for(self, acct: SocialAccount) -> frozenset[Capability]:
+        if is_sandbox_channel(acct):
+            return CAPABILITIES
         return CAPABILITIES if SCOPE in (acct.scopes or []) else frozenset()
 
     async def access_token(self, acct: SocialAccount) -> str:
         """A short-lived access token minted from the stored refresh token. Google's
         ``invalid_grant`` (access removed, password changed) is ``account_needs_reconnect``."""
+        if is_sandbox_channel(acct):
+            return SANDBOX_TOKEN
         if acct.access_token_enc is None:
             raise PlatformError("account_needs_reconnect", message="The channel is disconnected")
         refresh = self.deps.cipher.decrypt(acct.access_token_enc)
@@ -132,23 +186,37 @@ class YouTubeAdapter:
     async def delete_comment(self, acct: SocialAccount, comment_ref: str) -> None:
         raise _unavailable(NO_COMMENTS)
 
+    async def _video(self, acct: SocialAccount, video_id: str) -> Video | None:
+        return await videos_for(acct, self.deps).get(await self.access_token(acct), video_id)
+
     async def get_media_counts(self, acct: SocialAccount, media_ref: str) -> MediaCounts | None:
-        return None
+        video = await self._video(acct, media_ref)
+        if video is None:
+            return None
+        return MediaCounts(like_count=video.likes, comments_count=video.comments)
 
     async def get_media_insights(
         self, acct: SocialAccount, media_ref: str, *, media_type: str
     ) -> MediaInsights:
-        return MediaInsights()
+        """D5's basic stats: views, likes and comments (videos.list statistics)."""
+        video = await self._video(acct, media_ref)
+        if video is None:
+            return MediaInsights()
+        return MediaInsights(views=video.views, likes=video.likes, comments=video.comments)
 
     async def get_account_insights(
         self, acct: SocialAccount, day: date, *, tz: str = "UTC"
     ) -> AccountInsights:
-        return AccountInsights()
+        """The channel's subscribers as its followers (channels.list statistics)."""
+        count = await videos_for(acct, self.deps).subscribers(
+            await self.access_token(acct), acct.platform_account_id
+        )
+        return AccountInsights(followers_count=count)
 
-    # ---- publishing: Phase 2 (platforms/youtube/publishing.py)
+    # ---- publishing (C-196): the video id is the container
 
     async def get_publishing_quota(self, acct: SocialAccount) -> PublishingQuota:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable("YouTube has no per-channel publishing limit to read")
 
     async def create_image_container(
         self,
@@ -158,7 +226,7 @@ class YouTubeAdapter:
         caption: str,
         extras: PublishExtras | None = None,
     ) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def create_reel_container(
         self,
@@ -170,13 +238,13 @@ class YouTubeAdapter:
         page_reel: bool = False,
         extras: PublishExtras | None = None,
     ) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def create_carousel_container(
         self,
@@ -186,7 +254,7 @@ class YouTubeAdapter:
         caption: str,
         extras: PublishExtras | None = None,
     ) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def list_collaborators(
         self, acct: SocialAccount, media_ref: str
@@ -196,20 +264,22 @@ class YouTubeAdapter:
     async def get_container_status(
         self, acct: SocialAccount, container_ref: str
     ) -> ContainerStatus:
-        raise _unavailable(NEXT_STEP)
+        return container_status(await self._video(acct, container_ref), datetime.now(UTC))
 
     async def create_text_container(self, acct: SocialAccount) -> str:
-        raise _unavailable(NEXT_STEP)
+        raise _unavailable(OWN_UPLOAD)
 
     async def publish_container(
         self, acct: SocialAccount, container_ref: str, *, caption: str = ""
     ) -> str:
-        raise _unavailable(NEXT_STEP)
+        """Nothing to do: the privacy (and ``publishAt``) went with the upload."""
+        return container_ref
 
     async def get_published_media(
         self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
-        raise _unavailable(NEXT_STEP)
+        video = await self._video(acct, media_ref)
+        return published_media(video) if video is not None else None
 
     async def find_published_media(
         self,
@@ -220,7 +290,8 @@ class YouTubeAdapter:
         published_after: datetime,
         story: bool = False,
     ) -> PlatformMedia | None:
-        raise _unavailable(NEXT_STEP)
+        """The container is the video: read it (YouTube never answers PUBLISHED here)."""
+        return await self.get_published_media(acct, container_ref)
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:
         raise _unavailable(NO_COMMENTS)

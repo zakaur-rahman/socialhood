@@ -211,7 +211,8 @@ export function accountCaptionId(accountId: string): string {
   return `composer-caption-${accountId}`;
 }
 
-export type AccountCaption = { accountId: string; label: string; value: string; maxChars?: number };
+/** ``noun``: "Description" for a YouTube channel (its caption is the video's description), else "Caption". */
+export type AccountCaption = { accountId: string; label: string; value: string; maxChars?: number; noun?: string };
 
 /**
  * UX-SCR-13 Caption: one caption for every account, or (with two or more accounts) a caption per
@@ -230,6 +231,7 @@ export function CaptionEditor({
   accountCaptions,
   onAccountCaptionChange,
   maxChars = CAPTION_MAX_CHARS,
+  label = "Caption",
 }: {
   wid: string;
   slug: string;
@@ -245,12 +247,14 @@ export function CaptionEditor({
   onAccountCaptionChange: (index: number, value: string) => void;
   /** The shared caption's limit: the strictest of the accounts it goes to (C-131). */
   maxChars?: number;
+  /** "Description" when only YouTube channels are chosen (C-195). */
+  label?: string;
 }) {
   const switchId = useId();
   return (
     <Section
       id="composer-caption-section"
-      title="Caption"
+      title={label}
       aside={
         canPerAccount || perAccount ? (
           <Field id={switchId} orientation="horizontal" density="compact" className="w-auto gap-2">
@@ -266,7 +270,7 @@ export function CaptionEditor({
             <CaptionField
               key={item.accountId}
               id={accountCaptionId(item.accountId)}
-              label={`Caption for ${item.label}`}
+              label={`${item.noun ?? "Caption"} for ${item.label}`}
               value={item.value}
               onChange={(value) => onAccountCaptionChange(index, value)}
               wid={wid}
@@ -280,7 +284,7 @@ export function CaptionEditor({
       ) : (
         <CaptionField
           id={CAPTION_ID}
-          label="Caption"
+          label={label}
           value={caption}
           onChange={onCaptionChange}
           wid={wid}
@@ -288,7 +292,7 @@ export function CaptionEditor({
           groups={groups}
           groupsLoading={groupsLoading}
           maxChars={maxChars}
-          placeholder="Write a caption…"
+          placeholder={label === "Caption" ? "Write a caption…" : `Write a ${label.toLowerCase()}…`}
         />
       )}
     </Section>

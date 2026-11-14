@@ -28,6 +28,7 @@ export function PostTypeSection({
   disabled,
   reelAvailable = false,
   instagramToo = false,
+  youtubeOnly = false,
 }: {
   value: PostKind;
   onChange: (kind: PostKind) => void;
@@ -36,7 +37,10 @@ export function PostTypeSection({
   reelAvailable?: boolean;
   /** An Instagram account is chosen too (its single video is a Reel either way). */
   instagramToo?: boolean;
+  /** Only YouTube channels are chosen: Stories and Reels are Instagram's and Facebook's, so there is nothing to pick (the YouTube section has Video or Short). */
+  youtubeOnly?: boolean;
 }) {
+  if (youtubeOnly && value === "post") return null;
   return (
     <Section id={POST_TYPE_ID} title="Type">
       <ToggleGroup

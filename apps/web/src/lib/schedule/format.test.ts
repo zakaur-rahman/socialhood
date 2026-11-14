@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
 import { IDENTITIES } from "@/lib/ui/identity";
+import { account } from "@/test/api";
 import { scheduledPost } from "@/test/schedule";
 
 import {
@@ -9,6 +10,7 @@ import {
   bulkResultMessage,
   canMove,
   captionLine,
+  instagramAccountColors,
   lockedMessage,
   moveErrorMessage,
   needsComposer,
@@ -16,6 +18,7 @@ import {
   postFormatLabel,
   summarizeSlots,
   UNKNOWN_ACCOUNT_COLOR,
+  youtubeStatus,
 } from "./format";
 
 function validation(fields: { field: string; message: string }[]) {
@@ -110,5 +113,28 @@ describe("schedule format", () => {
       expect(`${color.ring} ${color.dot}`).not.toMatch(/success|warning|danger|instagram|whatsapp|fg-secondary/);
     }
     expect(UNKNOWN_ACCOUNT_COLOR).toEqual({ gradient: "", ring: "ring-line-strong", dot: "bg-line-strong" });
+  });
+});
+
+describe("YouTube on Schedule (C-195)", () => {
+  it("keeps the three identities for Instagram and Facebook first; a fourth channel gets none", () => {
+    const colors = instagramAccountColors([
+      account({ id: "y1", platform: "youtube" }),
+      account({ id: "a1" }),
+      account({ id: "a2" }),
+      account({ id: "p1", platform: "facebook" }),
+    ]);
+    expect(colors.get("a1")).toBe(IDENTITIES[0]);
+    expect(colors.get("p1")).toBe(IDENTITIES[2]);
+    expect(colors.has("y1")).toBe(false);
+    expect(instagramAccountColors([account({ id: "a1" }), account({ id: "y1", platform: "youtube" })]).get("y1")).toBe(IDENTITIES[1]);
+  });
+
+  it("says Scheduled on YouTube for a direct upload", () => {
+    const youtube = { route: "direct" as const, state: "scheduled" as const, video_id: "v1", upload_expires_at: null, url: null };
+    expect(youtubeStatus(scheduledPost({ status: "scheduled", targets: [{ social_account_id: "y1", status: "pending", youtube }] }))).toBe(
+      "Scheduled on YouTube",
+    );
+    expect(youtubeStatus(scheduledPost({ status: "scheduled" }))).toBeNull();
   });
 });

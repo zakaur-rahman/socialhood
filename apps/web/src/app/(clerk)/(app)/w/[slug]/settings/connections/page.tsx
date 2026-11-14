@@ -356,8 +356,8 @@ function Connections() {
           )}
         </>
       )}
-      <YouTubeChannelsDialog key={youtubeNonce ?? "closed"} wid={wid} nonce={youtubeNonce} onClose={() => setYouTubeNonce(null)} />
-      <FacebookPagesDialog key={facebookNonce ?? "closed"} wid={wid} nonce={facebookNonce} onClose={() => setFacebookNonce(null)} />
+      <YouTubeChannelsDialog key={`youtube-${youtubeNonce ?? "closed"}`} wid={wid} nonce={youtubeNonce} onClose={() => setYouTubeNonce(null)} />
+      <FacebookPagesDialog key={`facebook-${facebookNonce ?? "closed"}`} wid={wid} nonce={facebookNonce} onClose={() => setFacebookNonce(null)} />
       <AutoConfirmDialog
         open={Boolean(confirmAuto)}
         onOpenChange={(open) => (open ? undefined : setConfirmAuto(null))}

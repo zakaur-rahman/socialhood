@@ -40,7 +40,20 @@ carries the workspace id, so none needs a cross-workspace lookup after the dispa
 - sweep_stuck_posts: periodic, every minute. Targets left ``publishing`` for more than 10 minutes
   with no publish_target waiting or running go back to pending (failed after the last attempt),
   and ``container_created`` targets idle for 10 minutes with no poll job waiting or running get
-  their next poll enqueued (TR-JOB-03).
+  their next poll enqueued (TR-JOB-03). A target whose YouTube upload job is waiting or running
+  counts as busy too.
+
+YouTube (C-196):
+- the dispatcher first holds back due posts whose YouTube video still has to be uploaded when
+  YouTube's daily uploads are used up: they move to the next quota day and their owners are told
+  (services/post_publishing/youtube_media.hold_back);
+- upload_youtube_video(target_id, workspace_id): bulk lane, publish_target's lock ``pub:{id}``,
+  5 tries; streams the tray's video to the target's YouTube session (youtube_media.upload);
+- sync_youtube_video(target_id, account_id, video_id, workspace_id): after a change to a post with
+  a direct upload, videos.update when what YouTube holds differs, or videos.delete for a video no
+  target holds any more (youtube_direct.sync); lock ``ytsync:{video_id}``;
+- expire_youtube_uploads: periodic, every 10 minutes; direct uploads opened 24 hours ago and not
+  finished: the post goes back to a draft ("The upload didn't finish").
 """
 
 from __future__ import annotations
@@ -53,7 +66,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
-from socialhood.jobs.app import INTERACTIVE, app
+from socialhood.jobs.app import BULK, INTERACTIVE, app
 from socialhood.jobs.enqueue import enqueue
 from socialhood.jobs.retry import PlatformRetry
 from socialhood.jobs.runtime import runtime
@@ -67,7 +80,13 @@ from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.platforms.errors import PlatformError
 from socialhood.realtime import events
 from socialhood.repositories import publish_targets as repo
-from socialhood.services.post_publishing import claims, collaborators, publish
+from socialhood.services.post_publishing import (
+    claims,
+    collaborators,
+    publish,
+    youtube_direct,
+    youtube_media,
+)
 
 log = get_logger(__name__)
 
@@ -78,6 +97,10 @@ IDLE_AFTER = timedelta(minutes=10)  # longer than the slowest poll interval (5 m
 HEARTBEAT_S = 60  # a running job whose worker has been silent this long is dead
 PUBLISH_RETRY = PlatformRetry(max_attempts=PUBLISH_ATTEMPTS)  # FR-PUB-05: 3 tries
 FIRST_COMMENT_RETRY = PlatformRetry(max_attempts=3)
+UPLOAD_RETRY = PlatformRetry(max_attempts=5)  # each try resumes from what YouTube holds
+SYNC_RETRY = PlatformRetry(max_attempts=3)
+# Jobs that work on a claimed target under its ``pub:{id}`` lock.
+TARGET_TASKS = ("publish_target", "upload_youtube_video")
 
 
 def _deps() -> PlatformDeps:
@@ -98,6 +121,9 @@ async def dispatch_due(
         with tenant_bypass_scope():
             posts = await repo.lock_due_posts(session, now, CLAIM_BATCH)
             targets = await repo.pending_targets_of(session, [p.id for p in posts])
+        held = await youtube_media.hold_back(session, redis, posts, targets, now)
+        posts = [p for p in posts if p.id not in held]
+        targets = [t for t in targets if t.scheduled_post_id not in held]
         for post in posts:
             with workspace_scope(post.workspace_id):
                 mine = [t for t in targets if t.scheduled_post_id == post.id]
@@ -131,7 +157,7 @@ _JOB_PENDING = """
 SELECT EXISTS (
   SELECT 1 FROM procrastinate_jobs j
   LEFT JOIN procrastinate_workers w ON w.id = j.worker_id
-  WHERE j.task_name = %(task)s
+  WHERE j.task_name = ANY(%(tasks)s)
     AND j.lock = %(lock)s
     AND (j.status = 'todo'
          OR (j.status = 'doing'
@@ -140,11 +166,12 @@ SELECT EXISTS (
 """
 
 
-async def job_pending(task: str, lock: str) -> bool:
-    """A job of ``task`` with this run lock is waiting (a delayed poll, a retry after a rate
-    limit) or running on a live worker."""
+async def job_pending(task: str | tuple[str, ...], lock: str) -> bool:
+    """A job of ``task`` (or of any of them) with this run lock is waiting (a delayed poll, a
+    retry after a rate limit) or running on a live worker."""
+    tasks = [task] if isinstance(task, str) else list(task)
     row = await app.connector.execute_query_one_async(
-        _JOB_PENDING, task=task, lock=lock, heartbeat=HEARTBEAT_S
+        _JOB_PENDING, tasks=tasks, lock=lock, heartbeat=HEARTBEAT_S
     )
     return bool(row["pending"])
 
@@ -161,7 +188,7 @@ async def sweep_stuck(
             idle = await repo.idle_containers(session, now - IDLE_AFTER, SWEEP_BATCH)
     counts = {"reset": 0, "failed": 0, "requeued": 0}
     for target in stuck:
-        if await job_pending("publish_target", f"pub:{target.id}"):
+        if await job_pending(TARGET_TASKS, f"pub:{target.id}"):
             continue  # still retrying (a rate limit can wait longer than STUCK_AFTER)
         with workspace_scope(target.workspace_id):
             outcome = await publish.reset_stuck(sessionmaker, redis, target.id, now=now)
@@ -236,6 +263,47 @@ async def post_first_comment(context: JobContext, target_id: str, workspace_id: 
             target_id=uuid.UUID(target_id),
             will_retry=will_retry,
         )
+
+
+@app.task(name="upload_youtube_video", queue=BULK, retry=UPLOAD_RETRY, pass_context=True)
+async def upload_youtube_video(context: JobContext, target_id: str, workspace_id: str) -> None:
+    rt = runtime()
+    job = context.job
+
+    def will_retry(error: PlatformError) -> bool:
+        return UPLOAD_RETRY.get_retry_decision(exception=error, job=job) is not None
+
+    with workspace_scope(uuid.UUID(workspace_id)):
+        await youtube_media.upload(
+            rt.sessionmaker,
+            rt.redis,
+            _deps(),
+            target_id=uuid.UUID(target_id),
+            will_retry=will_retry,
+        )
+
+
+@app.task(name="sync_youtube_video", queue=INTERACTIVE, retry=SYNC_RETRY)
+async def sync_youtube_video(
+    target_id: str, account_id: str, video_id: str, workspace_id: str
+) -> None:
+    rt = runtime()
+    with workspace_scope(uuid.UUID(workspace_id)):
+        await youtube_direct.sync(
+            rt.sessionmaker,
+            rt.redis,
+            _deps(),
+            target_id=uuid.UUID(target_id),
+            account_id=uuid.UUID(account_id),
+            video_id=video_id,
+        )
+
+
+@app.periodic(cron="*/10 * * * *", periodic_id="expire_youtube_uploads")
+@app.task(name="expire_youtube_uploads", queue=INTERACTIVE, queueing_lock="expire_youtube_uploads")
+async def expire_youtube_uploads(timestamp: int) -> None:
+    rt = runtime()
+    await youtube_direct.expire(rt.sessionmaker, rt.redis, _deps())
 
 
 async def refresh_collaborator_invites(

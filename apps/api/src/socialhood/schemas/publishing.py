@@ -24,7 +24,7 @@ import uuid
 from datetime import date, datetime, time
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
@@ -38,6 +38,8 @@ from socialhood.models.publishing import (
     STORED_CAPTION_MAX_CHARS,
     SUGGESTED_HASHTAGS_MAX,
     USER_TAGS_MAX,
+    YOUTUBE_TAGS_MAX_CHARS,
+    YOUTUBE_TITLE_MAX_CHARS,
 )
 from socialhood.schemas.automations import StatusName as AutomationStatusName
 from socialhood.schemas.automations import TriggerName
@@ -75,6 +77,9 @@ CollaboratorInvite = Literal["pending", "accepted"]
 # - extras: Instagram collaborators (up to 3, not on Stories or Facebook-only posts), user tags on
 #   photos, the location (a Facebook Page id) and a Reel's cover and audio name (FR-PUB-07); only
 #   listed when the post uses one
+# - youtube: each YouTube channel's options are complete (title, made for kids, AI disclosure:
+#   ``targets.{i}.options``), its video is uploaded (direct route) and a Short is vertical and up
+#   to 3 minutes; only listed when the post has a YouTube channel (C-196)
 # - publishing_limit: room in each account's 24-hour publishing limit on the post's day
 # - publish_at: at least 1 minute from now (only when the post has a time)
 ChecklistKey = Literal[
@@ -85,6 +90,7 @@ ChecklistKey = Literal[
     "hashtags",
     "mentions",
     "extras",
+    "youtube",
     "publishing_limit",
     "publish_at",
 ]
@@ -96,9 +102,18 @@ CHECKLIST_KEYS: tuple[ChecklistKey, ...] = (
     "hashtags",
     "mentions",
     "extras",
+    "youtube",
     "publishing_limit",
     "publish_at",
 )
+# A YouTube target's upload (C-196): ``direct`` when every account of the post is a YouTube
+# channel (the file goes from the browser or the AI app straight to YouTube), ``media`` when the
+# post also goes to Instagram or Facebook (the file is in the media tray and our publish job sends
+# it to YouTube at the time).
+YouTubeRoute = Literal["direct", "media"]
+YouTubeState = Literal[
+    "waiting_for_file", "uploading", "processing", "scheduled", "published", "failed"
+]
 
 # As typed: with or without "#", any case; stored without "#", lowercase. Letters, digits and
 # underscores only (else a field error on ``hashtags.{i}``).
@@ -108,6 +123,97 @@ HandleIn = Annotated[str, Field(min_length=1, max_length=INSTAGRAM_USERNAME_MAX_
 
 
 # ---- scheduled posts
+
+
+def youtube_tags_length(tags: list[str]) -> int:
+    """YouTube's count: each tag, plus 2 for the quotes of a tag with a space, plus the commas."""
+    return sum(len(t) + (2 if " " in t else 0) for t in tags) + max(0, len(tags) - 1)
+
+
+class YouTubeOptions(RequestModel):
+    """A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the
+    post's target. The description is the caption (or the target's ``caption_override``).
+    Stored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have
+    no default: the person answers both (COPPA; realistic AI-altered content).
+
+    - ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);
+    - ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts
+      its quotes, and each comma between tags counts);
+    - ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from
+      the file's shape and length; there is no separate call)."""
+
+    title: str = Field(min_length=1, max_length=YOUTUBE_TITLE_MAX_CHARS)
+    privacy: Literal["public", "unlisted", "private"] = "public"
+    made_for_kids: bool
+    synthetic_media: bool
+    category_id: str | None = Field(default=None, pattern=r"^\d{1,4}$")
+    tags: list[Annotated[str, Field(min_length=1, max_length=YOUTUBE_TAGS_MAX_CHARS)]] = Field(
+        default_factory=list, max_length=100
+    )
+    notify_subscribers: bool = True
+    format: Literal["video", "short"] = "video"
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Give the video a title.")
+        if "<" in value or ">" in value:
+            raise ValueError("A YouTube title can't contain < or >.")
+        return value
+
+    @field_validator("tags")
+    @classmethod
+    def _tags(cls, value: list[str]) -> list[str]:
+        tags = list(dict.fromkeys(t.strip() for t in value if t.strip()))
+        if any("<" in t or ">" in t for t in tags):
+            raise ValueError("A YouTube tag can't contain < or >.")
+        if youtube_tags_length(tags) > YOUTUBE_TAGS_MAX_CHARS:
+            raise ValueError(f"Keep the tags to {YOUTUBE_TAGS_MAX_CHARS} characters in all.")
+        return tags
+
+
+class YouTubeTargetState(ResponseModel):
+    """Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was
+    opened and not finished runs out then (the post goes back to a draft: "The upload didn't
+    finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link)."""
+
+    route: YouTubeRoute
+    state: YouTubeState
+    video_id: str | None = None
+    upload_expires_at: datetime | None = None
+    url: str | None = None
+
+
+class YouTubeUploadStart(RequestModel):
+    """POST …/scheduled-posts/{id}/youtube-upload: open a direct upload for the post's YouTube
+    target. ``target_id`` is the target's channel (its ``social_account_id``)."""
+
+    target_id: uuid.UUID
+    file_size: int = Field(ge=1, le=256 * 1024**3)  # YouTube's 256 GB
+    content_type: str = Field(min_length=1, max_length=100, pattern=r"^video/[\w.+-]+$")
+    file_name: str | None = Field(default=None, max_length=255)
+
+
+class YouTubeUploadSession(ResponseModel):
+    """Where the file goes: PUT it to ``upload_url`` in pieces of ``chunk_bytes`` (the last may be
+    shorter) with ``Content-Range: bytes {first}-{last}/{total}``. 308 means "go on" (its
+    ``Range`` header says what arrived); 200 or 201 means done, with the video's JSON (its
+    ``id``). To resume, PUT nothing with ``Content-Range: bytes */{total}``. The address works
+    for this one file until ``expires_at``; no token is needed or given."""
+
+    target_id: uuid.UUID
+    upload_url: str
+    chunk_bytes: int
+    expires_at: datetime
+
+
+class YouTubeUploadComplete(RequestModel):
+    """POST …/youtube-upload/complete: the finished upload's video id (from YouTube's answer)."""
+
+    target_id: uuid.UUID
+    video_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class UserTag(ResponseModel):
@@ -170,6 +276,10 @@ class ScheduledPostTarget(ResponseModel):
     # refreshed for a few days; ``collaborators_checked_at`` is the last read (None: not yet).
     collaborators: list[CollaboratorResult] = Field(default_factory=list)
     collaborators_checked_at: datetime | None = None
+    # A YouTube channel's choices (C-196); None for every other platform.
+    options: YouTubeOptions | None = None
+    # A YouTube channel's upload and video (C-196); None for every other platform.
+    youtube: YouTubeTargetState | None = None
 
 
 class ScheduledPostSummary(ResponseModel):
@@ -241,10 +351,13 @@ class ScheduledPostList(ResponseModel):
 
 
 class TargetIn(RequestModel):
-    """An account to publish to, with an optional caption for it alone."""
+    """An account to publish to, with an optional caption for it alone. ``options``: a YouTube
+    channel's choices (C-196), needed before the post is scheduled (the checklist's ``youtube``
+    item); null for every other platform (else 422 on ``targets.{i}.options``)."""
 
     social_account_id: uuid.UUID
     caption_override: str | None = Field(default=None, max_length=STORED_CAPTION_MAX_CHARS)
+    options: YouTubeOptions | None = None
 
 
 class UserTagIn(RequestModel):

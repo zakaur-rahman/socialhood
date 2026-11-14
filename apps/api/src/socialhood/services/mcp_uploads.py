@@ -21,6 +21,12 @@ media library. The MCP tools (mcp/tools/media.py) and the drop page's routes
   workspace holds at most ``OPEN_MAX`` unfinished tickets, so what waits in storage uncounted
   is bounded too.
 
+- **YouTube tickets** (C-196, ``kind`` ``youtube``): made by prepare_youtube_upload for a post's
+  YouTube target, valid as long as its upload session (24 hours). The upload page sends the file
+  straight to YouTube's session (the target's), never to storage, and completes through the same
+  service as the composer (services/post_publishing/youtube_direct.complete). Nothing to clean in
+  storage.
+
 - **Cleanup** (C-167; 01-design.md §5.3): a ticket that never finished (waiting, expired or
   rejected, no media asset) and expired more than ``STALE_AFTER`` ago has its one file deleted
   from storage (as an image, a video and a raw file: a signature doesn't fix which), unless the
@@ -74,6 +80,8 @@ from socialhood.settings import Settings
 log = get_logger(__name__)
 
 Kind = Literal["image", "video"]
+YOUTUBE = "youtube"
+NOT_FOR_YOUTUBE = "This upload goes straight to YouTube. Check it with get_youtube_upload_status."
 TICKET_TTL = timedelta(minutes=30)
 STALE_AFTER = timedelta(hours=24)  # after its expiry, an unfinished ticket's files are deleted
 TAG_PREFIX = "mcp_upload_"
@@ -206,11 +214,7 @@ async def check_daily(redis: Redis, plan: str, workspace_id: uuid.UUID, now: dat
         )
 
 
-async def _ticket(
-    session: AsyncSession, *, workspace_id: uuid.UUID, user_id: uuid.UUID, kind: Kind, now: datetime
-) -> McpUpload:
-    """A new waiting ticket, flushed; 409 when the workspace already holds ``OPEN_MAX`` that
-    never finished (the daily cleanup clears them)."""
+async def _check_open(session: AsyncSession) -> None:
     waiting = await session.scalar(
         select(func.count())
         .select_from(McpUpload)
@@ -218,6 +222,36 @@ async def _ticket(
     )
     if (waiting or 0) >= OPEN_MAX:
         raise ApiError("conflict", TOO_MANY_OPEN)
+
+
+async def youtube_ticket(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    target_id: uuid.UUID,
+    expires_at: datetime,
+) -> McpUpload:
+    """A waiting ``youtube`` ticket for a post's YouTube target (C-196), flushed: the upload page's
+    one-time link. It expires with the target's upload session."""
+    await _check_open(session)
+    upload = McpUpload(
+        user_id=user_id,
+        kind=YOUTUBE,
+        status=UploadStatus.WAITING.value,
+        scheduled_post_target_id=target_id,
+        expires_at=expires_at,
+    )
+    session.add(upload)
+    await session.flush()
+    return upload
+
+
+async def _ticket(
+    session: AsyncSession, *, workspace_id: uuid.UUID, user_id: uuid.UUID, kind: Kind, now: datetime
+) -> McpUpload:
+    """A new waiting ticket, flushed; 409 when the workspace already holds ``OPEN_MAX`` that
+    never finished (the daily cleanup clears them)."""
+    await _check_open(session)
     upload_id = uuid.uuid4()
     upload = McpUpload(
         id=upload_id,
@@ -289,6 +323,8 @@ async def finish(
     expired one is 409; a file that breaks a rule is rejected (the result says why) and deleted.
     The row is locked, so two finishes at once count the daily caps once."""
     upload = await get(session, upload_id, for_update=True)
+    if upload.kind == YOUTUBE:
+        raise ApiError("conflict", NOT_FOR_YOUTUBE)
     status = effective_status(upload, now)
     if status is UploadStatus.UPLOADED and upload.media_asset_id is not None:
         asset = await session.get(MediaAsset, upload.media_asset_id)
@@ -529,6 +565,9 @@ async def clean_stale(session: AsyncSession, media: MediaPurger, upload_id: uuid
     row stays, so the next day's run tries again). The caller commits."""
     ticket = await session.get(McpUpload, upload_id)
     if ticket is None or ticket.status == UploadStatus.UPLOADED or ticket.media_asset_id:
+        return 0
+    if ticket.kind == YOUTUBE:  # its file went to YouTube, never to storage
+        await session.execute(scoped_delete(McpUpload, id=ticket.id))
         return 0
     workspace_id = require_workspace()
     if ticket.public_id is None:  # made before the file's name was signed: found by its tag
