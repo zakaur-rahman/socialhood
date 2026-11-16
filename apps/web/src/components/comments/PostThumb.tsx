@@ -8,7 +8,7 @@ import type { PostSummary } from "@/lib/api/types";
 import { mediaTypeLabel } from "@/lib/comments/format";
 import { cn } from "@/lib/utils";
 
-const TYPE_ICON = { reel: Clapperboard, video: Play, carousel: GalleryHorizontal } as const;
+const TYPE_ICON = { reel: Clapperboard, short: Clapperboard, video: Play, carousel: GalleryHorizontal } as const;
 
 /** A square thumbnail with the format in the corner; a calm placeholder when Instagram gave none. */
 export function PostThumb({

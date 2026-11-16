@@ -24,9 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteComment, usePrivateReply, useReplyToComment, useSetCommentHidden } from "@/lib/api/queries";
 import type { Platform, PostComment } from "@/lib/api/types";
-import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { SENTIMENT_DOT, SENTIMENT_LABEL } from "@/lib/ai/format";
-import { authorHandle, authorName, commentActionError } from "@/lib/comments/format";
+import { authorHandle, authorName, commentActionError, deleteWarning, hideNote } from "@/lib/comments/format";
 import { timeAgo } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -57,6 +56,7 @@ export function CommentRow({
   canDelete,
   accountUsername,
   platform = "instagram",
+  canPrivateReply = true,
   prepared,
   onRemoved,
 }: {
@@ -70,6 +70,8 @@ export function CommentRow({
   accountUsername?: string | null;
   /** GR-29: the post's platform, for the words in the delete warning and the private reply's limit. */
   platform?: Platform;
+  /** False when the account has no private replies (YouTube): no DM button. */
+  canPrivateReply?: boolean;
   /**
    * A reply Ask Amplychat prepared (FR-AGT-03): the row opens with that composer and text. The
    * column remounts the row (by key) for each new one. A DM opens only if none was sent yet.
@@ -144,7 +146,7 @@ export function CommentRow({
       { comment, hidden },
       {
         onSuccess: () =>
-          toast.success(hidden ? "Comment hidden. Only its author can still see it." : "Comment shown again"),
+          toast.success(hidden ? hideNote(platform) : "Comment shown again"),
         onError: (error) => toast.error(commentActionError(error, hidden ? "hide" : "unhide", accountUsername)),
       },
     );
@@ -213,6 +215,7 @@ export function CommentRow({
           {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
           {/* GR-01: a comment on a live broadcast. */}
           {comment.is_live ? <Badge tone="neutral">Live</Badge> : null}
+          {comment.important ? <Badge tone="brand">Important</Badge> : null}
           {comment.hidden ? (
             <Badge>
               <EyeOff aria-hidden /> Hidden
@@ -252,7 +255,7 @@ export function CommentRow({
                 <MessageCircle aria-hidden /> View DM
               </Link>
             </Button>
-          ) : (
+          ) : canPrivateReply ? (
             <Button
               variant="ghost"
               size="sm"
@@ -263,7 +266,7 @@ export function CommentRow({
             >
               <Send aria-hidden /> DM
             </Button>
-          )}
+          ) : null}
           <Button
             variant="ghost"
             size="sm"
@@ -297,8 +300,7 @@ export function CommentRow({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    It&apos;s deleted on {PLATFORM_LABEL[platform]} for everyone, {handle} included. This can&apos;t be undone. To keep it
-                    but stop others seeing it, hide it instead.
+                    {deleteWarning(platform, handle)}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

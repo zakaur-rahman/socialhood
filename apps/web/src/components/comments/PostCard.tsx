@@ -73,6 +73,11 @@ export function PostCard({
                 </span>
               </span>
             </div>
+            {(stats.important ?? 0) > 0 ? (
+              <Badge tone="brand" size="md" data-testid="important-count">
+                {formatCount(stats.important ?? 0)} important
+              </Badge>
+            ) : null}
             {waiting > 0 ? (
               <Badge tone="warning" size="md" data-testid="needs-reply-count">
                 {formatCount(waiting)} {waiting === 1 ? "needs" : "need"} a reply
