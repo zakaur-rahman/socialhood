@@ -59,6 +59,10 @@ class ExtraMetrics(ResponseModel):
     swipes_forward: int | None = None
     exits: int | None = None  # taps out of the Story
     clicks: int | None = None
+    # YouTube Analytics: watch time.
+    watch_minutes: int | None = None
+    avg_view_seconds: int | None = None
+    avg_view_percent: int | None = None
 
 
 class PostPerformance(ResponseModel):

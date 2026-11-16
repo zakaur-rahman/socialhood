@@ -24,7 +24,7 @@ from socialhood.platforms.http import PlatformHttp
 from socialhood.platforms.instagram import oauth
 from socialhood.platforms.registry import adapter_for
 from socialhood.platforms.sandbox.adapter import SANDBOX_PREFIX, is_sandbox
-from socialhood.platforms.youtube.oauth import SCOPE as YOUTUBE_SCOPE
+from socialhood.platforms.youtube.oauth import SCOPES as YOUTUBE_SCOPES
 from socialhood.repositories import social_accounts as accounts
 from socialhood.repositories import workspaces
 from socialhood.schemas.accounts import SocialAccountOut, SocialAccountPatch
@@ -394,7 +394,7 @@ async def connect_sandbox(
             if whatsapp
             else [*facebook_oauth.SCOPES, facebook_oauth.INSIGHTS_SCOPE]
             if facebook
-            else [YOUTUBE_SCOPE]
+            else [*YOUTUBE_SCOPES]
             if youtube
             else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
         ),
