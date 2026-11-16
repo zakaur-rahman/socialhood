@@ -84,7 +84,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
   const account = accounts.data?.find((item) => item.id === data.social_account_id);
   // formatDay capitalises Today and Yesterday for labels on their own; mid-sentence they're lower case.
   const day = formatDay(data.posted_at, workspace.timezone, now);
-  const title = `${mediaTypeLabel(data.media_type)} from ${/^(Today|Yesterday|Tomorrow)$/.test(day) ? day.toLowerCase() : day}`;
+  const title = `${mediaTypeLabel(data.media_type, data.permalink)} from ${/^(Today|Yesterday|Tomorrow)$/.test(day) ? day.toLowerCase() : day}`;
 
   return (
     <PageFrame title={title} back={back}>

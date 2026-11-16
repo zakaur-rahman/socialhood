@@ -553,7 +553,7 @@ export function post(overrides: Partial<PostSummary> = {}): PostSummary {
     posted_at: "2026-09-27T12:00:00Z",
     like_count: 1204,
     comments_count: 212,
-    stats: { total: 12, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1 },
+    stats: { total: 12, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1, important: 0 },
     ...overrides,
   };
 }

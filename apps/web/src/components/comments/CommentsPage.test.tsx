@@ -25,7 +25,7 @@ const posts = [
     caption: "Behind the scenes",
     posted_at: "2024-03-01T12:00:00Z",
     like_count: null, // likes hidden on Instagram
-    stats: { total: 8, analysed: 3, positive: 2, neutral: 1, negative: 0, spam: 0 },
+    stats: { total: 8, analysed: 3, positive: 2, neutral: 1, negative: 0, spam: 0, important: 0 },
   }),
 ];
 
@@ -136,7 +136,7 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
           post: postDetail({
             id: "po1",
             posted_at: "2024-03-03T12:00:00Z",
-            stats: { total: 13, analysed: 13, positive: 7, neutral: 3, negative: 2, spam: 1 },
+            stats: { total: 13, analysed: 13, positive: 7, neutral: 3, negative: 2, spam: 1, important: 0 },
           }),
         }),
       }),

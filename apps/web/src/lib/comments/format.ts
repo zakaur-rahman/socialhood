@@ -117,12 +117,12 @@ const MEDIA_TYPE: Record<string, string> = {
   reel: "Reel",
   reels: "Reel",
   story: "Story",
-  short: "Short",
-  shorts: "Short",
 };
 
-export function mediaTypeLabel(type: string | null | undefined): string {
+/** A YouTube Short is stored as a reel; its link (youtube.com/shorts/…) tells it apart. */
+export function mediaTypeLabel(type: string | null | undefined, permalink?: string | null): string {
   if (!type) return "Post";
+  if (type.toLowerCase() === "reel" && permalink?.includes("youtube.com/shorts/")) return "Short";
   return MEDIA_TYPE[type.toLowerCase()] ?? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 }
 
@@ -203,7 +203,12 @@ export type CommentAction = "reply" | "dm" | "hide" | "unhide" | "delete";
  * What to show when a comment action fails (§4.7 error codes): the platform errors as the inbox
  * words them, and a clear refusal for a second private reply (409 conflict).
  */
-export function commentActionError(error: unknown, action: CommentAction, accountUsername?: string | null): string {
+export function commentActionError(
+  error: unknown,
+  action: CommentAction,
+  accountUsername?: string | null,
+  platform: Parameters<typeof sendFailure>[1]["platform"] = "instagram",
+): string {
   const apiError = toApiError(error);
   if (action === "dm" && apiError.code === "conflict") return SECOND_PRIVATE_REPLY;
   return sendFailure(
@@ -212,6 +217,6 @@ export function commentActionError(error: unknown, action: CommentAction, accoun
       message: apiError.detail ?? apiError.errors[0]?.message ?? null,
       requestId: apiError.requestId,
     },
-    { platform: "instagram", handle: accountUsername },
+    { platform, handle: accountUsername },
   ).message;
 }

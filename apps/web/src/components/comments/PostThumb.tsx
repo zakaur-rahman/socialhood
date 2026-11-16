@@ -8,14 +8,14 @@ import type { PostSummary } from "@/lib/api/types";
 import { mediaTypeLabel } from "@/lib/comments/format";
 import { cn } from "@/lib/utils";
 
-const TYPE_ICON = { reel: Clapperboard, short: Clapperboard, video: Play, carousel: GalleryHorizontal } as const;
+const TYPE_ICON = { reel: Clapperboard, video: Play, carousel: GalleryHorizontal } as const;
 
 /** A square thumbnail with the format in the corner; a calm placeholder when Instagram gave none. */
 export function PostThumb({
   post,
   className,
 }: {
-  post: Pick<PostSummary, "thumbnail_url" | "media_url" | "media_type">;
+  post: Pick<PostSummary, "thumbnail_url" | "media_url" | "media_type" | "permalink">;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -40,7 +40,7 @@ export function PostThumb({
               <Icon className="size-3.5" />
             </span>
           </TooltipTrigger>
-          <TooltipContent>{mediaTypeLabel(post.media_type)}</TooltipContent>
+          <TooltipContent>{mediaTypeLabel(post.media_type, post.permalink)}</TooltipContent>
         </Tooltip>
       ) : null}
     </div>

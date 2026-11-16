@@ -97,6 +97,7 @@ async def poll_account(
             token = await adapter.access_token(acct)
         except PlatformError as error:
             log.warning("youtube_poll_skipped", account_id=str(account_id), error_code=error.code)
+            await _flag_reconnect(sessionmaker, redis, acct, error)
             return None
         client = comments_for(acct, deps)
         sources: list[tuple[str | None, str | None]] = (
@@ -119,6 +120,7 @@ async def poll_account(
                     log.warning(
                         "youtube_poll_failed", account_id=str(account_id), error_code=error.code
                     )
+                    await _flag_reconnect(sessionmaker, redis, acct, error)
                     return PollResult(pages, stored, backfill)
                 pages += 1
                 new = await _store(sessionmaker, redis, deps, acct, page.comments, now, backfill)
@@ -128,6 +130,27 @@ async def poll_account(
                 cursor = page.next_cursor
     log.info("youtube_comments_polled", account_id=str(account_id), pages=pages, stored=stored)
     return PollResult(pages, stored, backfill)
+
+
+async def _flag_reconnect(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    acct: SocialAccount,
+    error: PlatformError,
+) -> None:
+    """Google revoked or expired the token (invalid_grant): show the channel as needing a
+    reconnect, with the usual notification, instead of failing quietly every 15 minutes."""
+    if error.code != "account_needs_reconnect":
+        return
+    from socialhood.services.connections import mark_needs_reconnect
+
+    with workspace_scope(acct.workspace_id):
+        async with sessionmaker() as session:
+            fresh = await accounts.get(session, acct.id)
+            if fresh is None or fresh.status != AccountStatus.ACTIVE:
+                return
+            await mark_needs_reconnect(session, fresh, "YouTube access was removed or has expired.")
+            await commit_and_publish(session, redis)
 
 
 async def _store(

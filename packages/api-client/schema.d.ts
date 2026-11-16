@@ -3632,7 +3632,8 @@ export interface paths {
          * List Post Comments
          * @description The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
          *     defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
-         *     D-11). Deleted comments are left out.
+         *     D-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are
+         *     left out.
          */
         get: operations["list_post_comments"];
         put?: never;
@@ -7646,6 +7647,11 @@ export interface components {
              */
             id: string;
             /**
+             * Important
+             * @default false
+             */
+            important: boolean;
+            /**
              * Is Live
              * @default false
              */
@@ -7799,11 +7805,17 @@ export interface components {
          *     analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
          *     analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
          *     total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
-         *     always ends. Deleted comments are not counted.
+         *     always ends. Deleted comments are not counted. ``important`` counts the comments the
+         *     ``important`` filter shows (services/comments/queries.py ``important_conditions``).
          */
         CommentStats: {
             /** Analysed */
             analysed: number;
+            /**
+             * Important
+             * @default 0
+             */
+            important: number;
             /** Negative */
             negative: number;
             /** Neutral */
@@ -8875,10 +8887,16 @@ export interface components {
          *     clicks on a Facebook Page post. None: not given for this post or not read yet.
          */
         ExtraMetrics: {
+            /** Avg View Percent */
+            avg_view_percent?: number | null;
+            /** Avg View Seconds */
+            avg_view_seconds?: number | null;
             /** Clicks */
             clicks?: number | null;
             /** Exits */
             exits?: number | null;
+            /** Follows */
+            follows?: number | null;
             /** Replies */
             replies?: number | null;
             /** Swipes Forward */
@@ -8887,6 +8905,8 @@ export interface components {
             taps_back?: number | null;
             /** Taps Forward */
             taps_forward?: number | null;
+            /** Watch Minutes */
+            watch_minutes?: number | null;
         };
         /**
          * FacebookConnectPages
@@ -23925,7 +23945,7 @@ export interface operations {
     list_post_comments: {
         parameters: {
             query?: {
-                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply";
+                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply" | "important";
                 cursor?: string | null;
                 limit?: number;
             };

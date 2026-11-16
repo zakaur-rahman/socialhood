@@ -193,7 +193,10 @@ async def test_connecting_a_channel_stores_the_refresh_token(
         "Maple Bakery",
     )
     assert sorted(account["capabilities"]) == [
-        "account_insights", "comments", "post_insights", "publish"
+        "account_insights",
+        "comments",
+        "post_insights",
+        "publish",
     ]
     assert account["token_expires_at"] is None
 

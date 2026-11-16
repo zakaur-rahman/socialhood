@@ -135,7 +135,7 @@ export function CommentRow({
           setComposer(null);
           toast.success(kind === "dm" ? `DM on its way to ${handle}` : "Reply posted");
         },
-        onError: (error) => setComposerError(commentActionError(error, kind === "dm" ? "dm" : "reply", accountUsername)),
+        onError: (error) => setComposerError(commentActionError(error, kind === "dm" ? "dm" : "reply", accountUsername, platform)),
       },
     );
   };
@@ -147,7 +147,7 @@ export function CommentRow({
       {
         onSuccess: () =>
           toast.success(hidden ? hideNote(platform) : "Comment shown again"),
-        onError: (error) => toast.error(commentActionError(error, hidden ? "hide" : "unhide", accountUsername)),
+        onError: (error) => toast.error(commentActionError(error, hidden ? "hide" : "unhide", accountUsername, platform)),
       },
     );
   };
@@ -171,7 +171,7 @@ export function CommentRow({
       },
       (error) => {
         deletingRef.current = false;
-        toast.error(commentActionError(error, "delete", accountUsername));
+        toast.error(commentActionError(error, "delete", accountUsername, platform));
       },
     );
   };

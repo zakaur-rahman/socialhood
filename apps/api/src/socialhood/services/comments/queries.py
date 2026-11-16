@@ -198,7 +198,11 @@ def needs_reply_conditions(now: datetime) -> list[ColumnElement[bool]]:
 # "Important" (YT4, every platform): worth a person's reply first.
 IMPORTANT_LIKES = 10
 IMPORTANT_INTENTS = tuple(
-    dict.fromkeys(COMMENT_FILTER_INTENTS["questions"] + COMMENT_FILTER_INTENTS["buying"])
+    dict.fromkeys(
+        COMMENT_FILTER_INTENTS["questions"]
+        + COMMENT_FILTER_INTENTS["buying"]
+        + ("complaint", "refund")  # a calm complaint is still worth a reply first
+    )
 )
 
 
@@ -206,7 +210,7 @@ def important_conditions() -> list[ColumnElement[bool]]:
     """The one rule for "important", on Comment and its (outer-joined) CommentAnalysis: not
     deleted, hidden or spam (unanalysed included) and not replied to, publicly or privately (as
     ``needs_reply_conditions``, without its 7-day window), and either analysed as a question, a
-    wish to buy or negative, or liked IMPORTANT_LIKES times or more. ``is_important`` is the same
+    wish to buy, a complaint or refund, or negative, or liked IMPORTANT_LIKES times or more. ``is_important`` is the same
     rule on one loaded comment; the ``important`` filter, ``Comment.important`` and the post's
     ``stats.important`` all use it."""
     query = CommentQuery(replied=False)

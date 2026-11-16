@@ -51,7 +51,7 @@ export function PostCard({
               className={cn("truncate text-sm font-medium", !firstLine && "text-fg-secondary")}
               data-testid="post-caption"
             >
-              <span className="sr-only">{mediaTypeLabel(post.media_type)}: </span>
+              <span className="sr-only">{mediaTypeLabel(post.media_type, post.permalink)}: </span>
               {firstLine || "No caption"}
             </p>
             <div className="flex items-center justify-between gap-2 text-xs">

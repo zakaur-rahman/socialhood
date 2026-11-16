@@ -16,8 +16,10 @@ A batch:
    sent to the provider (FR-PRV-02). On a plan limiting ``comment_intelligence_posts`` (Free: the
    5 most recent posts), comments on older posts are skipped (§1.7). Deleted and empty comments
    are skipped.
-2. Up to 50 pending comments of the account, oldest first, go to the provider in one call with
-   AI_MODEL_ANALYSIS and the versioned prompt ``comment_analysis.v1``: the business's name and
+2. Up to 50 pending comments of the account, oldest first, are taken. Those made only of emoji,
+   tags or a short hello or praise ("nice", "great video 🔥") are read by rules at no credit
+   (services/comments/trivial; model ``rules``). The rest go to the provider in one call with
+   AI_MODEL_ANALYSIS and the versioned prompt ``comment_analysis.v2``: the business's name and
    description in the system prompt, the captions and comments as data in the contents (TR-AI-04).
    Comments are numbered in the call and the answer must hold exactly one reading per number (the
    schema's validator, so Gemini retries once with the error). The call is metered as
@@ -74,7 +76,7 @@ from socialhood.schemas.ai import SentimentName
 from socialhood.schemas.inbox import IntentName
 from socialhood.services.analysis import business_profile
 from socialhood.services.automations.validation import AUTOMATION_PLATFORMS
-from socialhood.services.comments import views
+from socialhood.services.comments import trivial, views
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -94,6 +96,8 @@ TOPIC_WORDS = 3
 TOPIC_CHARS = 60
 SUMMARY_AFTER = 20  # TR-AI-11: new analysed comments since the post's last summary
 SPLIT_CODES = frozenset({"invalid_output", "blocked"})
+RULES_MODEL = "rules"  # emoji, tags and short praise read without AI (services/comments/trivial)
+RULES_VERSION = "trivial.v1"
 
 Outcome = Literal[
     "analysed", "nothing_pending", "not_found", "analysis_off", "quota_exhausted", "failed"
@@ -191,6 +195,7 @@ class _Batch:
 class _Readings:
     by_comment: dict[uuid.UUID, CommentReading] = field(default_factory=dict)
     given_up: set[uuid.UUID] = field(default_factory=set)  # failed alone, or over the call cap
+    by_rules: set[uuid.UUID] = field(default_factory=set)  # read by services/comments/trivial
     calls: int = 0
     model: str = ""
 
@@ -426,7 +431,21 @@ async def _read_all(
 ) -> _Readings:
     """Readings by comment (step 3: an invalid or blocked answer is tried again in halves)."""
     read = _Readings(model=settings.ai_model_analysis)
-    pending = [[(str(i), c) for i, c in enumerate(batch.comments, start=1)]]
+    for_ai: list[tuple[str, Comment]] = []
+    for i, ruled in enumerate(batch.comments, start=1):
+        rule = trivial.reading(ruled.text)
+        if rule is None:
+            for_ai.append((str(i), ruled))
+            continue
+        read.by_comment[ruled.id] = CommentReading(
+            id=str(i),
+            sentiment=rule.sentiment,
+            sentiment_score=rule.sentiment_score,
+            intent=rule.intent,
+            is_spam=False,
+        )
+        read.by_rules.add(ruled.id)
+    pending = [for_ai] if for_ai else []
     while pending:
         if read.calls >= MAX_CALLS_PER_BATCH:
             read.given_up |= {c.id for part in pending for _, c in part}
@@ -621,8 +640,8 @@ async def _store(
                 _values(
                     c,
                     read.by_comment[c.id],
-                    model=read.model,
-                    version=batch.prompt_version,
+                    model=RULES_MODEL if c.id in read.by_rules else read.model,
+                    version=RULES_VERSION if c.id in read.by_rules else batch.prompt_version,
                     now=now,
                 )
                 for c in still_pending

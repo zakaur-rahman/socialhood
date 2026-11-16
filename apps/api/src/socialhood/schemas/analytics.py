@@ -63,6 +63,8 @@ class ExtraMetrics(ResponseModel):
     watch_minutes: int | None = None
     avg_view_seconds: int | None = None
     avg_view_percent: int | None = None
+    # Follows from the post (Instagram); on YouTube, subscribers gained from the video.
+    follows: int | None = None
 
 
 class PostPerformance(ResponseModel):

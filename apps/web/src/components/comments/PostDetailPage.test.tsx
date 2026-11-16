@@ -77,7 +77,7 @@ function setup(partial: Partial<State> = {}, ws: WorkspaceSummary = workspace) {
     ws,
     handlers: {
       "GET /v1/w/:wid/posts/:id": () => (state.detail instanceof Response ? state.detail : json(state.detail)),
-      "GET /v1/w/:wid/social-accounts": () => json({ items: [state.account ?? account()] }),
+      "GET /v1/w/:wid/social-accounts": () => json({ items: [state.account ?? account({ capabilities: ["dm_send", "dm_attachments", "comments", "private_reply"] })] }),
       "GET /v1/w/:wid/posts/:id/comments": (call) => {
         const filter = (call.url.searchParams.get("filter") ?? "all") as CommentFilter;
         return json({ items: state.comments.filter((c) => matchesFilter(c, filter)), next_cursor: null });
@@ -191,7 +191,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
         summary: null,
         summary_updated_at: null,
         topics: [],
-        stats: { total: 4, analysed: 0, positive: 0, neutral: 0, negative: 0, spam: 0 },
+        stats: { total: 4, analysed: 0, positive: 0, neutral: 0, negative: 0, spam: 0, important: 0 },
       }),
     });
     const summary = await screen.findByRole("region", { name: "Summary" });
@@ -203,7 +203,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
 
   it("FR-CMT-02: shows analysis progress while comments are analysed, until they all are", async () => {
     const { queryClient } = setup({
-      detail: postDetail({ stats: { total: 58_000, analysed: 12_400, positive: 9000, neutral: 3000, negative: 300, spam: 100 } }),
+      detail: postDetail({ stats: { total: 58_000, analysed: 12_400, positive: 9000, neutral: 3000, negative: 300, spam: 100, important: 0 } }),
     });
     const progress = await screen.findByTestId("analysis-progress");
     expect(within(progress).getByRole("status")).toHaveTextContent("Analysing 12,400 of 58,000 comments");
@@ -212,7 +212,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     expect(bar).toHaveAttribute("aria-valuemax", "58000");
 
     send(queryClient, "post.updated", {
-      post: postDetail({ stats: { total: 58_000, analysed: 58_000, positive: 40_000, neutral: 15_000, negative: 2_500, spam: 500 } }),
+      post: postDetail({ stats: { total: 58_000, analysed: 58_000, positive: 40_000, neutral: 15_000, negative: 2_500, spam: 500, important: 0 } }),
     });
     await waitFor(() => expect(screen.queryByTestId("analysis-progress")).not.toBeInTheDocument());
   });
@@ -272,6 +272,7 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
     const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
     expect(within(chips).getAllByRole("radio").map((r) => r.textContent)).toEqual([
       "All",
+      "Important",
       "Needs reply",
       "Positive",
       "Neutral",

@@ -124,7 +124,7 @@ async def test_fifty_comments_are_analysed_in_one_call(cw: Comments, fake_ai: Fa
         "colour",
         False,
     )
-    assert (one["media_item_id"], one["prompt_version"]) == (post, "comment_analysis.v1")
+    assert (one["media_item_id"], one["prompt_version"]) == (post, "comment_analysis.v2")
     spam = next(a for a in analyses if a["text"] == "comment number 4")
     assert spam["is_spam"] is True
     # "number 1" also matches 10-19, and so on: 11 positive, 11 negative, 11 spam; the price

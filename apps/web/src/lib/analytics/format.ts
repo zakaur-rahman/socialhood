@@ -55,6 +55,10 @@ export const EXTRA_LABEL: Record<ExtraMetricName, string> = {
   swipes_forward: "Swipes forward",
   exits: "Exits",
   clicks: "Clicks",
+  watch_minutes: "Watch time",
+  avg_view_seconds: "Average view duration",
+  avg_view_percent: "Average percent viewed",
+  follows: "Follows",
 };
 
 /** What a Story shows, in order (Meta gives no likes, comments or saves for a Story). */

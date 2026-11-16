@@ -128,7 +128,7 @@ describe("Story and Page post figures (C-131)", () => {
 
 describe("YouTube watch figures", () => {
   const watch = performance({
-    metrics: { ...performance().metrics, watch_minutes: 125.4, avg_view_seconds: 95, avg_view_percent: 41.6, follows: 12 },
+    extra_metrics: { ...performance().extra_metrics, watch_minutes: 125, avg_view_seconds: 95, avg_view_percent: 42, follows: 12 },
   });
 
   it("appear only when the API gives them, and follows reads as subscribers on YouTube", () => {

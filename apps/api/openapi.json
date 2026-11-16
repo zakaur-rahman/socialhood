@@ -7547,6 +7547,11 @@
             "title": "Id",
             "type": "string"
           },
+          "important": {
+            "default": false,
+            "title": "Important",
+            "type": "boolean"
+          },
           "is_live": {
             "default": false,
             "title": "Is Live",
@@ -7862,10 +7867,15 @@
         "type": "object"
       },
       "CommentStats": {
-        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted.",
+        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted. ``important`` counts the comments the\n``important`` filter shows (services/comments/queries.py ``important_conditions``).",
         "properties": {
           "analysed": {
             "title": "Analysed",
+            "type": "integer"
+          },
+          "important": {
+            "default": 0,
+            "title": "Important",
             "type": "integer"
           },
           "negative": {
@@ -11249,6 +11259,28 @@
       "ExtraMetrics": {
         "description": "Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and\ncompares): an Instagram Story's replies and its taps and swipes through the Story, and the\nclicks on a Facebook Page post. None: not given for this post or not read yet.",
         "properties": {
+          "avg_view_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Percent"
+          },
+          "avg_view_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Seconds"
+          },
           "clicks": {
             "anyOf": [
               {
@@ -11270,6 +11302,17 @@
               }
             ],
             "title": "Exits"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
           },
           "replies": {
             "anyOf": [
@@ -11314,6 +11357,17 @@
               }
             ],
             "title": "Taps Forward"
+          },
+          "watch_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Minutes"
           }
         },
         "title": "ExtraMetrics",
@@ -43598,7 +43652,7 @@
     },
     "/v1/w/{wid}/posts/{post_id}/comments": {
       "get": {
-        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11). Deleted comments are left out.",
+        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are\nleft out.",
         "operationId": "list_post_comments",
         "parameters": [
           {
@@ -43636,7 +43690,8 @@
                 "buying",
                 "spam",
                 "hidden",
-                "needs_reply"
+                "needs_reply",
+                "important"
               ],
               "title": "Filter",
               "type": "string"

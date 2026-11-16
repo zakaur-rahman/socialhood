@@ -212,11 +212,14 @@ async def create_sandbox_account(
 async def sandbox_inbound(
     request: Request, body: SandboxInbound, ctx: CanUseDevSandbox, session: Session
 ) -> SandboxInboundResult:
-    """Inject a fake DM or comment. It goes through the same intake as a real webhook."""
+    """Inject a fake DM or comment. It goes through the same intake as a real webhook. For a
+    sandbox YouTube channel it queues a comment poll instead, which finds the seeded comment."""
     _require_sandbox(request)
     acct = await service.get_or_404(session, body.account_id)
     if not is_sandbox(acct):
         raise ApiError("conflict", "Only sandbox accounts accept injected events.")
+    if acct.platform == "youtube":
+        return await _sandbox_youtube(session, acct)
     if acct.platform == "facebook":
         events = split_facebook(_sandbox_facebook_payload(acct.platform_account_id, body))
         stored = await store_and_enqueue(session, WebhookProvider.FACEBOOK, events)
@@ -228,6 +231,33 @@ async def sandbox_inbound(
     payload = _sandbox_payload(acct.platform_account_id, body)
     stored = await store_and_enqueue(session, WebhookProvider.INSTAGRAM, split_payload(payload))
     return SandboxInboundResult(stored=len(stored))
+
+
+async def _sandbox_youtube(session: AsyncSession, acct: SocialAccount) -> SandboxInboundResult:
+    """YouTube has no comment webhook (YT4): make sure the sandbox channel has a video, then queue a
+    comment poll, which finds the sandbox's seeded viewer comment on it."""
+    from socialhood.jobs.tasks.youtube_comments import enqueue_poll
+    from socialhood.platforms.base import PlatformMedia
+    from socialhood.repositories.ingest import upsert_media_item
+
+    now = datetime.now(UTC)
+    await upsert_media_item(
+        session,
+        social_account_id=acct.id,
+        media=PlatformMedia(
+            platform_media_id="sandbox_yt_demo",
+            media_type="video",
+            caption="Sandbox video: our starter kit",
+            media_url=None,
+            thumbnail_url=None,
+            permalink="https://www.youtube.com/watch?v=sandbox_yt_demo",
+            posted_at=now - timedelta(days=1),
+        ),
+        synced_at=now,
+    )
+    await session.commit()
+    await enqueue_poll(acct.id, acct.workspace_id)
+    return SandboxInboundResult(stored=0)
 
 
 async def _sandbox_whatsapp(
