@@ -390,17 +390,22 @@ function sections(): LegalSection[] {
               chosen sheet. We can&apos;t see the rest of its Google Drive.
             </li>
             <li>
-              <strong>YouTube</strong>, if a business connects a channel. {N} uses YouTube API Services, with the one
-              permission Google calls <code>youtube.force-ssl</code>. We receive and store the channel&apos;s ID, name,
-              handle and picture, a token that lets {N} act for the channel (stored encrypted), and the IDs and processing
-              status of the videos {N} uploads. We use them only to upload, schedule, update and delete the videos the
-              business asks for, with the title, description, tags, category, visibility and the &quot;made for kids&quot;
-              and altered-content answers it gives. A video posted only to YouTube goes from the business&apos;s browser or
-              AI app straight to YouTube and isn&apos;t stored by us; a video posted to YouTube and other platforms is kept
-              in our media storage like any other post. To show how they do, we read the view, like and comment counts of
-              the videos {N} posts and the channel&apos;s subscriber count. If an upload is interrupted, we check the
-              titles and times of the channel&apos;s latest uploads so the same video isn&apos;t posted twice. We don&apos;t
-              read the text of comments or who the subscribers are.
+              <strong>YouTube</strong>, if a business connects a channel. {N} uses YouTube API Services, with the
+              permissions Google calls <code>youtube.force-ssl</code> and <code>yt-analytics.readonly</code>. We receive
+              and store the channel&apos;s ID, name, handle and picture, a token that lets {N} act for the channel (stored
+              encrypted), the title, picture and link of the channel&apos;s recent videos, and the IDs and processing status
+              of the videos {N} uploads. We use them to upload, schedule, update and delete the videos the business asks
+              for, with the title, description, tags, category, visibility and the &quot;made for kids&quot; and
+              altered-content answers it gives. A video posted only to YouTube goes from the business&apos;s browser or AI
+              app straight to YouTube and isn&apos;t stored by us; a video posted to YouTube and other platforms is kept in
+              our media storage like any other post. To show how they do, we read each video&apos;s views, likes, comment
+              count, watch time and average view duration, and the channel&apos;s subscriber count and how many subscribers
+              it gained and lost each day. These are totals only: we don&apos;t learn who the viewers or subscribers are.
+              We read the comments on the channel&apos;s videos (the text, the commenter&apos;s public name and channel ID,
+              and the like count) so the business can read, reply to, hide and delete them in {N}. Our AI sorts them, for
+              example into questions and complaints, to point out the ones that need a reply. Nothing replies to a
+              YouTube comment unless someone at the business sends it. If an upload is interrupted, we check the titles and
+              times of the channel&apos;s latest uploads so the same video isn&apos;t posted twice.
             </li>
           </ul>
           <p>
@@ -444,7 +449,8 @@ function sections(): LegalSection[] {
           </p>
           <p>
             <strong>Google (YouTube).</strong> If you connect a YouTube channel, the videos you post there and their
-            details go to YouTube through Google&apos;s official API.
+            details, and your replies to comments and your choices to hide or delete them, go to YouTube through
+            Google&apos;s official API.
           </p>
           <p>
             <strong>Our subprocessors</strong>, the service providers that process data for us, only to run {N}. The list is
