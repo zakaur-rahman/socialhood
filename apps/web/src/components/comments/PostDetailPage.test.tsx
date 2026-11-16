@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { handOff, resetAgentHandoff, useAgentHandoff } from "@/lib/agent/handoff";
-import type { CommentFilter, PostComment, PostDetail, WorkspaceSummary } from "@/lib/api/types";
+import type { CommentFilter, PostComment, PostDetail, SocialAccount, WorkspaceSummary } from "@/lib/api/types";
 import { matchesFilter, SECOND_PRIVATE_REPLY } from "@/lib/comments/format";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import {
@@ -63,6 +63,7 @@ type State = {
   reply?: (call: Call, c: PostComment) => Response;
   privateReply?: (call: Call, c: PostComment) => Response;
   summary?: () => Response;
+  account?: SocialAccount;
 };
 
 function setup(partial: Partial<State> = {}, ws: WorkspaceSummary = workspace) {
@@ -76,7 +77,7 @@ function setup(partial: Partial<State> = {}, ws: WorkspaceSummary = workspace) {
     ws,
     handlers: {
       "GET /v1/w/:wid/posts/:id": () => (state.detail instanceof Response ? state.detail : json(state.detail)),
-      "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }),
+      "GET /v1/w/:wid/social-accounts": () => json({ items: [state.account ?? account()] }),
       "GET /v1/w/:wid/posts/:id/comments": (call) => {
         const filter = (call.url.searchParams.get("filter") ?? "all") as CommentFilter;
         return json({ items: state.comments.filter((c) => matchesFilter(c, filter)), next_cursor: null });
@@ -483,6 +484,30 @@ describe("Comment actions (FR-CMT-04)", () => {
     expect(toast.success).toHaveBeenCalledWith("Comment deleted");
     // The row and its dialog are gone: focus lands on the list's heading, not on <body> (UI-066).
     await waitFor(() => expect(document.getElementById("post-comments-heading")).toHaveFocus());
+  });
+
+  it("on YouTube there is no DM, hide warns it may stay hidden and delete says it leaves public view", async () => {
+    const user = userEvent.setup();
+    setup({ account: account({ platform: "youtube", capabilities: ["comments"] }) });
+    await screen.findByRole("list", { name: "Comments" });
+    expect(within(row("@kabir")).queryByRole("button", { name: "DM @kabir" })).not.toBeInTheDocument();
+    await user.click(within(row("@kabir")).getByRole("button", { name: "Hide @kabir's comment" }));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Comment hidden on YouTube. YouTube may not let you show it again."),
+    );
+    await user.click(within(row("@free.followers")).getByRole("button", { name: "Delete @free.followers's comment" }));
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent("removed from public view on YouTube");
+  });
+
+  it("an important comment has an Important badge, and the chip shows the count", async () => {
+    setup({
+      comments: [comment({ id: "cm-imp", author_username: "vip", important: true }), kabir],
+      detail: postDetail({ stats: { ...postDetail().stats, important: 1 } }),
+    });
+    await screen.findByRole("list", { name: "Comments" });
+    expect(within(row("@vip")).getByText("Important")).toBeInTheDocument();
+    expect(within(row("@kabir")).queryByText("Important")).not.toBeInTheDocument();
+    expect(screen.getByTestId("important-chip-count")).toHaveTextContent("1");
   });
 
   it("agents can reply, DM and hide, but not delete", async () => {
