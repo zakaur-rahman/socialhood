@@ -109,7 +109,11 @@ async def connect(
 
 
 async def make_channel(
-    engine: AsyncEngine, workspace_id: uuid.UUID | str, *, refresh: str = "test"
+    engine: AsyncEngine,
+    workspace_id: uuid.UUID | str,
+    *,
+    refresh: str = "test",
+    scopes: list[str] | None = None,
 ) -> uuid.UUID:
     """The fake's channel, connected with a refresh token the fake accepts (no connect flow)."""
     with workspace_scope(uuid.UUID(str(workspace_id))):
@@ -120,7 +124,7 @@ async def make_channel(
                 username=CHANNEL.handle,
                 display_name=CHANNEL.title,
                 status="active",
-                scopes=[SCOPE],
+                scopes=[SCOPE] if scopes is None else scopes,
                 access_token_enc=TokenCipher([TOKEN_KEY]).encrypt(REFRESH_PREFIX + refresh),
                 connected_at=datetime.now(UTC),
             )

@@ -131,12 +131,13 @@ async def _held(
 
 async def _grant_of(
     redis: Redis, deps: PlatformDeps, nonce: str, held: dict[str, Any]
-) -> tuple[str, list[Channel]]:
-    """The refresh token and the channels: from the code on the first call, then from what was
-    kept."""
+) -> tuple[str, list[Channel], list[str]]:
+    """The refresh token, the channels and the known scopes Google granted: from the code on the
+    first call, then from what was kept."""
     if "grant" in held:
         kept = json.loads(deps.cipher.decrypt(held["grant"].encode()))
-        return kept["refresh_token"], [Channel(**c) for c in kept["channels"]]
+        scopes = kept.get("scopes") or [oauth.SCOPE]
+        return kept["refresh_token"], [Channel(**c) for c in kept["channels"]], scopes
     google = oauth.youtube_for(deps)
     code = deps.cipher.decrypt(held["code"].encode())
     try:
@@ -151,8 +152,10 @@ async def _grant_of(
         raise ApiError("platform_error", CONNECT_FAILED) from error
     if not channels:
         raise ApiError("validation_error", NO_CHANNELS)
+    scopes = [s for s in oauth.SCOPES if s in grant.scopes]  # only the ones we know
     keep = {
         "refresh_token": grant.refresh_token,
+        "scopes": scopes,
         "channels": [
             {"id": c.id, "title": c.title, "handle": c.handle, "avatar_url": c.avatar_url}
             for c in channels
@@ -162,7 +165,7 @@ async def _grant_of(
     rest = {k: v for k, v in held.items() if k != "code"}
     rest["grant"] = deps.cipher.encrypt(json.dumps(keep)).decode()
     await redis.set(_held_key(nonce), json.dumps(rest), ex=HELD_TTL_S)
-    return grant.refresh_token, channels
+    return grant.refresh_token, channels, scopes
 
 
 async def list_channels(
@@ -175,7 +178,7 @@ async def list_channels(
     user_id: uuid.UUID,
 ) -> YouTubeChannelList:
     held = await _held(redis, nonce, workspace_id=workspace_id, user_id=user_id)
-    _, channels = await _grant_of(redis, deps, nonce, held)
+    _, channels, _ = await _grant_of(redis, deps, nonce, held)
     items: list[YouTubeChannel] = []
     for channel in channels:
         existing = await accounts.find(session, Platform.YOUTUBE, channel.id)
@@ -205,7 +208,7 @@ async def connect_channels(
     held = await _held(redis, nonce, workspace_id=workspace_id, user_id=user_id)
     if "grant" not in held:
         raise ApiError("conflict", "List your channels first.")
-    refresh_token, channels = await _grant_of(redis, deps, nonce, held)
+    refresh_token, channels, scopes = await _grant_of(redis, deps, nonce, held)
     by_id = {c.id: c for c in channels}
     chosen = [by_id[i] for i in dict.fromkeys(channel_ids) if i in by_id]
     if len(chosen) != len(dict.fromkeys(channel_ids)):
@@ -229,7 +232,7 @@ async def connect_channels(
             "access_token_enc": deps.cipher.encrypt(refresh_token),
             "token_expires_at": None,  # a refresh token: access is minted per use
             "token_refreshed_at": now,
-            "scopes": [oauth.SCOPE],
+            "scopes": scopes,
             "status": AccountStatus.ACTIVE,
             "last_error": None,
             "connected_at": now,

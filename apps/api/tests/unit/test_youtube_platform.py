@@ -20,7 +20,7 @@ from socialhood.platforms.registry import adapter_for
 from socialhood.platforms.youtube.adapter import OWN_UPLOAD, YouTubeAdapter
 from socialhood.platforms.youtube.client import UPLOAD_LIMIT, map_google_error
 from socialhood.platforms.youtube.fake import FakeYouTube
-from socialhood.platforms.youtube.oauth import SCOPE, HttpYouTubeOAuth
+from socialhood.platforms.youtube.oauth import ANALYTICS_SCOPE, SCOPE, SCOPES, HttpYouTubeOAuth
 from socialhood.platforms.youtube.switch import features_for, youtube_enabled
 from socialhood.security.crypto import TokenCipher, new_key
 from socialhood.services.connections import refresh_due
@@ -77,15 +77,16 @@ def deps(**values: Any) -> PlatformDeps:
     return PlatformDeps(http=MagicMock(), cipher=TokenCipher([KEY]), settings=settings(**values))
 
 
-def test_the_authorize_url_asks_for_force_ssl_only_offline_with_consent() -> None:
+def test_the_authorize_url_asks_for_both_scopes_offline_with_consent() -> None:
     url = HttpYouTubeOAuth(deps()).authorize_url("st-1")
     assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
     query = {k: v[0] for k, v in parse_qs(urlparse(url).query).items()}
-    assert query["scope"] == SCOPE == "https://www.googleapis.com/auth/youtube.force-ssl"
+    assert SCOPE == "https://www.googleapis.com/auth/youtube.force-ssl"
+    assert query["scope"].split() == [SCOPE, ANALYTICS_SCOPE] == list(SCOPES)
     assert (query["access_type"], query["prompt"], query["include_granted_scopes"]) == (
         "offline",
         "consent",
-        "false",
+        "true",
     )
     assert (query["state"], query["response_type"]) == ("st-1", "code")
     assert query["redirect_uri"] == "https://api.test/v1/oauth/youtube/callback"
@@ -107,6 +108,15 @@ def test_capabilities_need_the_force_ssl_scope() -> None:
     adapter = YouTubeAdapter(deps())
     assert adapter.capabilities_for(channel()) == {Capability.PUBLISH, Capability.POST_INSIGHTS}
     assert adapter.capabilities_for(channel(scopes=[])) == frozenset()
+    assert adapter.capabilities_for(channel(scopes=[ANALYTICS_SCOPE])) == frozenset()
+
+
+def test_account_insights_need_the_analytics_scope_too() -> None:
+    adapter = YouTubeAdapter(deps())
+    both = adapter.capabilities_for(channel(scopes=[SCOPE, ANALYTICS_SCOPE]))
+    assert both == {Capability.PUBLISH, Capability.POST_INSIGHTS, Capability.ACCOUNT_INSIGHTS}
+    sandbox = SocialAccount(platform="youtube", platform_account_id="sandbox_yt1", scopes=[])
+    assert Capability.ACCOUNT_INSIGHTS in adapter.capabilities_for(sandbox)
 
 
 def test_the_registry_routes_youtube_to_its_adapter() -> None:

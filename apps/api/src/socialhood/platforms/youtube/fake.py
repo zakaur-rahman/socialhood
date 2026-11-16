@@ -31,6 +31,7 @@ from urllib.parse import urlencode
 import httpx
 
 from socialhood.platforms.errors import PlatformError
+from socialhood.platforms.youtube.analytics import DayReport, VideoReport
 from socialhood.platforms.youtube.client import Channel
 from socialhood.platforms.youtube.oauth import SCOPES, Grant
 from socialhood.platforms.youtube.publishing import (
@@ -98,6 +99,8 @@ class FakeYouTube:
         self.deleted: list[str] = []
         self.processing_reads = 0
         self.subscriber_count: int | None = 1200
+        self.video_reports: dict[str, VideoReport] = {}  # analytics (Phase 4)
+        self.day_reports: dict[Any, DayReport] = {}
         self._reads_left: dict[str, int] = {}
         self._lose_answers = 0
 
@@ -308,6 +311,17 @@ class FakeYouTube:
     async def subscribers(self, token: str, channel_id: str) -> int | None:
         self._enter("subscribers", channel_id=channel_id)
         return self.subscriber_count
+
+    # ---------------------------------------------------------------- analytics (Phase 4)
+    # Set ``video_reports[video_id]`` / ``day_reports[date]``; unset ones read as empty rows.
+
+    async def video(self, token: str, video_id: str, *, since: Any, until: Any) -> VideoReport:
+        self._enter("analytics_video", video_id=video_id, since=since, until=until)
+        return self.video_reports.get(video_id, VideoReport())
+
+    async def day(self, token: str, day: Any) -> DayReport:
+        self._enter("analytics_day", day=day)
+        return self.day_reports.get(day, DayReport())
 
 
 _process: list[FakeYouTube] = []
