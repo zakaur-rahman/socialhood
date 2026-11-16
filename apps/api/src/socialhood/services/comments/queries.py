@@ -3,7 +3,9 @@
 The comment list is newest first (commented_at, then id), paged with the inbox's cursor format, and
 narrowed by one filter chip (schemas/posts.py ``CommentFilter``): the sentiment chips and the
 intent chips count analysed comments that are not spam, spam counts analysed spam, hidden counts
-comments hidden on Instagram. Deleted comments are never listed.
+comments hidden on the platform, needs_reply is the nav badge's rule (``needs_reply_conditions``)
+and important is ``important_conditions``: unanswered comments that ask something, want to buy,
+are negative or have 10+ likes. Deleted comments are never listed.
 """
 
 from __future__ import annotations
@@ -59,6 +61,8 @@ def filter_condition(name: CommentFilter, *, now: datetime) -> ColumnElement[boo
         return Comment.hidden.is_(True)
     if name == "needs_reply":
         return and_(*needs_reply_conditions(now))
+    if name == "important":
+        return and_(*important_conditions())
     if name == "spam":
         return analysed & CommentAnalysis.is_spam.is_(True)
     not_spam = analysed & CommentAnalysis.is_spam.is_(False)
@@ -189,6 +193,49 @@ def needs_reply_conditions(now: datetime) -> list[ColumnElement[bool]]:
     post's ``needs_reply_count`` and the ``needs_reply`` comment filter all use it."""
     query = CommentQuery(start=now - NEEDS_REPLY_WINDOW, replied=False)
     return [*_scope(query), *_analysis_filters(query), Comment.hidden.is_(False)]
+
+
+# "Important" (YT4, every platform): worth a person's reply first.
+IMPORTANT_LIKES = 10
+IMPORTANT_INTENTS = tuple(
+    dict.fromkeys(COMMENT_FILTER_INTENTS["questions"] + COMMENT_FILTER_INTENTS["buying"])
+)
+
+
+def important_conditions() -> list[ColumnElement[bool]]:
+    """The one rule for "important", on Comment and its (outer-joined) CommentAnalysis: not
+    deleted, hidden or spam (unanalysed included) and not replied to, publicly or privately (as
+    ``needs_reply_conditions``, without its 7-day window), and either analysed as a question, a
+    wish to buy or negative, or liked IMPORTANT_LIKES times or more. ``is_important`` is the same
+    rule on one loaded comment; the ``important`` filter, ``Comment.important`` and the post's
+    ``stats.important`` all use it."""
+    query = CommentQuery(replied=False)
+    analysed = Comment.analysis_status == AnalysisStatus.DONE
+    signal = (
+        analysed
+        & (
+            CommentAnalysis.intent.in_(IMPORTANT_INTENTS)
+            | (CommentAnalysis.sentiment == "negative")
+        )
+    ) | (Comment.like_count >= IMPORTANT_LIKES)
+    return [*_scope(query), *_analysis_filters(query), Comment.hidden.is_(False), signal]
+
+
+def is_important(comment: Comment, analysis: CommentAnalysis | None) -> bool:
+    """``important_conditions`` for one comment and its analysis."""
+    if comment.deleted_at is not None or comment.hidden:
+        return False
+    if comment.our_replied_at is not None or comment.private_reply_message_id is not None:
+        return False
+    if analysis is not None and analysis.is_spam:
+        return False
+    if (comment.like_count or 0) >= IMPORTANT_LIKES:
+        return True
+    return (
+        analysis is not None
+        and comment.analysis_status == AnalysisStatus.DONE
+        and (analysis.intent in IMPORTANT_INTENTS or analysis.sentiment == "negative")
+    )
 
 
 async def comment_counts(session: AsyncSession, *, now: datetime) -> CommentCounts:

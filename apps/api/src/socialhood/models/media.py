@@ -87,7 +87,7 @@ class MediaItem(IdMixin, TimestampMixin, TenantScoped, Base):
     posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     like_count: Mapped[int | None] = mapped_column(Integer)
     comments_count: Mapped[int | None] = mapped_column(Integer)
-    # {total, analysed, positive, neutral, negative, spam}: schemas/posts.py CommentStats (P6).
+    # {total, analysed, positive, neutral, negative, spam, important}: schemas/posts.py CommentStats.
     comment_stats: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     summary: Mapped[str | None] = mapped_column(Text)
     # [{label, count, positive, neutral, negative}], at most 6: schemas/posts.py PostTopic (P6).

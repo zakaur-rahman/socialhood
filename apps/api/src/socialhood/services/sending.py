@@ -94,6 +94,7 @@ PLATFORM_NAMES = {
     "whatsapp": "WhatsApp",
     "facebook": "Facebook",
     "web": "Website",
+    "youtube": "YouTube",
 }
 DEFAULT_TAKEOVER_MINUTES = 120
 # ai_paused_until = 'infinity' means "until resumed" (§5.4); asyncpg writes datetime.max as that.

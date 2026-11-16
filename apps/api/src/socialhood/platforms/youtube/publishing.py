@@ -214,7 +214,7 @@ class Videos(Protocol):
         ...
 
     async def recent_uploads(self, token: str, channel_id: str, *, limit: int = 10) -> list[Video]:
-        """The channel's newest uploads, private ones included (2 units)."""
+        """The channel's newest uploads with their counts, private ones included (2 units)."""
         ...
 
     async def subscribers(self, token: str, channel_id: str) -> int | None:
@@ -492,7 +492,7 @@ class HttpVideos:
             f"{API}/videos",
             endpoint="videos.list",
             token=token,
-            params={"part": "snippet,status", "id": ",".join(ids)},
+            params={"part": "snippet,status,statistics", "id": ",".join(ids)},
         )
         return [video_from(item) for item in (listed or {}).get("items") or []]
 

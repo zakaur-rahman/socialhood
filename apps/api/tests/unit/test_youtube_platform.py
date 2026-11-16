@@ -105,7 +105,11 @@ def channel(scopes: list[str] | None = None, token: str | None = "fake-yt-refres
 
 def test_capabilities_need_the_force_ssl_scope() -> None:
     adapter = YouTubeAdapter(deps())
-    assert adapter.capabilities_for(channel()) == {Capability.PUBLISH, Capability.POST_INSIGHTS}
+    assert adapter.capabilities_for(channel()) == {
+        Capability.PUBLISH,
+        Capability.POST_INSIGHTS,
+        Capability.COMMENTS,  # YT4: no PRIVATE_REPLY (no DMs)
+    }
     assert adapter.capabilities_for(channel(scopes=[])) == frozenset()
 
 
@@ -113,13 +117,16 @@ def test_the_registry_routes_youtube_to_its_adapter() -> None:
     assert isinstance(adapter_for(channel(), deps()), YouTubeAdapter)
 
 
-async def test_messages_and_comments_are_unavailable_and_uploads_are_youtube_s_own() -> None:
+async def test_messages_and_private_replies_are_unavailable_and_uploads_are_youtube_s_own() -> None:
     adapter = YouTubeAdapter(deps())
     with pytest.raises(PlatformError) as dm:
         await adapter.send_message(channel(), "x", MagicMock())
     assert dm.value.code == "capability_unavailable"
+    with pytest.raises(PlatformError) as private:
+        await adapter.private_reply(channel(), "c", MagicMock())
+    assert private.value.code == "capability_unavailable"
     with pytest.raises(PlatformError) as comment:
-        await adapter.reply_to_comment(channel(), "c", "hi")
+        await adapter.post_comment(channel(), "v", "hi")
     assert comment.value.code == "capability_unavailable"
     with pytest.raises(PlatformError) as create:
         await adapter.create_reel_container(channel(), video_url="https://x/v.mp4", caption="")

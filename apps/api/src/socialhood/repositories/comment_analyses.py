@@ -24,7 +24,7 @@ from socialhood.models.media import MediaItem, MediaType
 from socialhood.repositories.base import scoped_update
 
 _FRESH = {"populate_existing": True}
-STAT_NAMES = ("total", "analysed", "positive", "neutral", "negative", "spam")
+STAT_NAMES = ("total", "analysed", "positive", "neutral", "negative", "spam", "important")
 
 
 # ---------------------------------------------------------------- the batch (analyze_comments)
@@ -182,7 +182,8 @@ async def count_stats(session: AsyncSession, media_item_id: uuid.UUID) -> dict[s
     """CommentStats for the post, from the rows: deleted comments are left out; ``analysed`` is
     every comment no longer pending (skipped ones too, so progress completes); positive, neutral
     and negative count analysed comments that are not spam. Each query reads one table, so a
-    viral post's plan never depends on join estimates."""
+    viral post's plan never depends on join estimates, except ``important`` (YT4), which joins the
+    post's comments to their analyses by comment id."""
     live = Comment.deleted_at.is_(None)
     total, analysed, deleted = (
         await session.execute(
@@ -201,6 +202,15 @@ async def count_stats(session: AsyncSession, media_item_id: uuid.UUID) -> dict[s
     )
     for sentiment, is_spam, n in readings.all():
         stats["spam" if is_spam else str(sentiment)] += int(n)
+    from socialhood.services.comments.queries import important_conditions  # the one rule
+
+    important = await session.scalar(
+        select(func.count())
+        .select_from(Comment)
+        .outerjoin(CommentAnalysis, CommentAnalysis.comment_id == Comment.id)
+        .where(Comment.media_item_id == media_item_id, *important_conditions())
+    )
+    stats["important"] = int(important or 0)
     return stats
 
 

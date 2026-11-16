@@ -221,3 +221,11 @@ async def insert_media_item(
         .returning(MediaItem)
     )
     return (await session.scalars(statement, execution_options=_FRESH)).one_or_none()
+
+
+async def account_has_comments(session: AsyncSession, social_account_id: uuid.UUID) -> bool:
+    """Whether any comment of the account is stored (YouTube's first poll is a backfill)."""
+    found = await session.scalar(
+        select(exists().where(Comment.social_account_id == social_account_id))
+    )
+    return bool(found)

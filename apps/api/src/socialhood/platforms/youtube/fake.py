@@ -13,6 +13,11 @@
   subscribers. ``processing_reads`` sets how many reads a new video stays processing;
   ``lose_next_answer()`` makes the next piece arrive but its answer fail (a cut connection);
   ``expire_sessions()`` makes every open session answer 404; ``fail_processing(id)`` fails a video.
+- Comments (YT4, platforms/youtube/comments.Comments): ``comment_threads`` holds them (``items``);
+  ``comment_threads.add(video_id, text, ...)`` is a viewer's comment (or reply, with
+  ``parent_id``), ``page_size`` sets the threads per page. Moderation keeps a ``status``; deleting
+  a viewer's comment is refused as ``forbidden``, like Google. The calls are named
+  ``comment_threads``, ``reply_comment``, ``moderate_comment`` and ``delete_comment``.
 
 shortcut: state lives in this process only (unlike google/fake.py's Redis mode): enough for tests,
 where the API and the jobs run in one process. The e2e sandbox channel uses
@@ -30,8 +35,10 @@ from urllib.parse import urlencode
 
 import httpx
 
+from socialhood.platforms.base import CommentPage
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.youtube.client import Channel
+from socialhood.platforms.youtube.comments import page_from, top_level_id
 from socialhood.platforms.youtube.oauth import SCOPES, Grant
 from socialhood.platforms.youtube.publishing import (
     CHUNK_BYTES,
@@ -100,6 +107,8 @@ class FakeYouTube:
         self.subscriber_count: int | None = 1200
         self._reads_left: dict[str, int] = {}
         self._lose_answers = 0
+        # YT4 comments
+        self.comment_threads = FakeComments(self)
 
     def fail_next(self, error: PlatformError) -> None:
         self._failures.append(error)
@@ -308,6 +317,135 @@ class FakeYouTube:
     async def subscribers(self, token: str, channel_id: str) -> int | None:
         self._enter("subscribers", channel_id=channel_id)
         return self.subscriber_count
+
+
+@dataclass
+class FakeComment:
+    id: str
+    video_id: str
+    author: str
+    name: str
+    text: str
+    likes: int
+    at: datetime
+    parent_id: str | None = None
+    status: str = "published"  # or rejected (hidden)
+
+
+class FakeComments:
+    """The fake's comments (see the module docstring)."""
+
+    def __init__(self, youtube: FakeYouTube) -> None:
+        self.youtube = youtube
+        self.items: dict[str, FakeComment] = {}
+        self.page_size = 100
+
+    def add(
+        self,
+        video_id: str,
+        text: str,
+        *,
+        author: str = "UCviewer000000000000001",
+        name: str = "Viewer",
+        parent_id: str | None = None,
+        likes: int = 0,
+        at: datetime | None = None,
+    ) -> str:
+        comment_id = (
+            f"{top_level_id(parent_id)}.r{secrets.token_hex(4)}"
+            if parent_id
+            else f"Ug{secrets.token_hex(6)}"
+        )
+        self.items[comment_id] = FakeComment(
+            comment_id,
+            video_id,
+            author,
+            name,
+            text,
+            likes,
+            at or datetime.now(UTC),
+            top_level_id(parent_id) if parent_id else None,
+        )
+        return comment_id
+
+    def _json(self, c: FakeComment) -> dict[str, Any]:
+        snippet: dict[str, Any] = {
+            "videoId": c.video_id,
+            "authorDisplayName": c.name,
+            "authorChannelId": {"value": c.author},
+            "textDisplay": c.text,
+            "likeCount": c.likes,
+            "publishedAt": c.at.isoformat(),
+        }
+        if c.parent_id:
+            snippet["parentId"] = c.parent_id
+        return {"id": c.id, "snippet": snippet}
+
+    async def threads(
+        self,
+        token: str,
+        *,
+        channel_id: str | None = None,
+        video_id: str | None = None,
+        cursor: str | None = None,
+    ) -> CommentPage:
+        self.youtube._enter(
+            "comment_threads", channel_id=channel_id, video_id=video_id, cursor=cursor
+        )
+        channel = self.youtube._channel_of(token)
+        shown = [c for c in self.items.values() if c.status == "published"]
+        tops = sorted(
+            (c for c in shown if c.parent_id is None and video_id in (None, c.video_id)),
+            key=lambda c: c.at,
+            reverse=True,
+        )
+        start = int(cursor or 0)
+        page = tops[start : start + self.page_size]
+        items = [
+            {
+                "id": top.id,
+                "snippet": {
+                    "channelId": channel,
+                    "videoId": top.video_id,
+                    "topLevelComment": self._json(top),
+                },
+                "replies": {
+                    "comments": [self._json(r) for r in shown if r.parent_id == top.id],
+                },
+            }
+            for top in page
+        ]
+        more = start + self.page_size < len(tops)
+        return page_from(
+            {"items": items, "nextPageToken": str(start + self.page_size) if more else None}
+        )
+
+    async def reply(self, token: str, parent_id: str, text: str) -> str:
+        self.youtube._enter("reply_comment", parent_id=parent_id, text=text)
+        channel = self.youtube._channel_of(token)
+        parent = self.items.get(parent_id)
+        if parent is None or parent.parent_id is not None:
+            raise PlatformError("platform_rejected", platform_code="invalidParentId")
+        return self.add(
+            parent.video_id, text, author=channel, name=CHANNEL.title, parent_id=parent_id
+        )
+
+    async def moderate(self, token: str, comment_id: str, status: str) -> None:
+        self.youtube._enter("moderate_comment", comment_id=comment_id, status=status)
+        self.youtube._channel_of(token)
+        if comment_id not in self.items:
+            raise PlatformError("platform_rejected", platform_code="commentNotFound")
+        self.items[comment_id].status = status
+
+    async def delete(self, token: str, comment_id: str) -> None:
+        self.youtube._enter("delete_comment", comment_id=comment_id)
+        channel = self.youtube._channel_of(token)
+        comment = self.items.get(comment_id)
+        if comment is None:
+            raise PlatformError("platform_rejected", platform_code="commentNotFound")
+        if comment.author != channel:
+            raise PlatformError("platform_rejected", platform_code="forbidden")
+        del self.items[comment_id]
 
 
 _process: list[FakeYouTube] = []

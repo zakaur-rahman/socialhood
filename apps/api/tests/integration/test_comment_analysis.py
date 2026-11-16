@@ -136,6 +136,7 @@ async def test_fifty_comments_are_analysed_in_one_call(cw: Comments, fake_ai: Fa
         "neutral": 17,
         "negative": 11,
         "spam": 11,
+        "important": 22,  # YT4: the price questions and the angry ones, unanswered
     }
     events = await stream(cw.world.redis, cw.wid)
     kinds = [kind for kind, _ in events]

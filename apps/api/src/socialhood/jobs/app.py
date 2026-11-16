@@ -46,6 +46,7 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.suggestions",
     "socialhood.jobs.tasks.knowledge",
     "socialhood.jobs.tasks.comments",
+    "socialhood.jobs.tasks.youtube_comments",
     "socialhood.jobs.tasks.insights",
     "socialhood.jobs.tasks.publishing",
     "socialhood.jobs.tasks.agent",

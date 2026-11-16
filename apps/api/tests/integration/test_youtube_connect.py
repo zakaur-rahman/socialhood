@@ -192,7 +192,7 @@ async def test_connecting_a_channel_stores_the_refresh_token(
         "maplebakery",
         "Maple Bakery",
     )
-    assert sorted(account["capabilities"]) == ["post_insights", "publish"]
+    assert sorted(account["capabilities"]) == ["comments", "post_insights", "publish"]
     assert account["token_expires_at"] is None
 
     [row] = await rows(engine)
@@ -372,4 +372,4 @@ async def test_a_sandbox_channel_can_be_made(
     assert made.status_code == 201, made.text
     body = made.json()
     assert (body["platform"], body["sandbox"], body["token_expires_at"]) == ("youtube", True, None)
-    assert sorted(body["capabilities"]) == ["post_insights", "publish"]
+    assert sorted(body["capabilities"]) == ["comments", "post_insights", "publish"]

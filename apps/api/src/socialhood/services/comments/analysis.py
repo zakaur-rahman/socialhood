@@ -27,7 +27,8 @@ A batch:
 3. An answer that is still invalid, or blocked, is tried again in halves so one comment cannot sink
    the batch; a comment that fails alone, or is left when MAX_CALLS_PER_BATCH calls were made, is
    skipped. Another failure after part of the batch was read keeps the rest pending.
-4. Spam is hidden on Instagram when the account's auto-hide is on (FR-CMT-05), before the batch is
+4. Spam is hidden on Instagram when the account's auto-hide is on (FR-CMT-05; never on YouTube,
+   whose comments people moderate), before the batch is
    stored; a refusal leaves the comment visible. A batch's comments share one call, so a reading
    there can be swayed by another commenter's text. Before hiding, each flagged comment is read
    again in a call holding only it, at no credit (at most MAX_HIDE_CHECKS a batch; §1.7's price per
@@ -72,6 +73,7 @@ from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.ai import SentimentName
 from socialhood.schemas.inbox import IntentName
 from socialhood.services.analysis import business_profile
+from socialhood.services.automations.validation import AUTOMATION_PLATFORMS
 from socialhood.services.comments import views
 from socialhood.settings import Settings
 
@@ -550,6 +552,8 @@ async def _auto_hide(
         c for c in batch.comments if c.id in readings and _is_spam(readings[c.id]) and not c.hidden
     ]
     if not acct.auto_hide_spam or not spam or acct.status == AccountStatus.NEEDS_RECONNECT:
+        return set()
+    if acct.platform not in AUTOMATION_PLATFORMS:  # YouTube comments are moderated by people only
         return set()
     try:
         adapter = adapter_for(acct, deps)

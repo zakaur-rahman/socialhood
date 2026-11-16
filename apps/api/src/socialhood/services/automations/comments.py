@@ -11,6 +11,8 @@ Runs in the account's workspace scope, in the webhook's transaction; never commi
   offered to next-post automations (its publish time is unknown).
 - The commenter becomes a contact by their IGSID (``from.id``, the same id their DMs carry; T0.9
   item 5), with the username the event gives.
+- Automations run only for the automation platforms (Instagram, Facebook): a YouTube comment
+  (YT4, polled by services/youtube_comments.py) is answered by people only.
 - The comment is inserted once (a replayed event stores nothing and triggers nothing) with
   ``analysis_status`` pending; analyze_comments reads it (T6.2). Replies keep their parent
   comment's id.
@@ -44,6 +46,7 @@ from socialhood.repositories import comment_analyses as stats
 from socialhood.repositories import comments as repo
 from socialhood.repositories import ingest as rows
 from socialhood.services.automations import posts, runtime
+from socialhood.services.automations.validation import AUTOMATION_PLATFORMS
 from socialhood.services.comments import views
 from socialhood.services.contacts import touch_activity
 
@@ -121,8 +124,9 @@ async def intake(
     if backfill:
         return Intake(comment)
     # A Live comment is answered only by automations on the Live scope (GR-10; the runtime
-    # checks), and only while the Live is on air.
-    await runtime.enqueue_for_comment(session, comment)
+    # checks), and only while the Live is on air. YouTube comments are answered by people only.
+    if acct.platform in AUTOMATION_PLATFORMS:
+        await runtime.enqueue_for_comment(session, comment)
     views.queue_comment(
         session,
         comment.workspace_id,
