@@ -29,7 +29,7 @@ test.describe("GR-45 snooze", () => {
     await expect(page.getByText(/^Snoozed until /)).toBeVisible();
     await expect(list.getByRole("link").filter({ hasText: asked })).toHaveCount(0);
 
-    await page.getByRole("radio", { name: "Snoozed" }).click();
+    await page.getByRole("radiogroup", { name: "Views" }).getByRole("radio", { name: "Snoozed" }).click();
     const snoozed = list.getByRole("link").filter({ hasText: asked });
     await expect(snoozed).toHaveCount(1);
 
@@ -38,7 +38,7 @@ test.describe("GR-45 snooze", () => {
     await page.getByRole("button", { name: "More actions" }).click();
     await page.getByRole("menuitem", { name: "Unsnooze" }).click();
     await expect(list.getByRole("link").filter({ hasText: asked })).toHaveCount(0);
-    await page.getByRole("radio", { name: "All", exact: true }).click();
+    await page.getByRole("radiogroup", { name: "Views" }).getByRole("radio", { name: "All", exact: true }).click();
     await expect(list.getByRole("link").filter({ hasText: asked })).toHaveCount(1);
   });
 

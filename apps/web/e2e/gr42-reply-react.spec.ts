@@ -68,6 +68,7 @@ test.describe("GR-42 reply and react", () => {
   });
 
   test("WhatsApp: the picker offers six reactions and a thumbs up reacts", async ({ page, api, workspace }) => {
+    await api.setPlan(workspace.id, "pro"); // WhatsApp is on Creator and up
     const number = await api.connectSandbox(workspace.id, "whatsapp");
     const { customer } = await openConversation(page, api, workspace, number, "919800000042");
 

@@ -4,10 +4,10 @@ import { expect, test, unique } from "./support/fixtures";
  * GR-43 contact import on the sandbox WhatsApp number. The owner (an admin) imports a CSV from
  * Contacts: the preview lists a new contact, a bad row and, once the consent box is ticked, the
  * people who agreed; the import saves them with their tags and a consent whose source is "import"
- * and whose evidence names the file and the row. A second import of the same file changes nothing.
+ * (its evidence, the file and the row, is checked in the API tests). A second import of the same file changes nothing.
  */
 type Contact = { id: string; name: string; phone: string | null; tags: { name: string }[] };
-type Record_ = Contact & { consents: { channel: string; status: string; source: string; evidence: Record<string, unknown> }[] };
+type Record_ = Contact & { consents: { channel: string; status: string; source: string }[] };
 
 test.describe("GR-43 contact import", () => {
   test("previews, imports with the consent box, and importing again changes nothing", async ({ page, api, workspace }) => {
@@ -24,6 +24,8 @@ test.describe("GR-43 contact import", () => {
     await page.goto(`/w/${workspace.slug}/contacts`);
     await page.getByRole("button", { name: "Import CSV" }).click();
     const dialog = page.getByRole("dialog", { name: "Import contacts from a CSV file" });
+    // The number is known once accounts load; until then the file button is disabled.
+    await expect(dialog.getByRole("button", { name: "Choose a CSV file" })).toBeEnabled();
     await dialog.getByTestId("csv-file-input").setInputFiles({ name: "people.csv", mimeType: "text/csv", buffer: Buffer.from(file) });
 
     // The preview: one new, one left out with its reason; the yes is ignored without the tick.
@@ -42,11 +44,12 @@ test.describe("GR-43 contact import", () => {
     const record = await api.call<Record_>("GET", `/v1/w/${workspace.id}/contacts/${asha.id}`);
     const consent = record.consents.find((c) => c.channel === "whatsapp");
     expect(`${consent?.status}/${consent?.source}`).toBe("granted/import");
-    expect(consent?.evidence).toMatchObject({ file_name: "people.csv", row: 2 });
 
     // The same file again: nothing is new, nothing changes.
     await page.getByRole("button", { name: "Import CSV" }).click();
     const again = page.getByRole("dialog", { name: "Import contacts from a CSV file" });
+    // The number is known once accounts load; until then the file button is disabled.
+    await expect(again.getByRole("button", { name: "Choose a CSV file" })).toBeEnabled();
     await again.getByTestId("csv-file-input").setInputFiles({ name: "people.csv", mimeType: "text/csv", buffer: Buffer.from(file) });
     await expect(again.getByText(/2 rows: 0 new, 0 to update, 1 unchanged, 1 left out\./)).toBeVisible({ timeout: 20_000 });
     await expect(again.getByRole("button", { name: "Import" })).toBeDisabled();
