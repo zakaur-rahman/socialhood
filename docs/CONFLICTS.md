@@ -10092,3 +10092,22 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Left as they are:** a new reply on an old thread can be missed (threads are ordered by thread
   time); channel-level watch time is stored but not shown; the owner adds the analytics scope on
   the consent screen, enables the YouTube Analytics API and files the quota form when needed.
+
+## C-200 · IndexNow after each production deploy (owner, 2026-11-19)
+
+- **Why:** IndexNow tells Bing, Yandex, Seznam, Naver and the other IndexNow engines about new,
+  changed and removed pages at once, instead of waiting for their crawlers. Google doesn't use it;
+  Search Console and the sitemap stay the way to reach Google.
+- **Decided:**
+  - Our own key (not the example on indexnow.org), served as `apps/web/public/<key>.txt` at the
+    site root. It's public by design, so it sits in the repository, not in secrets; the script
+    reads it from the file's name, so it's written down once. The proxy passes the file through
+    on the site host (C-146).
+  - The release workflow saves the live sitemap before the deploy and runs `scripts/indexnow.mjs`
+    after it, which sends only pages that are new, have a new `lastmod` (the sitemap's dates are
+    when the content changed, C-153) or were removed. One POST to api.indexnow.org, at most 10,000
+    URLs. The first deploy that ships the key file sends every page once.
+  - It never fails a release (`continue-on-error`, warnings only), and sends nothing unless the
+    live site serves the key.
+- **Left as they are:** the app host (dashboard.amplychat.com) isn't submitted: it's noindex. No
+  separate IndexNow call on content changes between releases: our pages only change on a release.
