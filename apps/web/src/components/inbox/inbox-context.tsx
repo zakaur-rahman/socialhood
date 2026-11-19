@@ -38,6 +38,8 @@ export type InboxUi = {
   manualUnreadId: string | null;
   markUnread: (id: string) => void;
   archive: (id: string, archived: boolean) => void;
+  /** GR-45: snooze until a time, or bring it back now with null. */
+  snooze: (id: string, until: Date | null) => void;
 };
 
 const InboxUiContext = createContext<InboxUi | null>(null);

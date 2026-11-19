@@ -375,13 +375,15 @@ async def remove_override(session: AsyncSession, account_id: uuid.UUID) -> None:
 # ---------------------------------------------------------------- the away message
 
 
-def away_applies(msg: Message) -> bool:
+def away_applies(msg: Message, contact: Contact | None = None) -> bool:
     """A person writing: not a story mention or like, and not a tap on a button, quick reply or
-    conversation starter (those answer something we sent)."""
+    conversation starter (those answer something we sent). Never to a contact whose automatic
+    replies are off (GR-44)."""
     from socialhood.services.automations import runtime
 
     return (
-        msg.kind != "story_mention"
+        (contact is None or not contact.auto_replies_off)
+        and msg.kind != "story_mention"
         and not runtime.is_story_like(msg)
         and not msg.postback_payload
         and not msg.quick_reply_payload

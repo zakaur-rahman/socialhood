@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from socialhood.ai.policy import AnalysisFacts, PolicyInput, evaluate
-from socialhood.models.inbox import Message
+from socialhood.models.inbox import Contact, Message
 from socialhood.schemas.business_hours import BusinessHoursUpdate
 from socialhood.services import business_hours as bh
 
@@ -298,6 +298,12 @@ def message(
 )
 def test_the_away_message_answers_a_person_writing(msg: Message, expected: bool) -> None:
     assert bh.away_applies(msg) is expected
+
+
+def test_the_away_message_skips_a_contact_with_automatic_replies_off() -> None:  # GR-44
+    contact = Contact(auto_replies_off=True)
+    assert bh.away_applies(message(), contact) is False
+    assert bh.away_applies(message(), Contact(auto_replies_off=False)) is True
 
 
 # ---------------------------------------------------------------- Auto mode and the hours

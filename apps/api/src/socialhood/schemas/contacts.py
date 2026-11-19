@@ -127,6 +127,7 @@ class ContactListItem(ResponseModel):
     lead_stage_at: datetime | None = None
     lead_stage_reason: str | None = None
     lead_cold: bool = False
+    auto_replies_off: bool = False  # GR-44: no automatic replies to this contact
     conversation_id: uuid.UUID | None = None  # None: never messaged (for example a commenter)
     last_activity_at: datetime | None = None
     first_seen_at: datetime | None = None
@@ -166,6 +167,7 @@ class ContactPatch(RequestModel):
     phone: str | None = Field(default=None, max_length=32)
     clear_phone: bool = False
     fields: dict[str, Any] | None = None
+    auto_replies_off: bool | None = None  # GR-44
 
 
 class ContactCreate(RequestModel):

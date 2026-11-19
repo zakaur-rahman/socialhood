@@ -43,6 +43,7 @@ NAMES = [
     "grounded_in_knowledge",
     "rate",
     "output_filter",
+    "contact_allows_auto",
 ]
 
 
@@ -199,7 +200,7 @@ async def test_a_workspace_escalation_phrase_escalates(ai: Ai) -> None:
     assert decision.checks[6]["value"] == "wholesale"
 
 
-@pytest.mark.parametrize("case", ["suggest_mode", "paused", "no_credits", "handled"])
+@pytest.mark.parametrize("case", ["suggest_mode", "paused", "no_credits", "handled", "auto_off"])
 async def test_a_skip_changes_nothing_visible(ai: Ai, case: str) -> None:
     suggestion_id = await ready(ai)
     if case == "suggest_mode":
@@ -214,6 +215,9 @@ async def test_a_skip_changes_nothing_visible(ai: Ai, case: str) -> None:
     elif case == "no_credits":
         await ai.set_used(4999)
         expected = "quota_exhausted"
+    elif case == "auto_off":  # GR-44: the suggestion is drafted, but nothing is sent
+        await ai.execute("UPDATE contacts SET auto_replies_off = true")
+        expected = "auto_replies_off"
     else:
         await ai.execute(
             "UPDATE messages SET automation_handled = true WHERE id = :id", id=ai.message_id

@@ -66,6 +66,13 @@ def test_marketing_messages_wait_for_the_legal_check() -> None:
     assert decide(window_open=True, marketing_enabled=False) == rules.Decision("text")
 
 
+@pytest.mark.parametrize("platform", ["instagram", "facebook", "whatsapp"])
+def test_a_contact_with_automatic_replies_off_gets_no_step(platform: str) -> None:  # GR-44
+    found = decide(platform=platform, window_open=True, auto_replies_off=True)
+    assert found == rules.Decision("skip", "auto_replies_off")
+    assert found.reason == "Automatic replies are off for this person."
+
+
 @pytest.mark.parametrize("platform", ["instagram", "facebook"])
 def test_instagram_and_messenger_send_only_while_the_window_is_open(platform: str) -> None:
     assert decide(platform=platform, window_open=True) == rules.Decision("text")

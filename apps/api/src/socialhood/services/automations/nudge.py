@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.errors import ApiError
 from socialhood.models.automations import AutomationRun
-from socialhood.models.inbox import Conversation, MessageStatus
+from socialhood.models.inbox import Contact, Conversation, MessageStatus
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.realtime import events
@@ -56,9 +56,15 @@ def _eligible(run: AutomationRun) -> bool:
     return run.trigger_message_id is not None
 
 
+async def _auto_off(session: AsyncSession, contact_id: uuid.UUID | None) -> bool:
+    """GR-44: the person has automatic replies off, so no nudge."""
+    contact = await session.get(Contact, contact_id) if contact_id else None
+    return contact is not None and contact.auto_replies_off
+
+
 async def after_message(session: AsyncSession, run: AutomationRun) -> None:
     """The run's message reached Instagram: enqueue the nudge when one may be due."""
-    if not _eligible(run):
+    if not _eligible(run) or await _auto_off(session, run.contact_id):
         return
     automation = await runs.get_automation(session, run.automation_id)
     if automation is None or actions.render_nudge(automation, None, disclosure_line=None) is None:
@@ -102,7 +108,7 @@ async def run(
             return "skipped"
         if dm.status not in DELIVERED:
             return "skipped" if dm.status == MessageStatus.FAILED else "missing"
-        if not _eligible(row) or row.contact_id is None:
+        if not _eligible(row) or row.contact_id is None or await _auto_off(session, row.contact_id):
             return "skipped"
         contact_id, conversation_id = row.contact_id, dm.conversation_id
         check = row.confirmed_at is None  # a DM keyword run: read it now

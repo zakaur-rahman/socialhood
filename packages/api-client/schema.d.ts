@@ -5857,7 +5857,7 @@ export interface components {
              */
             outcome: "auto_sent" | "escalated" | "skipped";
             /** Reason */
-            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed") | null;
+            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed" | "auto_replies_off") | null;
             /** Sent Message Id */
             sent_message_id?: string | null;
             /** Suggestion Id */
@@ -8008,6 +8008,11 @@ export interface components {
         };
         /** ContactDetail */
         ContactDetail: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -8116,6 +8121,11 @@ export interface components {
         };
         /** ContactListItem */
         ContactListItem: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Conversation Id */
             conversation_id?: string | null;
             /** Email */
@@ -8171,6 +8181,8 @@ export interface components {
          *     phone set here is marked as entered by a member and not verified.
          */
         ContactPatch: {
+            /** Auto Replies Off */
+            auto_replies_off?: boolean | null;
             /**
              * Clear Email
              * @default false
@@ -8202,6 +8214,11 @@ export interface components {
          * @description One contact with what the business knows about them.
          */
         ContactRecord: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Consents */
             consents: components["schemas"]["Consent"][];
             /** Conversation Id */
@@ -8384,6 +8401,8 @@ export interface components {
             scheduled_count: number;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             social_account: components["schemas"]["ConversationAccount"];
             /**
              * Social Account Id
@@ -8492,6 +8511,8 @@ export interface components {
             reply_window_closes_at?: string | null;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -8519,8 +8540,15 @@ export interface components {
              * @default false
              */
             resume_ai: boolean;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /** Status */
             status?: ("open" | "archived") | null;
+            /**
+             * Unsnooze
+             * @default false
+             */
+            unsnooze: boolean;
         };
         /** ConversationSummary */
         ConversationSummary: {
@@ -19734,7 +19762,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived" | "snoozed";
                 platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;

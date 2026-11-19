@@ -36,6 +36,7 @@ function lead(stage: LeadStage, values: Partial<ContactListItem> = {}): ContactL
     lead_stage_at: "2026-10-22T10:00:00Z",
     lead_stage_reason: null,
     lead_cold: false,
+    auto_replies_off: false,
     conversation_id: `c-${stage}`,
     last_activity_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
     first_seen_at: "2026-09-27T09:00:00Z",
