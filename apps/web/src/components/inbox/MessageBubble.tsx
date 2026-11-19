@@ -8,20 +8,24 @@ import {
   ExternalLink,
   LoaderCircle,
   Megaphone,
+  Reply,
+  SmilePlus,
   Sparkles,
   Zap,
   type LucideIcon,
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Message, MessageStatus, Platform } from "@/lib/api/types";
+import type { Message, MessageStatus, Platform, ReactionEmoji, ReplyQuote } from "@/lib/api/types";
 import type { SendFailure } from "@/lib/copy";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
+import { ourReaction } from "@/lib/inbox/reactions";
 import { formatTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +74,11 @@ type Props = {
   lang?: string | null;
   /** Under the bubble: the analysis chips of an analysed customer message (FR-AI-02). */
   below?: ReactNode;
+  /** GR-42: quote this message in the composer. */
+  onReply?: () => void;
+  /** GR-42: the reactions this platform takes, and setting ours (null removes it). */
+  reactionChoices?: readonly ReactionEmoji[];
+  onReact?: (emoji: ReactionEmoji | null) => void;
 };
 
 /** UX-INB-06: one message, in the variant its direction, source and status call for. */
@@ -88,6 +97,9 @@ export function MessageBubble({
   aiInfo,
   lang,
   below,
+  onReply,
+  reactionChoices = [],
+  onReact,
 }: Props) {
   if (message.direction === "system" || message.kind === "system") {
     return <SystemNote>{message.text ?? "Conversation updated"}</SystemNote>;
@@ -146,11 +158,20 @@ export function MessageBubble({
   const quickReplies = outbound && !unsent ? (message.quick_replies ?? []) : [];
   // White chips on the gradient, failed and sending fills; neutral ones on a native-app bubble.
   const tinted = !nativeApp || failed || pending;
+  const actions =
+    onReply || (onReact && reactionChoices.length > 0) ? (
+      <MessageActions
+        message={message}
+        onReply={onReply}
+        choices={onReact ? reactionChoices : []}
+        onReact={onReact}
+      />
+    ) : null;
 
   return (
     <div
       className={cn(
-        "flex items-end gap-2",
+        "group/msg flex items-end gap-2",
         outbound ? "justify-end" : "justify-start",
         live && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-normal",
       )}
@@ -158,6 +179,7 @@ export function MessageBubble({
       data-status={status ?? undefined}
       data-message-id={message.id}
     >
+      {outbound ? actions : null}
       {!outbound ? (
         <span className="w-6 shrink-0">
           {groupEnd ? <ContactAvatar id={contact.id} name={contact.name} pictureUrl={contact.pictureUrl} size={24} /> : null}
@@ -166,6 +188,13 @@ export function MessageBubble({
       <div className={cn("flex max-w-[85%] flex-col md:max-w-[70%]", outbound ? "items-end" : "items-start")}>
         <div className={cn(bubbleClass, reactions.length > 0 && "mb-3")} data-variant={variantName(message)}>
           {label ? <p className="mb-1 text-2xs font-medium text-fg-secondary">{label}</p> : null}
+          {message.reply_to ? (
+            <QuoteBlock
+              quote={message.reply_to}
+              author={message.reply_to.direction === "inbound" ? contact.name : "You"}
+              onBrand={outbound && !nativeApp && !sticker}
+            />
+          ) : null}
           {message.kind === "template" && message.template ? (
             <p className={cn("mb-1 text-xs font-medium", metaClass)}>Template · {message.template.name}</p>
           ) : null}
@@ -324,6 +353,101 @@ export function MessageBubble({
         ) : null}
         {below}
       </div>
+      {!outbound ? actions : null}
+    </div>
+  );
+}
+
+/** GR-42: the quoted message, above the text. It scrolls to that message when it is loaded. */
+function QuoteBlock({ quote, author, onBrand }: { quote: ReplyQuote; author: string; onBrand: boolean }) {
+  const jump = () => {
+    const target = document.querySelector<HTMLElement>(`[data-message-id="${quote.id}"]`);
+    target?.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+  return (
+    <button
+      type="button"
+      onClick={jump}
+      className={cn(
+        "mb-1.5 block w-full min-w-0 rounded-lg border-l-2 px-2 py-1 text-left text-xs whitespace-normal",
+        onBrand ? "border-on-brand-line-strong text-on-brand" : "border-brand bg-raised text-fg-secondary",
+      )}
+      aria-label={`Show the quoted message from ${author}: ${quote.text_preview}`}
+      data-testid="reply-quote"
+    >
+      <span className="block font-medium">{author}</span>
+      <span className="line-clamp-2">{quote.text_preview}</span>
+    </button>
+  );
+}
+
+/**
+ * GR-42: Reply and React beside the bubble. Shown on hover or keyboard focus; always on touch
+ * screens, which have no hover.
+ */
+function MessageActions({
+  message,
+  onReply,
+  choices,
+  onReact,
+}: {
+  message: Message;
+  onReply?: () => void;
+  choices: readonly ReactionEmoji[];
+  onReact?: (emoji: ReactionEmoji | null) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const mine = ourReaction(message);
+  const toggle = (emoji: ReactionEmoji) => {
+    setPickerOpen(false);
+    onReact?.(mine === emoji ? null : emoji);
+  };
+  return (
+    <div
+      className="flex shrink-0 items-center self-center motion-safe:transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover/msg:opacity-100 pointer-fine:focus-within:opacity-100 pointer-fine:has-[[data-state=open]]:opacity-100"
+      data-testid="message-actions"
+    >
+      {onReply ? (
+        <Button type="button" variant="ghost" size="icon-xs" className="text-fg-secondary" aria-label="Reply" onClick={onReply}>
+          <Reply aria-hidden />
+        </Button>
+      ) : null}
+      {choices.length === 1 ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={mine === choices[0] ? `Remove your ${choices[0]} reaction` : `React with ${choices[0]}`}
+          aria-pressed={mine === choices[0]}
+          onClick={() => toggle(choices[0])}
+        >
+          <span aria-hidden>{choices[0]}</span>
+        </Button>
+      ) : choices.length > 1 ? (
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="ghost" size="icon-xs" className="text-fg-secondary" aria-label="React">
+              <SmilePlus aria-hidden />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" className="w-auto flex-row gap-0.5 p-1" aria-label="Reactions">
+            {choices.map((emoji) => (
+              <Button
+                key={emoji}
+                type="button"
+                variant={mine === emoji ? "soft" : "ghost"}
+                size="icon"
+                className="text-lg"
+                aria-label={mine === emoji ? `Remove your ${emoji} reaction` : `React with ${emoji}`}
+                aria-pressed={mine === emoji}
+                onClick={() => toggle(emoji)}
+              >
+                <span aria-hidden>{emoji}</span>
+              </Button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      ) : null}
     </div>
   );
 }

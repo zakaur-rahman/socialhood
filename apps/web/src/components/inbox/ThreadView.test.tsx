@@ -265,3 +265,38 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
     expect(nav.replace).not.toHaveBeenCalled();
   });
 });
+
+describe("ThreadView: reply and react (GR-42)", () => {
+  it("Reply puts the message in the composer and the send quotes it", async () => {
+    const { calls } = renderWithApi(<ThreadView key="c1" conversationId="c1" />, {
+      handlers: handlers((call) => json(stored(call), 202)),
+    });
+    await screen.findByText("Do you ship to Dubai?");
+    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    expect(screen.getByTestId("replying-to")).toHaveTextContent("Do you ship to Dubai?");
+    await replyWith("Yes, 5–7 days");
+
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path.endsWith("/messages"))).toBe(true));
+    const send = calls.find((c) => c.method === "POST" && c.path.endsWith("/messages"))!;
+    expect((send.body as SendMessage).reply_to_message_id).toBe("m1");
+    expect(screen.queryByTestId("replying-to")).not.toBeInTheDocument();
+  });
+
+  it("an Instagram heart is sent at once and rolled back when refused", async () => {
+    const { calls } = renderWithApi(<ThreadView key="c1" conversationId="c1" />, {
+      handlers: {
+        ...handlers((call) => json(stored(call), 202)),
+        "PUT /v1/w/:wid/conversations/:id/messages/:mid/reaction": () =>
+          problem(409, "reaction_not_supported", "Only a heart can be sent here"),
+      },
+    });
+    await screen.findByText("Do you ship to Dubai?");
+    await userEvent.click(screen.getByRole("button", { name: "React with ❤️" }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    const put = calls.find((c) => c.method === "PUT")!;
+    expect(put.path).toContain("/conversations/c1/messages/m1/reaction");
+    expect(put.body).toEqual({ emoji: "❤️" });
+    await waitFor(() => expect(screen.queryByRole("img", { name: /Reactions:/ })).not.toBeInTheDocument());
+  });
+});

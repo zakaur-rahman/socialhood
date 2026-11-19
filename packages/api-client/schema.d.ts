@@ -2082,6 +2082,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Message Reaction
+         * @description Set or remove (``emoji: null``) the business's reaction to a message (GR-42).
+         */
+        put: operations["set_message_reaction"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations/{conversation_id}/polish": {
         parameters: {
             query?: never;
@@ -10176,6 +10196,7 @@ export interface components {
             reactions: components["schemas"]["Reaction"][];
             /** Read At */
             read_at?: string | null;
+            reply_to?: components["schemas"]["ReplyQuote"] | null;
             /** Sent At */
             sent_at?: string | null;
             sent_by?: components["schemas"]["Actor"] | null;
@@ -12007,6 +12028,29 @@ export interface components {
              */
             tag_id: string;
         };
+        /**
+         * ReplyQuote
+         * @description The message a reply quotes (GR-42): the customer's or ours, in the same conversation.
+         */
+        ReplyQuote: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound" | "system";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system";
+            /** Text Preview */
+            text_preview: string;
+        };
         /** ReplyWindow */
         ReplyWindow: {
             /** Closes At */
@@ -12763,6 +12807,8 @@ export interface components {
              * Format: uuid
              */
             client_id: string;
+            /** Reply To Message Id */
+            reply_to_message_id?: string | null;
             /** Sticker */
             sticker?: "like_heart" | null;
             /** Sticker Asset Id */
@@ -13036,6 +13082,14 @@ export interface components {
             problems: string[];
             /** Steps */
             steps: components["schemas"]["PreviewStep"][];
+        };
+        /**
+         * SetReaction
+         * @description PUT …/messages/{id}/reaction: our reaction to the message; null removes it.
+         */
+        SetReaction: {
+            /** Emoji */
+            emoji: ("👍" | "❤️" | "😂" | "😮" | "😢" | "🙏") | null;
         };
         /** SetField */
         SetField: {
@@ -19960,6 +20014,52 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_message_reaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetReaction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,15 +1,26 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { applyMessage, applyQueuedResponse } from "@/lib/inbox/cache";
+import { withOurReaction } from "@/lib/inbox/reactions";
 import { useInboxStore } from "@/lib/inbox/store";
+import { toastError } from "@/lib/toast-error";
 import { uuid } from "@/lib/uuid";
 
 import { toApiError } from "../errors";
 import { useApi } from "../provider";
-import type { Attachment, MediaAsset, Message, MessageKind, SendMessage, TemplateSend } from "../types";
+import type {
+  Attachment,
+  MediaAsset,
+  Message,
+  MessageKind,
+  ReactionEmoji,
+  ReplyQuote,
+  SendMessage,
+  TemplateSend,
+} from "../types";
 import { unwrap } from "./unwrap";
 
 export type ReplyInput = {
@@ -24,6 +35,8 @@ export type ReplyInput = {
   humanAgent?: boolean;
   /** The suggestion this text came from, sent as is or edited (F-08). */
   suggestionId?: string;
+  /** GR-42: the message this reply quotes. */
+  replyTo?: Message;
 };
 
 export const HEART = "\u2764\ufe0f";
@@ -45,6 +58,12 @@ function attachmentFor(asset: MediaAsset, asSticker = false): Attachment {
     height: asset.height ?? null,
     duration_s: asset.duration_s ?? null,
   };
+}
+
+/** The quote the API will show for a reply to ``message`` (services/inbox_views.reply_quote). */
+export function quoteOf(message: Message): ReplyQuote {
+  const preview = message.deleted_at ? "Message unsent" : (message.text ?? "").split(/\s+/).join(" ").trim();
+  return { id: message.id, kind: message.kind, direction: message.direction, text_preview: preview || "Message" };
 }
 
 function kindFor(input: ReplyInput): MessageKind {
@@ -82,6 +101,7 @@ export function optimisticMessage(conversationId: string, clientId: string, inpu
     suggestion_id: input.suggestionId ?? null,
     human_agent_tag: Boolean(input.humanAgent),
     reactions: [],
+    reply_to: input.replyTo ? quoteOf(input.replyTo) : null,
   };
 }
 
@@ -149,6 +169,7 @@ export function useSendReply(wid: string, conversationId: string) {
         sticker: input.heart ? "like_heart" : null,
         sticker_asset_id: input.sticker?.id ?? null,
         suggestion_id: input.suggestionId ?? null,
+        reply_to_message_id: input.replyTo?.id ?? null,
       };
       useInboxStore.getState().putOutbox({
         clientId,
@@ -192,4 +213,31 @@ export function useSendReply(wid: string, conversationId: string) {
   }, []);
 
   return { send, retry, discard };
+}
+
+/**
+ * GR-42: set or remove (null) our reaction. The bubble changes at once and goes back if the API
+ * refuses (reaction_not_supported, a closed window, the platform's error).
+ */
+export function useReact(wid: string, conversationId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<Message, Error, { message: Message; emoji: ReactionEmoji | null }, { previous: Message }>({
+    mutationFn: ({ message, emoji }) =>
+      unwrap(
+        api.PUT("/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction", {
+          params: { path: { wid, conversation_id: conversationId, message_id: message.id } },
+          body: { emoji },
+        }),
+      ),
+    onMutate: ({ message, emoji }) => {
+      applyMessage(queryClient, wid, conversationId, withOurReaction(message, emoji));
+      return { previous: message };
+    },
+    onError: (error, _input, context) => {
+      if (context) applyMessage(queryClient, wid, conversationId, context.previous);
+      toastError(error);
+    },
+    onSuccess: (message) => applyMessage(queryClient, wid, conversationId, message),
+  });
 }

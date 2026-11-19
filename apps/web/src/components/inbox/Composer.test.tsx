@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
-import { conversation, json, problem, renderWithApi, type Call } from "@/test/api";
+import { conversation, json, message, problem, renderWithApi, type Call } from "@/test/api";
 
 import { Composer, type Uploader } from "./Composer";
 
@@ -567,5 +567,19 @@ describe("Saved replies (GR-21)", () => {
     await user.clear(textbox());
     await user.type(textbox(), "/zzz");
     await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+  });
+});
+
+describe("Replying to a message (GR-42)", () => {
+  it("shows what the reply quotes, focuses the box, and × cancels it", async () => {
+    const user = userEvent.setup();
+    const onCancelReply = vi.fn();
+    renderComposer({}, { replyTo: message({ text: "Do you ship to Pune?" }), onCancelReply });
+    const chip = screen.getByTestId("replying-to");
+    expect(chip).toHaveTextContent("Replying to Priya");
+    expect(chip).toHaveTextContent("Do you ship to Pune?");
+    expect(textbox()).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Cancel reply" }));
+    expect(onCancelReply).toHaveBeenCalledOnce();
   });
 });
