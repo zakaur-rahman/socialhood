@@ -146,6 +146,7 @@ async def test_topic_counts_match_the_mapping(cw: Comments, fake_ai: FakeProvide
         "neutral": 0,
         "negative": 0,
         "spam": 0,
+        "important": 0,
     }
 
 

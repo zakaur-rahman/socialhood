@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCommentCounts, usePostGrid, useSocialAccounts } from "@/lib/api/queries";
 import type { PostSort } from "@/lib/api/types";
-import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
+import { accountLabel, commentAccounts } from "@/lib/automations/accounts";
 import { flattenPosts } from "@/lib/comments/cache";
 import { formatCount } from "@/lib/comments/format";
 import { emptyStates } from "@/lib/copy";
@@ -53,10 +53,12 @@ function GridSkeleton() {
 export function CommentsPage() {
   const workspace = useCurrentWorkspace();
   const wid = workspace.id;
+  const youtubeOn = (workspace.features ?? []).includes("youtube");
+  const connectLabel = youtubeOn ? "Connect an account" : "Connect Instagram";
   const now = useNow();
   const [accountId, setAccountId] = useState<string | null>(null);
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => commentAccounts(allAccounts.data ?? []), [allAccounts.data]);
   const [sort, setSort] = useState<PostSort>("recent");
   const posts = usePostGrid(wid, accountId, sort);
   const counts = useCommentCounts(wid);
@@ -83,10 +85,11 @@ export function CommentsPage() {
         <Card>
           <EmptyState
             size="compact"
-            {...emptyStates.comments}
+            title={emptyStates.comments.title}
+            body={youtubeOn ? "Your Instagram, Facebook and YouTube posts and their comments appear here after you connect." : emptyStates.comments.body}
             action={
               <Button asChild size="sm">
-                <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect Instagram</Link>
+                <Link href={`/w/${workspace.slug}/settings/connections` as Route}>{connectLabel}</Link>
               </Button>
             }
           />

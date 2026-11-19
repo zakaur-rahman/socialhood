@@ -262,6 +262,18 @@ function sections(): LegalSection[] {
             We&apos;ll adapt {N} where we can, but we aren&apos;t responsible for Meta&apos;s actions or for its charges.
           </p>
           <p>
+            If you connect a YouTube channel, {N} uses YouTube API Services, and by using that feature you agree to be bound
+            by the{" "}
+            <a href="https://www.youtube.com/t/terms" rel="noopener noreferrer">
+              YouTube Terms of Service
+            </a>
+            . Google&apos;s handling of your data is covered by the{" "}
+            <a href="https://policies.google.com/privacy" rel="noopener noreferrer">
+              Google Privacy Policy
+            </a>
+            . The same applies to Google as to Meta above: its rules and decisions are outside our control.
+          </p>
+          <p>
             You can also connect your own accounts with other services, such as Razorpay, Shopify, Google Sheets and Zapier.
             Their terms apply to your use of them. Payments your customers make through your Razorpay account are between
             you and them: we never hold that money, and you are responsible for your orders, deliveries and refunds to your

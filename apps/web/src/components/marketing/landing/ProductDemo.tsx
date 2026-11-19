@@ -78,7 +78,7 @@ const PERSON = "Can I talk to a person?";
 const TEAMMATE = "Priya S.";
 
 /** The app's list chips (ListHeader CHIP_VIEWS), in its order. */
-export const PRODUCT_DEMO_CHIPS = ["All", "Unread", "Needs reply", "Needs you", "Assigned to me", "Leads", "Handled by AI", "Archived"];
+export const PRODUCT_DEMO_CHIPS = ["All", "Unread", "Needs reply", "Needs you", "Assigned to me", "Leads", "Handled by AI", "Snoozed", "Archived"];
 /** The strip shows connected platforms only (InboxShell), so no Facebook here. */
 const STRIP: { key: "all" | Platform; label: string }[] = [
   { key: "all", label: "All" },

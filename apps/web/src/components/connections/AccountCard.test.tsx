@@ -255,4 +255,17 @@ describe("deleting an account's data (C-067)", () => {
     expect(within(card).queryAllByRole("button")).toEqual([]);
     expect(within(card).queryByRole("switch")).toBeNull();
   });
+
+  it("a YouTube account without analytics access hints at reconnecting", async () => {
+    const { handlers, card } = renderCard({ platform: "youtube", display_name: "Maple Bakery", capabilities: ["comments"] });
+    const hint = within(card).getByTestId("reconnect-insights");
+    expect(hint).toHaveTextContent("Reconnect to add watch time and subscriber changes");
+    await userEvent.click(within(hint).getByRole("button", { name: "Reconnect" }));
+    expect(handlers.onReconnect).toHaveBeenCalled();
+  });
+
+  it("no hint once analytics access is granted", () => {
+    const { card } = renderCard({ platform: "youtube", capabilities: ["comments", "account_insights"] });
+    expect(within(card).queryByTestId("reconnect-insights")).not.toBeInTheDocument();
+  });
 });

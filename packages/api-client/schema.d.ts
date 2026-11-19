@@ -1857,6 +1857,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/contacts/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Contacts
+         * @description Save the file's valid rows (the same reading as the preview). Existing contacts only get
+         *     blanks filled and tags added; a withdrawn consent is never granted again.
+         */
+        post: operations["import_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Contact Import
+         * @description Read the file and say what an import would create, update and leave out, and why. Saves
+         *     nothing. 422 for another platform's account or a file with no Phone column.
+         */
+        post: operations["preview_contact_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -2026,8 +2068,9 @@ export interface paths {
         head?: never;
         /**
          * Update Conversation
-         * @description Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
-         *     plan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
+         * @description Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or
+         *     clear the conversation's AI mode override (auto needs a paid plan: 402
+         *     entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
          */
         patch: operations["update_conversation"];
         trace?: never;
@@ -2076,6 +2119,30 @@ export interface paths {
          *     downgrade (FR-BIL-07).
          */
         post: operations["send_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Message Reaction
+         * @description Set or remove (``emoji: null``) the business's reaction to a message (GR-42). It goes to
+         *     the platform at once; the same reaction again changes nothing. 409 reaction_not_supported
+         *     where the platform takes no reactions or not this emoji (Instagram and Facebook: a heart
+         *     only), 409 reply_window_closed as for a reply, 422 for a message the platform can't react to
+         *     (WhatsApp: older than 30 days).
+         */
+        put: operations["set_message_reaction"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2265,7 +2332,8 @@ export interface paths {
         put?: never;
         /**
          * Sandbox Inbound
-         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook.
+         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook. For a
+         *     sandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.
          */
         post: operations["sandbox_inbound"];
         delete?: never;
@@ -3632,7 +3700,8 @@ export interface paths {
          * List Post Comments
          * @description The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
          *     defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
-         *     D-11). Deleted comments are left out.
+         *     D-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are
+         *     left out.
          */
         get: operations["list_post_comments"];
         put?: never;
@@ -5837,7 +5906,7 @@ export interface components {
              */
             outcome: "auto_sent" | "escalated" | "skipped";
             /** Reason */
-            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed") | null;
+            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed" | "auto_replies_off") | null;
             /** Sent Message Id */
             sent_message_id?: string | null;
             /** Suggestion Id */
@@ -7646,6 +7715,11 @@ export interface components {
              */
             id: string;
             /**
+             * Important
+             * @default false
+             */
+            important: boolean;
+            /**
              * Is Live
              * @default false
              */
@@ -7799,11 +7873,17 @@ export interface components {
          *     analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
          *     analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
          *     total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
-         *     always ends. Deleted comments are not counted.
+         *     always ends. Deleted comments are not counted. ``important`` counts the comments the
+         *     ``important`` filter shows (services/comments/queries.py ``important_conditions``).
          */
         CommentStats: {
             /** Analysed */
             analysed: number;
+            /**
+             * Important
+             * @default 0
+             */
+            important: number;
             /** Negative */
             negative: number;
             /** Neutral */
@@ -7988,6 +8068,11 @@ export interface components {
         };
         /** ContactDetail */
         ContactDetail: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -8087,6 +8172,90 @@ export interface components {
             /** Tag Ids */
             tag_ids?: string[];
         };
+        /**
+         * ContactImport
+         * @description A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file
+         *     agreed to WhatsApp marketing; without it the file's "WhatsApp marketing" column is ignored.
+         */
+        ContactImport: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Csv */
+            csv: string;
+            /**
+             * File Name
+             * @default
+             */
+            file_name: string;
+            /**
+             * Grant Consent
+             * @default false
+             */
+            grant_consent: boolean;
+        };
+        /** ContactImportPreview */
+        ContactImportPreview: {
+            /** Columns */
+            columns: string[];
+            /** Consent Ignored */
+            consent_ignored: number;
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Ignored Columns */
+            ignored_columns: string[];
+            /** Row Cap */
+            row_cap: number;
+            /** Rows */
+            rows: components["schemas"]["ContactImportRowOut"][];
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Total Rows */
+            total_rows: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportResult */
+        ContactImportResult: {
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportRowOut */
+        ContactImportRowOut: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "unchanged" | "skip";
+            /** Line */
+            line: number;
+            /** Phone */
+            phone: string;
+            /** Reasons */
+            reasons?: string[];
+        };
         /** ContactList */
         ContactList: {
             /** Items */
@@ -8096,6 +8265,11 @@ export interface components {
         };
         /** ContactListItem */
         ContactListItem: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Conversation Id */
             conversation_id?: string | null;
             /** Email */
@@ -8151,6 +8325,8 @@ export interface components {
          *     phone set here is marked as entered by a member and not verified.
          */
         ContactPatch: {
+            /** Auto Replies Off */
+            auto_replies_off?: boolean | null;
             /**
              * Clear Email
              * @default false
@@ -8182,6 +8358,11 @@ export interface components {
          * @description One contact with what the business knows about them.
          */
         ContactRecord: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Consents */
             consents: components["schemas"]["Consent"][];
             /** Conversation Id */
@@ -8364,6 +8545,8 @@ export interface components {
             scheduled_count: number;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             social_account: components["schemas"]["ConversationAccount"];
             /**
              * Social Account Id
@@ -8472,6 +8655,8 @@ export interface components {
             reply_window_closes_at?: string | null;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -8499,8 +8684,15 @@ export interface components {
              * @default false
              */
             resume_ai: boolean;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /** Status */
             status?: ("open" | "archived") | null;
+            /**
+             * Unsnooze
+             * @default false
+             */
+            unsnooze: boolean;
         };
         /** ConversationSummary */
         ConversationSummary: {
@@ -8875,10 +9067,16 @@ export interface components {
          *     clicks on a Facebook Page post. None: not given for this post or not read yet.
          */
         ExtraMetrics: {
+            /** Avg View Percent */
+            avg_view_percent?: number | null;
+            /** Avg View Seconds */
+            avg_view_seconds?: number | null;
             /** Clicks */
             clicks?: number | null;
             /** Exits */
             exits?: number | null;
+            /** Follows */
+            follows?: number | null;
             /** Replies */
             replies?: number | null;
             /** Swipes Forward */
@@ -8887,6 +9085,8 @@ export interface components {
             taps_back?: number | null;
             /** Taps Forward */
             taps_forward?: number | null;
+            /** Watch Minutes */
+            watch_minutes?: number | null;
         };
         /**
          * FacebookConnectPages
@@ -10176,6 +10376,7 @@ export interface components {
             reactions: components["schemas"]["Reaction"][];
             /** Read At */
             read_at?: string | null;
+            reply_to?: components["schemas"]["ReplyQuote"] | null;
             /** Sent At */
             sent_at?: string | null;
             sent_by?: components["schemas"]["Actor"] | null;
@@ -12007,6 +12208,29 @@ export interface components {
              */
             tag_id: string;
         };
+        /**
+         * ReplyQuote
+         * @description The message a reply quotes (GR-42): the customer's or ours, in the same conversation.
+         */
+        ReplyQuote: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound" | "system";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system";
+            /** Text Preview */
+            text_preview: string;
+        };
         /** ReplyWindow */
         ReplyWindow: {
             /** Closes At */
@@ -12763,6 +12987,8 @@ export interface components {
              * Format: uuid
              */
             client_id: string;
+            /** Reply To Message Id */
+            reply_to_message_id?: string | null;
             /** Sticker */
             sticker?: "like_heart" | null;
             /** Sticker Asset Id */
@@ -13048,6 +13274,14 @@ export interface components {
             kind: "set_field";
             /** Value */
             value: string;
+        };
+        /**
+         * SetReaction
+         * @description PUT …/messages/{id}/reaction: our reaction to the message; null removes it.
+         */
+        SetReaction: {
+            /** Emoji */
+            emoji: ("👍" | "❤️" | "😂" | "😮" | "😢" | "🙏") | null;
         };
         /** SheetColumn */
         SheetColumn: {
@@ -19371,6 +19605,94 @@ export interface operations {
             };
         };
     };
+    import_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_contact_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportPreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_contact: {
         parameters: {
             query?: never;
@@ -19680,7 +20002,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived" | "snoozed";
                 platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;
@@ -19960,6 +20282,52 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_message_reaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetReaction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23925,7 +24293,7 @@ export interface operations {
     list_post_comments: {
         parameters: {
             query?: {
-                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply";
+                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply" | "important";
                 cursor?: string | null;
                 limit?: number;
             };

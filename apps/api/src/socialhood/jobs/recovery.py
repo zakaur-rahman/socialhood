@@ -64,6 +64,7 @@ RECOVERY: dict[str, Recovery] = {
     "sync_all_media": R,
     "sweep_messages": R,
     "dispatch_due": R,  # claims with FOR UPDATE SKIP LOCKED; claimed rows are the sweeper's
+    "wake_snoozed": R,  # GR-45: re-reads due snoozes each minute; waking twice changes nothing
     "sweep_stuck_scheduled": R,
     "end_automation_windows": R,
     "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket
@@ -99,6 +100,8 @@ RECOVERY: dict[str, Recovery] = {
     "sync_media": R,
     "backfill_account": R,
     "backfill_comments": R,
+    "dispatch_youtube_comments": R,
+    "poll_youtube_comments": R,  # reads, and the intake stores each comment once
     "snapshot_account_posts": R,  # each window is captured once
     "snapshot_account_day": R,  # one row per account and day
     "crawl_site": R,  # resumable: the queue is in site_pages, a stale version is dropped

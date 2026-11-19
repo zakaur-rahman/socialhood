@@ -2329,7 +2329,8 @@
                   "paused",
                   "automation_handled",
                   "rate_capped",
-                  "not_needed"
+                  "not_needed",
+                  "auto_replies_off"
                 ],
                 "type": "string"
               },
@@ -7547,6 +7548,11 @@
             "title": "Id",
             "type": "string"
           },
+          "important": {
+            "default": false,
+            "title": "Important",
+            "type": "boolean"
+          },
           "is_live": {
             "default": false,
             "title": "Is Live",
@@ -7862,10 +7868,15 @@
         "type": "object"
       },
       "CommentStats": {
-        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted.",
+        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted. ``important`` counts the comments the\n``important`` filter shows (services/comments/queries.py ``important_conditions``).",
         "properties": {
           "analysed": {
             "title": "Analysed",
+            "type": "integer"
+          },
+          "important": {
+            "default": 0,
+            "title": "Important",
             "type": "integer"
           },
           "negative": {
@@ -8306,6 +8317,11 @@
       },
       "ContactDetail": {
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -8748,6 +8764,201 @@
         "title": "ContactFilterSpec",
         "type": "object"
       },
+      "ContactImport": {
+        "additionalProperties": false,
+        "description": "A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file\nagreed to WhatsApp marketing; without it the file's \"WhatsApp marketing\" column is ignored.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "csv": {
+            "maxLength": 900000,
+            "minLength": 1,
+            "title": "Csv",
+            "type": "string"
+          },
+          "file_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "File Name",
+            "type": "string"
+          },
+          "grant_consent": {
+            "default": false,
+            "title": "Grant Consent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account_id",
+          "csv"
+        ],
+        "title": "ContactImport",
+        "type": "object"
+      },
+      "ContactImportPreview": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "consent_ignored": {
+            "title": "Consent Ignored",
+            "type": "integer"
+          },
+          "consents_granted": {
+            "title": "Consents Granted",
+            "type": "integer"
+          },
+          "consents_kept_withdrawn": {
+            "title": "Consents Kept Withdrawn",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "ignored_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Columns",
+            "type": "array"
+          },
+          "row_cap": {
+            "title": "Row Cap",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ContactImportRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "tags_created": {
+            "title": "Tags Created",
+            "type": "integer"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged",
+          "skipped",
+          "consents_granted",
+          "consents_kept_withdrawn",
+          "tags_created",
+          "rows",
+          "total_rows",
+          "row_cap",
+          "consent_ignored",
+          "columns",
+          "ignored_columns"
+        ],
+        "title": "ContactImportPreview",
+        "type": "object"
+      },
+      "ContactImportResult": {
+        "properties": {
+          "consents_granted": {
+            "title": "Consents Granted",
+            "type": "integer"
+          },
+          "consents_kept_withdrawn": {
+            "title": "Consents Kept Withdrawn",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "tags_created": {
+            "title": "Tags Created",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged",
+          "skipped",
+          "consents_granted",
+          "consents_kept_withdrawn",
+          "tags_created"
+        ],
+        "title": "ContactImportResult",
+        "type": "object"
+      },
+      "ContactImportRowOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "update",
+              "unchanged",
+              "skip"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "line",
+          "phone",
+          "action"
+        ],
+        "title": "ContactImportRowOut",
+        "type": "object"
+      },
       "ContactList": {
         "properties": {
           "items": {
@@ -8777,6 +8988,11 @@
       },
       "ContactListItem": {
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "conversation_id": {
             "anyOf": [
               {
@@ -8948,6 +9164,17 @@
         "additionalProperties": false,
         "description": "Only what is sent changes. A ``name`` is the team's; ``use_platform_name`` goes back to the\nplatform's. ``fields`` merges: a key set to null is removed. An email or\nphone set here is marked as entered by a member and not verified.",
         "properties": {
+          "auto_replies_off": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Replies Off"
+          },
           "clear_email": {
             "default": false,
             "title": "Clear Email",
@@ -9019,6 +9246,11 @@
       "ContactRecord": {
         "description": "One contact with what the business knows about them.",
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "consents": {
             "items": {
               "$ref": "#/components/schemas/Consent"
@@ -9716,6 +9948,18 @@
             ],
             "title": "Signal"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "social_account": {
             "$ref": "#/components/schemas/ConversationAccount"
           },
@@ -10161,6 +10405,18 @@
             ],
             "title": "Signal"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "social_account_id": {
             "format": "uuid",
             "title": "Social Account Id",
@@ -10221,6 +10477,18 @@
             "title": "Resume Ai",
             "type": "boolean"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "status": {
             "anyOf": [
               {
@@ -10235,6 +10503,11 @@
               }
             ],
             "title": "Status"
+          },
+          "unsnooze": {
+            "default": false,
+            "title": "Unsnooze",
+            "type": "boolean"
           }
         },
         "title": "ConversationPatch",
@@ -11249,6 +11522,28 @@
       "ExtraMetrics": {
         "description": "Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and\ncompares): an Instagram Story's replies and its taps and swipes through the Story, and the\nclicks on a Facebook Page post. None: not given for this post or not read yet.",
         "properties": {
+          "avg_view_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Percent"
+          },
+          "avg_view_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Seconds"
+          },
           "clicks": {
             "anyOf": [
               {
@@ -11270,6 +11565,17 @@
               }
             ],
             "title": "Exits"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
           },
           "replies": {
             "anyOf": [
@@ -11314,6 +11620,17 @@
               }
             ],
             "title": "Taps Forward"
+          },
+          "watch_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Minutes"
           }
         },
         "title": "ExtraMetrics",
@@ -14826,6 +15143,16 @@
               }
             ],
             "title": "Read At"
+          },
+          "reply_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplyQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sent_at": {
             "anyOf": [
@@ -19963,6 +20290,56 @@
         "title": "RemoveTag",
         "type": "object"
       },
+      "ReplyQuote": {
+        "description": "The message a reply quotes (GR-42): the customer's or ours, in the same conversation.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "inbound",
+              "outbound",
+              "system"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "image",
+              "video",
+              "audio",
+              "file",
+              "sticker",
+              "story_mention",
+              "story_reply",
+              "share",
+              "template",
+              "location",
+              "unsupported",
+              "system"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text_preview": {
+            "title": "Text Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "text_preview"
+        ],
+        "title": "ReplyQuote",
+        "type": "object"
+      },
       "ReplyWindow": {
         "properties": {
           "closes_at": {
@@ -22167,6 +22544,18 @@
             "title": "Client Id",
             "type": "string"
           },
+          "reply_to_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply To Message Id"
+          },
           "sticker": {
             "anyOf": [
               {
@@ -22980,6 +23369,36 @@
           "value"
         ],
         "title": "SetField",
+        "type": "object"
+      },
+      "SetReaction": {
+        "additionalProperties": false,
+        "description": "PUT \u2026/messages/{id}/reaction: our reaction to the message; null removes it.",
+        "properties": {
+          "emoji": {
+            "anyOf": [
+              {
+                "enum": [
+                  "\ud83d\udc4d",
+                  "\u2764\ufe0f",
+                  "\ud83d\ude02",
+                  "\ud83d\ude2e",
+                  "\ud83d\ude22",
+                  "\ud83d\ude4f"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji"
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "title": "SetReaction",
         "type": "object"
       },
       "SheetColumn": {
@@ -36336,6 +36755,134 @@
         ]
       }
     },
+    "/v1/w/{wid}/contacts/import": {
+      "post": {
+        "description": "Save the file's valid rows (the same reading as the preview). Existing contacts only get\nblanks filled and tags added; a withdrawn consent is never granted again.",
+        "operationId": "import_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Import Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/import/preview": {
+      "post": {
+        "description": "Read the file and say what an import would create, update and leave out, and why. Saves\nnothing. 422 for another platform's account or a file with no Phone column.",
+        "operationId": "preview_contact_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Contact Import",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
     "/v1/w/{wid}/contacts/{contact_id}": {
       "get": {
         "operationId": "get_contact",
@@ -36879,7 +37426,8 @@
                 "ai_handled",
                 "mine",
                 "unassigned",
-                "archived"
+                "archived",
+                "snoozed"
               ],
               "title": "View",
               "type": "string"
@@ -37142,7 +37690,7 @@
         ]
       },
       "patch": {
-        "description": "Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid\nplan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).",
+        "description": "Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or\nclear the conversation's AI mode override (auto needs a paid plan: 402\nentitlement_required); resume_ai ends a takeover pause (FR-SUG-05).",
         "operationId": "update_conversation",
         "parameters": [
           {
@@ -37459,6 +38007,90 @@
           }
         },
         "summary": "Send Message",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction": {
+      "put": {
+        "description": "Set or remove (``emoji: null``) the business's reaction to a message (GR-42). It goes to\nthe platform at once; the same reaction again changes nothing. 409 reaction_not_supported\nwhere the platform takes no reactions or not this emoji (Instagram and Facebook: a heart\nonly), 409 reply_window_closed as for a reply, 422 for a message the platform can't react to\n(WhatsApp: older than 30 days).",
+        "operationId": "set_message_reaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReaction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Set Message Reaction",
         "tags": [
           "inbox"
         ]
@@ -38075,7 +38707,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/inbound": {
       "post": {
-        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook.",
+        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook. For a\nsandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.",
         "operationId": "sandbox_inbound",
         "parameters": [
           {
@@ -43598,7 +44230,7 @@
     },
     "/v1/w/{wid}/posts/{post_id}/comments": {
       "get": {
-        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11). Deleted comments are left out.",
+        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are\nleft out.",
         "operationId": "list_post_comments",
         "parameters": [
           {
@@ -43636,7 +44268,8 @@
                 "buying",
                 "spam",
                 "hidden",
-                "needs_reply"
+                "needs_reply",
+                "important"
               ],
               "title": "Filter",
               "type": "string"

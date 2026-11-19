@@ -81,6 +81,15 @@ class WebAdapter:
     ) -> None:
         return None  # the widget does not show read receipts
 
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        return None  # GR-42: stored on the message; nothing to send
+
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         raise _unavailable("The website chat takes text only")
 

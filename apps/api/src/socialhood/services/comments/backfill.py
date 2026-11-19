@@ -79,6 +79,10 @@ def _missing(stored: int, comments_count: int | None) -> bool:
 async def after_media_sync(session: AsyncSession, acct: SocialAccount) -> bool:
     """Called by sync_media once the posts are stored: queue the backfill when a recent post is
     missing comments. A failed enqueue is logged, never raised (the next sync tries again)."""
+    if acct.platform == "youtube":
+        # The 15-minute poll reads YouTube comments. YouTube's count includes our own replies,
+        # which we don't store, so the count check would re-read those posts every sync.
+        return False
     posts = await stats.stored_counts(session, acct.id, RECENT_POSTS)
     if not any(_missing(stored, item.comments_count) for item, stored in posts):
         return False

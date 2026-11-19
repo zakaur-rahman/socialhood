@@ -193,6 +193,20 @@ export function AccountCard({
         </CardInset>
       ) : null}
 
+      {live && account.platform === "youtube" && account.status === "active" && !account.capabilities.includes("account_insights") ? (
+        <p className="text-sm text-fg-secondary" data-testid="reconnect-insights">
+          Reconnect to add watch time and subscriber changes
+          {canManage ? (
+            <>
+              {" "}
+              <Button variant="link" size="xs" className="px-0" disabled={busy.reconnecting} onClick={actions.onReconnect}>
+                Reconnect
+              </Button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-subtle pt-4">
         <p className="flex min-w-0 items-center gap-1.5 text-xs text-fg-secondary">
           <Cable className="size-3.5 shrink-0" aria-hidden />

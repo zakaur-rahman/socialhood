@@ -1,6 +1,6 @@
 """The auto-reply policy (TR-AI-07; FR-SUG-04, FR-SUG-06, F-09). Pure: no database, no clock.
 
-``evaluate`` runs the 13 checks in TR-AI-07's order on facts the caller loaded
+``evaluate`` runs the 14 checks in TR-AI-07's order on facts the caller loaded
 (``PolicyInput``). Every check is evaluated and recorded as {n, name, passed, value}, so the
 decision popover can show all of them; the first failure decides the outcome:
 
@@ -20,6 +20,7 @@ decision popover can show all of them; the first failure decides the outcome:
  11 anything but small talk uses a source >= the minimum      escalated · out_of_knowledge
  12 no AI reply to this message yet; < 5 in the last hour     skipped · rate_capped
  13 the output filter passes, unattended (ai/output_filter)   escalated · output_blocked
+ 14 the contact allows automatic replies (GR-44)              skipped · auto_replies_off
 
 No analysis for the message fails check 6 as low_confidence: Auto never sends without the
 analysis' human, intent and sentiment signals (a P5 decision).
@@ -115,6 +116,7 @@ class PolicyInput:
     # GR-22: the account's hours say Auto works only while closed, and it is open now.
     auto_hours_blocked: bool = False
     small_talk: bool = False  # the whole message is small talk, by its words alone (check 11)
+    contact_allows_auto: bool = True  # GR-44: false when the contact's automatic replies are off
 
 
 @dataclass(frozen=True)
@@ -176,6 +178,13 @@ def evaluate(p: PolicyInput) -> Decision:
         _grounded(a, p),
         _rate(p),
         _output(p.reply_text, p.allowed_texts),
+        Check(
+            14,
+            "contact_allows_auto",
+            p.contact_allows_auto,
+            p.contact_allows_auto,
+            *SKIP_AUTO_OFF,
+        ),
     ]
     failed = next((c for c in checks if not c.passed), None)
     if failed is None:
@@ -185,6 +194,7 @@ def evaluate(p: PolicyInput) -> Decision:
 
 SKIP_MODE: tuple[Outcome, str] = ("skipped", "mode_not_auto")
 SKIP_HANDLED: tuple[Outcome, str] = ("skipped", "automation_handled")
+SKIP_AUTO_OFF: tuple[Outcome, str] = ("skipped", "auto_replies_off")
 ESC_WINDOW: tuple[Outcome, str] = ("escalated", "window_closed")
 ESC_KNOWLEDGE: tuple[Outcome, str] = ("escalated", "out_of_knowledge")
 

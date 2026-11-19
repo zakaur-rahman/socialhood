@@ -70,10 +70,10 @@ function Figures({
 }) {
   const { metrics } = performance;
   const younger = youngerNote(performance, "figures");
-  const figures = figuresOf(performance);
+  const figures = figuresOf(performance, account?.platform);
   const anyMissing = figures.some((figure) => figure.value == null);
   const handle = account ? accountLabel(account) : "This account";
-  const platform = account?.platform === "facebook" ? "Facebook" : "Instagram";
+  const platform = account?.platform === "facebook" ? "Facebook" : account?.platform === "youtube" ? "YouTube" : "Instagram";
   const story = performance.media_type === "story";
 
   return (

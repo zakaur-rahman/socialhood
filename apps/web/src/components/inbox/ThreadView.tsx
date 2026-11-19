@@ -36,6 +36,7 @@ import {
   useConversationScheduled,
   useMarkRead,
   useMessages,
+  useReact,
   useSendReply,
   useSocialAccounts,
   type ReplyInput,
@@ -45,6 +46,7 @@ import { sendFailure, type SendFailure } from "@/lib/copy";
 import { useDocumentTitle } from "@/lib/document-title";
 import { flattenMessages, setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName } from "@/lib/inbox/format";
+import { canActOn, reactionsFor } from "@/lib/inbox/reactions";
 import { useInboxStore } from "@/lib/inbox/store";
 import { formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
@@ -54,6 +56,7 @@ import { Composer, type Uploader } from "./Composer";
 import { useOptionalInboxUi } from "./inbox-context";
 import { MessageBubble } from "./MessageBubble";
 import { MessageLog } from "./MessageLog";
+import { SnoozeDialog } from "./SnoozeDialog";
 import { TemplatePicker } from "./TemplatePicker";
 import { ThreadHeader } from "./ThreadHeader";
 
@@ -133,16 +136,21 @@ function Thread({
   const outbox = useInboxStore((state) => state.outbox);
   const queryClient = useQueryClient();
   const [ordering, setOrdering] = useState(false); // GR-32: the Create order dialog
+  const [snoozing, setSnoozing] = useState(false); // GR-45: the Snooze dialog
   const [productKind, setProductKind] = useState<"product" | "product_list" | null>(null); // GR-33
   const { send: sendReply, retry, discard } = useSendReply(wid, conversationId);
+  const react = useReact(wid, conversationId);
+  // GR-42: the message the next reply quotes (Reply on a bubble); any send uses it up.
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const pendingSuggestionId = conversation.pending_suggestion?.id ?? null;
   // Any reply retires the pending suggestion: sent as is, edited, or typed instead (F-08).
   const send = useCallback(
     (input: ReplyInput) => {
-      sendReply(input);
+      sendReply(replyTo ? { ...input, replyTo } : input);
+      setReplyTo(null);
       if (pendingSuggestionId) setPendingSuggestion(queryClient, wid, conversationId, null, pendingSuggestionId);
     },
-    [sendReply, pendingSuggestionId, queryClient, wid, conversationId],
+    [sendReply, replyTo, pendingSuggestionId, queryClient, wid, conversationId],
   );
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -218,6 +226,8 @@ function Thread({
   const accountStatus = conversation.social_account.status;
   // As the composer decides: replies need an open window and a connected account.
   const canReply = canSchedule && accountStatus !== "needs_reconnect" && accountStatus !== "disconnected";
+  // GR-42: reactions go to the customer's messages (Meta's docs only describe those).
+  const reactionChoices = reactionsFor(conversation.platform);
   const suggestionUi = useSuggestionSlot({ conversation, messages: all, canReply, onSend: send, upload: knowledgeUpload });
   const analysis = conversation.latest_analysis ?? null;
 
@@ -248,6 +258,8 @@ function Thread({
         onToggleDetails={() => ui?.toggleDetails()}
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
+        onSnooze={ui ? () => setSnoozing(true) : undefined}
+        onUnsnooze={ui ? () => ui.snooze(conversationId, null) : undefined}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
         assigneeControl={<AssigneeMenu conversation={conversation} />}
         commerceActions={[
@@ -261,6 +273,13 @@ function Thread({
         ]}
       />
       <CreateOrderDialog conversationId={conversationId} open={ordering} onOpenChange={setOrdering} />
+      <SnoozeDialog
+        open={snoozing}
+        onOpenChange={setSnoozing}
+        now={now}
+        timeZone={workspace.timezone}
+        onSnooze={(until) => ui?.snooze(conversationId, until)}
+      />
       {conversation.platform === "whatsapp" ? (
         <SendProductDialog
           key={productKind ?? "closed"}
@@ -297,6 +316,13 @@ function Thread({
             reconnectHref={reconnectHref}
             lang={analysis && message.id === analysis.message_id ? analysis.language : undefined}
             aiInfo={message.source === "ai_auto" && !isLocalMessage(message) ? <DecisionInfo messageId={message.id} /> : undefined}
+            onReply={canReply && canActOn(message) ? () => setReplyTo(message) : undefined}
+            reactionChoices={reactionChoices}
+            onReact={
+              canReply && message.direction === "inbound" && canActOn(message)
+                ? (emoji) => react.mutate({ message, emoji })
+                : undefined
+            }
             below={
               analysis && message.id === analysis.message_id && message.direction === "inbound" ? (
                 <AnalysisChips analysis={analysis} conversationId={conversationId} />
@@ -327,6 +353,8 @@ function Thread({
         onChooseTemplate={() => setTemplateOpen(true)}
         canAttach={canAttach}
         upload={upload}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
       <AlertDialog open={replaceAsk !== null} onOpenChange={(open) => (open ? undefined : setReplaceAsk(null))}>
         <AlertDialogContent>

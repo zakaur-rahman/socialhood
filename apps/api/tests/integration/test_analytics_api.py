@@ -219,6 +219,10 @@ async def test_a_storys_figures_come_with_its_replies_and_taps(shop: Shop) -> No
         "swipes_forward": None,
         "exits": None,
         "clicks": None,
+        "watch_minutes": None,
+        "avg_view_seconds": None,
+        "avg_view_percent": None,
+        "follows": None,
     }
     six = await shop.get(f"/posts/{story}/performance", age="6h")
     assert (six["age"], six["extra_metrics"]["replies"]) == ("6h", 2)

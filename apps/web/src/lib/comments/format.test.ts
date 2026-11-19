@@ -5,6 +5,7 @@ import { comment } from "@/test/api";
 
 import {
   analysingText,
+  authorName,
   byteLength,
   commentActionError,
   COMMENT_FILTERS,
@@ -23,9 +24,10 @@ function problem(status: number, code: string, detail?: string) {
 }
 
 describe("filter chips (UX-SCR-05; CommentFilter in schemas/posts.py)", () => {
-  it("lists the nine chips in the spec's order", () => {
+  it("lists the chips in the spec's order, Important after All", () => {
     expect(COMMENT_FILTERS.map((f) => f.label)).toEqual([
       "All",
+      "Important",
       "Needs reply",
       "Positive",
       "Neutral",
@@ -35,6 +37,12 @@ describe("filter chips (UX-SCR-05; CommentFilter in schemas/posts.py)", () => {
       "Spam",
       "Hidden",
     ]);
+  });
+
+  it("Important takes the API's flag and leaves out deleted comments", () => {
+    expect(matchesFilter(comment({ important: true }), "important")).toBe(true);
+    expect(matchesFilter(comment({ important: false }), "important")).toBe(false);
+    expect(matchesFilter(comment({ important: true, deleted_at: "2026-09-28T12:00:00Z" }), "important")).toBe(false);
   });
 
   it("needs a reply by the nav badge's rule: unreplied, not spam, not hidden, not deleted, last 7 days", () => {
@@ -151,5 +159,14 @@ describe("replies", () => {
     expect(commentActionError(new TypeError("Failed to fetch"), "reply")).toBe(
       "You're offline. Reconnect to send messages.",
     );
+  });
+});
+
+describe("authorName", () => {
+  it("adds @ to a username, and leaves a YouTube handle or display name as it is", () => {
+    expect(authorName({ author_username: "maple.bakery" })).toBe("@maple.bakery");
+    expect(authorName({ author_username: "@bakerybob" })).toBe("@bakerybob");
+    expect(authorName({ author_username: "Sandbox Viewer" })).toBe("Sandbox Viewer");
+    expect(authorName({ author_username: null })).toBe("Someone");
   });
 });

@@ -15,7 +15,7 @@ export function PostThumb({
   post,
   className,
 }: {
-  post: Pick<PostSummary, "thumbnail_url" | "media_url" | "media_type">;
+  post: Pick<PostSummary, "thumbnail_url" | "media_url" | "media_type" | "permalink">;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -40,7 +40,7 @@ export function PostThumb({
               <Icon className="size-3.5" />
             </span>
           </TooltipTrigger>
-          <TooltipContent>{mediaTypeLabel(post.media_type)}</TooltipContent>
+          <TooltipContent>{mediaTypeLabel(post.media_type, post.permalink)}</TooltipContent>
         </Tooltip>
       ) : null}
     </div>

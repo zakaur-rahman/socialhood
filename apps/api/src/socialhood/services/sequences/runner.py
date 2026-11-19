@@ -153,6 +153,7 @@ async def run_one(
         if acct.platform == "whatsapp"
         else None,
         marketing_enabled=bool(deps.settings.broadcasts_enabled),
+        auto_replies_off=contact.auto_replies_off,
     )
     if decision.action == "skip":
         await _record(

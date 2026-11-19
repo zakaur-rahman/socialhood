@@ -198,6 +198,7 @@ export function conversation(overrides: Partial<Conversation> = {}): Conversatio
       first_seen_at: "2026-09-27T09:00:00Z",
       platform_user_id: "17841400000000000",
       name_source: "platform",
+      auto_replies_off: false,
     },
     reply_window: { state: "open", closes_at: "2026-09-29T11:55:00Z" },
     ai: { effective_mode: "suggest", override: null, paused_until: null },
@@ -553,7 +554,7 @@ export function post(overrides: Partial<PostSummary> = {}): PostSummary {
     posted_at: "2026-09-27T12:00:00Z",
     like_count: 1204,
     comments_count: 212,
-    stats: { total: 12, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1 },
+    stats: { total: 12, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1, important: 0 },
     ...overrides,
   };
 }
@@ -587,6 +588,7 @@ export function comment(overrides: Partial<PostComment> = {}): PostComment {
     text: "What sizes do you have?",
     like_count: 0,
     hidden: false,
+    important: false,
     is_live: false,
     commented_at: "2026-09-28T11:00:00Z",
     deleted_at: null,

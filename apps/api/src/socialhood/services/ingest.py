@@ -274,6 +274,8 @@ async def _automations(session: AsyncSession, contact: Contact, msg: Message, *,
     for this contact (FR-AUT-21), or DM keyword automations."""
     from socialhood.services.automations import runtime
 
+    if contact.auto_replies_off:  # GR-44: only people reply to them
+        return
     await runtime.contact_replied(session, contact.id, at=msg.occurred_at)
     if run:
         await runtime.enqueue_for_message(session, msg, contact_id=contact.id)
@@ -554,6 +556,7 @@ class _Ingest:
         contact_names.apply_platform_name(contact, event.contact_name)
         if not self.backfill:
             conv.unread_count += 1
+            conv.snoozed_until = None  # GR-45: a new message wakes a snoozed conversation early
             if conv.status == ConversationStatus.ARCHIVED:
                 conv.status = ConversationStatus.OPEN
 

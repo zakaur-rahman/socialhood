@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { Conversation } from "@/lib/api/types";
@@ -84,5 +85,31 @@ describe("DetailsPanel: where the conversation started (GR-01)", () => {
     renderDetails(null, { entry: null });
     expect(await screen.findByText("Priya Nair")).toBeInTheDocument();
     expect(screen.queryByTestId("conversation-entry")).toBeNull();
+  });
+});
+
+describe("DetailsPanel automatic replies (GR-44)", () => {
+  it("switches automatic replies off for the customer", async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> = {};
+    const base = conversation();
+    renderWithApi(<DetailsPanel conversationId="c1" />, {
+      handlers: {
+        "GET /v1/w/:wid/conversations/:id": () => json(base),
+        "PATCH /v1/w/:wid/contacts/:id": (call) => ((body = call.body as Record<string, unknown>), json({ id: base.contact.id, auto_replies_off: true })),
+      },
+    });
+    const toggle = await screen.findByRole("switch", { name: "Automatic replies" });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    await waitFor(() => expect(body.auto_replies_off).toBe(true));
+  });
+
+  it("shows them as off", async () => {
+    const base = conversation();
+    renderWithApi(<DetailsPanel conversationId="c1" />, {
+      handlers: { "GET /v1/w/:wid/conversations/:id": () => json({ ...base, contact: { ...base.contact, auto_replies_off: true } }) },
+    });
+    expect(await screen.findByRole("switch", { name: "Automatic replies" })).not.toBeChecked();
   });
 });
