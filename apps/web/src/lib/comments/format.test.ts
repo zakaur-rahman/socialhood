@@ -5,6 +5,7 @@ import { comment } from "@/test/api";
 
 import {
   analysingText,
+  authorName,
   byteLength,
   commentActionError,
   COMMENT_FILTERS,
@@ -158,5 +159,14 @@ describe("replies", () => {
     expect(commentActionError(new TypeError("Failed to fetch"), "reply")).toBe(
       "You're offline. Reconnect to send messages.",
     );
+  });
+});
+
+describe("authorName", () => {
+  it("adds @ to a username, and leaves a YouTube handle or display name as it is", () => {
+    expect(authorName({ author_username: "maple.bakery" })).toBe("@maple.bakery");
+    expect(authorName({ author_username: "@bakerybob" })).toBe("@bakerybob");
+    expect(authorName({ author_username: "Sandbox Viewer" })).toBe("Sandbox Viewer");
+    expect(authorName({ author_username: null })).toBe("Someone");
   });
 });

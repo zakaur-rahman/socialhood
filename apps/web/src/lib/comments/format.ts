@@ -171,12 +171,18 @@ export function byteLength(text: string): number {
   return encoder.encode(text).length;
 }
 
+/** "@name" for an Instagram or Facebook username; a YouTube name already has its "@" (a handle)
+ * or is a display name with spaces, so it's shown as it is. */
+function handle(name: string): string {
+  return name.startsWith("@") || /\s/.test(name) ? name : `@${name}`;
+}
+
 export function authorHandle(comment: Pick<PostComment, "author_username">): string {
-  return comment.author_username ? `@${comment.author_username}` : "this person";
+  return comment.author_username ? handle(comment.author_username) : "this person";
 }
 
 export function authorName(comment: Pick<PostComment, "author_username">): string {
-  return comment.author_username ? `@${comment.author_username}` : "Instagram user";
+  return comment.author_username ? handle(comment.author_username) : "Someone";
 }
 
 /** Words that differ by platform in the hide and delete confirmations. */

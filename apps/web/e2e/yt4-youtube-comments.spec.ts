@@ -13,7 +13,8 @@ type Comment = { id: string; text: string; important: boolean };
 test.describe("YT4 YouTube comments", () => {
   test("a polled YouTube comment shows as Important, and a person replies to it", async ({ api, page, youtube }) => {
     const { workspace, account } = youtube;
-    await api.inbound(workspace.id, { accountId: account.id, kind: "comment" });
+    // The route needs a text; on YouTube the poll finds the sandbox's own seeded comment instead.
+    await api.inbound(workspace.id, { accountId: account.id, kind: "comment", text: "Love this!" });
 
     const posts = () => api.call<{ items: Post[] }>("GET", `/v1/w/${workspace.id}/posts?account_id=${account.id}`);
     let postId = "";
