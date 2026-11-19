@@ -91,6 +91,7 @@ class OutboundMessage:
     quick_replies: tuple[OutboundQuickReply, ...] = ()  # with text, not with buttons
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
     products: OutboundProducts | None = None  # WhatsApp product messages (GR-33)
+    reply_to: str | None = None  # GR-42: the platform id of the message this one quotes
 
 
 @dataclass(frozen=True)
@@ -311,6 +312,18 @@ class PlatformAdapter(Protocol):
     ) -> None:
         """Mark the conversation seen. Instagram needs the contact (``recipient_ref``); WhatsApp
         needs the latest inbound message (``message_ref``)."""
+        ...
+
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """React to a message in the chat with ``recipient_ref`` (GR-42); None removes our
+        reaction. Raises ``reaction_not_supported`` where the platform can't, or not with this
+        emoji."""
         ...
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload: ...

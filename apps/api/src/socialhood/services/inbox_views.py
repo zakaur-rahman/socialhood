@@ -19,6 +19,7 @@ from socialhood.schemas.inbox import (
     MessageButton,
     QuickReplyOut,
     Reaction,
+    ReplyQuote,
     Signal,
     TemplateInfo,
 )
@@ -128,9 +129,26 @@ def list_item(
     )
 
 
+def reply_quote(quoted: Message) -> ReplyQuote:
+    """What a reply shows of the message it quotes (GR-42)."""
+    return ReplyQuote(
+        id=quoted.id,
+        kind=quoted.kind,
+        direction=quoted.direction,
+        text_preview=UNSENT_PREVIEW
+        if quoted.deleted_at
+        else preview_text(quoted.kind, quoted.text),
+    )
+
+
 def message_out(
-    msg: Message, *, sent_by_name: str | None = None, automation: AutomationRef | None = None
+    msg: Message,
+    *,
+    sent_by_name: str | None = None,
+    automation: AutomationRef | None = None,
+    reply_to: Message | None = None,
 ) -> MessageOut:
+    """``reply_to``: the message ``msg`` quotes, when it is stored (GR-42)."""
     return MessageOut(
         id=msg.id,
         conversation_id=msg.conversation_id,
@@ -162,6 +180,7 @@ def message_out(
         suggestion_id=msg.suggestion_id,
         human_agent_tag=msg.human_agent_tag,
         reactions=[Reaction.model_validate(r) for r in msg.reactions or []],
+        reply_to=reply_quote(reply_to) if reply_to is not None else None,
     )
 
 

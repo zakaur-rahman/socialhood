@@ -20,7 +20,7 @@ from socialhood.models.identity import User
 from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.observability.logging import get_logger
 from socialhood.schemas.inbox import Assignee
-from socialhood.services.inbox_views import list_item, member_label, message_out
+from socialhood.services.inbox_views import list_item, member_label, message_out, reply_quote
 
 log = get_logger(__name__)
 
@@ -28,6 +28,7 @@ STREAM_MAXLEN = 10_000
 MAX_EVENT_BYTES = 64 * 1024
 _QUEUE_KEY = "realtime_events"
 _AUTOMATION_RUN = "_automation_run_id"  # set by queue_message, removed before publishing
+_REPLY_TO = "_reply_to"  # GR-42: the quoted message's platform id, likewise
 
 EventType = Literal[
     "message.created",
@@ -100,6 +101,7 @@ async def commit_and_publish(session: AsyncSession, redis: Redis) -> None:
         raise
     pending = session.info.pop(_QUEUE_KEY, [])
     await _name_automations(session, pending)
+    await _quote_replies(session, pending)
     for workspace_id, event_type, payload in pending:
         await publish(redis, workspace_id, event_type, payload)
 
@@ -131,6 +133,33 @@ async def _name_automations(
                 p["message"]["automation"] = {"id": str(found[0]), "name": found[1]}
 
 
+async def _quote_replies(
+    session: AsyncSession, pending: list[tuple[uuid.UUID, str, dict[str, Any]]]
+) -> None:
+    """Fill ``message.reply_to`` for replies (GR-42), as ``_name_automations`` fills names: the
+    client replaces a message with the event's, so the quote must be in every event."""
+    marked: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for workspace_id, _, payload in pending:
+        if _REPLY_TO in payload:
+            marked.setdefault(workspace_id, []).append(payload)
+    if not marked:
+        return
+    from socialhood.repositories.messages import quoted
+
+    for workspace_id, payloads in marked.items():
+        refs = [(uuid.UUID(p["conversation_id"]), p[_REPLY_TO]) for p in payloads]
+        try:
+            with workspace_scope(workspace_id):
+                found = await quoted(session, set(refs))
+        except Exception:
+            log.warning("realtime_reply_quotes_failed", exc_info=True)
+            found = {}
+        for p, ref in zip(payloads, refs, strict=True):
+            p.pop(_REPLY_TO)
+            if ref in found:
+                p["message"]["reply_to"] = reply_quote(found[ref]).model_dump(mode="json")
+
+
 # ---- builders for the inbox events every producer emits
 
 
@@ -147,6 +176,8 @@ def queue_message(
     }
     if msg.automation_run_id:  # named in commit_and_publish ("Automation · {name}")
         payload[_AUTOMATION_RUN] = msg.automation_run_id
+    if msg.reply_to_platform_message_id:  # quoted in commit_and_publish
+        payload[_REPLY_TO] = msg.reply_to_platform_message_id
     queue(session, msg.workspace_id, "message.created" if created else "message.updated", payload)
 
 

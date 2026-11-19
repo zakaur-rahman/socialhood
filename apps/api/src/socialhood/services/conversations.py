@@ -56,6 +56,7 @@ from socialhood.models.inbox import (
 from socialhood.realtime import events
 from socialhood.repositories import automation_runs, inbox, social_accounts
 from socialhood.repositories import conversations as writes
+from socialhood.repositories import messages as messages_repo
 from socialhood.schemas.inbox import (
     Assignee,
     AutomationRef,
@@ -526,6 +527,10 @@ async def list_messages(
     automations = await automation_runs.automation_names(
         session, [m.automation_run_id for m in page if m.automation_run_id]
     )
+    quotes = await messages_repo.quoted(
+        session,
+        {(conv.id, m.reply_to_platform_message_id) for m in page if m.reply_to_platform_message_id},
+    )
 
     def automation(m: Message) -> AutomationRef | None:
         found = automations.get(m.automation_run_id) if m.automation_run_id else None
@@ -537,6 +542,7 @@ async def list_messages(
                 m,
                 sent_by_name=names.get(m.sent_by_user_id) if m.sent_by_user_id else None,
                 automation=automation(m),
+                reply_to=quotes.get((conv.id, m.reply_to_platform_message_id or "")),
             )
             for m in page
         ],

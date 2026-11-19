@@ -137,6 +137,10 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "client_id": "5f0c3c1e-2d7a-4b43-9d35-9d7f0b0c2a11",
         "text": "Sent into B",
     },
+    # GR-42: a reaction to B's message.
+    ("PUT", "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction"): {
+        "emoji": "❤️"
+    },
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/scheduled-messages"): {
         "text": "Scheduled into B",
         "send_at": "2030-01-01T09:00:00Z",

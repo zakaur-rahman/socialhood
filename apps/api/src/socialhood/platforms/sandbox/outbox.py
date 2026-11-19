@@ -38,7 +38,7 @@ from socialhood.platforms.whatsapp.health import NumberHealth
 DIRECTIVE = re.compile(r"\[sandbox:fail=([a-z_]+)\]")
 KEEP = 200
 
-SendKind = Literal["send", "private_reply", "comment_reply", "moderation", "ice_breakers"]
+SendKind = Literal["send", "private_reply", "comment_reply", "moderation", "ice_breakers", "react"]
 ModerationAction = Literal["hide", "unhide", "delete"]
 
 
@@ -59,6 +59,14 @@ class SandboxCommentReply:
 
 
 @dataclass(frozen=True)
+class SandboxReaction:
+    account_ref: str
+    recipient_ref: str
+    platform_message_id: str
+    emoji: str | None  # None: removed
+
+
+@dataclass(frozen=True)
 class SandboxModeration:
     account_ref: str
     comment_ref: str
@@ -69,6 +77,7 @@ SENT: deque[SandboxSend] = deque(maxlen=KEEP)
 PRIVATE_REPLIES: deque[SandboxSend] = deque(maxlen=KEEP)
 COMMENT_REPLIES: deque[SandboxCommentReply] = deque(maxlen=KEEP)
 MODERATION: deque[SandboxModeration] = deque(maxlen=KEEP)
+REACTIONS: deque[SandboxReaction] = deque(maxlen=KEEP)  # GR-42
 SEEN: deque[tuple[str, str]] = deque(maxlen=KEEP)  # (account_ref, recipient_ref) marked seen
 _FAILURES: deque[tuple[SendKind | None, PlatformError]] = deque()
 ICE_BREAKERS: dict[str, list[IceBreaker]] = {}  # account ref -> the starters last set (GR-11)
@@ -127,6 +136,7 @@ def reset() -> None:
     PRIVATE_REPLIES.clear()
     COMMENT_REPLIES.clear()
     MODERATION.clear()
+    REACTIONS.clear()
     SEEN.clear()
     _FAILURES.clear()
     FOLLOWS.clear()
@@ -169,6 +179,12 @@ def record_comment_reply(account_ref: str, comment_ref: str, text: str) -> str:
     reply_id = f"sandbox_reply_{secrets.token_hex(8)}"
     COMMENT_REPLIES.append(SandboxCommentReply(account_ref, comment_ref, text, reply_id))
     return reply_id
+
+
+def record_reaction(
+    account_ref: str, recipient_ref: str, platform_message_id: str, emoji: str | None
+) -> None:
+    REACTIONS.append(SandboxReaction(account_ref, recipient_ref, platform_message_id, emoji))
 
 
 def record_moderation(account_ref: str, comment_ref: str, action: ModerationAction) -> None:

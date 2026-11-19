@@ -300,6 +300,15 @@ class Reaction(ResponseModel):
     at: datetime
 
 
+class ReplyQuote(ResponseModel):
+    """The message a reply quotes (GR-42): the customer's or ours, in the same conversation."""
+
+    id: uuid.UUID
+    kind: MessageKindName
+    direction: DirectionName
+    text_preview: str
+
+
 class Message(ResponseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
@@ -325,6 +334,7 @@ class Message(ResponseModel):
     suggestion_id: uuid.UUID | None = None
     human_agent_tag: bool
     reactions: list[Reaction]
+    reply_to: ReplyQuote | None = None  # GR-42; null also when the quoted message isn't stored
 
 
 class MessageList(ResponseModel):
@@ -352,6 +362,18 @@ class SendMessage(RequestModel):
     sticker: Literal["like_heart"] | None = None  # Instagram's heart sticker, on its own
     sticker_asset_id: uuid.UUID | None = None  # a WhatsApp sticker: an uploaded 512x512 WebP
     suggestion_id: uuid.UUID | None = None  # P5: sending a suggestion
+    # GR-42: quote this message of the conversation (our id); it must have reached the platform.
+    reply_to_message_id: uuid.UUID | None = None
+
+
+# GR-42 (D4): the reactions a member can send. Instagram and Facebook take only the heart.
+ReactionEmoji = Literal["👍", "❤️", "😂", "😮", "😢", "🙏"]
+
+
+class SetReaction(RequestModel):
+    """PUT …/messages/{id}/reaction: our reaction to the message; null removes it."""
+
+    emoji: ReactionEmoji | None
 
 
 # ---- scheduled messages (F-10)

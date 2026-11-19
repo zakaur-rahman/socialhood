@@ -337,6 +337,34 @@ async def test_each_send_shape(
     }
 
 
+@respx.mock
+async def test_a_reply_carries_the_quoted_message_as_context(
+    adapter: WhatsAppAdapter, acct: SocialAccount
+) -> None:
+    route = respx.post(MESSAGES).respond(200, json=fixture("whatsapp_send_success.json"))
+    await adapter.send_message(acct, CUSTOMER, OutboundMessage(text="Yes", reply_to="wamid.Q"))
+    body = sent(route)
+    assert body["context"] == {"message_id": "wamid.Q"}
+    assert body["text"] == {"body": "Yes", "preview_url": False}
+
+
+@respx.mock
+async def test_a_reaction_is_a_reaction_message_and_empty_removes_it(
+    adapter: WhatsAppAdapter, acct: SocialAccount
+) -> None:
+    route = respx.post(MESSAGES).respond(200, json=fixture("whatsapp_send_success.json"))
+    await adapter.react(acct, CUSTOMER, "wamid.IN", "👍")
+    assert sent(route) == {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": CUSTOMER,
+        "type": "reaction",
+        "reaction": {"message_id": "wamid.IN", "emoji": "👍"},
+    }
+    await adapter.react(acct, CUSTOMER, "wamid.IN", None)
+    assert sent(route)["reaction"] == {"message_id": "wamid.IN", "emoji": ""}
+
+
 @pytest.mark.parametrize(
     "message",
     [
