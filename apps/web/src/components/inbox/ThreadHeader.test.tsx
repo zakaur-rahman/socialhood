@@ -229,6 +229,30 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(handlers.onMarkUnread).toHaveBeenCalledOnce();
   });
 
+  it("snoozes from the menu, and unsnoozes a snoozed conversation (GR-45)", async () => {
+    const onSnooze = vi.fn();
+    const onUnsnooze = vi.fn();
+    const { rerender } = render(
+      <TooltipProvider>
+        <ThreadHeader conversation={conversation()} now={now} detailsOpen={false} onToggleDetails={vi.fn()} onArchive={vi.fn()} onMarkUnread={vi.fn()} onSnooze={onSnooze} onUnsnooze={onUnsnooze} />
+      </TooltipProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(screen.queryByRole("menuitem", { name: "Unsnooze" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Snooze…" }));
+    expect(onSnooze).toHaveBeenCalledOnce();
+
+    rerender(
+      <TooltipProvider>
+        <ThreadHeader conversation={conversation({ snoozed_until: inHours(5) })} now={now} detailsOpen={false} onToggleDetails={vi.fn()} onArchive={vi.fn()} onMarkUnread={vi.fn()} onSnooze={onSnooze} onUnsnooze={onUnsnooze} />
+      </TooltipProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Unsnooze" }));
+    expect(onUnsnooze).toHaveBeenCalledOnce();
+  });
+
   it("offers Unarchive for an archived conversation", async () => {
     const handlers = renderHeader({ status: "archived" });
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));

@@ -81,6 +81,9 @@ VIEW_WORDS: dict[str, str] = {
     "closing_soon": "closing-soon",
     "ai_handled": "AI-handled",
     "archived": "archived",
+    "snoozed": "snoozed",
+    "mine": "assigned-to-you",
+    "unassigned": "unassigned",
 }
 SENDERS = {
     "customer": "customer",
@@ -111,7 +114,7 @@ class SearchConversationsInput(_Input):
         description=(
             "all (open), unread, needs_reply, needs_you (the AI handed it to a person), leads "
             "(lead score 60+), closing_soon (reply window about to close), ai_handled or "
-            "archived."
+            "archived or snoozed (hidden until a set time)."
         ),
     )
     platform: PlatformName | None = None

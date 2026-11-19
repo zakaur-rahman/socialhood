@@ -54,6 +54,7 @@ import { Composer, type Uploader } from "./Composer";
 import { useOptionalInboxUi } from "./inbox-context";
 import { MessageBubble } from "./MessageBubble";
 import { MessageLog } from "./MessageLog";
+import { SnoozeDialog } from "./SnoozeDialog";
 import { TemplatePicker } from "./TemplatePicker";
 import { ThreadHeader } from "./ThreadHeader";
 
@@ -133,6 +134,7 @@ function Thread({
   const outbox = useInboxStore((state) => state.outbox);
   const queryClient = useQueryClient();
   const [ordering, setOrdering] = useState(false); // GR-32: the Create order dialog
+  const [snoozing, setSnoozing] = useState(false); // GR-45: the Snooze dialog
   const [productKind, setProductKind] = useState<"product" | "product_list" | null>(null); // GR-33
   const { send: sendReply, retry, discard } = useSendReply(wid, conversationId);
   const pendingSuggestionId = conversation.pending_suggestion?.id ?? null;
@@ -248,6 +250,8 @@ function Thread({
         onToggleDetails={() => ui?.toggleDetails()}
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
+        onSnooze={ui ? () => setSnoozing(true) : undefined}
+        onUnsnooze={ui ? () => ui.snooze(conversationId, null) : undefined}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
         assigneeControl={<AssigneeMenu conversation={conversation} />}
         commerceActions={[
@@ -261,6 +265,13 @@ function Thread({
         ]}
       />
       <CreateOrderDialog conversationId={conversationId} open={ordering} onOpenChange={setOrdering} />
+      <SnoozeDialog
+        open={snoozing}
+        onOpenChange={setSnoozing}
+        now={now}
+        timeZone={workspace.timezone}
+        onSnooze={(until) => ui?.snooze(conversationId, until)}
+      />
       {conversation.platform === "whatsapp" ? (
         <SendProductDialog
           key={productKind ?? "closed"}

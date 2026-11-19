@@ -125,6 +125,7 @@ def list_item(
         ai_mode_override=conv.ai_mode_override,
         assignee=assignee_of(conv, assignee),
         assigned_at=conv.assigned_at if conv.assignee_user_id is not None else None,
+        snoozed_until=conv.snoozed_until,
     )
 
 

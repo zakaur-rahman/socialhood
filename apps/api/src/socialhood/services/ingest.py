@@ -556,6 +556,7 @@ class _Ingest:
         contact_names.apply_platform_name(contact, event.contact_name)
         if not self.backfill:
             conv.unread_count += 1
+            conv.snoozed_until = None  # GR-45: a new message wakes a snoozed conversation early
             if conv.status == ConversationStatus.ARCHIVED:
                 conv.status = ConversationStatus.OPEN
 

@@ -79,6 +79,7 @@ InboxView = Literal[
     "mine",  # GR-20: assigned to the caller
     "unassigned",  # GR-20: open, with nobody
     "archived",
+    "snoozed",  # GR-45: open, hidden from the other views until its time
 ]
 
 
@@ -138,6 +139,7 @@ class ConversationListItem(ResponseModel):
     ai_mode_override: AiModeName | None = None
     assignee: Assignee | None = None  # GR-20; null: nobody has it
     assigned_at: datetime | None = None
+    snoozed_until: datetime | None = None  # GR-45; null: not snoozed
 
 
 class ReplyWindow(ResponseModel):
@@ -248,6 +250,10 @@ class ConversationPatch(RequestModel):
     ai_mode_override: AiModeName | None = None
     clear_ai_mode_override: bool = False
     resume_ai: bool = False  # FR-SUG-05: end a takeover pause now (T5.6)
+    # GR-45: hide the conversation until then (in the future, at most 90 days ahead); ``unsnooze``
+    # brings it back now. Not both.
+    snoozed_until: datetime | None = None
+    unsnooze: bool = False
 
 
 # ---- messages

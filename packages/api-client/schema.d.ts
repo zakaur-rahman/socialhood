@@ -8381,6 +8381,8 @@ export interface components {
             scheduled_count: number;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             social_account: components["schemas"]["ConversationAccount"];
             /**
              * Social Account Id
@@ -8489,6 +8491,8 @@ export interface components {
             reply_window_closes_at?: string | null;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -8516,8 +8520,15 @@ export interface components {
              * @default false
              */
             resume_ai: boolean;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /** Status */
             status?: ("open" | "archived") | null;
+            /**
+             * Unsnooze
+             * @default false
+             */
+            unsnooze: boolean;
         };
         /** ConversationSummary */
         ConversationSummary: {
@@ -19697,7 +19708,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived" | "snoozed";
                 platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;

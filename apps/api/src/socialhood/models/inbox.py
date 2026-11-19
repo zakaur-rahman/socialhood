@@ -229,9 +229,17 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GR-45: hidden from every view but "snoozed" until then; the wake_snoozed job (or a new
+    # customer message) clears it. Null: not snoozed.
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "contact_id"),
+        Index(
+            "ix_conversations_snoozed",
+            "snoozed_until",
+            postgresql_where=sql("snoozed_until IS NOT NULL"),
+        ),
         Index(
             "ix_conversations_assignee",
             "workspace_id",
