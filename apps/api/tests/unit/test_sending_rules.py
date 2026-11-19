@@ -71,6 +71,17 @@ def test_attachments_go_first_one_per_part_and_sent_parts_are_skipped() -> None:
     assert all(p.message.human_agent for p in parts)
 
 
+def test_only_the_first_part_quotes_the_message() -> None:
+    attachments: list[dict[str, object]] = [{"type": "image", "url": "u1", "send_url": "s1"}]
+    msg = message(attachments=attachments, reply_to_platform_message_id="mid_q")
+    parts = sending.pending_parts(msg, "whatsapp", human_agent=False)
+    assert [p.message.reply_to for p in parts] == ["mid_q", None]
+    # After the first part went, the rest go without the quote.
+    attachments[0]["sent"] = True
+    [text] = sending.pending_parts(msg, "whatsapp", human_agent=False)
+    assert text.message.reply_to is None
+
+
 def test_a_template_is_its_own_part() -> None:
     template = {"name": "order_update", "language": "en", "params": ["Asha"]}
     [part] = sending.pending_parts(

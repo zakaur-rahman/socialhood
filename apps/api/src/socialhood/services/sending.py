@@ -30,7 +30,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Literal, cast
@@ -279,6 +279,7 @@ async def queue_outbound(
     quick_replies: Sequence[OutboundQuickReply] = (),
     automation_run_id: uuid.UUID | None = None,
     interactive: dict[str, Any] | None = None,
+    reply_to_message_id: uuid.UUID | None = None,
     deps: PlatformDeps | None = None,
     now: datetime | None = None,
 ) -> Message:
@@ -286,8 +287,9 @@ async def queue_outbound(
 
     ``buttons`` are link buttons sent with the text (automation DMs, FR-AUT-13);
     ``quick_replies`` are offered with the text instead (FR-AUT-21). ``interactive`` is a WhatsApp
-    product or product-list message (GR-33; ``text`` is its body). ``deps`` defaults to the
-    worker's (jobs use that); the API passes its own.
+    product or product-list message (GR-33; ``text`` is its body). ``reply_to_message_id``
+    quotes a message of the conversation that reached the platform (GR-42). ``deps`` defaults to
+    the worker's (jobs use that); the API passes its own.
     """
     now = now or datetime.now(UTC)
     text = text if text is not None and text.strip() else None
@@ -305,6 +307,7 @@ async def queue_outbound(
     from socialhood.services.suggestions import service as suggestions  # it imports this module
 
     suggestion = await suggestions.for_send(session, conv, suggestion_id)
+    reply_to = await _reply_target(session, conv, reply_to_message_id)
     acct = await accounts.get(session, conv.social_account_id)
     if acct is None:
         raise ApiError("not_found")
@@ -374,6 +377,7 @@ async def queue_outbound(
         interactive=interactive,
         automation_run_id=automation_run_id,
         reactions=[],
+        reply_to_platform_message_id=reply_to,
     )
     try:
         async with session.begin_nested():
@@ -394,6 +398,21 @@ async def queue_outbound(
     await events.queue_conversation(session, conv, now=now, human_agent=human_agent)
     await enqueue_send(msg.id, conv.id, msg.workspace_id)
     return msg
+
+
+async def _reply_target(
+    session: AsyncSession, conv: Conversation, message_id: uuid.UUID | None
+) -> str | None:
+    """The platform id of the message a reply quotes (GR-42): one of this conversation's that
+    reached the platform."""
+    if message_id is None:
+        return None
+    target = await messages_repo.get(session, message_id)
+    if target is None or target.conversation_id != conv.id:
+        raise _invalid("reply_to_message_id", "That message isn't in this conversation.")
+    if not target.platform_message_id or target.deleted_at is not None:
+        raise _invalid("reply_to_message_id", "That message can't be quoted.")
+    return target.platform_message_id
 
 
 def _same_request(
@@ -880,7 +899,7 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
                 _bucket(platform, media=False),
             )
         )
-        return parts
+        return _quote_first(msg, parts)
     if msg.interactive:
         parts.append(
             Part(
@@ -917,7 +936,18 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
                 _bucket(platform, media=False),
             )
         )
-    return parts
+    return _quote_first(msg, parts)
+
+
+def _quote_first(msg: Message, parts: list[Part]) -> list[Part]:
+    """GR-42: only the row's first platform message carries the quote; after a partial send the
+    first part has gone already."""
+    started = any(item.get("sent") for item in msg.attachments or [])
+    if not msg.reply_to_platform_message_id or started or not parts:
+        return parts
+    first = parts[0]
+    quoted = replace(first.message, reply_to=msg.reply_to_platform_message_id)
+    return [Part(first.attachment_index, quoted, first.bucket), *parts[1:]]
 
 
 def _bucket(platform: str, *, media: bool) -> Bucket:

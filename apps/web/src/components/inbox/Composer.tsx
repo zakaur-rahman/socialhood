@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
+import { AlertTriangle, Clock, Paperclip, Reply, SendHorizontal, Smile, Sparkles, Sticker, Undo2, X } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApi } from "@/lib/api/provider";
 import { useCreateScheduled, useFillSavedReply, usePolishReply, useSavedReplies, type ReplyInput } from "@/lib/api/queries";
-import type { Conversation, MediaAsset, SavedReply } from "@/lib/api/types";
+import type { Conversation, MediaAsset, Message, SavedReply } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
 import { clearSearchOnEscape } from "@/lib/inbox/search-escape";
@@ -86,6 +86,9 @@ type Props = {
   upload?: Uploader;
   /** With a suggestion showing: Ctrl/⌘ Enter sends it and Esc dismisses it from an empty composer (UX-INB-08). */
   suggestionKeys?: { send: () => void; dismiss: () => void } | null;
+  /** GR-42: the message the next reply quotes, shown as a chip with ×. */
+  replyTo?: Message | null;
+  onCancelReply?: () => void;
 };
 
 type Mode = "reply" | "blocked" | "closed" | "template_only";
@@ -110,6 +113,8 @@ export function Composer({
   canAttach,
   upload,
   suggestionKeys = null,
+  replyTo = null,
+  onCancelReply,
 }: Props) {
   const conversationId = conversation.id;
   const draft = useInboxStore((state) => state.drafts[conversationId] ?? "");
@@ -125,6 +130,11 @@ export function Composer({
   const sticker = useStickerUpload(wid, upload);
 
   const name = contactName(conversation.contact, conversation.platform);
+  // GR-42: choosing Reply on a message brings the cursor here.
+  const replyToId = replyTo?.id ?? null;
+  useEffect(() => {
+    if (replyToId) textRef.current?.focus();
+  }, [replyToId]);
   const replyWindow = conversation.reply_window;
   const accountStatus = conversation.social_account.status;
   const accountHandle = conversation.social_account.username
@@ -371,6 +381,18 @@ export function Composer({
   return (
     <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
+      {replyTo ? (
+        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border-l-2 border-brand bg-raised py-1 pr-1 pl-2 text-xs" data-testid="replying-to">
+          <Reply className="size-3.5 shrink-0 text-fg-secondary" aria-hidden />
+          <p className="min-w-0 flex-1 truncate">
+            <span className="font-medium">{replyTo.direction === "inbound" ? `Replying to ${firstName(name)}` : "Replying to your message"}</span>
+            <span className="text-fg-secondary"> · {replyTo.text ?? "a message"}</span>
+          </p>
+          <Button type="button" variant="ghost" size="icon-xs" aria-label="Cancel reply" onClick={onCancelReply}>
+            <X aria-hidden />
+          </Button>
+        </div>
+      ) : null}
       {/* The textarea draws no outline of its own; this wrapper shows the focus outline (DESIGN_SYSTEM §8.3). */}
       <div className="relative rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         {pickerOpen ? (

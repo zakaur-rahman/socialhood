@@ -10111,3 +10111,32 @@ features", then changed three rules. The audit report is kept outside the repo.
     live site serves the key.
 - **Left as they are:** the app host (dashboard.amplychat.com) isn't submitted: it's noindex. No
   separate IndexNow call on content changes between releases: our pages only change on a release.
+
+## C-201 · Inbox: reply and react, contact import, no automatic replies, snooze (owner, 2026-11-19)
+
+- **Why:** the owner asked what to borrow from the WA-AKG WhatsApp gateway (unofficial, no
+  license, nothing copied); the plan (GR-42 to GR-46) was agreed, n8n (GR-46) parked, and the owner
+  said to go ahead with the rest. The open decisions were settled as the plan recommended:
+  - **D1:** a CSV import may record WhatsApp marketing consent, but only when an Admin ticks
+    "These people agreed to get WhatsApp marketing from us"; each consent has source `import` and
+    evidence (who, when, file name, row), and an import never overrides a STOP or other
+    withdrawal.
+  - **D2:** no pinned conversations; snooze covers most of the need.
+  - **D4:** six reactions (👍 ❤️ 😂 😮 😢 🙏) on WhatsApp and website chat; a heart only on Instagram
+    and Facebook (Meta's sender actions document only "love"); none on YouTube.
+- **Decided while building:**
+  - Reactions are offered on the customer's messages only, and the Meta call runs in the request.
+    A closed reply window answers 409 `reply_window_closed` (the existing code), a WhatsApp
+    message older than 30 days 422.
+  - Imported tags don't start tag-triggered sequences or send `contact.tagged`, and filling an
+    existing contact's blanks sends no `contact.updated`, so one file can't set off thousands of
+    sends or webhooks. New contacts send `contact.created`.
+  - "No automatic replies" is checked at each automatic entry point (inbox automations, the away
+    message, comment automations, sequences, the follow nudge and AI Auto, the 14th policy
+    check); broadcasts, order notices and team, scheduled and API sends are unchanged.
+  - Snoozed conversations leave every inbox view but "Snoozed", the counts, the priority queue
+    and Home's "needs you"; archiving ends a snooze; at most 90 days ahead. A per-minute job wakes
+    them; a woken conversation returns at its usual place in the list (by its last message).
+- **Left as they are:** reply and react from the public API, MCP and agent tools; quoting from
+  scheduled messages; the website chat widget doesn't show quotes or reactions yet; Instagram and
+  Facebook reactions beyond the heart wait for a real account to confirm them.

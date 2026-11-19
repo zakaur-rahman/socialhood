@@ -5,7 +5,7 @@ refreshes whenever Home does (on new messages, replies, analyses and suggestions
 lib/realtime/events.ts). It uses the inbox's own definitions (services/conversations.py) so the
 queue agrees with the inbox chips:
 
-- **Candidates**: open conversations with a message (archived ones never) that need you
+- **Candidates**: open conversations with a message (archived and snoozed ones never) that need you
   (``needs_human``, the "Needs you" count) or need a reply (``awaiting_reply``, the "Needs reply"
   view and Home's tile).
 - **Excluded**: a needs-reply conversation whose reply window is closed: no free-form reply is
@@ -81,6 +81,7 @@ def waiting_since() -> ColumnElement[datetime]:
 def _waiting() -> list[ColumnElement[bool]]:
     return [
         Conversation.status == ConversationStatus.OPEN,
+        Conversation.snoozed_until.is_(None),  # GR-45
         Conversation.last_message_at.is_not(None),
     ]
 

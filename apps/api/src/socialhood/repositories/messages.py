@@ -4,11 +4,11 @@ current workspace, and status changes are conditional so two workers never both 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from datetime import datetime, timedelta
 from typing import Any, NamedTuple
 
-from sqlalchemy import and_, case, or_, select
+from sqlalchemy import and_, case, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.automations import Comment
@@ -29,6 +29,28 @@ NOT_YET_SENT = (MessageStatus.QUEUED, MessageStatus.SENDING, MessageStatus.FAILE
 
 async def get(session: AsyncSession, message_id: uuid.UUID) -> Message | None:
     return (await session.scalars(select(Message).where(Message.id == message_id))).one_or_none()
+
+
+async def quoted(
+    session: AsyncSession, refs: Collection[tuple[uuid.UUID, str]]
+) -> dict[tuple[uuid.UUID, str], Message]:
+    """The messages replies quote (GR-42), by (conversation id, platform message id)."""
+    if not refs:
+        return {}
+    rows = await session.scalars(
+        select(Message).where(
+            tuple_(Message.conversation_id, Message.platform_message_id).in_(list(refs))
+        )
+    )
+    return {(m.conversation_id, m.platform_message_id or ""): m for m in rows}
+
+
+async def quoted_by(session: AsyncSession, msg: Message) -> Message | None:
+    """The message ``msg`` quotes, if it is stored."""
+    ref = msg.reply_to_platform_message_id
+    if not ref:
+        return None
+    return (await quoted(session, [(msg.conversation_id, ref)])).get((msg.conversation_id, ref))
 
 
 async def find_by_client_id(

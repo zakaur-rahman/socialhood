@@ -8,6 +8,7 @@ import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
 import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
+import { AutoRepliesSwitch } from "@/components/contacts/AutoRepliesSwitch";
 import { ContactDrawer, PlatformNameNote } from "@/components/contacts/ContactDrawer";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { Alert } from "@/components/ui/alert";
@@ -157,6 +158,12 @@ export function DetailsPanel({
           </Button>
         </CardInset>
         <Attention conversation={c} now={now} timeZone={workspace.timezone} />
+      </Section>
+
+      <Section id="details-auto-replies" title="Replies">
+        <CardInset padding="compact">
+          <AutoRepliesSwitch contactId={c.contact.id} off={c.contact.auto_replies_off} />
+        </CardInset>
       </Section>
 
       <Section id="details-assignee" title="Assigned to">

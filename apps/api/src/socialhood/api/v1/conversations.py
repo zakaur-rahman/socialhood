@@ -87,8 +87,9 @@ async def update_conversation(
     ctx: CanAssign,
     session: Session,
 ) -> Conversation:
-    """Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
-    plan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05)."""
+    """Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or
+    clear the conversation's AI mode override (auto needs a paid plan: 402
+    entitlement_required); resume_ai ends a takeover pause (FR-SUG-05)."""
     conv = await service.get_or_404(session, conversation_id)
     enabled, now = _human_agent_enabled(request), datetime.now(UTC)
     if await service.update_conversation(

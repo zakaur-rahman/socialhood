@@ -29,6 +29,7 @@ import { rowAccountLabels } from "@/lib/inbox/format";
 import { inboxSearch } from "@/lib/inbox/url";
 import { emptyStates, inboxFilterEmpty } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
+import { formatDayTime } from "@/lib/tz";
 import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
 import { usePaneWidth, type PaneWidthLimits } from "@/lib/use-pane-width";
 import { cn } from "@/lib/utils";
@@ -276,6 +277,32 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     [items, open, selectedId, update, view],
   );
 
+  const snooze = useCallback(
+    (id: string, until: Date | null) => {
+      const index = items.findIndex((item) => item.id === id);
+      update.mutate(
+        { id, patch: until ? { snoozed_until: until.toISOString() } : { unsnooze: true } },
+        {
+          onSuccess: () => {
+            toast.success(until ? `Snoozed until ${formatDayTime(until, workspace.timezone)}` : "Conversation is back in the inbox", {
+              action: until
+                ? { label: "Undo", onClick: () => update.mutate({ id, patch: { unsnooze: true } }) }
+                : undefined,
+              duration: TOAST_ACTION_DURATION,
+            });
+          },
+          onError: (error) => toastError(error),
+        },
+      );
+      // Snoozing the open conversation moves on to the next one, as archiving does.
+      if (until && id === selectedId && view !== "snoozed") {
+        const next = items[index + 1] ?? items[index - 1];
+        open(next && next.id !== id ? next.id : null);
+      }
+    },
+    [items, open, selectedId, update, view, workspace.timezone],
+  );
+
   const markUnread = useCallback(
     (id: string) => {
       setManualUnreadId(id);
@@ -330,6 +357,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     manualUnreadId,
     markUnread,
     archive,
+    snooze,
   };
 
   const showList = layout !== "phone" || !selectedId;

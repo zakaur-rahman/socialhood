@@ -1,7 +1,7 @@
 """T5.6: the auto-reply policy (TR-AI-07, FR-SUG-04, FR-SUG-06) and its output filter.
 
-Done when: 13 unit tests, each failing one check alone, produce the right outcome and reason.
-Every evaluation records all 13 checks in order; the first failure decides.
+Done when: 14 unit tests, each failing one check alone, produce the right outcome and reason.
+Every evaluation records all 14 checks in order; the first failure decides.
 """
 
 from __future__ import annotations
@@ -59,6 +59,7 @@ NAMES = [
     "grounded_in_knowledge",
     "rate",
     "output_filter",
+    "contact_allows_auto",
 ]
 
 
@@ -69,7 +70,7 @@ def failed_checks(p: PolicyInput) -> list[int]:
 def test_every_check_passes_and_the_reply_is_sent() -> None:
     decision = evaluate(PASSING)
     assert (decision.outcome, decision.reason) == ("auto_sent", None)
-    assert [c["n"] for c in decision.checks_json] == list(range(1, 14))
+    assert [c["n"] for c in decision.checks_json] == list(range(1, 15))
     assert [c["name"] for c in decision.checks_json] == NAMES
     assert all(c["passed"] for c in decision.checks_json)
     assert set(decision.checks_json[0]) == {"n", "name", "passed", "value"}
@@ -111,6 +112,7 @@ ONE_FAILURE: list[tuple[int, dict[str, Any], str, str]] = [
         "escalated",
         "output_blocked",
     ),
+    (14, {"contact_allows_auto": False}, "skipped", "auto_replies_off"),  # GR-44
 ]
 
 

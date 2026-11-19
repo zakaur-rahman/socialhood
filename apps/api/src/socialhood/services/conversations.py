@@ -4,7 +4,8 @@ member makes to a conversation: read, unread, archive and the AI mode override.
 List: open conversations, newest activity first, or one view of them: unread (unread_count > 0),
 needs reply (awaiting_reply), leads (lead score >= 60), closing soon (a follow-up reminder is out
 and unanswered, FR-INB-14), AI handled (the AI has replied in it and it does not need a human), or
-archived. The detail carries the latest message analysis (FR-AI-02). Views, the platform and
+snoozed (GR-45: hidden from every other view and count until its time) or archived. The detail
+carries the latest message analysis (FR-AI-02). Views, the platform and
 account filters and search all run in SQL before the page is cut, so a busy account never pushes
 another's conversations off a page. Search matches the contact's name or username (the trigram
 index) and message text (search_tsv, 'simple' config, each word as a prefix, for search as you
@@ -19,7 +20,7 @@ import base64
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import (
@@ -56,6 +57,7 @@ from socialhood.models.inbox import (
 from socialhood.realtime import events
 from socialhood.repositories import automation_runs, inbox, social_accounts
 from socialhood.repositories import conversations as writes
+from socialhood.repositories import messages as messages_repo
 from socialhood.schemas.inbox import (
     Assignee,
     AutomationRef,
@@ -84,6 +86,7 @@ from socialhood.services.inbox_views import (
 from socialhood.services.reply_window import STANDARD_WINDOW, reply_window
 from socialhood.services.suggestions import service as suggestions
 
+SNOOZE_MAX = timedelta(days=90)  # GR-45
 CURSOR_INVALID = "This cursor is not valid. Load the list again."
 
 _TIMESTAMP = DateTime(timezone=True)
@@ -194,6 +197,9 @@ def _view_filter(
     if view == "archived":
         return [Conversation.status == ConversationStatus.ARCHIVED]
     where = [Conversation.status == ConversationStatus.OPEN]
+    if view == "snoozed":  # GR-45: every other view leaves these out
+        return [*where, Conversation.snoozed_until.is_not(None)]
+    where.append(Conversation.snoozed_until.is_(None))
     if view == "unread":
         where.append(Conversation.unread_count > 0)
     elif view == "needs_reply":
@@ -396,6 +402,7 @@ async def inbox_counts(session: AsyncSession, viewer_id: uuid.UUID | None = None
             .select_from(Conversation)
             .where(
                 Conversation.status == ConversationStatus.OPEN,
+                Conversation.snoozed_until.is_(None),  # GR-45
                 Conversation.last_message_at.is_not(None),
             )
         )
@@ -441,6 +448,7 @@ async def conversation_detail(
                 follows_business=contact.follows_business,
                 name_source=NameSource(contact.name_source).value,
                 platform_name=contact.platform_name,
+                auto_replies_off=contact.auto_replies_off,
             ),
             "reply_window": reply_window(
                 conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now
@@ -526,6 +534,10 @@ async def list_messages(
     automations = await automation_runs.automation_names(
         session, [m.automation_run_id for m in page if m.automation_run_id]
     )
+    quotes = await messages_repo.quoted(
+        session,
+        {(conv.id, m.reply_to_platform_message_id) for m in page if m.reply_to_platform_message_id},
+    )
 
     def automation(m: Message) -> AutomationRef | None:
         found = automations.get(m.automation_run_id) if m.automation_run_id else None
@@ -537,6 +549,7 @@ async def list_messages(
                 m,
                 sent_by_name=names.get(m.sent_by_user_id) if m.sent_by_user_id else None,
                 automation=automation(m),
+                reply_to=quotes.get((conv.id, m.reply_to_platform_message_id or "")),
             )
             for m in page
         ],
@@ -567,9 +580,9 @@ async def update_conversation(
     ig_human_agent_enabled: bool,
     now: datetime,
 ) -> bool:
-    """Archive or unarchive; set or clear the AI mode override (auto needs the plan's ai_modes,
-    FR-SUG-01); ``resume_ai`` ends a takeover pause now with the system note "AI resumed"
-    (FR-SUG-05, F-09)."""
+    """Archive or unarchive; snooze until a time or unsnooze (GR-45); set or clear the AI mode
+    override (auto needs the plan's ai_modes, FR-SUG-01); ``resume_ai`` ends a takeover pause now
+    with the system note "AI resumed" (FR-SUG-05, F-09)."""
     if patch.clear_ai_mode_override and patch.ai_mode_override is not None:
         raise ApiError(
             "validation_error",
@@ -578,6 +591,9 @@ async def update_conversation(
     values: dict[str, Any] = {}
     if patch.status is not None and patch.status != conv.status:
         values["status"] = patch.status
+        if patch.status == "archived":
+            values["snoozed_until"] = None  # archiving ends a snooze
+    values |= _snooze_values(conv, patch, now)
     if patch.ai_mode_override is not None:
         await check_entitlement(session, "ai_modes", patch.ai_mode_override)
         if patch.ai_mode_override != conv.ai_mode_override:
@@ -593,6 +609,30 @@ async def update_conversation(
     if resumed:
         await takeover.resumed_note(session, conv, now=now)
     return True
+
+
+def _snooze_values(conv: Conversation, patch: ConversationPatch, now: datetime) -> dict[str, Any]:
+    """GR-45: what ``snoozed_until`` and ``unsnooze`` change. 422 for both at once, a time that
+    is not in the future or more than 90 days ahead, or an archived conversation."""
+    if patch.snoozed_until is None and not patch.unsnooze:
+        return {}
+    if patch.snoozed_until is None:
+        return {"snoozed_until": None} if conv.snoozed_until is not None else {}
+    problem = None
+    until = patch.snoozed_until
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=UTC)
+    if patch.unsnooze:
+        problem = "Snooze or unsnooze, not both."
+    elif until <= now:
+        problem = "Pick a time in the future."
+    elif until > now + SNOOZE_MAX:
+        problem = "A conversation can be snoozed for at most 90 days."
+    elif conv.status == "archived" or patch.status == "archived":
+        problem = "An archived conversation can't be snoozed."
+    if problem:
+        raise ApiError("validation_error", errors=[FieldError("snoozed_until", problem)])
+    return {"snoozed_until": until}
 
 
 async def mark_read(

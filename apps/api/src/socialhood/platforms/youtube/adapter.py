@@ -169,6 +169,15 @@ class YouTubeAdapter:
     ) -> None:
         raise _unavailable(NO_MESSAGES)
 
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        raise PlatformError("reaction_not_supported", message=NO_MESSAGES)
+
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         raise _unavailable(NO_MESSAGES)
 

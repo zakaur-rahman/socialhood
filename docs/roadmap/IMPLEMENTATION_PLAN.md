@@ -627,6 +627,22 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Done when:** a Drive photo picked in the composer publishes; with "don't keep my media" on, our
   copy is gone after publishing; with backup on, the media and its details appear in their Drive.
 
+#### GR-42 to GR-46 · Inbox ideas from a WhatsApp gateway · owner 2026-11-16, built 2026-11-19 (C-201)
+Ideas checked against the open-source WA-AKG gateway; only what works through Meta's official APIs.
+No numbering clash: GR-41 is the YouTube publishing e2e spec.
+- **GR-42 · Reply and react:** quote a customer's message when replying; react with 👍 ❤️ 😂 😮 😢 🙏
+  on WhatsApp and website chat, a heart on Instagram and Facebook. Incoming quotes show.
+- **GR-43 · Contact import from CSV:** WhatsApp numbers only, Admins only, the export's columns,
+  preview then import, 5,000 rows a file. Marketing consent only with the Admin's tick, with
+  evidence; a STOP always wins.
+- **GR-44 · No automatic replies for one contact:** a switch per contact; every automatic send
+  skips them, AI suggestions still drafted.
+- **GR-45 · Snooze:** a conversation leaves the inbox until a chosen time, then comes back unread
+  and the assignee is told; a customer message wakes it early.
+- **GR-46 · n8n node:** parked by the owner (2026-11-19).
+- **Done when:** each GR's e2e spec passes (`gr42-reply-react`, `gr43-contact-import`,
+  `gr44-auto-replies-off`, `gr45-snooze`).
+
 ---
 
 ## E. Order, dependencies and lanes
@@ -644,6 +660,7 @@ Wave 5  GR-25 → GR-26    GR-27 (← GR-04, GR-14)    GR-28    GR-29 → GR-30
 Wave 6  GR-31 → GR-32, GR-33
 Wave 7  GR-34  GR-35  GR-36 (← GR-03, GR-23)  GR-37
 Later   GR-40 (← GR-27, O-10)
+Inbox   GR-42  GR-43  GR-44 → GR-45   (GR-46 n8n parked)
 ```
 
 **Suggested batches,** three parallel lanes as in the UI programme:

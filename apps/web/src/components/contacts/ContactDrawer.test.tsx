@@ -35,6 +35,7 @@ const record: ContactRecord = {
   lead_stage_at: "2026-10-22T10:00:00Z",
   lead_stage_reason: "Lead score reached 72.",
   lead_cold: false,
+  auto_replies_off: false,
   conversation_id: "c1",
   last_activity_at: "2026-10-23T10:00:00Z",
   first_seen_at: "2026-09-27T09:00:00Z",
@@ -116,6 +117,32 @@ describe("ContactDrawer (GR-17)", () => {
     await user.type(name, "Priya (wholesale)");
     await user.click(within(drawer).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body.name).toBe("Priya (wholesale)"));
+  });
+
+  it("turns automatic replies off for the contact (GR-44)", async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> = {};
+    setup({ patch: (call) => ((body = call.body as Record<string, unknown>), json({ ...record, auto_replies_off: true })) });
+    const drawer = await screen.findByRole("dialog");
+    const toggle = await within(drawer).findByRole("switch", { name: "Automatic replies" });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    await waitFor(() => expect(body.auto_replies_off).toBe(true));
+  });
+
+  it("shows automatic replies as off and turns them back on (GR-44)", async () => {
+    const user = userEvent.setup();
+    let body: Record<string, unknown> = {};
+    setup({
+      saved: { auto_replies_off: true },
+      patch: (call) => ((body = call.body as Record<string, unknown>), json({ ...record, auto_replies_off: false })),
+    });
+    const drawer = await screen.findByRole("dialog");
+    const toggle = await within(drawer).findByRole("switch", { name: "Automatic replies" });
+    expect(toggle).not.toBeChecked();
+    expect(within(drawer).getByText(/only your team replies/)).toBeInTheDocument();
+    await user.click(toggle);
+    await waitFor(() => expect(body.auto_replies_off).toBe(false));
   });
 
   it("shows the platform's name beside a team name and goes back to it (C-135)", async () => {

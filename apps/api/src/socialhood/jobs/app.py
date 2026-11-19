@@ -34,6 +34,7 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.sync",
     "socialhood.jobs.tasks.send",
     "socialhood.jobs.tasks.scheduled",
+    "socialhood.jobs.tasks.snooze",
     "socialhood.jobs.tasks.whatsapp",
     "socialhood.jobs.tasks.automations",
     "socialhood.jobs.tasks.automation_windows",

@@ -544,7 +544,7 @@ async def _away(
     """GR-22: nothing answered this DM, so the away message goes if the account is closed and it
     hasn't been sent in this closed window. The conversation is locked while it is checked and
     marked, so two messages in a row send it once."""
-    if not business_hours.away_applies(msg) or not await business_hours.away_possible(
+    if not business_hours.away_applies(msg, contact) or not await business_hours.away_possible(
         session, msg.social_account_id
     ):
         return outcome
@@ -840,6 +840,8 @@ async def _first_passing(
     found: list[matching.Match],
     read_only: str | None,
 ) -> _Fired | Outcome | None:
+    if contact is not None and contact.auto_replies_off:  # GR-44: no public reply, no private DM
+        return None
     by_id = {item.automation.id: item.automation for item in loaded}
     expired = env.now - comment.commented_at >= PRIVATE_REPLY_LIMIT
     live_late = comment.is_live and env.now - comment.commented_at > LIVE_REPLY_WINDOW
