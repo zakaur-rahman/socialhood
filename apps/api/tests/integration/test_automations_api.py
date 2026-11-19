@@ -954,7 +954,15 @@ async def test_posts_for_the_picker(ws: Ws, engine: AsyncEngine) -> None:
     mine = await ws.ok("GET", "/posts", params={"account_id": ws.account_id})
     assert [p["id"] for p in mine["items"]] == [str(i) for i in ids]
     assert mine["items"][0]["media_type"] == "image"
-    zero = {"total": 0, "analysed": 0, "positive": 0, "neutral": 0, "negative": 0, "spam": 0}
+    zero = {
+        "total": 0,
+        "analysed": 0,
+        "positive": 0,
+        "neutral": 0,
+        "negative": 0,
+        "spam": 0,
+        "important": 0,
+    }
     stored = {"total": 5, "analysed": 4, "positive": 3, "spam": 1}
     assert mine["items"][0]["stats"] == {**zero, **stored}
     assert mine["items"][1]["stats"] == zero

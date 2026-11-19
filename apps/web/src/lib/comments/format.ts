@@ -1,11 +1,13 @@
 /** Presentation rules for comments and posts (UX-SCR-05, FR-CMT-02…04). Pure, tested directly. */
 import { toApiError } from "@/lib/api/errors";
-import type { CommentFilter, CommentStats, Intent, PostComment } from "@/lib/api/types";
+import type { CommentFilter, CommentStats, Intent, Platform, PostComment } from "@/lib/api/types";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { sendFailure } from "@/lib/copy";
 
 /** The filter chips in the order UX-SCR-05 lists them. */
 export const COMMENT_FILTERS: { value: CommentFilter; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "important", label: "Important" },
   { value: "needs_reply", label: "Needs reply" },
   { value: "positive", label: "Positive" },
   { value: "neutral", label: "Neutral" },
@@ -54,6 +56,8 @@ export function matchesFilter(comment: PostComment, filter: CommentFilter, now: 
       return true;
     case "hidden":
       return comment.hidden;
+    case "important":
+      return Boolean(comment.important);
     case "needs_reply":
       return needsReply(comment, now);
     case "spam":
@@ -92,6 +96,7 @@ export function filterEmpty(filter: CommentFilter, analysing: boolean): { title:
     spam: "No spam",
     hidden: "No hidden comments",
     needs_reply: "Nothing needs a reply",
+    important: "Nothing important",
   };
   const waiting = analysing && filter !== "hidden";
   return {
@@ -114,8 +119,10 @@ const MEDIA_TYPE: Record<string, string> = {
   story: "Story",
 };
 
-export function mediaTypeLabel(type: string | null | undefined): string {
+/** A YouTube Short is stored as a reel; its link (youtube.com/shorts/…) tells it apart. */
+export function mediaTypeLabel(type: string | null | undefined, permalink?: string | null): string {
   if (!type) return "Post";
+  if (type.toLowerCase() === "reel" && permalink?.includes("youtube.com/shorts/")) return "Short";
   return MEDIA_TYPE[type.toLowerCase()] ?? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 }
 
@@ -164,12 +171,32 @@ export function byteLength(text: string): number {
   return encoder.encode(text).length;
 }
 
+/** "@name" for an Instagram or Facebook username; a YouTube name already has its "@" (a handle)
+ * or is a display name with spaces, so it's shown as it is. */
+function handle(name: string): string {
+  return name.startsWith("@") || /\s/.test(name) ? name : `@${name}`;
+}
+
 export function authorHandle(comment: Pick<PostComment, "author_username">): string {
-  return comment.author_username ? `@${comment.author_username}` : "this person";
+  return comment.author_username ? handle(comment.author_username) : "this person";
 }
 
 export function authorName(comment: Pick<PostComment, "author_username">): string {
-  return comment.author_username ? `@${comment.author_username}` : "Instagram user";
+  return comment.author_username ? handle(comment.author_username) : "Someone";
+}
+
+/** Words that differ by platform in the hide and delete confirmations. */
+export function hideNote(platform: Platform): string {
+  return platform === "youtube"
+    ? "Comment hidden on YouTube. YouTube may not let you show it again."
+    : "Comment hidden. Only its author can still see it.";
+}
+
+export function deleteWarning(platform: Platform, handle: string): string {
+  const name = PLATFORM_LABEL[platform];
+  return platform === "youtube"
+    ? `If it's someone else's comment, it's removed from public view on YouTube, and ${handle} may still see it. Your own replies are deleted for good. This can't be undone. To keep it but stop others seeing it, hide it instead.`
+    : `It's deleted on ${name} for everyone, ${handle} included. This can't be undone. To keep it but stop others seeing it, hide it instead.`;
 }
 
 /** A second private reply (TR-PL-04): Instagram allows one per comment. */
@@ -182,7 +209,12 @@ export type CommentAction = "reply" | "dm" | "hide" | "unhide" | "delete";
  * What to show when a comment action fails (§4.7 error codes): the platform errors as the inbox
  * words them, and a clear refusal for a second private reply (409 conflict).
  */
-export function commentActionError(error: unknown, action: CommentAction, accountUsername?: string | null): string {
+export function commentActionError(
+  error: unknown,
+  action: CommentAction,
+  accountUsername?: string | null,
+  platform: Parameters<typeof sendFailure>[1]["platform"] = "instagram",
+): string {
   const apiError = toApiError(error);
   if (action === "dm" && apiError.code === "conflict") return SECOND_PRIVATE_REPLY;
   return sendFailure(
@@ -191,6 +223,6 @@ export function commentActionError(error: unknown, action: CommentAction, accoun
       message: apiError.detail ?? apiError.errors[0]?.message ?? null,
       requestId: apiError.requestId,
     },
-    { platform: "instagram", handle: accountUsername },
+    { platform, handle: accountUsername },
   ).message;
 }

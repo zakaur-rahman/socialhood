@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { PostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/comments/format";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
-import { account, json, post, postDetail, problem, renderWithApi, type Call } from "@/test/api";
+import { account, json, post, workspace, postDetail, problem, renderWithApi, type Call } from "@/test/api";
 
 import { CommentsPage } from "./CommentsPage";
 
@@ -25,7 +25,7 @@ const posts = [
     caption: "Behind the scenes",
     posted_at: "2024-03-01T12:00:00Z",
     like_count: null, // likes hidden on Instagram
-    stats: { total: 8, analysed: 3, positive: 2, neutral: 1, negative: 0, spam: 0 },
+    stats: { total: 8, analysed: 3, positive: 2, neutral: 1, negative: 0, spam: 0, important: 0 },
   }),
 ];
 
@@ -136,7 +136,7 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
           post: postDetail({
             id: "po1",
             posted_at: "2024-03-03T12:00:00Z",
-            stats: { total: 13, analysed: 13, positive: 7, neutral: 3, negative: 2, spam: 1 },
+            stats: { total: 13, analysed: 13, positive: 7, neutral: 3, negative: 2, spam: 1, important: 0 },
           }),
         }),
       }),
@@ -187,6 +187,26 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     expect(await screen.findByText("No posts yet")).toBeInTheDocument();
     expect(screen.getByText("Your Instagram posts and their comments appear here after you connect.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/settings/connections");
+  });
+
+  it("lists YouTube channels in the account filter", async () => {
+    const yt = account({ id: "a2", platform: "youtube", username: null, display_name: "Maple Channel", capabilities: ["comments"] });
+    setup({ accounts: [account(), yt] });
+    await screen.findAllByTestId("post-card");
+    expect(screen.getByRole("combobox", { name: "Account" })).toBeInTheDocument();
+  });
+
+  it("empty: with YouTube on, the copy and link name every platform", async () => {
+    renderWithApi(<CommentsPage />, {
+      ws: { ...workspace, features: ["youtube"] },
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [] }),
+        "GET /v1/w/:wid/comments/counts": () => json({ needs_reply: 0 }),
+        "GET /v1/w/:wid/posts": () => json({ items: [], next_cursor: null }),
+      },
+    });
+    expect(await screen.findByText(/Instagram, Facebook and YouTube posts/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connect an account" })).toBeInTheDocument();
   });
 
   it("empty: with an account connected it says posts appear once they sync", async () => {

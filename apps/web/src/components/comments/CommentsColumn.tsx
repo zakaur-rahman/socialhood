@@ -46,11 +46,13 @@ export function CommentsColumn({
   now,
   accountUsername,
   platform,
+  canPrivateReply,
 }: {
   post: PostDetail;
   now: Date;
   accountUsername?: string | null;
   platform?: Platform;
+  canPrivateReply?: boolean;
 }) {
   const workspace = useCurrentWorkspace();
   // The card's "n need a reply" opens the post with this chip chosen (?filter=needs_reply).
@@ -120,6 +122,7 @@ export function CommentsColumn({
                 onRemoved={() => headingRef.current?.focus()}
                 accountUsername={accountUsername}
                 platform={platform}
+                canPrivateReply={canPrivateReply}
                 prepared={isTarget ? { kind: prepared.private ? "dm" : "reply", text: prepared.text } : undefined}
               />
             );
@@ -160,6 +163,11 @@ export function CommentsColumn({
             {COMMENT_FILTERS.map((option) => (
               <ToggleGroupItem key={option.value} value={option.value}>
                 {option.label}
+                {option.value === "important" && (post.stats.important ?? 0) > 0 ? (
+                  <span className="ml-1 tabular-nums" data-testid="important-chip-count">
+                    {formatCount(post.stats.important ?? 0)}
+                  </span>
+                ) : null}
                 {option.value === "needs_reply" && (post.needs_reply_count ?? 0) > 0 ? (
                   <span className="ml-1 tabular-nums" data-testid="needs-reply-chip-count">
                     {formatCount(post.needs_reply_count ?? 0)}

@@ -45,6 +45,11 @@ function sections(): LegalSection[] {
             subprocessor.
           </li>
           <li>
+            <strong>Google (YouTube)</strong>, if a business connects a YouTube channel. The videos it posts there, and
+            their details, go to YouTube through Google&apos;s official API. Google runs YouTube under its own terms and
+            is not our subprocessor.
+          </li>
+          <li>
             <strong>Dodo Payments</strong>, once paid plans open. As merchant of record it runs checkout, takes payments,
             charges tax and issues invoices, and it decides how it handles payment data under its own{" "}
             <a href="https://dodopayments.com/privacy-policy" rel="noopener noreferrer">

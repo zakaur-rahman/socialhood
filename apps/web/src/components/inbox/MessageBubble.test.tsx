@@ -261,3 +261,50 @@ describe("AttachmentView (FR-INB-02)", () => {
     expect(screen.getByRole("link", { name: /View post/ })).toHaveAttribute("href", "https://www.instagram.com/p/abc/");
   });
 });
+
+describe("Reply and react (GR-42)", () => {
+  it("shows the quoted message above the text, with who wrote it", () => {
+    renderBubble({
+      ...out,
+      text: "Yes, tomorrow",
+      reply_to: { id: "q1", kind: "text", direction: "inbound", text_preview: "Do you ship to Pune?" },
+    });
+    const quote = screen.getByRole("button", { name: "Show the quoted message from Priya Nair: Do you ship to Pune?" });
+    expect(quote).toHaveTextContent("Priya Nair");
+    expect(quote).toHaveTextContent("Do you ship to Pune?");
+  });
+
+  it("Reply quotes the message", async () => {
+    const onReply = vi.fn();
+    renderBubble({}, { onReply });
+    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    expect(onReply).toHaveBeenCalledOnce();
+  });
+
+  it("the picker offers the platform's reactions, and choosing ours again removes it", async () => {
+    const onReact = vi.fn();
+    renderBubble(
+      { reactions: [{ emoji: "👍", by: "business", at: "2026-09-28T12:44:00Z" }] },
+      { onReact, reactionChoices: ["👍", "❤️", "😂", "😮", "😢", "🙏"] },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "React" }));
+    expect(screen.getAllByRole("button", { name: /^React with / })).toHaveLength(5);
+    await userEvent.click(screen.getByRole("button", { name: "React with ❤️" }));
+    expect(onReact).toHaveBeenLastCalledWith("❤️");
+    await userEvent.click(screen.getByRole("button", { name: "React" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove your 👍 reaction" }));
+    expect(onReact).toHaveBeenLastCalledWith(null);
+  });
+
+  it("with only a heart (Instagram), the heart is one toggle", async () => {
+    const onReact = vi.fn();
+    renderBubble({}, { onReact, reactionChoices: ["❤️"] });
+    await userEvent.click(screen.getByRole("button", { name: "React with ❤️" }));
+    expect(onReact).toHaveBeenCalledWith("❤️");
+  });
+
+  it("shows no actions where the platform can't react and replying isn't offered", () => {
+    renderBubble({}, { onReact: vi.fn(), reactionChoices: [] });
+    expect(screen.queryByTestId("message-actions")).not.toBeInTheDocument();
+  });
+});

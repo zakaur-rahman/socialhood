@@ -26,6 +26,26 @@ describe("matchesFilters: assignment views (GR-20)", () => {
   });
 });
 
+describe("matchesFilters: snoozed (GR-45)", () => {
+  const snoozed = { snoozed_until: "2026-11-20T09:00:00Z" };
+
+  it("a snoozed conversation is only in the Snoozed view", () => {
+    expect(matchesFilters(listItem(snoozed), filters("snoozed"))).toBe(true);
+    for (const view of ["all", "unread", "needs_reply", "leads", "unassigned", "mine"] as const) {
+      expect(matchesFilters(listItem({ ...snoozed, unread_count: 2, awaiting_reply: true, lead_score: 90 }), filters(view))).toBe(false);
+    }
+  });
+
+  it("a conversation that is not snoozed is not in the Snoozed view", () => {
+    expect(matchesFilters(listItem(), filters("snoozed"))).toBe(false);
+    expect(matchesFilters(listItem({ status: "archived" }), filters("snoozed"))).toBe(false);
+  });
+
+  it("an archived conversation stays in Archived", () => {
+    expect(matchesFilters(listItem({ status: "archived" }), filters("archived"))).toBe(true);
+  });
+});
+
 describe("upsertQueuedResponse: a send's 202 after the worker's update (C-154)", () => {
   const pages = (...items: ReturnType<typeof message>[]) => ({ pages: [{ items, next_cursor: null }], pageParams: [null] });
   const queued = message({ id: "m1", client_id: "c1", direction: "outbound", status: "queued" });

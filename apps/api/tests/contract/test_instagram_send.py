@@ -191,3 +191,46 @@ async def test_a_failure_after_the_request_went_out_is_delivery_unknown(
         await ig.send_message(acct, IGSID, OutboundMessage(text="Hi"))
     assert raised.value.code == code
     assert raised.value.retryable is retryable
+
+
+# ---------------------------------------------------------------- GR-42: quotes and reactions
+
+
+@respx.mock
+async def test_a_reply_quotes_the_message(adapter: tuple[InstagramAdapter, SocialAccount]) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={"recipient_id": IGSID, "message_id": "mid.2"})
+    await ig.send_message(acct, IGSID, OutboundMessage(text="Yes", reply_to="mid.quoted"))
+    assert sent(route)["message"] == {"text": "Yes", "reply_to": {"mid": "mid.quoted"}}
+
+
+@respx.mock
+async def test_a_heart_is_a_love_reaction_and_none_removes_it(
+    adapter: tuple[InstagramAdapter, SocialAccount],
+) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={"recipient_id": IGSID})
+    await ig.react(acct, IGSID, "mid.1", "❤️")
+    assert sent(route) == {
+        "recipient": {"id": IGSID},
+        "sender_action": "react",
+        "payload": {"message_id": "mid.1", "reaction": "love"},
+    }
+    await ig.react(acct, IGSID, "mid.1", None)
+    assert sent(route) == {
+        "recipient": {"id": IGSID},
+        "sender_action": "unreact",
+        "payload": {"message_id": "mid.1"},
+    }
+
+
+@respx.mock
+async def test_other_reactions_are_not_supported(
+    adapter: tuple[InstagramAdapter, SocialAccount],
+) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={})
+    with pytest.raises(PlatformError) as raised:
+        await ig.react(acct, IGSID, "mid.1", "\U0001f44d")
+    assert raised.value.code == "reaction_not_supported"
+    assert not route.called

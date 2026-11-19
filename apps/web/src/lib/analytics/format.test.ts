@@ -10,6 +10,8 @@ import {
   diffTone,
   diffWords,
   figuresOf,
+  formatDuration,
+  formatWatchTime,
   formatDiff,
   formatFigure,
   formatMetric,
@@ -121,5 +123,29 @@ describe("Story and Page post figures (C-131)", () => {
     const page = performance({ extra_metrics: { replies: null, taps_forward: null, taps_back: null, swipes_forward: null, exits: null, clicks: 31 } });
     const figures = figuresOf(page);
     expect(figures[figures.length - 1]).toMatchObject({ key: "clicks", label: "Clicks", value: 31 });
+  });
+});
+
+describe("YouTube watch figures", () => {
+  const watch = performance({
+    extra_metrics: { ...performance().extra_metrics, watch_minutes: 125, avg_view_seconds: 95, avg_view_percent: 42, follows: 12 },
+  });
+
+  it("appear only when the API gives them, and follows reads as subscribers on YouTube", () => {
+    expect(figuresOf(performance()).map((figure) => figure.key)).not.toContain("watch_minutes");
+    const figures = figuresOf(watch, "youtube");
+    expect(figures.slice(-4).map((figure) => figure.label)).toEqual([
+      "Watch time",
+      "Average view duration",
+      "Average percent viewed",
+      "Subscribers gained",
+    ]);
+    expect(figures.slice(-4).map(formatFigure)).toEqual(["2 h 5 min", "1:35", "42%", "12"]);
+    expect(figuresOf(watch, "instagram").at(-1)?.label).toBe("Follows");
+  });
+
+  it("formats short times", () => {
+    expect(formatWatchTime(45)).toBe("45 min");
+    expect(formatDuration(5)).toBe("0:05");
   });
 });

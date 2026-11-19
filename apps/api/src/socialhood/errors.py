@@ -25,6 +25,8 @@ ERROR_CODES: dict[str, ErrorCode] = {
     "reply_window_closed": ErrorCode(409, "The reply window has closed"),
     "account_needs_reconnect": ErrorCode(409, "The account needs reconnecting"),
     "capability_unavailable": ErrorCode(409, "This account can't do that"),
+    # GR-42: the platform takes no reactions, or not this emoji (Instagram, Messenger: a heart).
+    "reaction_not_supported": ErrorCode(409, "This platform doesn't take this reaction"),
     "account_in_use": ErrorCode(409, "The account is connected to another workspace"),  # F-04
     # F-03: a personal Instagram account came back from the connect (§4.7's copy, C-060).
     "ig_not_professional": ErrorCode(422, "Only business and creator accounts can connect"),

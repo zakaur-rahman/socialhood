@@ -45,6 +45,9 @@ type Props = {
   onToggleDetails: () => void;
   onArchive: (archived: boolean) => void;
   onMarkUnread: () => void;
+  /** GR-45: open the snooze dialog, and bring a snoozed conversation back now. */
+  onSnooze?: () => void;
+  onUnsnooze?: () => void;
   /** The one AI mode control (a compact menu); without it the header shows a read-only chip. */
   aiControl?: ReactNode;
   /** GR-20: who has the conversation, as a menu to change it. */
@@ -73,6 +76,8 @@ export function ThreadHeader({
   onToggleDetails,
   onArchive,
   onMarkUnread,
+  onSnooze,
+  onUnsnooze,
   aiControl,
   assigneeControl,
   commerceActions,
@@ -187,6 +192,11 @@ export function ThreadHeader({
               ) : null}
               <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
               <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
+              {conversation.snoozed_until && onUnsnooze ? (
+                <DropdownMenuItem onSelect={onUnsnooze}>Unsnooze</DropdownMenuItem>
+              ) : !archived && onSnooze ? (
+                <DropdownMenuItem onSelect={onSnooze}>Snooze…</DropdownMenuItem>
+              ) : null}
               {commerceActions && commerceActions.length > 0 ? (
                 <>
                   <DropdownMenuSeparator />

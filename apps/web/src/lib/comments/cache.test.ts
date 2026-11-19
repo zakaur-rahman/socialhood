@@ -42,7 +42,7 @@ describe("post.updated patches the grid and the open post (F-12)", () => {
     queryClient.setQueryData(keys.posts(wid, "a1", ""), pages([card]));
     queryClient.setQueryData(keys.post(wid, "po1"), postDetail({ id: "po1" }));
 
-    const stats = { total: 13, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1 };
+    const stats = { total: 13, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1, important: 0 };
     send(queryClient, "post.updated", { post: postDetail({ id: "po1", stats, summary: "New summary" }) });
 
     const all = queryClient.getQueryData<PostPages>(keys.posts(wid, null, ""))!;

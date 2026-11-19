@@ -72,6 +72,7 @@ def test_story_figures_are_stored_and_read_back() -> None:
         "exits": 60,
     }
     stored = {"replies", "taps_forward", "taps_back", "swipes_forward", "exits", "clicks"}
+    stored |= {"watch_minutes", "avg_view_seconds", "avg_view_percent", "follows"}  # YouTube
     assert stored <= set(PostMetric)
     assert set(EXTRA_METRICS) == set(ExtraMetrics.model_fields) == stored
     figures = Figures("23h", insights.metrics())

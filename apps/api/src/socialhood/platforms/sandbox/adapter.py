@@ -126,6 +126,25 @@ class SandboxAdapter:
 
         outbox.SEEN.append((acct.platform_account_id, recipient_ref))
 
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """Recorded in ``outbox.REACTIONS``. A WhatsApp number takes any emoji; an Instagram
+        account or a Facebook Page only a heart, like the real ones (GR-42)."""
+        from socialhood.platforms.instagram.adapter import react_payload
+        from socialhood.platforms.sandbox import outbox
+
+        if acct.platform != "whatsapp":
+            react_payload(recipient_ref, platform_message_id, emoji)  # refuses what Meta would
+        failure = outbox.failure_for_text(None, "react")
+        if failure is not None:
+            raise failure
+        outbox.record_reaction(acct.platform_account_id, recipient_ref, platform_message_id, emoji)
+
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         from socialhood.platforms.sandbox import history
 

@@ -138,6 +138,8 @@ def outbound_payload(to: str, message: OutboundMessage) -> dict[str, Any]:
         content = {"type": "text", "text": {"body": message.text, "preview_url": False}}
     else:
         raise PlatformError("platform_rejected", message="Nothing to send")
+    if message.reply_to:  # GR-42: shown as a quote of that message
+        content["context"] = {"message_id": message.reply_to}
     return {"messaging_product": "whatsapp", "recipient_type": "individual", "to": to, **content}
 
 
@@ -219,6 +221,29 @@ class WhatsAppAdapter:
             endpoint="messages.read",
             token=self._token(acct),
             json={"messaging_product": "whatsapp", "status": "read", "message_id": wamid},
+        )
+
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """A ``reaction`` message (GR-42); an empty emoji removes ours. Meta refuses a message
+        older than 30 days (131009); the service checks the age first."""
+        await self.wa.request(
+            "POST",
+            f"{acct.platform_account_id}/messages",
+            endpoint="messages.react",
+            token=self._token(acct),
+            json={
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient_ref,
+                "type": "reaction",
+                "reaction": {"message_id": platform_message_id, "emoji": emoji or ""},
+            },
         )
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:

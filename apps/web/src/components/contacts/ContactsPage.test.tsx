@@ -42,6 +42,7 @@ function contact(values: Partial<ContactListItem> = {}): ContactListItem {
     lead_stage_at: "2026-10-22T10:00:00Z",
     lead_stage_reason: "Lead score reached 72.",
     lead_cold: false,
+    auto_replies_off: false,
     conversation_id: "c1",
     last_activity_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
     first_seen_at: "2026-09-27T09:00:00Z",

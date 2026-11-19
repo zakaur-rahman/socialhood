@@ -1,6 +1,6 @@
 /**
  * "What's new" (/changelog, C-156): what has shipped, newest first, in words a customer reads.
- * Built from the merged pull requests on develop (#13 to #176) and their CONFLICTS entries; only
+ * Built from the merged pull requests on develop (#13 to #238) and their CONFLICTS entries; only
  * features a customer can use or see, no infrastructure, tests or design-system work. A feature
  * that waits on Meta or a listing says so in `status`.
  *
@@ -38,6 +38,141 @@ export type ChangelogEntry = {
 };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    date: "2026-11-14",
+    title: "YouTube videos and Shorts",
+    area: "publishing",
+    body: "Connect a YouTube channel and schedule videos and Shorts from the composer or from your AI app. A video for YouTube alone goes straight to YouTube, without our file size limit.",
+    status: "Opens to everyone after Google's review",
+    prs: [238],
+  },
+  {
+    date: "2026-11-13",
+    title: "Schedule from 1 minute ahead",
+    area: "publishing",
+    body: "Posts and messages can be scheduled for 1 minute from now, and the time list no longer offers times that have passed.",
+    prs: [224],
+  },
+  {
+    date: "2026-11-13",
+    title: "Publish now and switch automations from AI apps",
+    area: "ai",
+    body: "Your AI app can publish a post right away and turn an automation on or off. Each one shows you a preview and waits for your yes, and owners and admins are told.",
+    prs: [234],
+  },
+  {
+    date: "2026-11-13",
+    title: "More Instagram accounts on paid plans",
+    area: "app",
+    body: "Creator now connects 2 Instagram accounts, Business 4 and Agency 10. Website chat runs on 1 site on Free and Creator, 3 on Business and 20 on Agency.",
+    prs: [235],
+  },
+  {
+    date: "2026-11-13",
+    title: "See which account a conversation is on",
+    area: "inbox",
+    body: "With several accounts on one platform, each conversation shows its account, and the account filter shows each account's picture.",
+    prs: [235],
+  },
+  {
+    date: "2026-11-13",
+    title: "A clearer AI menu in the Human Agent window",
+    area: "inbox",
+    body: "When a conversation is in Meta's Human Agent window, the AI menu explains that only replies you send go out.",
+    prs: [225],
+  },
+  {
+    date: "2026-11-13",
+    title: "A warmer website",
+    area: "website",
+    body: "The public site has a warmer sand and charcoal look.",
+    prs: [227],
+  },
+  {
+    date: "2026-11-12",
+    title: "A redesigned website chat",
+    area: "website",
+    body: "The chat on your website looks cleaner: a flat panel, joined message bubbles and a round Send button.",
+    prs: [230],
+  },
+  {
+    date: "2026-11-07",
+    title: "Human Agent replies are always yours",
+    area: "inbox",
+    body: "After 24 hours, an AI draft goes into the reply box for you to check and send, as Meta's Human Agent rules require, instead of going out in one click.",
+    prs: [221],
+  },
+  {
+    date: "2026-11-06",
+    title: "A calmer app",
+    area: "app",
+    body: "A plainer look across the app, with page headers and search rows that stay in view as you scroll.",
+    prs: [214, 215, 217],
+  },
+  {
+    date: "2026-11-05",
+    title: "Tighter access and approvals",
+    area: "team",
+    body: "Only owners and admins can mark orders paid or refund them. Auto replies need a source in your knowledge, and anything without one goes to a person.",
+    prs: [212],
+  },
+  {
+    date: "2026-11-05",
+    title: "An animated product demo",
+    area: "website",
+    body: "The landing page shows the inbox, AI drafts and automations at work.",
+    prs: [208, 219],
+  },
+  {
+    date: "2026-11-03",
+    title: "Four plans and six-month billing",
+    area: "app",
+    body: "Free, Creator at $15, Business at $30 and Agency at $70 a month. Paying every six months saves 10% on Creator, 15% on Business and 25% on Agency.",
+    status: "Paid plans aren't on sale yet",
+    prs: [203, 206, 209, 210],
+  },
+  {
+    date: "2026-11-01",
+    title: "Usage and billing tabs",
+    area: "app",
+    body: "Settings › Billing and usage opens on what you've used this month, with billing in its own tab.",
+    prs: [202],
+  },
+  {
+    date: "2026-11-01",
+    title: "Automations and posts from AI apps",
+    area: "ai",
+    body: "Ask Claude or ChatGPT to set up a comment automation or an Instagram post. It shows you a preview before anything is saved.",
+    prs: [200],
+  },
+  {
+    date: "2026-11-01",
+    title: "Safer API keys",
+    area: "app",
+    body: "API keys can expire and be limited to your IP addresses. They're revoked when the person who made them leaves, or at once if GitHub finds one published.",
+    prs: [197],
+  },
+  {
+    date: "2026-10-31",
+    title: "Connect Claude, ChatGPT and other AI apps",
+    area: "ai",
+    body: "Work with your inbox, knowledge, automations and posts from your AI app, after you sign in and approve it. API keys are in Settings.",
+    prs: [193, 194, 195, 196],
+  },
+  {
+    date: "2026-10-31",
+    title: "Feature pages, a glossary and comparisons",
+    area: "website",
+    body: "Deeper feature and automation pages, a glossary, and a guide to Manychat alternatives.",
+    prs: [189, 191],
+  },
+  {
+    date: "2026-10-30",
+    title: "A new website",
+    area: "website",
+    body: "A redesigned public site with a new landing page, how it works and features pages, and new sign-in pages.",
+    prs: [178, 186],
+  },
   {
     date: "2026-10-28",
     title: "Guides",

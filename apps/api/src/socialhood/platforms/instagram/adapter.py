@@ -151,6 +151,8 @@ class InstagramAdapter:
             }
         else:
             content = _text_content(message)
+        if message.reply_to:  # GR-42: shown as a quote of that message
+            content["reply_to"] = {"mid": message.reply_to}
         payload: dict[str, object] = {"recipient": {"id": recipient_ref}, "message": content}
         if message.human_agent:
             payload["messaging_type"] = "MESSAGE_TAG"
@@ -185,6 +187,22 @@ class InstagramAdapter:
             endpoint="me.messages.mark_seen",
             token=self._token(acct),
             json={"recipient": {"id": recipient_ref}, "sender_action": "mark_seen"},
+        )
+
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """The ``react`` / ``unreact`` sender actions (GR-42): a heart only."""
+        await self.http.request(
+            "POST",
+            self._graph("me/messages"),
+            endpoint="me.messages.react",
+            token=self._token(acct),
+            json=react_payload(recipient_ref, platform_message_id, emoji),
         )
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
@@ -530,6 +548,27 @@ def _text_content(message: OutboundMessage) -> dict[str, object]:
                 ],
             },
         }
+    }
+
+
+HEARTS = frozenset({"❤️", "❤"})  # the red heart, with and without its emoji form
+
+
+def react_payload(
+    recipient_ref: str, platform_message_id: str, emoji: str | None
+) -> dict[str, object]:
+    """Meta's react / unreact sender action, for Instagram and Messenger (GR-42). Meta's docs
+    name only ``love`` as a reaction, so a heart is the one we send; anything else is
+    reaction_not_supported. shortcut: heart only until a real account confirms other emoji."""
+    target: dict[str, object] = {"message_id": platform_message_id}
+    if emoji is None:
+        return {"recipient": {"id": recipient_ref}, "sender_action": "unreact", "payload": target}
+    if emoji not in HEARTS:
+        raise PlatformError("reaction_not_supported", message="Only a heart can be sent here")
+    return {
+        "recipient": {"id": recipient_ref},
+        "sender_action": "react",
+        "payload": {**target, "reaction": "love"},
     }
 
 

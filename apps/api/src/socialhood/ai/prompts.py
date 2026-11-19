@@ -18,7 +18,7 @@ CURRENT = {
     "analysis": 1,
     "suggest": 3,
     "summary": 2,
-    "comment_analysis": 1,
+    "comment_analysis": 2,  # v2: platform-neutral (YouTube comments, YT4)
     "post_summary": 1,
     # The composer's Write with AI and Suggest hashtags (FR-PUB-02, T7.4).
     "caption": 1,

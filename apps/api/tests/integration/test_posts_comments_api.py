@@ -177,7 +177,7 @@ async def test_post_detail_has_its_counts_summary_and_largest_topics_first(shop:
         "Linen shirts",
         "People love the fit.",
     )
-    assert body["stats"] == stats
+    assert body["stats"] == {**stats, "important": 0}
     assert [t["label"] for t in body["topics"]] == ["price", "sizes"]
     assert body["summary_updated_at"] is not None
     assert (await shop.get(f"/posts/{uuid.uuid4()}")).status_code == 404
@@ -403,7 +403,7 @@ async def test_a_public_reply_is_posted_once_per_idempotency_key(shop: Shop) -> 
     row = await shop.one("SELECT our_reply_text FROM comments WHERE id = :id", id=comment_id)
     assert row["our_reply_text"] == "₹499, DM us!"
     events = await stream(shop.redis, shop.wid)
-    assert [kind for kind, _ in events] == ["comment.updated"]
+    assert [kind for kind, _ in events] == ["comment.updated", "post.updated"]
     assert events[0][1]["comment"]["public_reply"]["text"] == "₹499, DM us!"
 
     again = await shop.post_json(path, {"text": "₹499, DM us!"}, key="reply-key-1")
@@ -487,7 +487,7 @@ async def test_a_second_private_reply_to_the_same_comment_is_refused(shop: Shop)
     assert job["queueing_lock"] == f"send:{message['id']}"
     assert job["args"]["comment_id"] == str(comment_id)
     kinds = [kind for kind, _ in await stream(shop.redis, shop.wid)]
-    assert kinds == ["message.created", "conversation.updated", "comment.updated"]
+    assert kinds == ["message.created", "conversation.updated", "comment.updated", "post.updated"]
 
     # The same request again: the first answer, nothing new queued.
     again = await shop.post_json(path, {"text": "Here's the link: maple.example"}, key="dm-key-1")

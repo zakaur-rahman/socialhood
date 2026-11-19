@@ -2,7 +2,7 @@
 FR-SUG-04, FR-SUG-05, F-09).
 
 decide_auto_reply evaluates the policy for a pending suggestion and writes one ai_decisions row
-with all 13 checks: auto_sent queues an ai_auto message (2 more credits) and marks the suggestion
+with all 14 checks: auto_sent queues an ai_auto message (2 more credits) and marks the suggestion
 sent; escalated flags the conversation "Needs you" with the reason and notifies; skipped changes
 nothing. A person's reply pauses Auto with a system note; Resume ends the pause. The decision
 popover (GET …/ai-decision) and "should not have sent" feedback. Free workspaces cannot set Auto.
@@ -43,6 +43,7 @@ NAMES = [
     "grounded_in_knowledge",
     "rate",
     "output_filter",
+    "contact_allows_auto",
 ]
 
 
@@ -199,7 +200,7 @@ async def test_a_workspace_escalation_phrase_escalates(ai: Ai) -> None:
     assert decision.checks[6]["value"] == "wholesale"
 
 
-@pytest.mark.parametrize("case", ["suggest_mode", "paused", "no_credits", "handled"])
+@pytest.mark.parametrize("case", ["suggest_mode", "paused", "no_credits", "handled", "auto_off"])
 async def test_a_skip_changes_nothing_visible(ai: Ai, case: str) -> None:
     suggestion_id = await ready(ai)
     if case == "suggest_mode":
@@ -214,6 +215,9 @@ async def test_a_skip_changes_nothing_visible(ai: Ai, case: str) -> None:
     elif case == "no_credits":
         await ai.set_used(4999)
         expected = "quota_exhausted"
+    elif case == "auto_off":  # GR-44: the suggestion is drafted, but nothing is sent
+        await ai.execute("UPDATE contacts SET auto_replies_off = true")
+        expected = "auto_replies_off"
     else:
         await ai.execute(
             "UPDATE messages SET automation_handled = true WHERE id = :id", id=ai.message_id
@@ -276,7 +280,7 @@ async def test_the_decision_is_shown_for_both_messages_and_takes_feedback(ai: Ai
             "auto_sent",
             None,
         )
-        assert [c["n"] for c in body["checks"]] == list(range(1, 14))
+        assert [c["n"] for c in body["checks"]] == list(range(1, 15))
 
     path = f"/ai-decisions/{decision.id}/feedback"
     marked = await ai.call("POST", path, json={"feedback": "bad"})

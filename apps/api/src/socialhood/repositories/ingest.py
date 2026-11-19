@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -343,9 +343,16 @@ async def upsert_media_item(
         posted_at=media.posted_at,
         **changing,
     )
+    # A post we published as a Reel (a Facebook Page Reel, a YouTube Short) is read back by the
+    # sync as a plain video: keep its type and link.
+    keep_reel = and_(MediaItem.media_type == "reel", statement.excluded.media_type == "video")
+    kept = {
+        k: case((keep_reel, getattr(MediaItem, k)), else_=statement.excluded[k])
+        for k in ("media_type", "permalink")
+    }
     statement = statement.on_conflict_do_update(
         index_elements=[MediaItem.social_account_id, MediaItem.platform_media_id],
-        set_={**{k: statement.excluded[k] for k in changing}, "updated_at": synced_at},
+        set_={**{k: statement.excluded[k] for k in changing}, **kept, "updated_at": synced_at},
     )
     await session.execute(statement)
 
