@@ -112,7 +112,11 @@ async def test_start_asks_google_for_force_ssl_offline_with_consent(
     # The real client's URL (the fake's points straight back).
     real = HttpYouTubeOAuth(deps_from(app.state.http, app.state.settings)).authorize_url("s")
     query = {k: v[0] for k, v in parse_qs(urlparse(real).query).items()}
-    assert (query["scope"], query["access_type"], query["prompt"]) == (SCOPE, "offline", "consent")
+    assert (query["scope"], query["access_type"], query["prompt"]) == (
+        f"{SCOPE} {ANALYTICS_SCOPE}",
+        "offline",
+        "consent",
+    )
     assert query["include_granted_scopes"] == "true"
 
 
@@ -251,7 +255,8 @@ async def test_a_grant_without_analytics_connects_with_basic_stats_only(
     clerk_id, ws = await owner(client, clerk)
     done = await connect(client, clerk, clerk_id, ws["id"])
     assert done.status_code == 201, done.text
-    assert sorted(done.json()["items"][0]["capabilities"]) == ["post_insights", "publish"]
+    capabilities = sorted(done.json()["items"][0]["capabilities"])
+    assert capabilities == ["comments", "post_insights", "publish"]
     [row] = await rows(engine)
     assert row["scopes"] == [SCOPE]
 
@@ -314,8 +319,8 @@ async def test_one_channel_per_workspace_even_on_business(
         1,
     )
     assert body["detail"] == "Your plan includes 1 YouTube account."
-    started = await start_connect(client, clerk, clerk_id, ws["id"])
-    assert (started.status_code, started.json()["entitlement"]) == (402, "youtube_accounts")
+    # Starting again works, so the connected channel can come back with more scopes (C-199).
+    assert (await start_connect(client, clerk, clerk_id, ws["id"])).status_code == 200
     # Reconnecting the connected channel keeps its slot.
     again = await connect_channels(client, clerk, clerk_id, ws["id"], second, [CHANNEL.id])
     assert again.status_code == 201, again.text
@@ -400,4 +405,9 @@ async def test_a_sandbox_channel_can_be_made(
     assert made.status_code == 201, made.text
     body = made.json()
     assert (body["platform"], body["sandbox"], body["token_expires_at"]) == ("youtube", True, None)
-    assert sorted(body["capabilities"]) == ["comments", "post_insights", "publish"]
+    assert sorted(body["capabilities"]) == [
+        "account_insights",
+        "comments",
+        "post_insights",
+        "publish",
+    ]

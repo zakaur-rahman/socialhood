@@ -91,8 +91,10 @@ async def start(
     """Store a single-use OAuth state (TR-PL-08) and return Google's authorize URL."""
     if not oauth.configured(deps):
         raise ApiError("service_unavailable", NOT_CONFIGURED)
-    # A channel already connected can be reconnected, so only a plan with none free refuses here.
-    await _check_capacity(session, Platform.YOUTUBE, plan)
+    # A channel already connected can be reconnected (also to add the analytics scope), so only a
+    # workspace with none refuses here; connect_channels refuses a different channel exactly.
+    if not await accounts.count_live(session, Platform.YOUTUBE):
+        await _check_capacity(session, Platform.YOUTUBE, plan)
     state = secrets.token_urlsafe(32)
     await redis.set(
         f"oauth:{state}",

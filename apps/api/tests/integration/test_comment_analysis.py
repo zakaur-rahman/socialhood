@@ -402,7 +402,7 @@ async def test_the_free_plan_analyses_the_five_most_recent_posts(
 
 async def test_deleted_and_empty_comments_are_skipped(cw: Comments, fake_ai: FakeProvider) -> None:
     post = await cw.post()
-    kept = await cw.comment("Nice", post=post)
+    kept = await cw.comment("Is this available in blue?", post=post)
     gone = await cw.comment("Deleted soon", post=post)
     blank = await cw.comment("   ", post=post)
     await cw.execute("UPDATE comments SET deleted_at = now() WHERE id = :id", id=gone)
