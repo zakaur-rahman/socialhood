@@ -392,6 +392,7 @@ def _item(
         "lead_stage_at": contact.lead_stage_at,
         "lead_stage_reason": contact.lead_stage_reason,
         "lead_cold": leads.is_cold(contact, conv.last_inbound_at if conv else None),
+        "auto_replies_off": contact.auto_replies_off,
         "conversation_id": conv.id if conv else None,
         "last_activity_at": activity,
         "first_seen_at": contact.first_seen_at or contact.created_at,
@@ -566,6 +567,8 @@ async def update_contact(session: AsyncSession, contact_id: uuid.UUID, body: Con
                 except ValueError as error:
                     errors.append(FieldError(field=f"fields.{key}", message=str(error)))
         contact.fields = merged
+    if body.auto_replies_off is not None:
+        contact.auto_replies_off = body.auto_replies_off
     if errors:
         raise ApiError("validation_error", errors=errors)
     await session.flush()

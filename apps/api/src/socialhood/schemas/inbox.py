@@ -104,6 +104,7 @@ class ContactDetail(ContactSummary):
     # C-135: who chose display_name ("platform" or "team") and the platform's own latest name.
     name_source: Literal["platform", "team"] = "platform"
     platform_name: str | None = None
+    auto_replies_off: bool = False  # GR-44
 
 
 class Assignee(ResponseModel):

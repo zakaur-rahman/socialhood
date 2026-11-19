@@ -170,6 +170,7 @@ async def policy_input(
     if found:
         allowed += await drafting.knowledge_mentioning(session, [v for _, v in found])
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=False, now=now)
+    contact = await session.get(Contact, conv.contact_id)
     return policy.PolicyInput(
         effective_mode=conv.ai_mode_override or acct.ai_mode,
         auto_allowed="auto" in entitlement(plan, "ai_modes"),
@@ -202,6 +203,7 @@ async def policy_input(
         min_similarity=settings.ai_retrieval_min_sim,
         auto_hours_blocked=await business_hours.auto_blocked(session, acct.id, now),
         small_talk=small_talk.is_small_talk(msg.text, None),
+        contact_allows_auto=contact is None or not contact.auto_replies_off,  # GR-44
     )
 
 

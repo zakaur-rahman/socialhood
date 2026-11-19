@@ -124,6 +124,7 @@ class SkipReason(StrEnum):
     PAUSED = "paused"
     AUTOMATION_HANDLED = "automation_handled"
     RATE_CAPPED = "rate_capped"
+    AUTO_REPLIES_OFF = "auto_replies_off"  # GR-44
     NOT_NEEDED = "not_needed"
 
 

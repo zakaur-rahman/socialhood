@@ -41,6 +41,7 @@ import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
+import { AutoRepliesSwitch } from "./AutoRepliesSwitch";
 import { ContactSequences } from "./ContactSequences";
 import { ContactTimeline } from "./ContactTimeline";
 import { TagChip } from "./TagChip";
@@ -152,6 +153,9 @@ function DrawerBody({ record }: { record: ContactRecord }) {
       <div className="flex flex-col gap-6 p-4">
         <Section id="contact-lead-stage" title="Lead stage">
           <LeadStageSection record={record} />
+        </Section>
+        <Section id="contact-auto-replies" title="Replies">
+          <AutoRepliesSwitch contactId={record.id} off={record.auto_replies_off} />
         </Section>
         <Section id="contact-tags" title="Tags">
           <TagsEditor record={record} admin={admin} />

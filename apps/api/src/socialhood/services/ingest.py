@@ -274,6 +274,8 @@ async def _automations(session: AsyncSession, contact: Contact, msg: Message, *,
     for this contact (FR-AUT-21), or DM keyword automations."""
     from socialhood.services.automations import runtime
 
+    if contact.auto_replies_off:  # GR-44: only people reply to them
+        return
     await runtime.contact_replied(session, contact.id, at=msg.occurred_at)
     if run:
         await runtime.enqueue_for_message(session, msg, contact_id=contact.id)

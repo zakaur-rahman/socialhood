@@ -441,6 +441,7 @@ async def conversation_detail(
                 follows_business=contact.follows_business,
                 name_source=NameSource(contact.name_source).value,
                 platform_name=contact.platform_name,
+                auto_replies_off=contact.auto_replies_off,
             ),
             "reply_window": reply_window(
                 conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now

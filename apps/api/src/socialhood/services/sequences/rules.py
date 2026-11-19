@@ -34,6 +34,7 @@ REASONS: dict[str, str] = {
     "marketing_off": "WhatsApp marketing messages are switched off for now.",
     "missing_value": "A template variable had no value for this person and no fallback.",
     "no_text": "This step only has a template, and this channel can't send templates.",
+    "auto_replies_off": "Automatic replies are off for this person.",
     "no_conversation": "They have never written to this account, so there is nobody to reply to.",
 }
 
@@ -57,9 +58,13 @@ def decide(
     has_template: bool,
     consent_skip: str | None,
     marketing_enabled: bool,
+    auto_replies_off: bool = False,
 ) -> Decision:
     """What to send. ``consent_skip`` is GR-23's answer for the contact: None when the latest
-    WhatsApp marketing record is a grant, else ``opted_out`` or ``no_consent``."""
+    WhatsApp marketing record is a grant, else ``opted_out`` or ``no_consent``. Nothing is sent
+    to a contact whose automatic replies are off (GR-44)."""
+    if auto_replies_off:
+        return Decision("skip", "auto_replies_off")
     if platform != "whatsapp":
         if not has_text:
             return Decision("skip", "no_text")

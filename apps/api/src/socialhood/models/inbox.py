@@ -155,6 +155,11 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     lead_stage_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lead_stage_reason: Mapped[str | None] = mapped_column(Text)
     lead_cold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GR-44: no automatic replies (automations, away message, AI Auto, sequences, nudges) for this
+    # contact; people still reply, and order notices, broadcasts and AI suggestions are unchanged.
+    auto_replies_off: Mapped[bool] = mapped_column(
+        Boolean, server_default=sql("false"), default=False
+    )
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_user_id"),

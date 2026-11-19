@@ -31,6 +31,7 @@ const kabir = conversation({
     first_seen_at: "2026-09-20T09:00:00Z",
     platform_user_id: "178",
     name_source: "platform",
+    auto_replies_off: false,
   },
 });
 

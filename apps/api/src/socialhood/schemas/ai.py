@@ -18,7 +18,13 @@ TakeoverMinutes = Literal[0, 30, 120, 1440]  # 0 = until resumed (FR-SUG-05)
 SentimentName = Literal["positive", "neutral", "negative"]
 DecisionOutcomeName = Literal["auto_sent", "escalated", "skipped"]
 SkipReasonName = Literal[
-    "mode_not_auto", "quota_exhausted", "paused", "automation_handled", "rate_capped", "not_needed"
+    "mode_not_auto",
+    "quota_exhausted",
+    "paused",
+    "automation_handled",
+    "rate_capped",
+    "not_needed",
+    "auto_replies_off",
 ]
 
 ListItem = Annotated[str, Field(min_length=1, max_length=120)]
