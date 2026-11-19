@@ -38129,7 +38129,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/inbound": {
       "post": {
-        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook.",
+        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook. For a\nsandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.",
         "operationId": "sandbox_inbound",
         "parameters": [
           {

@@ -210,9 +210,9 @@ def important_conditions() -> list[ColumnElement[bool]]:
     """The one rule for "important", on Comment and its (outer-joined) CommentAnalysis: not
     deleted, hidden or spam (unanalysed included) and not replied to, publicly or privately (as
     ``needs_reply_conditions``, without its 7-day window), and either analysed as a question, a
-    wish to buy, a complaint or refund, or negative, or liked IMPORTANT_LIKES times or more. ``is_important`` is the same
-    rule on one loaded comment; the ``important`` filter, ``Comment.important`` and the post's
-    ``stats.important`` all use it."""
+    wish to buy, a complaint or refund, or negative, or liked IMPORTANT_LIKES times or more.
+    ``is_important`` is the same rule on one loaded comment; the ``important`` filter,
+    ``Comment.important`` and the post's ``stats.important`` all use it."""
     query = CommentQuery(replied=False)
     analysed = Comment.analysis_status == AnalysisStatus.DONE
     signal = (

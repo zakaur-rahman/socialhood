@@ -2265,7 +2265,8 @@ export interface paths {
         put?: never;
         /**
          * Sandbox Inbound
-         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook.
+         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook. For a
+         *     sandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.
          */
         post: operations["sandbox_inbound"];
         delete?: never;
