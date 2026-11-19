@@ -247,7 +247,10 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.prepare.outputs.sha }}
-          sparse-checkout: infra/vm
+          sparse-checkout: |
+            infra/vm
+            scripts
+            apps/web/public
 
       - name: Set up SSH
         env:
@@ -284,11 +287,27 @@ jobs:
               api.env.example web.env.example \
             | ssh vm 'mkdir -p /opt/amplychat && tar -C /opt/amplychat -xf - --no-same-owner'
 
+      # C-200: the sitemap before the deploy, so IndexNow gets only what changed. Left out while the
+      # live site doesn't serve the key yet, so the first deploy with the key file sends every page.
+      - name: Save the live sitemap (IndexNow)
+        continue-on-error: true
+        run: |
+          key="$(ls apps/web/public | grep -Ex '[0-9a-f]{32}\.txt' || true)"
+          if [ -n "$key" ] && curl -fsS "https://amplychat.com/${key}" > /dev/null; then
+            curl -fsS https://amplychat.com/sitemap.xml -o "$RUNNER_TEMP/sitemap-before.xml"
+          fi
+
       # SHA is a 40-character hex commit id (checked in prepare), expanded here on purpose.
       - name: Deploy
         run: |
           # shellcheck disable=SC2029
           ssh vm "/opt/amplychat/deploy.sh '$SHA'"
+
+      # Bing, Yandex and the other IndexNow engines hear about added, changed and removed pages.
+      # Never fails the deploy.
+      - name: Tell search engines what changed (IndexNow)
+        continue-on-error: true
+        run: node scripts/indexnow.mjs "$RUNNER_TEMP/sitemap-before.xml"
 
       - name: Summary
         if: always()
