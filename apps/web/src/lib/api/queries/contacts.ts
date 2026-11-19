@@ -10,6 +10,9 @@ import type {
   BulkTagsUpdate,
   ConsentCreate,
   ContactCount,
+  ContactImportBody,
+  ContactImportPreview,
+  ContactImportResult,
   ContactList,
   ContactPatch,
   ContactRecord,
@@ -239,6 +242,28 @@ export function useExportContacts(wid: string) {
       });
       if (error !== undefined || data === undefined) throw new Error("The export did not download. Try again.");
       return data as Blob;
+    },
+  });
+}
+
+// ---- CSV import (GR-43)
+
+/** What the file would do, row by row. Saves nothing. */
+export function usePreviewContactImport(wid: string) {
+  const api = useApi();
+  return useMutation<ContactImportPreview, Error, ContactImportBody>({
+    mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/contacts/import/preview", { params: { path: { wid } }, body })),
+  });
+}
+
+export function useImportContacts(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<ContactImportResult, Error, ContactImportBody>({
+    mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/contacts/import", { params: { path: { wid } }, body })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: keys.contactLists(wid) });
+      void queryClient.invalidateQueries({ queryKey: keys.tags(wid) });
     },
   });
 }

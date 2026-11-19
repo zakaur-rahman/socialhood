@@ -178,6 +178,45 @@ class ContactCreate(RequestModel):
     fields: dict[str, Any] | None = None
 
 
+class ContactImport(RequestModel):
+    """A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file
+    agreed to WhatsApp marketing; without it the file's "WhatsApp marketing" column is ignored."""
+
+    account_id: uuid.UUID
+    csv: str = Field(min_length=1, max_length=900_000)  # under the API's 1 MB body limit
+    grant_consent: bool = False
+    file_name: str = Field(default="", max_length=200)  # kept as consent evidence
+
+
+ImportAction = Literal["create", "update", "unchanged", "skip"]
+
+
+class ContactImportRowOut(ResponseModel):
+    line: int  # the CSV line, the header being 1
+    phone: str
+    action: ImportAction
+    reasons: list[str] = Field(default_factory=list)
+
+
+class ContactImportResult(ResponseModel):
+    created: int
+    updated: int  # existing contacts that got something filled in, a tag or a consent
+    unchanged: int
+    skipped: int  # rows with problems, left out
+    consents_granted: int
+    consents_kept_withdrawn: int  # said yes, but a STOP or other withdrawal stands
+    tags_created: int
+
+
+class ContactImportPreview(ContactImportResult):
+    rows: list[ContactImportRowOut]  # the first 500
+    total_rows: int
+    row_cap: int
+    consent_ignored: int  # "yes" rows left alone because the box wasn't ticked
+    columns: list[str]  # the recognised header columns
+    ignored_columns: list[str]
+
+
 class ContactTagsUpdate(RequestModel):
     add: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     remove: list[uuid.UUID] = Field(default_factory=list, max_length=20)

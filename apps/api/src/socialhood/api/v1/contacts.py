@@ -25,6 +25,9 @@ from socialhood.schemas.contacts import (
     BulkTagsUpdate,
     ConsentCreate,
     ContactCount,
+    ContactImport,
+    ContactImportPreview,
+    ContactImportResult,
     ContactList,
     ContactPatch,
     ContactRecord,
@@ -45,7 +48,7 @@ from socialhood.schemas.contacts import (
     TagPatch,
     TimelineList,
 )
-from socialhood.services import contact_segments, contact_timeline
+from socialhood.services import audit, contact_segments, contact_timeline, contacts_import
 from socialhood.services import contacts as service
 from socialhood.services.contacts import ContactFilter
 
@@ -200,6 +203,43 @@ async def export_contacts(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="contacts-{stamp}.csv"'},
     )
+
+
+@router.post("/contacts/import/preview", operation_id="preview_contact_import")
+async def preview_contact_import(
+    body: ContactImport, ctx: Admin, session: Session
+) -> ContactImportPreview:
+    """Read the file and say what an import would create, update and leave out, and why. Saves
+    nothing. 422 for another platform's account or a file with no Phone column."""
+    planned = await contacts_import.plan(
+        session, body.csv, account_id=body.account_id, grant_consent=body.grant_consent
+    )
+    return contacts_import.preview(planned)
+
+
+@router.post("/contacts/import", operation_id="import_contacts")
+async def import_contacts(body: ContactImport, ctx: Admin, session: Session) -> ContactImportResult:
+    """Save the file's valid rows (the same reading as the preview). Existing contacts only get
+    blanks filled and tags added; a withdrawn consent is never granted again."""
+    planned = await contacts_import.plan(
+        session, body.csv, account_id=body.account_id, grant_consent=body.grant_consent
+    )
+    result = await contacts_import.apply(
+        session, planned, user_id=ctx.user.id, file_name=body.file_name
+    )
+    await audit.record(
+        session,
+        ctx,
+        "contacts.imported",
+        "contact",
+        None,
+        account_id=body.account_id,
+        file_name=body.file_name,
+        consent_ticked=body.grant_consent,
+        **result.model_dump(),
+    )
+    await session.commit()
+    return result
 
 
 @router.post("/contacts/bulk-tags", operation_id="bulk_tag_contacts")

@@ -449,6 +449,10 @@ export type CatalogueLimits = Schemas["CatalogueLimits"];
 export type CsvImportPreview = Schemas["ImportPreview"];
 export type CsvImportRow = Schemas["ImportRowOut"];
 export type CsvImportResult = Schemas["ImportResult"];
+export type ContactImportBody = Schemas["ContactImport"];
+export type ContactImportPreview = Schemas["ContactImportPreview"];
+export type ContactImportRow = Schemas["ContactImportRowOut"];
+export type ContactImportResult = Schemas["ContactImportResult"];
 export type ShopifyStatus = Schemas["ShopifyStatus"];
 
 // ---- orders and payment requests (GR-32)

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, SlidersHorizontal, Tag, Users } from "lucide-react";
+import { AlertTriangle, Download, SlidersHorizontal, Tag, Upload, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { BulkTagDialog } from "./BulkTagDialog";
 import { ContactDrawer } from "./ContactDrawer";
 import { FiltersSheet } from "./FiltersSheet";
+import { ImportContactsDialog } from "./ImportContactsDialog";
 import { SegmentBar } from "./SegmentBar";
 import { TagChip } from "./TagChip";
 import { ListCardSkeleton, SkeletonRegion } from "@/components/states/skeletons";
@@ -63,6 +64,7 @@ export function ContactsPage() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [allMatching, setAllMatching] = useState(false);
   const [tagging, setTagging] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const list = useContacts(wid, filters);
   const count = useContactCount(wid, filters);
@@ -116,9 +118,14 @@ export function ContactsPage() {
       title="Contacts"
       actions={
         admin ? (
-          <Button variant="secondary" loading={exporter.isPending} onClick={exportCsv}>
-            <Download aria-hidden /> Export CSV
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setImporting(true)}>
+              <Upload aria-hidden /> Import CSV
+            </Button>
+            <Button variant="secondary" loading={exporter.isPending} onClick={exportCsv}>
+              <Download aria-hidden /> Export CSV
+            </Button>
+          </>
         ) : null
       }
     >
@@ -275,6 +282,7 @@ export function ContactsPage() {
           setAllMatching(false);
         }}
       />
+      <ImportContactsDialog open={importing} onOpenChange={setImporting} />
       {exporter.isSuccess ? <span className="sr-only" role="status">Export ready</span> : null}
     </PageFrame>
   );

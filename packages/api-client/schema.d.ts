@@ -1857,6 +1857,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/contacts/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Contacts
+         * @description Save the file's valid rows (the same reading as the preview). Existing contacts only get
+         *     blanks filled and tags added; a withdrawn consent is never granted again.
+         */
+        post: operations["import_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Contact Import
+         * @description Read the file and say what an import would create, update and leave out, and why. Saves
+         *     nothing. 422 for another platform's account or a file with no Phone column.
+         */
+        post: operations["preview_contact_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -8086,6 +8128,87 @@ export interface components {
             stages?: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
             /** Tag Ids */
             tag_ids?: string[];
+        };
+        /**
+         * ContactImport
+         * @description A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file
+         *     agreed to WhatsApp marketing; without it the file's "WhatsApp marketing" column is ignored.
+         */
+        ContactImport: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Csv */
+            csv: string;
+            /**
+             * File Name
+             * @default
+             */
+            file_name: string;
+            /**
+             * Grant Consent
+             * @default false
+             */
+            grant_consent: boolean;
+        };
+        /** ContactImportPreview */
+        ContactImportPreview: {
+            /** Columns */
+            columns: string[];
+            /** Consent Ignored */
+            consent_ignored: number;
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Ignored Columns */
+            ignored_columns: string[];
+            /** Row Cap */
+            row_cap: number;
+            /** Rows */
+            rows: components["schemas"]["ContactImportRowOut"][];
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Total Rows */
+            total_rows: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportResult */
+        ContactImportResult: {
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportRowOut */
+        ContactImportRowOut: {
+            /** Action */
+            action: "create" | "update" | "unchanged" | "skip";
+            /** Line */
+            line: number;
+            /** Phone */
+            phone: string;
+            /** Reasons */
+            reasons?: string[];
         };
         /** ContactList */
         ContactList: {
@@ -19239,6 +19362,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BulkTagsResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    import_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_contact_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportPreview"];
                 };
             };
             /** @description Validation error */
