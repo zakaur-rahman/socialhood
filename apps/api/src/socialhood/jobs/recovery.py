@@ -64,6 +64,7 @@ RECOVERY: dict[str, Recovery] = {
     "sync_all_media": R,
     "sweep_messages": R,
     "dispatch_due": R,  # claims with FOR UPDATE SKIP LOCKED; claimed rows are the sweeper's
+    "wake_snoozed": R,  # GR-45: re-reads due snoozes each minute; waking twice changes nothing
     "sweep_stuck_scheduled": R,
     "end_automation_windows": R,
     "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket

@@ -38,6 +38,7 @@ async def desk(
     app: FastAPI,
     engine: AsyncEngine,
     redis: Redis,
+    queue: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Shop:
     desk = await shop(client, clerk, app, engine, redis, monkeypatch)

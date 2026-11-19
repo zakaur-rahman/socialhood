@@ -183,6 +183,15 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "status": "granted",
         "note": "Asked in the shop",
     },
+    # GR-43: importing into B's WhatsApp account is refused like any other unknown account.
+    ("POST", "/v1/w/{wid}/contacts/import/preview"): {
+        "account_id": "{account_id}",
+        "csv": "Phone\n+15550100",
+    },
+    ("POST", "/v1/w/{wid}/contacts/import"): {
+        "account_id": "{account_id}",
+        "csv": "Phone\n+15550100",
+    },
     ("POST", "/v1/w/{wid}/contacts/bulk-tags"): {
         "contact_ids": ["{contact_id}"],
         "add": ["{tag_id}"],

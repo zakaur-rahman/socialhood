@@ -207,7 +207,7 @@ async def export_contacts(
 
 @router.post("/contacts/import/preview", operation_id="preview_contact_import")
 async def preview_contact_import(
-    body: ContactImport, ctx: Admin, session: Session
+    body: ContactImport, ctx: CanManageContacts, session: Session
 ) -> ContactImportPreview:
     """Read the file and say what an import would create, update and leave out, and why. Saves
     nothing. 422 for another platform's account or a file with no Phone column."""
@@ -218,7 +218,9 @@ async def preview_contact_import(
 
 
 @router.post("/contacts/import", operation_id="import_contacts")
-async def import_contacts(body: ContactImport, ctx: Admin, session: Session) -> ContactImportResult:
+async def import_contacts(
+    body: ContactImport, ctx: CanManageContacts, session: Session
+) -> ContactImportResult:
     """Save the file's valid rows (the same reading as the preview). Existing contacts only get
     blanks filled and tags added; a withdrawn consent is never granted again."""
     planned = await contacts_import.plan(

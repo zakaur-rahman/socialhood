@@ -2,7 +2,7 @@
 
 For a pending inbox suggestion in Auto mode, in one transaction holding the suggestion's and the
 conversation's row locks: load the facts, evaluate the policy (ai/policy), write one
-``ai_decisions`` row with all 13 checks, then act on the outcome:
+``ai_decisions`` row with all 14 checks, then act on the outcome:
 
 - auto_sent: reserve 2 credits (``auto_reply``, with its usage event), queue an outbound message
   with source ``ai_auto`` and the suggestion's id through services/sending (so the suggestion

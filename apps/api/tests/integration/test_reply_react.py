@@ -19,6 +19,7 @@ from socialhood.jobs.runtime import Runtime
 from socialhood.platforms.sandbox import outbox
 from socialhood.realtime.events import stream_key
 from tests.support.api import Clerk, sign_in
+from tests.support.automation_api import set_plan
 from tests.support.inbox import make_thread
 from tests.support.sending import (
     Setup,
@@ -54,6 +55,7 @@ async def whatsapp_setup(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncE
     clerk_id, me = await sign_in(client, clerk, email="wa@example.com", first_name="Asha")
     wid = me["workspaces"][0]["id"]
     headers = clerk.headers(clerk_id)
+    await set_plan(engine, wid, "pro")  # WhatsApp is on Creator and up (C-172)
     created = await client.post(
         f"/v1/w/{wid}/dev/sandbox/accounts", json={"platform": "whatsapp"}, headers=headers
     )

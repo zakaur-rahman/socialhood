@@ -2,7 +2,7 @@
 FR-SUG-04, FR-SUG-05, F-09).
 
 decide_auto_reply evaluates the policy for a pending suggestion and writes one ai_decisions row
-with all 13 checks: auto_sent queues an ai_auto message (2 more credits) and marks the suggestion
+with all 14 checks: auto_sent queues an ai_auto message (2 more credits) and marks the suggestion
 sent; escalated flags the conversation "Needs you" with the reason and notifies; skipped changes
 nothing. A person's reply pauses Auto with a system note; Resume ends the pause. The decision
 popover (GET …/ai-decision) and "should not have sent" feedback. Free workspaces cannot set Auto.
@@ -280,7 +280,7 @@ async def test_the_decision_is_shown_for_both_messages_and_takes_feedback(ai: Ai
             "auto_sent",
             None,
         )
-        assert [c["n"] for c in body["checks"]] == list(range(1, 14))
+        assert [c["n"] for c in body["checks"]] == list(range(1, 15))
 
     path = f"/ai-decisions/{decision.id}/feedback"
     marked = await ai.call("POST", path, json={"feedback": "bad"})

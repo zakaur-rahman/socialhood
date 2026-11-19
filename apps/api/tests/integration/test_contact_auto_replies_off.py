@@ -150,10 +150,10 @@ async def test_a_comment_from_a_contact_with_replies_off_gets_no_public_reply_an
 
     assert await world.run("comment", second) is Outcome.SKIPPED
 
-    assert outbox.COMMENT_REPLIES == []
+    assert not outbox.COMMENT_REPLIES
     assert await world.rows("SELECT id FROM automation_runs") == []
     assert (await world.drain()).sent == 0
-    assert outbox.PRIVATE_REPLIES == []
+    assert not outbox.PRIVATE_REPLIES
 
 
 async def test_the_follow_nudge_is_not_queued_for_a_contact_with_replies_off(
