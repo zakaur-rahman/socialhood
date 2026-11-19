@@ -55,6 +55,10 @@ export const EXTRA_LABEL: Record<ExtraMetricName, string> = {
   swipes_forward: "Swipes forward",
   exits: "Exits",
   clicks: "Clicks",
+  watch_minutes: "Watch time",
+  avg_view_seconds: "Average view duration",
+  avg_view_percent: "Average percent viewed",
+  follows: "Follows",
 };
 
 /** What a Story shows, in order (Meta gives no likes, comments or saves for a Story). */
@@ -69,13 +73,32 @@ export const STORY_FIGURES: (MetricName | ExtraMetricName)[] = [
   "exits",
 ];
 
-export type Figure = { key: MetricName | ExtraMetricName; label: string; value: number | null };
+/** Figures only YouTube gives (watch time, retention, subscribers); the API sends them when it has them. */
+export const WATCH_FIGURES = ["watch_minutes", "avg_view_seconds", "avg_view_percent", "follows"] as const;
+export type WatchFigureName = (typeof WATCH_FIGURES)[number];
+
+export const WATCH_LABEL: Record<WatchFigureName, string> = {
+  watch_minutes: "Watch time",
+  avg_view_seconds: "Average view duration",
+  avg_view_percent: "Average percent viewed",
+  follows: "Follows",
+};
+
+/** `follows` is subscribers gained on YouTube. */
+export function watchLabel(key: WatchFigureName, platform?: string | null): string {
+  return key === "follows" && platform === "youtube" ? "Subscribers gained" : WATCH_LABEL[key];
+}
+
+export type Figure = { key: MetricName | ExtraMetricName | WatchFigureName; label: string; value: number | null };
 
 /**
  * The figures a post's card shows, in order: a Story its own list; every other post the usual
  * seven, plus the clicks of a Facebook Page post when the API gave them.
  */
-export function figuresOf(performance: Pick<PostPerformance, "media_type" | "metrics" | "extra_metrics">): Figure[] {
+export function figuresOf(
+  performance: Pick<PostPerformance, "media_type" | "metrics" | "extra_metrics">,
+  platform?: string | null,
+): Figure[] {
   const extra: Partial<Record<string, number | null>> = performance.extra_metrics ?? {};
   const metrics: Partial<Record<string, number | null>> = performance.metrics;
   const read = (key: string) => metrics[key] ?? extra[key] ?? null;
@@ -83,11 +106,17 @@ export function figuresOf(performance: Pick<PostPerformance, "media_type" | "met
     performance.media_type === "story"
       ? STORY_FIGURES
       : [...METRICS, ...(extra.clicks != null ? (["clicks"] as ExtraMetricName[]) : [])];
-  return keys.map((key) => ({
+  const base: Figure[] = keys.map((key) => ({
     key,
     label: key in EXTRA_LABEL ? EXTRA_LABEL[key as ExtraMetricName] : METRIC_LABEL[key as MetricName],
     value: read(key),
   }));
+  const watch: Figure[] = WATCH_FIGURES.filter((key) => read(key) != null).map((key) => ({
+    key,
+    label: watchLabel(key, platform),
+    value: read(key),
+  }));
+  return [...base, ...watch];
 }
 
 const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -99,8 +128,25 @@ export function formatMetric(metric: MetricName, value: number | null | undefine
   return metric === "engagement_rate" ? `${whole.format(value)}%` : whole.format(value);
 }
 
+/** Minutes as "2 h 5 min", or "45 min" under an hour. */
+export function formatWatchTime(minutes: number): string {
+  const total = Math.round(minutes);
+  const h = Math.floor(total / 60);
+  return h > 0 ? `${whole.format(h)} h ${total % 60} min` : `${total} min`;
+}
+
+/** Seconds as "m:ss". */
+export function formatDuration(seconds: number): string {
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /** A figure from `figuresOf`: engagement rate as a percentage, the rest as whole numbers, "—" when unknown. */
 export function formatFigure(figure: Figure): string {
+  if (figure.value == null) return "—";
+  if (figure.key === "watch_minutes") return formatWatchTime(figure.value);
+  if (figure.key === "avg_view_seconds") return formatDuration(figure.value);
+  if (figure.key === "avg_view_percent") return `${Math.round(figure.value)}%`;
   return figure.key === "engagement_rate" ? formatMetric("engagement_rate", figure.value) : formatMetric("reach", figure.value);
 }
 

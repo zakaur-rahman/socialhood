@@ -99,6 +99,8 @@ RECOVERY: dict[str, Recovery] = {
     "sync_media": R,
     "backfill_account": R,
     "backfill_comments": R,
+    "dispatch_youtube_comments": R,
+    "poll_youtube_comments": R,  # reads, and the intake stores each comment once
     "snapshot_account_posts": R,  # each window is captured once
     "snapshot_account_day": R,  # one row per account and day
     "crawl_site": R,  # resumable: the queue is in site_pages, a stale version is dropped

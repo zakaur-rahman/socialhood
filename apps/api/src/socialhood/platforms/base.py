@@ -189,6 +189,10 @@ class MediaInsights:
     exits: int | None = None
     # Facebook Page posts only: clicks on the post.
     clicks: int | None = None
+    # YouTube Analytics only (the scope may not be granted).
+    watch_minutes: int | None = None
+    avg_view_seconds: int | None = None
+    avg_view_percent: int | None = None
 
     def metrics(self) -> dict[str, int]:
         """The known values, as stored in a snapshot's ``metrics``."""
@@ -209,6 +213,7 @@ class AccountInsights:
     follows: int | None = None
     unfollows: int | None = None
     profile_links_taps: int | None = None
+    watch_minutes: int | None = None  # YouTube Analytics only
 
     def metrics(self) -> dict[str, int]:
         """The known insight values, as stored in ``account_daily_metrics.metrics``."""

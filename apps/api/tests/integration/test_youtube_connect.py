@@ -18,7 +18,7 @@ from socialhood.platforms.deps import deps_from
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.youtube.client import Channel
 from socialhood.platforms.youtube.fake import CHANNEL, FakeYouTube
-from socialhood.platforms.youtube.oauth import SCOPE, HttpYouTubeOAuth
+from socialhood.platforms.youtube.oauth import ANALYTICS_SCOPE, SCOPE, HttpYouTubeOAuth
 from socialhood.security.crypto import TokenCipher
 from socialhood.services.youtube_connect import CONNECT_NOT_YOURS, NO_SCOPE
 from socialhood.settings import Settings
@@ -112,8 +112,12 @@ async def test_start_asks_google_for_force_ssl_offline_with_consent(
     # The real client's URL (the fake's points straight back).
     real = HttpYouTubeOAuth(deps_from(app.state.http, app.state.settings)).authorize_url("s")
     query = {k: v[0] for k, v in parse_qs(urlparse(real).query).items()}
-    assert (query["scope"], query["access_type"], query["prompt"]) == (SCOPE, "offline", "consent")
-    assert query["include_granted_scopes"] == "false"
+    assert (query["scope"], query["access_type"], query["prompt"]) == (
+        f"{SCOPE} {ANALYTICS_SCOPE}",
+        "offline",
+        "consent",
+    )
+    assert query["include_granted_scopes"] == "true"
 
 
 async def test_the_callback_parks_the_code_and_a_state_works_once(
@@ -192,14 +196,19 @@ async def test_connecting_a_channel_stores_the_refresh_token(
         "maplebakery",
         "Maple Bakery",
     )
-    assert sorted(account["capabilities"]) == ["post_insights", "publish"]
+    assert sorted(account["capabilities"]) == [
+        "account_insights",
+        "comments",
+        "post_insights",
+        "publish",
+    ]
     assert account["token_expires_at"] is None
 
     [row] = await rows(engine)
     assert (row["platform_account_id"], row["status"], row["scopes"]) == (
         CHANNEL.id,
         "active",
-        [SCOPE],
+        [SCOPE, ANALYTICS_SCOPE],
     )
     assert row["profile_picture_url"] == "https://yt.test/maple.jpg"
     refresh = TokenCipher([TOKEN_KEY]).decrypt(row["access_token_enc"])
@@ -233,6 +242,30 @@ async def test_a_grant_without_the_scope_is_refused(
     nonce = await nonce_for(client, clerk, clerk_id, ws["id"])
     refused = await list_channels(client, clerk, clerk_id, ws["id"], nonce)
     assert (refused.status_code, refused.json()["detail"]) == (422, NO_SCOPE)
+
+
+async def test_a_grant_without_analytics_connects_with_basic_stats_only(
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    fake_youtube: FakeYouTube,
+    engine: AsyncEngine,
+    queue: None,
+) -> None:
+    fake_youtube.scopes = (SCOPE,)
+    clerk_id, ws = await owner(client, clerk)
+    done = await connect(client, clerk, clerk_id, ws["id"])
+    assert done.status_code == 201, done.text
+    capabilities = sorted(done.json()["items"][0]["capabilities"])
+    assert capabilities == ["comments", "post_insights", "publish"]
+    [row] = await rows(engine)
+    assert row["scopes"] == [SCOPE]
+
+    # Connecting again with the analytics scope updates the stored scopes.
+    fake_youtube.scopes = (SCOPE, ANALYTICS_SCOPE)
+    again = await connect(client, clerk, clerk_id, ws["id"])
+    assert again.status_code == 201, again.text
+    [row] = await rows(engine)
+    assert row["scopes"] == [SCOPE, ANALYTICS_SCOPE]
 
 
 async def test_an_invalid_grant_on_the_exchange_is_a_platform_error(
@@ -286,8 +319,8 @@ async def test_one_channel_per_workspace_even_on_business(
         1,
     )
     assert body["detail"] == "Your plan includes 1 YouTube account."
-    started = await start_connect(client, clerk, clerk_id, ws["id"])
-    assert (started.status_code, started.json()["entitlement"]) == (402, "youtube_accounts")
+    # Starting again works, so the connected channel can come back with more scopes (C-199).
+    assert (await start_connect(client, clerk, clerk_id, ws["id"])).status_code == 200
     # Reconnecting the connected channel keeps its slot.
     again = await connect_channels(client, clerk, clerk_id, ws["id"], second, [CHANNEL.id])
     assert again.status_code == 201, again.text
@@ -372,4 +405,9 @@ async def test_a_sandbox_channel_can_be_made(
     assert made.status_code == 201, made.text
     body = made.json()
     assert (body["platform"], body["sandbox"], body["token_expires_at"]) == ("youtube", True, None)
-    assert sorted(body["capabilities"]) == ["post_insights", "publish"]
+    assert sorted(body["capabilities"]) == [
+        "account_insights",
+        "comments",
+        "post_insights",
+        "publish",
+    ]

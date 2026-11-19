@@ -13,6 +13,15 @@ export function automationAccounts(accounts: SocialAccount[]): SocialAccount[] {
   );
 }
 
+/** Platforms the Comments page lists: automations stay on Instagram and Facebook. */
+export const COMMENT_PLATFORMS = ["instagram", "facebook", "youtube"] as const;
+
+export function commentAccounts(accounts: SocialAccount[]): SocialAccount[] {
+  return accounts.filter(
+    (account) => (COMMENT_PLATFORMS as readonly string[]).includes(account.platform) && account.status !== "disconnected",
+  );
+}
+
 /**
  * Instagram accounts that are still connected: what only Instagram has (story mentions) and
  * publishing, until Pages publish too (GR-30).

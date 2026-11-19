@@ -86,6 +86,10 @@ class PostMetric(StrEnum):
     EXITS = "exits"
     # Facebook Page posts: link and other clicks on the post.
     CLICKS = "clicks"
+    # YouTube Analytics (watch time).
+    WATCH_MINUTES = "watch_minutes"
+    AVG_VIEW_SECONDS = "avg_view_seconds"
+    AVG_VIEW_PERCENT = "avg_view_percent"
 
 
 class AccountMetric(StrEnum):
@@ -99,6 +103,7 @@ class AccountMetric(StrEnum):
     FOLLOWS = "follows"
     UNFOLLOWS = "unfollows"
     PROFILE_LINKS_TAPS = "profile_links_taps"
+    WATCH_MINUTES = "watch_minutes"  # YouTube
 
 
 class CommentAnalysis(IdMixin, TimestampMixin, TenantScoped, Base):

@@ -128,6 +128,7 @@ from socialhood.services.automations import (
     matching,
     results,
 )
+from socialhood.services.automations.validation import AUTOMATION_PLATFORMS
 
 log = get_logger(__name__)
 
@@ -795,7 +796,7 @@ async def _run_comment(env: _Env, comment_id: uuid.UUID) -> Outcome:
         if comment is None:
             return Outcome.MISSING
         acct = await accounts.get(session, comment.social_account_id)
-        if acct is None:
+        if acct is None or acct.platform not in AUTOMATION_PLATFORMS:  # YouTube: people only
             return Outcome.IGNORED
         earlier = await runs.event_runs(session, comment_id=comment.id)
         if earlier:

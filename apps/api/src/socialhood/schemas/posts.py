@@ -28,7 +28,16 @@ CommentAnalysisStatus = Literal["pending", "done", "skipped"]
 # - needs_reply: the Comments nav badge's rule (D-11), so a post's chip adds up to the badge: the
 #   account has not replied (public or private), not spam, not hidden, from the last 7 days
 CommentFilter = Literal[
-    "all", "positive", "neutral", "negative", "questions", "buying", "spam", "hidden", "needs_reply"
+    "all",
+    "positive",
+    "neutral",
+    "negative",
+    "questions",
+    "buying",
+    "spam",
+    "hidden",
+    "needs_reply",
+    "important",
 ]
 COMMENT_FILTER_INTENTS: dict[str, tuple[IntentName, ...]] = {
     "questions": ("pricing", "product_inquiry", "shipping", "order_status", "support"),
@@ -47,7 +56,8 @@ class CommentStats(ResponseModel):
     analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
     analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
     total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
-    always ends. Deleted comments are not counted.
+    always ends. Deleted comments are not counted. ``important`` counts the comments the
+    ``important`` filter shows (services/comments/queries.py ``important_conditions``).
     """
 
     total: int
@@ -56,6 +66,7 @@ class CommentStats(ResponseModel):
     neutral: int
     negative: int
     spam: int
+    important: int = 0
 
     @classmethod
     def from_stored(cls, raw: Mapping[str, Any] | None) -> CommentStats:
@@ -163,6 +174,7 @@ class Comment(ResponseModel):
     analysis: CommentAnalysis | None = None  # None while pending or when skipped
     public_reply: CommentPublicReply | None = None
     private_reply: CommentPrivateReply | None = None
+    important: bool = False  # services/comments/queries.py ``is_important`` (YT4)
 
 
 class CommentList(ResponseModel):

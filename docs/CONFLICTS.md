@@ -10037,6 +10037,62 @@ features", then changed three rules. The audit report is kept outside the repo.
   complete never arrives stays on YouTube (it went out with the chosen privacy) while the post
   returns to a draft.
 
+## C-198 · YouTube in the legal pages (owner, 2026-11-14)
+
+- **Why:** Google's YouTube API Services policies ask the app's terms to bind users to the YouTube
+  Terms of Service, and its privacy policy to say it uses YouTube API Services, link the Google
+  Privacy Policy, say what YouTube data it reads, stores and shares, and how to revoke access
+  (Google's third-party connections page) and have the data deleted. Needed before Google's
+  verification of the `youtube.force-ssl` scope.
+- **Decided:**
+  - Privacy Policy: the YouTube channel under "The accounts you connect"; a third case in "Google
+    user data" (what we read and store, the direct route that never stores the file, the stats,
+    the duplicate-upload check), the YouTube ToS and Google Privacy Policy links, revoke and
+    delete, and no cookies for YouTube data; Google (YouTube) under "Who we share it with".
+  - Terms: one paragraph in "Meta's platforms and other services" binding YouTube users to the
+    YouTube ToS. Subprocessors: Google (YouTube) under "Others who receive data", like Meta, not a
+    subprocessor. DPA: the nature of processing names videos sent to a connected channel.
+  - Last-updated dates of the four pages move to 2026-11-14.
+- **Left as they are:** the pages say what the code does with the flag on; with
+  `YOUTUBE_WORKSPACES` empty nobody can connect a channel, and the text is still accurate. Not
+  reviewed by a lawyer (C-156).
+
+## C-199 · YouTube Phase 4: comments, important comments and YouTube Analytics (owner, 2026-11-16)
+
+- **Why:** Phase 4 of the YouTube plan (2026-11-14). The owner asked that YouTube comments are
+  answered by people only, with important comments highlighted, and asked to cut AI tokens where
+  rules can do the work.
+- **Decided:**
+  - Comments live on the Comments page, like Instagram's and Facebook's. Comments aren't in the
+    inbox for any platform, so YouTube's aren't either.
+  - Read by polling: YouTube has no comment webhook. Every 15 minutes, one `commentThreads.list`
+    per channel (`allThreadsRelatedToChannelId`, newest first, at most 5 pages, stopping at the
+    first page with nothing new). The first poll is a backfill (no events). A daily quota guard
+    (Pacific day): polling stops at 8,000 units, replies, hides and deletes at 9,500.
+  - Nothing automatic on YouTube: automations stay Instagram/Facebook only (already refused by
+    validation), intake never queues a comment automation for YouTube, and spam auto-hide skips
+    it. Analysis still runs, under the usual credits and `comment_intelligence_posts`.
+  - Moderation: Hide sets `rejected` (YouTube may not allow Unhide; the UI says so). Delete
+    removes our own replies and rejects anyone else's (a channel can't delete others' comments).
+    No private replies on YouTube.
+  - Important (every platform): not replied, not hidden or spam, and a question, buying interest,
+    complaint or refund request, a negative comment, or 10+ likes. An `important` filter, a flag
+    on each comment and a count on the post.
+  - Comments made only of emoji, tags or short listed praise are read by rules
+    (`services/comments/trivial.py`, model `rules`, no credit) on every platform. The analysis
+    prompt became platform-neutral (`comment_analysis.v2`).
+  - YouTube Analytics with `yt-analytics.readonly`, requested with `include_granted_scopes=true`;
+    the granted scopes are stored. With it, `account_insights` and per-video watch time, average
+    view duration and percent, and subscribers gained (`follows`); daily subscribers gained and
+    lost on the account. Channels connected earlier keep the basic stats until they reconnect.
+  - The 6-hourly per-post comment backfill skips YouTube (YouTube's count includes our own
+    replies, which we don't store). A revoked token found by the poll marks the channel as
+    needing a reconnect.
+  - Large multi-platform files in our own bucket: not built (D2 keeps the 100 MB limit).
+- **Left as they are:** a new reply on an old thread can be missed (threads are ordered by thread
+  time); channel-level watch time is stored but not shown; the owner adds the analytics scope on
+  the consent screen, enables the YouTube Analytics API and files the quota form when needed.
+
 ## C-200 · IndexNow after each production deploy (owner, 2026-11-19)
 
 - **Why:** IndexNow tells Bing, Yandex, Seznam, Naver and the other IndexNow engines about new,

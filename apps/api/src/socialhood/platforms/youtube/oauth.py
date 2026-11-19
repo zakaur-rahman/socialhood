@@ -1,9 +1,10 @@
-"""Google OAuth for YouTube (C-195): the same OAuth client as Clerk's Google sign-in, one scope.
+"""Google OAuth for YouTube (C-195): the same OAuth client as Clerk's Google sign-in, two scopes.
 
-- ``youtube.force-ssl`` only: uploads, and editing or deleting what was uploaded
-  (``youtube.upload`` alone can't edit or cancel).
+- ``youtube.force-ssl``: uploads, and editing or deleting what was uploaded
+  (``youtube.upload`` alone can't edit or cancel). ``yt-analytics.readonly`` adds watch time and
+  subscriber change; the user may decline it, so only ``SCOPE`` is required.
 - Authorise with ``access_type=offline`` and ``prompt=consent`` so Google always returns a refresh
-  token, and ``include_granted_scopes=false`` so the grant holds this scope alone.
+  token, and ``include_granted_scopes=true`` so reconnecting adds a scope to the earlier grant.
 - The refresh token is the stored credential (``access_token_enc``, no expiry); a short-lived
   access token is minted from it for each use. ``invalid_grant`` while minting means the access was
   removed: ``account_needs_reconnect``.
@@ -25,7 +26,8 @@ from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.youtube.client import Channel, google_http, list_channels
 
 SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
-SCOPES = (SCOPE,)
+ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
+SCOPES = (SCOPE, ANALYTICS_SCOPE)
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 (an address, not a secret)
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
@@ -67,7 +69,7 @@ class HttpYouTubeOAuth:
                 "scope": " ".join(SCOPES),
                 "access_type": "offline",
                 "prompt": "consent",
-                "include_granted_scopes": "false",
+                "include_granted_scopes": "true",
                 "state": state,
             }
         )

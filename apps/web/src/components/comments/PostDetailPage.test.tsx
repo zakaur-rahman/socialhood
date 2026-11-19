@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { handOff, resetAgentHandoff, useAgentHandoff } from "@/lib/agent/handoff";
-import type { CommentFilter, PostComment, PostDetail, WorkspaceSummary } from "@/lib/api/types";
+import type { CommentFilter, PostComment, PostDetail, SocialAccount, WorkspaceSummary } from "@/lib/api/types";
 import { matchesFilter, SECOND_PRIVATE_REPLY } from "@/lib/comments/format";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import {
@@ -63,6 +63,7 @@ type State = {
   reply?: (call: Call, c: PostComment) => Response;
   privateReply?: (call: Call, c: PostComment) => Response;
   summary?: () => Response;
+  account?: SocialAccount;
 };
 
 function setup(partial: Partial<State> = {}, ws: WorkspaceSummary = workspace) {
@@ -76,7 +77,7 @@ function setup(partial: Partial<State> = {}, ws: WorkspaceSummary = workspace) {
     ws,
     handlers: {
       "GET /v1/w/:wid/posts/:id": () => (state.detail instanceof Response ? state.detail : json(state.detail)),
-      "GET /v1/w/:wid/social-accounts": () => json({ items: [account()] }),
+      "GET /v1/w/:wid/social-accounts": () => json({ items: [state.account ?? account({ capabilities: ["dm_send", "dm_attachments", "comments", "private_reply"] })] }),
       "GET /v1/w/:wid/posts/:id/comments": (call) => {
         const filter = (call.url.searchParams.get("filter") ?? "all") as CommentFilter;
         return json({ items: state.comments.filter((c) => matchesFilter(c, filter)), next_cursor: null });
@@ -190,7 +191,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
         summary: null,
         summary_updated_at: null,
         topics: [],
-        stats: { total: 4, analysed: 0, positive: 0, neutral: 0, negative: 0, spam: 0 },
+        stats: { total: 4, analysed: 0, positive: 0, neutral: 0, negative: 0, spam: 0, important: 0 },
       }),
     });
     const summary = await screen.findByRole("region", { name: "Summary" });
@@ -202,7 +203,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
 
   it("FR-CMT-02: shows analysis progress while comments are analysed, until they all are", async () => {
     const { queryClient } = setup({
-      detail: postDetail({ stats: { total: 58_000, analysed: 12_400, positive: 9000, neutral: 3000, negative: 300, spam: 100 } }),
+      detail: postDetail({ stats: { total: 58_000, analysed: 12_400, positive: 9000, neutral: 3000, negative: 300, spam: 100, important: 0 } }),
     });
     const progress = await screen.findByTestId("analysis-progress");
     expect(within(progress).getByRole("status")).toHaveTextContent("Analysing 12,400 of 58,000 comments");
@@ -211,7 +212,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     expect(bar).toHaveAttribute("aria-valuemax", "58000");
 
     send(queryClient, "post.updated", {
-      post: postDetail({ stats: { total: 58_000, analysed: 58_000, positive: 40_000, neutral: 15_000, negative: 2_500, spam: 500 } }),
+      post: postDetail({ stats: { total: 58_000, analysed: 58_000, positive: 40_000, neutral: 15_000, negative: 2_500, spam: 500, important: 0 } }),
     });
     await waitFor(() => expect(screen.queryByTestId("analysis-progress")).not.toBeInTheDocument());
   });
@@ -271,6 +272,7 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
     const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
     expect(within(chips).getAllByRole("radio").map((r) => r.textContent)).toEqual([
       "All",
+      "Important",
       "Needs reply",
       "Positive",
       "Neutral",
@@ -483,6 +485,30 @@ describe("Comment actions (FR-CMT-04)", () => {
     expect(toast.success).toHaveBeenCalledWith("Comment deleted");
     // The row and its dialog are gone: focus lands on the list's heading, not on <body> (UI-066).
     await waitFor(() => expect(document.getElementById("post-comments-heading")).toHaveFocus());
+  });
+
+  it("on YouTube there is no DM, hide warns it may stay hidden and delete says it leaves public view", async () => {
+    const user = userEvent.setup();
+    setup({ account: account({ platform: "youtube", capabilities: ["comments"] }) });
+    await screen.findByRole("list", { name: "Comments" });
+    expect(within(row("@kabir")).queryByRole("button", { name: "DM @kabir" })).not.toBeInTheDocument();
+    await user.click(within(row("@kabir")).getByRole("button", { name: "Hide @kabir's comment" }));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Comment hidden on YouTube. YouTube may not let you show it again."),
+    );
+    await user.click(within(row("@free.followers")).getByRole("button", { name: "Delete @free.followers's comment" }));
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent("removed from public view on YouTube");
+  });
+
+  it("an important comment has an Important badge, and the chip shows the count", async () => {
+    setup({
+      comments: [comment({ id: "cm-imp", author_username: "vip", important: true }), kabir],
+      detail: postDetail({ stats: { ...postDetail().stats, important: 1 } }),
+    });
+    await screen.findByRole("list", { name: "Comments" });
+    expect(within(row("@vip")).getByText("Important")).toBeInTheDocument();
+    expect(within(row("@kabir")).queryByText("Important")).not.toBeInTheDocument();
+    expect(screen.getByTestId("important-chip-count")).toHaveTextContent("1");
   });
 
   it("agents can reply, DM and hide, but not delete", async () => {

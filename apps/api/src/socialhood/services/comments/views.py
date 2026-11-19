@@ -81,6 +81,12 @@ def analysis_out(row: CommentAnalysis | None) -> CommentAnalysisOut | None:
     )
 
 
+def is_important(comment: Comment, analysis: CommentAnalysis | None) -> bool:
+    from socialhood.services.comments.queries import is_important as rule  # queries imports us
+
+    return rule(comment, analysis)
+
+
 def comment_out(
     comment: Comment,
     analysis: CommentAnalysis | None,
@@ -121,6 +127,7 @@ def comment_out(
             "analysis": analysis_out(analysis) if comment.analysis_status == "done" else None,
             "public_reply": public_reply,
             "private_reply": private_reply,
+            "important": is_important(comment, analysis),
         }
     )
 

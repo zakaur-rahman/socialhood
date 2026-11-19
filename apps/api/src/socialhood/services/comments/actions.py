@@ -23,6 +23,11 @@ account (F-05) and is 409 account_needs_reconnect, a rate limit is 429 rate_limi
 - Hide and unhide: a comment already in that state is returned as it is, without a call.
 - Delete (admins): ``deleted_at`` is set, the post's stats recounted and post.updated published;
   deleting a deleted comment does nothing.
+- A reply (public or private), hide or unhide also recounts the post's stats (its ``important``
+  count changes).
+- YouTube (YT4): each reply, hide, unhide or delete counts 50 of the project's daily units
+  (platforms/buckets.YouTubeQuota) and is refused, 429 rate_limited, once they pass
+  YOUTUBE_WRITE_CEILING; Google's own quotaExceeded says the same.
 """
 
 from __future__ import annotations
@@ -30,7 +35,7 @@ from __future__ import annotations
 import math
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,6 +53,13 @@ from socialhood.models.inbox import (
     MessageStatus,
 )
 from socialhood.platforms.base import PlatformAdapter
+from socialhood.platforms.buckets import (
+    YOUTUBE_QUOTA_REACHED,
+    YOUTUBE_WRITE_CEILING,
+    YOUTUBE_WRITE_UNITS,
+    YouTubeQuota,
+    next_google_day,
+)
 from socialhood.platforms.capabilities import Capability, require
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
@@ -149,6 +161,8 @@ async def _refused(
         headers = (
             {"Retry-After": str(math.ceil(error.retry_after_s))} if error.retry_after_s else {}
         )
+        if error.platform_code == "quotaExceeded":  # YouTube: the project's units for the day
+            return ApiError("rate_limited", YOUTUBE_QUOTA_REACHED, headers=headers)
         return ApiError(
             "rate_limited",
             sending.say(
@@ -162,6 +176,23 @@ async def _refused(
         error.code, acct.platform, platform_message=error.message, username=acct.username
     )
     return ApiError("platform_error", reason)
+
+
+async def _spend_units(redis: Redis, acct: SocialAccount) -> None:
+    """A YouTube write takes 50 of the project's daily units; refused past the ceiling."""
+    if acct.platform != "youtube":
+        return
+    now = datetime.now(UTC)
+    if not await YouTubeQuota(redis).take(
+        YOUTUBE_WRITE_UNITS, ceiling=YOUTUBE_WRITE_CEILING, now=now
+    ):
+        wait = math.ceil((next_google_day(now) - now).total_seconds())
+        raise ApiError("rate_limited", YOUTUBE_QUOTA_REACHED, headers={"Retry-After": str(wait)})
+
+
+async def _recount(session: AsyncSession, comment: Comment) -> None:
+    for item in await stats.recount(session, [comment.media_item_id]):
+        views.queue_post(session, item)
 
 
 async def _out(session: AsyncSession, comment_id: uuid.UUID, *, publish: bool) -> CommentOut:
@@ -190,6 +221,7 @@ async def reply(
     if comment.our_reply_text == text and replied and now - replied < DOUBLE_REPLY_WINDOW:
         return await _out(session, comment.id, publish=False)
     acct, adapter = await _account(session, deps, comment, Capability.COMMENTS, sends=True)
+    await _spend_units(redis, acct)
     try:
         reply_id = await adapter.reply_to_comment(acct, comment.platform_comment_id, text)
     except PlatformError as error:
@@ -198,7 +230,9 @@ async def reply(
     comment.our_reply_text = text
     comment.our_replied_at = now
     await session.flush()
-    return await _out(session, comment.id, publish=True)
+    out = await _out(session, comment.id, publish=True)
+    await _recount(session, comment)
+    return out
 
 
 # ---------------------------------------------------------------- hide, unhide, delete
@@ -217,6 +251,7 @@ async def set_hidden(
     if comment.hidden == hidden:
         return await _out(session, comment.id, publish=False)
     acct, adapter = await _account(session, deps, comment, Capability.COMMENTS)
+    await _spend_units(redis, acct)
     try:
         if hidden:
             await adapter.hide_comment(acct, comment.platform_comment_id)
@@ -226,7 +261,9 @@ async def set_hidden(
         raise await _refused(session, redis, acct, error) from error
     comment.hidden = hidden
     await session.flush()
-    return await _out(session, comment.id, publish=True)
+    out = await _out(session, comment.id, publish=True)
+    await _recount(session, comment)
+    return out
 
 
 async def delete(
@@ -241,6 +278,7 @@ async def delete(
     if comment.deleted_at is not None:
         return
     acct, adapter = await _account(session, deps, comment, Capability.COMMENTS)
+    await _spend_units(redis, acct)
     try:
         await adapter.delete_comment(acct, comment.platform_comment_id)
     except PlatformError as error:
@@ -248,8 +286,7 @@ async def delete(
     comment.deleted_at = now
     await session.flush()
     await _out(session, comment.id, publish=True)
-    for item in await stats.recount(session, [comment.media_item_id]):
-        views.queue_post(session, item)
+    await _recount(session, comment)
 
 
 # ---------------------------------------------------------------- private reply
@@ -334,6 +371,7 @@ async def private_reply(
         ),
     )
     out = await _out(session, comment.id, publish=True)
+    await _recount(session, comment)
     return QueuedPrivateReply(out, msg.id, conv.id, created=True)
 
 
