@@ -2068,8 +2068,9 @@ export interface paths {
         head?: never;
         /**
          * Update Conversation
-         * @description Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
-         *     plan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
+         * @description Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or
+         *     clear the conversation's AI mode override (auto needs a paid plan: 402
+         *     entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
          */
         patch: operations["update_conversation"];
         trace?: never;
@@ -2134,7 +2135,11 @@ export interface paths {
         get?: never;
         /**
          * Set Message Reaction
-         * @description Set or remove (``emoji: null``) the business's reaction to a message (GR-42).
+         * @description Set or remove (``emoji: null``) the business's reaction to a message (GR-42). It goes to
+         *     the platform at once; the same reaction again changes nothing. 409 reaction_not_supported
+         *     where the platform takes no reactions or not this emoji (Instagram and Facebook: a heart
+         *     only), 409 reply_window_closed as for a reply, 422 for a message the platform can't react to
+         *     (WhatsApp: older than 30 days).
          */
         put: operations["set_message_reaction"];
         post?: never;
@@ -8226,7 +8231,10 @@ export interface components {
         };
         /** ContactImportRowOut */
         ContactImportRowOut: {
-            /** Action */
+            /**
+             * Action
+             * @enum {string}
+             */
             action: "create" | "update" | "unchanged" | "skip";
             /** Line */
             line: number;
@@ -13234,14 +13242,6 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["PreviewStep"][];
         };
-        /**
-         * SetReaction
-         * @description PUT …/messages/{id}/reaction: our reaction to the message; null removes it.
-         */
-        SetReaction: {
-            /** Emoji */
-            emoji: ("👍" | "❤️" | "😂" | "😮" | "😢" | "🙏") | null;
-        };
         /** SetField */
         SetField: {
             /** Key */
@@ -13253,6 +13253,14 @@ export interface components {
             kind: "set_field";
             /** Value */
             value: string;
+        };
+        /**
+         * SetReaction
+         * @description PUT …/messages/{id}/reaction: our reaction to the message; null removes it.
+         */
+        SetReaction: {
+            /** Emoji */
+            emoji: ("👍" | "❤️" | "😂" | "😮" | "😢" | "🙏") | null;
         };
         /** SheetColumn */
         SheetColumn: {
@@ -19466,94 +19474,6 @@ export interface operations {
             };
         };
     };
-    import_contacts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                wid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ContactImport"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactImportResult"];
-                };
-            };
-            /** @description Validation error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Problem details (application/problem+json) */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    preview_contact_import: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                wid: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ContactImport"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContactImportPreview"];
-                };
-            };
-            /** @description Validation error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Problem details (application/problem+json) */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     count_contacts: {
         parameters: {
             query?: {
@@ -19642,6 +19562,94 @@ export interface operations {
                 };
                 content: {
                     "text/csv": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    import_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_contact_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportPreview"];
                 };
             };
             /** @description Validation error */
