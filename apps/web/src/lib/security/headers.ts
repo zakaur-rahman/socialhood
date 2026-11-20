@@ -1,9 +1,9 @@
 /**
  * SEC-11: the web app's response headers, applied to every route by next.config.ts.
  *
- * The CSP allows only the app itself, Clerk (its Frontend API, images, bot protection and
- * telemetry), Cloudinary (uploads and delivery), Instagram's and Facebook's CDNs (profile pictures
- * and platform media), Meta's SDK (WhatsApp Embedded Signup), Sentry (the DSN's host), Umami (the
+ * The CSP allows only the app itself, Clerk (its Frontend API, images and bot protection; its
+ * telemetry is off, P-8), Cloudinary (uploads and delivery), Instagram's and Facebook's CDNs
+ * (profile pictures and platform media), Meta's SDK (WhatsApp Embedded Signup), Sentry (the DSN's host), Umami (the
  * public site's cookieless visit counts, C-194) and the API.
  * Hosts that depend on the environment are read from the NEXT_PUBLIC_* variables at build time.
  *
@@ -92,8 +92,6 @@ export function contentSecurityPolicy(env: Env): string {
       "'self'",
       api,
       clerk,
-      "https://clerk-telemetry.com",
-      "https://*.clerk-telemetry.com",
       clerkProtect,
       "https://api.cloudinary.com",
       "https://www.googleapis.com", // the browser uploads a video straight to YouTube

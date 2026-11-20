@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DeleteWorkspace } from "@/components/workspace/DeleteWorkspace";
+import { DEFAULT_AUTOMATION_DISCLOSURE as DEFAULT_DISCLOSURE } from "@/lib/ai/format";
 import { ApiError } from "@/lib/api/errors";
 import { useSocialAccounts, useUpdateWorkspace, useWorkspace } from "@/lib/api/queries";
 import type { Workspace, WorkspacePatch } from "@/lib/api/types";
@@ -49,9 +50,6 @@ const schema = z.object({
   message: "Enter the line to add, or turn the disclosure off.",
 });
 type Values = z.infer<typeof schema>;
-
-/** FR-AUT-11: the line automated messages end with; null in the API means off. */
-const DEFAULT_DISCLOSURE = "Sent automatically";
 
 const LANGUAGES = [
   ["auto", "Customer's language"],

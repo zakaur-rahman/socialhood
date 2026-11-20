@@ -1,8 +1,8 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AiSettings, SocialAccount } from "@/lib/api/types";
+import type { AiSettings, SocialAccount, Workspace } from "@/lib/api/types";
 import { account, aiSettings, billingState, json, planList, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import { AiSettingsPage } from "./AiSettingsPage";
@@ -21,16 +21,36 @@ function setup({
   role = "owner",
   billing = billingState(),
   patch,
+  items = accounts,
+  wid = workspace.id,
+  disclosure = null,
 }: {
   role?: "owner" | "admin" | "agent";
   billing?: ReturnType<typeof billingState>;
   patch?: (call: Call) => Response;
+  items?: SocialAccount[];
+  wid?: string;
+  disclosure?: string | null;
 } = {}) {
   let settings: AiSettings = aiSettings({ escalation_phrases: ["lawyer"], business_description: "Linen dresses." });
+  const details: Workspace = {
+    ...workspace,
+    id: wid,
+    role,
+    plan: billing.plan,
+    reply_language: "auto",
+    status: "active",
+    automation_disclosure: disclosure,
+    checklist_dismissed_at: null,
+    created_at: "2026-09-01T00:00:00Z",
+    member_count: 1,
+  };
   const view = renderWithApi(<AiSettingsPage />, {
-    ws: { ...workspace, role, plan: billing.plan },
+    ws: { ...workspace, id: wid, role, plan: billing.plan },
     handlers: {
-      "GET /v1/w/:wid/social-accounts": () => json({ items: accounts }),
+      "GET /v1/w/:wid": () => json(details),
+      "PATCH /v1/w/:wid": (call) => json({ ...details, ...(call.body as object) }),
+      "GET /v1/w/:wid/social-accounts": () => json({ items }),
       "GET /v1/w/:wid/billing": () => json(billing),
       "GET /v1/w/:wid/ai-settings": () => json(settings),
       "PUT /v1/w/:wid/ai-settings": (call) => {
@@ -172,5 +192,44 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     expect(within(instagram).getByRole("radio", { name: "Off" })).toBeDisabled();
     expect(screen.getByText("Only owners and admins can change AI settings.")).toBeInTheDocument();
     expect(calls.some((c) => c.path.endsWith("/ai-settings"))).toBe(false);
+  });
+});
+
+// P-1: workspaces on Auto from before the label became the default are asked once.
+describe("the automated-message label prompt", () => {
+  const onAuto = [account({ id: "a1", username: "maple.bakery", ai_mode: "auto" })];
+
+  it("on Auto without the label, offers to turn it on and saves the default line", async () => {
+    const user = userEvent.setup();
+    const { patches } = setup({ items: onAuto, wid: "w-label-on" });
+    await user.click(await screen.findByRole("button", { name: "Turn on the label" }));
+    await waitFor(() =>
+      expect(patches()).toEqual([
+        { path: "/v1/w/w-label-on", body: { automation_disclosure: "Sent by an automated assistant" } },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Turn on the label" })).toBeNull());
+  });
+
+  it("stays dismissed once dismissed", async () => {
+    const user = userEvent.setup();
+    setup({ items: onAuto, wid: "w-label-dismiss" });
+    await user.click(await screen.findByRole("button", { name: "Dismiss the label suggestion" }));
+    expect(screen.queryByText("Say when a reply is automated")).toBeNull();
+    cleanup();
+    setup({ items: onAuto, wid: "w-label-dismiss" });
+    await screen.findByRole("radiogroup", { name: "@maple.bakery" });
+    expect(screen.queryByText("Say when a reply is automated")).toBeNull();
+  });
+
+  it("is not shown with the label on, or without Auto", async () => {
+    const { calls } = setup({ items: onAuto, wid: "w-label-set", disclosure: "Sent automatically" });
+    await waitFor(() => expect(calls.some((c) => c.method === "GET" && c.path === "/v1/w/w-label-set")).toBe(true));
+    await screen.findByRole("radiogroup", { name: "@maple.bakery" });
+    expect(screen.queryByText("Say when a reply is automated")).toBeNull();
+    cleanup();
+    setup({ wid: "w-label-none" });
+    await screen.findByRole("radiogroup", { name: "@maple.bakery" });
+    expect(screen.queryByText("Say when a reply is automated")).toBeNull();
   });
 });
