@@ -2,11 +2,14 @@ import { Heart, MessageSquare } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { PostSummary } from "@/lib/api/types";
+import type { PostSummary, SocialAccount } from "@/lib/api/types";
+import { accountLabel } from "@/lib/automations/accounts";
 import { analysingText, formatCount, isAnalysing, mediaTypeLabel, plural } from "@/lib/comments/format";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { formatDay } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +27,14 @@ export function postHref(slug: string, postId: string, filter?: "needs_reply"): 
  */
 export function PostCard({
   post,
+  account,
   slug,
   timeZone,
   now,
 }: {
   post: PostSummary;
+  /** The post's account; null once the accounts load without it (removed), undefined while they load. */
+  account?: Pick<SocialAccount, "platform" | "username" | "display_name"> | null;
   slug: string;
   timeZone: string;
   now: Date;
@@ -43,10 +49,23 @@ export function PostCard({
   const date = formatDay(post.posted_at, timeZone, now);
   return (
     <li data-testid="post-card" data-post-id={post.id}>
-      <Card asChild className="block overflow-hidden p-0 hover:border-line-strong">
+      {/* h-full: every card in a row matches the tallest (spam line, badges), so the edges line up. */}
+      <Card asChild className="block h-full overflow-hidden p-0 hover:border-line-strong">
         <Link href={postHref(slug, post.id, waiting > 0 ? "needs_reply" : undefined)}>
           <PostThumb post={post} className="border-b border-line" />
           <div className="space-y-2 p-3">
+            {/* Which platform and account the post is on, so a grid of several accounts reads at a glance. */}
+            <p className="flex h-4 items-center gap-1.5 text-xs text-fg-secondary" data-testid="post-account">
+              {account ? (
+                <>
+                  <PlatformGlyph platform={account.platform} className="size-3.5 shrink-0" />
+                  <span className="sr-only">{PLATFORM_LABEL[account.platform]}: </span>
+                  <span className="truncate">{accountLabel(account)}</span>
+                </>
+              ) : account === null ? (
+                "Disconnected account"
+              ) : null}
+            </p>
             <p
               className={cn("truncate text-sm font-medium", !firstLine && "text-fg-secondary")}
               data-testid="post-caption"

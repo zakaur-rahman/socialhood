@@ -32,7 +32,8 @@ function SwitchRow({
   id: string;
   label: string;
   hint: string;
-  checked: boolean;
+  /** Undefined while the settings load: the row keeps its text, so nothing below it moves. */
+  checked: boolean | undefined;
   disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
@@ -46,14 +47,18 @@ function SwitchRow({
           {hint}
         </p>
       </div>
-      <Switch
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        aria-describedby={`${id}-hint`}
-        onCheckedChange={onChange}
-        className="mt-1"
-      />
+      {checked === undefined ? (
+        <Skeleton className="mt-1 h-[18.4px] w-8 shrink-0 rounded-full" />
+      ) : (
+        <Switch
+          id={id}
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={`${id}-hint`}
+          onCheckedChange={onChange}
+          className="mt-1"
+        />
+      )}
     </div>
   );
 }
@@ -94,7 +99,11 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const save = (next: NotificationPreferences) => {
+  const current = prefs.data;
+  // Switches only render once the settings have loaded, so `current` is set whenever this runs.
+  const save = (change: Partial<NotificationPreferences>) => {
+    if (!current) return;
+    const next = { ...current, ...change };
     setSaveError(null);
     setSaved(false);
     update.mutate(next, {
@@ -103,12 +112,6 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
     });
   };
 
-  const loading = (
-    <div role="status" className="space-y-3" aria-busy="true" aria-label="Loading">
-      <Skeleton className="h-4 w-40" />
-      <Skeleton className="h-3 w-64 max-w-full" />
-    </div>
-  );
   const failed = (
     <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
       <p className="flex-1 text-danger-fg">{errorMessage(prefs.error)}</p>
@@ -130,18 +133,16 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
     >
       <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
         <Section id="digest" title="Email" icon={<Mail />}>
-          {prefs.isPending ? (
-            loading
-          ) : prefs.isError ? (
+          {prefs.isError ? (
             failed
           ) : (
-            <div className="divide-y divide-line-subtle">
+            <div className="divide-y divide-line-subtle" aria-busy={prefs.isPending}>
               <SwitchRow
                 id="email-digest"
                 label="Weekly digest"
                 hint={`Mondays at 09:00 (${workspace.timezone}): messages, reply rate, response time, top questions and conversations that still need you.`}
-                checked={prefs.data.email_digest}
-                onChange={(on) => save({ ...prefs.data, email_digest: on })}
+                checked={current?.email_digest}
+                onChange={(on) => save({ email_digest: on })}
               />
               {/* Only owners and admins are emailed about these, so only they get the switch. */}
               {admin ? (
@@ -149,8 +150,8 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
                   id="email-ai-changes"
                   label="Changes by AI apps"
                   hint="An email when a connected AI app, such as Claude or ChatGPT, changes a post or an automation. You still get the notification in Amplychat."
-                  checked={prefs.data.email_ai_changes}
-                  onChange={(on) => save({ ...prefs.data, email_ai_changes: on })}
+                  checked={current?.email_ai_changes}
+                  onChange={(on) => save({ email_ai_changes: on })}
                 />
               ) : null}
             </div>
@@ -173,20 +174,18 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
           <div className="border-t border-line-subtle pt-3">
             <p className="text-sm font-medium">Send me</p>
             <p className="text-xs text-fg-secondary">For {workspace.name}, on every device where notifications are on.</p>
-            {prefs.isPending ? (
-              <div className="pt-3">{loading}</div>
-            ) : prefs.isError ? (
+            {prefs.isError ? (
               <div className="pt-3">{failed}</div>
             ) : (
-              <div className="divide-y divide-line-subtle">
+              <div className="divide-y divide-line-subtle" aria-busy={prefs.isPending}>
                 {PUSH_EVENTS.map((event) => (
                   <SwitchRow
                     key={event}
                     id={`push-${event}`}
                     label={PUSH_EVENT_COPY[event].label}
                     hint={PUSH_EVENT_COPY[event].hint}
-                    checked={prefs.data.push[event]}
-                    onChange={(on) => save({ ...prefs.data, push: { ...prefs.data.push, [event]: on } })}
+                    checked={current?.push[event]}
+                    onChange={(on) => current && save({ push: { ...current.push, [event]: on } })}
                   />
                 ))}
               </div>
