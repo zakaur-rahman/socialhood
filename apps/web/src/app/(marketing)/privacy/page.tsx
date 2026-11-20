@@ -104,8 +104,10 @@ function sections(): LegalSection[] {
           <p>
             If a business adds {N}&apos;s chat to its website, we receive the messages a visitor sends, the name and email
             address they choose to give, their answer to any marketing consent question (with the words shown and the
-            time), the page&apos;s address, and their IP address, which we use only to limit abuse. The chat keeps a
-            random visitor ID in the visitor&apos;s browser so the conversation continues on their next visit.
+            time), the page&apos;s address, and their IP address, which we use only to limit abuse. Once the visitor
+            opens the chat, it keeps a random visitor ID in their browser so the conversation continues on their next
+            visit. Replies may come from Google&apos;s AI (see <a href="#ai">AI features and Google Gemini</a>), and the
+            chat says so, with a link to the business&apos;s privacy notice.
           </p>
           <h3>Contacts, orders and consent</h3>
           <p>
@@ -282,9 +284,10 @@ function sections(): LegalSection[] {
             <a href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer">
               Google&apos;s terms for the paid Gemini API
             </a>
-            , Google doesn&apos;t use what we send, or what it returns, to improve its products. Google keeps it for a
-            limited time to detect misuse, and may store or cache it briefly in any country where it has facilities. We
-            don&apos;t use your data to train AI models either.
+            , Google doesn&apos;t use what we send, or what it returns, to improve its products. Google says it keeps
+            prompts and responses for a limited time only to detect misuse of its terms and for any disclosures the law
+            requires, and may store or cache them briefly in any country where it has facilities. We don&apos;t use your
+            data to train AI models either.
           </p>
           <ul>
             <li>
@@ -585,7 +588,7 @@ function sections(): LegalSection[] {
                   <td>90 days, then deleted with their analysis. Conversations left with no messages are deleted too.</td>
                 </tr>
                 <tr>
-                  <td>Messages on Creator and Business</td>
+                  <td>Messages on Creator, Business and Agency</td>
                   <td>While the workspace exists</td>
                 </tr>
                 <tr>
@@ -623,12 +626,19 @@ function sections(): LegalSection[] {
                   <td>30 days</td>
                 </tr>
                 <tr>
+                  <td>Server logs (IP addresses and request details)</td>
+                  <td>
+                    Until newer logs replace them: each service keeps at most 5 files of 10 MB, so there&apos;s no fixed
+                    number of days, and a busy service keeps them for less time.
+                  </td>
+                </tr>
+                <tr>
                   <td>Database backups</td>
                   <td>Nightly copies: the last 7 days and the last 4 Sundays, never more than 30 days, then deleted.</td>
                 </tr>
                 <tr>
                   <td>Records of data deletion requests (a confirmation code, the Meta account ID and the status)</td>
-                  <td>Kept, so the status page keeps working</td>
+                  <td>No set end date yet. We keep them so the status page keeps working, and they hold no messages.</td>
                 </tr>
               </tbody>
             </table>

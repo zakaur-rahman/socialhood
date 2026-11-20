@@ -111,6 +111,10 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     // D-10: the header card holds the one primary; the Creator plan card offers the same action as a secondary.
     expect(within(current).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "default");
     expect(within(cards[1]).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "secondary");
+    // P-3: what the trial turns into, and that it renews, next to the button.
+    expect(within(cards[1]).getByTestId("renewal-pro")).toHaveTextContent(
+      /^Then ₹999 a month from \d{1,2} [A-Z][a-z]{2,3}. Renews until you cancel in Settings → Billing\.$/,
+    );
 
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
@@ -131,6 +135,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(creator).toHaveTextContent("$81 every 6 months");
     expect(creator).toHaveTextContent("($13.50 a month)");
     expect(within(creator).queryByRole("button", { name: /trial/i })).not.toBeInTheDocument();
+    expect(within(creator).getByTestId("renewal-pro")).toHaveTextContent("Renews every 6 months until you cancel in Settings → Billing.");
     const agency = within(plans).getByTestId("plan-agency");
     expect(agency).toHaveTextContent("$315 every 6 months");
     expect(agency).toHaveTextContent("($52.50 a month), save 25%");
