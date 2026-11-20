@@ -10559,7 +10559,6 @@
             "type": "string"
           },
           "per_message": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Per Message",
             "type": "string"
           },
@@ -10568,7 +10567,6 @@
             "type": "string"
           },
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           },
@@ -20006,7 +20004,6 @@
           },
           "rates": {
             "additionalProperties": {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
               "type": "string"
             },
             "title": "Rates",
