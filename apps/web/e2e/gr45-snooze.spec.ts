@@ -47,6 +47,8 @@ test.describe("GR-45 snooze", () => {
     api,
     sandbox,
   }) => {
+    // The snooze ends after 70 s and the job runs on the minute, so waking alone can take ~130 s.
+    test.setTimeout(300_000);
     const { workspace, account } = sandbox;
     const wid = workspace.id;
     const username = `e2e_gr45_${Date.now().toString(36)}`;
