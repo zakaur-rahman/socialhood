@@ -19,6 +19,7 @@ const saved: WidgetSettings = {
   marketing_consent_text: "Email me offers.",
   show_branding: true,
   can_remove_branding: false,
+  privacy_url: null,
   sites_limit: 1,
   ai_mode: "suggest",
   script_url: "https://api.example.com/widget.js",
@@ -66,6 +67,20 @@ describe("website chat form (GR-28)", () => {
     expect(isLive(base)).toBe(true);
     expect(isLive({ ...base, enabled: false })).toBe(false);
     expect(isLive({ ...base, domains: [] })).toBe(false);
+  });
+
+  it("sends the privacy page trimmed, clears it with an empty string and holds back a non-http address", () => {
+    const base = toForm(saved);
+    expect(base.privacyUrl).toBe("");
+    expect(toBody({ ...base, privacyUrl: " https://shop.example/privacy " }, saved)).toEqual({
+      privacy_url: "https://shop.example/privacy",
+    });
+    const set = { ...saved, privacy_url: "https://shop.example/privacy" };
+    expect(toBody({ ...toForm(set), privacyUrl: "" }, set)).toEqual({ privacy_url: "" });
+    const bad = "Enter a privacy page address that starts with https://.";
+    expect(problem({ ...base, privacyUrl: "javascript:alert(1)" })).toBe(bad);
+    expect(problem({ ...base, privacyUrl: "shop.example/privacy" })).toBe(bad);
+    expect(problem({ ...base, privacyUrl: "http://shop.example/p" })).toBeNull();
   });
 
   it("sends the branding choice only when it changed", () => {

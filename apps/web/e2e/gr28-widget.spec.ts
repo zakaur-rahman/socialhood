@@ -63,6 +63,7 @@ test.describe("GR-28 website chat", () => {
     await expect(chat.panel).toBeVisible();
     await expect(chat.log).toContainText("Hi! How can we help?");
     await expect(chat.frame.getByRole("link", { name: "Powered by Amplychat" })).toBeVisible(); // Free
+    await expect(chat.frame.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "https://amplychat.com/privacy"); // the default
 
     const question = unique("Do you have the linen shirt?");
     await chat.input.fill(question);
@@ -142,6 +143,35 @@ test.describe("GR-28 website chat", () => {
         { timeout: 20_000 },
       )
       .toContain("pat@shop.example");
+  });
+
+  test("the chat starts a session and keeps a visitor id only once it is opened, and links the privacy page", async ({ page, api, workspace }) => {
+    const widget = await setUp(api, workspace, { privacy_url: "https://shop.example/privacy" });
+    const sessions: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/v1/widget/session")) sessions.push(request.url());
+    });
+    await serveShop(page, PAGE_ORIGIN, widget.widget_id);
+    await page.goto(`${PAGE_ORIGIN}/shop`);
+    const chat = chatOn(page);
+    await expect(chat.launcher).toBeVisible();
+    const storedKeys = () =>
+      chat.frame.locator("body").evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("sh_visitor_")));
+    await page.waitForTimeout(500); // room for an eager session to show up, if there were one
+    expect(sessions).toHaveLength(0);
+    expect(await storedKeys()).toHaveLength(0);
+
+    await chat.launcher.click();
+    await expect(chat.log).toContainText("Hi! How can we help?");
+    await expect.poll(() => sessions.length).toBe(1);
+    await expect.poll(storedKeys).toHaveLength(1);
+    await expect(chat.panel).toContainText("Replies may be written by AI.");
+    await expect(chat.frame.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "https://shop.example/privacy");
+
+    // A returning visitor already has an id, so their thread is picked up on load for the badge.
+    await page.reload();
+    await expect(chatOn(page).launcher).toBeVisible();
+    await expect.poll(() => sessions.length).toBe(2);
   });
 
   test("it works from the keyboard: Enter opens it, Tab stays inside, Escape closes it", async ({ page, api, workspace }) => {

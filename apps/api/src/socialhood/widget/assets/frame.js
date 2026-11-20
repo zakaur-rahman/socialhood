@@ -1,7 +1,8 @@
 /* Amplychat chat widget: the chat inside the frame (GR-28). Plain JavaScript, no libraries.
-   It opens a session (the server checks the widget id and the site), keeps a visitor key in this
-   frame's own storage, sends messages and long-polls for replies. The visitor's session key lives
-   in memory only. */
+   It draws the launcher from the config the frame page carries, and opens a session (the server
+   checks the widget id and the site) and keeps a visitor key in this frame's own storage only when
+   the visitor opens the chat, or at once for a returning visitor who already has a key. It sends
+   messages and long-polls for replies. The visitor's session key lives in memory only. */
 (function () {
   "use strict";
 
@@ -11,10 +12,17 @@
   var BRAND_URL = body.getAttribute("data-brand-url") || "https://amplychat.com";
   var root = document.getElementById("root");
   var STORE_KEY = "sh_visitor_" + WIDGET;
+  var CONFIG = null;
+  try {
+    CONFIG = JSON.parse(body.getAttribute("data-config") || "null");
+  } catch (e) {
+    /* no config: the frame hides below */
+  }
 
   var st = {
     bearer: null,
-    config: null,
+    ready: null,
+    config: CONFIG,
     messages: [],
     pending: [],
     version: null,
@@ -95,7 +103,14 @@
   function api(method, path, payload, signal) {
     var headers = { Accept: "application/json" };
     if (payload !== undefined) headers["Content-Type"] = "application/json";
-    if (st.bearer && path.indexOf("/session") === -1) headers.Authorization = "Bearer " + st.bearer;
+    if (path.indexOf("/session") === -1) {
+      if (!st.bearer) {
+        return ensureSession().then(function () {
+          return api(method, path, payload, signal);
+        });
+      }
+      headers.Authorization = "Bearer " + st.bearer;
+    }
     return fetch(path, {
       method: method,
       headers: headers,
@@ -148,6 +163,28 @@
       st.messages = data.messages;
       st.version = data.version;
     });
+  }
+
+  /* One session for the frame, started on first need. A refusal hides the chat; anything else
+     can be tried again. */
+  function ensureSession() {
+    if (!st.ready) {
+      st.ready = openSession().then(
+        function () {
+          showError("");
+          renderLog();
+          renderCard();
+          if (st.messages.length) startPolling();
+        },
+        function (error) {
+          st.ready = null;
+          if (error && (error.status === 403 || error.status === 404)) tell({ type: "hide" });
+          else showError(error && error.message);
+          throw error;
+        }
+      );
+    }
+    return st.ready;
   }
 
   function merge(data) {
@@ -294,6 +331,7 @@
     ui.launcher.setAttribute("aria-expanded", open ? "true" : "false");
     tell({ type: "layout", open: open, side: st.config.position });
     if (open) {
+      ensureSession().catch(function () {});
       st.unread = 0;
       renderBadge();
       ui.log.scrollTop = ui.log.scrollHeight;
@@ -496,6 +534,10 @@
     ]);
     ui.composer = el("form", { class: "composer" }, [ui.input, ui.send]);
     ui.composer.addEventListener("submit", submitMessage);
+    var notice = el("p", { class: "notice" }, [
+      document.createTextNode("Replies may be written by AI. "),
+      el("a", { href: cfg.privacy_url, target: "_blank", rel: "noopener noreferrer", text: "Privacy" }),
+    ]);
 
     var children = [
       el("header", {}, [el("h1", { text: cfg.title }), close]),
@@ -503,6 +545,7 @@
       ui.card,
       ui.error,
       ui.composer,
+      notice,
     ];
     if (cfg.show_branding) {
       children.push(
@@ -530,18 +573,12 @@
     }
   });
 
-  if (!WIDGET || !HOST) {
+  if (!WIDGET || !HOST || !CONFIG) {
     tell({ type: "hide" });
     return;
   }
-  openSession().then(
-    function () {
-      build();
-      tell({ type: "layout", open: false, side: st.config.position });
-      if (st.messages.length) startPolling();
-    },
-    function () {
-      tell({ type: "hide" });
-    }
-  );
+  build();
+  tell({ type: "layout", open: false, side: st.config.position });
+  /* A returning visitor: pick up their thread now so new replies show on the badge. */
+  if (readKey()) ensureSession().catch(function () {});
 })();

@@ -33,6 +33,7 @@ import {
   GREETING_MAX,
   isDirty,
   isLive,
+  PRIVACY_URL_MAX,
   problem,
   TITLE_MAX,
   toBody,
@@ -403,6 +404,21 @@ function VisitorCard({ form, onChange, errors }: CardProps & { errors: Record<st
           </div>
         </>
       ) : null}
+      <Field invalid={Boolean(errors.privacy_url)} className="border-t border-line pt-5">
+        <FieldLabel>Privacy page</FieldLabel>
+        <Input
+          type="url"
+          inputMode="url"
+          value={form.privacyUrl}
+          maxLength={PRIVACY_URL_MAX}
+          placeholder="https://amplychat.com/privacy"
+          onChange={(e) => onChange({ privacyUrl: e.target.value })}
+        />
+        <FieldDescription>
+          Under the chat, visitors see “Replies may be written by AI. Privacy”, linked here. Leave it empty to link
+          Amplychat&apos;s privacy policy.
+        </FieldDescription>
+      </Field>
     </SettingsCard>
   );
 }
