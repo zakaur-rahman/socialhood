@@ -70,7 +70,7 @@ export function AuthLegal({ mode, className }: { mode: AuthMode; className?: str
     <nav aria-label="Legal" data-auth-legal="sign-up" className={base}>
       <p data-legal-line="fallback" className="text-pretty [[data-auth-shell]:has(#legalAccepted-field)_&]:hidden">
         By continuing, you agree to our <LegalLink href={terms.href}>Terms</LegalLink> and{" "}
-        <LegalLink href={privacy.href}>Privacy Policy</LegalLink>.
+        <LegalLink href={privacy.href}>Privacy Policy</LegalLink> and confirm you are 18 or older.
       </p>
       <p data-legal-line="with-consent" className="hidden [[data-auth-shell]:has(#legalAccepted-field)_&]:block">
         {short}

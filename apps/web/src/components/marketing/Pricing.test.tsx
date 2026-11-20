@@ -26,6 +26,7 @@ describe("the pricing section (C-155 layout)", () => {
     expect(pro.queryByText(/when we launch/)).toBeNull();
     expect(pro.getByText("7-day free trial")).toBeInTheDocument();
     expect(pro.getByText(/A card is required to start the trial/)).toBeInTheDocument();
+    expect(card("Creator")).toHaveTextContent("Then ₹999 a month after the 7-day trial. Renews until you cancel in Settings → Billing.");
     expect(pro.getByText("AI Auto mode and suggestions")).toBeInTheDocument();
     expect(pro.getByText("2 Instagram; 1 each of WhatsApp, Facebook and web chat")).toBeInTheDocument();
     expect(pro.getByRole("link", { name: "Start free, then try Creator" })).toHaveAttribute(
@@ -146,7 +147,7 @@ describe("C-172, C-173: planned prices and the Agency card", () => {
     render(<Pricing pricing={buildPricing(items)} />);
     await user.click(screen.getByRole("radio", { name: "6 months" }));
     expect(card("Business")).toHaveTextContent("$160 every 6 months");
-    expect(card("Business")).toHaveTextContent("($26.67 a month), save 11%. Cancel anytime.");
+    expect(card("Business")).toHaveTextContent("($26.67 a month), save 11%. Renews every 6 months until you cancel in Settings → Billing.");
     expect(card("Creator")).toHaveTextContent("₹999 a month");
     expect(card("Creator")).not.toHaveTextContent("every 6 months");
     // Not on sale at all: the planned six-month price, labelled.

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { LegalFacts, LegalPage, type LegalSection } from "@/components/marketing/legal/LegalPage";
-import { LEGAL, governingLawClause, isSet, operatorName } from "@/lib/legal";
+import { LEGAL, REPORT_REVIEW_BUSINESS_DAYS, governingLawClause, isSet, operatorName } from "@/lib/legal";
 import { SITE_NAME } from "@/lib/marketing/site";
 import { pageMetadata } from "@/lib/marketing/seo";
 
@@ -179,11 +179,19 @@ function sections(): LegalSection[] {
             <li>deceive, harass, threaten or discriminate against anyone, or share illegal or harmful content;</li>
             <li>sell goods or services that the law, Meta&apos;s commerce policies or your payment provider don&apos;t allow;</li>
             <li>process data you have no right to, or sensitive data you don&apos;t need;</li>
+            <li>put {N}&apos;s website chat on a site aimed at children without their parents&apos; consent;</li>
             <li>
               break, overload, probe or get around the security or limits of {N} or Meta&apos;s platforms, or copy, resell
               or reverse-engineer the service.
             </li>
           </ul>
+          <p>
+            <strong>Reporting abuse or copyright.</strong> Anyone can report content sent or posted through {N} that breaks
+            these rules or infringes their copyright: email {mail} with a link to it. We review each report within{" "}
+            {REPORT_REVIEW_BUSINESS_DAYS} business days, remove content that breaks these terms, and may suspend the
+            workspace as described in <a href="#ending">Suspension and ending</a>. Our{" "}
+            <Link href="/safety#report">Safety page</Link> explains how.
+          </p>
         </>
       ),
     },

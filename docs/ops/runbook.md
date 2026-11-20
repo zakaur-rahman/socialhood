@@ -4,6 +4,9 @@ What to do when an alert fires. Alerts, dashboards and drills: [alerts.md](alert
 [dashboards.md](dashboards.md). Deploys and rollbacks: [deploy.md](deploy.md). Restores:
 [backup.md](backup.md).
 
+If personal data may have leaked, follow [incident-response.md](incident-response.md) first: the
+owner decides, and some reports are due within 6 hours.
+
 First steps for any alert:
 
 1. Open the dashboard (Grafana → Amplychat overview) and Sentry, filtered to the environment.
