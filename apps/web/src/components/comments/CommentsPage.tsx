@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +36,7 @@ function GridSkeleton() {
           <li>
             <Skeleton className="aspect-square w-full rounded-none" />
             <div className="space-y-2 p-3">
+              <Skeleton className="h-4 w-1/2" />
               <Skeleton className="h-3 w-2/3" />
               <Skeleton className="h-1.5 w-full" />
               <Skeleton className="h-3 w-1/3" />
@@ -127,7 +129,14 @@ export function CommentsPage() {
         </div>
         <ul className={GRID_CLASS} aria-label="Posts" data-testid="posts-grid">
           {items.map((post) => (
-            <PostCard key={post.id} post={post} slug={workspace.slug} timeZone={workspace.timezone} now={now} />
+            <PostCard
+              key={post.id}
+              post={post}
+              account={allAccounts.data ? (allAccounts.data.find((a) => a.id === post.social_account_id) ?? null) : undefined}
+              slug={workspace.slug}
+              timeZone={workspace.timezone}
+              now={now}
+            />
           ))}
         </ul>
         {posts.hasNextPage ? (
@@ -156,12 +165,25 @@ export function CommentsPage() {
           {accounts.length > 1 ? (
           <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
             <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
-              <SelectValue />
+              <SelectValue>
+                {chosen ? (
+                  <>
+                    <PlatformGlyph platform={chosen.platform} className="size-4 shrink-0" />
+                    <span className="truncate">{accountLabel(chosen)}</span>
+                  </>
+                ) : (
+                  "All accounts"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All accounts</SelectItem>
               {accounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
+                <SelectItem
+                  key={account.id}
+                  value={account.id}
+                  icon={<PlatformGlyph platform={account.platform} className="size-4" />}
+                >
                   {accountLabel(account)}
                 </SelectItem>
               ))}
