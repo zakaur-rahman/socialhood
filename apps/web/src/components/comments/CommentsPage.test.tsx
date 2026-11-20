@@ -167,6 +167,21 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     expect(lists).toEqual([null, "a2"]);
   });
 
+  it("names each post's platform and account on its card, and a removed account as disconnected", async () => {
+    setup({
+      accounts: [account(), account({ id: "a2", platform: "youtube", username: null, display_name: "Maple TV" })],
+      items: [
+        post({ id: "po1" }),
+        post({ id: "po8", social_account_id: "a2" }),
+        post({ id: "po9", social_account_id: "gone" }),
+      ],
+    });
+    await screen.findAllByTestId("post-card");
+    await waitFor(() => expect(within(card("po1")).getByTestId("post-account")).toHaveTextContent("Instagram: @maple.bakery"));
+    expect(within(card("po8")).getByTestId("post-account")).toHaveTextContent("YouTube: Maple TV");
+    expect(within(card("po9")).getByTestId("post-account")).toHaveTextContent("Disconnected account");
+  });
+
   it("hides the account filter with one account", async () => {
     setup();
     await screen.findAllByTestId("post-card");
