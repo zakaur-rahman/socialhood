@@ -51,6 +51,8 @@ export type MessageSource = Message["source"];
 export type MessageStatus = NonNullable<Message["status"]>;
 export type Attachment = Schemas["Attachment"];
 export type SendMessage = Schemas["SendMessage"];
+export type ReplyQuote = Schemas["ReplyQuote"];
+export type ReactionEmoji = NonNullable<Schemas["SetReaction"]["emoji"]>;
 export type TemplateSend = Schemas["TemplateSend"];
 export type ErrorInfo = Schemas["ErrorInfo"];
 export type MessageAnalysis = Schemas["MessageAnalysis"];
@@ -68,6 +70,8 @@ export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
 export type FacebookPageOption = Schemas["FacebookPageOption"];
 export type FacebookPageList = Schemas["FacebookPageList"];
+export type YouTubeChannel = Schemas["YouTubeChannel"];
+export type YouTubeChannelList = Schemas["YouTubeChannelList"];
 export type SandboxAccountCreate = Schemas["SandboxAccountCreate"];
 
 // ---- automations (P4: FR-AUT-01…19, UX-SCR-02, 03, 11, 12)
@@ -447,6 +451,10 @@ export type CatalogueLimits = Schemas["CatalogueLimits"];
 export type CsvImportPreview = Schemas["ImportPreview"];
 export type CsvImportRow = Schemas["ImportRowOut"];
 export type CsvImportResult = Schemas["ImportResult"];
+export type ContactImportBody = Schemas["ContactImport"];
+export type ContactImportPreview = Schemas["ContactImportPreview"];
+export type ContactImportRow = Schemas["ContactImportRowOut"];
+export type ContactImportResult = Schemas["ContactImportResult"];
 export type ShopifyStatus = Schemas["ShopifyStatus"];
 
 // ---- orders and payment requests (GR-32)

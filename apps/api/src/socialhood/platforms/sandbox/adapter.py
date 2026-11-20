@@ -37,6 +37,7 @@ from socialhood.platforms.instagram.adapter import CAPABILITIES
 from socialhood.platforms.whatsapp.adapter import CAPABILITIES as WHATSAPP_CAPABILITIES
 from socialhood.platforms.whatsapp.health import NumberHealth
 from socialhood.platforms.whatsapp.templates import MessageTemplate
+from socialhood.platforms.youtube.adapter import CAPABILITIES as YOUTUBE_CAPABILITIES
 
 SANDBOX_PREFIX = "sandbox_"
 
@@ -59,6 +60,9 @@ class SandboxAdapter:
             return FACEBOOK_CAPABILITIES | {Capability.HUMAN_AGENT}
         if acct.platform == "whatsapp":
             return WHATSAPP_CAPABILITIES
+        if acct.platform == "youtube":
+            # C-196: the registry gives sandbox channels the YouTube adapter (SandboxVideos)
+            return YOUTUBE_CAPABILITIES
         return CAPABILITIES
 
     async def list_templates(self, acct: SocialAccount) -> list[MessageTemplate]:
@@ -121,6 +125,25 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import outbox
 
         outbox.SEEN.append((acct.platform_account_id, recipient_ref))
+
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """Recorded in ``outbox.REACTIONS``. A WhatsApp number takes any emoji; an Instagram
+        account or a Facebook Page only a heart, like the real ones (GR-42)."""
+        from socialhood.platforms.instagram.adapter import react_payload
+        from socialhood.platforms.sandbox import outbox
+
+        if acct.platform != "whatsapp":
+            react_payload(recipient_ref, platform_message_id, emoji)  # refuses what Meta would
+        failure = outbox.failure_for_text(None, "react")
+        if failure is not None:
+            raise failure
+        outbox.record_reaction(acct.platform_account_id, recipient_ref, platform_message_id, emoji)
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         from socialhood.platforms.sandbox import history

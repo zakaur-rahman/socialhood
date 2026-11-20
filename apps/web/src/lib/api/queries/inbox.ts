@@ -29,7 +29,7 @@ export function useConversations(wid: string, filters: ConversationFilters) {
             path: { wid },
             query: {
               view: filters.view,
-              platform: filters.platform ?? undefined,
+              platform: filters.platform && filters.platform !== "youtube" ? filters.platform : undefined, // no YouTube conversations
               account_id: filters.accountId ?? undefined,
               q: filters.q.trim() || undefined,
               cursor: pageParam ?? undefined,
@@ -120,7 +120,7 @@ export function useUpdateConversation(wid: string) {
       unwrap(
         api.PATCH("/v1/w/{wid}/conversations/{conversation_id}", {
           params: { path: { wid, conversation_id: id } },
-          body: { clear_ai_mode_override: false, resume_ai: false, ...patch },
+          body: { clear_ai_mode_override: false, resume_ai: false, unsnooze: false, ...patch },
         }),
       ),
     onSuccess: (conversation) => {

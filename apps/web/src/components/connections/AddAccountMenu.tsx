@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { FacebookGlyph } from "./FacebookGlyph";
 import { InstagramGlyph } from "./InstagramGlyph";
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
+import { YouTubeGlyph } from "./YouTubeGlyph";
 
 function LogoTile({ className, children }: { className: string; children: ReactNode }) {
   return (
@@ -36,12 +37,15 @@ export function AddAccountMenu({
   onWhatsApp,
   whatsAppConfigured,
   busy,
+  onYouTube,
 }: {
   onInstagram: () => void;
   onFacebook: () => void;
   onWhatsApp: () => void;
   whatsAppConfigured: boolean;
   busy: boolean;
+  /** Only passed while the workspace has YouTube switched on. */
+  onYouTube?: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -82,6 +86,17 @@ export function AddAccountMenu({
             </span>
           </span>
         </DropdownMenuItem>
+        {onYouTube ? (
+          <DropdownMenuItem onSelect={onYouTube} className="items-center gap-3 py-2">
+            <LogoTile className="bg-youtube-logo">
+              <YouTubeGlyph className="size-4" />
+            </LogoTile>
+            <span className="flex flex-col">
+              <span className="font-medium">YouTube channel</span>
+              <span className="text-xs text-fg-secondary">A YouTube channel, to post videos to</span>
+            </span>
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

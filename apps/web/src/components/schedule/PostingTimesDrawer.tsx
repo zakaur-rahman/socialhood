@@ -22,6 +22,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { errorMessage } from "@/lib/copy";
 import { WEEKDAYS_LONG, WEEKDAYS_SHORT, zoneLabel } from "@/lib/schedule/dates";
 import { formatDayTime } from "@/lib/tz";
+import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
 import { BestTimesPanel } from "./BestTimes";
@@ -70,6 +71,7 @@ export function PostingTimesDrawer({
   onCloseAutoFocus?: (event: Event) => void;
 }) {
   const fromPage = useOptionalSchedule();
+  const youtubeOn = (useCurrentWorkspace().features ?? []).includes("youtube");
   const context = basics ?? fromPage;
   if (!context) throw new Error("PostingTimesDrawer needs the Schedule page or `basics`");
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -118,7 +120,11 @@ export function PostingTimesDrawer({
         ) : current ? (
           <div className="flex min-h-0 flex-1 flex-col">{times(current)}</div>
         ) : (
-          <p className="p-4 text-sm text-fg-secondary">Connect an Instagram account or a Facebook Page to set posting times.</p>
+          <p className="p-4 text-sm text-fg-secondary">
+            {youtubeOn
+              ? "Connect an Instagram account, a Facebook Page or a YouTube channel to set posting times."
+              : "Connect an Instagram account or a Facebook Page to set posting times."}
+          </p>
         )}
       </SheetContent>
     </Sheet>

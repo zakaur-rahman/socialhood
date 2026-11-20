@@ -33,6 +33,7 @@ TOOL_MODULES = (
     "socialhood.mcp.tools.automations_write",
     "socialhood.mcp.tools.automations_create",
     "socialhood.mcp.tools.ask",
+    "socialhood.mcp.tools.youtube",  # C-196
 )
 
 

@@ -91,6 +91,7 @@ export const keys = {
   // inbox (P3)
   conversationLists: (wid: string) => ["w", wid, "conversations"] as const,
   conversations: (wid: string, filters: ConversationFilters) => ["w", wid, "conversations", filters] as const,
+  conversationDetails: (wid: string) => ["w", wid, "conversation"] as const, // prefix of every detail
   conversation: (wid: string, id: string) => ["w", wid, "conversation", id] as const,
   messages: (wid: string, conversationId: string) => ["w", wid, "messages", conversationId] as const,
   inboxCounts: (wid: string) => ["w", wid, "inbox-counts"] as const,

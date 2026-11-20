@@ -44,6 +44,7 @@ const API_NAME = {
   whatsapp: "WhatsApp Cloud API",
   facebook: "Facebook Pages API",
   web: "Website chat widget",
+  youtube: "YouTube Data API",
 } as const;
 
 export type AccountActions = {
@@ -144,7 +145,8 @@ export function AccountCard({
         </p>
       ) : null}
 
-      {live ? (
+      {/* YouTube is publish-only: no DMs, comments or AI replies, so no AI settings. */}
+      {live && account.platform !== "youtube" ? (
         <CardInset className="space-y-4">
           <Setting
             id={`ai-mode-${account.id}`}
@@ -189,6 +191,20 @@ export function AccountCard({
             </Setting>
           )}
         </CardInset>
+      ) : null}
+
+      {live && account.platform === "youtube" && account.status === "active" && !account.capabilities.includes("account_insights") ? (
+        <p className="text-sm text-fg-secondary" data-testid="reconnect-insights">
+          Reconnect to add watch time and subscriber changes
+          {canManage ? (
+            <>
+              {" "}
+              <Button variant="link" size="xs" className="px-0" disabled={busy.reconnecting} onClick={actions.onReconnect}>
+                Reconnect
+              </Button>
+            </>
+          ) : null}
+        </p>
       ) : null}
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-subtle pt-4">

@@ -16,6 +16,12 @@ FR-PUB-10, FR-PUB-14; C-043).
   automations that already have their published post are kept (C-043).
 - Publish now sets ``publish_at`` to now and hands the pending targets to the publishing jobs
   (``publish_target`` by name, T7.3) after the commit.
+- YouTube (C-196): a target's ``options`` are a YouTube channel's only (422 on
+  ``targets.{i}.options`` elsewhere). A post for YouTube channels only with an empty tray is the
+  direct route: its format is a single video (``reel``) and its video goes straight to YouTube
+  (services/post_publishing/youtube_direct.py). Every change queues a sync of its direct uploads
+  for after the commit; a video no target holds any more (a channel removed, the post deleted,
+  Edit and retry, another platform or tray media added) is deleted from YouTube then.
 
 Every change queues ``scheduled_post.updated`` (views.publish_updated); nothing here commits.
 """
@@ -43,6 +49,7 @@ from socialhood.models.publishing import (
     MIN_SCHEDULE_LEAD,
     REEL_AUDIO_NAME_MAX_CHARS,
     USER_TAGS_MAX_PER_IMAGE,
+    PostFormat,
     ScheduledPostAsset,
     ScheduledPostStatus,
     ScheduledPostTarget,
@@ -64,7 +71,7 @@ from socialhood.schemas.publishing import (
     TargetIn,
 )
 from socialhood.services.conversations import decode_cursor, encode_cursor
-from socialhood.services.post_publishing import collaborators
+from socialhood.services.post_publishing import collaborators, youtube_direct
 from socialhood.services.scheduled_posts import rules, slots, views
 
 log = get_logger(__name__)
@@ -122,6 +129,7 @@ async def _reload(session: AsyncSession, posts: Sequence[PostRow]) -> None:
 
 async def _changed(session: AsyncSession, post: PostRow, env: Env) -> ScheduledPost:
     await _reload(session, [post])
+    await youtube_direct.queue_changed(session, [post.id])
     [out] = await views.publish_updated(session, [post], deps=env.deps, now=env.now)
     return out
 
@@ -247,6 +255,12 @@ async def _check_body(session: AsyncSession, body: ScheduledPostDraft) -> _Check
             errors.append(FieldError(f"targets.{i}", "Account not found."))
         elif target.social_account_id in seen_accounts:
             errors.append(FieldError(f"targets.{i}", "This account is already selected."))
+        elif (
+            target.options is not None and accounts[target.social_account_id].platform != "youtube"
+        ):
+            errors.append(
+                FieldError(f"targets.{i}.options", "Only a YouTube channel takes these options.")
+            )
         seen_accounts.add(target.social_account_id)
     found = await repo.assets_by_id(session, body.asset_ids)
     seen_assets: set[uuid.UUID] = set()
@@ -291,34 +305,69 @@ def _reset(target: ScheduledPostTarget) -> None:
     target.first_comment_error = None
     target.collaborator_statuses = []
     target.collaborators_checked_at = None
+    target.upload_expires_at = None
+    target.sent_metadata = None
+
+
+def _drop_upload(
+    session: AsyncSession, target: ScheduledPostTarget, *, deleting: bool = False
+) -> None:
+    """A pending YouTube target's direct upload ends: its video is deleted from YouTube after
+    the commit (a published one is never touched). ``deleting``: the row goes too, so it is
+    left as it is (changing it would make the flush update a deleted row)."""
+    if target.status == TargetStatus.PUBLISHED:
+        return
+    if target.platform_media_id and target.options is not None:
+        youtube_direct.queue_sync(session, target, target.platform_media_id)
+    if not deleting:
+        youtube_direct.clear(target)
 
 
 async def _write_targets(
-    session: AsyncSession, post: PostRow, targets: Sequence[TargetIn], *, reset: bool
+    session: AsyncSession,
+    post: PostRow,
+    targets: Sequence[TargetIn],
+    *,
+    reset: bool,
+    direct: bool = False,
 ) -> None:
-    """The post's targets become the body's: kept accounts keep their row (new caption), others
-    are removed or added."""
+    """The post's targets become the body's: kept accounts keep their row (new caption and
+    options), others are removed or added. ``direct``: the post is on YouTube's direct route
+    (C-196); otherwise a pending target's direct upload is dropped."""
     existing = {t.social_account_id: t for t, _ in await repo.targets_for(session, [post.id])}
     wanted = {t.social_account_id: t for t in targets}
+    for account, row in existing.items():
+        if account not in wanted:
+            _drop_upload(session, row, deleting=True)
     await repo.delete_targets(
         session, [row.id for account, row in existing.items() if account not in wanted]
     )
     for account_id, target in wanted.items():
         override = target.caption_override or None
-        row = existing.get(account_id)
-        if row is None:
+        options = target.options.model_dump(mode="json") if target.options else None
+        current = existing.get(account_id)
+        if current is None:
             session.add(
                 ScheduledPostTarget(
                     scheduled_post_id=post.id,
                     social_account_id=account_id,
                     caption_override=override,
+                    options=options,
                     status=TargetStatus.PENDING,
                 )
             )
             continue
-        row.caption_override = override
-        if reset and row.status != TargetStatus.PENDING:
-            _reset(row)
+        current.caption_override = override
+        current.options = options
+        if reset and current.status != TargetStatus.PENDING:
+            _drop_upload(session, current)
+            _reset(current)
+        elif (
+            not direct
+            and current.status == TargetStatus.PENDING
+            and (current.platform_media_id or current.upload_expires_at)
+        ):
+            _drop_upload(session, current)
     await session.flush()
 
 
@@ -338,12 +387,22 @@ async def _write(
     pages_only = bool(body.targets) and all(
         checked.accounts[t.social_account_id].platform == "facebook" for t in body.targets
     )
+    # Only YouTube channels and an empty tray: the video goes straight to YouTube (C-196).
+    direct = (
+        bool(body.targets)
+        and not checked.assets
+        and all(checked.accounts[t.social_account_id].platform == "youtube" for t in body.targets)
+    )
     post.kind = body.kind
-    post.format = rules.derive_format(
-        [a.resource_type for a in checked.assets],
-        story=body.kind == "story",
-        text=pages_only and bool(body.caption.strip()) and body.kind != "reel",
-        reel=body.kind == "reel",
+    post.format = (
+        PostFormat.REEL
+        if direct and body.kind != "story"
+        else rules.derive_format(
+            [a.resource_type for a in checked.assets],
+            story=body.kind == "story",
+            text=pages_only and bool(body.caption.strip()) and body.kind != "reel",
+            reel=body.kind == "reel",
+        )
     )
     post.updated_at = now
     post.collaborators = checked.collaborators
@@ -358,7 +417,7 @@ async def _write(
     wanted = [(a, checked.tags.get(a, [])) for a in body.asset_ids]
     if current != wanted:
         await repo.replace_assets(session, post.id, body.asset_ids, checked.tags)
-    await _write_targets(session, post, body.targets, reset=reset)
+    await _write_targets(session, post, body.targets, reset=reset, direct=direct)
 
 
 async def create(
@@ -384,6 +443,7 @@ async def replace(
         raise _conflict(post.status)
     checked = await _check_body(session, body)
     if post.status == P.SCHEDULED:  # Update schedule: checked before anything is written
+        kept = {t.social_account_id: t for t, _ in await repo.targets_for(session, [post.id])}
         draft = views.Draft(
             post_id=post.id,
             caption=body.caption,
@@ -403,6 +463,17 @@ async def replace(
             cover_offset_ms=body.cover_offset_ms,
             share_to_feed=body.share_to_feed,
             audio_name=checked.audio_name,
+            options=[
+                t.options.model_dump(mode="json") if t.options else None for t in body.targets
+            ],
+            uploaded=[
+                bool(
+                    not checked.assets
+                    and (row := kept.get(t.social_account_id)) is not None
+                    and row.platform_media_id
+                )
+                for t in body.targets
+            ],
         )
         await _require_ready(session, draft, env)
     retry = post.status in RETRYABLE
@@ -531,6 +602,27 @@ async def publish_now(
     return out, HandOver(post.workspace_id, pending)
 
 
+async def schedule_uploaded(
+    session: AsyncSession, post: PostRow, env: Env, *, now: bool
+) -> tuple[ScheduledPost, HandOver | None]:
+    """A direct YouTube upload finished (C-196, the post locked by the caller): a "now" post is
+    published as Publish now does (the caller hands the targets over after its commit); a draft
+    is scheduled at its time; a scheduled post keeps its time."""
+    if now:
+        await _schedule(session, post, env.now, env, check_time=False)
+        out = await _changed(session, post, env)
+        pending = [
+            t.id
+            for t, _ in await repo.targets_for(session, [post.id])
+            if t.status == TargetStatus.PENDING
+        ]
+        return out, HandOver(post.workspace_id, pending)
+    if post.status == P.DRAFT and post.publish_at is not None:
+        await _schedule(session, post, post.publish_at, env)
+    post.updated_at = env.now
+    return await _changed(session, post, env), None
+
+
 async def hand_over(handover: HandOver) -> int:
     """Enqueue ``publish_target`` (T7.3) for each pending target, by name, under the job
     catalogue's ``pub:{target_id}``; publish_target claims a pending target of a due post itself.
@@ -627,6 +719,7 @@ async def duplicate(
             scheduled_post_id=copy.id,
             social_account_id=target.social_account_id,
             caption_override=target.caption_override,
+            options=target.options,  # a YouTube channel's choices, without its video
             status=TargetStatus.PENDING,
         )
         for target, _ in loaded.targets
@@ -644,6 +737,9 @@ async def delete(session: AsyncSession, scheduled_post_id: uuid.UUID) -> None:
 
 
 async def _delete(session: AsyncSession, post: PostRow) -> None:
+    for target, _ in await repo.targets_for(session, [post.id]):
+        # a direct upload waiting on YouTube goes too (C-196)
+        _drop_upload(session, target, deleting=True)
     await repo.keep_published_links(session, post.id)
     await repo.delete_posts(session, [post.id])
 
@@ -712,6 +808,7 @@ async def bulk(
                 changed.append(post)
     await _reload(session, changed)
     if changed:
+        await youtube_direct.queue_changed(session, [p.id for p in changed])
         await views.publish_updated(session, changed, deps=env.deps, now=env.now)
     by_id = {p.id: p for p in changed + untouched}
     return BulkScheduledPostResult(

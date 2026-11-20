@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from socialhood.auth.accept_invitations import accept_for_user
 from socialhood.auth.deps import CurrentUser, Session
 from socialhood.auth.memberships import memberships_for
+from socialhood.platforms.youtube.switch import features_for
 from socialhood.schemas.workspaces import Me, WorkspaceList, WorkspaceSummary
 
 router = APIRouter(prefix="/v1", tags=["me"])
@@ -19,6 +20,7 @@ async def _summaries(
     await accept_for_user(
         session, user, http=request.app.state.http, settings=request.app.state.settings
     )
+    settings = request.app.state.settings
     return [
         WorkspaceSummary.model_validate(
             {
@@ -28,6 +30,7 @@ async def _summaries(
                 "timezone": m.timezone,
                 "role": m.role,
                 "plan": m.plan,
+                "features": features_for(settings, m.workspace_id, m.slug),
             }
         )
         for m in await memberships_for(session, user.id)

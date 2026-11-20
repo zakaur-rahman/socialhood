@@ -42,6 +42,13 @@ import {
   REEL_NEEDS_VIDEO,
   REEL_ONE_VIDEO,
   reelVideoProblem,
+  byteCount,
+  shortProblem,
+  tagsLength,
+  YOUTUBE_DESCRIPTION_MAX_BYTES,
+  YOUTUBE_TAGS_MAX_CHARS,
+  YOUTUBE_TITLE_MAX_CHARS,
+  type YouTubeOptions,
   storyShapeOff,
   storyVideoProblem,
   videoTooLong,
@@ -58,6 +65,7 @@ export const CHECKLIST_KEYS: readonly ChecklistKey[] = [
   "hashtags",
   "mentions",
   "extras",
+  "youtube",
   "publishing_limit",
   "publish_at",
 ];
@@ -71,16 +79,29 @@ export const LOCAL_KEYS: ReadonlySet<ChecklistKey> = new Set([
   "hashtags",
   "mentions",
   "extras",
+  "youtube",
   "publish_at",
 ]);
 
+/** The draft as the checklist reads it: a YouTube target's two questions may still be unanswered (null). */
+export type CheckDraft = Omit<ScheduledPostDraft, "targets"> & {
+  targets?: { social_account_id: string; caption_override?: string | null; options?: YouTubeOptions | null }[];
+};
+
 export type ChecklistInput = {
-  draft: ScheduledPostDraft;
+  draft: CheckDraft;
   /** Every account of the workspace, to read each selected one's status and capabilities. */
   accounts: SocialAccount[];
   /** What is known about each asset id in the draft. */
   assets: Record<string, AssetInfo>;
   now: Date;
+  /**
+   * A YouTube-only post's video (the direct route never uses the media tray): what the browser read
+   * from the picked file, a placeholder when it can't tell, or null when none is picked.
+   */
+  youtubeFile?: AssetInfo | null;
+  /** A YouTube-only post whose video is already on YouTube: no file is needed. */
+  youtubeUploaded?: boolean;
 };
 
 function fail(key: ChecklistKey, message: string, field: string | null): ChecklistItem {
@@ -92,16 +113,22 @@ function pass(key: ChecklistKey, message: string): ChecklistItem {
 }
 
 /** One caption with the field it lives in, for the per-caption checks. */
-type CaptionSlot = { text: string; field: string; owner: string; limit: number };
+type CaptionSlot = { text: string; field: string; owner: string; limit: number; youtube: boolean };
 
-function captionSlots(draft: ScheduledPostDraft, accounts: SocialAccount[]): CaptionSlot[] {
+function captionSlots(draft: CheckDraft, accounts: SocialAccount[]): CaptionSlot[] {
   // Each caption is held to the limit of the accounts it goes to (C-131): an account's own caption
   // to its platform's; the shared one to the strictest of the accounts without their own.
   const platformOf = (id: string) => accounts.find((item) => item.id === id)?.platform ?? "instagram";
   const targets = draft.targets ?? [];
   const shared = targets.filter((target) => target.caption_override == null).map((target) => platformOf(target.social_account_id));
   const slots: CaptionSlot[] = [
-    { text: draft.caption ?? "", field: "caption", owner: "The caption", limit: shared.length ? captionLimit(shared) : FACEBOOK_CAPTION_MAX_CHARS },
+    {
+      text: draft.caption ?? "",
+      field: "caption",
+      owner: shared.length && shared.every((platform) => platform === "youtube") ? "The description" : "The caption",
+      limit: shared.length ? captionLimit(shared) : FACEBOOK_CAPTION_MAX_CHARS,
+      youtube: shared.includes("youtube"),
+    },
   ];
   targets.forEach((target, index) => {
     if (target.caption_override == null) return;
@@ -109,15 +136,16 @@ function captionSlots(draft: ScheduledPostDraft, accounts: SocialAccount[]): Cap
     slots.push({
       text: target.caption_override,
       field: `targets.${index}.caption_override`,
-      owner: `The caption for ${handleOf(account)}`,
+      owner: `The ${account?.platform === "youtube" ? "description" : "caption"} for ${handleOf(account)}`,
       limit: captionLimit([platformOf(target.social_account_id)]),
+      youtube: account?.platform === "youtube",
     });
   });
   return slots;
 }
 
 /** The checks the composer can make without the API, in checklist order. */
-export function localChecklist({ draft, accounts, assets, now }: ChecklistInput): ChecklistItem[] {
+export function localChecklist({ draft, accounts, assets, now, youtubeFile = null, youtubeUploaded = false }: ChecklistInput): ChecklistItem[] {
   const items: ChecklistItem[] = [];
   const targets = draft.targets ?? [];
   const assetIds = draft.asset_ids ?? [];
@@ -126,7 +154,9 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const selected = targets
     .map((target) => accounts.find((item) => item.id === target.social_account_id))
     .filter((account): account is SocialAccount => Boolean(account));
-  const { instagram: ig, facebook: fb } = postPlatforms(selected);
+  const { instagram: ig, facebook: fb, youtube: yt } = postPlatforms(selected);
+  // A post for YouTube channels alone uploads straight to YouTube, not through the media tray.
+  const ytOnly = yt && selected.every((account) => account.platform === "youtube");
   // Text for Facebook Pages alone, with no media, is a text post (GR-30).
   const textPost = fb && !ig && !story && !reel && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
   const limitName = ig ? "Instagram" : "Amplychat";
@@ -160,7 +190,19 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
 
   // media: the assets make a format
   const known = assetIds.map((id) => assets[id]).filter((asset): asset is AssetInfo => Boolean(asset));
-  if (assetIds.length === 0) {
+  if (ytOnly) {
+    items.push(...youtubeChecklist({ draft, accounts, file: youtubeFile, uploaded: youtubeUploaded }));
+    return finishChecklist(items, draft, now);
+  }
+  const oneVideo = assetIds.length === 1 && (known.length === 0 || known[0].resource_type === "video");
+  if (yt && story) {
+    items.push(fail("media", "A Story can't go to YouTube. Choose Post, or remove the YouTube channel.", "targets"));
+  } else if (yt && !oneVideo) {
+    items.push(fail("media", "YouTube needs exactly one video. Post photos to the other accounts on their own.", "asset_ids"));
+  } else if (yt) {
+    // The mixed route: Cloudinary once, then our scheduler sends it to every platform (the plan's Approach).
+    items.push(pass("media", "Posting to several platforms: the video is stored once and sent to each."));
+  } else if (assetIds.length === 0) {
     items.push(
       textPost
         ? pass("media", "Text post")
@@ -171,7 +213,6 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
           ),
     );
   } else if (reel) {
-    const oneVideo = assetIds.length === 1 && (known.length === 0 || known[0].resource_type === "video");
     items.push(oneVideo ? pass("media", "Reel") : fail("media", REEL_ONE_VIDEO, "asset_ids"));
   } else if (fb && !story && assetIds.length > 1 && known.some((asset) => asset.resource_type === "video")) {
     items.push(fail("media", FACEBOOK_NO_MIX, "asset_ids"));
@@ -195,8 +236,11 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     const label = assetLabel(asset, index);
     const crop = story || !ig ? null : cropNeeded(asset);
     const storyProblem = story ? storyVideoProblem(asset) : reel && fb ? reelVideoProblem(asset) : null;
+    const short = yt && youtubeOptionsOf(draft)?.format === "short" ? shortProblem(asset) : null;
     if (storyProblem) {
       fileProblems.push(fail("media_files", `${label}: ${storyProblem}`, `asset_ids.${index}`));
+    } else if (short) {
+      fileProblems.push(fail("youtube", `${label}: ${short}`, `asset_ids.${index}`));
     } else if (crop) {
       const shape = crop === "tall" ? "taller than 4:5" : "wider than 1.91:1";
       fileProblems.push(fail("media_files", `${label} is ${shape}. Crop it to 1:1, 4:5 or 1.91:1.`, `asset_ids.${index}`));
@@ -243,11 +287,16 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const mentionProblems: ChecklistItem[] = [];
   for (const slot of slots) {
     const counts = countText(slot.text);
-    if (counts.chars > slot.limit) {
+    const bytes = slot.youtube ? byteCount(slot.text) : 0;
+    if (slot.youtube && bytes > YOUTUBE_DESCRIPTION_MAX_BYTES && counts.chars <= slot.limit) {
+      captionProblems.push(
+        fail("caption", `${slot.owner} is ${formatCount(bytes)} bytes. YouTube allows ${formatCount(YOUTUBE_DESCRIPTION_MAX_BYTES)}.`, slot.field),
+      );
+    } else if (counts.chars > slot.limit) {
       captionProblems.push(
         fail(
           "caption",
-          `${slot.owner} is ${formatCount(counts.chars)} characters. ${slot.limit === CAPTION_MAX_CHARS ? "Instagram" : "Facebook"} allows ${formatCount(slot.limit)}.`,
+          `${slot.owner} is ${formatCount(counts.chars)} characters. ${slot.limit === CAPTION_MAX_CHARS ? "Instagram" : slot.limit === YOUTUBE_DESCRIPTION_MAX_BYTES ? "YouTube" : "Facebook"} allows ${formatCount(slot.limit)}.`,
           slot.field,
         ),
       );
@@ -287,11 +336,85 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
 
   const singleVideo = assetIds.length === 1 && assets[assetIds[0]]?.resource_type === "video";
   items.push(...extrasChecklist({ draft, assets, ig, story, reel, singleVideo }));
+  if (yt) items.push(...youtubeOptionsChecklist(draft, accounts));
   return finishChecklist(items, draft, now);
 }
 
+/** The YouTube options of the post (every YouTube target carries the same ones), or null. */
+export function youtubeOptionsOf(draft: CheckDraft): YouTubeOptions | null {
+  return (draft.targets ?? []).find((target) => target.options)?.options ?? null;
+}
+
+/**
+ * A YouTube-only post (the direct route): one video in the YouTube box, the description's 5,000
+ * bytes, a Short's shape and length, then the options. The media tray isn't used, so files left
+ * in it would be ignored: they are flagged instead.
+ */
+function youtubeChecklist({
+  draft,
+  accounts,
+  file,
+  uploaded,
+}: {
+  draft: CheckDraft;
+  accounts: SocialAccount[];
+  file: AssetInfo | null;
+  uploaded: boolean;
+}): ChecklistItem[] {
+  const items: ChecklistItem[] = [];
+  if ((draft.asset_ids ?? []).length > 0) {
+    items.push(fail("media", "A post to YouTube alone uploads its video in the YouTube box. Remove the files from the media tray.", "asset_ids"));
+  } else if (uploaded) {
+    items.push(pass("media", "The video is on YouTube"));
+  } else if (!file) {
+    items.push(fail("youtube", "Add the video for YouTube.", "youtube_file"));
+  } else {
+    items.push(pass("media", "One video, uploaded straight to YouTube"));
+  }
+  const short = file && youtubeOptionsOf(draft)?.format === "short" ? shortProblem(file) : null;
+  if (short) items.push(fail("youtube", short, "youtube_file"));
+
+  const captionProblems: ChecklistItem[] = [];
+  for (const slot of captionSlots(draft, accounts)) {
+    const bytes = byteCount(slot.text);
+    if (bytes > YOUTUBE_DESCRIPTION_MAX_BYTES) {
+      captionProblems.push(
+        fail("caption", `${slot.owner} is ${formatCount(bytes)} bytes. YouTube allows ${formatCount(YOUTUBE_DESCRIPTION_MAX_BYTES)}.`, slot.field),
+      );
+    }
+  }
+  items.push(...(captionProblems.length ? captionProblems : [pass("caption", "Description within 5,000 bytes")]));
+  items.push(...youtubeOptionsChecklist(draft, accounts));
+  return items;
+}
+
+/** The YouTube section's required answers (S-1): title, made for kids, the AI disclosure, and the tags' length. */
+function youtubeOptionsChecklist(draft: CheckDraft, accounts: SocialAccount[]): ChecklistItem[] {
+  const index = (draft.targets ?? []).findIndex(
+    (target) => accounts.find((account) => account.id === target.social_account_id)?.platform === "youtube",
+  );
+  if (index < 0) return [];
+  const options = draft.targets?.[index]?.options ?? null;
+  const field = (name: string) => `targets.${index}.options.${name}`;
+  const items: ChecklistItem[] = [];
+  const title = options?.title.trim() ?? "";
+  if (!title) items.push(fail("youtube", "Add a title for YouTube.", field("title")));
+  else if ([...title].length > YOUTUBE_TITLE_MAX_CHARS) {
+    items.push(fail("youtube", `Keep the YouTube title to ${YOUTUBE_TITLE_MAX_CHARS} characters (now ${[...title].length}).`, field("title")));
+  } else if (/[<>]/.test(title)) items.push(fail("youtube", "YouTube titles can't contain < or >.", field("title")));
+  if (options?.made_for_kids == null) items.push(fail("youtube", "Say whether the video is made for kids.", field("made_for_kids")));
+  if (options?.synthetic_media == null) {
+    items.push(fail("youtube", "Say whether the video has realistic AI-made or altered content.", field("synthetic_media")));
+  }
+  const tags = tagsLength(options?.tags ?? []);
+  if (tags > YOUTUBE_TAGS_MAX_CHARS) {
+    items.push(fail("youtube", `Keep YouTube tags to ${YOUTUBE_TAGS_MAX_CHARS} characters in total (now ${tags}).`, field("tags")));
+  }
+  return items.length ? items : [pass("youtube", "YouTube details set")];
+}
+
 type ExtrasInput = {
-  draft: ScheduledPostDraft;
+  draft: CheckDraft;
   assets: Record<string, AssetInfo>;
   ig: boolean;
   story: boolean;
@@ -373,7 +496,7 @@ export function extrasChecklist({ draft, assets, ig, story, reel, singleVideo }:
 }
 
 /** publish_at: only when the post has a time. */
-function finishChecklist(items: ChecklistItem[], draft: ScheduledPostDraft, now: Date): ChecklistItem[] {
+function finishChecklist(items: ChecklistItem[], draft: CheckDraft, now: Date): ChecklistItem[] {
   if (draft.publish_at) {
     const at = new Date(draft.publish_at).getTime();
     items.push(
@@ -393,6 +516,7 @@ export function itemsFromErrors(errors: ProblemField[]): ChecklistItem[] {
 /** The checklist key a field belongs to. */
 export function keyOfField(field: string): ChecklistKey {
   if (/^targets\.\d+\.caption_override$/.test(field) || field === "caption" || field === "first_comment") return "caption";
+  if (/^targets\.\d+\.options/.test(field) || field === "youtube_file") return "youtube";
   if (["collaborators", "location", "user_tags", "cover_asset_id", "cover_offset_ms", "audio_name", "share_to_feed"].includes(field.split(".")[0])) {
     return "extras";
   }

@@ -9924,6 +9924,175 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Owner to confirm:** the Umami account's data region (the subprocessors page names it as "the
   region chosen for our account").
 
+## C-195 · YouTube Phase 1: connect a channel (owner, 2026-11-14)
+
+- **Asked:** connect a YouTube channel (plan: plans/youtube-plan-2026-11-14.html, Phase 1). API
+  side here; the web side in the same branch.
+- **Decided by the owner:**
+  - YouTube is publish only (no DMs, no comments yet): capabilities `publish` and `post_insights`,
+    both only when the grant holds `youtube.force-ssl`.
+  - OAuth: the same Google OAuth client as Clerk's Google sign-in, our own settings
+    (`YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`, `YOUTUBE_PROVIDER`
+    google or fake, fake refused in production). One scope, `youtube.force-ssl` (uploads, and
+    editing or deleting them; `youtube.upload` alone can't), with `access_type=offline`,
+    `prompt=consent`, `include_granted_scopes=false`.
+  - The refresh token is stored encrypted in `social_accounts.access_token_enc` with
+    `token_expires_at` NULL; the adapter mints a short-lived access token per use. The daily
+    `refresh_tokens` job skips YouTube (`connections.refresh_due`). `invalid_grant` is
+    `account_needs_reconnect`.
+  - Feature switch `YOUTUBE_WORKSPACES`: empty is off everywhere, `*` on for all, otherwise a comma
+    list of workspace slugs or ids. `WorkspaceOut` and `WorkspaceSummary` carry
+    `features: ["youtube"]` where it is on; the YouTube connect routes answer 404 elsewhere.
+  - Plans (D1): one YouTube channel per workspace on every plan (`youtube_accounts` = 1); it counts
+    toward Free's 2 channels in total and the read-only rules (`CHANNEL_PLATFORMS`). A
+    `youtube_accounts` usage meter shows where YouTube is on.
+  - Disconnect revokes the grant with Google (best effort), after the normal disconnect.
+- **Calls made:**
+  - Google errors get their own mapper (`platforms/youtube/client.map_google_error`):
+    `PlatformHttp` takes a `mapper`, Meta's stays the default.
+  - The callback sends the browser to `/w/{slug}/settings/connections?youtube=<nonce>` (or
+    `?error=…&platform=youtube`), where the Connections page lives, as Facebook's does.
+  - A connect whose grant lacks `youtube.force-ssl` is refused at the channel list (422) rather
+    than connecting a channel that can't publish.
+  - Account platform names: a new `AccountPlatformName` (with `youtube`) for account-shaped
+    answers (`SocialAccountOut`, the overview's accounts); conversation, contact and inbox filters
+    keep `PlatformName` without it. The public API's account list leaves YouTube channels out
+    (they hold no contacts).
+  - Migration 0060 also adds the nullable `scheduled_post_targets.options` (JSONB) that Phase 2
+    uses for a video's title and privacy.
+  - Publishing methods answer `capability_unavailable` ("YouTube publishing arrives in the next
+    step") until Phase 2.
+- **Left as they are:** workspace deletion drops tokens without revoking them with Google (as for
+  every platform); a grant exchanged but never connected stays valid at Google until it expires
+  or is removed.
+
+## C-196 · YouTube Phase 2: schedule and publish videos and Shorts (owner, 2026-11-14)
+
+- **Asked:** plans/youtube-plan-2026-11-14.html, Phase 2 (S-1..S-12), API side here; the web side
+  in the same branch by another worker. Owner decisions: two upload routes (direct for YouTube-only
+  posts, the media tray when Instagram or Facebook is in the post), the project-wide daily upload
+  counter, the MCP tools `prepare_youtube_upload` and `get_youtube_upload_status`.
+- **Contract (as agreed with the web side):** `YouTubeOptions` on `TargetIn.options` and on the
+  post's target (`title`, `privacy`, `made_for_kids` and `synthetic_media` with no default,
+  `category_id`, `tags`, `notify_subscribers`, `format`), stored in
+  `scheduled_post_targets.options`; the target's `youtube: YouTubeTargetState` (`route`, `state`,
+  `video_id`, `upload_expires_at`, `url`); `POST …/scheduled-posts/{id}/youtube-upload`
+  (`start_youtube_upload`, 201 `YouTubeUploadSession`) and `…/youtube-upload/complete`
+  (`complete_youtube_upload`, the post); the checklist key `youtube`.
+- **Calls made:**
+  - **The route** is `direct` when every account is a YouTube channel *and the tray is empty*;
+    a YouTube-only post with a video in the tray (an AI app's create_post with media) goes the
+    media way, so `start_youtube_upload` answers 409 for it too ("…is in the media tray"). A
+    direct post's format is `reel` (one video) with no assets, so the `schedulable` check holds.
+  - `target_id` in the upload bodies is the channel's `social_account_id` (what the post's
+    targets show); the target row's id works too.
+  - **Unlisted at a time:** YouTube's `publishAt` always makes a video public, so a scheduled
+    unlisted (or private) video uploads private without `publishAt` and the publish job sets the
+    privacy at the time (videos.update, 50 units). Public uses `publishAt` (YouTube publishes it;
+    our read-back only marks it published). "Now" (a post without a time) uploads with the chosen
+    privacy.
+  - **Edits after a direct upload** go through a job after the commit (`sync_youtube_video`):
+    nothing is called during a request or an AI app's preview, and videos.update runs only when
+    something YouTube holds differs from `sent_metadata` (autosave would otherwise use up the
+    10,000 units). A draft's video is held private without `publishAt`, so unscheduling stops
+    YouTube publishing it. A video no target holds any more is deleted (the post deleted, the
+    channel removed, a new file, Edit and retry, another platform or tray media added: the
+    composer moves the post to the tray), never a video that is already public or unlisted.
+  - **Media route:** publish_target opens the session (one upload counted) and stores it before a
+    byte goes; `upload_youtube_video` runs on the bulk lane under publish_target's `pub:{id}` lock
+    (the sweeper counts it as busy) with 5 tries, each asking the session first; a gone session
+    is checked against the uploads playlist (title, since the claim) before uploading again. The
+    finished video's id is the container and the usual polls wait for processing (30 minutes, as
+    for Instagram; "YouTube took too long to process the video" after).
+  - **Daily limit:** `YouTubeUploads` is a fixed-window counter per Pacific-Time day in Valkey
+    (not a token bucket: Google's quota resets at midnight). Over it, a direct start is 429 with
+    the reset in the workspace's time; due media-route posts are moved by the dispatcher to the
+    next quota day plus a minute (every account of the post moves with it) and owners and admins
+    get a `post_failed` notification (warning) titled "Post moved to tomorrow". A session that
+    fails to open gives its count back.
+  - **Open uploads:** at most 3 direct sessions open per workspace (`upload_expires_at` in the
+    future); an unfinished one expires after 24 hours (`expire_youtube_uploads`, every 10 minutes):
+    the post is a draft again, the target shows `upload_expired` "The upload didn't finish…".
+  - **Sandbox (e2e):** the sandbox channel now uses the YouTube adapter with
+    `publishing.SandboxVideos`: no Google and no state. Its upload address is the dev route
+    `PUT /v1/dev/sandbox/youtube-uploads/{token}` (left out of the contract; 404 unless
+    SANDBOX_PLATFORM_ENABLED), answering like Google (308 + `Range`, then 200 with
+    `{"id": "sandbox_yt_<token>"}`) with 512 KiB pieces (under the API's 1 MB body limit); any
+    `sandbox_yt_*` id reads back as a processed public video of the channel, so the worker needs
+    nothing from the API process; the media route's streaming is skipped. The CORS config allows
+    `Content-Range` and exposes `Range` for it. The Phase 1 FakeYouTube stays in-process (tests).
+  - **MCP:** both tools are write tier (`posts:write`, owners and admins, the `full` mode):
+    `get_youtube_upload_status` also finishes the upload when YouTube holds the whole file (Claude
+    Code's curl route has no page to call complete), which a read tool can't (its session is
+    rolled back). `prepare_youtube_upload` counts against `mcp_posts_daily`/`mcp_posts` like
+    create_post and makes a `youtube` upload ticket (migration 0061 widens `mcp_uploads.kind` and
+    adds `scheduled_post_target_id`); `GET /mcp-uploads/{id}` returns `youtube` and
+    `scheduled_post_id` for it, `POST …/complete` takes `{video_id}`. finish_media_upload refuses a
+    youtube ticket.
+  - Stats (D5, minimal): `get_media_counts`/`get_media_insights` read views, likes and comments
+    (videos.list statistics); `get_account_insights` the subscribers as followers.
+  - YouTube takes no first comment from us: none is queued for a YouTube target.
+- **Left as they are:** create_post/update_post can't set YouTube options (use
+  prepare_youtube_upload); a custom thumbnail waits for Phase 3; a direct "now" upload whose
+  complete never arrives stays on YouTube (it went out with the chosen privacy) while the post
+  returns to a draft.
+
+## C-198 · YouTube in the legal pages (owner, 2026-11-14)
+
+- **Why:** Google's YouTube API Services policies ask the app's terms to bind users to the YouTube
+  Terms of Service, and its privacy policy to say it uses YouTube API Services, link the Google
+  Privacy Policy, say what YouTube data it reads, stores and shares, and how to revoke access
+  (Google's third-party connections page) and have the data deleted. Needed before Google's
+  verification of the `youtube.force-ssl` scope.
+- **Decided:**
+  - Privacy Policy: the YouTube channel under "The accounts you connect"; a third case in "Google
+    user data" (what we read and store, the direct route that never stores the file, the stats,
+    the duplicate-upload check), the YouTube ToS and Google Privacy Policy links, revoke and
+    delete, and no cookies for YouTube data; Google (YouTube) under "Who we share it with".
+  - Terms: one paragraph in "Meta's platforms and other services" binding YouTube users to the
+    YouTube ToS. Subprocessors: Google (YouTube) under "Others who receive data", like Meta, not a
+    subprocessor. DPA: the nature of processing names videos sent to a connected channel.
+  - Last-updated dates of the four pages move to 2026-11-14.
+- **Left as they are:** the pages say what the code does with the flag on; with
+  `YOUTUBE_WORKSPACES` empty nobody can connect a channel, and the text is still accurate. Not
+  reviewed by a lawyer (C-156).
+
+## C-199 · YouTube Phase 4: comments, important comments and YouTube Analytics (owner, 2026-11-16)
+
+- **Why:** Phase 4 of the YouTube plan (2026-11-14). The owner asked that YouTube comments are
+  answered by people only, with important comments highlighted, and asked to cut AI tokens where
+  rules can do the work.
+- **Decided:**
+  - Comments live on the Comments page, like Instagram's and Facebook's. Comments aren't in the
+    inbox for any platform, so YouTube's aren't either.
+  - Read by polling: YouTube has no comment webhook. Every 15 minutes, one `commentThreads.list`
+    per channel (`allThreadsRelatedToChannelId`, newest first, at most 5 pages, stopping at the
+    first page with nothing new). The first poll is a backfill (no events). A daily quota guard
+    (Pacific day): polling stops at 8,000 units, replies, hides and deletes at 9,500.
+  - Nothing automatic on YouTube: automations stay Instagram/Facebook only (already refused by
+    validation), intake never queues a comment automation for YouTube, and spam auto-hide skips
+    it. Analysis still runs, under the usual credits and `comment_intelligence_posts`.
+  - Moderation: Hide sets `rejected` (YouTube may not allow Unhide; the UI says so). Delete
+    removes our own replies and rejects anyone else's (a channel can't delete others' comments).
+    No private replies on YouTube.
+  - Important (every platform): not replied, not hidden or spam, and a question, buying interest,
+    complaint or refund request, a negative comment, or 10+ likes. An `important` filter, a flag
+    on each comment and a count on the post.
+  - Comments made only of emoji, tags or short listed praise are read by rules
+    (`services/comments/trivial.py`, model `rules`, no credit) on every platform. The analysis
+    prompt became platform-neutral (`comment_analysis.v2`).
+  - YouTube Analytics with `yt-analytics.readonly`, requested with `include_granted_scopes=true`;
+    the granted scopes are stored. With it, `account_insights` and per-video watch time, average
+    view duration and percent, and subscribers gained (`follows`); daily subscribers gained and
+    lost on the account. Channels connected earlier keep the basic stats until they reconnect.
+  - The 6-hourly per-post comment backfill skips YouTube (YouTube's count includes our own
+    replies, which we don't store). A revoked token found by the poll marks the channel as
+    needing a reconnect.
+  - Large multi-platform files in our own bucket: not built (D2 keeps the 100 MB limit).
+- **Left as they are:** a new reply on an old thread can be missed (threads are ordered by thread
+  time); channel-level watch time is stored but not shown; the owner adds the analytics scope on
+  the consent screen, enables the YouTube Analytics API and files the quota form when needed.
+
 ## C-200 · IndexNow after each production deploy (owner, 2026-11-19)
 
 - **Why:** IndexNow tells Bing, Yandex, Seznam, Naver and the other IndexNow engines about new,
@@ -9942,3 +10111,32 @@ features", then changed three rules. The audit report is kept outside the repo.
     live site serves the key.
 - **Left as they are:** the app host (dashboard.amplychat.com) isn't submitted: it's noindex. No
   separate IndexNow call on content changes between releases: our pages only change on a release.
+
+## C-201 · Inbox: reply and react, contact import, no automatic replies, snooze (owner, 2026-11-19)
+
+- **Why:** the owner asked what to borrow from the WA-AKG WhatsApp gateway (unofficial, no
+  license, nothing copied); the plan (GR-42 to GR-46) was agreed, n8n (GR-46) parked, and the owner
+  said to go ahead with the rest. The open decisions were settled as the plan recommended:
+  - **D1:** a CSV import may record WhatsApp marketing consent, but only when an Admin ticks
+    "These people agreed to get WhatsApp marketing from us"; each consent has source `import` and
+    evidence (who, when, file name, row), and an import never overrides a STOP or other
+    withdrawal.
+  - **D2:** no pinned conversations; snooze covers most of the need.
+  - **D4:** six reactions (👍 ❤️ 😂 😮 😢 🙏) on WhatsApp and website chat; a heart only on Instagram
+    and Facebook (Meta's sender actions document only "love"); none on YouTube.
+- **Decided while building:**
+  - Reactions are offered on the customer's messages only, and the Meta call runs in the request.
+    A closed reply window answers 409 `reply_window_closed` (the existing code), a WhatsApp
+    message older than 30 days 422.
+  - Imported tags don't start tag-triggered sequences or send `contact.tagged`, and filling an
+    existing contact's blanks sends no `contact.updated`, so one file can't set off thousands of
+    sends or webhooks. New contacts send `contact.created`.
+  - "No automatic replies" is checked at each automatic entry point (inbox automations, the away
+    message, comment automations, sequences, the follow nudge and AI Auto, the 14th policy
+    check); broadcasts, order notices and team, scheduled and API sends are unchanged.
+  - Snoozed conversations leave every inbox view but "Snoozed", the counts, the priority queue
+    and Home's "needs you"; archiving ends a snooze; at most 90 days ahead. A per-minute job wakes
+    them; a woken conversation returns at its usual place in the list (by its last message).
+- **Left as they are:** reply and react from the public API, MCP and agent tools; quoting from
+  scheduled messages; the website chat widget doesn't show quotes or reactions yet; Instagram and
+  Facebook reactions beyond the heart wait for a real account to confirm them.

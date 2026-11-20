@@ -646,6 +646,7 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         "neutral": 0,
         "negative": 1,
         "spam": 1,
+        "important": 0,  # as stored by the seed
     }
     assert bread["stats"]["total"] == 0  # not analysed yet: {} reads as zeros
     assert (body["needs_reply"], body["needs_you"]) == (2, 1)  # Meera and Dev; Meera

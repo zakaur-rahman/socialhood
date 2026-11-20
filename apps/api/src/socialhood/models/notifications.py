@@ -78,6 +78,8 @@ class NotificationType(StrEnum):
     AUTOMATION_ALERT = "automation_alert"  # a flow's "notify the team" step (GR-03), in app only
     BROADCAST_PAUSED = "broadcast_paused"  # a broadcast stopped on its own (GR-23), in app only
     CONVERSATION_ASSIGNED = "conversation_assigned"  # a conversation was assigned to you (GR-20)
+    # A snoozed conversation came back (GR-45), to its assignee.
+    CONVERSATION_SNOOZE_ENDED = "conversation_snooze_ended"
     NEW_LEAD = "new_lead"  # lead score reaches 70 (FR-NOT-03; T8.6)
     LEAD_COLD = "lead_cold"  # a qualified or follow-up lead went quiet (GR-18), in app only
     SHEETS_FAILING = "sheets_failing"  # Google Sheets lost access or its sheet (GR-27), in app only
@@ -107,6 +109,7 @@ PUSH_EVENT_OF_TYPE: dict[str, PushEvent] = {
     NotificationType.AUTOMATION_FAILING: PushEvent.NEEDS_YOU,  # replies nobody got (GR-05)
     # GR-20: a conversation handed to you needs you, so it follows the "needs you" switch.
     NotificationType.CONVERSATION_ASSIGNED: PushEvent.NEEDS_YOU,
+    NotificationType.CONVERSATION_SNOOZE_ENDED: PushEvent.NEEDS_YOU,
     NotificationType.NEW_LEAD: PushEvent.NEW_LEAD,
     NotificationType.WINDOW_CLOSING: PushEvent.WINDOW_CLOSING,
     NotificationType.ACCOUNT_NEEDS_RECONNECT: PushEvent.ACCOUNT,

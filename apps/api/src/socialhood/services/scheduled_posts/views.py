@@ -17,7 +17,9 @@ from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.connections import SocialAccount
@@ -28,6 +30,7 @@ from socialhood.models.publishing import (
     PostFormat,
     PostKind,
     ScheduledPostAsset,
+    ScheduledPostStatus,
     ScheduledPostTarget,
     TargetStatus,
 )
@@ -47,6 +50,8 @@ from socialhood.schemas.publishing import (
     ScheduledPost,
     ScheduledPostSummary,
     UserTag,
+    YouTubeOptions,
+    YouTubeTargetState,
 )
 from socialhood.schemas.publishing import ScheduledPostTarget as TargetOut
 from socialhood.services.media_assets import MB
@@ -120,14 +125,89 @@ def _first_comment(target: ScheduledPostTarget, first_comment: str | None) -> Fi
     return FirstCommentResult(status="pending")
 
 
+def youtube_options(stored: dict[str, Any] | None) -> YouTubeOptions | None:
+    """A target's stored YouTube options (C-196), or None (none stored, or no longer valid)."""
+    if not stored:
+        return None
+    try:
+        return YouTubeOptions.model_validate(stored)
+    except ValidationError:
+        return None
+
+
+def is_session(ref: str | None) -> bool:
+    """A direct upload's session address in ``container_id`` (C-196), not a video id."""
+    return bool(ref) and str(ref).startswith(("https://", "http://"))
+
+
+def youtube_video_id(target: ScheduledPostTarget) -> str | None:
+    """The target's YouTube video: stored once a direct upload finished or a publish read it."""
+    if target.platform_media_id:
+        return target.platform_media_id
+    ref = target.container_id
+    return ref if ref and not is_session(ref) else None
+
+
+def youtube_url(video_id: str, options: YouTubeOptions | None) -> str:
+    if options is not None and options.format == "short":
+        return f"https://www.youtube.com/shorts/{video_id}"
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def youtube_state(
+    target: ScheduledPostTarget, *, direct: bool, scheduled: bool
+) -> YouTubeTargetState:
+    """Where a YouTube target's video is (C-196). Direct route: waiting for the file, uploading
+    (a session is open), scheduled (the video is on YouTube), then processing while the publish
+    job reads it back. Media route: scheduled until the publish time, uploading while our job
+    sends the file, processing while YouTube processes it."""
+    options = youtube_options(target.options)
+    video_id = youtube_video_id(target)
+    status = target.status
+    state: str
+    if status == TargetStatus.PUBLISHED:
+        state = "published"
+    elif status in (TargetStatus.FAILED, TargetStatus.CANCELED):
+        state = "failed"
+    elif status == TargetStatus.CONTAINER_CREATED:
+        state = "processing"
+    elif status == TargetStatus.PUBLISHING:
+        state = "processing" if direct and video_id else "uploading"
+    elif direct:
+        state = (
+            "scheduled"
+            if target.platform_media_id
+            else "uploading"
+            if is_session(target.container_id)
+            else "waiting_for_file"
+        )
+    else:
+        state = "scheduled" if scheduled else "waiting_for_file"
+    return YouTubeTargetState.model_validate(
+        {
+            "route": "direct" if direct else "media",
+            "state": state,
+            "video_id": video_id,
+            "upload_expires_at": target.upload_expires_at,
+            "url": target.permalink or (youtube_url(video_id, options) if video_id else None),
+        }
+    )
+
+
 def target_out(
     target: ScheduledPostTarget,
     first_comment: str | None,
     post_id: uuid.UUID | None,
     *,
     story: bool = False,
+    platform: str | None = None,
+    direct: bool = False,
+    scheduled: bool = False,
 ) -> TargetOut:
+    """``platform``, ``direct`` and ``scheduled`` (the account's platform, the post's YouTube
+    route and whether it is scheduled) fill a YouTube target's ``options`` and ``youtube``."""
     published = target.status == TargetStatus.PUBLISHED
+    youtube = platform == "youtube"
     return TargetOut.model_validate(
         {
             "social_account_id": target.social_account_id,
@@ -152,7 +232,20 @@ def target_out(
             ),
             "collaborators": (target.collaborator_statuses or []) if published else [],
             "collaborators_checked_at": target.collaborators_checked_at,
+            "options": youtube_options(target.options) if youtube else None,
+            "youtube": (
+                youtube_state(target, direct=direct, scheduled=scheduled) if youtube else None
+            ),
         }
+    )
+
+
+def direct_route(loaded: Loaded) -> bool:
+    """The YouTube direct route (C-196): only YouTube channels, no media in the tray."""
+    return (
+        bool(loaded.targets)
+        and not loaded.assets
+        and all(account.platform == "youtube" for _, account in loaded.targets)
     )
 
 
@@ -172,9 +265,15 @@ def _summary(loaded: Loaded, items: dict[uuid.UUID, uuid.UUID]) -> ScheduledPost
             "asset_count": len(loaded.assets),
             "targets": [
                 target_out(
-                    t, post.first_comment, items.get(t.id), story=post.format == PostFormat.STORY
+                    t,
+                    post.first_comment,
+                    items.get(t.id),
+                    story=post.format == PostFormat.STORY,
+                    platform=account.platform,
+                    direct=direct_route(loaded),
+                    scheduled=post.status == ScheduledPostStatus.SCHEDULED,
                 )
-                for t, _ in loaded.targets
+                for t, account in loaded.targets
             ],
             "created_at": post.created_at,
             "updated_at": post.updated_at,
@@ -227,6 +326,10 @@ class Draft:
     cover_offset_ms: int | None = None
     share_to_feed: bool = True
     audio_name: str | None = None
+    # C-196, by target in ``targets`` order: the stored YouTube options, and whether the
+    # target's video is already on YouTube (a direct upload that finished).
+    options: Sequence[dict[str, Any] | None] = ()
+    uploaded: Sequence[bool] = ()
 
     @classmethod
     def of(cls, loaded: Loaded, cover: MediaAsset | None = None) -> Draft:
@@ -247,6 +350,8 @@ class Draft:
             cover_offset_ms=post.cover_offset_ms,
             share_to_feed=post.share_to_feed,
             audio_name=post.audio_name,
+            options=[target.options for target, _ in loaded.targets],
+            uploaded=[bool(target.platform_media_id) for target, _ in loaded.targets],
         )
 
 
@@ -300,8 +405,14 @@ def facts(
                 can_publish=can_publish(account, deps),
                 caption_override=override,
                 recent_posts=recent.get((draft.post_id, account.id), 0),
+                options=(
+                    youtube_options(draft.options[i] if i < len(draft.options) else None)
+                    if account.platform == "youtube"
+                    else None
+                ),
+                video_uploaded=i < len(draft.uploaded) and draft.uploaded[i],
             )
-            for account, override in draft.targets
+            for i, (account, override) in enumerate(draft.targets)
         ],
         assets=[
             replace(

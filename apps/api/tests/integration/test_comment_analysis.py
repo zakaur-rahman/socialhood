@@ -124,7 +124,7 @@ async def test_fifty_comments_are_analysed_in_one_call(cw: Comments, fake_ai: Fa
         "colour",
         False,
     )
-    assert (one["media_item_id"], one["prompt_version"]) == (post, "comment_analysis.v1")
+    assert (one["media_item_id"], one["prompt_version"]) == (post, "comment_analysis.v2")
     spam = next(a for a in analyses if a["text"] == "comment number 4")
     assert spam["is_spam"] is True
     # "number 1" also matches 10-19, and so on: 11 positive, 11 negative, 11 spam; the price
@@ -136,6 +136,7 @@ async def test_fifty_comments_are_analysed_in_one_call(cw: Comments, fake_ai: Fa
         "neutral": 17,
         "negative": 11,
         "spam": 11,
+        "important": 22,  # YT4: the price questions and the angry ones, unanswered
     }
     events = await stream(cw.world.redis, cw.wid)
     kinds = [kind for kind, _ in events]
@@ -401,7 +402,7 @@ async def test_the_free_plan_analyses_the_five_most_recent_posts(
 
 async def test_deleted_and_empty_comments_are_skipped(cw: Comments, fake_ai: FakeProvider) -> None:
     post = await cw.post()
-    kept = await cw.comment("Nice", post=post)
+    kept = await cw.comment("Is this available in blue?", post=post)
     gone = await cw.comment("Deleted soon", post=post)
     blank = await cw.comment("   ", post=post)
     await cw.execute("UPDATE comments SET deleted_at = now() WHERE id = :id", id=gone)

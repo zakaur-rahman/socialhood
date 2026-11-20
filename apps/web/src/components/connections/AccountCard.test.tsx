@@ -106,6 +106,16 @@ describe("AccountCard (UX-SCR-07)", () => {
     expect(within(card).queryByRole("button", { name: "Disconnect" })).not.toBeInTheDocument();
   });
 
+  it("a YouTube channel has no AI controls and names its API", () => {
+    const { card } = renderCard({ platform: "youtube", username: "maplebakery" });
+    expect(within(card).getByRole("img", { name: "YouTube" })).toBeInTheDocument();
+    expect(within(card).getByText("YouTube Data API")).toBeInTheDocument();
+    expect(within(card).queryByText("AI replies")).toBeNull();
+    expect(within(card).queryByText("AI analysis")).toBeNull();
+    expect(within(card).queryByText("Hide spam comments")).toBeNull();
+    expect(within(card).getByRole("button", { name: /Disconnect/ })).toBeInTheDocument();
+  });
+
   it("marks sandbox accounts", () => {
     const { card } = renderCard({ sandbox: true });
     expect(within(card).getByText("Sandbox")).toBeInTheDocument();
@@ -244,5 +254,18 @@ describe("deleting an account's data (C-067)", () => {
     expect(within(card).getByRole("status")).toHaveTextContent("It disappears from this list when done.");
     expect(within(card).queryAllByRole("button")).toEqual([]);
     expect(within(card).queryByRole("switch")).toBeNull();
+  });
+
+  it("a YouTube account without analytics access hints at reconnecting", async () => {
+    const { handlers, card } = renderCard({ platform: "youtube", display_name: "Maple Bakery", capabilities: ["comments"] });
+    const hint = within(card).getByTestId("reconnect-insights");
+    expect(hint).toHaveTextContent("Reconnect to add watch time and subscriber changes");
+    await userEvent.click(within(hint).getByRole("button", { name: "Reconnect" }));
+    expect(handlers.onReconnect).toHaveBeenCalled();
+  });
+
+  it("no hint once analytics access is granted", () => {
+    const { card } = renderCard({ platform: "youtube", capabilities: ["comments", "account_insights"] });
+    expect(within(card).queryByTestId("reconnect-insights")).not.toBeInTheDocument();
   });
 });

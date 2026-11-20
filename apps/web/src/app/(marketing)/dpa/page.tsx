@@ -257,7 +257,7 @@ function sections(): LegalSection[] {
               <strong>Nature of the processing.</strong> Receiving messages, comments and profiles from Meta&apos;s
               platforms and website chat; storing and organising them; showing them to your team; analysing them with AI,
               drafting replies and, if you turn on Auto mode, sending replies; sending your replies, automated messages and
-              posts; running your automations; sending data to the tools you connect; and deleting it.
+              posts, including videos to a YouTube channel you connect; running your automations; sending data to the tools you connect; and deleting it.
             </li>
             <li>
               <strong>Purpose.</strong> Only to provide {N} to you under the Terms, and to keep it secure.

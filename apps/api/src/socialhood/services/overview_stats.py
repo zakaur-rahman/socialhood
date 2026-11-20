@@ -638,6 +638,7 @@ async def needs_you(session: AsyncSession, account_id: uuid.UUID | None = None) 
                 Conversation.workspace_id == ws,
                 Conversation.status == ConversationStatus.OPEN,
                 Conversation.needs_human.is_(True),
+                Conversation.snoozed_until.is_(None),  # GR-45: as the inbox counts
                 on_account,
             )
         )

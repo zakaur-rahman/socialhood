@@ -129,9 +129,14 @@ async def get_key(ctx: Annotated[ApiKeyContext, Depends(api_key_ctx)]) -> Public
 
 @router.get("/accounts", operation_id="list_accounts", tags=["Accounts"])
 async def list_accounts(ctx: ReadContacts, session: Session) -> PublicAccountList:
-    """The connected accounts: a new contact is added to one of them by its id."""
+    """The connected accounts: a new contact is added to one of them by its id. A YouTube channel
+    (C-195) has no contacts, so it isn't listed."""
     return PublicAccountList(
-        items=[PublicAccount.model_validate(a) for a in await accounts.list_all(session)]
+        items=[
+            PublicAccount.model_validate(a)
+            for a in await accounts.list_all(session)
+            if a.platform != "youtube"
+        ]
     )
 
 

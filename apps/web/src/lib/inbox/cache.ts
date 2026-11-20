@@ -34,11 +34,16 @@ export const LEAD_SCORE = 60;
 export function matchesFilters(item: ConversationListItem, filters: ConversationFilters): boolean | null {
   if (filters.platform && item.platform !== filters.platform) return false;
   if (filters.accountId && item.social_account_id !== filters.accountId) return false;
-  const open = item.status === "open";
+  // GR-45: a snoozed conversation is open, but only the "snoozed" view shows it.
+  const snoozed = item.status === "open" && Boolean(item.snoozed_until);
+  const open = item.status === "open" && !snoozed;
   let match: boolean | null;
   switch (filters.view) {
     case "archived":
       match = item.status === "archived";
+      break;
+    case "snoozed":
+      match = snoozed;
       break;
     case "unread":
       match = open && item.unread_count > 0;

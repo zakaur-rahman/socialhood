@@ -127,6 +127,7 @@ class ContactListItem(ResponseModel):
     lead_stage_at: datetime | None = None
     lead_stage_reason: str | None = None
     lead_cold: bool = False
+    auto_replies_off: bool = False  # GR-44: no automatic replies to this contact
     conversation_id: uuid.UUID | None = None  # None: never messaged (for example a commenter)
     last_activity_at: datetime | None = None
     first_seen_at: datetime | None = None
@@ -166,6 +167,7 @@ class ContactPatch(RequestModel):
     phone: str | None = Field(default=None, max_length=32)
     clear_phone: bool = False
     fields: dict[str, Any] | None = None
+    auto_replies_off: bool | None = None  # GR-44
 
 
 class ContactCreate(RequestModel):
@@ -176,6 +178,45 @@ class ContactCreate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     email: str | None = Field(default=None, max_length=254)
     fields: dict[str, Any] | None = None
+
+
+class ContactImport(RequestModel):
+    """A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file
+    agreed to WhatsApp marketing; without it the file's "WhatsApp marketing" column is ignored."""
+
+    account_id: uuid.UUID
+    csv: str = Field(min_length=1, max_length=900_000)  # under the API's 1 MB body limit
+    grant_consent: bool = False
+    file_name: str = Field(default="", max_length=200)  # kept as consent evidence
+
+
+ImportAction = Literal["create", "update", "unchanged", "skip"]
+
+
+class ContactImportRowOut(ResponseModel):
+    line: int  # the CSV line, the header being 1
+    phone: str
+    action: ImportAction
+    reasons: list[str] = Field(default_factory=list)
+
+
+class ContactImportResult(ResponseModel):
+    created: int
+    updated: int  # existing contacts that got something filled in, a tag or a consent
+    unchanged: int
+    skipped: int  # rows with problems, left out
+    consents_granted: int
+    consents_kept_withdrawn: int  # said yes, but a STOP or other withdrawal stands
+    tags_created: int
+
+
+class ContactImportPreview(ContactImportResult):
+    rows: list[ContactImportRowOut]  # the first 500
+    total_rows: int
+    row_cap: int
+    consent_ignored: int  # "yes" rows left alone because the box wasn't ticked
+    columns: list[str]  # the recognised header columns
+    ignored_columns: list[str]
 
 
 class ContactTagsUpdate(RequestModel):

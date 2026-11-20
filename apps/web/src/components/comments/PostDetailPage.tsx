@@ -84,7 +84,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
   const account = accounts.data?.find((item) => item.id === data.social_account_id);
   // formatDay capitalises Today and Yesterday for labels on their own; mid-sentence they're lower case.
   const day = formatDay(data.posted_at, workspace.timezone, now);
-  const title = `${mediaTypeLabel(data.media_type)} from ${/^(Today|Yesterday|Tomorrow)$/.test(day) ? day.toLowerCase() : day}`;
+  const title = `${mediaTypeLabel(data.media_type, data.permalink)} from ${/^(Today|Yesterday|Tomorrow)$/.test(day) ? day.toLowerCase() : day}`;
 
   return (
     <PageFrame title={title} back={back}>
@@ -93,7 +93,9 @@ export function PostDetailPage({ postId }: { postId: string }) {
           <PostPanel post={data} account={account} slug={workspace.slug} timeZone={workspace.timezone} now={now} />
         </div>
         <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 xl:row-span-1">
-          <CommentsColumn post={data} now={now} accountUsername={account?.username} platform={account?.platform} />
+          <CommentsColumn post={data} now={now} accountUsername={account?.username} platform={account?.platform}
+            canPrivateReply={account ? account.capabilities.includes("private_reply") : undefined}
+          />
         </div>
         <div className={cn("min-w-0 space-y-4 xl:col-start-3 xl:row-start-1", SIDE_STICKY)} data-testid="post-insights">
           <PostSummaryCard post={data} now={now} />

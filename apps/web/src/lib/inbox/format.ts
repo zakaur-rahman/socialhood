@@ -19,6 +19,7 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   whatsapp: "WhatsApp",
   facebook: "Facebook",
   web: "Website",
+  youtube: "YouTube",
 };
 
 export function contactName(contact: Pick<ContactSummary, "display_name" | "username">, platform: Platform): string {

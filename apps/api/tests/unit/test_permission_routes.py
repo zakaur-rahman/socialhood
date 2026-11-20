@@ -34,6 +34,9 @@ NO_WORKSPACE = {
     # body stands in for a member; a reported key is revoked wherever it is (services/
     # secret_scanning.py).
     ("POST", "/v1/security/secret-scanning"),
+    # C-196: the sandbox channel's upload address (dev and e2e only; 404 unless the sandbox
+    # platform is on). The unguessable token from the upload session stands in for a member.
+    ("PUT", "/v1/dev/sandbox/youtube-uploads/{token}"),
 }
 
 

@@ -129,7 +129,7 @@ async def get_workspace(call: ToolCall, args: GetWorkspaceInput) -> WorkspaceRes
 
 
 class ListAccountsInput(ToolInput):
-    platform: Literal["instagram", "facebook", "whatsapp", "web"] | None = Field(
+    platform: Literal["instagram", "facebook", "whatsapp", "web", "youtube"] | None = Field(
         default=None, description="Only this platform's accounts."
     )
 

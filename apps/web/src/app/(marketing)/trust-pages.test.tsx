@@ -162,7 +162,7 @@ describe("safety, what's new and AI info (C-156)", () => {
     render(<ChangelogPage />);
     const months = changelogByMonth();
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(months.map((month) => month.month));
-    expect(months[0].month).toBe("October 2026");
+    expect(months[0].month).toBe("November 2026");
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(CHANGELOG.length);
     for (const entry of CHANGELOG) expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(changelogUpdated()).toBe(CHANGELOG.map((entry) => entry.date).sort().at(-1));

@@ -25,11 +25,16 @@ CapabilityName = Literal[
 ]
 
 
+# The platforms an account can be on. YouTube (C-195) publishes only, so it is never a
+# conversation's platform (schemas/inbox.PlatformName).
+AccountPlatformName = Literal["instagram", "whatsapp", "facebook", "web", "youtube"]
+
+
 class SocialAccountOut(ResponseModel):
     """Never the token itself (SEC-02)."""
 
     id: uuid.UUID
-    platform: Literal["instagram", "whatsapp", "facebook", "web"]
+    platform: AccountPlatformName
     display_name: str | None = None
     username: str | None = None
     profile_picture_url: str | None = None
@@ -73,10 +78,11 @@ class InstagramConnectComplete(RequestModel):
 
 
 class SandboxAccountCreate(RequestModel):
-    """Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
-    or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one."""
+    """Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),
+    a WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes
+    an Instagram one."""
 
-    platform: Literal["instagram", "facebook", "whatsapp"] = "instagram"
+    platform: Literal["instagram", "facebook", "whatsapp", "youtube"] = "instagram"
 
 
 class SandboxCartItem(RequestModel):

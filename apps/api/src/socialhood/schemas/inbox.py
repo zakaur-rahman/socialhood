@@ -79,6 +79,7 @@ InboxView = Literal[
     "mine",  # GR-20: assigned to the caller
     "unassigned",  # GR-20: open, with nobody
     "archived",
+    "snoozed",  # GR-45: open, hidden from the other views until its time
 ]
 
 
@@ -104,6 +105,7 @@ class ContactDetail(ContactSummary):
     # C-135: who chose display_name ("platform" or "team") and the platform's own latest name.
     name_source: Literal["platform", "team"] = "platform"
     platform_name: str | None = None
+    auto_replies_off: bool = False  # GR-44
 
 
 class Assignee(ResponseModel):
@@ -137,6 +139,7 @@ class ConversationListItem(ResponseModel):
     ai_mode_override: AiModeName | None = None
     assignee: Assignee | None = None  # GR-20; null: nobody has it
     assigned_at: datetime | None = None
+    snoozed_until: datetime | None = None  # GR-45; null: not snoozed
 
 
 class ReplyWindow(ResponseModel):
@@ -247,6 +250,10 @@ class ConversationPatch(RequestModel):
     ai_mode_override: AiModeName | None = None
     clear_ai_mode_override: bool = False
     resume_ai: bool = False  # FR-SUG-05: end a takeover pause now (T5.6)
+    # GR-45: hide the conversation until then (in the future, at most 90 days ahead); ``unsnooze``
+    # brings it back now. Not both.
+    snoozed_until: datetime | None = None
+    unsnooze: bool = False
 
 
 # ---- messages
@@ -300,6 +307,15 @@ class Reaction(ResponseModel):
     at: datetime
 
 
+class ReplyQuote(ResponseModel):
+    """The message a reply quotes (GR-42): the customer's or ours, in the same conversation."""
+
+    id: uuid.UUID
+    kind: MessageKindName
+    direction: DirectionName
+    text_preview: str
+
+
 class Message(ResponseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
@@ -325,6 +341,7 @@ class Message(ResponseModel):
     suggestion_id: uuid.UUID | None = None
     human_agent_tag: bool
     reactions: list[Reaction]
+    reply_to: ReplyQuote | None = None  # GR-42; null also when the quoted message isn't stored
 
 
 class MessageList(ResponseModel):
@@ -352,6 +369,18 @@ class SendMessage(RequestModel):
     sticker: Literal["like_heart"] | None = None  # Instagram's heart sticker, on its own
     sticker_asset_id: uuid.UUID | None = None  # a WhatsApp sticker: an uploaded 512x512 WebP
     suggestion_id: uuid.UUID | None = None  # P5: sending a suggestion
+    # GR-42: quote this message of the conversation (our id); it must have reached the platform.
+    reply_to_message_id: uuid.UUID | None = None
+
+
+# GR-42 (D4): the reactions a member can send. Instagram and Facebook take only the heart.
+ReactionEmoji = Literal["👍", "❤️", "😂", "😮", "😢", "🙏"]
+
+
+class SetReaction(RequestModel):
+    """PUT …/messages/{id}/reaction: our reaction to the message; null removes it."""
+
+    emoji: ReactionEmoji | None
 
 
 # ---- scheduled messages (F-10)

@@ -84,7 +84,8 @@ async def list_post_comments(
 ) -> CommentList:
     """The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
     defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
-    D-11). Deleted comments are left out."""
+    D-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are
+    left out."""
     return await comment_queries.list_comments(
         session,
         post_id,

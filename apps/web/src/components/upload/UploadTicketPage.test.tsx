@@ -77,3 +77,32 @@ describe("UploadTicketPage", () => {
     await waitFor(() => expect(screen.getByText("This upload expired.")).toBeInTheDocument());
   });
 });
+
+describe("UploadTicketPage in YouTube mode (C-195)", () => {
+  beforeEach(() => storage.sendToStorage.mockReset());
+  const youtubeTicket = {
+    ...waiting,
+    kind: "youtube",
+    limits: {},
+    upload: null,
+    youtube: { upload_url: "https://www.googleapis.com/upload/youtube/v3/videos?upload_id=t1", chunk_bytes: 8388608, title: "Sourdough at dawn", channel_name: "Maple Bakery" },
+  } as unknown as McpUploadTicket;
+
+  it("names the video and channel, sends the file to YouTube and completes with the video id", async () => {
+    const uploader = vi.fn(async () => "vid42");
+    const view = renderWithApi(<UploadTicketPage ticketId="t1" youtubeUploader={uploader} />, {
+      handlers: {
+        "GET /v1/w/:wid/mcp-uploads/:id": () => json(youtubeTicket),
+        "POST /v1/w/:wid/mcp-uploads/:id/complete": () => json({ ...youtubeTicket, status: "uploaded", youtube: null }),
+      },
+    });
+    expect(await screen.findByTestId("youtube-ticket-title")).toHaveTextContent("Upload to YouTube: Sourdough at dawn on Maple Bakery");
+    await userEvent.upload(screen.getByLabelText("Choose a video for YouTube"), new File(["x"], "dawn.mp4", { type: "video/mp4" }));
+    expect(await screen.findByText("The video is on YouTube.")).toBeInTheDocument();
+    expect(uploader).toHaveBeenCalledWith(expect.objectContaining({ uploadUrl: youtubeTicket.youtube!.upload_url, chunkBytes: 8388608 }));
+    const complete = view.calls.find((c) => c.method === "POST");
+    expect(complete?.body).toEqual({ video_id: "vid42" });
+    // Never through storage.
+    expect(storage.sendToStorage).not.toHaveBeenCalled();
+  });
+});

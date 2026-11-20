@@ -13,7 +13,8 @@
               "instagram",
               "whatsapp",
               "facebook",
-              "web"
+              "web",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -2328,7 +2329,8 @@
                   "paused",
                   "automation_handled",
                   "rate_capped",
-                  "not_needed"
+                  "not_needed",
+                  "auto_replies_off"
                 ],
                 "type": "string"
               },
@@ -7345,6 +7347,7 @@
               "hashtags",
               "mentions",
               "extras",
+              "youtube",
               "publishing_limit",
               "publish_at"
             ],
@@ -7544,6 +7547,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "important": {
+            "default": false,
+            "title": "Important",
+            "type": "boolean"
           },
           "is_live": {
             "default": false,
@@ -7860,10 +7868,15 @@
         "type": "object"
       },
       "CommentStats": {
-        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted.",
+        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted. ``important`` counts the comments the\n``important`` filter shows (services/comments/queries.py ``important_conditions``).",
         "properties": {
           "analysed": {
             "title": "Analysed",
+            "type": "integer"
+          },
+          "important": {
+            "default": 0,
+            "title": "Important",
             "type": "integer"
           },
           "negative": {
@@ -8304,6 +8317,11 @@
       },
       "ContactDetail": {
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -8746,6 +8764,201 @@
         "title": "ContactFilterSpec",
         "type": "object"
       },
+      "ContactImport": {
+        "additionalProperties": false,
+        "description": "A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file\nagreed to WhatsApp marketing; without it the file's \"WhatsApp marketing\" column is ignored.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "csv": {
+            "maxLength": 900000,
+            "minLength": 1,
+            "title": "Csv",
+            "type": "string"
+          },
+          "file_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "File Name",
+            "type": "string"
+          },
+          "grant_consent": {
+            "default": false,
+            "title": "Grant Consent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account_id",
+          "csv"
+        ],
+        "title": "ContactImport",
+        "type": "object"
+      },
+      "ContactImportPreview": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "consent_ignored": {
+            "title": "Consent Ignored",
+            "type": "integer"
+          },
+          "consents_granted": {
+            "title": "Consents Granted",
+            "type": "integer"
+          },
+          "consents_kept_withdrawn": {
+            "title": "Consents Kept Withdrawn",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "ignored_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Columns",
+            "type": "array"
+          },
+          "row_cap": {
+            "title": "Row Cap",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ContactImportRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "tags_created": {
+            "title": "Tags Created",
+            "type": "integer"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged",
+          "skipped",
+          "consents_granted",
+          "consents_kept_withdrawn",
+          "tags_created",
+          "rows",
+          "total_rows",
+          "row_cap",
+          "consent_ignored",
+          "columns",
+          "ignored_columns"
+        ],
+        "title": "ContactImportPreview",
+        "type": "object"
+      },
+      "ContactImportResult": {
+        "properties": {
+          "consents_granted": {
+            "title": "Consents Granted",
+            "type": "integer"
+          },
+          "consents_kept_withdrawn": {
+            "title": "Consents Kept Withdrawn",
+            "type": "integer"
+          },
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "tags_created": {
+            "title": "Tags Created",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged",
+          "skipped",
+          "consents_granted",
+          "consents_kept_withdrawn",
+          "tags_created"
+        ],
+        "title": "ContactImportResult",
+        "type": "object"
+      },
+      "ContactImportRowOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "update",
+              "unchanged",
+              "skip"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "line",
+          "phone",
+          "action"
+        ],
+        "title": "ContactImportRowOut",
+        "type": "object"
+      },
       "ContactList": {
         "properties": {
           "items": {
@@ -8775,6 +8988,11 @@
       },
       "ContactListItem": {
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "conversation_id": {
             "anyOf": [
               {
@@ -8946,6 +9164,17 @@
         "additionalProperties": false,
         "description": "Only what is sent changes. A ``name`` is the team's; ``use_platform_name`` goes back to the\nplatform's. ``fields`` merges: a key set to null is removed. An email or\nphone set here is marked as entered by a member and not verified.",
         "properties": {
+          "auto_replies_off": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Replies Off"
+          },
           "clear_email": {
             "default": false,
             "title": "Clear Email",
@@ -9017,6 +9246,11 @@
       "ContactRecord": {
         "description": "One contact with what the business knows about them.",
         "properties": {
+          "auto_replies_off": {
+            "default": false,
+            "title": "Auto Replies Off",
+            "type": "boolean"
+          },
           "consents": {
             "items": {
               "$ref": "#/components/schemas/Consent"
@@ -9714,6 +9948,18 @@
             ],
             "title": "Signal"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "social_account": {
             "$ref": "#/components/schemas/ConversationAccount"
           },
@@ -10159,6 +10405,18 @@
             ],
             "title": "Signal"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "social_account_id": {
             "format": "uuid",
             "title": "Social Account Id",
@@ -10219,6 +10477,18 @@
             "title": "Resume Ai",
             "type": "boolean"
           },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
           "status": {
             "anyOf": [
               {
@@ -10233,6 +10503,11 @@
               }
             ],
             "title": "Status"
+          },
+          "unsnooze": {
+            "default": false,
+            "title": "Unsnooze",
+            "type": "boolean"
           }
         },
         "title": "ConversationPatch",
@@ -10284,7 +10559,6 @@
             "type": "string"
           },
           "per_message": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Per Message",
             "type": "string"
           },
@@ -10293,7 +10567,6 @@
             "type": "string"
           },
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           },
@@ -11247,6 +11520,28 @@
       "ExtraMetrics": {
         "description": "Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and\ncompares): an Instagram Story's replies and its taps and swipes through the Story, and the\nclicks on a Facebook Page post. None: not given for this post or not read yet.",
         "properties": {
+          "avg_view_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Percent"
+          },
+          "avg_view_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg View Seconds"
+          },
           "clicks": {
             "anyOf": [
               {
@@ -11268,6 +11563,17 @@
               }
             ],
             "title": "Exits"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
           },
           "replies": {
             "anyOf": [
@@ -11312,6 +11618,17 @@
               }
             ],
             "title": "Taps Forward"
+          },
+          "watch_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Minutes"
           }
         },
         "title": "ExtraMetrics",
@@ -14140,6 +14457,27 @@
         "title": "MarkRead",
         "type": "object"
       },
+      "McpUploadCompletion": {
+        "additionalProperties": false,
+        "description": "A ``youtube`` ticket's finished upload: the video id from YouTube's answer. Other tickets\nsend no body.",
+        "properties": {
+          "video_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id"
+          }
+        },
+        "title": "McpUploadCompletion",
+        "type": "object"
+      },
       "McpUploadTicket": {
         "properties": {
           "expires_at": {
@@ -14155,7 +14493,8 @@
           "kind": {
             "enum": [
               "image",
-              "video"
+              "video",
+              "youtube"
             ],
             "title": "Kind",
             "type": "string"
@@ -14188,6 +14527,18 @@
             ],
             "title": "Reason"
           },
+          "scheduled_post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Post Id"
+          },
           "status": {
             "enum": [
               "waiting",
@@ -14202,6 +14553,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/DropSignature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "youtube": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeTicket"
               },
               {
                 "type": "null"
@@ -14780,6 +15141,16 @@
               }
             ],
             "title": "Read At"
+          },
+          "reply_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplyQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sent_at": {
             "anyOf": [
@@ -16500,7 +16871,8 @@
                 "instagram",
                 "whatsapp",
                 "facebook",
-                "web"
+                "web",
+                "youtube"
               ],
               "type": "string"
             },
@@ -19632,7 +20004,6 @@
           },
           "rates": {
             "additionalProperties": {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
               "type": "string"
             },
             "title": "Rates",
@@ -19914,6 +20285,56 @@
           "tag_id"
         ],
         "title": "RemoveTag",
+        "type": "object"
+      },
+      "ReplyQuote": {
+        "description": "The message a reply quotes (GR-42): the customer's or ours, in the same conversation.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "inbound",
+              "outbound",
+              "system"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "image",
+              "video",
+              "audio",
+              "file",
+              "sticker",
+              "story_mention",
+              "story_reply",
+              "share",
+              "template",
+              "location",
+              "unsupported",
+              "system"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text_preview": {
+            "title": "Text Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "text_preview"
+        ],
+        "title": "ReplyQuote",
         "type": "object"
       },
       "ReplyWindow": {
@@ -20402,14 +20823,15 @@
       },
       "SandboxAccountCreate": {
         "additionalProperties": false,
-        "description": "Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)\nor a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.",
+        "description": "Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),\na WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes\nan Instagram one.",
         "properties": {
           "platform": {
             "default": "instagram",
             "enum": [
               "instagram",
               "facebook",
-              "whatsapp"
+              "whatsapp",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -21797,6 +22219,16 @@
               }
             ]
           },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "permalink": {
             "anyOf": [
               {
@@ -21859,6 +22291,16 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "youtube": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeTargetState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -22098,6 +22540,18 @@
             "format": "uuid",
             "title": "Client Id",
             "type": "string"
+          },
+          "reply_to_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply To Message Id"
           },
           "sticker": {
             "anyOf": [
@@ -22914,6 +23368,36 @@
         "title": "SetField",
         "type": "object"
       },
+      "SetReaction": {
+        "additionalProperties": false,
+        "description": "PUT \u2026/messages/{id}/reaction: our reaction to the message; null removes it.",
+        "properties": {
+          "emoji": {
+            "anyOf": [
+              {
+                "enum": [
+                  "\ud83d\udc4d",
+                  "\u2764\ufe0f",
+                  "\ud83d\ude02",
+                  "\ud83d\ude2e",
+                  "\ud83d\ude22",
+                  "\ud83d\ude4f"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji"
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "title": "SetReaction",
+        "type": "object"
+      },
       "SheetColumn": {
         "additionalProperties": false,
         "properties": {
@@ -23718,7 +24202,8 @@
               "instagram",
               "whatsapp",
               "facebook",
-              "web"
+              "web",
+              "youtube"
             ],
             "title": "Platform",
             "type": "string"
@@ -24885,7 +25370,7 @@
       },
       "TargetIn": {
         "additionalProperties": false,
-        "description": "An account to publish to, with an optional caption for it alone.",
+        "description": "An account to publish to, with an optional caption for it alone. ``options``: a YouTube\nchannel's choices (C-196), needed before the post is scheduled (the checklist's ``youtube``\nitem); null for every other platform (else 422 on ``targets.{i}.options``).",
         "properties": {
           "caption_override": {
             "anyOf": [
@@ -24898,6 +25383,16 @@
               }
             ],
             "title": "Caption Override"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YouTubeOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "social_account_id": {
             "format": "uuid",
@@ -27311,6 +27806,14 @@
             "title": "Created At",
             "type": "string"
           },
+          "features": {
+            "items": {
+              "const": "youtube",
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -27374,7 +27877,8 @@
           "role",
           "plan",
           "created_at",
-          "member_count"
+          "member_count",
+          "features"
         ],
         "title": "WorkspaceOut",
         "type": "object"
@@ -27488,6 +27992,14 @@
       },
       "WorkspaceSummary": {
         "properties": {
+          "features": {
+            "items": {
+              "const": "youtube",
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -27531,9 +28043,396 @@
           "slug",
           "timezone",
           "role",
-          "plan"
+          "plan",
+          "features"
         ],
         "title": "WorkspaceSummary",
+        "type": "object"
+      },
+      "YouTubeChannel": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "connected": {
+            "default": false,
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "title"
+        ],
+        "title": "YouTubeChannel",
+        "type": "object"
+      },
+      "YouTubeChannelList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/YouTubeChannel"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "YouTubeChannelList",
+        "type": "object"
+      },
+      "YouTubeChannelsRequest": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Connections page's URL (?youtube=\u2026).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "YouTubeChannelsRequest",
+        "type": "object"
+      },
+      "YouTubeConnectChannels": {
+        "additionalProperties": false,
+        "description": "The channel to connect, picked from the list the same nonce returned. One per workspace.",
+        "properties": {
+          "channel_ids": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "title": "Channel Ids",
+            "type": "array"
+          },
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "channel_ids"
+        ],
+        "title": "YouTubeConnectChannels",
+        "type": "object"
+      },
+      "YouTubeConnectStart": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "YouTubeConnectStart",
+        "type": "object"
+      },
+      "YouTubeOptions": {
+        "additionalProperties": false,
+        "description": "A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the\npost's target. The description is the caption (or the target's ``caption_override``).\nStored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have\nno default: the person answers both (COPPA; realistic AI-altered content).\n\n- ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);\n- ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts\n  its quotes, and each comma between tags counts);\n- ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from\n  the file's shape and length; there is no separate call).",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "pattern": "^\\d{1,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "format": {
+            "default": "video",
+            "enum": [
+              "video",
+              "short"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "made_for_kids": {
+            "title": "Made For Kids",
+            "type": "boolean"
+          },
+          "notify_subscribers": {
+            "default": true,
+            "title": "Notify Subscribers",
+            "type": "boolean"
+          },
+          "privacy": {
+            "default": "public",
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ],
+            "title": "Privacy",
+            "type": "string"
+          },
+          "synthetic_media": {
+            "title": "Synthetic Media",
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "made_for_kids",
+          "synthetic_media"
+        ],
+        "title": "YouTubeOptions",
+        "type": "object"
+      },
+      "YouTubeTargetState": {
+        "description": "Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was\nopened and not finished runs out then (the post goes back to a draft: \"The upload didn't\nfinish\"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).",
+        "properties": {
+          "route": {
+            "enum": [
+              "direct",
+              "media"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "waiting_for_file",
+              "uploading",
+              "processing",
+              "scheduled",
+              "published",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "upload_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Expires At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id"
+          }
+        },
+        "required": [
+          "route",
+          "state"
+        ],
+        "title": "YouTubeTargetState",
+        "type": "object"
+      },
+      "YouTubeTicket": {
+        "description": "A ``youtube`` ticket's upload while it waits (C-196): PUT the file to ``upload_url`` in\npieces of ``chunk_bytes`` (``Content-Range``; 308 go on, 200/201 done with the video's id),\nthen complete with that id.",
+        "properties": {
+          "channel_name": {
+            "title": "Channel Name",
+            "type": "string"
+          },
+          "chunk_bytes": {
+            "title": "Chunk Bytes",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_url",
+          "chunk_bytes",
+          "title",
+          "channel_name"
+        ],
+        "title": "YouTubeTicket",
+        "type": "object"
+      },
+      "YouTubeUploadComplete": {
+        "additionalProperties": false,
+        "description": "POST \u2026/youtube-upload/complete: the finished upload's video id (from YouTube's answer).",
+        "properties": {
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "video_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "video_id"
+        ],
+        "title": "YouTubeUploadComplete",
+        "type": "object"
+      },
+      "YouTubeUploadSession": {
+        "description": "Where the file goes: PUT it to ``upload_url`` in pieces of ``chunk_bytes`` (the last may be\nshorter) with ``Content-Range: bytes {first}-{last}/{total}``. 308 means \"go on\" (its\n``Range`` header says what arrived); 200 or 201 means done, with the video's JSON (its\n``id``). To resume, PUT nothing with ``Content-Range: bytes */{total}``. The address works\nfor this one file until ``expires_at``; no token is needed or given.",
+        "properties": {
+          "chunk_bytes": {
+            "title": "Chunk Bytes",
+            "type": "integer"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "upload_url",
+          "chunk_bytes",
+          "expires_at"
+        ],
+        "title": "YouTubeUploadSession",
+        "type": "object"
+      },
+      "YouTubeUploadStart": {
+        "additionalProperties": false,
+        "description": "POST \u2026/scheduled-posts/{id}/youtube-upload: open a direct upload for the post's YouTube\ntarget. ``target_id`` is the target's channel (its ``social_account_id``).",
+        "properties": {
+          "content_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^video/[\\w.+-]+$",
+            "title": "Content Type",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "maximum": 274877906944.0,
+            "minimum": 1.0,
+            "title": "File Size",
+            "type": "integer"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id",
+          "file_size",
+          "content_type"
+        ],
+        "title": "YouTubeUploadStart",
         "type": "object"
       }
     }
@@ -35853,6 +36752,134 @@
         ]
       }
     },
+    "/v1/w/{wid}/contacts/import": {
+      "post": {
+        "description": "Save the file's valid rows (the same reading as the preview). Existing contacts only get\nblanks filled and tags added; a withdrawn consent is never granted again.",
+        "operationId": "import_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Import Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/import/preview": {
+      "post": {
+        "description": "Read the file and say what an import would create, update and leave out, and why. Saves\nnothing. 422 for another platform's account or a file with no Phone column.",
+        "operationId": "preview_contact_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Contact Import",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
     "/v1/w/{wid}/contacts/{contact_id}": {
       "get": {
         "operationId": "get_contact",
@@ -36396,7 +37423,8 @@
                 "ai_handled",
                 "mine",
                 "unassigned",
-                "archived"
+                "archived",
+                "snoozed"
               ],
               "title": "View",
               "type": "string"
@@ -36659,7 +37687,7 @@
         ]
       },
       "patch": {
-        "description": "Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid\nplan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).",
+        "description": "Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or\nclear the conversation's AI mode override (auto needs a paid plan: 402\nentitlement_required); resume_ai ends a takeover pause (FR-SUG-05).",
         "operationId": "update_conversation",
         "parameters": [
           {
@@ -36976,6 +38004,90 @@
           }
         },
         "summary": "Send Message",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction": {
+      "put": {
+        "description": "Set or remove (``emoji: null``) the business's reaction to a message (GR-42). It goes to\nthe platform at once; the same reaction again changes nothing. 409 reaction_not_supported\nwhere the platform takes no reactions or not this emoji (Instagram and Facebook: a heart\nonly), 409 reply_window_closed as for a reply, 422 for a message the platform can't react to\n(WhatsApp: older than 30 days).",
+        "operationId": "set_message_reaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReaction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Set Message Reaction",
         "tags": [
           "inbox"
         ]
@@ -37521,7 +38633,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/accounts": {
       "post": {
-        "description": "Connect a fake Instagram account for local development: with ``platform: facebook`` a fake\nFacebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved\ntemplates (GR-23).",
+        "description": "Connect a fake Instagram account for local development: with ``platform: facebook`` a fake\nFacebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved\ntemplates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195).",
         "operationId": "create_sandbox_account",
         "parameters": [
           {
@@ -37592,7 +38704,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/inbound": {
       "post": {
-        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook.",
+        "description": "Inject a fake DM or comment. It goes through the same intake as a real webhook. For a\nsandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.",
         "operationId": "sandbox_inbound",
         "parameters": [
           {
@@ -40880,7 +41992,7 @@
     },
     "/v1/w/{wid}/mcp-uploads/{upload_id}": {
       "get": {
-        "description": "The upload an AI app asked for, with the signed fields to send the file to storage while it\nwaits. 404 for a ticket that isn't this workspace's.",
+        "description": "The upload an AI app asked for, with the signed fields to send the file to storage while it\nwaits (a ``youtube`` ticket: its YouTube upload address instead). 404 for a ticket that isn't\nthis workspace's.",
         "operationId": "get_mcp_upload",
         "parameters": [
           {
@@ -40944,7 +42056,7 @@
     },
     "/v1/w/{wid}/mcp-uploads/{upload_id}/complete": {
       "post": {
-        "description": "After the browser uploaded the file: add the ticket's file to the media library. 409 when\nno file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``\nticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.",
+        "description": "After the browser uploaded the file: add the ticket's file to the media library. 409 when\nno file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``\nticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.\n\nA ``youtube`` ticket takes ``{video_id}`` and completes the post's YouTube upload as the\ncomposer does (complete_youtube_upload's answers: 422 for a video that isn't the upload's,\n409 when the upload expired).",
         "operationId": "complete_mcp_upload",
         "parameters": [
           {
@@ -40968,6 +42080,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/McpUploadCompletion"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -43098,7 +44227,7 @@
     },
     "/v1/w/{wid}/posts/{post_id}/comments": {
       "get": {
-        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11). Deleted comments are left out.",
+        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are\nleft out.",
         "operationId": "list_post_comments",
         "parameters": [
           {
@@ -43136,7 +44265,8 @@
                 "buying",
                 "spam",
                 "hidden",
-                "needs_reply"
+                "needs_reply",
+                "important"
               ],
               "title": "Filter",
               "type": "string"
@@ -45302,6 +46432,154 @@
         ]
       }
     },
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload": {
+      "post": {
+        "description": "C-196: open a direct upload of the video for a post whose accounts are all YouTube\nchannels (``target_id``: the channel's ``social_account_id``). The browser then PUTs the file\nto ``upload_url`` itself; the channel's token is never sent. A post with a time uploads as\nprivate and YouTube publishes it then; a post without one (\"now\") uploads with the chosen\nprivacy. One of YouTube's daily uploads is counted. 409 conflict for a post that also goes to\nother platforms (\"Posts to several platforms use the media tray\"), has media in the tray or\ncan't be edited, or when the workspace has 3 uploads open; 422 for missing YouTube options\n(``targets.{i}.options``) or a time under a minute away (``publish_at``); 429 rate_limited\nwhen YouTube's daily uploads are used up (\"Try again after \u2026\", with Retry-After).",
+        "operationId": "start_youtube_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scheduled_post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scheduled Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeUploadStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeUploadSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Youtube Upload",
+        "tags": [
+          "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete": {
+      "post": {
+        "description": "C-196: the browser finished the upload; ``video_id`` is the id in YouTube's answer. The\nvideo is read on the channel (it must be there, with the upload's title), kept on the\ntarget, and the post is scheduled (the checklist and scheduled_posts_monthly apply: 422, 402)\nor, for a post without a time, published now. 409 when no upload is open for the channel.\nSending the same video again returns the post as it is.",
+        "operationId": "complete_youtube_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scheduled_post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scheduled Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeUploadComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledPost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Youtube Upload",
+        "tags": [
+          "publishing"
+        ]
+      }
+    },
     "/v1/w/{wid}/sequences": {
       "get": {
         "description": "Newest first, each with its enrolment counts, and the plan's limits.",
@@ -46460,6 +47738,188 @@
         "summary": "Complete Whatsapp Signup",
         "tags": [
           "whatsapp"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/channels": {
+      "post": {
+        "description": "The channels of the Google account that consented, from the nonce the OAuth callback\nredirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it\nexpired (10 minutes), 422 when the account has no channel or the permission was not given,\n502 when Google fails. Asking again returns the same list.",
+        "operationId": "list_youtube_channels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeChannelsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeChannelList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Youtube Channels",
+        "tags": [
+          "youtube"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/connect": {
+      "post": {
+        "description": "Google's authorize URL (youtube.force-ssl, offline, consent). 503 until YouTube connections\nare configured, 402 over youtube_accounts or Free's channels in total.",
+        "operationId": "start_youtube_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeConnectStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Youtube Connect",
+        "tags": [
+          "youtube"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/youtube/connect-channels": {
+      "post": {
+        "description": "Connect the picked channel. 422 channel_ids for a channel that wasn't listed, 409\naccount_in_use when it is connected to another workspace, 402 over youtube_accounts (one per\nworkspace) or Free's channels in total (nothing is added, the nonce stays valid), 404 when it\nexpired.",
+        "operationId": "connect_youtube_channels",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YouTubeConnectChannels"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialAccountList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Connect Youtube Channels",
+        "tags": [
+          "youtube"
         ]
       }
     },

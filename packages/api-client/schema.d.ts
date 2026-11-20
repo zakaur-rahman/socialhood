@@ -1857,6 +1857,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/contacts/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Contacts
+         * @description Save the file's valid rows (the same reading as the preview). Existing contacts only get
+         *     blanks filled and tags added; a withdrawn consent is never granted again.
+         */
+        post: operations["import_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Contact Import
+         * @description Read the file and say what an import would create, update and leave out, and why. Saves
+         *     nothing. 422 for another platform's account or a file with no Phone column.
+         */
+        post: operations["preview_contact_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/contacts/{contact_id}": {
         parameters: {
             query?: never;
@@ -2026,8 +2068,9 @@ export interface paths {
         head?: never;
         /**
          * Update Conversation
-         * @description Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
-         *     plan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
+         * @description Archive or unarchive; snooze until a time in the next 90 days, or unsnooze (GR-45); set or
+         *     clear the conversation's AI mode override (auto needs a paid plan: 402
+         *     entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
          */
         patch: operations["update_conversation"];
         trace?: never;
@@ -2076,6 +2119,30 @@ export interface paths {
          *     downgrade (FR-BIL-07).
          */
         post: operations["send_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/messages/{message_id}/reaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Message Reaction
+         * @description Set or remove (``emoji: null``) the business's reaction to a message (GR-42). It goes to
+         *     the platform at once; the same reaction again changes nothing. 409 reaction_not_supported
+         *     where the platform takes no reactions or not this emoji (Instagram and Facebook: a heart
+         *     only), 409 reply_window_closed as for a reply, 422 for a message the platform can't react to
+         *     (WhatsApp: older than 30 days).
+         */
+        put: operations["set_message_reaction"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2245,7 +2312,7 @@ export interface paths {
          * Create Sandbox Account
          * @description Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
          *     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
-         *     templates (GR-23).
+         *     templates (GR-23), with ``platform: youtube`` a fake YouTube channel (C-195).
          */
         post: operations["create_sandbox_account"];
         delete?: never;
@@ -2265,7 +2332,8 @@ export interface paths {
         put?: never;
         /**
          * Sandbox Inbound
-         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook.
+         * @description Inject a fake DM or comment. It goes through the same intake as a real webhook. For a
+         *     sandbox YouTube channel it queues a comment poll instead, which finds the seeded comment.
          */
         post: operations["sandbox_inbound"];
         delete?: never;
@@ -3078,7 +3146,8 @@ export interface paths {
         /**
          * Get Mcp Upload
          * @description The upload an AI app asked for, with the signed fields to send the file to storage while it
-         *     waits. 404 for a ticket that isn't this workspace's.
+         *     waits (a ``youtube`` ticket: its YouTube upload address instead). 404 for a ticket that isn't
+         *     this workspace's.
          */
         get: operations["get_mcp_upload"];
         put?: never;
@@ -3103,6 +3172,10 @@ export interface paths {
          * @description After the browser uploaded the file: add the ticket's file to the media library. 409 when
          *     no file has arrived or the ticket expired; 415 never (a file over a limit is a ``rejected``
          *     ticket, with the reason); 402 quota_exceeded past the plan's daily upload caps.
+         *
+         *     A ``youtube`` ticket takes ``{video_id}`` and completes the post's YouTube upload as the
+         *     composer does (complete_youtube_upload's answers: 422 for a video that isn't the upload's,
+         *     409 when the upload expired).
          */
         post: operations["complete_mcp_upload"];
         delete?: never;
@@ -3627,7 +3700,8 @@ export interface paths {
          * List Post Comments
          * @description The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
          *     defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
-         *     D-11). Deleted comments are left out.
+         *     D-11; ``important``: unanswered questions, buying, negative or 10+ likes). Deleted comments are
+         *     left out.
          */
         get: operations["list_post_comments"];
         put?: never;
@@ -4117,6 +4191,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Youtube Upload
+         * @description C-196: open a direct upload of the video for a post whose accounts are all YouTube
+         *     channels (``target_id``: the channel's ``social_account_id``). The browser then PUTs the file
+         *     to ``upload_url`` itself; the channel's token is never sent. A post with a time uploads as
+         *     private and YouTube publishes it then; a post without one ("now") uploads with the chosen
+         *     privacy. One of YouTube's daily uploads is counted. 409 conflict for a post that also goes to
+         *     other platforms ("Posts to several platforms use the media tray"), has media in the tray or
+         *     can't be edited, or when the workspace has 3 uploads open; 422 for missing YouTube options
+         *     (``targets.{i}.options``) or a time under a minute away (``publish_at``); 429 rate_limited
+         *     when YouTube's daily uploads are used up ("Try again after …", with Retry-After).
+         */
+        post: operations["start_youtube_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/youtube-upload/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Youtube Upload
+         * @description C-196: the browser finished the upload; ``video_id`` is the id in YouTube's answer. The
+         *     video is read on the channel (it must be there, with the upload's title), kept on the
+         *     target, and the post is scheduled (the checklist and scheduled_posts_monthly apply: 422, 402)
+         *     or, for a post without a time, published now. 409 when no upload is open for the channel.
+         *     Sending the same video again returns the post as it is.
+         */
+        post: operations["complete_youtube_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/sequences": {
         parameters: {
             query?: never;
@@ -4433,6 +4559,73 @@ export interface paths {
          *     over accounts_per_platform, 502 when Meta fails.
          */
         post: operations["complete_whatsapp_signup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List Youtube Channels
+         * @description The channels of the Google account that consented, from the nonce the OAuth callback
+         *     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
+         *     expired (10 minutes), 422 when the account has no channel or the permission was not given,
+         *     502 when Google fails. Asking again returns the same list.
+         */
+        post: operations["list_youtube_channels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Youtube Connect
+         * @description Google's authorize URL (youtube.force-ssl, offline, consent). 503 until YouTube connections
+         *     are configured, 402 over youtube_accounts or Free's channels in total.
+         */
+        post: operations["start_youtube_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/youtube/connect-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Youtube Channels
+         * @description Connect the picked channel. 422 channel_ids for a channel that wasn't listed, 409
+         *     account_in_use when it is connected to another workspace, 402 over youtube_accounts (one per
+         *     workspace) or Free's channels in total (nothing is added, the nonce stays valid), 404 when it
+         *     expired.
+         */
+        post: operations["connect_youtube_channels"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4936,7 +5129,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /**
              * Status
              * @enum {string}
@@ -5713,7 +5906,7 @@ export interface components {
              */
             outcome: "auto_sent" | "escalated" | "skipped";
             /** Reason */
-            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed") | null;
+            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed" | "auto_replies_off") | null;
             /** Sent Message Id */
             sent_message_id?: string | null;
             /** Suggestion Id */
@@ -7430,7 +7623,7 @@ export interface components {
              * Key
              * @enum {string}
              */
-            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "extras" | "publishing_limit" | "publish_at";
+            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "extras" | "youtube" | "publishing_limit" | "publish_at";
             /** Message */
             message: string;
             /** Ok */
@@ -7521,6 +7714,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Important
+             * @default false
+             */
+            important: boolean;
             /**
              * Is Live
              * @default false
@@ -7675,11 +7873,17 @@ export interface components {
          *     analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
          *     analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
          *     total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
-         *     always ends. Deleted comments are not counted.
+         *     always ends. Deleted comments are not counted. ``important`` counts the comments the
+         *     ``important`` filter shows (services/comments/queries.py ``important_conditions``).
          */
         CommentStats: {
             /** Analysed */
             analysed: number;
+            /**
+             * Important
+             * @default 0
+             */
+            important: number;
             /** Negative */
             negative: number;
             /** Neutral */
@@ -7864,6 +8068,11 @@ export interface components {
         };
         /** ContactDetail */
         ContactDetail: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -7963,6 +8172,90 @@ export interface components {
             /** Tag Ids */
             tag_ids?: string[];
         };
+        /**
+         * ContactImport
+         * @description A contact CSV (GR-43). ``grant_consent`` is the admin's tick that the people in the file
+         *     agreed to WhatsApp marketing; without it the file's "WhatsApp marketing" column is ignored.
+         */
+        ContactImport: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Csv */
+            csv: string;
+            /**
+             * File Name
+             * @default
+             */
+            file_name: string;
+            /**
+             * Grant Consent
+             * @default false
+             */
+            grant_consent: boolean;
+        };
+        /** ContactImportPreview */
+        ContactImportPreview: {
+            /** Columns */
+            columns: string[];
+            /** Consent Ignored */
+            consent_ignored: number;
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Ignored Columns */
+            ignored_columns: string[];
+            /** Row Cap */
+            row_cap: number;
+            /** Rows */
+            rows: components["schemas"]["ContactImportRowOut"][];
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Total Rows */
+            total_rows: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportResult */
+        ContactImportResult: {
+            /** Consents Granted */
+            consents_granted: number;
+            /** Consents Kept Withdrawn */
+            consents_kept_withdrawn: number;
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Tags Created */
+            tags_created: number;
+            /** Unchanged */
+            unchanged: number;
+            /** Updated */
+            updated: number;
+        };
+        /** ContactImportRowOut */
+        ContactImportRowOut: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "unchanged" | "skip";
+            /** Line */
+            line: number;
+            /** Phone */
+            phone: string;
+            /** Reasons */
+            reasons?: string[];
+        };
         /** ContactList */
         ContactList: {
             /** Items */
@@ -7972,6 +8265,11 @@ export interface components {
         };
         /** ContactListItem */
         ContactListItem: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Conversation Id */
             conversation_id?: string | null;
             /** Email */
@@ -8027,6 +8325,8 @@ export interface components {
          *     phone set here is marked as entered by a member and not verified.
          */
         ContactPatch: {
+            /** Auto Replies Off */
+            auto_replies_off?: boolean | null;
             /**
              * Clear Email
              * @default false
@@ -8058,6 +8358,11 @@ export interface components {
          * @description One contact with what the business knows about them.
          */
         ContactRecord: {
+            /**
+             * Auto Replies Off
+             * @default false
+             */
+            auto_replies_off: boolean;
             /** Consents */
             consents: components["schemas"]["Consent"][];
             /** Conversation Id */
@@ -8240,6 +8545,8 @@ export interface components {
             scheduled_count: number;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             social_account: components["schemas"]["ConversationAccount"];
             /**
              * Social Account Id
@@ -8348,6 +8655,8 @@ export interface components {
             reply_window_closes_at?: string | null;
             /** Signal */
             signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -8375,8 +8684,15 @@ export interface components {
              * @default false
              */
             resume_ai: boolean;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
             /** Status */
             status?: ("open" | "archived") | null;
+            /**
+             * Unsnooze
+             * @default false
+             */
+            unsnooze: boolean;
         };
         /** ConversationSummary */
         ConversationSummary: {
@@ -8751,10 +9067,16 @@ export interface components {
          *     clicks on a Facebook Page post. None: not given for this post or not read yet.
          */
         ExtraMetrics: {
+            /** Avg View Percent */
+            avg_view_percent?: number | null;
+            /** Avg View Seconds */
+            avg_view_seconds?: number | null;
             /** Clicks */
             clicks?: number | null;
             /** Exits */
             exits?: number | null;
+            /** Follows */
+            follows?: number | null;
             /** Replies */
             replies?: number | null;
             /** Swipes Forward */
@@ -8763,6 +9085,8 @@ export interface components {
             taps_back?: number | null;
             /** Taps Forward */
             taps_forward?: number | null;
+            /** Watch Minutes */
+            watch_minutes?: number | null;
         };
         /**
          * FacebookConnectPages
@@ -9819,6 +10143,15 @@ export interface components {
             /** Ids */
             ids?: string[] | null;
         };
+        /**
+         * McpUploadCompletion
+         * @description A ``youtube`` ticket's finished upload: the video id from YouTube's answer. Other tickets
+         *     send no body.
+         */
+        McpUploadCompletion: {
+            /** Video Id */
+            video_id?: string | null;
+        };
         /** McpUploadTicket */
         McpUploadTicket: {
             /**
@@ -9835,7 +10168,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "image" | "video";
+            kind: "image" | "video" | "youtube";
             /** Limits */
             limits: {
                 [key: string]: unknown;
@@ -9844,12 +10177,15 @@ export interface components {
             media_asset_id?: string | null;
             /** Reason */
             reason?: string | null;
+            /** Scheduled Post Id */
+            scheduled_post_id?: string | null;
             /**
              * Status
              * @enum {string}
              */
             status: "waiting" | "uploaded" | "expired" | "rejected";
             upload?: components["schemas"]["DropSignature"] | null;
+            youtube?: components["schemas"]["YouTubeTicket"] | null;
         };
         /** Me */
         Me: {
@@ -10040,6 +10376,7 @@ export interface components {
             reactions: components["schemas"]["Reaction"][];
             /** Read At */
             read_at?: string | null;
+            reply_to?: components["schemas"]["ReplyQuote"] | null;
             /** Sent At */
             sent_at?: string | null;
             sent_by?: components["schemas"]["Actor"] | null;
@@ -10638,7 +10975,7 @@ export interface components {
             /** Oldest Waiting Since */
             oldest_waiting_since: string | null;
             /** Platforms Connected */
-            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web")[];
+            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web" | "youtube")[];
             previous: components["schemas"]["OverviewPeriod"];
             /** Priority Queue */
             priority_queue: components["schemas"]["PriorityConversation"][];
@@ -11871,6 +12208,29 @@ export interface components {
              */
             tag_id: string;
         };
+        /**
+         * ReplyQuote
+         * @description The message a reply quotes (GR-42): the customer's or ours, in the same conversation.
+         */
+        ReplyQuote: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound" | "system";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system";
+            /** Text Preview */
+            text_preview: string;
+        };
         /** ReplyWindow */
         ReplyWindow: {
             /** Closes At */
@@ -12047,8 +12407,9 @@ export interface components {
         };
         /**
          * SandboxAccountCreate
-         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
-         *     or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.
+         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29),
+         *     a WhatsApp number with approved templates (GR-23) or a YouTube channel (C-195). No body makes
+         *     an Instagram one.
          */
         SandboxAccountCreate: {
             /**
@@ -12056,7 +12417,7 @@ export interface components {
              * @default instagram
              * @enum {string}
              */
-            platform: "instagram" | "facebook" | "whatsapp";
+            platform: "instagram" | "facebook" | "whatsapp" | "youtube";
         };
         /** SandboxCartItem */
         SandboxCartItem: {
@@ -12516,6 +12877,7 @@ export interface components {
             /** Expires At */
             expires_at?: string | null;
             first_comment?: components["schemas"]["FirstCommentResult"] | null;
+            options?: components["schemas"]["YouTubeOptions"] | null;
             /** Permalink */
             permalink?: string | null;
             /** Platform Media Id */
@@ -12534,6 +12896,7 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
+            youtube?: components["schemas"]["YouTubeTargetState"] | null;
         };
         /**
          * Seats
@@ -12624,6 +12987,8 @@ export interface components {
              * Format: uuid
              */
             client_id: string;
+            /** Reply To Message Id */
+            reply_to_message_id?: string | null;
             /** Sticker */
             sticker?: "like_heart" | null;
             /** Sticker Asset Id */
@@ -12910,6 +13275,14 @@ export interface components {
             /** Value */
             value: string;
         };
+        /**
+         * SetReaction
+         * @description PUT …/messages/{id}/reaction: our reaction to the message; null removes it.
+         */
+        SetReaction: {
+            /** Emoji */
+            emoji: ("👍" | "❤️" | "😂" | "😮" | "😢" | "🙏") | null;
+        };
         /** SheetColumn */
         SheetColumn: {
             /** Field */
@@ -13186,7 +13559,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp" | "facebook" | "web";
+            platform: "instagram" | "whatsapp" | "facebook" | "web" | "youtube";
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**
@@ -13624,11 +13997,14 @@ export interface components {
         };
         /**
          * TargetIn
-         * @description An account to publish to, with an optional caption for it alone.
+         * @description An account to publish to, with an optional caption for it alone. ``options``: a YouTube
+         *     channel's choices (C-196), needed before the post is scheduled (the checklist's ``youtube``
+         *     item); null for every other platform (else 422 on ``targets.{i}.options``).
          */
         TargetIn: {
             /** Caption Override */
             caption_override?: string | null;
+            options?: components["schemas"]["YouTubeOptions"] | null;
             /**
              * Social Account Id
              * Format: uuid
@@ -14423,6 +14799,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14485,6 +14863,8 @@ export interface components {
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
+            /** Features */
+            features: "youtube"[];
             /**
              * Id
              * Format: uuid
@@ -14506,6 +14886,187 @@ export interface components {
             slug: string;
             /** Timezone */
             timezone: string;
+        };
+        /** YouTubeChannel */
+        YouTubeChannel: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Channel Id */
+            channel_id: string;
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Handle */
+            handle?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** YouTubeChannelList */
+        YouTubeChannelList: {
+            /** Items */
+            items: components["schemas"]["YouTubeChannel"][];
+        };
+        /**
+         * YouTubeChannelsRequest
+         * @description The nonce the OAuth callback put in the Connections page's URL (?youtube=…).
+         */
+        YouTubeChannelsRequest: {
+            /** Nonce */
+            nonce: string;
+        };
+        /**
+         * YouTubeConnectChannels
+         * @description The channel to connect, picked from the list the same nonce returned. One per workspace.
+         */
+        YouTubeConnectChannels: {
+            /** Channel Ids */
+            channel_ids: string[];
+            /** Nonce */
+            nonce: string;
+        };
+        /** YouTubeConnectStart */
+        YouTubeConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /**
+         * YouTubeOptions
+         * @description A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the
+         *     post's target. The description is the caption (or the target's ``caption_override``).
+         *     Stored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have
+         *     no default: the person answers both (COPPA; realistic AI-altered content).
+         *
+         *     - ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);
+         *     - ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts
+         *       its quotes, and each comma between tags counts);
+         *     - ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from
+         *       the file's shape and length; there is no separate call).
+         */
+        YouTubeOptions: {
+            /** Category Id */
+            category_id?: string | null;
+            /**
+             * Format
+             * @default video
+             * @enum {string}
+             */
+            format: "video" | "short";
+            /** Made For Kids */
+            made_for_kids: boolean;
+            /**
+             * Notify Subscribers
+             * @default true
+             */
+            notify_subscribers: boolean;
+            /**
+             * Privacy
+             * @default public
+             * @enum {string}
+             */
+            privacy: "public" | "unlisted" | "private";
+            /** Synthetic Media */
+            synthetic_media: boolean;
+            /** Tags */
+            tags?: string[];
+            /** Title */
+            title: string;
+        };
+        /**
+         * YouTubeTargetState
+         * @description Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was
+         *     opened and not finished runs out then (the post goes back to a draft: "The upload didn't
+         *     finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).
+         */
+        YouTubeTargetState: {
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "direct" | "media";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "waiting_for_file" | "uploading" | "processing" | "scheduled" | "published" | "failed";
+            /** Upload Expires At */
+            upload_expires_at?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Video Id */
+            video_id?: string | null;
+        };
+        /**
+         * YouTubeTicket
+         * @description A ``youtube`` ticket's upload while it waits (C-196): PUT the file to ``upload_url`` in
+         *     pieces of ``chunk_bytes`` (``Content-Range``; 308 go on, 200/201 done with the video's id),
+         *     then complete with that id.
+         */
+        YouTubeTicket: {
+            /** Channel Name */
+            channel_name: string;
+            /** Chunk Bytes */
+            chunk_bytes: number;
+            /** Title */
+            title: string;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
+         * YouTubeUploadComplete
+         * @description POST …/youtube-upload/complete: the finished upload's video id (from YouTube's answer).
+         */
+        YouTubeUploadComplete: {
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Video Id */
+            video_id: string;
+        };
+        /**
+         * YouTubeUploadSession
+         * @description Where the file goes: PUT it to ``upload_url`` in pieces of ``chunk_bytes`` (the last may be
+         *     shorter) with ``Content-Range: bytes {first}-{last}/{total}``. 308 means "go on" (its
+         *     ``Range`` header says what arrived); 200 or 201 means done, with the video's JSON (its
+         *     ``id``). To resume, PUT nothing with ``Content-Range: bytes *\/{total}``. The address works
+         *     for this one file until ``expires_at``; no token is needed or given.
+         */
+        YouTubeUploadSession: {
+            /** Chunk Bytes */
+            chunk_bytes: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /**
+         * YouTubeUploadStart
+         * @description POST …/scheduled-posts/{id}/youtube-upload: open a direct upload for the post's YouTube
+         *     target. ``target_id`` is the target's channel (its ``social_account_id``).
+         */
+        YouTubeUploadStart: {
+            /** Content Type */
+            content_type: string;
+            /** File Name */
+            file_name?: string | null;
+            /** File Size */
+            file_size: number;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
         };
     };
     responses: never;
@@ -19044,6 +19605,94 @@ export interface operations {
             };
         };
     };
+    import_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_contact_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactImportPreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_contact: {
         parameters: {
             query?: never;
@@ -19353,7 +20002,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "mine" | "unassigned" | "archived" | "snoozed";
                 platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 assignee_id?: string | null;
@@ -19633,6 +20282,52 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_message_reaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetReaction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22346,7 +23041,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["McpUploadCompletion"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -23594,7 +24293,7 @@ export interface operations {
     list_post_comments: {
         parameters: {
             query?: {
-                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply";
+                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply" | "important";
                 cursor?: string | null;
                 limit?: number;
             };
@@ -24916,6 +25615,96 @@ export interface operations {
             };
         };
     };
+    start_youtube_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeUploadStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeUploadSession"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_youtube_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeUploadComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_sequences: {
         parameters: {
             query?: never;
@@ -25653,6 +26442,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeChannelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeChannelList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_youtube_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YouTubeConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_youtube_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["YouTubeConnectChannels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountList"];
                 };
             };
             /** @description Validation error */

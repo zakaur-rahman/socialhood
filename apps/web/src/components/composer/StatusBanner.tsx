@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ExternalLink, Pencil, RotateCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Pencil, RotateCw, Upload } from "lucide-react";
 
 import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useRefreshCollaborators } from "@/lib/api/queries/scheduledPosts";
 import { usePostPerformance } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { AGE_LABEL, figuresOf, formatFigure } from "@/lib/analytics/format";
+import { youtubeStateLabel } from "@/lib/copy";
 import { handleOf } from "@/lib/publishing/rules";
 import type { ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types";
 import { formatDayTime } from "@/lib/tz";
@@ -16,7 +17,12 @@ import { cn } from "@/lib/utils";
 
 /** The platform's name in the words the banner uses. */
 function platformName(account: SocialAccount | undefined): string {
-  return account?.platform === "facebook" ? "Facebook" : "Instagram";
+  return account?.platform === "facebook" ? "Facebook" : account?.platform === "youtube" ? "YouTube" : "Instagram";
+}
+
+/** The link to the post on its platform: a YouTube video's watch page comes from its state. */
+function linkOf(target: ScheduledPostTarget): string | null {
+  return target.permalink ?? target.youtube?.url ?? null;
 }
 
 const TARGET_LABEL: Record<ScheduledPostTarget["status"], string> = {
@@ -120,17 +126,24 @@ function TargetRows({
     <ul className="mt-3 space-y-2" aria-label="Accounts">
       {targets.map((target) => {
         const account = accounts.find((item) => item.id === target.social_account_id);
+        const permalink = linkOf(target);
+        // A YouTube video says where it is on YouTube (uploading, processing) rather than our step.
+        const youtube = target.youtube && target.status !== "failed" && target.status !== "published" ? target.youtube : null;
         return (
           <li key={target.social_account_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="font-medium">{handleOf(account)}</span>
             <span className={cn(target.status === "failed" ? "text-danger-fg" : "text-fg-secondary")}>
-              {target.status === "container_created" ? `${platformName(account)} is processing it` : TARGET_LABEL[target.status]}
+              {youtube
+                ? youtubeStateLabel(youtube.state)
+                : target.status === "container_created"
+                  ? `${platformName(account)} is processing it`
+                  : TARGET_LABEL[target.status]}
               {target.status === "published" && target.published_at ? ` ${formatDayTime(target.published_at, timeZone, now)}` : ""}
               {target.status === "failed" && target.error ? `: ${target.error.message}` : ""}
             </span>
-            {target.permalink ? (
+            {permalink ? (
               <a
-                href={target.permalink}
+                href={permalink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-brand-fg underline-offset-4 hover:underline"
@@ -165,6 +178,58 @@ function TargetRows({
 }
 
 /**
+ * C-195: a draft or scheduled post with a direct YouTube upload says where the video is: waiting
+ * for the file, uploading (with this tab's progress), processing on YouTube, scheduled on YouTube.
+ */
+function YouTubeBanner({
+  post,
+  accounts,
+  timeZone,
+  now,
+  progress,
+}: {
+  post: ScheduledPost;
+  accounts: SocialAccount[];
+  timeZone: string;
+  now: Date;
+  progress: number | null;
+}) {
+  const isYouTube = (item: ScheduledPostTarget) => accounts.find((account) => account.id === item.social_account_id)?.platform === "youtube";
+  // Only the direct route has a video on YouTube before the time; the media route publishes like the others.
+  const target = post.targets.find((item) => item.youtube?.route === "direct") ?? (progress != null ? post.targets.find(isYouTube) : undefined);
+  // This tab's upload is fresher than the stored state.
+  const shown = progress != null ? "uploading" : target?.youtube?.state;
+  if (!target || !shown) return null;
+  const label = youtubeStateLabel(shown, progress);
+  const channel = handleOf(accounts.find((item) => item.id === target.social_account_id));
+  return (
+    <Alert
+      variant="outline"
+      tone={shown === "failed" ? "danger" : shown === "scheduled" ? "success" : "brand"}
+      data-testid="youtube-banner"
+      className="mt-4"
+      icon={shown === "uploading" || shown === "processing" ? <Spinner /> : shown === "scheduled" ? <CheckCircle2 /> : shown === "failed" ? <AlertTriangle /> : <Upload />}
+    >
+      <AlertTitle>
+        {label}
+        {shown === "scheduled" && post.publish_at ? ` for ${formatDayTime(post.publish_at, timeZone, now)}` : ""}
+      </AlertTitle>
+      <p className="text-sm text-fg-secondary">
+        {shown === "waiting_for_file"
+          ? `Add the video in the YouTube box, then schedule. It uploads straight to ${channel}.`
+          : shown === "scheduled"
+            ? `${channel} has the video as private until then; YouTube publishes it at that time.`
+            : shown === "processing"
+              ? "YouTube is processing the video. You can leave this page."
+              : shown === "uploading"
+                ? "Keep this tab open until the upload finishes."
+                : (target.error?.message ?? "The upload didn't finish.")}
+      </p>
+    </Alert>
+  );
+}
+
+/**
  * UX-SCR-13: while publishing the composer is read-only under a status banner; a published post
  * shows View on Instagram and the first-comment result; a failed or cancelled one shows the reason
  * and Edit and retry.
@@ -177,6 +242,7 @@ export function StatusBanner({
   onEditAndRetry,
   retrying,
   wid,
+  youtubeProgress = null,
 }: {
   post: ScheduledPost;
   accounts: SocialAccount[];
@@ -186,11 +252,13 @@ export function StatusBanner({
   wid?: string;
   onEditAndRetry: () => void;
   retrying: boolean;
+  /** A direct YouTube upload running in this tab, 0 to 100. */
+  youtubeProgress?: number | null;
 }) {
   switch (post.status) {
     case "draft":
     case "scheduled":
-      return null;
+      return <YouTubeBanner post={post} accounts={accounts} timeZone={timeZone} now={now} progress={youtubeProgress} />;
     case "publishing":
       return (
         <Alert variant="outline" tone="brand" data-testid="status-banner" className="mt-4" icon={<Spinner />}>

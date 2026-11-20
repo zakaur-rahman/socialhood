@@ -1795,10 +1795,10 @@ export const FEATURE_AI_INBOX: GtmPage = {
         title: "A message arrives and is read",
         body: "A few seconds after the customer stops typing, their newest message is read with the conversation around it and tagged. A burst of messages is read once.",
       },
-      // ai/policy.py: the 13 checks in order; MAX_AI_REPLIES_PER_HOUR = 5 per conversation (services/suggestions/auto.py).
+      // ai/policy.py: the 14 checks in order; MAX_AI_REPLIES_PER_HOUR = 5 per conversation (services/suggestions/auto.py).
       {
         title: "The AI drafts, or replies on Creator and Business",
-        body: "In Suggest, the draft waits for you. In Auto, a reply goes out only after 13 checks pass, among them: the reply window is open, nobody asked for a person, it isn't a refund or complaint, the answer is grounded in your knowledge, and the AI has sent fewer than 5 replies in that conversation in the last hour.",
+        body: "In Suggest, the draft waits for you. In Auto, a reply goes out only after 14 checks pass, among them: the reply window is open, nobody asked for a person, it isn't a refund or complaint, the answer is grounded in your knowledge, and the AI has sent fewer than 5 replies in that conversation in the last hour.",
       },
       // FAQ_TAKEOVER (services/sending.py human_takeover, models/ai.py TAKEOVER_MINUTES).
       {
@@ -1855,7 +1855,7 @@ export const FEATURE_AI_INBOX: GtmPage = {
       {
         question: "Which messages does the AI answer on its own?",
         answer:
-          "Only in Auto mode, which is part of Creator and Business, and only when all 13 checks pass. A greeting or a thank-you can be answered without your knowledge; a question about price, stock or delivery needs a source from it. Everything else waits for you.",
+          "Only in Auto mode, which is part of Creator and Business, and only when all 14 checks pass. A greeting or a thank-you can be answered without your knowledge; a question about price, stock or delivery needs a source from it. Everything else waits for you.",
       },
       // components/ai/DecisionInfo.tsx: the info button on an AI-sent message, its checks and "Should not have sent".
       {

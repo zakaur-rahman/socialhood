@@ -64,6 +64,8 @@ export function target(overrides: Partial<ScheduledPostTarget> = {}): ScheduledP
     first_comment: null,
     collaborators: [],
     collaborators_checked_at: null,
+    options: null,
+    youtube: null,
     ...overrides,
   };
 }

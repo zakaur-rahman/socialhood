@@ -17,7 +17,15 @@ from socialhood.mcp.registry import ToolInput, ToolOutput, registry, tool
 from socialhood.mcp.tools.common import agent_tool, moment
 
 View = Literal[
-    "all", "unread", "needs_reply", "needs_you", "leads", "closing_soon", "ai_handled", "archived"
+    "all",
+    "unread",
+    "needs_reply",
+    "needs_you",
+    "leads",
+    "closing_soon",
+    "ai_handled",
+    "archived",
+    "snoozed",
 ]
 
 # ---------------------------------------------------------------- list_conversations
@@ -28,7 +36,8 @@ class ListConversationsInput(ToolInput):
         default="all",
         description=(
             "all (open), unread, needs_reply, needs_you (handed to a person), leads (lead score "
-            "60+), closing_soon (reply window about to close), ai_handled or archived."
+            "60+), closing_soon (reply window about to close), ai_handled, archived or "
+            "snoozed (hidden until a set time)."
         ),
     )
     query: str | None = Field(

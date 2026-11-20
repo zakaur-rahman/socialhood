@@ -154,3 +154,20 @@ describe("PostPreview (FR-PUB-03, UX-CMP-02)", () => {
     expect(screen.queryByRole("combobox", { name: "Account" })).not.toBeInTheDocument();
   });
 });
+
+describe("the YouTube preview (C-195)", () => {
+  const channel = account({ id: "y1", platform: "youtube", username: "maplebakery", display_name: "Maple Bakery" });
+
+  it("shows the title and the channel, and marks a Short", () => {
+    renderPreview({ accounts: [channel], assets: [], format: null, youtube: { title: "Sourdough at dawn", format: "short", videoUrl: null } });
+    const card = screen.getByRole("article", { name: "YouTube preview" });
+    expect(within(card).getByTestId("youtube-preview-title")).toHaveTextContent("Sourdough at dawn");
+    expect(within(card).getByText("Maple Bakery")).toBeInTheDocument();
+    expect(within(card).getByText("Short")).toBeInTheDocument();
+  });
+
+  it("asks for a title while there is none", () => {
+    renderPreview({ accounts: [channel], assets: [], format: null, youtube: { title: " ", format: "video", videoUrl: null } });
+    expect(screen.getByTestId("youtube-preview-title")).toHaveTextContent("Your title shows here");
+  });
+});

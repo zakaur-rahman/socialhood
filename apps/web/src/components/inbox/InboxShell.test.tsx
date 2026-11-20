@@ -531,7 +531,7 @@ describe("keyboard shortcuts (FR-INB-12)", () => {
     await user.keyboard("e");
     await waitFor(() => expect(calls.some((c) => c.method === "PATCH")).toBe(true));
     const patch = calls.find((c) => c.method === "PATCH");
-    expect(patch?.body).toEqual({ clear_ai_mode_override: false, resume_ai: false, status: "archived" });
+    expect(patch?.body).toEqual({ clear_ai_mode_override: false, resume_ai: false, unsnooze: false, status: "archived" });
     expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox/c2");
     await waitFor(() => expect(within(pane("list")!).queryByText("Priya Nair")).not.toBeInTheDocument());
   });

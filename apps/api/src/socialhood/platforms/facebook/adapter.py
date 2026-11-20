@@ -157,6 +157,8 @@ class FacebookAdapter:
             }
         else:
             content = text_content(message)
+        if message.reply_to:  # GR-42: shown as a quote of that message (unverified for Pages)
+            content["reply_to"] = {"mid": message.reply_to}
         payload: dict[str, object] = {
             "recipient": {"id": recipient_ref},
             "messaging_type": "RESPONSE",
@@ -195,6 +197,25 @@ class FacebookAdapter:
             endpoint="me.messages.mark_seen",
             token=self._token(acct),
             json={"recipient": {"id": recipient_ref}, "sender_action": "mark_seen"},
+        )
+
+    async def react(
+        self,
+        acct: SocialAccount,
+        recipient_ref: str,
+        platform_message_id: str,
+        emoji: str | None,
+    ) -> None:
+        """Instagram's ``react`` / ``unreact`` sender actions, a heart only (GR-42; unverified
+        for Pages)."""
+        from socialhood.platforms.instagram.adapter import react_payload
+
+        await self.http.request(
+            "POST",
+            self._graph("me/messages"),
+            endpoint="me.messages.react",
+            token=self._token(acct),
+            json=react_payload(recipient_ref, platform_message_id, emoji),
         )
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:

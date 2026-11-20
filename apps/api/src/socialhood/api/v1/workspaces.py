@@ -13,6 +13,7 @@ from socialhood.auth.deps import AnyMember, CanManageSettings, Session
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.billing import Subscription
 from socialhood.models.identity import WorkspaceMember
+from socialhood.platforms.youtube.switch import features_for
 from socialhood.repositories import users
 from socialhood.schemas.workspaces import Overview, OverviewPreset, WorkspaceOut, WorkspacePatch
 from socialhood.services import audit
@@ -22,7 +23,7 @@ from socialhood.services import workspaces as service
 router = APIRouter(prefix="/v1/w/{wid}", tags=["workspaces"])
 
 
-async def _out(session: Session, ctx: AnyMember) -> WorkspaceOut:
+async def _out(request: Request, session: Session, ctx: AnyMember) -> WorkspaceOut:
     plan = await session.scalar(select(Subscription.plan))  # filtered to this workspace
     members = await session.scalar(select(func.count()).select_from(WorkspaceMember))
     ws = ctx.workspace
@@ -40,21 +41,22 @@ async def _out(session: Session, ctx: AnyMember) -> WorkspaceOut:
             "checklist_dismissed_at": ws.checklist_dismissed_at,
             "created_at": ws.created_at,
             "member_count": int(members or 1),  # filtered to this workspace; the caller is one
+            "features": features_for(request.app.state.settings, ws.id, ws.slug),
         }
     )
 
 
 @router.get("", operation_id="get_workspace")
-async def get_workspace(ctx: AnyMember, session: Session) -> WorkspaceOut:
+async def get_workspace(request: Request, ctx: AnyMember, session: Session) -> WorkspaceOut:
     """Also remembers this workspace as the user's last one, for /app (F-02)."""
     await users.set_last_workspace(session, ctx.user.id, ctx.workspace_id)
     await session.commit()
-    return await _out(session, ctx)
+    return await _out(request, session, ctx)
 
 
 @router.patch("", operation_id="update_workspace")
 async def update_workspace(
-    body: WorkspacePatch, ctx: CanManageSettings, session: Session
+    request: Request, body: WorkspacePatch, ctx: CanManageSettings, session: Session
 ) -> WorkspaceOut:
     await service.update_workspace(session, ctx.workspace, body)
     await audit.record(
@@ -66,7 +68,7 @@ async def update_workspace(
         fields=sorted(body.model_fields_set),
     )
     await session.commit()
-    return await _out(session, ctx)
+    return await _out(request, session, ctx)
 
 
 @router.get("/overview", operation_id="get_overview")

@@ -105,8 +105,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_allowed_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "Last-Event-ID"],
-        expose_headers=["X-Request-ID", "Retry-After"],
+        # Content-Range and Range: the sandbox channel's dev upload route (C-196), which a
+        # browser PUTs to as it would to YouTube.
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key",
+            "Last-Event-ID",
+            "Content-Range",
+        ],
+        expose_headers=["X-Request-ID", "Retry-After", "Range"],
         max_age=600,
     )
     app.add_middleware(BodyLimitMiddleware)

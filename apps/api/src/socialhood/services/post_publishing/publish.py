@@ -30,6 +30,12 @@ post_first_comment, all in one transaction.
 
 A post ending failed or partly published notifies its owners and admins with the reasons
 (FR-PUB-06). Every change queues ``scheduled_post.updated``.
+
+Per platform (C-196): the publishing quota is read for Instagram only; a YouTube target leaves
+publish_target after its claim for youtube_media.begin (the video read back, or opened and
+uploaded on the bulk lane), then comes back here as ``container_created`` with its video id as
+the container, so the polls, the read-back and the media item are the same for every platform.
+A YouTube Short is stored as a Reel with its /shorts/ link; YouTube takes no first comment.
 """
 
 from __future__ import annotations
@@ -427,6 +433,15 @@ async def publish_target(
             await settle(session, post, target, got.status, code=got.code, message=got.message)
             await commit_and_publish(session, redis)
             return "canceled" if got.status == TargetStatus.CANCELED else "failed"
+        if acct.platform == "youtube":  # C-196: YouTube's own upload step
+            if claimed:
+                await queue_post_updated(session, post)
+            await commit_and_publish(session, redis)
+            from socialhood.services.post_publishing import youtube_media
+
+            return await youtube_media.begin(
+                sessionmaker, redis, deps, target_id=target_id, will_retry=will_retry, now=now
+            )
         media = container_media(post, await repo.assets_of(session, post.id))
         if media is None:
             await settle(
@@ -831,6 +846,8 @@ async def _read_back(p: _Poll, media_id: str) -> PlatformMedia:
     except PlatformError as error:
         log.warning("published_media_read_failed", target_id=str(p.target_id), error=error.code)
         media = None
+    if p.acct.platform == "youtube":
+        return _youtube_media(p, media_id, media)
     page_reel = p.acct.platform != "instagram" and p.post.kind == PostKind.REEL
     if media is not None and media.platform_media_id == media_id:
         # A Page video published as a Reel is a Reel (C-131), whatever Facebook calls the video.
@@ -856,6 +873,29 @@ async def _read_back(p: _Poll, media_id: str) -> PlatformMedia:
         thumbnail_url=None,
         permalink=None,
         posted_at=p.now,
+    )
+
+
+def _youtube_media(p: _Poll, video_id: str, media: PlatformMedia | None) -> PlatformMedia:
+    """A YouTube video as read back (C-196): a Short is a Reel with its /shorts/ link."""
+    from socialhood.services.scheduled_posts.views import youtube_options, youtube_url
+
+    options = youtube_options(p.target.options)
+    short = options is not None and options.format == "short"
+    base = media or PlatformMedia(
+        platform_media_id=video_id,
+        media_type="video",
+        caption=p.caption or None,
+        media_url=None,
+        thumbnail_url=None,
+        permalink=None,
+        posted_at=p.now,
+    )
+    return replace(
+        base,
+        platform_media_id=video_id,
+        media_type="reel" if short else "video",
+        permalink=youtube_url(video_id, options),
     )
 
 
@@ -890,8 +930,12 @@ async def _published(p: _Poll, media: PlatformMedia) -> Outcome:
             target.collaborator_statuses = collaborators.initial(post)
             target.collaborators_checked_at = None
         await settle(session, post, target, TargetStatus.PUBLISHED, media=media)
-        # A Story takes no comment of its own (GR-39).
-        first_comment = bool(post.first_comment) and post.format != PostFormat.STORY
+        # A Story takes no comment of its own (GR-39); YouTube takes none from us (C-196).
+        first_comment = (
+            bool(post.first_comment)
+            and post.format != PostFormat.STORY
+            and p.acct.platform != "youtube"
+        )
         await commit_and_publish(session, p.redis)
     if first_comment:
         await enqueue_first_comment(p.target_id, p.workspace_id)
