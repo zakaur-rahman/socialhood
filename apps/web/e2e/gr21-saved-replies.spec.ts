@@ -85,9 +85,10 @@ test.describe("GR-21 saved replies", () => {
       "GET",
       `/v1/w/${workspace.id}/conversations/${first.conversation_id}/messages`,
     );
-    expect(sent.items.filter((m) => m.direction === "outbound").map((m) => m.text)).toContain(
-      "Hi there! Prices start at 499.",
-    );
+    // The workspace's automation label (C-202) follows the text.
+    expect(
+      sent.items.some((m) => m.direction === "outbound" && m.text?.startsWith("Hi there! Prices start at 499.")),
+    ).toBe(true);
 
     // Deleted: the next run fails at that step, with a reason a person can act on.
     await api.call("DELETE", `/v1/w/${workspace.id}/saved-replies/${reply.id}`);

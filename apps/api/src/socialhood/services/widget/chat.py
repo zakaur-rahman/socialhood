@@ -8,7 +8,9 @@ transaction, and never commits except where it says so; the route commits with
   checked (the widget exists and is enabled, its workspace is active, the host is allowed) and the
   answer is a signed visitor token for that host (security/widget_tokens.py), the widget's config
   and the visitor's history. Nothing is stored for a visitor who never writes: the contact and
-  conversation are made by the first message (or the email form, when it comes first).
+  conversation are made by the first message (or the email form, when it comes first). The frame
+  opens a session only when the visitor opens the chat, or on load for a returning visitor who
+  already holds a visitor key (P-2); the frame page itself carries the config.
 - **Messages in** are ordinary inbound messages through ``services/ingest.py``, so analysis,
   suggestions, Auto mode, knowledge, escalation, automations and webhooks work as on Instagram.
   The visitor's ``client_id`` makes a retry idempotent (it becomes the platform message id). A
@@ -63,6 +65,7 @@ from socialhood.repositories import social_accounts as accounts
 from socialhood.repositories import widget as repo
 from socialhood.repositories import workspaces as workspace_repo
 from socialhood.schemas.widget import (
+    DEFAULT_PRIVACY_URL,
     WidgetConfig,
     WidgetEmail,
     WidgetEmailOut,
@@ -171,8 +174,18 @@ def config_of(row: WidgetSettings, *, can_remove_branding: bool, email_known: bo
         marketing_consent_enabled=row.marketing_consent_enabled,
         marketing_consent_text=row.marketing_consent_text,
         show_branding=row.show_branding or not can_remove_branding,
+        privacy_url=row.privacy_url or DEFAULT_PRIVACY_URL,
         email_known=email_known,
     )
+
+
+async def config_for(
+    session: AsyncSession, row: WidgetSettings, *, email_known: bool
+) -> WidgetConfig:
+    """The config as the plan allows it. The frame page carries it (email_known false) so the
+    launcher shows without a session; the session sends it again with the visitor's state."""
+    can_remove = bool(entitlement(await current_plan(session), "widget_remove_branding"))
+    return config_of(row, can_remove_branding=can_remove, email_known=email_known)
 
 
 async def _thread(
@@ -216,8 +229,6 @@ async def open_session(
         key = key or widget_tokens.new_secret()
         visitor = widget_tokens.visitor_id(key)
         contact, conv = await _thread(session, widget, visitor)
-        plan = await current_plan(session)
-        can_remove = bool(entitlement(plan, "widget_remove_branding"))
         thread = await _messages(session, conv)
         bearer, expires_in = widget_tokens.issue(
             account_id=widget.acct.id,
@@ -230,10 +241,8 @@ async def open_session(
             session_key=bearer,
             expires_in=expires_in,
             visitor_key=key,
-            config=config_of(
-                widget.row,
-                can_remove_branding=can_remove,
-                email_known=bool(contact and contact.email),
+            config=await config_for(
+                session, widget.row, email_known=bool(contact and contact.email)
             ),
             messages=thread.messages,
             version=thread.version,

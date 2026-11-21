@@ -17,6 +17,10 @@ from socialhood.models.ai import AiSettings
 from socialhood.models.billing import Plan, Subscription, SubscriptionStatus, TrialEmail
 from socialhood.models.identity import Role, User, Workspace, WorkspaceMember, WorkspaceStatus
 
+# P-1: new workspaces label automated messages from the start (FR-AUT-11). It also ends keyword
+# automation messages, so it says "automated", not "AI". Existing workspaces are prompted instead.
+DEFAULT_AUTOMATION_DISCLOSURE = "Sent by an automated assistant"
+
 
 async def lock_limit(session: AsyncSession, name: str, workspace_id: uuid.UUID) -> None:
     """Serialise one plan limit's check-then-add in the workspace until the transaction ends, so
@@ -52,7 +56,13 @@ def new_workspace_rows(
 ) -> tuple[Workspace, list[object]]:
     """A workspace and the rows every workspace starts with (TR-AUTH-03, FR-ACC-02, §5.5
     agent_policies)."""
-    workspace = Workspace(id=uuid.uuid4(), name=name, slug=slug, owner_user_id=owner_id)
+    workspace = Workspace(
+        id=uuid.uuid4(),
+        name=name,
+        slug=slug,
+        owner_user_id=owner_id,
+        automation_disclosure=DEFAULT_AUTOMATION_DISCLOSURE,
+    )
     children: list[object] = [
         WorkspaceMember(workspace_id=workspace.id, user_id=owner_id, role=Role.OWNER),
         Subscription(

@@ -46,6 +46,24 @@ def test_text_and_body_are_truncated_at_info() -> None:
     assert out["other"] == long
 
 
+def test_emails_and_phone_numbers_are_masked() -> None:
+    out = run(
+        {
+            "event": "send_failed",
+            "detail": "No user priya@example.com at +91 98765 43210",
+            "text": "Reach me on priya.sharma@example.com please, thanks so much",
+            "args": ["+14155550100", 17840000000000000],
+            "wa_id": "919876543210",
+            "phone_number_id": "106540352242922",
+        }
+    )
+    assert out["detail"] == "No user [email] at [phone]"
+    assert out["text"] == "Reach me on [email] please, thanks so mu…"
+    assert out["args"] == ["[phone]", 17840000000000000]
+    assert out["wa_id"] == REDACTED
+    assert out["phone_number_id"] == "106540352242922"  # a Meta id, not a number
+
+
 def test_text_is_kept_at_debug() -> None:
     long = "x" * 100
     assert run({"text": long}, truncate=False)["text"] == long

@@ -35,7 +35,7 @@ from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sentry_sdk.transport import Transport
 
 from socialhood import __version__
-from socialhood.observability.logging import REDACTED, get_logger, is_secret_key
+from socialhood.observability.logging import EMAIL, REDACTED, get_logger, is_secret_key
 from socialhood.settings import Settings
 
 if TYPE_CHECKING:
@@ -70,7 +70,6 @@ EXTRA_SECRET_KEYS = frozenset(
 # Context the scrubber must never touch: Sentry's own trace and runtime blocks.
 _SAFE_CONTEXTS = frozenset({"trace", "runtime", "os", "device", "app", "response"})
 
-_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _BEARER = re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]+")
 _JWT = re.compile(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 # 40+ characters with letters and digits: platform tokens, keys, signatures. UUIDs (36) survive.
@@ -201,7 +200,7 @@ def _exception_of(exc_info: Any, method_name: str) -> BaseException | None:
 
 def scrub_text(value: str) -> str:
     """Mask emails, credentials and query strings inside free text."""
-    value = _EMAIL.sub("[email]", value)
+    value = EMAIL.sub("[email]", value)
     value = _BEARER.sub(r"\1 [redacted]", value)
     value = _JWT.sub("[jwt]", value)
     value = _LONG_TOKEN.sub("[token]", value)

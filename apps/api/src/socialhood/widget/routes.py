@@ -88,14 +88,14 @@ def _refusal(status: int, message: str) -> HTMLResponse:
     return HTMLResponse(REFUSAL.format(message=html.escape(message)), status, headers)
 
 
-def _page(widget_id: str, host: str, brand_url: str) -> str:
+def _page(widget_id: str, host: str, brand_url: str, config: str) -> str:
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="robots" content="noindex"><title>Chat</title>'
         '<link rel="stylesheet" href="/widget/frame.css"></head>'
         f'<body data-widget="{html.escape(widget_id)}" data-host="{html.escape(host)}" '
-        f'data-brand-url="{html.escape(brand_url)}">'
+        f'data-brand-url="{html.escape(brand_url)}" data-config="{html.escape(config)}">'
         '<div id="root"></div><script src="/widget/frame.js"></script></body></html>'
     )
 
@@ -114,10 +114,12 @@ async def frame(request: Request, session: Session, w: WidgetId, h: HostName) ->
         row = await repo.get_settings(session, widget.acct.id)
         assert row is not None  # load() found it
         sites = await chat.live_sites(session, row)
+        # The launcher's look, so the frame shows it without opening a session (P-2).
+        config = await chat.config_for(session, row, email_known=False)
     settings = request.app.state.settings
     headers = {
         **FRAME_HEADERS,
         "Content-Security-Policy": FRAME_POLICY.format(ancestors=origin.frame_ancestors(sites)),
     }
-    page = _page(w, host, settings.site_url or DEFAULT_BRAND_URL)
+    page = _page(w, host, settings.site_url or DEFAULT_BRAND_URL, config.model_dump_json())
     return HTMLResponse(page, 200, headers)

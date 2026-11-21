@@ -77,6 +77,10 @@ export const PRIORITY_TONE: Record<Priority, Tone> = {
 
 // ---- modes (FR-SUG-01)
 
+/** FR-AUT-11 / P-1: the line automated messages end with, as new workspaces start
+ * (apps/api repositories/workspaces.py DEFAULT_AUTOMATION_DISCLOSURE). */
+export const DEFAULT_AUTOMATION_DISCLOSURE = "Sent by an automated assistant";
+
 export const AI_MODES: AiMode[] = ["off", "suggest", "auto"];
 
 export const AI_MODE_LABEL: Record<AiMode, string> = { off: "Off", suggest: "Suggest", auto: "Auto" };

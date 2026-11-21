@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
 import { TRIAL_DAYS, canStartCheckout, planHighlights, sixMonthOffer } from "@/lib/billing/plan";
-import { AGENCY, PLAN_NAME, billingCopy, formatPrice, plannedAmount, type BillingPeriod, type PaidPlan } from "@/lib/copy";
+import { AGENCY, PLAN_NAME, billingCopy, formatPrice, plannedAmount, renewalLine, type BillingPeriod, type PaidPlan } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 const TAGLINE: Record<PlanOffer["plan"], string> = {
@@ -86,6 +86,15 @@ export function PlanCards({
           const highlights = planHighlights(offer.entitlements);
           const trialDays = offer.trial_days || TRIAL_DAYS;
           const six = period === "six_month" ? sixMonthOffer(offer) : null;
+          const trialing = !six && billing.trial_eligible && offer.trial_days > 0;
+          // P-3: what the button commits to, under it (a planned six-month price can't be bought).
+          const renewal = six
+            ? six.planned
+              ? null
+              : renewalLine(six.total, "six_month", 0)
+            : offer.price
+              ? renewalLine(formatPrice(offer.price), "month", trialing ? trialDays : 0, new Date())
+              : null;
           return (
             <Card
               asChild
@@ -149,18 +158,25 @@ export function PlanCards({
                 </ul>
                 {mayPay && offer.plan !== "free" && offer.available ? (
                   // D-10: the page header's card holds the one primary; a card here is secondary.
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="mt-5 w-full"
-                    loading={checkout.pending && checkout.plan === offer.plan}
-                    disabled={checkout.pending && checkout.plan !== offer.plan}
-                    onClick={() => checkout.start(offer.plan as PaidPlan, six ? "six_month" : "month")}
-                  >
-                    {!six && billing.trial_eligible && offer.trial_days > 0
-                      ? billingCopy.trialCta(trialDays)
-                      : `Upgrade to ${PLAN_NAME[offer.plan]}`}
-                  </Button>
+                  <div className="mt-5">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full"
+                      loading={checkout.pending && checkout.plan === offer.plan}
+                      disabled={checkout.pending && checkout.plan !== offer.plan}
+                      onClick={() => checkout.start(offer.plan as PaidPlan, six ? "six_month" : "month")}
+                    >
+                      {trialing
+                        ? billingCopy.trialCta(trialDays)
+                        : `Upgrade to ${PLAN_NAME[offer.plan]}`}
+                    </Button>
+                    {renewal ? (
+                      <p className="mt-2 text-xs text-fg-secondary" data-testid={`renewal-${offer.plan}`}>
+                        {renewal}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : offer.plan === "agency" && !offer.available && !isCurrent ? (
                   <Button asChild variant="secondary" size="lg" className="mt-5 w-full">
                     <a href={AGENCY.href}>{AGENCY.cta}</a>

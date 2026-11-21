@@ -6,6 +6,9 @@ the visitor, and the files the embed serves."""
 from __future__ import annotations
 
 import asyncio
+import html
+import json
+import re
 import time
 import uuid
 from collections.abc import Iterator
@@ -204,6 +207,26 @@ async def test_a_bad_domain_or_colour_names_the_field(ws: Ws, site: Site) -> Non
     too_many = [f"site{i}.example.com" for i in range(21)]
     assert (await ws.call("PUT", "/widget", json={"allowed_domains": too_many})).status_code == 422
     assert (await ws.ok("GET", "/widget"))["allowed_domains"] == [HOST]  # nothing was saved
+
+
+async def test_the_privacy_page_is_an_http_address_and_falls_back_to_amplychats(
+    ws: Ws, site: Site
+) -> None:
+    assert (await ws.ok("GET", "/widget"))["privacy_url"] is None
+    assert (await site.session()).json()["config"]["privacy_url"] == "https://amplychat.com/privacy"
+    for bad in ("javascript:alert(1)", "ftp://shop.example/p", "shop.example/privacy", "https://"):
+        refused = await ws.call("PUT", "/widget", json={"privacy_url": bad})
+        assert refused.status_code == 422, bad
+        assert [e["field"] for e in refused.json()["errors"]] == ["privacy_url"]
+    saved = await site.settings(privacy_url="https://shop.example/privacy")
+    assert saved["privacy_url"] == "https://shop.example/privacy"
+    assert (await site.session()).json()["config"]["privacy_url"] == "https://shop.example/privacy"
+    assert (await site.settings(privacy_url="http://shop.example/p"))["privacy_url"] == (
+        "http://shop.example/p"
+    )
+    assert (await site.settings(privacy_url=""))["privacy_url"] is None  # cleared
+    assert (await site.settings(privacy_url="https://shop.example/p"))["privacy_url"]
+    assert (await site.settings(privacy_url=None))["privacy_url"] is None
 
 
 async def test_agents_cannot_read_or_change_the_settings(
@@ -793,6 +816,15 @@ async def test_the_frame_is_served_only_to_an_allowed_site_and_names_it_in_its_p
     assert 'data-host="example.com"' in ok.text
     assert '<script src="/widget/frame.js">' in ok.text
     assert ok.headers["cache-control"] == "no-store"
+    # The launcher's config rides on the page, so no session opens until the chat does (P-2).
+    found = re.search(r'data-config="([^"]*)"', ok.text)
+    assert found is not None
+    config = json.loads(html.unescape(found.group(1)))
+    assert config["title"] == "Chat with us"
+    assert config["privacy_url"] == "https://amplychat.com/privacy"
+    assert config["show_branding"] is True
+    assert config["email_known"] is False
+    assert await site.rows("SELECT id FROM contacts") == []
 
     for params, status in (
         ({"w": site.widget_id, "h": "evil.example"}, 403),

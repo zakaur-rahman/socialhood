@@ -20,6 +20,9 @@ WidgetPositionName = Literal["right", "left"]
 EmailCaptureName = Literal["off", "optional", "required"]
 AiModeName = Literal["off", "suggest", "auto"]
 HEX_COLOR = r"^#[0-9A-Fa-f]{6}$"
+# An http or https address with a host; "" in an update clears it.
+HTTP_URL = r"^(https?://[^\s/?#]+\S*)?$"
+DEFAULT_PRIVACY_URL = "https://amplychat.com/privacy"
 
 
 # ---- settings (owners and admins)
@@ -42,6 +45,7 @@ class WidgetSettingsOut(ResponseModel):
     show_branding: bool
     # Free cannot turn the branding off; the settings page shows the switch locked.
     can_remove_branding: bool
+    privacy_url: str | None  # None: the chat links Amplychat's own policy
     # How many sites the plan covers (C-185); the settings page says so and caps the list.
     sites_limit: int
     ai_mode: AiModeName
@@ -66,6 +70,7 @@ class WidgetSettingsUpdate(RequestModel):
     marketing_consent_enabled: bool | None = None
     marketing_consent_text: str | None = Field(default=None, min_length=1, max_length=300)
     show_branding: bool | None = None
+    privacy_url: str | None = Field(default=None, pattern=HTTP_URL, max_length=2000)
 
 
 # ---- the public widget API
@@ -81,6 +86,7 @@ class WidgetConfig(ResponseModel):
     marketing_consent_enabled: bool
     marketing_consent_text: str
     show_branding: bool
+    privacy_url: str  # the business's privacy page, or Amplychat's
     email_known: bool  # they already gave an email: do not ask again
 
 

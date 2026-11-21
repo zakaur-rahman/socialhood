@@ -30,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUpFallbackRedirectUrl="/app"
       afterSignOutUrl={siteHref("/")}
       allowedRedirectOrigins={allowedRedirectOrigins}
+      // P-8: no usage data to Clerk; the CSP no longer allows clerk-telemetry.com.
+      telemetry={false}
     >
       {children}
     </ClerkProvider>

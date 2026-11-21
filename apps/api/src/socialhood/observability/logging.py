@@ -1,7 +1,8 @@
 """JSON logging with redaction (SEC-07, TR-OPS-01).
 
-Values of keys that look like secrets are replaced, and free text (``text``, ``body``) is cut to
-40 characters unless the log level is DEBUG. Context such as ``request_id`` is bound through
+Values of keys that look like secrets are replaced, emails and phone numbers are masked (P-7, as
+in the Sentry scrubber), and free text (``text``, ``body``) is cut to 40 characters unless the log
+level is DEBUG. Context such as ``request_id`` is bound through
 structlog's context variables.
 """
 
@@ -22,6 +23,16 @@ _SECRET_KEY = re.compile(r"token|secret|authorization|password|signature|(?:^|_)
 # Keys ending in "_code" that carry diagnostics, not credentials.
 _SAFE_KEYS = frozenset({"status_code", "error_code", "platform_code", "http_status_code"})
 _TEXT_KEYS = frozenset({"text", "body"})
+# Contact details: dropped by key, since a bare WhatsApp number has no "+" to match on.
+_CONTACT_KEYS = frozenset({"email", "phone", "phone_number", "display_phone_number", "wa_id"})
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# International numbers in free text (E.164, maybe spaced); bare digit runs are left alone, as
+# platform ids look the same.
+PHONE = re.compile(r"\+\d[\d ()-]{6,}\d")
+
+
+def mask_contacts(value: str) -> str:
+    return PHONE.sub("[phone]", EMAIL.sub("[email]", value))
 
 
 def is_secret_key(key: str) -> bool:
@@ -34,15 +45,18 @@ def redact(value: Any, *, truncate: bool) -> Any:
         out: dict[Any, Any] = {}
         for key, item in value.items():
             name = str(key)
-            if is_secret_key(name):
+            if is_secret_key(name) or name.lower() in _CONTACT_KEYS:
                 out[key] = REDACTED
             elif truncate and name.lower() in _TEXT_KEYS and isinstance(item, str):
+                item = mask_contacts(item)  # before the cut, so no partial address survives
                 out[key] = item if len(item) <= TEXT_LIMIT else item[:TEXT_LIMIT] + "…"
             else:
                 out[key] = redact(item, truncate=truncate)
         return out
     if isinstance(value, list | tuple):
         return type(value)(redact(item, truncate=truncate) for item in value)
+    if isinstance(value, str):
+        return mask_contacts(value)
     return value
 
 

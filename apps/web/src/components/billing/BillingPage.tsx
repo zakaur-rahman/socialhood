@@ -49,7 +49,16 @@ import {
   planStatus,
   type MeterView,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, PRICE_TAX_NOTE, billingCopy, limitText, planIncludes, pricePerPeriod } from "@/lib/copy";
+import {
+  PLAN_NAME,
+  PRICE_TAX_NOTE,
+  billingCopy,
+  formatPrice,
+  limitText,
+  planIncludes,
+  pricePerPeriod,
+  renewalLine,
+} from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -179,6 +188,7 @@ export function BillingPage() {
           isOwner={isOwner}
           checkout={checkout}
           trialDays={plans.data?.items.find((offer) => offer.plan === "pro")?.trial_days || TRIAL_DAYS}
+          proPrice={plans.data?.items.find((offer) => offer.plan === "pro")?.price ?? null}
         />
         <Tabs value={tab} onValueChange={chooseTab} className="gap-6">
           <TabsList size="xl" className="w-full sm:w-72">
@@ -221,11 +231,14 @@ function CurrentPlan({
   isOwner,
   checkout,
   trialDays,
+  proPrice,
 }: {
   billing: BillingState;
   isOwner: boolean;
   checkout: ReturnType<typeof useStartCheckout>;
   trialDays: number;
+  /** Creator's monthly price, for the renewal line under the button (P-3); null until it loads. */
+  proPrice: { amount_minor: number; currency: string } | null;
 }) {
   const workspace = useCurrentWorkspace();
   const portal = useOpenPortal(workspace.id);
@@ -260,14 +273,21 @@ function CurrentPlan({
     <div className="flex flex-wrap gap-2 md:justify-end">
       {notOnSale ? <p className="text-sm text-fg-secondary">{billingCopy.paidPlansSoon}</p> : null}
       {mayCheckout ? (
-        <Button
-          size="lg"
-          loading={checkout.pending && checkout.plan === "pro"}
-          disabled={checkout.pending && checkout.plan !== "pro"}
-          onClick={() => checkout.start("pro")}
-        >
-          {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
-        </Button>
+        <div className="flex flex-col gap-1 md:items-end">
+          <Button
+            size="lg"
+            loading={checkout.pending && checkout.plan === "pro"}
+            disabled={checkout.pending && checkout.plan !== "pro"}
+            onClick={() => checkout.start("pro")}
+          >
+            {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
+          </Button>
+          {proPrice ? (
+            <p className="max-w-72 text-xs text-fg-secondary md:text-right" data-testid="renewal-line">
+              {renewalLine(formatPrice(proPrice), "month", billing.trial_eligible ? trialDays : 0, new Date())}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {billing.status !== "free" ? (
         <Button
