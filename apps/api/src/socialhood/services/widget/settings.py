@@ -130,6 +130,7 @@ async def out(
         marketing_consent_text=row.marketing_consent_text,
         show_branding=row.show_branding or not can_remove,
         can_remove_branding=can_remove,
+        privacy_url=row.privacy_url,
         sites_limit=int(entitlement(plan, "widget_sites")),
         ai_mode=acct.ai_mode,
         script_url=url,
@@ -176,9 +177,11 @@ async def update(session: AsyncSession, row: WidgetSettings, body: WidgetSetting
             "widget_remove_branding",
             detail='Removing "Powered by Amplychat" is part of Creator and Business.',
         )
+    if values.get("privacy_url") == "":
+        values["privacy_url"] = None  # cleared: the chat links Amplychat's policy again
     if values.get("accent_color"):
         values["accent_color"] = values["accent_color"].upper()
-    nulls = [name for name, value in values.items() if value is None]
+    nulls = [name for name, value in values.items() if value is None and name != "privacy_url"]
     if nulls:
         raise ApiError(
             "validation_error", errors=[FieldError(name, "This can't be empty.") for name in nulls]

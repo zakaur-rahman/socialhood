@@ -81,8 +81,8 @@ export type LegalDocumentKey =
 
 /** Each document's page and the date its text last changed (shown as "Last updated"). */
 export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, { title: string; path: string; lastUpdated: string }> = {
-  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-11-14" },
-  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-11-14" },
+  privacy: { title: "Privacy Policy", path: "/privacy", lastUpdated: "2026-11-21" },
+  terms: { title: "Terms of Service", path: "/terms", lastUpdated: "2026-11-21" },
   // OWNER REVIEW: the refund terms are a default for a monthly SaaS, not a decision yet.
   refunds: { title: "Refund and Cancellation Policy", path: "/refunds", lastUpdated: "2026-11-04" },
   shipping: { title: "Shipping and Delivery Policy", path: "/shipping", lastUpdated: "2026-11-02" },
@@ -97,6 +97,9 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, { title: string; path: st
 export const GRIEVANCE_DAYS_LIMIT = 90;
 /** The default: one month, as the IT Rules 2011 (SPDI, rule 5(9)) ask while they still apply. */
 export const GRIEVANCE_DAYS_DEFAULT = 30;
+
+/** P-5: how soon we review a report of abuse or copyright infringement (/safety and /terms). */
+export const REPORT_REVIEW_BUSINESS_DAYS = 5;
 
 /** A config value that is really set (not undefined, empty or blank). */
 export function isSet(value: string | null | undefined): value is string {

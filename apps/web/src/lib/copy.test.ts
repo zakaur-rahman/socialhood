@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "./api/errors";
 import {
   plural,
+  renewalLine,
   CONNECT_ERRORS,
   completeConnectResult,
   connectResult,
@@ -196,5 +197,21 @@ describe("plural", () => {
     expect(plural(1, "like", "likes")).toBe("like");
     expect(plural(0, "like", "likes")).toBe("likes");
     expect(plural(2, "person", "people")).toBe("people");
+  });
+});
+
+describe("renewalLine (P-3)", () => {
+  const now = new Date("2026-11-13T12:00:00Z");
+  it("a monthly trial: the price and the first charge date, trial length later", () => {
+    expect(renewalLine("$15", "month", 7, now)).toBe("Then $15 a month from 20 Nov. Renews until you cancel in Settings → Billing.");
+  });
+  it("without a date (cached marketing pages) it says after the trial", () => {
+    expect(renewalLine("$15", "month", 7)).toBe(
+      "Then $15 a month after the 7-day trial. Renews until you cancel in Settings → Billing.",
+    );
+  });
+  it("no trial: monthly or every 6 months, paid at checkout", () => {
+    expect(renewalLine("$15", "month", 0, now)).toBe("Renews monthly until you cancel in Settings → Billing.");
+    expect(renewalLine("$81", "six_month", 0, now)).toBe("Renews every 6 months until you cancel in Settings → Billing.");
   });
 });

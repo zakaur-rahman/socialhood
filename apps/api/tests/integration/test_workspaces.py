@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -21,6 +22,18 @@ async def test_members_read_their_workspace(client: httpx.AsyncClient, clerk: Cl
     assert body["reply_language"] == "auto"
     assert body["role"] == "owner"
     assert body["checklist_dismissed_at"] is None
+
+
+async def test_new_workspaces_label_automated_messages(
+    client: httpx.AsyncClient, clerk: Clerk, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P-1: the disclosure line is on from the start (tests/conftest.py turns it off elsewhere)."""
+    line = "Sent by an automated assistant"
+    monkeypatch.setattr("socialhood.repositories.workspaces.DEFAULT_AUTOMATION_DISCLOSURE", line)
+    clerk_id, me = await sign_in(client, clerk)
+    wid = me["workspaces"][0]["id"]
+    body = (await client.get(f"/v1/w/{wid}", headers=clerk.headers(clerk_id))).json()
+    assert body["automation_disclosure"] == line
 
 
 async def test_the_member_count_is_this_workspaces(

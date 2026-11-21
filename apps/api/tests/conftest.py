@@ -58,6 +58,15 @@ os.environ["REDIS_URL"] = workers.redis_url(
 os.environ.setdefault("LOG_LEVEL", "INFO")
 
 
+@pytest.fixture(autouse=True)
+def _unlabelled_new_workspaces(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Tests predate P-1 and expect automated messages without the disclosure line; the default
+    # itself is covered in test_workspaces.py.
+    monkeypatch.setattr(
+        "socialhood.repositories.workspaces.DEFAULT_AUTOMATION_DISCLOSURE", None, raising=True
+    )
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     # A serial test must not share the machine, Postgres or Valkey with other workers' tests.
     # CI runs `pytest -n 4 -m "not serial"`, then `pytest -m serial`.

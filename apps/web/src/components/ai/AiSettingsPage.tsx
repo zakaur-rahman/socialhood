@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Lock, MessagesSquare, ShieldAlert, Timer } from "lucide-react";
+import { Bot, CheckCircle2, Lock, MessagesSquare, ShieldAlert, Timer } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -28,11 +29,21 @@ import {
   useSocialAccounts,
   useUpdateAccount,
   useUpdateAiSettings,
+  useUpdateWorkspace,
+  useWorkspace,
 } from "@/lib/api/queries";
 import type { AccountStatus, AiMode, AiSettings, SocialAccount, TakeoverMinutes } from "@/lib/api/types";
-import { AI_MODE_HINT, AI_MODE_LABEL, AI_MODES, BUILT_IN_ESCALATIONS, TAKEOVER_OPTIONS } from "@/lib/ai/format";
+import {
+  AI_MODE_HINT,
+  AI_MODE_LABEL,
+  AI_MODES,
+  BUILT_IN_ESCALATIONS,
+  DEFAULT_AUTOMATION_DISCLOSURE,
+  TAKEOVER_OPTIONS,
+} from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
+import { useStoredFlag } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -153,6 +164,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
         ) : null
       }
     >
+      {canManage && accounts.some((a) => a.ai_mode === "auto") ? <DisclosurePrompt /> : null}
       {accounts.length === 0 ? (
         <EmptyState title="No connected accounts" body="Connect Instagram or WhatsApp to choose how the AI replies." />
       ) : (
@@ -233,6 +245,47 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
         }}
       />
     </SettingsCard>
+  );
+}
+
+/** P-1: workspaces already on Auto before the label became the default are asked once to turn it
+ * on, never switched silently. Gone once on, or once dismissed in this browser. */
+function DisclosurePrompt() {
+  const current = useCurrentWorkspace();
+  const workspace = useWorkspace(current.id);
+  const update = useUpdateWorkspace(current.id);
+  const [dismissed, setDismissed] = useStoredFlag(`socialhood:disclosure-prompt-dismissed:${current.id}`);
+  if (dismissed || !workspace.data || workspace.data.automation_disclosure) return null;
+  const turnOn = () =>
+    update.mutate(
+      { automation_disclosure: DEFAULT_AUTOMATION_DISCLOSURE },
+      {
+        onSuccess: () => {
+          setDismissed(true);
+          toast.success("Automated messages are now labelled");
+        },
+        onError: (error) => toastError(error),
+      },
+    );
+  return (
+    <Alert
+      tone="brand"
+      icon={<Bot />}
+      className="mb-4"
+      action={
+        <AlertAction onClick={turnOn} disabled={update.isPending}>
+          Turn on the label
+        </AlertAction>
+      }
+      onDismiss={() => setDismissed(true)}
+      dismissLabel="Dismiss the label suggestion"
+    >
+      <AlertTitle>Say when a reply is automated</AlertTitle>
+      <AlertDescription>
+        Auto replies go out without saying they&apos;re automated. Add &ldquo;{DEFAULT_AUTOMATION_DISCLOSURE}&rdquo; to
+        them? You can change the line in Settings → Workspace.
+      </AlertDescription>
+    </Alert>
   );
 }
 
