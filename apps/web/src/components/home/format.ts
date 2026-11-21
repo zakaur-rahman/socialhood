@@ -92,15 +92,16 @@ export function smallChange(
   const direction = diff > 0 ? "up" : "down";
   const sign = diff > 0 ? "+" : MINUS;
   const before = `from ${options.period}`;
+  const vs = `vs ${options.period}`;
   if (options.points) {
     const size = Math.abs(diff) < 0.1 ? "<0.1" : oneDecimal.format(Math.abs(diff));
-    return { direction, good: null, text: `${size.startsWith("<") ? "" : sign}${size} pts`, words: `${direction} ${size === "<0.1" ? "less than 0.1" : size} percentage points ${before}` };
+    return { direction, good: null, text: `${size.startsWith("<") ? "" : sign}${size} pts`, vs, words: `${direction} ${size === "<0.1" ? "less than 0.1" : size} percentage points ${before}` };
   }
   const pct = previous ? percentSize((diff / previous) * 100) : null;
   const pctText = pct === null ? null : `${pct.startsWith("<") ? "" : sign}${pct}%`;
   const absolute = options.format ? options.format(Math.abs(diff)) : null;
   const text = absolute && pctText ? `${sign}${absolute} (${pctText})` : absolute ? `${sign}${absolute}` : (pctText ?? "");
-  return { direction, good: null, text, words: `${direction} ${absolute ?? ""}${pctText ? ` (${pct === "<0.1" ? "less than 0.1%" : `${pct}%`})` : ""} ${before}`.replace("  ", " ") };
+  return { direction, good: null, text, vs, words: `${direction} ${absolute ?? ""}${pctText ? ` (${pct === "<0.1" ? "less than 0.1%" : `${pct}%`})` : ""} ${before}`.replace("  ", " ") };
 }
 
 /** A duration for a chart axis, short enough to stay on one line: "45s", "12m", "28h", "1d 4h". */
@@ -121,6 +122,8 @@ export type Trend = {
   text: string;
   /** For screen readers: "up 25% from the previous 7 days". */
   words: string;
+  /** What the change compares to, shown beside it where there is room: "vs previous 7 days". */
+  vs?: string;
 };
 
 type Better = "higher" | "lower" | "neither";
@@ -129,8 +132,9 @@ const UNIT = { percent: { short: "%", long: "%" }, points: { short: " pts", long
 
 function trend(delta: number, size: string, unit: keyof typeof UNIT, period: string, better: Better): Trend {
   const before = `from the previous ${period}`;
+  const vs = `vs previous ${period}`;
   if (delta === 0) {
-    return { direction: "flat", good: null, text: "No change", words: `no change ${before}` };
+    return { direction: "flat", good: null, text: "No change", vs, words: `no change ${before}` };
   }
   const direction = delta > 0 ? "up" : "down";
   const good = better === "neither" ? null : (direction === "up") === (better === "higher");
@@ -138,6 +142,7 @@ function trend(delta: number, size: string, unit: keyof typeof UNIT, period: str
     direction,
     good,
     text: size.startsWith("<") ? `${size}${UNIT[unit].short}` : `${delta > 0 ? "+" : MINUS}${size}${UNIT[unit].short}`,
+    vs,
     words: `${direction} ${size.startsWith("<") ? "less than 0.1" : size}${UNIT[unit].long} ${before}`,
   };
 }

@@ -298,11 +298,11 @@ body:has(.site) {
     & .hero-tag { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6); font-size: var(--fs-label); line-height: var(--lh-label); color: var(--s-text-2); }
     & .hero-tag .chan-dots { flex: none; }
     & .hero-sub { font-size: var(--fs-lede); line-height: var(--lh-lede); color: var(--s-text-2); max-width: 44ch; margin: 0 0 var(--space-8); }
-    & .hero-sub b { color: var(--s-text); font-weight: 600; }
+    & .hero-sub b { color: var(--s-text); font-weight: 500; }
     & .ctas { display: flex; flex-wrap: wrap; gap: var(--space-3); }
     & .facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: var(--space-6) 0 0; padding: 0; list-style: none; font-size: var(--fs-label); color: var(--s-text-2); }
     & .facts li { display: inline-flex; align-items: center; gap: var(--space-2); }
-    & .facts svg { color: var(--ok); }
+    & .facts svg { color: var(--s-text-3); }
 
     & .stage { margin: 0; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); }
     /* The inbox's frame (sheet, edge, drop, channel line) is a layer of its own under the messages, so
@@ -2934,21 +2934,16 @@ body:has(.site) {
    label swap inside one box, so nothing moves the layout). Reduced motion: the final state stands. */
 @layer components {
   .site {
-    /* ---- hero: one announcement above the eyebrow, a quiet pill-in-a-pill link */
-    & .hero-new { margin: 0 0 var(--space-5); }
+    /* ---- hero: one announcement above the eyebrow, a quiet text link (no pill: the headline carries the colour) */
+    & .hero-new { margin: 0 0 var(--space-6); }
     & .hero-new-link {
-      display: inline-flex; align-items: center; gap: var(--space-2); min-height: 36px; padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-      border: 1px solid var(--s-line); border-radius: 999px; background: var(--s-surface); color: var(--s-text); text-decoration: none;
+      display: inline-flex; align-items: center; gap: var(--space-2); min-height: 24px; color: var(--s-text); text-decoration: none;
       font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500;
-      transition: border-color var(--dur-quick) var(--ease), background-color var(--dur-quick) var(--ease);
+      transition: color var(--dur-quick) var(--ease);
     }
-    & .hero-new-pill {
-      display: inline-flex; align-items: center; flex: none; height: 24px; padding: 0 var(--space-2); border-radius: 999px;
-      background: var(--iris-soft); color: var(--iris-ink); font-size: var(--fs-micro); font-weight: 600;
-    }
+    & .hero-new-pill { flex: none; color: var(--s-text-3); }
     & .hero-new-arrow { flex: none; color: var(--s-text-3); transition: transform var(--dur-fast) var(--ease), color var(--dur-quick) var(--ease); }
     @media (hover: hover) {
-      & .hero-new-link:hover { border-color: var(--s-line-control); }
       & .hero-new-link:hover .hero-new-arrow { transform: translateX(var(--dist-micro)); color: var(--s-text); }
     }
     & .hero-new-link:active { transform: translateY(1px); }

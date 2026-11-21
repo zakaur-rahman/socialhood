@@ -40,7 +40,7 @@ export function FinalCta({ trialDays = 0, from }: { trialDays?: number; from?: "
         <ul className="facts close-facts" aria-label="What you get">
           {perks.map((perk) => (
             <li key={perk}>
-              <Check className="size-4" strokeWidth={2.4} aria-hidden />
+              <Check className="size-4" aria-hidden />
               {perk}
             </li>
           ))}

@@ -315,10 +315,10 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(screen.queryAllByTestId("metric-badge")).toHaveLength(0);
   });
 
-  it("the header: the greeting, the channels and the period in the workspace's days, and the channels pill", async () => {
+  it("the header: the page title, the channels and the period in the workspace's days, and the channels pill", async () => {
     setup();
     expect(
-      await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), Priya$/ }),
+      await screen.findByRole("heading", { level: 1, name: "Home" }),
     ).toBeInTheDocument();
     expect(await screen.findByTestId("home-subtitle")).toHaveTextContent(
       "Overview across Instagram & WhatsApp · Last 7 days · 24–30 Sep",

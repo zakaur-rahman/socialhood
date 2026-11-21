@@ -408,12 +408,6 @@ export function reconnectBanner(username: string | null | undefined): string {
     : "Reconnect your Instagram account to keep receiving messages";
 }
 
-export function greeting(now: Date, firstName?: string | null): string {
-  const hour = now.getHours();
-  const part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  return firstName ? `${part}, ${firstName}` : part;
-}
-
 // ---- AI and knowledge (P5, §4.7)
 
 const count = new Intl.NumberFormat("en-US");

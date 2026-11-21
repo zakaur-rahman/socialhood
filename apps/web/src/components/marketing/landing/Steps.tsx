@@ -1,10 +1,10 @@
-import { BookOpenText, Link2, type LucideIcon, MessageSquareReply } from "lucide-react";
+import { BookOpenText, type LucideIcon, MessageSquareReply, Plug } from "lucide-react";
 
 /** The three setup steps, as the site has always described them; each with its icon (C-157 motion), shown on the feature pages (GtmPageView). */
 export const SETUP_STEPS: { title: string; body: string; icon: LucideIcon }[] = [
   {
     title: "Connect your accounts",
-    icon: Link2,
+    icon: Plug,
     body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Amplychat never asks for your password.",
   },
   {

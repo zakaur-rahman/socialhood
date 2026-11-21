@@ -12,7 +12,6 @@ import {
   ChartLine,
   Hand,
   Inbox,
-  Link2,
   type LucideIcon,
   MessageCircleQuestionMark,
   MessageSquareReply,
@@ -90,7 +89,7 @@ export const STAGES: Stage[] = [
     id: "connect",
     short: "Connect your accounts",
     title: SETUP_STEPS[0].title,
-    icon: Link2,
+    icon: Plug,
     // SETUP_STEPS[0], then the widget's one line of code (components/widget/WidgetSettingsPage.tsx).
     body: [SETUP_STEPS[0].body, "Add website chat by pasting one line of code into your site."],
     points: [

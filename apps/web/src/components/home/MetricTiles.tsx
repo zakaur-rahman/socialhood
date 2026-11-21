@@ -81,7 +81,7 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
             <span>
               {formatCount(current.messages_received)} in {days}
             </span>
-            {received ? <TrendChip trend={received} /> : null}
+            {received ? <TrendChip trend={received} compare /> : null}
           </span>
         }
       />

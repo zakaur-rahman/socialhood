@@ -13,9 +13,9 @@ import { Alert, AlertAction } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInboxCounts, useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
+import { useInboxCounts, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
 import type { Overview } from "@/lib/api/types";
-import { errorMessage, greeting } from "@/lib/copy";
+import { errorMessage } from "@/lib/copy";
 import { gapPrefill } from "@/lib/knowledge/prefill";
 import { toastError } from "@/lib/toast-error";
 import { dayKey } from "@/lib/tz";
@@ -39,7 +39,7 @@ import { TopIntentsCard } from "./TopIntentsCard";
 import { TopPostsCard } from "./TopPostsCard";
 
 /**
- * Home (UX-SCR-01, FR-HOME-01; redesigned, C-065): the greeting with the channels and the period,
+ * Home (UX-SCR-01, FR-HOME-01; redesigned, C-065): the page title with the channels and the period,
  * the channels pill, 7 days / 30 days / Custom (remembered on this device) and refresh; the
  * onboarding checklist until dismissed (once complete, for one session only); accounts to fix; the
  * metric tiles with their Attention and Fast labels; sentiment, the most commented posts and what customers asked about; open questions
@@ -48,7 +48,6 @@ import { TopPostsCard } from "./TopPostsCard";
  */
 export function HomeScreen() {
   const workspace = useCurrentWorkspace();
-  const me = useMe();
   const now = useNow();
   const today = dayKey(now, workspace.timezone);
   const [stored, setStored] = useStoredString<string>(`socialhood:home-range:${workspace.id}`, "7d");
@@ -58,8 +57,6 @@ export function HomeScreen() {
   const [sheet, setSheet] = useState<SourceSheetMode | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const firstName = me.data?.name?.split(" ")[0];
-  const title = me.data ? greeting(new Date(), firstName) : "Home";
   const canManage = workspace.role !== "agent";
   const data = overview.data;
 
@@ -71,9 +68,9 @@ export function HomeScreen() {
   };
 
   const header = (
-    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex pt-4flex-col gap-4 lg:flex-row lg:items-end lg:justify-between")}>
+    <header className={cn(STICKY_PAGE_HEADER, "mb-6 flex flex-col gap-4 pt-4 lg:flex-row lg:items-end lg:justify-between")}>
       <div className="min-w-0">
-        <h1 className={PAGE_TITLE}>{title}</h1>
+        <h1 className={PAGE_TITLE}>Home</h1>
         {data ? (
           <p className="mt-1 text-sm text-fg-secondary" data-testid="home-subtitle">
             {channelsLine(data.platforms_connected)}
