@@ -37,12 +37,12 @@ test.describe("GR-22 business hours", () => {
 
     const fan = `e2e_gr22_${Date.now().toString(36)}`;
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "Are you open?", fromId: fan });
-    await expect.poll(async () => (await outbound(api, workspace.id)).filter((t) => t === AWAY).length, { timeout: 30_000 }).toBe(1);
+    await expect.poll(async () => (await outbound(api, workspace.id)).filter((t) => t.startsWith(AWAY)).length, { timeout: 30_000 }).toBe(1);
 
     // Another message in the same closed window: no second away message.
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "Hello?", fromId: fan });
     await new Promise((resolve) => setTimeout(resolve, 8_000));
-    expect((await outbound(api, workspace.id)).filter((t) => t === AWAY)).toHaveLength(1);
+    expect((await outbound(api, workspace.id)).filter((t) => t.startsWith(AWAY))).toHaveLength(1);
   });
 
   test("no away message while open", async ({ api, sandbox }) => {
@@ -52,7 +52,7 @@ test.describe("GR-22 business hours", () => {
 
     await api.inbound(workspace.id, { accountId: account.id, kind: "dm", text: "Are you open?", fromId: "e2e_gr22_open" });
     await new Promise((resolve) => setTimeout(resolve, 8_000));
-    expect((await outbound(api, workspace.id)).filter((t) => t === AWAY)).toHaveLength(0);
+    expect((await outbound(api, workspace.id)).filter((t) => t.startsWith(AWAY))).toHaveLength(0);
   });
 
   test("an automation that needs outside hours answers while closed and not while open", async ({ api, sandbox }) => {

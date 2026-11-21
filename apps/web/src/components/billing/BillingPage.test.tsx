@@ -115,6 +115,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(within(cards[1]).getByTestId("renewal-pro")).toHaveTextContent(
       /^Then ₹999 a month from \d{1,2} [A-Z][a-z]{2,3}. Renews until you cancel in Settings → Billing\.$/,
     );
+    expect(within(current).getByTestId("renewal-line")).toHaveTextContent(/^Then ₹999 a month from /);
 
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));

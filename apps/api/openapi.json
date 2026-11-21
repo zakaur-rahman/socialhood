@@ -27494,6 +27494,17 @@
             "title": "Position",
             "type": "string"
           },
+          "privacy_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Url"
+          },
           "script_url": {
             "title": "Script Url",
             "type": "string"
@@ -27535,6 +27546,7 @@
           "marketing_consent_text",
           "show_branding",
           "can_remove_branding",
+          "privacy_url",
           "sites_limit",
           "ai_mode",
           "script_url",
@@ -27669,6 +27681,19 @@
               }
             ],
             "title": "Position"
+          },
+          "privacy_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "pattern": "^(https?://[^\\s/?#]+\\S*)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Url"
           },
           "show_branding": {
             "anyOf": [

@@ -300,8 +300,8 @@ function sections(): LegalSection[] {
               or summaries. Features you use on purpose, like a suggested reply or Ask {N}, still send the text they need.
             </li>
             <li>
-              A business can add a short line, such as &quot;Sent automatically&quot;, to the messages its automations and
-              Auto mode send (Settings → Workspace).
+              New workspaces add a short line, &quot;Sent by an automated assistant&quot;, to the messages their automations
+              and Auto mode send. A business can change or remove it (Settings → Workspace).
             </li>
             <li>Ask {N} reads your workspace&apos;s data to answer. It never sends, changes or deletes anything.</li>
           </ul>

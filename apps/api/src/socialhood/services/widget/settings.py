@@ -181,9 +181,7 @@ async def update(session: AsyncSession, row: WidgetSettings, body: WidgetSetting
         values["privacy_url"] = None  # cleared: the chat links Amplychat's policy again
     if values.get("accent_color"):
         values["accent_color"] = values["accent_color"].upper()
-    nulls = [
-        name for name, value in values.items() if value is None and name != "privacy_url"
-    ]
+    nulls = [name for name, value in values.items() if value is None and name != "privacy_url"]
     if nulls:
         raise ApiError(
             "validation_error", errors=[FieldError(name, "This can't be empty.") for name in nulls]
