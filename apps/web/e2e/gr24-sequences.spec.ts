@@ -75,8 +75,8 @@ test.describe("GR-24 sequences", () => {
       "GET",
       `/v1/w/${wid}/conversations/${thread?.id}/messages`,
     );
-    expect(messages.items.some((m) => m.text === "Anything else I can help with?")).toBe(true);
-    expect(messages.items.some((m) => m.text === "Still thinking it over?")).toBe(false);
+    expect(messages.items.some((m) => m.text?.startsWith("Anything else I can help with?"))).toBe(true);
+    expect(messages.items.some((m) => m.text?.startsWith("Still thinking it over?"))).toBe(false);
   });
 
   test("the editor saves a draft from the form", async ({ page, api, sandbox }) => {

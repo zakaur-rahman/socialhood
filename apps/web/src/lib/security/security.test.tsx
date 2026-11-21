@@ -41,6 +41,7 @@ describe("the web CSP (SEC-11)", () => {
         "https://o42.ingest.us.sentry.io",
       ]),
     );
+    expect(csp).not.toContain("clerk-telemetry.com"); // P-8: Clerk's telemetry is off
     expect(directive(csp, "script-src")).toEqual(
       expect.arrayContaining(["https://clerk.amplychat.com", "https://connect.facebook.net", "https://cloud.umami.is"]),
     );

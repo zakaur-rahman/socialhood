@@ -56,6 +56,8 @@ class WidgetSettings(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     # "Powered by Amplychat". Free always shows it; Creator and Business can turn it off (PD-7).
     show_branding: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    # The business's privacy page, linked under the composer; None links Amplychat's own (P-2).
+    privacy_url: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         UniqueConstraint("social_account_id"),
@@ -70,4 +72,7 @@ class WidgetSettings(IdMixin, TimestampMixin, TenantScoped, Base):
             name="marketing_consent_text_length",
         ),
         CheckConstraint("cardinality(allowed_domains) <= 20", name="allowed_domains_count"),
+        CheckConstraint(
+            "privacy_url ~ '^https?://' AND char_length(privacy_url) <= 2000", name="privacy_url"
+        ),
     )

@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { AGENCY, formatPrice } from "@/lib/copy";
+import { AGENCY, formatPrice, renewalLine } from "@/lib/copy";
 import type { PlanCard, Pricing as PricingData } from "@/lib/marketing/plans";
 import { SIGN_UP_PATH, appUrl } from "@/lib/marketing/site";
 import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
@@ -40,7 +40,7 @@ function PriceLine({ card, pricing, six }: { card: PlanCard; pricing: PricingDat
           <small> every 6 months</small>
         </p>
         <p className="sub">
-          {note}. {planned ? (card.plan === "agency" ? AGENCY.note : "Planned price, when we launch.") : "Cancel anytime."}
+          {note}. {planned ? (card.plan === "agency" ? AGENCY.note : "Planned price, when we launch.") : renewalLine(total, "six_month", 0)}
         </p>
       </>
     );
@@ -80,8 +80,10 @@ function PriceLine({ card, pricing, six }: { card: PlanCard; pricing: PricingDat
         </p>
         <p className="sub">
           {card.trialDays > 0
-            ? `Try ${card.name} free for ${card.trialDays} days, once per workspace. A card is required to start the trial.`
-            : "Cancel anytime."}
+            ? `Try ${card.name} free for ${card.trialDays} days, once per workspace. A card is required to start the trial. `
+            : ""}
+          {/* P-3: no date here, the page is cached (revalidate); the app's plan cards show it. */}
+          {renewalLine(card.price, "month", card.trialDays)}
         </p>
       </>
     );

@@ -70,10 +70,10 @@ describe("automation disclosure (FR-AUT-11)", () => {
     expect(screen.queryByLabelText("Line to add")).not.toBeInTheDocument();
 
     await user.click(toggle);
-    expect(screen.getByLabelText("Line to add")).toHaveValue("Sent automatically");
+    expect(screen.getByLabelText("Line to add")).toHaveValue("Sent by an automated assistant");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() => expect(patches).toEqual([{ automation_disclosure: "Sent automatically" }]));
+    await waitFor(() => expect(patches).toEqual([{ automation_disclosure: "Sent by an automated assistant" }]));
   });
 
   it("turning it off sends null", async () => {

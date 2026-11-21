@@ -779,6 +779,22 @@ export function pricePerPeriod(price: { amount_minor: number; currency: string; 
   return price.interval === "six_month" ? `${formatPrice(price)} every 6 months` : pricePerMonth(price);
 }
 
+/**
+ * P-3: the line under a plan's checkout button, saying what is charged and that it renews. A trial is
+ * monthly only (C-174); with `now` the first charge date is shown (Dodo charges when the trial ends).
+ * Marketing pages are cached, so they pass no `now` and say "after the trial" instead of a date.
+ */
+export function renewalLine(price: string, period: BillingPeriod, trialDays: number, now?: Date): string {
+  const renews = "Renews until you cancel in Settings → Billing.";
+  // No trial: paid at checkout, and the price is already beside the button.
+  if (period === "six_month") return "Renews every 6 months until you cancel in Settings → Billing.";
+  if (trialDays <= 0) return "Renews monthly until you cancel in Settings → Billing.";
+  if (!now) return `Then ${price} a month after the ${trialDays}-day trial. ${renews}`;
+  const charge = new Date(now.getTime() + trialDays * 86_400_000);
+  const on = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(charge);
+  return `Then ${price} a month from ${on}. ${renews}`;
+}
+
 export const billingCopy = {
   upgradeCta: "Upgrade to Creator",
   upgradeToBusiness: "Upgrade to Business",

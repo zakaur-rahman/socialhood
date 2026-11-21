@@ -33,6 +33,7 @@ function settings(overrides: Partial<WidgetSettings> = {}): WidgetSettings {
     marketing_consent_text: "Email me news and offers. You can unsubscribe at any time.",
     show_branding: true,
     can_remove_branding: false,
+    privacy_url: null,
     sites_limit: 3,
     ai_mode: "suggest",
     script_url: "https://api.example.com/widget.js",
@@ -184,6 +185,25 @@ describe("WidgetSettingsPage (GR-28)", () => {
     await user.click(branding);
     await user.click(within(await screen.findByRole("region", { name: "Save changes" })).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(sent).toEqual({ show_branding: false }));
+  });
+
+  it("saves the privacy page linked under the chat, and holds back an address that isn't http", async () => {
+    const user = userEvent.setup();
+    let sent: WidgetSettingsUpdate | undefined;
+    setup(settings(), {
+      "PUT /v1/w/:wid/widget": (call) => {
+        sent = call.body as WidgetSettingsUpdate;
+        return json(settings({ privacy_url: "https://shop.example/privacy" }));
+      },
+    });
+    const field = await screen.findByRole("textbox", { name: "Privacy page" });
+    expect(field).toHaveValue("");
+    await user.type(field, "shop.example/privacy");
+    expect(await screen.findByText("Enter a privacy page address that starts with https://.")).toBeInTheDocument();
+    await user.clear(field);
+    await user.type(field, "https://shop.example/privacy");
+    await user.click(within(await screen.findByRole("region", { name: "Save changes" })).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent).toEqual({ privacy_url: "https://shop.example/privacy" }));
   });
 
   it("links to the AI settings for the chat's AI mode", async () => {

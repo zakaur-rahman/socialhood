@@ -13,6 +13,7 @@ export type WidgetForm = {
   consentEnabled: boolean;
   consentText: string;
   branding: boolean;
+  privacyUrl: string;
 };
 
 export const TITLE_MAX = 40;
@@ -20,6 +21,9 @@ export const GREETING_MAX = 300;
 export const EMAIL_PROMPT_MAX = 200;
 export const CONSENT_TEXT_MAX = 300;
 export const DOMAIN_MAX_CHARS = 253;
+export const PRIVACY_URL_MAX = 2000;
+/** The API's rule: an http or https address with a host. */
+const HTTP_URL = /^https?:\/\/[^\s/?#]+\S*$/;
 
 export const EMAIL_CAPTURE_LABEL: Record<WidgetEmailCapture, string> = {
   off: "Don't ask",
@@ -40,6 +44,7 @@ export function toForm(s: WidgetSettings): WidgetForm {
     consentEnabled: s.marketing_consent_enabled,
     consentText: s.marketing_consent_text,
     branding: s.show_branding,
+    privacyUrl: s.privacy_url ?? "",
   };
 }
 
@@ -58,6 +63,8 @@ export function toBody(form: WidgetForm, saved: WidgetSettings): WidgetSettingsU
   if (form.consentEnabled !== before.consentEnabled) body.marketing_consent_enabled = form.consentEnabled;
   if (form.consentText.trim() !== before.consentText) body.marketing_consent_text = form.consentText.trim();
   if (form.branding !== before.branding) body.show_branding = form.branding;
+  // "" clears it, and the chat links Amplychat's policy again.
+  if (form.privacyUrl.trim() !== before.privacyUrl) body.privacy_url = form.privacyUrl.trim();
   return body;
 }
 
@@ -73,6 +80,8 @@ export function problem(form: WidgetForm): string | null {
   if (form.emailCapture !== "off" && form.consentEnabled && !form.consentText.trim()) {
     return "Write the words next to the consent box.";
   }
+  const privacy = form.privacyUrl.trim();
+  if (privacy && !HTTP_URL.test(privacy)) return "Enter a privacy page address that starts with https://.";
   return null;
 }
 

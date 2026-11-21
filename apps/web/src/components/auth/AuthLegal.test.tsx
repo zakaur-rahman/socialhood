@@ -49,7 +49,7 @@ describe("AuthLegal", () => {
     const withConsent = nav.querySelector('[data-legal-line="with-consent"]');
     // The sentence as seen (the links' "(opens in a new tab)" is for screen readers only).
     expect(fallback?.textContent?.replace(/\s*\(opens in a new tab\)/g, "")).toBe(
-      "By continuing, you agree to our Terms and Privacy Policy.",
+      "By continuing, you agree to our Terms and Privacy Policy and confirm you are 18 or older.",
     );
     // CSS swaps the two (:has on Clerk's #legalAccepted-field): never both on screen.
     expect(fallback?.className).toContain("[[data-auth-shell]:has(#legalAccepted-field)_&]:hidden");

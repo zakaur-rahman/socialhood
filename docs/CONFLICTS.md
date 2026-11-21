@@ -10140,3 +10140,39 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Left as they are:** reply and react from the public API, MCP and agent tools; quoting from
   scheduled messages; the website chat widget doesn't show quotes or reactions yet; Instagram and
   Facebook reactions beyond the heart wait for a real account to confirm them.
+
+## C-202 · Privacy fixes before launch: P-1 to P-8 and the 18+ line (owner, 2026-11-21)
+
+- **Why:** the 2026-11-13 privacy audit (`privacy-audit-2026-11-13/findings.md`, outside the repo)
+  and the launch plan's Phase 2 were never built. The owner agreed to build the fixes that need no
+  product decision, plus AI labels by default (P-1), the website chat notice and lazy session
+  (P-2) and an 18+ line at sign-up.
+- **Decided while building:**
+  - **P-1:** new workspaces start with "Sent by an automated assistant". It says "automated", not
+    "AI", because the same line also ends keyword-automation messages. It's set where workspaces
+    are created, not as a column default, so there's no migration. Existing workspaces aren't
+    switched on silently. Owners and admins with an account on Auto and no line see a dismissible
+    prompt in Settings → AI rules; it remembers the choice per workspace in that browser. The
+    API tests turn the default off with an autouse fixture, because they predate it.
+  - **P-2:** a `privacy_url` setting (http or https, up to 2,000 characters, with a check
+    constraint), falling back to amplychat.com/privacy. The chat starts its session and stores
+    `sh_visitor_` only when opened. A returning visitor who already has an ID still gets a session
+    on page load, so unread replies keep their badge; this stores nothing new. The email prompt
+    wording is unchanged: naming the business needs a migration and leaves old widgets as they are.
+  - **P-3:** the renewal line is dated in the app ("Then $15 a month from 28 Nov"). The marketing
+    pricing page says "after the 7-day trial", because it's cached and rendered on the server.
+  - **P-5:** reports of abuse or copyright are reviewed within 5 business days
+    (`REPORT_REVIEW_BUSINESS_DAYS`).
+  - **P-7:** emails and +-prefixed phone numbers are masked in every logged string, and the
+    `email`, `phone`, `phone_number`, `display_phone_number` and `wa_id` keys are blanked.
+    `phone_number_id` is a Meta ID and stays.
+  - **P-8:** Clerk telemetry is off in the browser and its hosts are out of the CSP.
+- **Left open:**
+  - Meta deletion-request records have no purge, so the policy says "No set end date yet". This
+    needs a period from the owner and a purge job.
+  - Clerk's server-side telemetry needs `CLERK_TELEMETRY_DISABLED=1` on the VM.
+  - Nobody has checked the breach plan's outside deadlines (CERT-In 6 h, DPDP Rule 7, Meta) against
+    the current rules.
+  - No command re-encrypts stored tokens after a Fernet key rotation.
+  - Deferred to after launch: private, expiring links for customer media, and a self-serve
+    workspace export.

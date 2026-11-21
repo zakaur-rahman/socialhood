@@ -14707,6 +14707,8 @@ export interface components {
              * @enum {string}
              */
             position: "right" | "left";
+            /** Privacy Url */
+            privacy_url: string | null;
             /** Script Url */
             script_url: string;
             /** Show Branding */
@@ -14743,6 +14745,8 @@ export interface components {
             marketing_consent_text?: string | null;
             /** Position */
             position?: ("right" | "left") | null;
+            /** Privacy Url */
+            privacy_url?: string | null;
             /** Show Branding */
             show_branding?: boolean | null;
             /** Title */

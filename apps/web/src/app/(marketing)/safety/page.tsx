@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   CalendarX,
+  Flag,
   Clock,
   HandCoins,
   Image as ImageIcon,
@@ -22,6 +23,7 @@ import { InfoBand, InfoCard, InfoPage } from "@/components/marketing/InfoPage";
 import { Ico } from "@/components/marketing/landing/Ico";
 import { Callout } from "@/components/site/Callout";
 import { SUPPORT_EMAIL } from "@/lib/copy";
+import { REPORT_REVIEW_BUSINESS_DAYS } from "@/lib/legal";
 import { pageMetadata } from "@/lib/marketing/seo";
 import { SITE_NAME } from "@/lib/marketing/site";
 
@@ -183,6 +185,18 @@ export default function SafetyPage() {
             What to do: check the account&apos;s status in the Instagram app and follow Meta&apos;s steps there. Once the account
             is in good standing again, reconnect it in {SITE_NAME}. If you&apos;re unsure what happened, write to {mail} and
             we&apos;ll help you read the errors.
+          </p>
+        </Callout>
+      </InfoBand>
+
+      <InfoBand id="report" title="Report abuse or copyright">
+        <Callout tone="info" icon={Flag}>
+          <p>
+            If a business uses {SITE_NAME} to spam, harass or mislead people, or posts or sends something that copies your
+            work, email {mail} with a link to the post, message, chat or website, and what is wrong. For copyright, say
+            what work is yours. We review each report within {REPORT_REVIEW_BUSINESS_DAYS} business days and remove content
+            that breaks our <Link href="/terms#acceptable-use">Terms</Link>. Content on Instagram, Facebook or WhatsApp
+            itself can also be reported to Meta in its apps.
           </p>
         </Callout>
       </InfoBand>
