@@ -1,9 +1,9 @@
 "use client";
 
-import { Keyboard, Layers } from "lucide-react";
+import { Keyboard } from "lucide-react";
 import { useEffect, useRef, useState, type Ref } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AccountChoice, AllAccountsChoice } from "@/components/connections/AccountChoice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
@@ -58,19 +58,6 @@ function countText(count: number): string {
 const SHORT_ON_ROOM = "(max-height: 40rem)";
 
 /** An account in the filter: its picture and handle, in the list and on the closed Select (C-188). */
-function AccountChoice({ account }: { account: SocialAccount }) {
-  const name = accountName(account);
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <Avatar size="sm" aria-hidden>
-        {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
-        <AvatarFallback className="bg-raised text-fg">{name.replace("@", "").slice(0, 1).toUpperCase()}</AvatarFallback>
-      </Avatar>
-      <span className="min-w-0 truncate">{name}</span>
-    </span>
-  );
-}
-
 /**
  * UX-INB-03, re-arranged (C-063): "Inbox" with the Chats | Scheduled tabs, a full-width search
  * (debounced, server-side) with the account filter beside it, and the view chips. The Tabs root
@@ -187,15 +174,9 @@ export function ListHeader({
                 <SelectContent>
                   <SelectItem
                     value="all"
-                    check="highlight"
-                    icon={
-                      <span className="grid size-6 place-items-center rounded-full bg-raised">
-                        <Layers className="size-3.5" aria-hidden />
-                      </span>
-                    }
-                  >
-                    All accounts
-                  </SelectItem>
+                    check="highlight" textValue="All accounts">
+                <AllAccountsChoice />
+              </SelectItem>
                   {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id} textValue={accountName(account)} check="highlight">
                       <AccountChoice account={account} />
