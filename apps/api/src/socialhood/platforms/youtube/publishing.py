@@ -14,7 +14,10 @@
   tried against Google).
 - **Quota.** videos.insert has its own bucket (100 a day per Google Cloud project); every other
   call shares 10,000 units: videos.list 1, playlistItems.list 1, channels.list 1, videos.update
-  50, videos.delete 50. ``platforms/buckets.youtube_uploads`` counts inserts.
+  50, videos.delete 50, thumbnails.set 50. ``platforms/buckets.youtube_uploads`` counts inserts.
+- **Thumbnails** (C-203). ``set_thumbnail`` reads the image from storage and POSTs its bytes to
+  ``upload/youtube/v3/thumbnails/set?videoId=…`` (a media upload). A channel YouTube doesn't let
+  use custom thumbnails (not verified) answers 403 ``forbidden``; a bad image 400.
 - ``Videos`` is what the services call; ``videos_for`` picks the implementation: Google
   (``HttpVideos``), the sandbox channel's (``SandboxVideos``: no Google, no state; see below) or a
   test's fake (``platforms/youtube/fake.FakeYouTube``).
@@ -49,6 +52,7 @@ from socialhood.settings import Settings
 log = get_logger("socialhood.platforms")
 
 UPLOAD_API = "https://www.googleapis.com/upload/youtube/v3/videos"
+THUMBNAIL_API = "https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
 CHUNK_BYTES = 8 * 1024 * 1024  # a multiple of 256 KiB, as Google asks of every piece but the last
 SANDBOX_CHUNK_BYTES = 512 * 1024  # the dev route sits behind the API's 1 MB body limit
 SESSION_LIFETIME = timedelta(hours=24)  # ours: an unfinished direct upload ends then
@@ -211,6 +215,12 @@ class Videos(Protocol):
 
     async def delete(self, token: str, video_id: str) -> None:
         """videos.delete (50 units); a video already gone is fine."""
+        ...
+
+    async def set_thumbnail(
+        self, token: str, video_id: str, image_url: str, *, content_type: str
+    ) -> None:
+        """thumbnails.set (50 units) with the image at ``image_url`` (C-203)."""
         ...
 
     async def recent_uploads(self, token: str, channel_id: str, *, limit: int = 10) -> list[Video]:
@@ -471,6 +481,28 @@ class HttpVideos:
         )
         del response
 
+    async def set_thumbnail(
+        self, token: str, video_id: str, image_url: str, *, content_type: str
+    ) -> None:
+        try:
+            image = await self.client.get(image_url, timeout=CHUNK_TIMEOUT)
+        except httpx.HTTPError as error:
+            raise PlatformError(
+                "platform_unavailable", message="Couldn't read the thumbnail from storage."
+            ) from error
+        if image.status_code != 200:
+            raise PlatformError(
+                "platform_unavailable", message="Couldn't read the thumbnail from storage."
+            )
+        await self._raw(
+            "POST",
+            THUMBNAIL_API,
+            endpoint="thumbnails.set",
+            params={"videoId": video_id, "uploadType": "media"},
+            content=image.content,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": content_type},
+        )
+
     async def recent_uploads(self, token: str, channel_id: str, *, limit: int = 10) -> list[Video]:
         uploads = "UU" + channel_id[2:]  # a channel's uploads playlist
         body = await self.http.request(
@@ -578,6 +610,11 @@ class SandboxVideos:
 
     async def delete(self, token: str, video_id: str) -> None:
         return None
+
+    async def set_thumbnail(
+        self, token: str, video_id: str, image_url: str, *, content_type: str
+    ) -> None:
+        return None  # YouTube takes it; nothing is read or sent
 
     async def recent_uploads(self, token: str, channel_id: str, *, limit: int = 10) -> list[Video]:
         return []

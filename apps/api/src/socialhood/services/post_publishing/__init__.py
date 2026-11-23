@@ -6,7 +6,8 @@ The publish jobs' work (jobs/tasks/publishing.py stays thin):
   media item and automation links, the post's status, notifications) and post_first_comment;
 - ``projection``: the ``scheduled_post.updated`` payload and the status rule;
 - ``youtube_direct``: a YouTube-only post's upload straight to YouTube, its edits and expiry;
-  ``youtube_media``: YouTube at the publish time (read back, or upload from the tray) (C-196).
+  ``youtube_media``: YouTube at the publish time (read back, or upload from the tray) (C-196);
+- ``youtube_thumbnail``: a YouTube video's custom thumbnail once the video is there (C-203).
 
 Nothing here opens ``tenant_bypass_scope``: the jobs do, for the cross-workspace claims only.
 """

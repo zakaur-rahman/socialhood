@@ -2,7 +2,7 @@
 
 import { PAGE_TITLE } from "@/styles/tokens";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Check, Copy, EllipsisVertical, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
+import { AlertCircle, Check, Copy, EllipsisVertical, Pencil, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -116,7 +116,7 @@ import { useMediaUploads, type Uploader } from "./use-media-uploads";
 import { ComposerTools } from "./ComposerTools";
 import { sharedFreeTime, WHEN_DATE_ID, WhenSection, type QueuePreview, type WhenMode } from "./WhenSection";
 import { useYouTubeUpload, YOUTUBE_DROPZONE_ID, YouTubeDropzone } from "./YouTubeDropzone";
-import { YOUTUBE_SECTION_ID, youtubeFieldId, YouTubeOptions } from "./YouTubeOptions";
+import { savedThumbnail, YOUTUBE_SECTION_ID, youtubeFieldId, YouTubeOptions } from "./YouTubeOptions";
 
 export type ComposerDeps = {
   /** Tests pass fakes; the app uploads through the API and Cloudinary and crops on a canvas. */
@@ -227,7 +227,10 @@ function Composer({
   const groupsQuery = useComposerHashtagGroups(wid);
   const groups = groupsQuery.data ?? [];
 
-  const editable = isEditable(server.status);
+  // A scheduled post opens locked: nothing changes, and no time check runs, until Edit is pressed.
+  const [unlocked, setUnlocked] = useState(false);
+  const locked = server.status === "scheduled" && !unlocked;
+  const editable = isEditable(server.status) && !locked;
   const isDraft = server.status === "draft";
   const { draft, update, flush, settle, reset, discard, status: saveStatus, error: saveError, dirty } = usePostDraft(wid, initial, {
     autosave: isDraft,
@@ -623,6 +626,7 @@ function Composer({
   /** Stored post after a lifecycle action: it becomes the draft, and its time fills When. */
   const afterAction = (post: ScheduledPost) => {
     reset(post);
+    setUnlocked(false);
     setActionErrors([]);
     if (post.publish_at) setWhen(toZonedInputs(new Date(post.publish_at), timeZone));
     setWhenMode("time");
@@ -863,7 +867,7 @@ function Composer({
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4 lg:max-w-[640px]">
           <fieldset disabled={!editable} className="min-w-0 space-y-4">
-            <legend className="sr-only">{editable ? "Post" : "Post (read-only)"}</legend>
+            <legend className="sr-only">{editable ? "Post" : locked ? "Post (press Edit to change it)" : "Post (read-only)"}</legend>
             <AccountPicker
               accounts={igAccounts}
               loading={accountsQuery.isPending}
@@ -929,7 +933,7 @@ function Composer({
               tagTotal={tagTotal}
             />
             )}
-            {route ? <YouTubeOptions options={youtubeOptions} onChange={setYouTubeOptions} route={route} /> : null}
+            {route ? <YouTubeOptions options={youtubeOptions} onChange={setYouTubeOptions} route={route} wid={wid} upload={upload} saved={savedThumbnail(server.targets, youtubeOptions.thumbnail_media_id)} /> : null}
             {isStory ? null : (
             <>
             <CaptionEditor
@@ -984,14 +988,14 @@ function Composer({
               readOnly={!editable}
               beforeCreate={isDraft ? settle : async () => !dirty}
             />
-            {editable ? (
+            {editable || locked ? (
               <WhenSection
                 mode={isDraft ? whenNow : "time"}
                 onModeChange={onModeChange}
                 value={when}
                 onChange={onWhenChange}
                 timeZone={timeZone}
-                error={timeError}
+                error={locked ? null : timeError}
                 queue={queue}
                 scheduledAt={publishAtLabel}
                 allowQueue={isDraft && !youtubeOnly}
@@ -1004,6 +1008,25 @@ function Composer({
             ) : null}
           </fieldset>
 
+          {locked ? (
+            <div
+              ref={reserveBottomBar}
+              role="region"
+              aria-label="Post actions"
+              className={cn(
+                "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
+                BOTTOM_BAR,
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-fg-secondary">Scheduled. Press Edit to change it.</p>
+                <Button size="lg" className="ml-auto" onClick={() => setUnlocked(true)}>
+                  <Pencil aria-hidden />
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {editable ? (
             <>
               <PostChecklist
@@ -1028,7 +1051,11 @@ function Composer({
                     <Button variant="ghost" size="lg" onClick={() => void onSaveDraft()} disabled={acting}>
                       Save draft
                     </Button>
-                  ) : null}
+                  ) : (
+                    <Button variant="ghost" size="lg" onClick={() => afterAction(server)} disabled={acting}>
+                      Cancel
+                    </Button>
+                  )}
                   <DisabledReason reason={publishBlock}>
                     <Button
                       variant="secondary"
@@ -1091,6 +1118,7 @@ function Composer({
                     title: youtubeOptions.title,
                     format: youtubeOptions.format,
                     videoUrl: youtubeOnly ? ytFileUrl : postAssets[0]?.resource_type === "video" ? postAssets[0].url || null : null,
+                    thumbnailUrl: savedThumbnail(server.targets, youtubeOptions.thumbnail_media_id)?.thumbnail_url ?? null,
                   }
                 : undefined
             }

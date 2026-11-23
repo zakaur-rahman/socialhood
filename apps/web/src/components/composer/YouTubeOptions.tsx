@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { ChevronDown, ImagePlus, X } from "lucide-react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChipInput } from "@/components/ui/chip-input";
@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { youtubeCopy } from "@/lib/copy";
+import type { ScheduledPostTarget } from "@/lib/publishing/types";
 import {
   charCount,
+  checkYouTubeThumbnail,
   tagsLength,
   YOUTUBE_AI_HELP_URL,
   YOUTUBE_CATEGORIES,
@@ -24,12 +26,22 @@ import {
 import { cn } from "@/lib/utils";
 
 import { Section } from "./Section";
+import { useMediaUploads, type Uploader } from "./use-media-uploads";
 
 export const YOUTUBE_SECTION_ID = "composer-youtube";
 export const YOUTUBE_TITLE_ID = "composer-youtube-title";
 export const YOUTUBE_KIDS_ID = "composer-youtube-kids";
 export const YOUTUBE_AI_ID = "composer-youtube-ai";
 export const YOUTUBE_TAGS_ID = "composer-youtube-tags";
+export const YOUTUBE_THUMBNAIL_ID = "composer-youtube-thumbnail";
+
+type SavedYouTube = NonNullable<ScheduledPostTarget["youtube"]>;
+
+/** C-203: the saved post's word on the chosen thumbnail (its image, whether YouTube took it), once saved. */
+export function savedThumbnail(targets: ScheduledPostTarget[], id: string | null | undefined): SavedYouTube | null {
+  if (!id) return null;
+  return targets.find((target) => target.youtube && target.options?.thumbnail_media_id === id)?.youtube ?? null;
+}
 
 /** The element a YouTube option's checklist item links to (``targets.{i}.options.{name}``). */
 export function youtubeFieldId(name: string): string {
@@ -37,6 +49,7 @@ export function youtubeFieldId(name: string): string {
   if (name === "synthetic_media") return YOUTUBE_AI_ID;
   if (name === "tags" || name === "category_id" || name === "notify_subscribers") return YOUTUBE_TAGS_ID;
   if (name === "title") return YOUTUBE_TITLE_ID;
+  if (name === "thumbnail_media_id") return YOUTUBE_THUMBNAIL_ID;
   return YOUTUBE_SECTION_ID;
 }
 
@@ -84,21 +97,132 @@ function YesNo({
 }
 
 /**
+ * C-203: an optional custom thumbnail, uploaded like the post's images and set on YouTube once the
+ * video is there. YouTube takes it only from verified channels, and the API can't bring back
+ * YouTube's own thumbnail, so Remove only stops it being sent.
+ */
+function Thumbnail({
+  wid,
+  upload,
+  id,
+  saved,
+  onChange,
+}: {
+  wid: string;
+  upload?: Uploader;
+  id: string | null;
+  saved: SavedYouTube | null;
+  onChange: (id: string | null) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // The image picked in this session, until the saved post shows it.
+  const [picked, setPicked] = useState<{ id: string; url: string | null } | null>(null);
+  const uploads = useMediaUploads(wid, {
+    upload,
+    onUploaded: (asset) => {
+      setPicked({ id: asset.id, url: asset.secure_url ?? null });
+      onChange(asset.id);
+    },
+  });
+  const sending = uploads.items.find((item) => item.status !== "failed");
+  const failed = uploads.items.find((item) => item.status === "failed");
+  const chosenUrl = id ? ((picked?.id === id ? picked.url : null) ?? saved?.thumbnail_url ?? null) : null;
+  const url = sending?.previewUrl ?? chosenUrl;
+  const pick = (file: File) => {
+    const problem = checkYouTubeThumbnail(file);
+    setNotice(problem);
+    if (failed) uploads.remove(failed.id);
+    if (!problem) uploads.add(file);
+  };
+  const error = notice ?? failed?.error ?? null;
+  const labelId = `${YOUTUBE_THUMBNAIL_ID}-label`;
+
+  return (
+    <div id={YOUTUBE_THUMBNAIL_ID} tabIndex={-1} role="group" aria-labelledby={labelId} className="space-y-2">
+      <p id={labelId} className="text-sm font-medium">
+        Thumbnail (optional)
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        {url ? (
+          <div className="aspect-video w-40 overflow-hidden rounded-md bg-media-scrim">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="Thumbnail" className="size-full object-cover" data-testid="youtube-thumbnail-preview" />
+          </div>
+        ) : null}
+        <input
+          ref={input}
+          type="file"
+          accept=".jpg,.jpeg,.png"
+          className="hidden"
+          aria-label="Thumbnail image"
+          data-testid="youtube-thumbnail-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) pick(file);
+          }}
+        />
+        <Button type="button" variant="secondary" size="sm" data-focus-target loading={Boolean(sending)} onClick={() => input.current?.click()}>
+          <ImagePlus aria-hidden /> {id ? "Replace" : "Choose an image"}
+        </Button>
+        {id ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setNotice(null);
+              onChange(null);
+            }}
+          >
+            <X aria-hidden /> Remove
+          </Button>
+        ) : null}
+      </div>
+      {error ? (
+        <p role="alert" className="text-xs text-danger-fg">
+          {error}
+        </p>
+      ) : id && saved?.thumbnail_status === "failed" ? (
+        <p role="alert" className="text-xs text-danger-fg" data-testid="youtube-thumbnail-status">
+          {saved.thumbnail_error}
+        </p>
+      ) : id && saved?.thumbnail_status === "set" ? (
+        <p className="text-xs text-fg-secondary" data-testid="youtube-thumbnail-status">
+          {youtubeCopy.thumbnailSet}
+        </p>
+      ) : null}
+      <p className="text-xs text-fg-secondary">{youtubeCopy.thumbnailNote}</p>
+      {id ? <p className="text-xs text-fg-secondary">{youtubeCopy.thumbnailRemove}</p> : null}
+    </div>
+  );
+}
+
+/**
  * UX-SCR-13 YouTube (C-195 S-9): shown when a YouTube channel is chosen. Video or Short, the
  * title (required, 100 characters), privacy (Public by default), made for kids and the AI
  * disclosure (both required, neither answered for you), and behind More the category, tags (500
  * characters in total) and whether subscribers are notified. Every YouTube channel of the post
- * gets these. The caption above is the video's description.
+ * gets these. The caption above is the video's description. Then the optional thumbnail (C-203).
  */
 export function YouTubeOptions({
   options,
   onChange,
   route,
+  wid,
+  upload,
+  saved = null,
 }: {
   options: Options;
   onChange: (patch: Partial<Options>) => void;
   /** ``direct``: YouTube alone, uploaded from the browser; ``media``: through the media tray with the other platforms. */
   route: "direct" | "media";
+  wid: string;
+  /** The thumbnail's upload; tests pass a fake. */
+  upload?: Uploader;
+  /** The saved post's YouTube state for the chosen thumbnail (``savedThumbnail``). */
+  saved?: SavedYouTube | null;
 }) {
   const [more, setMore] = useState(Boolean(options.category_id || options.tags.length || !options.notify_subscribers));
   const titleChars = charCount(options.title);
@@ -187,6 +311,14 @@ export function YouTubeOptions({
               </a>
             </>
           }
+        />
+
+        <Thumbnail
+          wid={wid}
+          upload={upload}
+          id={options.thumbnail_media_id ?? null}
+          saved={saved}
+          onChange={(thumbnail_media_id) => onChange({ thumbnail_media_id })}
         />
 
         <div className="border-t border-line pt-3">

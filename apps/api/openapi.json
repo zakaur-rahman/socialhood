@@ -28196,7 +28196,7 @@
       },
       "YouTubeOptions": {
         "additionalProperties": false,
-        "description": "A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the\npost's target. The description is the caption (or the target's ``caption_override``).\nStored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have\nno default: the person answers both (COPPA; realistic AI-altered content).\n\n- ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);\n- ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts\n  its quotes, and each comma between tags counts);\n- ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from\n  the file's shape and length; there is no separate call).",
+        "description": "A YouTube channel's choices for its video (C-196), on ``TargetIn.options`` and on the\npost's target. The description is the caption (or the target's ``caption_override``).\nStored in ``scheduled_post_targets.options``. ``made_for_kids`` and ``synthetic_media`` have\nno default: the person answers both (COPPA; realistic AI-altered content).\n\n- ``title``: 1 to 100 characters, no ``<`` or ``>`` (YouTube refuses them);\n- ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts\n  its quotes, and each comma between tags counts);\n- ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from\n  the file's shape and length; there is no separate call);\n- ``thumbnail_media_id`` (C-203): an uploaded JPG or PNG of up to 2 MB, set on YouTube once\n  the video is there (services/post_publishing/youtube_thumbnail.py).",
         "properties": {
           "category_id": {
             "anyOf": [
@@ -28253,6 +28253,18 @@
             "title": "Tags",
             "type": "array"
           },
+          "thumbnail_media_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Media Id"
+          },
           "title": {
             "maxLength": 100,
             "minLength": 1,
@@ -28269,7 +28281,7 @@
         "type": "object"
       },
       "YouTubeTargetState": {
-        "description": "Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was\nopened and not finished runs out then (the post goes back to a draft: \"The upload didn't\nfinish\"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).",
+        "description": "Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was\nopened and not finished runs out then (the post goes back to a draft: \"The upload didn't\nfinish\"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).\nC-203, with a custom thumbnail chosen: its image (``thumbnail_url``), whether YouTube has it\n(``thumbnail_status``: pending until the video is there and it was sent) and, when YouTube\nrefused it, why (``thumbnail_error``; the video itself is not affected).",
         "properties": {
           "route": {
             "enum": [
@@ -28290,6 +28302,44 @@
             ],
             "title": "State",
             "type": "string"
+          },
+          "thumbnail_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Error"
+          },
+          "thumbnail_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "set",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Status"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
           },
           "upload_expires_at": {
             "anyOf": [

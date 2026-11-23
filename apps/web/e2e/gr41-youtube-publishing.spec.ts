@@ -10,7 +10,9 @@ import { pickDay } from "./support/ui";
  *     browser sends the file to the upload address the API hands out), ends "Scheduled on YouTube"
  *     in the composer and on Schedule;
  * (b) a post to the YouTube channel and an Instagram account goes through the media tray (the
- *     media route) and is scheduled like any other post.
+ *     media route) and is scheduled like any other post;
+ * (c) C-203: a custom thumbnail picked in the YouTube section is set on YouTube by the worker once
+ *     the video is there (the sandbox channel takes it), and the composer says so.
  *
  * SANDBOX DEPENDENCIES, marked "SANDBOX:" below; adjust them to what the API worker ships:
  *  1. The workspace needs the youtube feature (YOUTUBE_WORKSPACES). This assumes the sandbox
@@ -41,6 +43,44 @@ async function fillYouTube(page: Page, title: string, format: "Video" | "Short")
   await section.getByRole("textbox", { name: "Title" }).fill(title);
   await section.getByRole("group", { name: "Is this video made for kids?" }).getByRole("radio", { name: "No" }).check();
   await section.getByRole("group", { name: /realistic AI-made or altered content/ }).getByRole("radio", { name: "No" }).check();
+}
+
+/**
+ * The composer's signed image upload without Cloudinary (e2e has none): the signature, the upload and
+ * the registration are answered with an image seeded in the media library, so the post refers to a
+ * real asset the API checks.
+ */
+async function uploadsBecome(page: Page, workspace: Workspace, asset: { id: string; secure_url: string }) {
+  const cors = () => ({ "Access-Control-Allow-Origin": new URL(page.url()).origin, "Access-Control-Allow-Credentials": "true" });
+  const cloud = "https://api.cloudinary.com/v1_1/e2e/image/upload";
+  await page.route("**/media-assets/upload-signature", (route) =>
+    route.fulfill({
+      headers: cors(),
+      json: { cloud_name: "e2e", api_key: "e2e", timestamp: 1, folder: `ws/${workspace.id}/post`, signature: "e2e", upload_url: cloud },
+    }),
+  );
+  await page.route(cloud, (route) => route.fulfill({ headers: cors(), json: { public_id: `ws/${workspace.id}/post/thumb` } }));
+  await page.route(/\/v1\/w\/[^/]+\/media-assets$/, (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({
+          status: 201,
+          headers: cors(),
+          json: {
+            id: asset.id,
+            public_id: `ws/${workspace.id}/post/thumb`,
+            resource_type: "image",
+            purpose: "post",
+            format: "jpg",
+            secure_url: asset.secure_url,
+            bytes: 180_000,
+            width: 1280,
+            height: 720,
+            duration_s: null,
+            created_at: new Date().toISOString(),
+          },
+        })
+      : route.fallback(),
+  );
 }
 
 async function pickTomorrow(page: Page, time = "10:30") {
@@ -125,5 +165,37 @@ test.describe("GR-41 YouTube publishing", () => {
     // No direct upload on this route: the scheduler sends the stored video to each platform.
     await expect(page.getByTestId("youtube-banner")).toHaveCount(0);
     await expect(page.getByRole("main").getByText("Scheduled", { exact: true })).toBeVisible();
+  });
+
+  test("a custom thumbnail is set on YouTube once the video is there", async ({ page, api, youtube }) => {
+    const { workspace, account } = youtube;
+    const image = await api.mediaAsset(workspace.id, "thumbnail.jpg");
+    await newPost(page, workspace);
+    await uploadsBecome(page, workspace, image);
+    await choose(page, account);
+
+    await fillYouTube(page, unique("Proofing baskets"), "Video");
+    const section = page.getByRole("region", { name: "YouTube" });
+    const thumbnail = section.getByRole("group", { name: "Thumbnail (optional)" });
+    await expect(thumbnail).toContainText("YouTube shows custom thumbnails only for verified channels.");
+    await thumbnail.getByTestId("youtube-thumbnail-input").setInputFiles({ name: "thumbnail.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(4 * 1024) });
+    await expect(thumbnail.getByRole("img", { name: "Thumbnail" })).toBeVisible();
+    await expect(thumbnail.getByRole("button", { name: /Replace/ })).toBeVisible();
+
+    await page.getByRole("region", { name: "Description" }).getByRole("textbox", { name: "Description" }).fill("Rye in the bannetons.");
+    await page.getByTestId("youtube-file-input").setInputFiles({ name: "baskets.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(512 * 1024) });
+    await pickTomorrow(page, "12:00");
+    await expect(page.getByRole("region", { name: "Checklist" }).getByRole("link", { name: /^To fix:/ })).toHaveCount(0);
+
+    const completed = page.waitForResponse((r) => /\/youtube-upload\/complete$/.test(r.url()));
+    await page.getByRole("region", { name: "Post actions" }).getByRole("button", { name: "Schedule" }).click();
+    const done = await completed;
+    expect(done.status()).toBe(200);
+    const [target] = ((await done.json()) as { targets: { options: { thumbnail_media_id?: string | null } }[] }).targets;
+    expect(target.options.thumbnail_media_id).toBe(image.id);
+
+    // SANDBOX: the worker's set_youtube_thumbnail sends it to the sandbox channel, which takes it.
+    await expect(page.getByTestId("youtube-banner")).toContainText("Scheduled on YouTube", { timeout: 30_000 });
+    await expect(thumbnail.getByTestId("youtube-thumbnail-status")).toHaveText("Set on YouTube.", { timeout: 30_000 });
   });
 });

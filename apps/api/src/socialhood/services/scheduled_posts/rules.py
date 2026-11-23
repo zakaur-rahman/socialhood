@@ -19,6 +19,7 @@ from datetime import datetime
 
 from socialhood.errors import FieldError
 from socialhood.models.connections import AccountStatus
+from socialhood.models.media import AssetPurpose, MediaAsset
 from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
     CAROUSEL_MAX_ASSETS,
@@ -40,6 +41,8 @@ from socialhood.models.publishing import (
     USER_TAGS_MAX_PER_IMAGE,
     YOUTUBE_DESCRIPTION_MAX_BYTES,
     YOUTUBE_SHORT_MAX_S,
+    YOUTUBE_THUMBNAIL_FORMATS,
+    YOUTUBE_THUMBNAIL_MAX_BYTES,
     PostFormat,
 )
 from socialhood.schemas.publishing import ChecklistItem, ChecklistKey, YouTubeOptions
@@ -130,6 +133,24 @@ YOUTUBE_DESCRIPTION_BRACKETS = "A YouTube description can't contain < or >."
 YOUTUBE_SHORT_SHAPE = "A Short is a vertical video. Use a portrait video or choose Video."
 YOUTUBE_SHORT_LENGTH = f"A Short can be up to {YOUTUBE_SHORT_MAX_S // 60} minutes. Choose Video."
 YOUTUBE_DIRECT = "Video: straight to YouTube"
+# C-203: the custom thumbnail (the composer says the same before uploading).
+YOUTUBE_THUMBNAIL_MISSING = "This thumbnail wasn't found. Upload it again."
+YOUTUBE_THUMBNAIL_TYPE = "Use a JPG or PNG image for the thumbnail."
+YOUTUBE_THUMBNAIL_SIZE = f"The thumbnail can be up to {YOUTUBE_THUMBNAIL_MAX_BYTES // MB} MB."
+
+
+def youtube_thumbnail_problem(asset: MediaAsset | None) -> str | None:
+    """Why an upload can't be a YouTube thumbnail (C-203), or None: one of this workspace's
+    post images (the caller looked it up in the workspace's scope), JPG or PNG, up to 2 MB."""
+    if asset is None or asset.purpose != AssetPurpose.POST:
+        return YOUTUBE_THUMBNAIL_MISSING
+    fmt = file_format(asset.format, asset.public_id)
+    if asset.resource_type != "image" or fmt not in YOUTUBE_THUMBNAIL_FORMATS:
+        return YOUTUBE_THUMBNAIL_TYPE
+    if asset.bytes > YOUTUBE_THUMBNAIL_MAX_BYTES:
+        return YOUTUBE_THUMBNAIL_SIZE
+    return None
+
 
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."

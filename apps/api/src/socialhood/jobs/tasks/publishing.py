@@ -52,6 +52,9 @@ YouTube (C-196):
 - sync_youtube_video(target_id, account_id, video_id, workspace_id): after a change to a post with
   a direct upload, videos.update when what YouTube holds differs, or videos.delete for a video no
   target holds any more (youtube_direct.sync); lock ``ytsync:{video_id}``;
+- set_youtube_thumbnail(target_id, video_id, workspace_id): a custom thumbnail once the video is on
+  YouTube (C-203, youtube_thumbnail.apply); lock ``ytthumb:{video_id}``, 3 tries for YouTube
+  being down (a refusal is recorded, not retried);
 - expire_youtube_uploads: periodic, every 10 minutes; direct uploads opened 24 hours ago and not
   finished: the post goes back to a draft ("The upload didn't finish").
 """
@@ -88,6 +91,7 @@ from socialhood.services.post_publishing import (
     publish,
     youtube_direct,
     youtube_media,
+    youtube_thumbnail,
 )
 
 log = get_logger(__name__)
@@ -297,6 +301,19 @@ async def sync_youtube_video(
             _deps(),
             target_id=uuid.UUID(target_id),
             account_id=uuid.UUID(account_id),
+            video_id=video_id,
+        )
+
+
+@app.task(name="set_youtube_thumbnail", queue=INTERACTIVE, retry=SYNC_RETRY)
+async def set_youtube_thumbnail(target_id: str, video_id: str, workspace_id: str) -> None:
+    rt = runtime()
+    with workspace_scope(uuid.UUID(workspace_id)):
+        await youtube_thumbnail.apply(
+            rt.sessionmaker,
+            rt.redis,
+            _deps(),
+            target_id=uuid.UUID(target_id),
             video_id=video_id,
         )
 

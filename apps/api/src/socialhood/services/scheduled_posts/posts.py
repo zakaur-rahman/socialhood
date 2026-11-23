@@ -262,6 +262,16 @@ async def _check_body(session: AsyncSession, body: ScheduledPostDraft) -> _Check
                 FieldError(f"targets.{i}.options", "Only a YouTube channel takes these options.")
             )
         seen_accounts.add(target.social_account_id)
+    thumbnails = {
+        i: t.options.thumbnail_media_id
+        for i, t in enumerate(body.targets)
+        if t.options is not None and t.options.thumbnail_media_id is not None
+    }
+    images = await repo.assets_by_id(session, list(thumbnails.values()))
+    for i, image_id in thumbnails.items():
+        problem = rules.youtube_thumbnail_problem(images.get(image_id))
+        if problem:
+            errors.append(FieldError(f"targets.{i}.options.thumbnail_media_id", problem))
     found = await repo.assets_by_id(session, body.asset_ids)
     seen_assets: set[uuid.UUID] = set()
     for i, asset_id in enumerate(body.asset_ids):

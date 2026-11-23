@@ -148,6 +148,22 @@ def youtube_video_id(target: ScheduledPostTarget) -> str | None:
     return ref if ref and not is_session(ref) else None
 
 
+THUMBNAIL_SENT = "thumbnail"  # sent_metadata (C-203): the image last sent to thumbnails.set
+THUMBNAIL_ERROR = "thumbnail_error"  # and why YouTube refused it, when it did
+
+
+def thumbnail_state(target: ScheduledPostTarget, options: YouTubeOptions | None) -> dict[str, Any]:
+    """A chosen thumbnail's status (C-203): pending until it was sent, then set or failed."""
+    wanted = options.thumbnail_media_id if options is not None else None
+    if wanted is None:
+        return {}
+    sent = target.sent_metadata or {}
+    if sent.get(THUMBNAIL_SENT) != str(wanted):
+        return {"thumbnail_status": "pending"}
+    error = sent.get(THUMBNAIL_ERROR)
+    return {"thumbnail_status": "failed" if error else "set", "thumbnail_error": error}
+
+
 def youtube_url(video_id: str, options: YouTubeOptions | None) -> str:
     if options is not None and options.format == "short":
         return f"https://www.youtube.com/shorts/{video_id}"
@@ -190,6 +206,7 @@ def youtube_state(
             "video_id": video_id,
             "upload_expires_at": target.upload_expires_at,
             "url": target.permalink or (youtube_url(video_id, options) if video_id else None),
+            **thumbnail_state(target, options),
         }
     )
 
@@ -492,6 +509,10 @@ async def posts_out(
     loaded = await load(session, posts)
     items = await _items(session, loaded)
     covers = {c.id: c for c in await repo.covers_for(session, [p.cover_asset_id for p in posts])}
+    chosen = [youtube_options(t.options) for one in loaded for t, _ in one.targets]
+    thumbnails = await repo.assets_by_id(
+        session, [o.thumbnail_media_id for o in chosen if o is not None and o.thumbnail_media_id]
+    )
     drafts = [
         Draft.of(one, covers.get(one.post.cover_asset_id) if one.post.cover_asset_id else None)
         for one in loaded
@@ -515,10 +536,15 @@ async def posts_out(
         checklist = rules.checklist(
             facts(draft, deps=deps, recent=recent), now=now, publishing_limit=PUBLISHING_LIMIT
         )
-        summary = _summary(one, items)
+        summary = _summary(one, items).model_dump()
+        for row in summary["targets"]:  # C-203: the chosen thumbnail's image, for the composer
+            image_id = (row["options"] or {}).get("thumbnail_media_id")
+            image = thumbnails.get(image_id) if image_id else None
+            if image is not None and row["youtube"] is not None:
+                row["youtube"]["thumbnail_url"] = thumbnail_url(image)
         out.append(
             ScheduledPost(
-                **summary.model_dump(),
+                **summary,
                 first_comment=post.first_comment,
                 collaborators=list(post.collaborators or []),
                 location_id=post.location_id,

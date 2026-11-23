@@ -13,6 +13,8 @@
   subscribers. ``processing_reads`` sets how many reads a new video stays processing;
   ``lose_next_answer()`` makes the next piece arrive but its answer fail (a cut connection);
   ``expire_sessions()`` makes every open session answer 404; ``fail_processing(id)`` fails a video.
+  thumbnails.set (C-203) keeps each video's image address in ``thumbnails``; ``custom_thumbnails
+  = False`` answers it like a channel that isn't verified (403 ``forbidden``).
 - Comments (YT4, platforms/youtube/comments.Comments): ``comment_threads`` holds them (``items``);
   ``comment_threads.add(video_id, text, ...)`` is a viewer's comment (or reply, with
   ``parent_id``), ``page_size`` sets the threads per page. Moderation keeps a ``status``; deleting
@@ -104,6 +106,8 @@ class FakeYouTube:
         self.videos: dict[str, Video] = {}
         self.metadata: dict[str, dict[str, Any]] = {}
         self.deleted: list[str] = []
+        self.thumbnails: dict[str, str] = {}  # C-203: video id -> the image's address
+        self.custom_thumbnails = True
         self.processing_reads = 0
         self.subscriber_count: int | None = 1200
         self.video_reports: dict[str, VideoReport] = {}  # analytics (Phase 4)
@@ -310,6 +314,22 @@ class FakeYouTube:
         self._channel_of(token)
         if self.videos.pop(video_id, None) is not None:
             self.deleted.append(video_id)
+
+    async def set_thumbnail(
+        self, token: str, video_id: str, image_url: str, *, content_type: str
+    ) -> None:
+        self._enter("set_thumbnail", video_id=video_id, image_url=image_url)
+        channel = self._channel_of(token)
+        video = self.videos.get(video_id)
+        if video is None or video.channel_id != channel:
+            raise PlatformError("platform_rejected", platform_code="videoNotFound")
+        if not self.custom_thumbnails:
+            raise PlatformError(
+                "platform_rejected",
+                platform_code="forbidden",
+                message="The authenticated user doesn't have permissions to upload thumbnails.",
+            )
+        self.thumbnails[video_id] = image_url
 
     async def recent_uploads(self, token: str, channel_id: str, *, limit: int = 10) -> list[Video]:
         self._enter("recent_uploads", channel_id=channel_id)
