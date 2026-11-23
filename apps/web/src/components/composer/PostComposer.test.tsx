@@ -54,6 +54,10 @@ const TZ = workspace.timezone;
 const maple = account({ id: "a1", username: "maple.bakery", capabilities: ["publish"] });
 const studio = account({ id: "a2", username: "maple.studio", capabilities: ["publish"] });
 const inTwoDays = () => new Date(Math.ceil((Date.now() + 2 * 86_400_000) / 3_600_000) * 3_600_000).toISOString();
+/** A scheduled post opens locked: press Edit to change it. */
+async function editScheduled(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "Edit" }));
+}
 
 function validation(errors: { field: string; message: string }[]): Response {
   return new Response(JSON.stringify({ type: "about:blank", title: "validation_error", status: 422, code: "validation_error", errors }), {
@@ -733,11 +737,31 @@ describe("PostComposer tools in place (UI-054)", () => {
 });
 
 describe("PostComposer scheduled posts (FR-PUB-04)", () => {
+  it("opens locked: no edits and no time check until Edit; Cancel puts the post back and locks it", async () => {
+    const user = userEvent.setup();
+    // 30 seconds away: while locked it must not say "at least 1 minute".
+    renderComposer({ initial: readyPost({ status: "scheduled", publish_at: new Date(Date.now() + 30_000).toISOString() }) });
+    const actions = await screen.findByRole("region", { name: "Post actions" });
+    expect(captionBox()).toBeDisabled();
+    expect(within(actions).queryByRole("button", { name: "Update schedule" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Pick a time at least 1 minute from now.")).not.toBeInTheDocument();
+
+    await editScheduled(user);
+    expect(captionBox()).toBeEnabled();
+    await user.type(captionBox(), "!");
+    expect(captionBox()).toHaveValue("New linen dresses are here #linen!");
+
+    await user.click(within(screen.getByRole("region", { name: "Post actions" })).getByRole("button", { name: "Cancel" }));
+    expect(captionBox()).toBeDisabled();
+    expect(captionBox()).toHaveValue("New linen dresses are here #linen");
+  });
+
   it("doesn't autosave; Update schedule waits for a change, then saves it", async () => {
     const user = userEvent.setup();
     const publishAt = inTwoDays();
     const { puts } = renderComposer({ initial: readyPost({ status: "scheduled", publish_at: publishAt }) });
     expect(await screen.findByText(`Scheduled for ${formatDayTime(publishAt, TZ)}`)).toBeInTheDocument();
+    await editScheduled(user);
     expect(scheduleButton("Update schedule")).toBeDisabled();
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Change something to update the schedule.");
 
@@ -750,12 +774,13 @@ describe("PostComposer scheduled posts (FR-PUB-04)", () => {
     await waitFor(() => expect(puts).toHaveLength(1));
     expect((puts[0].body as ScheduledPostDraft).caption).toBe("New linen dresses are here #linen!");
     expect(toast.success).toHaveBeenCalledWith(`Schedule updated. It publishes ${formatDayTime(publishAt, TZ)}.`);
-    await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeInTheDocument(); // saved, and locked again
   });
 
   it("has no Save as draft: Update schedule is the save, and Unschedule is in More", async () => {
     const user = userEvent.setup();
     renderComposer({ initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }) });
+    await editScheduled(user);
     const actions = await screen.findByRole("region", { name: "Post actions" });
     expect(within(actions).getByRole("button", { name: "Update schedule" })).toBeInTheDocument();
     expect(within(actions).queryByRole("button", { name: /draft/i })).not.toBeInTheDocument();
@@ -793,6 +818,7 @@ describe("PostComposer scheduled posts (FR-PUB-04)", () => {
       },
     });
     stored.state = view.state;
+    await editScheduled(user);
     await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
 
     await user.click(screen.getByRole("button", { name: "More actions" }));
@@ -844,6 +870,7 @@ describe("PostComposer leaving with unsaved edits (C-044)", () => {
       initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
       shell: <SidebarLink onNavigate={navigated} />,
     });
+    await editScheduled(user);
     await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
     expect(screen.getByTestId("save-status")).toHaveTextContent("Unsaved changes");
 
@@ -870,6 +897,7 @@ describe("PostComposer leaving with unsaved edits (C-044)", () => {
         },
       },
     });
+    await editScheduled(user);
     await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
 
     await user.click(screen.getByRole("button", { name: "More actions" }));
@@ -898,6 +926,7 @@ describe("PostComposer leaving with unsaved edits (C-044)", () => {
     await screen.findByRole("textbox", { name: "Caption" });
 
     // Write with AI, then the toast's Undo: the caption is the stored one again.
+    await editScheduled(user);
     await user.click(screen.getByRole("button", { name: "Write with AI" }));
     await user.type(screen.getByRole("textbox", { name: "What's the post about?" }), "linen dresses");
     await user.click(screen.getByRole("button", { name: "Write caption" }));
@@ -933,9 +962,10 @@ describe("PostComposer leaving with unsaved edits (C-044)", () => {
     await user.click(screen.getByRole("link", { name: "Inbox" }));
     expect(navigated).toHaveBeenCalledOnce();
 
+    await editScheduled(user);
     await user.type(captionBox(), "!");
     await user.click(scheduleButton("Update schedule"));
-    await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeInTheDocument(); // saved, and locked again
     await user.click(screen.getByRole("link", { name: "Inbox" }));
     expect(navigated).toHaveBeenCalledTimes(2);
     expect(confirm).not.toHaveBeenCalled();
