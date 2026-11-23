@@ -94,8 +94,11 @@ function NoMedia({
   );
 }
 
-/** C-195: what the YouTube preview shows; ``videoUrl`` is the picked file (a local URL) or the uploaded video. */
-export type PreviewYouTube = { title: string; format: "video" | "short"; videoUrl: string | null };
+/**
+ * C-195: what the YouTube preview shows; ``videoUrl`` is the picked file (a local URL) or the uploaded video,
+ * ``thumbnailUrl`` the custom thumbnail once saved (C-203), shown in its place.
+ */
+export type PreviewYouTube = { title: string; format: "video" | "short"; videoUrl: string | null; thumbnailUrl?: string | null };
 
 /** FR-PUB-07: what the Instagram options add to the preview. */
 export type PreviewExtras = {
@@ -291,8 +294,8 @@ function FacebookPreview({
 }
 
 /**
- * C-195: the video as YouTube lists it: the picked file's first frame (YouTube makes the real
- * thumbnail; custom thumbnails come later), the title and the channel. A Short is 9:16.
+ * C-195: the video as YouTube lists it: the custom thumbnail (C-203) or the picked file's first frame
+ * (YouTube makes the real thumbnail then), the title and the channel. A Short is 9:16.
  */
 function YouTubePreview({
   account,
@@ -310,7 +313,10 @@ function YouTubePreview({
   return (
     <article aria-label="YouTube preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
       <div className={cn("relative mx-auto bg-media-scrim", short ? "aspect-[9/16] max-h-[420px]" : "aspect-video w-full")}>
-        {youtube.videoUrl ? (
+        {youtube.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={youtube.thumbnailUrl} alt="Thumbnail" className="size-full object-cover" />
+        ) : youtube.videoUrl ? (
           <video src={youtube.videoUrl} muted playsInline preload="metadata" aria-label="Video" className="size-full object-cover" />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-on-brand">

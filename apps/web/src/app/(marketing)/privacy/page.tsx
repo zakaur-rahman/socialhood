@@ -398,8 +398,8 @@ function sections(): LegalSection[] {
               and store the channel&apos;s ID, name, handle and picture, a token that lets {N} act for the channel (stored
               encrypted), the title, picture and link of the channel&apos;s recent videos, and the IDs and processing status
               of the videos {N} uploads. We use them to upload, schedule, update and delete the videos the business asks
-              for, with the title, description, tags, category, visibility and the &quot;made for kids&quot; and
-              altered-content answers it gives. A video posted only to YouTube goes from the business&apos;s browser or AI
+              for, with the title, description, tags, category, visibility, the thumbnail image if it chooses one,
+              and the &quot;made for kids&quot; and altered-content answers it gives. A video posted only to YouTube goes from the business&apos;s browser or AI
               app straight to YouTube and isn&apos;t stored by us; a video posted to YouTube and other platforms is kept in
               our media storage like any other post. To show how they do, we read each video&apos;s views, likes, comment
               count, watch time and average view duration, and the channel&apos;s subscriber count and how many subscribers

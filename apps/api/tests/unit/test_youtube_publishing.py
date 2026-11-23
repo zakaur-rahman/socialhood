@@ -20,6 +20,7 @@ from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.youtube.adapter import GONE, container_status
 from socialhood.platforms.youtube.fake import FakeYouTube
 from socialhood.platforms.youtube.publishing import (
+    THUMBNAIL_API,
     HttpVideos,
     Video,
     match_recent,
@@ -28,6 +29,7 @@ from socialhood.platforms.youtube.publishing import (
     web_origin,
 )
 from socialhood.schemas.publishing import YouTubeOptions, youtube_tags_length
+from socialhood.services.post_publishing import youtube_thumbnail
 from socialhood.services.post_publishing.youtube_direct import changed, metadata
 from socialhood.services.scheduled_posts import rules
 from socialhood.services.scheduled_posts.rules import AssetFacts, PostFacts, TargetFacts
@@ -327,6 +329,42 @@ async def test_google_s_errors_on_upload_calls_are_mapped() -> None:
             "tok", metadata=meta, size=None, content_type="video/*"
         )
     assert (error.value.code, error.value.retryable) == ("platform_rate_limited", True)
+
+
+async def test_thumbnails_set_posts_the_image_s_bytes_and_a_403_is_not_retried() -> None:
+    """C-203: the image is read from storage and sent as a media upload."""
+    image_url = "https://res.cloudinary.com/demo/image/upload/thumb.png"
+    seen: list[httpx.Request] = []
+    answer = httpx.Response(200, json={"items": []})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == image_url:
+            return httpx.Response(200, content=b"png")
+        seen.append(request)
+        return answer
+
+    videos = http_videos(handler)
+    await videos.set_thumbnail("tok", "vid1", image_url, content_type="image/png")
+    [sent] = seen
+    assert str(sent.url).startswith(THUMBNAIL_API)
+    assert dict(sent.url.params) == {"videoId": "vid1", "uploadType": "media"}
+    assert (sent.headers["Content-Type"], sent.content) == ("image/png", b"png")
+    assert sent.headers["Authorization"] == "Bearer tok"
+
+    forbidden = {"error": {"code": 403, "errors": [{"reason": "forbidden"}], "message": "No"}}
+    answer = httpx.Response(403, json=forbidden)
+    with pytest.raises(PlatformError) as refused:
+        await videos.set_thumbnail("tok", "vid1", image_url, content_type="image/png")
+    assert (refused.value.platform_code, refused.value.retryable) == ("forbidden", False)
+    assert youtube_thumbnail.refusal(refused.value) == youtube_thumbnail.NOT_VERIFIED
+    answer = httpx.Response(400, json={"error": {"code": 400, "errors": [{"reason": "x"}]}})
+    with pytest.raises(PlatformError) as bad:
+        await videos.set_thumbnail("tok", "vid1", image_url, content_type="image/png")
+    assert youtube_thumbnail.refusal(bad.value) == youtube_thumbnail.BAD_IMAGE
+    answer = httpx.Response(503)
+    with pytest.raises(PlatformError) as down:
+        await videos.set_thumbnail("tok", "vid1", image_url, content_type="image/png")
+    assert down.value.retryable is True
 
 
 # ---------------------------------------------------------------- streaming from storage

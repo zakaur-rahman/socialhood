@@ -94,6 +94,10 @@ YOUTUBE_TITLE_MAX_CHARS = 100
 YOUTUBE_DESCRIPTION_MAX_BYTES = 5000
 YOUTUBE_TAGS_MAX_CHARS = 500
 YOUTUBE_SHORT_MAX_S = 180
+# C-203: a custom thumbnail (thumbnails.set): YouTube takes JPG, PNG, GIF or BMP up to 2 MB; our
+# image uploads are JPG, PNG, WEBP or HEIC, so JPG and PNG are what both take.
+YOUTUBE_THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024
+YOUTUBE_THUMBNAIL_FORMATS = frozenset({"jpg", "jpeg", "png"})
 
 # Instagram extras (FR-PUB-07, C-134; Meta's IG User Media and IG Media Collaborators references,
 # checked 2026-10-25). The publishing reference allows up to 3 collaborators and the

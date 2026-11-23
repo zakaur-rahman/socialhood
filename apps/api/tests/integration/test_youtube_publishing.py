@@ -3,7 +3,7 @@ Origin header, the daily count, mixed posts, the open-upload cap; complete: the 
 scheduling and "now"; edits, moves, unscheduling and deleting through the sync job; the 24-hour
 expiry; the dispatcher's read-back), the media route (streaming with a resume after a cut,
 processing, a lost answer never uploading twice, a processing failure, the daily limit moving the
-post to the next day), and the per-target options."""
+post to the next day), the per-target options, and the custom thumbnail (C-203)."""
 
 from __future__ import annotations
 
@@ -21,13 +21,24 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.jobs.tasks import publishing as publish_jobs
-from socialhood.platforms.buckets import YOUTUBE_UPLOADS, google_day, next_google_day
+from socialhood.platforms.buckets import (
+    YOUTUBE_UPLOADS,
+    YouTubeQuota,
+    google_day,
+    next_google_day,
+)
 from socialhood.platforms.deps import deps_from
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.youtube.fake import SESSION_PREFIX, FakeYouTube
-from socialhood.services.post_publishing import publish, youtube_direct, youtube_media
+from socialhood.services.post_publishing import (
+    publish,
+    youtube_direct,
+    youtube_media,
+    youtube_thumbnail,
+)
 from socialhood.services.scheduled_posts import views as scheduled_post_views
 from tests.support.api import WEB, Clerk
+from tests.support.inbox import make_asset
 from tests.support.ingest import jobs
 from tests.support.publishing_api import Shop, failing, iso, later, open_shop
 from tests.support.youtube import OPTIONS, clear_upload_quota, make_channel
@@ -658,3 +669,140 @@ async def test_the_sandbox_channel_completes_a_direct_upload(
     )
     assert done.status_code == 200, done.text
     assert done.json()["status"] == "scheduled"
+
+
+# ---------------------------------------------------------------- the custom thumbnail (C-203)
+
+
+async def _thumbnail(tube: Tube, **values: Any) -> uuid.UUID:
+    values.setdefault("purpose", "post")
+    return await make_asset(tube.engine, workspace_id=tube.wid, width=1280, height=720, **values)
+
+
+async def run_thumbnails(tube: Tube) -> list[str]:
+    out: list[str] = []
+    for job in await jobs("set_youtube_thumbnail"):
+        args = job["args"]
+        with workspace_scope(tube.wid):
+            out.append(
+                await youtube_thumbnail.apply(
+                    tube.maker,
+                    tube.redis,
+                    tube.deps,
+                    target_id=uuid.UUID(args["target_id"]),
+                    video_id=args["video_id"],
+                )
+            )
+    return out
+
+
+async def test_a_thumbnail_is_one_of_the_workspace_s_jpg_or_png_images_up_to_2_mb(
+    tube: Tube,
+) -> None:
+    field = "targets.0.options.thumbnail_media_id"
+    wrong_type = "Use a JPG or PNG image for the thumbnail."
+    not_found = "This thumbnail wasn't found. Upload it again."
+    cases = {
+        await _thumbnail(tube, fmt="gif"): wrong_type,
+        await _thumbnail(tube, size=2 * MiB + 1): "The thumbnail can be up to 2 MB.",
+        await tube.shop.video(): wrong_type,
+        await _thumbnail(tube, purpose="message"): not_found,
+        uuid.uuid4(): not_found,  # not this workspace's
+    }
+    for image, message in cases.items():
+        options = {**OPTIONS, "thumbnail_media_id": str(image)}
+        fields = await tube.shop.fields(
+            "POST",
+            "/scheduled-posts",
+            {"targets": [{"social_account_id": str(tube.channel), "options": options}]},
+        )
+        assert fields == {field: message}
+    png = await _thumbnail(tube, fmt="png", size=2 * MiB)
+    post = await tube.draft(options={**OPTIONS, "thumbnail_media_id": str(png)})
+    youtube = channel_of(tube, post)["youtube"]
+    assert youtube["thumbnail_status"] == "pending"  # no video yet
+    assert youtube["thumbnail_url"].endswith(".jpg")  # the preview's small JPEG
+
+
+async def test_the_thumbnail_is_set_once_the_direct_upload_completes(tube: Tube) -> None:
+    image = await _thumbnail(tube)
+    units = await YouTubeQuota(tube.redis).used(datetime.now(UTC))
+    post, video_id = await tube.uploaded(
+        publish_at=later(days=1), options={**OPTIONS, "thumbnail_media_id": str(image)}
+    )
+    assert await run_thumbnails(tube) == ["set"]
+    [call] = tube.fake.named("set_thumbnail")
+    assert call["video_id"] == video_id
+    assert tube.fake.thumbnails[video_id].endswith("sample.jpg")
+    assert await YouTubeQuota(tube.redis).used(datetime.now(UTC)) == units + 50
+    got = await tube.shop.ok("GET", f"/scheduled-posts/{post['id']}")
+    youtube = channel_of(tube, got)["youtube"]
+    assert (youtube["thumbnail_status"], youtube["thumbnail_error"]) == ("set", None)
+
+    # Another edit (the title) leaves the thumbnail alone; a new image is sent again.
+    other = await _thumbnail(tube, fmt="png")
+    for chosen in (image, other):
+        options = {**OPTIONS, "title": "New title", "thumbnail_media_id": str(chosen)}
+        body = {
+            "targets": [{"social_account_id": str(tube.channel), "options": options}],
+            "caption": post["caption"],
+            "publish_at": post["publish_at"],
+        }
+        await tube.shop.ok("PUT", f"/scheduled-posts/{post['id']}", body)
+        await run_thumbnails(tube)
+    assert len(tube.fake.named("set_thumbnail")) == 2
+    assert tube.fake.thumbnails[video_id].endswith("sample.png")
+
+
+async def test_a_post_published_now_gets_its_thumbnail_at_the_publish_step(tube: Tube) -> None:
+    image = await _thumbnail(tube)
+    post, video_id = await tube.uploaded(options={**OPTIONS, "thumbnail_media_id": str(image)})
+    target = await tube.target(post["id"])
+    assert await tube.publish(target["id"]) == "containers_created"
+    assert "set" in await run_thumbnails(tube)
+    assert video_id in tube.fake.thumbnails
+
+
+async def test_a_channel_that_can_t_use_thumbnails_gets_a_warning_not_a_failure(
+    tube: Tube,
+) -> None:
+    image = await _thumbnail(tube)
+    tube.fake.custom_thumbnails = False  # YouTube's 403 forbidden: not a verified channel
+    post, video_id = await tube.uploaded(
+        publish_at=later(days=1), options={**OPTIONS, "thumbnail_media_id": str(image)}
+    )
+    assert await run_thumbnails(tube) == ["failed"]
+    assert await run_thumbnails(tube) == ["unchanged"]  # not retried
+    assert len(tube.fake.named("set_thumbnail")) == 1
+    got = await tube.shop.ok("GET", f"/scheduled-posts/{post['id']}")
+    target = channel_of(tube, got)
+    assert got["status"] == "scheduled"
+    assert target["error"] is None
+    assert target["youtube"]["thumbnail_status"] == "failed"
+    assert target["youtube"]["thumbnail_error"] == youtube_thumbnail.NOT_VERIFIED
+    assert video_id not in tube.fake.thumbnails
+
+
+async def test_youtube_being_down_is_retried(tube: Tube) -> None:
+    image = await _thumbnail(tube)
+    _post, video_id = await tube.uploaded(
+        publish_at=later(days=1), options={**OPTIONS, "thumbnail_media_id": str(image)}
+    )
+    tube.fake.fail_on("set_thumbnail", PlatformError("platform_unavailable"))
+    with pytest.raises(PlatformError):
+        await run_thumbnails(tube)
+    assert await run_thumbnails(tube) == ["set"]  # the job's next try
+    assert video_id in tube.fake.thumbnails
+
+
+async def test_the_media_route_sets_the_thumbnail_after_its_upload(tube: Tube) -> None:
+    data = b"x" * 1000
+    _source(tube, data)
+    image = await _thumbnail(tube)
+    post, target_id = await _media_post(tube, len(data), thumbnail_media_id=str(image))
+    assert await tube.publish(target_id) == "waiting"
+    assert await run_thumbnails(tube) == []  # no video yet
+    assert await tube.upload(target_id) == "containers_created"
+    assert await run_thumbnails(tube) == ["set"]
+    row = await tube.target(post["id"])
+    assert row["container_id"] in tube.fake.thumbnails
