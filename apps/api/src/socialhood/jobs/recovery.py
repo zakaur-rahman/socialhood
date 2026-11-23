@@ -81,6 +81,7 @@ RECOVERY: dict[str, Recovery] = {
     "sweep_stuck_posts": R,
     "refresh_collaborator_invites": R,  # FR-PUB-07: a read of the last answer, harmless to repeat
     "sync_youtube_video": R,  # C-196: compares before videos.update; a deleted video is fine
+    "set_youtube_thumbnail": R,  # C-203: compares with the image last sent; setting twice is fine
     "expire_youtube_uploads": R,
     "sweep_agent_runs": R,
     "expire_agent_approvals": R,  # an expired approval is no longer pending

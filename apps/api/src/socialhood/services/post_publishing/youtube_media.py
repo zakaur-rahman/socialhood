@@ -14,6 +14,8 @@ for the media route, and the dispatcher's hold-back when YouTube's daily uploads
   first checked against the channel's recent uploads (same title, since the claim), so a lost
   answer never posts twice. The finished upload's video id becomes the container and the polls
   wait for YouTube's processing, as for an Instagram video.
+- **Thumbnail** (C-203): once the video id is the container, ``set_youtube_thumbnail`` is queued
+  for a target with a custom thumbnail (youtube_thumbnail.py).
 - **Daily limit**: a due post whose YouTube video still has to be uploaded, when the day's uploads
   are used up, is moved to the start of the next quota day (midnight Pacific Time, plus a minute)
   instead of failing, and its owners are told (``hold_back``, run by the dispatcher before it
@@ -45,7 +47,7 @@ from socialhood.realtime.events import commit_and_publish
 from socialhood.repositories import publish_targets as repo
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services.notifications import notify_admins
-from socialhood.services.post_publishing import publish
+from socialhood.services.post_publishing import publish, youtube_thumbnail
 from socialhood.services.post_publishing.projection import queue_post_updated
 from socialhood.services.post_publishing.youtube_direct import changed, local_time, metadata
 from socialhood.services.scheduled_posts import views
@@ -124,11 +126,14 @@ async def _to_processing(
         target.poll_count = 0
         target.status = TargetStatus.CONTAINER_CREATED
         if sent is not None:
-            target.sent_metadata = sent
+            target.sent_metadata = {**(target.sent_metadata or {}), **sent}  # keeps C-203's
+        thumbnail = youtube_thumbnail.wanted(target.options, target.sent_metadata)
         await queue_post_updated(session, post)
         await commit_and_publish(session, redis)
         workspace_id = post.workspace_id
     await publish.enqueue_poll(target_id, workspace_id, 1)
+    if thumbnail:  # C-203: the video id is known; its own job, so the video never waits on it
+        await youtube_thumbnail.enqueue(target_id, video_id, workspace_id)
     return "containers_created"
 
 

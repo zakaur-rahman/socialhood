@@ -10176,3 +10176,23 @@ features", then changed three rules. The audit report is kept outside the repo.
   - No command re-encrypts stored tokens after a Fernet key rotation.
   - Deferred to after launch: private, expiring links for customer media, and a self-serve
     workspace export.
+
+## C-203 · YouTube custom thumbnail; scheduled posts open locked (owner, 2026-11-23)
+
+- **Why:** the owner scheduled a YouTube video and found no thumbnail option. A scheduled post also
+  opened with every field live and the time picker open, so as its time came within a minute the
+  "at least 1 minute" error appeared on its own.
+- **Thumbnail:**
+  - `YouTubeOptions.thumbnail_media_id` takes an image from the media library: JPG or PNG, at
+    most 2 MB. Our image uploads don't take GIF or BMP.
+  - A separate job, `set_youtube_thumbnail`, calls `thumbnails.set` (50 quota units) once the
+    video id is known, on both upload routes, and again when the image changes on a video already
+    on YouTube.
+  - A thumbnail failure never fails or holds back the video. A 403 (the channel isn't verified)
+    or a 400 is recorded on the target and shown in the composer, and isn't retried; 5xx errors
+    are retried. If the day's quota has run out, the thumbnail is recorded as failed.
+  - Remove only clears our copy, because YouTube's API can't restore its automatic thumbnail. The
+    field says so.
+- **Locked scheduled posts:** a scheduled post opens read-only with its time and an Edit button.
+  Edit unlocks the fields and Update schedule. Cancel restores the stored post and locks it again,
+  and so does a successful update. The time check runs only while editing.
