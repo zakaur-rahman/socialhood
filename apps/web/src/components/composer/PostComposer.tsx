@@ -116,7 +116,7 @@ import { useMediaUploads, type Uploader } from "./use-media-uploads";
 import { ComposerTools } from "./ComposerTools";
 import { sharedFreeTime, WHEN_DATE_ID, WhenSection, type QueuePreview, type WhenMode } from "./WhenSection";
 import { useYouTubeUpload, YOUTUBE_DROPZONE_ID, YouTubeDropzone } from "./YouTubeDropzone";
-import { YOUTUBE_SECTION_ID, youtubeFieldId, YouTubeOptions } from "./YouTubeOptions";
+import { savedThumbnail, YOUTUBE_SECTION_ID, youtubeFieldId, YouTubeOptions } from "./YouTubeOptions";
 
 export type ComposerDeps = {
   /** Tests pass fakes; the app uploads through the API and Cloudinary and crops on a canvas. */
@@ -933,7 +933,7 @@ function Composer({
               tagTotal={tagTotal}
             />
             )}
-            {route ? <YouTubeOptions options={youtubeOptions} onChange={setYouTubeOptions} route={route} /> : null}
+            {route ? <YouTubeOptions options={youtubeOptions} onChange={setYouTubeOptions} route={route} wid={wid} upload={upload} saved={savedThumbnail(server.targets, youtubeOptions.thumbnail_media_id)} /> : null}
             {isStory ? null : (
             <>
             <CaptionEditor
@@ -1118,6 +1118,7 @@ function Composer({
                     title: youtubeOptions.title,
                     format: youtubeOptions.format,
                     videoUrl: youtubeOnly ? ytFileUrl : postAssets[0]?.resource_type === "video" ? postAssets[0].url || null : null,
+                    thumbnailUrl: savedThumbnail(server.targets, youtubeOptions.thumbnail_media_id)?.thumbnail_url ?? null,
                   }
                 : undefined
             }

@@ -90,7 +90,7 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
 /** A YouTube target's options in a fixed order: the API may answer its keys in another. */
 function optionsKey(options: unknown): string {
   const o = options as YouTubeOptions | null | undefined;
-  return o ? JSON.stringify([o.title, o.privacy, o.made_for_kids, o.synthetic_media, o.category_id, o.tags, o.notify_subscribers, o.format]) : "null";
+  return o ? JSON.stringify([o.title, o.privacy, o.made_for_kids, o.synthetic_media, o.category_id, o.tags, o.notify_subscribers, o.format, o.thumbnail_media_id ?? null]) : "null";
 }
 
 const instant = (at: string | null) => (at ? new Date(at).getTime() : null);

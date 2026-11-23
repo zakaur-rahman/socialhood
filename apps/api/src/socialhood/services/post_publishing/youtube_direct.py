@@ -22,7 +22,8 @@ nor storage sees the file.
   (a scheduled post is private with ``publishAt``; a draft is private without one, so it doesn't
   go out). A video no target holds any more (the post deleted, the channel removed, the video
   replaced, Edit and retry, or another platform added: the tray takes over) is deleted
-  (videos.delete, 50 units). A published video is never deleted.
+  (videos.delete, 50 units). A published video is never deleted. A target with a custom
+  thumbnail also queues ``set_youtube_thumbnail`` then (C-203, youtube_thumbnail.py).
 - **Expiry** (``expire``): a session opened and not finished within 24 hours is dropped; the post
   goes back to a draft with "The upload didn't finish".
 
@@ -75,6 +76,7 @@ from socialhood.schemas.publishing import (
     YouTubeUploadComplete,
     YouTubeUploadSession,
 )
+from socialhood.services.post_publishing import youtube_thumbnail
 from socialhood.services.post_publishing.projection import queue_post_updated
 from socialhood.services.scheduled_posts import rules, views
 
@@ -192,6 +194,7 @@ class PendingSync:
     account_id: uuid.UUID
     video_id: str
     workspace_id: uuid.UUID
+    thumbnail: bool = False  # C-203: the target has a custom thumbnail to look at
 
 
 def queue_sync(
@@ -204,7 +207,11 @@ def queue_sync(
         return
     pending: dict[tuple[uuid.UUID, str], PendingSync] = session.info.setdefault(_KEY, {})
     pending[(target.id, video)] = PendingSync(
-        target.id, target.social_account_id, video, target.workspace_id
+        target.id,
+        target.social_account_id,
+        video,
+        target.workspace_id,
+        youtube_thumbnail.wanted(target.options, target.sent_metadata),
     )
 
 
@@ -234,6 +241,8 @@ async def defer(job: PendingSync) -> bool:
     from socialhood.jobs.app import INTERACTIVE
     from socialhood.jobs.enqueue import enqueue_named
 
+    if job.thumbnail:
+        await youtube_thumbnail.enqueue(job.target_id, job.video_id, job.workspace_id)
     try:
         return await enqueue_named(
             "sync_youtube_video",
@@ -546,7 +555,7 @@ async def sync(
     async with sessionmaker() as session:
         locked = await targets_repo.lock_target(session, target_id)
         if locked is not None and views.youtube_video_id(locked) == video_id:
-            locked.sent_metadata = wanted
+            locked.sent_metadata = {**(locked.sent_metadata or {}), **wanted}  # keeps C-203's
         await session.commit()
     return "updated"
 

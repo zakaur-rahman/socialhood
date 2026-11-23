@@ -325,6 +325,8 @@ export type YouTubeOptions = {
   tags: string[];
   notify_subscribers: boolean;
   format: "video" | "short";
+  /** C-203: an uploaded JPG or PNG set as the video's thumbnail once it is on YouTube. */
+  thumbnail_media_id?: string | null;
 };
 
 export const DEFAULT_YOUTUBE_OPTIONS: YouTubeOptions = {
@@ -400,6 +402,19 @@ export function checkYouTubeFile(file: Pick<File, "name" | "type" | "size">): st
   if (!YOUTUBE_VIDEO_EXTENSIONS.includes(extensionOf(file.name)) && !file.type.startsWith("video/")) {
     return "YouTube takes video files, such as MP4, MOV or WebM.";
   }
+  return null;
+}
+
+/** C-203: YouTube's custom thumbnail, as both YouTube and our uploads take it: JPG or PNG up to 2 MB. */
+export const YOUTUBE_THUMBNAIL_MAX_BYTES = 2 * MB;
+export const YOUTUBE_THUMBNAIL_EXTENSIONS = ["jpg", "jpeg", "png"];
+export const YOUTUBE_THUMBNAIL_TYPE = "Use a JPG or PNG image for the thumbnail.";
+export const YOUTUBE_THUMBNAIL_SIZE = "The thumbnail can be up to 2 MB.";
+
+/** Why a file can't be the thumbnail (the API's own messages), or null. */
+export function checkYouTubeThumbnail(file: Pick<File, "name" | "size">): string | null {
+  if (!YOUTUBE_THUMBNAIL_EXTENSIONS.includes(extensionOf(file.name))) return YOUTUBE_THUMBNAIL_TYPE;
+  if (file.size > YOUTUBE_THUMBNAIL_MAX_BYTES) return YOUTUBE_THUMBNAIL_SIZE;
   return null;
 }
 

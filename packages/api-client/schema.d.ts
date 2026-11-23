@@ -14974,6 +14974,8 @@ export interface components {
             synthetic_media: boolean;
             /** Tags */
             tags?: string[];
+            /** Thumbnail Media Id */
+            thumbnail_media_id?: string | null;
             /** Title */
             title: string;
         };
@@ -14994,6 +14996,12 @@ export interface components {
              * @enum {string}
              */
             state: "waiting_for_file" | "uploading" | "processing" | "scheduled" | "published" | "failed";
+            /** Thumbnail Error */
+            thumbnail_error?: string | null;
+            /** Thumbnail Status */
+            thumbnail_status?: ("pending" | "set" | "failed") | null;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
             /** Upload Expires At */
             upload_expires_at?: string | null;
             /** Url */

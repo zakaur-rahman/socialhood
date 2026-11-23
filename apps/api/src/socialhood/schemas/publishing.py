@@ -140,7 +140,9 @@ class YouTubeOptions(RequestModel):
     - ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts
       its quotes, and each comma between tags counts);
     - ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from
-      the file's shape and length; there is no separate call)."""
+      the file's shape and length; there is no separate call);
+    - ``thumbnail_media_id`` (C-203): an uploaded JPG or PNG of up to 2 MB, set on YouTube once
+      the video is there (services/post_publishing/youtube_thumbnail.py)."""
 
     title: str = Field(min_length=1, max_length=YOUTUBE_TITLE_MAX_CHARS)
     privacy: Literal["public", "unlisted", "private"] = "public"
@@ -152,6 +154,7 @@ class YouTubeOptions(RequestModel):
     )
     notify_subscribers: bool = True
     format: Literal["video", "short"] = "video"
+    thumbnail_media_id: uuid.UUID | None = None
 
     @field_validator("title")
     @classmethod
@@ -177,13 +180,19 @@ class YouTubeOptions(RequestModel):
 class YouTubeTargetState(ResponseModel):
     """Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was
     opened and not finished runs out then (the post goes back to a draft: "The upload didn't
-    finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link)."""
+    finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).
+    C-203, with a custom thumbnail chosen: its image (``thumbnail_url``), whether YouTube has it
+    (``thumbnail_status``: pending until the video is there and it was sent) and, when YouTube
+    refused it, why (``thumbnail_error``; the video itself is not affected)."""
 
     route: YouTubeRoute
     state: YouTubeState
     video_id: str | None = None
     upload_expires_at: datetime | None = None
     url: str | None = None
+    thumbnail_url: str | None = None
+    thumbnail_status: Literal["pending", "set", "failed"] | None = None
+    thumbnail_error: str | None = None
 
 
 class YouTubeUploadStart(RequestModel):

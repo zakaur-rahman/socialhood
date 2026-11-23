@@ -312,6 +312,9 @@ export const youtubeCopy = {
   publishing: "Uploaded to YouTube. It goes live once YouTube has processed it.",
   leaveWarning: "The video is still uploading to YouTube. If you leave now, the upload stops.",
   scheduled: (when: string) => `Scheduled on YouTube for ${when}.`,
+  thumbnailNote: "YouTube shows custom thumbnails only for verified channels. A JPG or PNG up to 2 MB; 1280 × 720 (16:9) fits best.",
+  thumbnailRemove: "Removing it here doesn't take it off a video already on YouTube: YouTube's own thumbnail can only be brought back in YouTube Studio.",
+  thumbnailSet: "Set on YouTube.",
 } as const;
 
 /** What a YouTube target is doing, as the composer and Schedule say it. */
