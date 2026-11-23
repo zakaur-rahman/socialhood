@@ -14946,7 +14946,9 @@ export interface components {
          *     - ``tags``: at most 500 characters in all, as YouTube counts them (a tag with a space counts
          *       its quotes, and each comma between tags counts);
          *     - ``format``: a ``short`` is checked to be vertical and up to 3 minutes (YouTube decides from
-         *       the file's shape and length; there is no separate call).
+         *       the file's shape and length; there is no separate call);
+         *     - ``thumbnail_media_id`` (C-203): an uploaded JPG or PNG of up to 2 MB, set on YouTube once
+         *       the video is there (services/post_publishing/youtube_thumbnail.py).
          */
         YouTubeOptions: {
             /** Category Id */
@@ -14984,6 +14986,9 @@ export interface components {
          * @description Where a YouTube target's video is (C-196). ``upload_expires_at``: a direct upload that was
          *     opened and not finished runs out then (the post goes back to a draft: "The upload didn't
          *     finish"). ``url``: the video on YouTube once there is one (a Short's /shorts/ link).
+         *     C-203, with a custom thumbnail chosen: its image (``thumbnail_url``), whether YouTube has it
+         *     (``thumbnail_status``: pending until the video is there and it was sent) and, when YouTube
+         *     refused it, why (``thumbnail_error``; the video itself is not affected).
          */
         YouTubeTargetState: {
             /**

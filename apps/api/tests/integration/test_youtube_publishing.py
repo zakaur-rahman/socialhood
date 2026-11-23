@@ -225,6 +225,9 @@ async def test_a_youtube_only_draft_goes_straight_to_youtube(tube: Tube) -> None
         "video_id": None,
         "upload_expires_at": None,
         "url": None,
+        "thumbnail_url": None,  # C-203: no thumbnail picked
+        "thumbnail_status": None,
+        "thumbnail_error": None,
     }
     assert failing(post) == {"targets.0": "youtube"}  # only the upload is missing
 
