@@ -2,12 +2,12 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { PageFrame } from "@/components/shell/PageFrame";
+import { AccountChoice, AllAccountsChoice } from "@/components/connections/AccountChoice";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,7 +18,7 @@ import { accountLabel, commentAccounts } from "@/lib/automations/accounts";
 import { flattenPosts } from "@/lib/comments/cache";
 import { formatCount } from "@/lib/comments/format";
 import { emptyStates } from "@/lib/copy";
-import { useNow } from "@/lib/use-browser-state";
+import { useNow, useStoredString } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { PostCard } from "./PostCard";
@@ -58,10 +58,18 @@ export function CommentsPage() {
   const youtubeOn = (workspace.features ?? []).includes("youtube");
   const connectLabel = youtubeOn ? "Connect an account" : "Connect Instagram";
   const now = useNow();
-  const [accountId, setAccountId] = useState<string | null>(null);
+  // Remembered per workspace, so opening a post and coming back keeps the account and the order.
+  const [storedAccount, setStoredAccount] = useStoredString<string>(`socialhood:comments-account:${wid}`, ALL);
+  const [storedSort, setSort] = useStoredString<PostSort>(`socialhood:comments-sort:${wid}`, "recent");
+  const sort: PostSort = storedSort === "needs_reply" ? "needs_reply" : "recent";
   const allAccounts = useSocialAccounts(wid);
   const accounts = useMemo(() => commentAccounts(allAccounts.data ?? []), [allAccounts.data]);
-  const [sort, setSort] = useState<PostSort>("recent");
+  // A remembered account that was since disconnected falls back to all (once the list has loaded).
+  const accountId =
+    storedAccount === ALL || (allAccounts.data && !accounts.some((account) => account.id === storedAccount))
+      ? null
+      : storedAccount;
+  const setAccountId = (id: string | null) => setStoredAccount(id ?? ALL);
   const posts = usePostGrid(wid, accountId, sort);
   const counts = useCommentCounts(wid);
   const waiting = counts.data?.needs_reply ?? 0;
@@ -164,27 +172,17 @@ export function CommentsPage() {
           </Button>
           {accounts.length > 1 ? (
           <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
-            <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
-              <SelectValue>
-                {chosen ? (
-                  <>
-                    <PlatformGlyph platform={chosen.platform} className="size-4 shrink-0" />
-                    <span className="truncate">{accountLabel(chosen)}</span>
-                  </>
-                ) : (
-                  "All accounts"
-                )}
-              </SelectValue>
+            {/* A fixed width: an account's name changing the button's width would move the buttons beside it. */}
+            <SelectTrigger aria-label="Account" size="lg" className="w-48 shrink-0">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All accounts</SelectItem>
+              <SelectItem value={ALL} check="highlight" textValue="All accounts">
+                <AllAccountsChoice />
+              </SelectItem>
               {accounts.map((account) => (
-                <SelectItem
-                  key={account.id}
-                  value={account.id}
-                  icon={<PlatformGlyph platform={account.platform} className="size-4" />}
-                >
-                  {accountLabel(account)}
+                <SelectItem key={account.id} value={account.id} textValue={accountLabel(account)} check="highlight">
+                  <AccountChoice account={account} />
                 </SelectItem>
               ))}
             </SelectContent>
