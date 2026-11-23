@@ -50,11 +50,11 @@ function subscribeStorage(onChange: () => void) {
 const memory = new Map<string, string>();
 
 function write(key: string, value: string) {
-  memory.set(key, value);
   try {
     window.localStorage.setItem(key, value);
+    memory.delete(key);
   } catch {
-    // Not remembered across visits.
+    memory.set(key, value); // Not remembered across visits.
   }
   window.dispatchEvent(new Event(LOCAL_EVENT));
 }

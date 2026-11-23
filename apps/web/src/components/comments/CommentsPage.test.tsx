@@ -182,6 +182,24 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     expect(within(card("po9")).getByTestId("post-account")).toHaveTextContent("Disconnected account");
   });
 
+  it("keeps the chosen account after opening a post and coming back", async () => {
+    const user = userEvent.setup();
+    const accounts = [account(), account({ id: "a2", username: "maple.studio" })];
+    const items = [...posts, post({ id: "po7", social_account_id: "a2", posted_at: "2024-03-02T12:00:00Z" })];
+    const first = setup({ accounts, items });
+    await screen.findAllByTestId("post-card");
+    await user.click(screen.getByRole("combobox", { name: "Account" }));
+    await user.click(await screen.findByRole("option", { name: "@maple.studio" }));
+    await waitFor(() => expect(screen.getAllByTestId("post-card")).toHaveLength(1));
+    first.unmount(); // the post opens; the grid goes away
+
+    const lists: (string | null)[] = [];
+    setup({ accounts, items, onList: (call) => lists.push(call.url.searchParams.get("account_id")) });
+    await waitFor(() => expect(screen.getAllByTestId("post-card")).toHaveLength(1));
+    expect(screen.getByRole("combobox", { name: "Account" })).toHaveTextContent("@maple.studio");
+    expect(lists).toEqual(["a2"]);
+  });
+
   it("hides the account filter with one account", async () => {
     setup();
     await screen.findAllByTestId("post-card");
