@@ -31,7 +31,6 @@ import {
   useUpdateAiConnectionsMode,
 } from "@/lib/api/queries";
 import type { AiConnection, AiConnectionsMode } from "@/lib/api/types";
-import { siteHref } from "@/lib/marketing/site";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
@@ -93,10 +92,14 @@ export const SCOPE_WORDS: Record<string, string> = {
 export function AiConnectionsPage() {
   const workspace = useCurrentWorkspace();
   const admin = workspace.role === "owner" || workspace.role === "admin";
-  // The old API keys address forwards to #api-keys, but the cards render after the browser's own jump.
+  // The old API keys address forwards to #api-keys, but the cards above it grow as their data loads,
+  // after the browser's own jump: scroll once they have loaded, so the target stays in sight.
+  const connections = useAiConnections(workspace.id);
+  const settings = useAiConnectionsSettings(workspace.id, admin);
+  const aboveLoaded = !connections.isPending && (!admin || !settings.isPending);
   useEffect(() => {
-    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
-  }, []);
+    if (aboveLoaded && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, [aboveLoaded]);
   return (
     <SettingsFrame
       header={
