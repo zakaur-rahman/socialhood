@@ -66,7 +66,7 @@ export function ScheduleRail({
   );
 
   return (
-    <div className="space-y-5 text-sm">
+    <div className="space-y-5 pr-1 text-sm">
       <RailSection title="Unscheduled drafts" count={drafts.isPending ? undefined : items.length}>
         {drafts.isPending ? (
           <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading drafts">
@@ -97,7 +97,7 @@ export function ScheduleRail({
         {accounts.length === 0 ? (
           <NoAccounts />
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2 pl-1">
             {accounts.map((account) => {
               const figure = figures.get(account.id);
               const used = figure?.published_24h ?? 0;
