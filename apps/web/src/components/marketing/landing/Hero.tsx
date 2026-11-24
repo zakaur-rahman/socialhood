@@ -90,7 +90,7 @@ export function Hero() {
               <ul className="facts" aria-label="At a glance">
                 {HERO_FACTS.map((fact) => (
                   <li key={fact}>
-                    <Check className="size-4" strokeWidth={2.4} aria-hidden />
+                    <Check className="size-4" aria-hidden />
                     {fact}
                   </li>
                 ))}

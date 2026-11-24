@@ -1,4 +1,4 @@
-import { BookOpen, Check, CircleCheck, type LucideIcon, MessageSquareOff, MessagesSquare, Sparkles } from "lucide-react";
+import { BookOpen, Check, CircleCheck, type LucideIcon, MessageSquareOff, MessagesSquare, Plug } from "lucide-react";
 
 import { MCP_PAGE_PATH, MCP_SETUP_PATH } from "@/lib/marketing/mcp-page";
 import { SITE_NAME } from "@/lib/marketing/site";
@@ -27,7 +27,7 @@ export const AI_APPS_CLIENTS = ["Claude", "ChatGPT", "Codex"] as const;
 export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[] = [
   {
     title: "Works with Claude, ChatGPT and Codex",
-    icon: Sparkles,
+    icon: Plug,
     body: `Add ${SITE_NAME} as a connector, sign in and pick the workspace.`,
   },
   {

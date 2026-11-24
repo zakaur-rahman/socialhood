@@ -43,6 +43,7 @@ describe("Home formatting (UX-SCR-01)", () => {
       direction: "up",
       good: null,
       text: "+25%",
+      vs: "vs previous 7 days",
       words: "up 25% from the previous 7 days",
     });
     expect(countTrend(6, 8, "30 days")?.text).toBe("−25%");

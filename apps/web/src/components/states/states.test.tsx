@@ -4,7 +4,6 @@ import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
-import { greeting } from "@/lib/copy";
 
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
@@ -138,10 +137,3 @@ describe("EmptyState", () => {
   });
 });
 
-describe("greeting", () => {
-  it("follows the time of day", () => {
-    expect(greeting(new Date(2026, 8, 28, 9), "Priya")).toBe("Good morning, Priya");
-    expect(greeting(new Date(2026, 8, 28, 14), "Priya")).toBe("Good afternoon, Priya");
-    expect(greeting(new Date(2026, 8, 28, 20))).toBe("Good evening");
-  });
-});

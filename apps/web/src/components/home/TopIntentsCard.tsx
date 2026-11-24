@@ -1,4 +1,3 @@
-import { assignColours, seriesStyle } from "@/components/charts/palette";
 import { Card, CardTitle } from "@/components/ui/card";
 import { INTENT_LABEL } from "@/lib/ai/format";
 import type { Overview } from "@/lib/api/types";
@@ -7,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { formatCount } from "./format";
 
 /** What customers wrote about most in the range (analysed messages; "other" and spam left out),
- * with how many messages these topics add up to. The bars are a chart on tokens, not Progress. */
+ * with how many messages these topics add up to. The bars are a chart on tokens, not Progress: a
+ * ranking, so the leading topic takes the accent and the rest stay neutral. */
 export function TopIntentsCard({
   intents,
   period,
@@ -19,11 +19,6 @@ export function TopIntentsCard({
 }) {
   const most = Math.max(1, ...intents.map((item) => item.count));
   const total = intents.reduce((sum, item) => sum + item.count, 0);
-  // A topic keeps its hue from range to range (the order of INTENT_LABEL); two shown never share one.
-  const colours = assignColours(
-    intents.map((item) => item.intent),
-    Object.keys(INTENT_LABEL),
-  );
   return (
     <Card asChild className="flex flex-col">
       <section aria-labelledby="home-intents">
@@ -44,7 +39,7 @@ export function TopIntentsCard({
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                    <div className={cn("h-full rounded-full", seriesStyle(colours.get(item.intent) ?? 0).bg)} style={{ width: `${(item.count / most) * 100}%` }} />
+                    <div className={cn("h-full rounded-full", item.count === most ? "bg-brand" : "bg-chart-neutral")} style={{ width: `${(item.count / most) * 100}%` }} />
                   </div>
                 </li>
               ))}

@@ -12,14 +12,16 @@ import type { Trend } from "./format";
 
 const TREND_TONE = { good: "text-success", bad: "text-danger-fg", neutral: "text-fg-secondary" } as const;
 
-/** The change from the period before, coloured when it is good or bad news. */
-export function TrendChip({ trend }: { trend: Trend }) {
+/** The change from the period before, coloured when it is good or bad news. `compare` also shows
+ * what it compares to ("vs previous 7 days"); dense tables leave it off. */
+export function TrendChip({ trend, compare = false }: { trend: Trend; compare?: boolean }) {
   const tone = trend.good === null ? "neutral" : trend.good ? "good" : "bad";
   const Icon = trend.direction === "up" ? ArrowUpRight : trend.direction === "down" ? ArrowDownRight : null;
   return (
     <span data-testid="trend" data-tone={tone} className={cn("inline-flex items-center gap-0.5 text-xs font-medium", TREND_TONE[tone])}>
       {Icon ? <Icon className="size-3.5" aria-hidden /> : null}
       <span aria-hidden>{trend.text}</span>
+      {compare && trend.vs ? <span aria-hidden className="ms-1 font-normal text-fg-secondary">{trend.vs}</span> : null}
       <span className="sr-only">{trend.words}</span>
     </span>
   );
@@ -66,7 +68,7 @@ export function MetricTile({ label, value, badge, hint, trend, href, children, c
             {badge.label}
           </Badge>
         ) : null}
-        {trend ? <TrendChip trend={trend} /> : null}
+        {trend ? <TrendChip trend={trend} compare /> : null}
       </p>
       {hint ? <p className="mt-1 text-xs text-fg-secondary">{hint}</p> : null}
       {children ? <div className="mt-auto pt-3">{children}</div> : null}
