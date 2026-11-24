@@ -163,16 +163,8 @@ function parseTime(text: string, lenient = false): string | null {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
 }
 
-/** Every `step` minutes of the day, "00:00" to "23:45" by default. */
-function timeSlots(step = 15): string[] {
-  const slots: string[] = []
-  for (let minutes = 0; minutes < 24 * 60; minutes += step) {
-    slots.push(`${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`)
-  }
-  return slots
-}
-
-const QUARTER_HOURS = timeSlots()
+const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"))
+const MINUTES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"))
 
 type TimeFieldProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type"> & {
   /** "HH:mm", or "" for none. */
@@ -185,7 +177,7 @@ type TimeFieldProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChan
 
 /**
  * A time of day: a text input that takes any minute ("18:07", "930") and shows it as HH:mm once you
- * leave it, with a list of quarter-hours beside it for a quick pick. The native `time` input's
+ * leave it, with an hour column and a minute column beside it to pick any minute. The native `time` input's
  * value format, without its per-browser 12/24-hour widget. Inside a Field it is the labelled
  * control, so `getByLabelText("Time")` finds the input.
  */
@@ -200,7 +192,6 @@ function TimeField({ value, onChange, min, className, size = "default", disabled
     setPrevious(value)
     if (draft !== null && (parseTime(draft) ?? "") !== value) setDraft(null)
   }
-  const slots = value && !QUARTER_HOURS.includes(value) ? [...QUARTER_HOURS, value].sort() : QUARTER_HOURS
   return (
     <div className="relative w-full">
       <Input
@@ -240,25 +231,27 @@ function TimeField({ value, onChange, min, className, size = "default", disabled
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-28 gap-0 p-1"
+          className="w-auto gap-0 p-1"
           onOpenAutoFocus={(event) => {
             const content = event.currentTarget as HTMLElement
-            const current =
-              content.querySelector<HTMLElement>("[aria-selected='true']:not([aria-disabled='true'])") ??
-              content.querySelector<HTMLElement>("[role='option']:not([aria-disabled='true'])")
             event.preventDefault()
+            // Each column shows its chosen value; focus starts on the hour.
+            for (const list of content.querySelectorAll<HTMLElement>("[role='listbox']")) {
+              list.querySelector<HTMLElement>("[aria-selected='true']")?.scrollIntoView?.({ block: "center" })
+            }
+            const current =
+              content.querySelector<HTMLElement>("[aria-label='Hours'] [aria-selected='true']:not([aria-disabled='true'])") ??
+              content.querySelector<HTMLElement>("[role='option']:not([aria-disabled='true'])")
             current?.focus()
-            current?.scrollIntoView?.({ block: "center" })
           }}
         >
-          <TimeList
-            slots={slots}
+          <TimeColumns
             min={min}
             value={value}
-            onPick={(time) => {
+            onPick={(time, done) => {
               onChange(time)
               setDraft(null)
-              setOpen(false)
+              if (done) setOpen(false)
             }}
           />
         </PopoverContent>
@@ -267,8 +260,56 @@ function TimeField({ value, onChange, min, className, size = "default", disabled
   )
 }
 
-/** The quarter-hours as a listbox: arrows move, Enter or a click chooses; times before `min` are disabled. */
-function TimeList({ slots, min, value, onPick }: { slots: string[]; min?: string; value: string; onPick: (time: string) => void }) {
+/**
+ * An hour column and a minute column, each a listbox: arrows move, Enter or a click chooses. Picking
+ * an hour keeps the minute (or the earliest allowed one) and leaves the columns open; picking a
+ * minute sets the time and closes them. Times before `min` are disabled.
+ */
+function TimeColumns({ min, value, onPick }: { min?: string; value: string; onPick: (time: string, done: boolean) => void }) {
+  const minHour = min?.slice(0, 2)
+  const minMinute = min?.slice(3, 5)
+  const [hour, setHour] = React.useState<string | null>(value ? value.slice(0, 2) : null)
+  const minute = value ? value.slice(3, 5) : null
+  const shownHour = hour ?? minHour ?? HOURS.find((h) => !minHour || h >= minHour) ?? "00"
+  const earliestIn = (h: string) => (minHour && h === minHour && minMinute ? minMinute : "00")
+  const pickHour = (h: string) => {
+    setHour(h)
+    const m = minute && `${h}:${minute}` >= (min ?? "") ? minute : earliestIn(h)
+    onPick(`${h}:${m}`, false)
+  }
+  return (
+    <div className="flex gap-1">
+      <TimeColumn
+        label="Hours"
+        items={HOURS}
+        isSelected={(h) => h === (hour ?? (value ? value.slice(0, 2) : null))}
+        isDisabled={(h) => Boolean(minHour && h < minHour)}
+        onPick={pickHour}
+      />
+      <TimeColumn
+        label="Minutes"
+        items={MINUTES}
+        isSelected={(m) => m === minute && shownHour === value.slice(0, 2)}
+        isDisabled={(m) => Boolean(min && `${shownHour}:${m}` < min)}
+        onPick={(m) => onPick(`${shownHour}:${m}`, true)}
+      />
+    </div>
+  )
+}
+
+function TimeColumn({
+  label,
+  items,
+  isSelected,
+  isDisabled,
+  onPick,
+}: {
+  label: string
+  items: string[]
+  isSelected: (item: string) => boolean
+  isDisabled: (item: string) => boolean
+  onPick: (item: string) => void
+}) {
   const move = (event: React.KeyboardEvent<HTMLUListElement>) => {
     const options = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[role='option']:not([aria-disabled='true'])"))
     const index = options.indexOf(document.activeElement as HTMLElement)
@@ -278,30 +319,34 @@ function TimeList({ slots, min, value, onPick }: { slots: string[]; min?: string
     options[Math.max(0, Math.min(options.length - 1, target))]?.focus()
   }
   return (
-    <ul role="listbox" aria-label="Times" onKeyDown={move} className="max-h-56 overflow-y-auto">
-      {slots.map((slot) => {
-        const past = Boolean(min && slot < min)
+    <div className="w-14">
+    {/* Both columns count from 00, so each says what it is; the listbox's name says it to screen readers. */}
+    <p aria-hidden className="px-2 pb-1 text-center text-xs font-medium text-fg-secondary">{label === "Hours" ? "Hour" : "Min"}</p>
+    <ul role="listbox" aria-label={label} onKeyDown={move} className="max-h-56 overflow-y-auto">
+      {items.map((item) => {
+        const disabled = isDisabled(item)
         return (
-        <li
-          key={slot}
-          role="option"
-          aria-selected={slot === value}
-          aria-disabled={past || undefined}
-          tabIndex={-1}
-          onClick={past ? undefined : () => onPick(slot)}
-          onKeyDown={(event) => {
-            if (!past && (event.key === "Enter" || event.key === " ")) {
-              event.preventDefault()
-              onPick(slot)
-            }
-          }}
-          className="cursor-default aria-disabled:pointer-events-none aria-disabled:opacity-40 rounded-md px-2 py-1 text-sm tabular-nums hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand aria-selected:bg-brand-soft aria-selected:text-brand-fg pointer-coarse:min-h-10 pointer-coarse:py-2"
-        >
-          {slot}
-        </li>
+          <li
+            key={item}
+            role="option"
+            aria-selected={isSelected(item)}
+            aria-disabled={disabled || undefined}
+            tabIndex={-1}
+            onClick={disabled ? undefined : () => onPick(item)}
+            onKeyDown={(event) => {
+              if (!disabled && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault()
+                onPick(item)
+              }
+            }}
+            className="cursor-default aria-disabled:pointer-events-none aria-disabled:opacity-40 rounded-md px-2 py-1 text-center text-sm tabular-nums hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand aria-selected:bg-brand-soft aria-selected:text-brand-fg pointer-coarse:min-h-10 pointer-coarse:py-2"
+          >
+            {item}
+          </li>
         )
       })}
     </ul>
+    </div>
   )
 }
 
@@ -362,10 +407,16 @@ function DateTimePicker({
       </Field>
       <Field id={`${idPrefix}-time`} density={density} invalid={invalid} disabled={disabled || (timeNeedsDate && !value.date)}>
         <FieldLabel className={labelClass}>{labels.time}</FieldLabel>
-        <TimeField size={size} value={value.time} min={value.date && min && value.date <= min ? minTime : undefined} onChange={(time) => onChange({ ...value, time })} />
+        <TimeField
+          size={size}
+          value={value.time}
+          // A day before the first allowed one has no time left ("24:00" is after every time); the first day starts at minTime.
+          min={value.date && min ? (value.date < min ? "24:00" : value.date === min ? minTime : undefined) : undefined}
+          onChange={(time) => onChange({ ...value, time })}
+        />
       </Field>
     </div>
   )
 }
 
-export { DatePicker, DateTimePicker, TimeField, parseTime, timeSlots }
+export { DatePicker, DateTimePicker, TimeField, parseTime }
