@@ -167,7 +167,7 @@ describe("MessageBubble variants (UX-INB-06)", () => {
         failure={sendFailure(error, { platform: "whatsapp" })}
         onRetry={() => {}}
         onChooseTemplate={onChooseTemplate}
-        reconnectHref={"/w/maple/settings/connections" as Route}
+        reconnectHref={"/w/maple/connections" as Route}
       />,
     );
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();

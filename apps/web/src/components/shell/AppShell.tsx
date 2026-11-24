@@ -39,7 +39,6 @@ import { MobileNav } from "./MobileNav";
 import { ShellFrame, useSidebarState } from "./ShellFrame";
 import { NotificationsButton } from "./NotificationsButton";
 import { BILLING_HREF, pageTitle } from "./nav";
-import { creditsUsage } from "./usage";
 
 /**
  * The signed-in frame: sidebar on desktop (collapsed below 1024 px, 1280 px in the inbox;
@@ -91,7 +90,6 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     unreadCount: counts.data?.unread ?? 0,
     commentsCount: commentCounts.data?.needs_reply ?? 0,
     knowledgeCount: counts.data?.knowledge_waiting ?? 0,
-    credits: creditsUsage(billing.data, billing.isPending),
     reconnecting,
     // UI-058: the setup checklist comes back from the workspace menu (those who can change the workspace).
     onShowChecklist: workspace.role === "agent" ? undefined : showChecklist,
@@ -188,6 +186,6 @@ export function accountBanners(accounts: SocialAccount[], slug: string): Banner[
       id: `reconnect:${account.id}`,
       tone: "warning" as const,
       message: reconnectBanner(account.username),
-      action: { label: "Reconnect", href: `/w/${slug}/settings/connections` as Route },
+      action: { label: "Reconnect", href: `/w/${slug}/connections` as Route },
     }));
 }

@@ -15,7 +15,7 @@ const reconnect: NotificationItem = {
   severity: "critical",
   title: "Reconnect @maple.bakery",
   body: "@maple.bakery needs reconnecting to keep receiving messages.",
-  link: "/settings/connections",
+  link: "/connections",
   read_at: null,
   created_at: "2026-09-28T11:55:00Z",
 };
@@ -29,7 +29,7 @@ describe("NotificationsPanel (UX-SH-04)", () => {
       <NotificationsPanel items={[reconnect]} unread={1} slug="maple" marking={false} onMarkAllRead={vi.fn()} onOpen={onOpen} now={now} />,
     );
     const link = screen.getByRole("link", { name: /Reconnect @maple.bakery/ });
-    expect(link).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(link).toHaveAttribute("href", "/w/maple/connections");
     expect(screen.getByLabelText("unread")).toBeInTheDocument();
     expect(screen.getByText("5m")).toBeInTheDocument();
     await userEvent.click(link);
@@ -79,7 +79,7 @@ describe("account banners (F-05)", () => {
         id: "reconnect:maple.bakery",
         tone: "warning",
         message: "Reconnect @maple.bakery to keep receiving messages",
-        action: { label: "Reconnect", href: "/w/maple/settings/connections" },
+        action: { label: "Reconnect", href: "/w/maple/connections" },
       },
     ]);
   });

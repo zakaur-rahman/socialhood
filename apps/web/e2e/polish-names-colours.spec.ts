@@ -54,7 +54,7 @@ test.describe("Polish A names and colours", () => {
   });
 
   test("the account card badge uses the platform's logo colour", async ({ page, sandbox }) => {
-    await page.goto(`/w/${sandbox.workspace.slug}/settings/connections`);
+    await page.goto(`/w/${sandbox.workspace.slug}/connections`);
     const badge = page.getByRole("img", { name: "Instagram" }).first();
     await expect(badge).toBeVisible();
     await expect(badge).toHaveClass(/bg-instagram-logo-gradient/);

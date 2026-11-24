@@ -1,11 +1,11 @@
 "use client";
 
-import { Activity, Bot, ExternalLink, Plug, ShieldAlert, Trash2 } from "lucide-react";
-import type { Route } from "next";
+import { Activity, Bot, Plug, ShieldAlert, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { ApiKeysSection } from "@/components/integrations/ApiKeysSection";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import {
@@ -37,6 +37,7 @@ import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { SetupCard } from "./SetupCard";
 import { ToolCallList } from "./ToolCallList";
 
 export const SETUP_GUIDE_PATH = "/developers/mcp";
@@ -84,7 +85,7 @@ export const SCOPE_WORDS: Record<string, string> = {
 };
 
 /**
- * Settings › Connected AI apps (C-165 phase C): what AI apps (Claude, ChatGPT, Codex over MCP)
+ * Settings › MCP & API (C-165 phase C): what AI apps (Claude, ChatGPT, Codex over MCP)
  * may do in this workspace, and every app connected to it, each with its member, what it may do,
  * when it was last used, its recent tool calls and Disconnect. Owners and admins set the mode and
  * see everyone's connections; other members see their own. API keys show their tool calls too.
@@ -92,27 +93,23 @@ export const SCOPE_WORDS: Record<string, string> = {
 export function AiConnectionsPage() {
   const workspace = useCurrentWorkspace();
   const admin = workspace.role === "owner" || workspace.role === "admin";
+  // The old API keys address forwards to #api-keys, but the cards render after the browser's own jump.
+  useEffect(() => {
+    if (window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, []);
   return (
     <SettingsFrame
       header={
         <SettingsPageHeader
-          title="Connected AI apps"
-          description={
-            <>
-              Claude, ChatGPT and Codex can work in this workspace as one of its members.{" "}
-              <Link
-                className="inline-flex items-center gap-1 font-medium text-brand-fg underline underline-offset-4"
-                href={siteHref(SETUP_GUIDE_PATH) as Route}
-              >
-                How to connect an AI app <ExternalLink className="size-3.5" aria-hidden />
-              </Link>
-            </>
-          }
+          title="MCP & API"
+          description="Claude, ChatGPT and Codex can work in this workspace as one of its members (over MCP). API keys are for the public API and AI apps that use a key."
         />
       }
     >
-      {admin ? <ModeCard /> : null}
+      <SetupCard canMakeKeys={admin} />
       <ConnectionsCard />
+      {admin ? <ModeCard /> : null}
+      {admin ? <ApiKeysSection /> : null}
     </SettingsFrame>
   );
 }
@@ -226,15 +223,7 @@ function ConnectionsCard() {
         <p className="text-sm text-fg-secondary">Couldn&rsquo;t load connected apps. Try again in a moment.</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-fg-secondary">
-          No AI apps are connected. Add Amplychat to Claude, ChatGPT or Codex with the{" "}
-          <Link className="font-medium text-brand-fg underline underline-offset-4" href={siteHref(SETUP_GUIDE_PATH) as Route}>
-            setup guide
-          </Link>
-          . API keys for Claude Code and Codex are in{" "}
-          <Link className="font-medium text-brand-fg underline underline-offset-4" href={`/w/${workspace.slug}/settings/api-keys` as Route}>
-            Settings › API keys
-          </Link>
-          .
+          No AI apps are connected yet. Follow the steps above for your AI app.
         </p>
       ) : (
         <ul className="divide-y divide-line-subtle" aria-label="Connected AI apps">

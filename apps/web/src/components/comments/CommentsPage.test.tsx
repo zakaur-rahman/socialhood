@@ -219,7 +219,7 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     setup({ items: [], accounts: [] });
     expect(await screen.findByText("No posts yet")).toBeInTheDocument();
     expect(screen.getByText("Your Instagram posts and their comments appear here after you connect.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/connections");
   });
 
   it("lists YouTube channels in the account filter", async () => {

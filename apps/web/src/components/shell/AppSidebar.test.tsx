@@ -72,7 +72,7 @@ describe("AppSidebar (UX-SH-01)", () => {
   });
 
   it("collapses to icons with accessible names and no visible labels", () => {
-    renderSidebar({ collapsed: true, credits: { used: 10, limit: 200, plan: "free" } });
+    renderSidebar({ collapsed: true });
     const nav = mainNav();
     expect(nav).toHaveAttribute("data-collapsed", "true");
     // The labels stay in the DOM to fade, but are out of the accessibility tree.
@@ -81,7 +81,6 @@ describe("AppSidebar (UX-SH-01)", () => {
     expect(within(nav).queryByText("Inbox", { ignore: "[aria-hidden=true]" })).not.toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Inbox" })).toHaveAttribute("href", "/w/aria/inbox");
     expect(within(nav).getByRole("button", { name: "Workspace menu: Aria Label" })).toBeInTheDocument();
-    expect(within(nav).queryByRole("button", { name: "Upgrade" })).not.toBeInTheDocument();
   });
 
   it("animates only under motion-safe and only after the first paint; never with a bare transition", () => {
@@ -256,83 +255,6 @@ describe("workspace menu", () => {
       "Aria LabelFree",
       "Workspace settings",
     ]);
-  });
-});
-
-describe("usage card (FR-AI-05)", () => {
-  function meter() {
-    return screen.queryByRole("meter", { name: "AI credits" });
-  }
-  function upgrade() {
-    return screen.queryByRole("button", { name: "Upgrade" });
-  }
-
-  it("Free: the meter and Upgrade for owners and admins", () => {
-    const { rerender } = renderSidebar({ credits: { used: 50, limit: 200, plan: "free" } });
-    expect(meter()).toHaveAttribute("aria-valuetext", "50 of 200 used");
-    expect(meter()).toHaveAttribute("aria-valuenow", "50");
-    expect(meter()).toHaveAttribute("aria-valuemax", "200");
-    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "normal");
-    expect(screen.getByText("50 of 200 used")).toBeInTheDocument();
-    expect(upgrade()).toBeInTheDocument();
-    rerender({ workspace: { ...owner, role: "admin" } });
-    expect(upgrade()).toBeInTheDocument();
-  });
-
-  it("Upgrade opens the upgrade dialog (UI-063): a plain upgrade, or the credit limit once they are used up", async () => {
-    openUpgrade.mockClear();
-    const user = userEvent.setup();
-    const { rerender } = renderSidebar({ credits: { used: 50, limit: 200, plan: "free" } });
-    await user.click(upgrade()!);
-    expect(openUpgrade).toHaveBeenLastCalledWith({ code: "entitlement_required", entitlement: "pro" });
-    rerender({ credits: { used: 200, limit: 200, plan: "free" } });
-    await user.click(upgrade()!);
-    expect(openUpgrade).toHaveBeenLastCalledWith({ code: "quota_exceeded", entitlement: "ai_credits_monthly", limit: 200 });
-  });
-
-  it("paying and under 80 %: the quiet meter, no Upgrade", () => {
-    renderSidebar({ workspace: { ...owner, plan: "pro" }, credits: { used: 3999, limit: 5000, plan: "pro" } });
-    expect(screen.getByText("3,999 of 5,000 used")).toBeInTheDocument();
-    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "normal");
-    expect(upgrade()).not.toBeInTheDocument();
-  });
-
-  it("from 80 %: warning-toned with Upgrade; used up: danger-toned", () => {
-    const { rerender } = renderSidebar({ credits: { used: 4000, limit: 5000, plan: "pro" } });
-    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "warning");
-    expect(upgrade()).toBeInTheDocument();
-    rerender({ credits: { used: 5000, limit: 5000, plan: "pro" } });
-    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "full");
-    expect(screen.getByText("5,000 of 5,000 used")).toBeInTheDocument();
-  });
-
-  it("never offers Upgrade on Max, the top plan", () => {
-    renderSidebar({ credits: { used: 24_000, limit: 25_000, plan: "max" } });
-    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "warning");
-    expect(upgrade()).not.toBeInTheDocument();
-  });
-
-  it("hidden for agents, for unlimited plans and when billing failed; a placeholder while loading", () => {
-    const { rerender } = renderSidebar({
-      workspace: { ...owner, role: "agent" },
-      credits: { used: 190, limit: 200, plan: "free" },
-    });
-    expect(meter()).not.toBeInTheDocument();
-    expect(upgrade()).not.toBeInTheDocument();
-    rerender({ workspace: owner, credits: null });
-    expect(meter()).not.toBeInTheDocument();
-    expect(screen.queryByTestId("usage-loading")).not.toBeInTheDocument();
-    rerender({ workspace: owner, credits: "loading" });
-    expect(screen.getByTestId("usage-loading")).toBeInTheDocument();
-    expect(upgrade()).not.toBeInTheDocument();
-  });
-
-  it("collapsed: a ring named by the figures, without Upgrade", () => {
-    renderSidebar({ collapsed: true, credits: { used: 412, limit: 500, plan: "free" } });
-    const ring = screen.getByRole("meter", { name: "AI credits" });
-    expect(ring).toHaveAttribute("aria-valuetext", "412 of 500 used");
-    expect(ring).toHaveAttribute("aria-valuemax", "500");
-    expect(upgrade()).not.toBeInTheDocument();
   });
 });
 

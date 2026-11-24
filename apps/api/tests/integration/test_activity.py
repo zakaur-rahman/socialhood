@@ -161,7 +161,7 @@ async def test_a_failed_run_shows_its_reason_and_the_reconnect_link(
     assert (item["id"], item["kind"], item["outcome"]) == (str(run), "automation_run", "failed")
     assert item["error_code"] == "account_needs_reconnect"
     assert item["reason"].endswith("needs reconnecting before you can send from it.")
-    assert item["action"] == {"label": "Reconnect Instagram", "href": "/settings/connections"}
+    assert item["action"] == {"label": "Reconnect Instagram", "href": "/connections"}
     assert item["automation_id"] == str(automation)
     assert item["retryable"] is False
     assert got["next_cursor"] is None

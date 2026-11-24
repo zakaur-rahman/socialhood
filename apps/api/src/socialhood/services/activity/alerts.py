@@ -6,7 +6,7 @@ that links to the Activity page filtered to it. A repeat inside the same ALERT_B
 notification (dedupe_key), so a long outage reminds every six hours, not every tick.
 
 An account that needs reconnecting is not alerted here: ``connections.mark_needs_reconnect``
-already notifies (and emails) once per broken connection, with a link to Settings, Connections.
+already notifies (and emails) once per broken connection, with a link to Connections.
 Failed webhook deliveries alert through GR-04's endpoint-disabled notification.
 
 The job (jobs/tasks/activity.py) finds the automations across workspaces, in tenant_bypass_scope,

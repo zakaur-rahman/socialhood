@@ -59,11 +59,21 @@ function renderCard(account: Partial<SocialAccount> = {}, props: { canManage?: b
   return { handlers, card: screen.getByRole("article", { name: "Maple Bakery" }) };
 }
 
+/** The switches sit behind the collapsed "AI settings" disclosure. */
+async function openSettings(card: HTMLElement) {
+  await userEvent.click(within(card).getByRole("button", { name: "AI settings" }));
+}
+
+const buttons = (card: HTMLElement) =>
+  within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"));
+
 describe("AccountCard (UX-SCR-07)", () => {
-  it("shows the account, its status and its settings", () => {
+  it("shows the account, its status and its settings", async () => {
     const { card } = renderCard();
     expect(within(card).getByText("@maple.bakery")).toBeInTheDocument();
     expect(within(card).getByText("Connected")).toBeInTheDocument();
+    expect(within(card).getByRole("combobox", { name: /AI replies/ })).toBeInTheDocument();
+    await openSettings(card);
     expect(within(card).getByRole("switch", { name: /AI analysis/ })).toBeChecked();
     expect(within(card).getByRole("switch", { name: /Hide spam comments/ })).not.toBeChecked();
     expect(within(card).queryByRole("button", { name: "Reconnect" })).not.toBeInTheDocument();
@@ -71,8 +81,25 @@ describe("AccountCard (UX-SCR-07)", () => {
 
   it("sends a switch change as a patch", async () => {
     const { card, handlers } = renderCard();
+    await openSettings(card);
     await userEvent.click(within(card).getByRole("switch", { name: /Hide spam comments/ }));
     expect(handlers.onChange).toHaveBeenCalledWith({ auto_hide_spam: true });
+  });
+
+  it("AI settings is a collapsed disclosure that shows and hides the switches", async () => {
+    const { card } = renderCard();
+    const toggle = within(card).getByRole("button", { name: "AI settings" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    const panel = document.getElementById(toggle.getAttribute("aria-controls")!);
+    expect(panel).not.toBeNull();
+    expect(card).toContainElement(panel);
+    expect(within(card).queryByRole("switch")).toBeNull();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(within(card).getAllByRole("switch")).toHaveLength(2);
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(card).queryByRole("switch")).toBeNull();
   });
 
   it("offers Reconnect with the reason when the token stopped working", async () => {
@@ -88,22 +115,29 @@ describe("AccountCard (UX-SCR-07)", () => {
 
   it("offers Retry when the webhook subscription failed", async () => {
     const { card, handlers } = renderCard({ status: "error", last_error: "Couldn't subscribe to messages. Try again." });
+    expect(within(card).getByRole("status")).toHaveTextContent("Couldn't subscribe to messages. Try again.");
     await userEvent.click(within(card).getByRole("button", { name: "Retry" }));
     expect(handlers.onRetrySubscribe).toHaveBeenCalledOnce();
   });
 
-  it("hides settings and Disconnect once disconnected", () => {
+  it("hides settings and Disconnect once disconnected", async () => {
     const { card } = renderCard({ status: "disconnected" });
     expect(within(card).getByText("Disconnected")).toBeInTheDocument();
     expect(within(card).queryByRole("switch")).not.toBeInTheDocument();
-    expect(within(card).queryByRole("button", { name: "Disconnect" })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("combobox", { name: /AI replies/ })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "AI settings" })).toBeNull();
     expect(within(card).getByRole("button", { name: "Reconnect" })).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole("button", { name: /More actions/ }));
+    expect(await screen.findByRole("menuitem", { name: "Delete account and data" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Disconnect" })).toBeNull();
   });
 
-  it("is read-only for agents", () => {
+  it("is read-only for agents", async () => {
     const { card } = renderCard({}, { canManage: false });
+    expect(within(card).getByRole("combobox", { name: /AI replies/ })).toBeDisabled();
+    await openSettings(card);
     expect(within(card).getByRole("switch", { name: /AI analysis/ })).toBeDisabled();
-    expect(within(card).queryByRole("button", { name: "Disconnect" })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /More actions/ })).not.toBeInTheDocument();
   });
 
   it("a YouTube channel has no AI controls and names its API", () => {
@@ -113,7 +147,8 @@ describe("AccountCard (UX-SCR-07)", () => {
     expect(within(card).queryByText("AI replies")).toBeNull();
     expect(within(card).queryByText("AI analysis")).toBeNull();
     expect(within(card).queryByText("Hide spam comments")).toBeNull();
-    expect(within(card).getByRole("button", { name: /Disconnect/ })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: /More actions/ })).toBeInTheDocument(); // Disconnect is in this menu (C-197)
+    expect(within(card).queryByRole("button", { name: "AI settings" })).toBeNull();
   });
 
   it("marks sandbox accounts", () => {
@@ -125,42 +160,39 @@ describe("AccountCard (UX-SCR-07)", () => {
     const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000 - 60_000).toISOString();
     const { card } = renderCard({ last_synced_at: threeHoursAgo });
     expect(within(card).getByText("Instagram API")).toBeInTheDocument();
-    expect(within(card).getByText("Last synced 3h ago")).toBeInTheDocument();
+    expect(within(card).getByText("synced 3h ago")).toHaveAttribute("title", expect.stringMatching(/^Last synced /));
     expect(within(card).getByRole("img", { name: "Instagram" })).toBeInTheDocument();
   });
 
-  it("says nothing about syncing before the first sync; WhatsApp is the Cloud API", () => {
+  it("says nothing about syncing before the first sync; WhatsApp is the Cloud API", async () => {
     const { card } = renderCard({ platform: "whatsapp", last_synced_at: null });
     expect(within(card).getByText("WhatsApp Cloud API")).toBeInTheDocument();
-    expect(within(card).queryByText(/Last synced/)).toBeNull();
+    expect(within(card).queryByText(/synced/)).toBeNull();
+    await openSettings(card);
+    expect(within(card).getByRole("switch", { name: /AI analysis/ })).toBeInTheDocument();
     // No spam switch: WhatsApp has no comments.
     expect(within(card).queryByRole("switch", { name: /Hide spam comments/ })).toBeNull();
   });
 
   it("a disconnected card offers Reconnect and the menu; nothing on it says delete (D-09)", () => {
     const { card } = renderCard({ status: "disconnected" });
-    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
-      "Reconnect",
-      "More actions for Maple Bakery",
-    ]);
+    expect(buttons(card)).toEqual(["Reconnect", "More actions for Maple Bakery"]);
   });
 
-  it("a connected card shows Disconnect as a neutral ghost button and the menu, no red (D-09)", () => {
+  it("a connected card shows no Reconnect and keeps Disconnect in the menu, no red (D-09)", async () => {
     const { card } = renderCard();
-    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
-      "Disconnect",
-      "More actions for Maple Bakery",
-    ]);
-    expect(within(card).getByRole("button", { name: "Disconnect" })).toHaveAttribute("data-variant", "ghost");
+    expect(buttons(card)).toEqual(["AI settings", "More actions for Maple Bakery"]);
     expect(card.innerHTML).not.toMatch(/[\s"](?:text|bg)-danger/);
+    await userEvent.click(within(card).getByRole("button", { name: /More actions/ }));
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.map((item) => item.textContent?.trim())).toEqual(["Disconnect", "Delete account and data"]);
   });
 
-  it("a connected sandbox gets the same menu", () => {
+  it("a connected sandbox gets the same menu", async () => {
     const { card } = renderCard({ sandbox: true });
-    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
-      "Disconnect",
-      "More actions for Maple Bakery",
-    ]);
+    expect(buttons(card)).toEqual(["AI settings", "More actions for Maple Bakery"]);
+    await userEvent.click(within(card).getByRole("button", { name: /More actions/ }));
+    expect(await screen.findByRole("menuitem", { name: "Disconnect" })).toBeInTheDocument();
   });
 
   it("choosing Auto on Free reaches the handler (the page opens the upgrade dialog)", async () => {
@@ -172,7 +204,8 @@ describe("AccountCard (UX-SCR-07)", () => {
 
   it("asks before disconnecting, and keeps the data (FR-CON-06)", async () => {
     const { card, handlers } = renderCard();
-    await userEvent.click(within(card).getByRole("button", { name: "Disconnect" }));
+    await userEvent.click(within(card).getByRole("button", { name: /More actions/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Disconnect" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Disconnect @maple.bakery?")).toBeInTheDocument();
     expect(within(dialog).getByText(/stay here for reference/)).toBeInTheDocument();

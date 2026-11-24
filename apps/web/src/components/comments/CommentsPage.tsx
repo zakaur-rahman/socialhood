@@ -99,7 +99,7 @@ export function CommentsPage() {
             body={youtubeOn ? "Your Instagram, Facebook and YouTube posts and their comments appear here after you connect." : emptyStates.comments.body}
             action={
               <Button asChild size="sm">
-                <Link href={`/w/${workspace.slug}/settings/connections` as Route}>{connectLabel}</Link>
+                <Link href={`/w/${workspace.slug}/connections` as Route}>{connectLabel}</Link>
               </Button>
             }
           />

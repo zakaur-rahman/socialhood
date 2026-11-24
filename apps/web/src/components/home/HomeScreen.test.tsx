@@ -372,7 +372,7 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
 
     const [account] = screen.getAllByTestId("account-attention");
     expect(account).toHaveTextContent("@maple.outlet needs reconnecting to keep receiving messages.");
-    expect(screen.getByRole("link", { name: "Open Connections" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(screen.getByRole("link", { name: "Open Connections" })).toHaveAttribute("href", "/w/maple/connections");
 
     for (const fake of [/NLP Engine/i, /confidence/i, /accuracy/i, /Instagram Graph/i, /AI Classified/i]) {
       expect(screen.queryByText(fake)).not.toBeInTheDocument();
