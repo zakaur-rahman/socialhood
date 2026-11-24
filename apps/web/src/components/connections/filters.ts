@@ -1,6 +1,6 @@
 import type { SocialAccount } from "@/lib/api/types";
 
-/** Settings → Connections' segmented filter (C-066). Sandboxes overlap the other two. */
+/** Connections' segmented filter (C-066). Sandboxes overlap the other two. */
 export type AccountFilter = "all" | "connected" | "disconnected" | "sandbox";
 
 export const ACCOUNT_FILTERS: readonly { value: AccountFilter; label: string }[] = [
@@ -45,6 +45,13 @@ export function filterCounts(accounts: SocialAccount[], query = ""): Record<Acco
     disconnected: matching.filter((a) => inFilter(a, "disconnected")).length,
     sandbox: matching.filter((a) => inFilter(a, "sandbox")).length,
   };
+}
+
+/** The Website chat card under the same search and filters: under Connected only while the chat is on. */
+export function websiteChatShown(on: boolean, filter: AccountFilter, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q && !"website chat".includes(q)) return false;
+  return filter === "all" || (on && filter === "connected");
 }
 
 export function visibleAccounts(accounts: SocialAccount[], filter: AccountFilter, query: string): SocialAccount[] {

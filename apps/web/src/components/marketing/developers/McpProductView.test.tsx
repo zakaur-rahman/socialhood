@@ -86,7 +86,7 @@ describe("/developers/mcp/api-key (C-165)", () => {
     }
     expect(screen.getAllByText(/https:\/\/api\.amplychat\.com\/mcp/).length).toBeGreaterThan(3);
     expect(screen.getByText(/bearer_token_env_var = "AMPLYCHAT_API_KEY"/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Settings › API keys/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Settings › MCP & API/).length).toBeGreaterThan(0);
     // API keys are on Business and Agency (billing/plans.py public_api), on every page.
     expect(screen.getByText(/A key is part of Business and Agency\./)).toBeInTheDocument();
     expect(screen.getByText(/Making a key needs a Business or Agency workspace\./)).toBeInTheDocument();

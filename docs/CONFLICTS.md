@@ -9741,6 +9741,27 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Not done:** no server check that the text was changed. A person who inserts the draft and
   sends it unedited has still reviewed it in the reply box.
 
+## C-180 · Connections as its own page; MCP & API in Settings; no credits meter in the sidebar (owner, 2026-11-08)
+
+- **Ask:** the owner found connecting an AI app (MCP) from the dashboard confusing: the setup steps
+  were only on the public site (/developers/mcp). Then, after seeing a first version: no AI
+  credits in the sidebar; name it "MCP & API" and keep it in Settings only; Connections opens
+  straight on its own page, like Inbox, and leaves Settings.
+- **Connections:** `/w/{slug}/connections`, in the sidebar right above Settings, with no settings
+  rail. `/settings/connections` forwards there, query included, so old emails and links still
+  work. The API now links to `/connections`: the connect return, notifications and the activity
+  feed. Settings opens on its own home.
+- **Settings › MCP & API** (was "Connected AI apps"):
+  - setup steps for Claude, Claude Code, ChatGPT and Codex in tabs, with copy buttons. The text
+    is `clientGuides()`, the same as /developers/mcp, so the two can't drift;
+  - the connected apps and the mode;
+  - the API keys, for owners and admins.
+
+  `/settings/api-keys` forwards to `/settings/ai-apps#api-keys`, and the rail no longer lists API
+  keys on its own. Public copy says "Settings › MCP & API".
+- **Sidebar:** the AI credits meter is gone. The credits banner when they run out, and the usage on
+  Billing and usage, stay.
+
 ## C-193 · SEO audit fixes (owner, 2026-11-12)
 
 - **Asked:** fix the findings of the 2026-11-11 SEO audit (report kept outside the repo).
@@ -9781,6 +9802,7 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   - The 5-minute margin before a reply window closes stays.
 - **AI apps over MCP keep 5 minutes** (`AI_APP_LEAD` in mcp/tools/publish.py). /developers/mcp and the MCP page promise that a post scheduled by an AI app waits 5 minutes, so the team can stop it. That promise stays true.
 - **Time list:** on the earliest allowed day (today), times before the first allowed minute are shown disabled and can't be picked, in the post composer, "Move to…" and Schedule message alike. A typed time is still checked by the form, as before.
+
 ## C-182 · The AI menu explains the Human Agent window (owner, 2026-11-08)
 
 - **Question:** should AI Suggest or Auto be turned off while Human Agent is active? No. The AI
@@ -9793,6 +9815,84 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
 - **Kept:** AI polish in the reply box stays. A person writes the text, reviews the rewrite and
   sends it.
 
+## C-183 · Website chat on the Connections page (owner, 2026-11-08; local only so far)
+
+- **Ask:** put Website chat inside Connections, with the other channels.
+- **Choice:** a card in the Connections list that opens a setup page. Not tabs, which would hide it,
+  and not the whole form on the page, which would mix four long cards and a save bar with the
+  search and filters.
+- **The card:** On or Off, the number of sites and today's chats, or "Not set up". It comes after
+  the accounts, and stays on the page when no account is connected. It matches a search for
+  "website", counts under All, and under Connected only while the chat is on. An off or unused chat
+  isn't "Disconnected".
+- **Reading the settings creates the channel** (`services/widget/settings.ensure`), so the card
+  reads them only once the workspace has a web account. Otherwise every workspace whose admin opened
+  Connections would get a website channel it never asked for.
+- **Add account** lists Website chat too. The form is unchanged at `/connections/website`, with a
+  "Connections" back link. `/settings/widget` forwards there. Settings loses Website chat and with
+  it the empty "Channels" group. Owners and admins only, as before.
+
+## C-184 · A warmer public site: sand and charcoal (owner, 2026-11-08; local only so far)
+
+- **Ask:** the owner liked a charcoal, sand and electric blue palette and said to use my best
+  judgement.
+- **Change:** the public site's paper, ink and night tokens move from cool greys to light sand and
+  warm charcoal. Violet stays the one accent, so it keeps matching the logo. Electric blue is not
+  used: it is too close to the violet and would clash with the locked logo.
+- **Scope:** every public page, since they share these tokens. Mixing warm and cool between pages
+  would look like a bug. The app and the logo, favicon and icon colours are unchanged. The share
+  image's background warms with the paper, and the sign-in and sign-up left panel shares the night
+  tokens, so it warms too. The "Amplychat" wordmark text next to the logo follows ink and night, so
+  it warms slightly; the logo mark itself does not.
+- **Readability:** every text and control pairing was recalculated and meets 4.5:1 for text and 3:1
+  for marks and control edges.
+
+## C-185 · Website chat: sites per plan (owner, 2026-11-08; local only so far)
+
+- **Why:** one widget could run on 20 sites on every plan, so $15 covered 20 client sites. The limit
+  now matches the other channel limits: Free 1, Creator 1, Business 3, Agency 20. A wildcard entry
+  such as `*.example.com` counts as one.
+- **After a downgrade:** the first sites in the list keep working and the rest stop, like extra
+  accounts (FR-BIL-07). The list can be kept or shortened, not grown. The settings page says so.
+- **Workspaces:** checked while choosing these numbers. One is provisioned at first sign-in and no
+  route creates another, so limits can only be bypassed by signing up again with another email.
+
+## C-186 · Inbox rows name their account when a platform has several (owner, 2026-11-08; local only so far)
+
+- **Why:** the main idea is many platforms and accounts in one workspace. The account filter already
+  existed beside the search, but with several accounts on a platform the rows looked the same until
+  opened.
+- **Change:** a row shows its account's handle next to the contact, only when that platform has more
+  than one account, and not once the list is filtered to one account. Row height is unchanged.
+
+## C-187 · Instagram has its own account limit (owner, 2026-11-08; local only so far)
+
+- **Limits:** Instagram: Free 1, Creator 2, Business 4, Agency 10 (`instagram_accounts`). WhatsApp and
+  Facebook keep `accounts_per_platform`: 1, 1, 3, 10. This replaces my earlier advice to keep Creator
+  at 1: the product is one workspace, and a person cannot buy a second one for a second brand.
+- **Why 4, not 5:** $7.50 per Instagram on Creator and Business and $7 on Agency. At 5, Business would
+  be cheaper per account than Agency.
+- **Where:** connecting, the downgrade rule, the billing meters, and the pricing, FAQ and AI info copy.
+
+## C-188 · Inbox: account pictures in the filter; the view chips on one row (owner, 2026-11-08; local only so far)
+
+- **Account filter:** each option, and the closed Select, shows the picture (or an initial) beside the
+  handle. The picture is decorative for screen readers.
+- **View chips:** one row that scrolls sideways at every width; they used to wrap from md. A plain mouse
+  wheel scrolls the row too, since its scrollbar is hidden.
+
+## C-189 · Website chat wildcards: the whole domain, never a shared host (owner said do your best, 2026-11-11)
+
+- **Shared hosts are refused.** A wildcard on a shared address (`*.myshopify.com`, `*.vercel.app`,
+  `*.co.uk`) covered everyone's sites there and counted as one, so one plan could cover any number
+  of shops. The message suggests the shop's own address (`yourshop.myshopify.com`). The list is kept
+  by hand in `services/widget/origin.SHARED_HOSTS`; move to the Public Suffix List if someone gets
+  round it.
+- **A wildcard covers the domain too.** `*.example.com` now also allows `example.com`. A business
+  needed two entries for its own site before, which Free and Creator (one site) could not have.
+- **Production, checked before release:** one website chat, on Creator, with no sites and no
+  wildcards. So the site limit (C-185) and this rule cut nobody at release.
+
 ## C-190 · Order updates in the Human Agent week need the member's own words (owner said do your best, 2026-11-11)
 
 - **Rule:** on Instagram and Messenger, between 24 hours and 7 days after the customer last wrote,
@@ -9802,6 +9902,38 @@ Four read-only reviews of the live home page (impeccable, design-taste-frontend,
   and sending those under the tag risks the permission Meta is reviewing.
 - **Payment links stay as they are.** A member makes the link by hand in a buying conversation.
 - **WhatsApp is unchanged:** after 24 hours it needs an approved utility template.
+## C-192 · Website chat redesign (owner, 2026-11-12)
+
+- **Asked:** the owner tested the widget on a page and said it needs a redesign. The bubble showed a
+  grey square, the open chat a grey border, the message box a doubled focus ring and scroll arrows.
+- **Cause of the grey boxes:** the frame is only 12px larger than the launcher and the panel, and
+  their shadows reached 40px, so the frame's edge cut them off. The owner asked to remove the
+  shadow: the launcher has none and the panel has a 1px outline instead. The frame keeps its size.
+- **Calls made:** a light header tinted 7% with the accent instead of a solid accent bar (the
+  accent stays on the launcher, the visitor's bubbles and the send button); same-side bubbles join;
+  a rounded field with a round arrow Send button, grey while the field is empty, still named "Send"
+  for screen readers; AI replies labelled "AI assistant" rather than "Assistant"; the settings
+  preview follows the new header (plain, without the tint, which the design lint keeps out of
+  inline styles).
+- **Not done:** timestamps on messages, a typing indicator and avatars: each needs data the widget
+  API doesn't send yet.
+## C-193 · SEO audit fixes (owner, 2026-11-12)
+
+- **Asked:** fix the findings of the 2026-11-11 SEO audit (report kept outside the repo).
+- **Done:** comparison titles lead with the rival and "alternative" (Manychat one-to-one leads with
+  "Manychat vs"); the MCP pages target "Instagram MCP server" and "set up"; titles and h1s name the
+  thing (pricing title built from the plan list, never a typed price; home tagline inside the h1);
+  /features/ai-inbox is the shared inbox page; footer links to comment-to-DM, WhatsApp auto-reply,
+  website chat and AI inbox; comparison cells link our feature pages; glossary terms linked on first
+  use and their `learn` links point at product pages; demo panel labels and plan names off the
+  heading skips; one robots tag on the 404; /icons cached a day; JSON-LD offers list every plan on
+  sale; llms.txt names plans, prices and limits from the plan list and refreshes hourly; /ai-info's
+  trial line and the Manychat price row agree with /pricing; sitemap dates bumped for changed pages.
+- **Calls made:** the /pricing title shows prices only when Creator and Business are both on sale
+  with a real price; the Manychat price row no longer states a price and links to /pricing.
+- **Not done (need the owner or a measurement):** findings 1, 3, 5, 14, 15, 16, 17, 18, 20, 21, 23, 24.
+  Open question: production is in billing test mode with a waitlist while /pricing reads as on sale;
+  every page now agrees with /pricing.
 ## C-184 · A warmer public site: sand and charcoal (owner, 2026-11-08; local only so far)
 
 - **Ask:** the owner liked a charcoal, sand and electric blue palette and said to use my best

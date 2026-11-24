@@ -1,6 +1,6 @@
 /**
  * Meta's Embedded Signup for WhatsApp (F-04, FR-CON-02). The Facebook JS SDK is loaded only
- * when the user clicks Connect WhatsApp on Settings → Connections (TR-FE-08, SEC CSP note).
+ * when the user clicks Connect WhatsApp on Connections (TR-FE-08, SEC CSP note).
  * FB.login returns an authorization code; the WABA and phone number ids arrive separately in
  * a "session info" window message. The code is what matters: once it is in, the signup always
  * completes through the API, with whichever ids the session info gave. The API finds the rest

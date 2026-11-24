@@ -58,7 +58,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
         { text: "Add the server:", code: `claude mcp add --transport http amplychat ${url}` },
         { text: "In Claude Code, run /mcp, pick amplychat and authenticate. Your browser opens Amplychat to choose the workspace and allow it." },
         {
-          text: "Or, with an API key from Settings › API keys (pick the AI app scopes you want):",
+          text: "Or, with an API key from Settings › MCP & API (pick the AI app scopes you want):",
           code: `claude mcp add --transport http amplychat ${url} \\\n  --header "Authorization: Bearer $AMPLYCHAT_API_KEY"`,
         },
       ],
@@ -179,7 +179,7 @@ export const SAFETY: readonly Capability[] = [
   },
   {
     title: "Your switch, your list",
-    body: "Owners and admins choose what AI apps may do: off, read only, read and drafts, or everything. Settings › Connected AI apps lists every connected app, and Settings › API keys every key, each with its recent tool calls. Disconnecting an app or revoking a key works at once.",
+    body: "Owners and admins choose what AI apps may do: off, read only, read and drafts, or everything. Settings › MCP & API lists every connected app and every API key with its recent tool calls. Disconnecting an app or revoking a key works at once.",
   },
   {
     title: "Every action is recorded",
@@ -202,7 +202,7 @@ export const CONNECT_AI_FAQ = [
   },
   {
     question: "How do I disconnect an AI app?",
-    answer: `In ${SITE_NAME}, open Settings › Connected AI apps and choose Disconnect. It stops working on its next request. Owners and admins can disconnect anyone's, or all of them at once.`,
+    answer: `In ${SITE_NAME}, open Settings › MCP & API and choose Disconnect. It stops working on its next request. Owners and admins can disconnect anyone's, or all of them at once.`,
   },
   {
     question: "Can one connection use two workspaces?",

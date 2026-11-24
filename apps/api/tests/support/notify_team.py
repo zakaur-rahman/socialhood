@@ -59,7 +59,7 @@ class Team:
             "severity": "critical",
             "title": "Reconnect @maple.bakery",
             "body": "@maple.bakery needs reconnecting to keep receiving messages.",
-            "link": "/settings/connections",
+            "link": "/connections",
             "dedupe_key": f"reconnect:{uuid.uuid4()}",
         }
         produce = notifications.notify_admins if to == "admins" else notifications.notify_members

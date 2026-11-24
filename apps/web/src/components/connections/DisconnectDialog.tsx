@@ -9,31 +9,31 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
 /**
  * FR-CON-06: disconnecting deletes the token at once and keeps what was stored for the account.
  * Deleting that too is its own action with a typed confirmation (C-067, DeleteAccountDialog).
+ * The card's ⋯ menu opens it, so the caller owns `open` (like DeleteAccountDialog).
  */
 export function DisconnectDialog({
   handle,
   pending,
+  open,
+  onOpenChange,
+  onCloseAutoFocus,
   onConfirm,
 }: {
   handle: string;
   pending: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: (event: Event) => void;
   onConfirm: () => void;
 }) {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="lg">
-          Disconnect
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect {handle}?</AlertDialogTitle>
           <AlertDialogDescription>

@@ -29,7 +29,7 @@ const PAGES = [
   "ask",
   "reports",
   "settings/workspace",
-  "settings/connections",
+  "connections",
   "settings/members",
   "settings/billing",
   "settings/ai",
@@ -38,7 +38,7 @@ const PAGES = [
   "settings/replies",
   "settings/integrations",
   "settings/notifications",
-  "settings/widget",
+  "connections/website",
   "settings/activity",
   "settings/appearance",
 ] as const;

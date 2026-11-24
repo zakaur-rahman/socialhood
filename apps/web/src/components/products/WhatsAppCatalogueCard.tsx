@@ -110,7 +110,7 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
   }
 
   if (accounts.isSuccess && numbers.length === 0) {
-    return <p className="text-sm text-fg-secondary">Connect a WhatsApp number first (Settings, Connections).</p>;
+    return <p className="text-sm text-fg-secondary">Connect a WhatsApp number first, in Connections.</p>;
   }
   return (
     <form className="space-y-2" onSubmit={submit}>

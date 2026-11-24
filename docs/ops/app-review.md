@@ -90,7 +90,7 @@ Record on production with a test Instagram professional account that has a role 
 
 - **S-1 · Connect (basic):**
   1. Sign in to Amplychat.
-  2. Open Settings › Connections and press Connect Instagram.
+  2. Open Connections and press Connect Instagram.
   3. Instagram's consent screen: grant the permissions.
   4. Back in Amplychat, the account card shows the name, username and picture.
 - **S-2 · Inbox and reply (manage_messages):**
@@ -117,7 +117,7 @@ Record on production with a test Instagram professional account that has a role 
   2. Reply.
   3. After 24 hours, show that only a template can be sent.
 - **S-8 · WhatsApp Embedded Signup (management):**
-  1. Settings › Connections › Connect WhatsApp: complete Embedded Signup.
+  1. Connections › Connect WhatsApp: complete Embedded Signup.
   2. The number appears.
   3. Open the template picker in a conversation.
 
@@ -132,7 +132,7 @@ accounts.
 
 **Test instructions for the submission (draft):**
 
-> Sign up at `<web>` with any email. You land on Home. Go to Settings › Connections and connect
+> Sign up at `<web>` with any email. You land on Home. Go to Connections and connect
 > your Instagram professional test account with Continue with Instagram. Then:
 > - **Inbox:** send a DM to that account from another account. It appears in the Inbox, where you
 >   can reply.
@@ -202,7 +202,7 @@ Not requested yet (FR-PUB-07, C-134): the Page Public Metadata Access feature, w
 **Screencast scripts** (record on production with a test Facebook Page the reviewer account manages):
 
 - **S-9 · Connect a Page (`pages_show_list`, `pages_manage_metadata`):**
-  1. Settings › Connections › Connect Facebook; Facebook's consent screen: grant the permissions.
+  1. Connections › Connect Facebook; Facebook's consent screen: grant the permissions.
   2. Back in Amplychat, the list of Pages appears; tick the test Page and press Connect Page.
   3. The Page's card shows its name and "Facebook Pages API".
 - **S-10 · Messenger inbox (`pages_messaging`):**
@@ -222,7 +222,7 @@ Not requested yet (FR-PUB-07, C-134): the Page Public Metadata Access feature, w
 
 **Reviewer instructions (draft):**
 
-> Sign up at `<web>`, go to Settings › Connections and press Connect Facebook. Continue as the test
+> Sign up at `<web>`, go to Connections and press Connect Facebook. Continue as the test
 > user, grant the permissions, tick the test Page and connect it. Then message the Page from
 > another account (Inbox), and comment on its newest post (Comments). Automations can be created
 > for the Page from the Automations tab. The app's UI is English.
