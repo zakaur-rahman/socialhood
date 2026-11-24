@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { DatePicker, DateTimePicker, parseTime, timeSlots } from "@/components/ui/date-picker";
+import { DatePicker, DateTimePicker, parseTime } from "@/components/ui/date-picker";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { dayLabel, formatDay, parseDay } from "@/lib/day";
 import { pickDate } from "@/test/datepicker";
@@ -42,7 +42,6 @@ describe("day strings", () => {
     expect(parseTime("18", true)).toBe("18:00");
     expect(parseTime("24:00")).toBeNull();
     expect(parseTime("10:60")).toBeNull();
-    expect(timeSlots()).toHaveLength(96);
   });
 });
 
@@ -132,13 +131,17 @@ describe("DateTimePicker", () => {
     expect(screen.getByText("Saved: 2026-09-28 14:15")).toBeInTheDocument();
     expect(time).toHaveValue("14:15");
 
+    // Any minute from the columns: the hour keeps them open, the minute sets the time and closes them.
     await user.click(screen.getByRole("button", { name: "Choose a time" }));
-    await user.click(await screen.findByRole("option", { name: "21:00" }));
-    expect(screen.getByText("Saved: 2026-09-28 21:00")).toBeInTheDocument();
-    expect(time).toHaveValue("21:00");
+    await user.click(within(await screen.findByRole("listbox", { name: "Hours" })).getByRole("option", { name: "21" }));
+    expect(screen.getByText("Saved: 2026-09-28 21:15")).toBeInTheDocument();
+    await user.click(within(screen.getByRole("listbox", { name: "Minutes" })).getByRole("option", { name: "07" }));
+    expect(screen.getByText("Saved: 2026-09-28 21:07")).toBeInTheDocument();
+    expect(time).toHaveValue("21:07");
+    expect(screen.queryByRole("listbox", { name: "Minutes" })).not.toBeInTheDocument();
 
     await pickDate(user, "Date", "2026-10-01");
-    expect(screen.getByText("Saved: 2026-10-01 21:00")).toBeInTheDocument();
+    expect(screen.getByText("Saved: 2026-10-01 21:07")).toBeInTheDocument();
   });
 
   it("on the first allowed day, times before minTime are disabled in the list; other days offer them all", async () => {
@@ -154,15 +157,17 @@ describe("DateTimePicker", () => {
     }
     render(<Today />);
     await user.click(screen.getByRole("button", { name: "Choose a time" }));
-    const past = await screen.findByRole("option", { name: "14:00" });
-    expect(past).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("option", { name: "14:15" })).not.toHaveAttribute("aria-disabled");
-    await user.click(screen.getByRole("option", { name: "14:15" }));
-    expect(screen.getByText("Saved: 2026-09-28 14:15")).toBeInTheDocument();
+    const hours = await screen.findByRole("listbox", { name: "Hours" });
+    const minutes = screen.getByRole("listbox", { name: "Minutes" });
+    expect(within(hours).getByRole("option", { name: "13" })).toHaveAttribute("aria-disabled", "true");
+    // The first allowed hour starts at the first allowed minute.
+    expect(within(minutes).getByRole("option", { name: "06" })).toHaveAttribute("aria-disabled", "true");
+    await user.click(within(minutes).getByRole("option", { name: "07" }));
+    expect(screen.getByText("Saved: 2026-09-28 14:07")).toBeInTheDocument();
 
     await pickDate(user, "Date", "2026-09-29");
     await user.click(screen.getByRole("button", { name: "Choose a time" }));
-    expect(await screen.findByRole("option", { name: "09:00" })).not.toHaveAttribute("aria-disabled");
+    expect(within(await screen.findByRole("listbox", { name: "Hours" })).getByRole("option", { name: "09" })).not.toHaveAttribute("aria-disabled");
   });
 });
 
