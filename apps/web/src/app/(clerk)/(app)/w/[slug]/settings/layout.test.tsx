@@ -28,7 +28,6 @@ describe("Settings rail (UX-SCR-07)", () => {
     const { nav, links } = rail("owner");
     expect(within(nav).getAllByRole("heading").map((h) => h.textContent)).toEqual([
       "Workspace",
-      "Channels",
       "Automation and AI",
       "Admin",
       "Just for you",
@@ -37,15 +36,12 @@ describe("Settings rail (UX-SCR-07)", () => {
       "Workspace",
       "Members",
       "Business hours",
-      "Connections",
-      "Website chat",
       "AI rules and takeover",
       "Saved replies",
       "Ask Amplychat",
-      "Connected AI apps",
+      "MCP & API",
       "Billing and usage",
       "Integrations",
-      "API keys",
       "Audit log",
       "Activity",
       "Notifications",
@@ -59,7 +55,7 @@ describe("Settings rail (UX-SCR-07)", () => {
     expect(within(nav).queryByRole("heading", { name: "Admin" })).toBeNull();
     expect(within(nav).getByText("Only changes things for you")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Connections" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: "Connections" })).toBeNull();
   });
 
   it("filters by label or keyword, says when nothing matches, and Escape clears", async () => {

@@ -301,7 +301,7 @@ describe("AutomationsPage (UX-SCR-02)", () => {
 
     const notice = await screen.findByTestId("instagram-only-notice");
     expect(notice).toHaveTextContent("Automations work on Instagram");
-    expect(within(notice).getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(within(notice).getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/connections");
     // Nothing sits above it, and no template invites a start.
     expect(screen.queryByRole("region", { name: "Last 7 days" })).not.toBeInTheDocument();
     expect(screen.queryByRole("article")).not.toBeInTheDocument();

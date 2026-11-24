@@ -1,6 +1,8 @@
 "use client";
 
 import { ChevronDown, Plus } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import { FacebookGlyph } from "./FacebookGlyph";
 import { InstagramGlyph } from "./InstagramGlyph";
+import { PLATFORM_LOGO_BG, PlatformGlyph } from "./PlatformGlyph";
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
 import { YouTubeGlyph } from "./YouTubeGlyph";
 
@@ -36,6 +39,7 @@ export function AddAccountMenu({
   onFacebook,
   onWhatsApp,
   whatsAppConfigured,
+  websiteHref,
   busy,
   onYouTube,
 }: {
@@ -43,6 +47,7 @@ export function AddAccountMenu({
   onFacebook: () => void;
   onWhatsApp: () => void;
   whatsAppConfigured: boolean;
+  websiteHref: Route;
   busy: boolean;
   /** Only passed while the workspace has YouTube switched on. */
   onYouTube?: () => void;
@@ -85,6 +90,17 @@ export function AddAccountMenu({
               {whatsAppConfigured ? "A WhatsApp Business number" : "WhatsApp isn't set up for this app yet"}
             </span>
           </span>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="items-center gap-3 py-2">
+          <Link href={websiteHref}>
+            <LogoTile className={PLATFORM_LOGO_BG.web}>
+              <PlatformGlyph platform="web" className="size-4" />
+            </LogoTile>
+            <span className="flex flex-col">
+              <span className="font-medium">Website chat</span>
+              <span className="text-xs text-fg-secondary">A chat bubble for your website</span>
+            </span>
+          </Link>
         </DropdownMenuItem>
         {onYouTube ? (
           <DropdownMenuItem onSelect={onYouTube} className="items-center gap-3 py-2">

@@ -121,7 +121,7 @@ export function PostPanel({
             <p className="text-xs text-fg-secondary">
               AI analysis is off for {account ? accountLabel(account) : "this account"}, so new comments aren&apos;t
               analysed.{" "}
-              <Link href={`/w/${slug}/settings/connections` as Route} className="text-brand-fg hover:underline">
+              <Link href={`/w/${slug}/connections` as Route} className="text-brand-fg hover:underline">
                 Turn it on
               </Link>
             </p>

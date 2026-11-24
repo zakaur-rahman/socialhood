@@ -41,7 +41,7 @@ export function AccountHealth({
       action={
         canManage ? (
           <AlertAction asChild>
-            <Link href={`/w/${slug}/settings/connections` as Route}>Open Connections</Link>
+            <Link href={`/w/${slug}/connections` as Route}>Open Connections</Link>
           </AlertAction>
         ) : undefined
       }

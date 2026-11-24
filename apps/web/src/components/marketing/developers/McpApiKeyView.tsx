@@ -117,7 +117,7 @@ export function McpApiKeyView({ apiBase }: { apiBase?: string }) {
               Create a key
             </h2>
             <p className="lede">
-              In Amplychat, open Settings › API keys (owners and admins), choose Create API key, name it after the tool and pick
+              In Amplychat, open Settings › MCP & API (owners and admins), choose Create API key, name it after the tool and pick
               its scopes. The key is shown once: copy it then.
             </p>
           </div>

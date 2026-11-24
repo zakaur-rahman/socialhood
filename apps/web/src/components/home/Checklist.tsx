@@ -18,7 +18,7 @@ const COPY: Record<ChecklistStep["key"], StepCopy> = {
     title: "Connect an account",
     why: "Bring your Instagram and WhatsApp messages into one inbox.",
     action: "Connect an account",
-    href: (s) => `/w/${s}/settings/connections` as Route,
+    href: (s) => `/w/${s}/connections` as Route,
   },
   add_knowledge: {
     title: "Add knowledge",
@@ -32,7 +32,7 @@ const COPY: Record<ChecklistStep["key"], StepCopy> = {
     action: "Choose a mode",
     // Each account's mode is set on its card in Connections (AiModeControl); done once an
     // account's mode is Suggest or Auto (C-060).
-    href: (s) => `/w/${s}/settings/connections` as Route,
+    href: (s) => `/w/${s}/connections` as Route,
   },
   create_automation: {
     title: "Create an automation",

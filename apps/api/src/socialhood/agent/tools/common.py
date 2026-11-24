@@ -58,7 +58,7 @@ LABEL_CHARS = 60
 TEXT_CHARS = 280  # a message, comment or caption in a result
 ADMIN_ONLY = "Only owners and admins can use this, as in the app."
 FACEBOOK_NOT_CONNECTED = (
-    "Facebook isn't connected: connect a Facebook Page in Settings to include it, so for now "
+    "Facebook isn't connected: connect a Facebook Page in Connections to include it, so for now "
     "only Instagram (and WhatsApp for messages) is covered."
 )
 

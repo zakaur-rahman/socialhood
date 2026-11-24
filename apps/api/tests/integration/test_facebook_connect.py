@@ -99,7 +99,7 @@ async def test_the_callback_connects_nothing_and_a_state_works_once(
     state = state_from(started.json()["authorize_url"])
     first = await client.get("/v1/oauth/facebook/callback", params={"code": "c", "state": state})
     query = redirect_query(first)
-    assert query["_path"] == f"/w/{ws['slug']}/settings/connections"
+    assert query["_path"] == f"/w/{ws['slug']}/connections"
     assert set(query) == {"facebook", "_path"}
     assert first.headers["location"].startswith(WEB)
     assert facebook.calls == []  # X-1: the callback exchanges nothing

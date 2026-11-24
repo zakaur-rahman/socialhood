@@ -34,6 +34,10 @@ export function PlatformStrip({
     );
   }
   const choices: PlatformChoice[] = ["all", ...platforms];
+  // Thin dividers between the segments, hidden on the chosen one and the one after it, so the
+  // marks read as one control on a dark track (owner, 2026-11-14).
+  const divided =
+    "relative min-w-0 before:absolute before:top-1/4 before:left-0 before:h-1/2 before:w-px before:bg-line first:before:hidden aria-checked:before:hidden [[aria-checked=true]+&]:before:hidden";
   return (
     <div className="px-3 pt-3">
       <ToggleGroup
@@ -45,12 +49,12 @@ export function PlatformStrip({
       >
         {choices.map((choice) =>
           choice === "all" ? (
-            <ToggleGroupItem key={choice} value={choice} className="min-w-0">
+            <ToggleGroupItem key={choice} value={choice} className={divided}>
               <Layers className="size-3.5 shrink-0" aria-hidden />
               <span className="truncate">All</span>
             </ToggleGroupItem>
           ) : (
-            <ToggleGroupItem key={choice} value={choice} className="min-w-0" title={PLATFORM_LABEL[choice]}>
+            <ToggleGroupItem key={choice} value={choice} className={divided} title={PLATFORM_LABEL[choice]}>
               <span
                 className={cn("grid size-5 shrink-0 place-items-center rounded-md text-on-brand", PLATFORM_LOGO_BG[choice])}
                 aria-hidden

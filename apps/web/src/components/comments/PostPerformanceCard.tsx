@@ -85,7 +85,7 @@ function Figures({
           data-testid="insights-unavailable"
           action={
             <AlertAction asChild>
-              <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
+              <Link href={`/w/${slug}/connections` as Route}>Reconnect</Link>
             </AlertAction>
           }
         >

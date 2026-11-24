@@ -199,7 +199,7 @@ async def _revoke_leaked(
             "new key, put it wherever this one was used, and remove the old one from the "
             "repository's history."
         ),
-        link="/settings/api-keys",
+        link="/settings/ai-apps#api-keys",
         dedupe_key=f"api-key-leaked:{key.id}",
     )
     await session.flush()  # in the key's workspace scope, where its audit row belongs

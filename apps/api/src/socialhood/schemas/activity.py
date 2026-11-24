@@ -22,7 +22,7 @@ ActivityOutcome = Literal["ok", "failed", "partial", "skipped", "attention"]
 
 
 class ActivityAction(ResponseModel):
-    """The one thing to do about it: a link inside the workspace ("/settings/connections")."""
+    """The one thing to do about it: a link inside the workspace ("/connections")."""
 
     label: str
     href: str

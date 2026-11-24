@@ -117,7 +117,7 @@ describe("Post figures (FR-ANL-02)", () => {
     expect(notice).toHaveTextContent(
       "@maple.bakery didn't give Amplychat permission to read insights, so reach, views, shares and saves aren't available. Reconnect to allow it.",
     );
-    expect(within(notice).getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(within(notice).getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/connections");
     expect(figure("Reach")).toBe("—");
     expect(figure("Engagement rate")).toBe("—");
     expect(figure("Likes")).toBe("180");
