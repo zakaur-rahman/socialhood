@@ -30205,7 +30205,7 @@
     },
     "/v1/w/{wid}/ai-connections/revoke-all": {
       "post": {
-        "description": "\"Disconnect all\": every AI app connection in the workspace, at once (\u00a76.7). API keys\nare separate (Settings, API keys).",
+        "description": "\"Disconnect all\": every AI app connection in the workspace, at once (\u00a76.7). API keys\nare separate (Settings, MCP & API).",
         "operationId": "revoke_all_ai_connections",
         "parameters": [
           {

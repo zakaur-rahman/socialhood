@@ -478,7 +478,7 @@ export interface paths {
         /**
          * Revoke All
          * @description "Disconnect all": every AI app connection in the workspace, at once (§6.7). API keys
-         *     are separate (Settings, API keys).
+         *     are separate (Settings, MCP & API).
          */
         post: operations["revoke_all_ai_connections"];
         delete?: never;
