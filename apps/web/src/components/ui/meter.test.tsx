@@ -81,7 +81,7 @@ describe("Meter (UI-022)", () => {
     expect(screen.queryByText("All used")).toBeNull();
   });
 
-  it("keeps a full slot neutral and says All used, with its message and action", () => {
+  it("keeps a full slot neutral, with its message and action and no All used", () => {
     render(
       <Meter
         label="Instagram accounts"
@@ -99,20 +99,22 @@ describe("Meter (UI-022)", () => {
     expect(slot("meter-fill")).toHaveClass("bg-fg-secondary");
     expect(slot("meter-fill")).not.toHaveClass("bg-danger");
     expect(slot("meter-value")).toHaveClass("text-fg-secondary");
-    expect(screen.getByText("All used")).toBeVisible();
+    expect(screen.queryByText("All used")).toBeNull();
     expect(screen.getByText("Free includes 1 account per platform.").closest("p")).toHaveClass("text-fg-secondary");
     expect(screen.getByRole("meter", { name: "Instagram accounts" })).toHaveAccessibleDescription(
-      "All used Free includes 1 account per platform. Upgrade",
+      "Free includes 1 account per platform. Upgrade",
     );
   });
 
-  it("says All used for a full slot even without a message, and never warns it at 80%", () => {
+  it("shows nothing under a full slot without a message, and never warns it at 80%", () => {
     const { rerender } = render(<Meter label="Active automations" kind="slot" value={4} max={5} />);
     expect(slot("meter")).toHaveAttribute("data-level", "normal");
     expect(slot("meter-fill")).toHaveClass("bg-fg-secondary");
     expect(screen.queryByText("All used")).toBeNull();
     rerender(<Meter label="Active automations" kind="slot" value={5} max={5} />);
-    expect(screen.getByText("All used")).toBeVisible();
+    expect(slot("meter")).toHaveAttribute("data-level", "full");
+    expect(screen.queryByText("All used")).toBeNull();
+    expect(screen.getByRole("meter", { name: "Active automations" })).not.toHaveAttribute("aria-describedby");
   });
 
   it("caps the bar and aria-valuenow at the limit, and keeps the real numbers in the text", () => {

@@ -423,7 +423,10 @@ function Usage({ billing }: { billing: BillingState }) {
               <QuotaTile
                 key={meter.metric}
                 meter={meter}
-                fullMessage={meter.limit ? (planIncludes(key, meter.limit, billing.plan) ?? undefined) : undefined}
+                // Only something that runs out says what the plan includes; a full slot (accounts, automations) is normal use.
+                fullMessage={
+                  meter.limit && !SLOT_METRICS.has(meter.metric) ? (planIncludes(key, meter.limit, billing.plan) ?? undefined) : undefined
+                }
               />
             );
           })}
