@@ -248,7 +248,7 @@ export const METRIC_FOR_ENTITLEMENT: Record<string, string> = {
 
 /**
  * C-173: the key lines of a plan card, the same on the dashboard and the marketing pages: channels,
- * members, automations, credits, posts, knowledge, then one more (API keys and Zapier where the plan
+ * members, automations, credits, posts, knowledge, then one more (the public API and Zapier where the plan
  * has them, else the AI mode). Six or seven lines, in this order; the full table has the rest.
  */
 const HIGHLIGHTS: { key: string; label: (value: EntitlementValue["value"], all: EntitlementValue[]) => string | null }[] = [
@@ -292,7 +292,7 @@ export function planHighlights(entitlements: EntitlementValue[]): string[] {
     return text ? [text] : [];
   });
   const value = (key: string) => entitlements.find((e) => e.key === key)?.value;
-  if (value("public_api") === true) lines.push("API keys and Zapier");
+  if (value("public_api") === true) lines.push("Public API and Zapier");
   else if (Array.isArray(value("ai_modes"))) lines.push((value("ai_modes") as string[]).includes("auto") ? "AI Auto mode and suggestions" : "AI suggestions only");
   return lines;
 }

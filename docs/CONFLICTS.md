@@ -10362,3 +10362,18 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Settings panel:** the settings rail is the full height of the window, like the main sidebar.
   Search stays at the top and the list scrolls beneath it with a fade. Group headings use the same
   small heading style as the rest of the app.
+
+## C-207 · API keys on every plan, for AI apps (owner, 2026-11-26)
+
+- **Why:** with C-205, AI apps work on every plan, but some local agents (Claude Code and Codex
+  setups) connect with a key rather than a sign-in. Keys were Business and Agency only, so Free
+  and Creator couldn't connect them.
+- **Rule:** any plan may make a key. On /mcp the key does what the plan allows. The public API, its
+  REST hooks and Zapier stay Business and Agency: they already check `public_api` each time a key
+  is used, so a key made on Free or Creator gets 402 there. This replaces C-172's "API keys are
+  Business" line.
+- **Settings › MCP & API:** every plan gets Create API key. Below Business a line says keys work
+  with AI apps over MCP and that the public API and Zapier are Business and Agency. A new key
+  there starts with the MCP read scopes instead of `contacts:read`.
+- **Copy:** `/developers/mcp`, its API key page, the pricing table ("Public API and the Zapier
+  app"), the plan card line and the 402 message no longer say API keys are Business only.

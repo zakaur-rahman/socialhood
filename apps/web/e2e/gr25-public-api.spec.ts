@@ -2,25 +2,25 @@ import { expect, test } from "./support/fixtures";
 
 /**
  * GR-25 Public API and API keys on the sandbox. Done when a key with read scope lists contacts and
- * gets 403 on a write. A Free workspace is told the API is part of Business and Agency; on Business a member makes a key
+ * gets 403 on a write. A Free workspace makes a key for AI apps, which the public API refuses (C-207); on Business a member makes a key
  * in Settings › MCP & API (shown once), uses it, sees when it was last used, and revokes it.
  * The reference page renders from the API's own OpenAPI document.
  */
 type ContactList = { items: { id: string }[] };
 
 test.describe("GR-25 public API and API keys", () => {
-  test("a Free workspace is told the public API is part of Business and Agency", async ({ page, api, workspace }) => {
+  test("a Free workspace makes a key for AI apps; the public API refuses it (C-207)", async ({ page, api, workspace }) => {
     await page.goto(`/w/${workspace.slug}/settings/api-keys`);
     await expect(page.getByRole("heading", { name: "MCP & API", level: 1 })).toBeVisible();
-    await expect(page.getByText("The public API, API keys and Zapier are part of Business and Agency.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create API key" })).toHaveCount(0);
+    await expect(
+      page.getByText("On your plan, API keys work with AI apps over MCP. The public API and Zapier are part of Business and Agency."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create API key" })).toBeVisible();
 
-    const refused = await api
-      .call("POST", `/v1/w/${workspace.id}/api-keys`, { name: "Zapier", scopes: ["contacts:read"] })
-      .then(() => null)
-      .catch((error: { status: number; body: string }) => error);
-    expect(refused?.status).toBe(402);
-    expect(JSON.parse(refused?.body ?? "{}")).toMatchObject({ code: "entitlement_required", entitlement: "public_api" });
+    const made = await api.call<{ key: string }>("POST", `/v1/w/${workspace.id}/api-keys`, { name: "Claude Code", scopes: ["posts:read"] });
+    const refused = await api.publicCall<{ code: string; entitlement: string }>(made.key, "GET", "/contacts");
+    expect(refused.status).toBe(402);
+    expect(refused.body).toMatchObject({ code: "entitlement_required", entitlement: "public_api" });
   });
 
   test("a read key lists contacts and is refused a write; revoking stops it", async ({ page, api, sandbox }) => {

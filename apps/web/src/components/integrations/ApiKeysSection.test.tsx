@@ -149,24 +149,33 @@ describe("Settings > API keys (GR-25)", () => {
     expect(toast.success).toHaveBeenCalledWith("API key revoked");
   });
 
-  it("tells a Creator workspace the API is part of Business instead of offering the form (C-172)", async () => {
+  it("offers keys on Creator for AI apps and says the public API is Business and Agency (C-207)", async () => {
     setup({ ws: { ...workspace, plan: "pro" } });
-    expect(await screen.findByText("The public API, API keys and Zapier are part of Business and Agency.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
+    expect(await screen.findByText("On your plan, API keys work with AI apps over MCP. The public API and Zapier are part of Business and Agency.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create API key" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
   });
 
   it("offers API keys on Agency, like Business (C-174)", async () => {
     setup({ ws: { ...workspace, plan: "agency" } });
     expect(await screen.findByRole("button", { name: "Create API key" })).toBeInTheDocument();
-    expect(screen.queryByText("The public API, API keys and Zapier are part of Business and Agency.")).not.toBeInTheDocument();
+    expect(screen.queryByText("On your plan, API keys work with AI apps over MCP. The public API and Zapier are part of Business and Agency.")).not.toBeInTheDocument();
   });
 
-  it("tells a Free workspace (not Business) the API is part of Business instead of offering the form", async () => {
-    setup({ ws: { ...workspace, plan: "free" } });
-    expect(await screen.findByText("The public API, API keys and Zapier are part of Business and Agency.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Create API key" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/w/maple/settings/billing?tab=billing");
+  it("lets a Free workspace make a key for AI apps, starting with the MCP read scopes (C-207)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ ws: { ...workspace, plan: "free" } });
+    expect(await screen.findByText("On your plan, API keys work with AI apps over MCP. The public API and Zapier are part of Business and Agency.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create API key" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create an API key" });
+    await user.type(within(dialog).getByRole("textbox", { name: "Name" }), "Claude Code");
+    await user.click(within(dialog).getByRole("button", { name: "Create key" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
+    const made = calls.find((c) => c.method === "POST");
+    expect(made?.body).toMatchObject({
+      name: "Claude Code",
+      scopes: ["conversations:read", "posts:read", "comments:read", "analytics:read", "knowledge:read"],
+    });
   });
 
   it("opens the upgrade dialog when the API says the plan lacks it", async () => {

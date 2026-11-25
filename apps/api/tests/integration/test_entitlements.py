@@ -398,17 +398,12 @@ async def test_instagram_limits_creator_2_and_business_4(
     assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 4)
 
 
-async def test_api_keys_are_business_only(shop: Shop) -> None:
-    body = {"name": "Zapier", "scopes": ["contacts:read"]}
-    for plan in ("free", "pro"):
+async def test_every_plan_makes_api_keys(shop: Shop) -> None:
+    """C-207: a key is made on any plan; the public API checks its plan when the key is used."""
+    body = {"name": "Claude Code", "scopes": ["posts:read"]}
+    for plan in ("free", "pro", "max", "agency"):
         await set_plan(shop.engine, shop.wid, plan)
-        refused = await shop.call("POST", "/api-keys", body)
-        assert_402(refused, "entitlement_required", "public_api", None)
-        assert (
-            refused.json()["detail"] == "The public API, API keys and Zapier are part of Business."
-        )
-    await set_plan(shop.engine, shop.wid, "max")
-    assert (await shop.call("POST", "/api-keys", body)).status_code == 201
+        assert (await shop.call("POST", "/api-keys", body)).status_code == 201, plan
 
 
 # ---------------------------------------------------------------- C-195 YouTube
