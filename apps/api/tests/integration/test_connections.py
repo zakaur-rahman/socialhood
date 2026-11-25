@@ -354,7 +354,7 @@ async def test_account_settings(
     await connect(client, clerk, clerk_id, ws["id"])
     url = f"/v1/w/{ws['id']}/social-accounts"
     [acct] = (await client.get(url, headers=clerk.headers(clerk_id))).json()["items"]
-    assert acct["ai_mode"] == "suggest"
+    assert acct["ai_mode"] == "off"  # C-204: AI replies start off
 
     changed = await client.patch(
         f"{url}/{acct['id']}",

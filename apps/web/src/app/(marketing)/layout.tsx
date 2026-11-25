@@ -1,6 +1,7 @@
 import "@/components/site/site.css";
 
 import type { Metadata, Viewport } from "next";
+import { Anek_Latin } from "next/font/google";
 import Script from "next/script";
 
 import { SiteFooter } from "@/components/marketing/SiteFooter";
@@ -19,6 +20,10 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: [OG_IMAGE] },
 };
 
+// The site's headings (owner, 2026-11-25): Anek Latin, loaded only on the public pages, so the app
+// never downloads it. Geist stays the body text and the fallback.
+const display = Anek_Latin({ variable: "--font-anek-latin", subsets: ["latin"] });
+
 // The browser bar on the site's paper (C-155); ThemeSync keeps it there after hydration.
 export const viewport: Viewport = { themeColor: colorValue("paper") };
 
@@ -32,7 +37,7 @@ export const viewport: Viewport = { themeColor: colorValue("paper") };
  */
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="site flex min-h-dvh flex-col">
+    <div className={`site ${display.variable} flex min-h-dvh flex-col`}>
       <ThemePin />
       <a href="#main" className="btn btn-main skip">
         Skip to content

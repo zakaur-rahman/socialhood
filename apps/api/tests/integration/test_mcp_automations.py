@@ -348,9 +348,9 @@ async def test_plan_role_and_mode_gate_the_automation_writes(
             text("UPDATE workspaces SET ai_connections_mode = 'full' WHERE id = :w"),
             {"w": setup.wid},
         )
-    await set_plan(engine, setup.wid, "free")
-    free = error_of(await call(mcp_app, key, "create_automation", args))
-    assert (free["code"], free["entitlement"]) == ("entitlement_required", "ai_connections")
+    await set_plan(engine, setup.wid, "free")  # C-205: Full on every plan, so Free previews too
+    preview = {k: v for k, v in args.items() if k != "confirmed"}
+    assert structured(await call(mcp_app, key, "create_automation", preview))["preview"] is True
     # list_instagram_posts reads, on every plan.
     assert structured(await call(mcp_app, key, "list_instagram_posts", {}))["items"] == []
     await set_plan(engine, setup.wid, "max")
@@ -826,12 +826,8 @@ async def test_plan_mode_and_workspace_gate_activation(
             text("UPDATE workspaces SET ai_connections_mode = 'full' WHERE id = :w"),
             {"w": setup.wid},
         )
-    await set_plan(engine, setup.wid, "free")
-    for confirmed in (False, True):
-        free = error_of(
-            await call(mcp_app, key, "activate_automation", {**args, "confirmed": confirmed})
-        )
-        assert (free["code"], free["entitlement"]) == ("entitlement_required", "ai_connections")
+    await set_plan(engine, setup.wid, "free")  # C-205: Full on every plan, so Free previews too
+    assert structured(await call(mcp_app, key, "activate_automation", args))["preview"] is True
     await set_plan(engine, setup.wid, "max")
     # Another workspace's automation, a real one, is not found: to turn on, pause or change.
     other = await workspace_with_thread(client, clerk, engine, email="other@example.com")

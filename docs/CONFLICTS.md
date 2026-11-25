@@ -10328,3 +10328,37 @@ features", then changed three rules. The audit report is kept outside the repo.
 - **Locked scheduled posts:** a scheduled post opens read-only with its time and an Edit button.
   Edit unlocks the fields and Update schedule. Cancel restores the stored post and locks it again,
   and so does a successful update. The time check runs only while editing.
+
+## C-204 · AI replies start off until the business turns them on (owner, 2026-11-25)
+
+- **Why:** a newly connected account started in Suggest, so drafts appeared, and AI credits were
+  spent, before the business had added knowledge or chosen how the AI should help.
+- **Default:** `social_accounts.ai_mode` now defaults to `off` (migration 0065). Accounts that
+  already exist keep their mode. A sandbox account still starts in Suggest, because it exists to
+  try the AI. The website chat account starts off like the others.
+- **Inbox:** above the composer of a conversation whose account is off, with no
+  per-conversation mode, one line says AI drafts are off and offers "Turn on Suggest". It can be
+  hidden, per account and per browser, and agents don't see it.
+- **Home checklist:** "Choose how AI helps" stays open until an account is on Suggest or Auto, with
+  wording that says replies are off until the business chooses.
+
+## C-205 · AI apps can schedule and publish on every plan, within its limits (owner, 2026-11-25)
+
+- **Why:** the owner chose "Everything within plan limits". An AI app should be able to do what
+  the member could do by hand in the dashboard. This replaces C-172's line that scheduling from an
+  AI app is part of Creator and Business.
+- **Plans:** `ai_connections` lets Free choose Full. `mcp_posts_daily` for Free goes from 0 to 10,
+  though Free's 10 scheduled posts a month binds first. Every other Free limit still applies
+  inside the tools: 3 active automations, no Auto mode, the knowledge and AI credit limits.
+- **Copy:** the MCP tool descriptions, the Connect AI FAQ, the GTM pages and the landing section
+  ("On every plan, within its limits") say the same thing.
+
+## C-206 · Landing headings in Anek Latin; Settings panel full height (owner, 2026-11-25)
+
+- **Headings:** the public site's display font is Anek Latin, loaded only on the marketing pages
+  through `next/font`, so the app doesn't download it. Body text stays Geist. The hero line now
+  says the AI drafts or sends replies across the channels, and posts are scheduled from the same
+  place. The headline stays "One inbox".
+- **Settings panel:** the settings rail is the full height of the window, like the main sidebar.
+  Search stays at the top and the list scrolls beneath it with a fade. Group headings use the same
+  small heading style as the rest of the app.

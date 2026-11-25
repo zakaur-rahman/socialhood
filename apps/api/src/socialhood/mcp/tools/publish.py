@@ -15,8 +15,9 @@ Posts go directly, as the member's own action (decision D3), with these safety n
   scheduling, and the preview says it can't be undone.
 - **The team is told.** Owners and admins get a notification naming the AI app and the member,
   with a link to the post (where it is cancelled).
-- **Free saves drafts only.** The workspace's mode and the plan decide (``require_scheduling``);
-  Free gets ``entitlement_required``, a workspace set to "read and drafts" a plain refusal.
+- **The workspace's mode decides** (``require_scheduling``): scheduling needs Full, which every plan
+  may choose (C-205); a workspace set to "read and drafts" gets a plain refusal. The plan's own
+  limits (Free: 10 scheduled posts a month) apply through the same services as the composer.
 - **Caps** on posts scheduled or published now: per day (``mcp_posts_daily``) and per minute
   (``mcp_posts``).
 
@@ -398,8 +399,8 @@ async def _published_now(
         "call shows the resolved time and the checklist. Show the member the preview and call "
         "again only after they agree, with confirmed true and the preview's confirmation_token. "
         "A scheduled time is at least 1 minute ahead. when “now” publishes at once and cannot be "
-        f"undone: use it {NOW_ONLY}. The team is notified. Plans: scheduling and publishing are "
-        "part of Creator and Business; drafts work on every plan, with no preview."
+        f"undone: use it {NOW_ONLY}. The team is notified. Every plan may schedule and publish, "
+        "within its own limits; drafts need no preview."
     ),
     input_model=CreatePostInput,
     output_model=PostResult,
@@ -561,7 +562,7 @@ def _merge(
         "now is previewed first: show the member the preview and call again only after they "
         "agree, with confirmed true and its confirmation_token. when “now” publishes at once and "
         f"cannot be undone: use it {NOW_ONLY}. A post whose publishing has started can't be "
-        "changed. Changing scheduled posts and publishing are part of Creator and Business."
+        "changed. Every plan may change and publish posts, within its own limits."
     ),
     input_model=UpdatePostInput,
     output_model=PostResult,

@@ -54,6 +54,7 @@ function chatOn(page: Page) {
 test.describe("GR-28 website chat", () => {
   test("a chat reaches the inbox with the AI's suggestion, and the reply reaches the widget", async ({ page, context, api, workspace }) => {
     const widget = await setUp(api, workspace);
+    await api.setAiMode(workspace.id, widget.account_id, "suggest"); // the website chat starts off (C-204)
     await serveShop(page, PAGE_ORIGIN, widget.widget_id);
     await page.goto(`${PAGE_ORIGIN}/shop`);
 

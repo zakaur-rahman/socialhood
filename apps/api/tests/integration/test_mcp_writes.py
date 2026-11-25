@@ -315,11 +315,11 @@ async def test_add_knowledge_counts_toward_the_plan_and_needs_the_fields(
         await call(mcp_app, key, "add_knowledge", {"type": "text", "title": "   ", "body": "b"})
     )
     assert (blank["code"], blank["field_errors"][0]["field"]) == ("validation_error", "title")
-    await set_plan(engine, setup.wid, "free")
-    free = error_of(
+    await set_plan(engine, setup.wid, "free")  # C-205: Full on every plan, so Free previews too
+    free = structured(
         await call(mcp_app, key, "add_knowledge", {"type": "text", "title": "t", "body": "b"})
     )
-    assert free["code"] == "entitlement_required"
+    assert free["preview"] is True
 
 
 async def test_added_knowledge_is_unused_until_a_person_approves_it(
@@ -442,17 +442,6 @@ async def test_pausing_a_draft_changes_nothing(
         await call(mcp_app, key, "pause_automation", {"automation_id": str(uuid.uuid4())})
     )
     assert missing["code"] == "not_found"
-
-
-async def test_automation_writes_need_pro(
-    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
-) -> None:
-    automation = str(
-        await make_automation(engine, workspace_id=setup.wid, account_id=setup.account_id)
-    )
-    await set_plan(engine, setup.wid, "free")
-    error = error_of(await call(mcp_app, key, "pause_automation", {"automation_id": automation}))
-    assert error["code"] == "entitlement_required"
 
 
 # ---------------------------------------------------------------- ask
