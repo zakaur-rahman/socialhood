@@ -124,7 +124,7 @@ export const MATRIX: MatrixGroup[] = [
         note: "Full adds scheduling and publishing posts, drafting knowledge for you to approve, and creating automations and turning them on and off. AI apps never send messages themselves.",
       },
       { key: "webhook_endpoints", label: "Outbound webhook endpoints", format: { kind: "count" } },
-      { key: "public_api", label: "Public API, API keys and the Zapier app", format: { kind: "flag" } },
+      { key: "public_api", label: "Public API and the Zapier app", format: { kind: "flag" } },
       { key: "sheets_sync", label: "Google Sheets sync", format: { kind: "flag" } },
     ],
   },

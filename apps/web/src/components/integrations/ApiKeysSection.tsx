@@ -44,6 +44,8 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 /** What a new key can do before the member changes it: read-only, the safer start. */
 const DEFAULT_SCOPES: ApiScopeName[] = ["contacts:read"];
+// C-207: below Business a key only works over MCP, so it starts with the AI app read scopes.
+const MCP_DEFAULT_SCOPES: ApiScopeName[] = ["conversations:read", "posts:read", "comments:read", "analytics:read", "knowledge:read"];
 
 /** C-167: how long a new key lasts. "never" is the default. */
 const EXPIRY_CHOICES = [
@@ -75,8 +77,8 @@ const IP_HINT = "IP addresses or CIDR ranges, IPv4 or IPv6, like 203.0.113.7 or 
 /**
  * Settings › MCP & API (GR-25, own section since C-165, on MCP & API since C-180): keys for the public API, the Zapier app and AI apps over MCP. Make a
  * key with a name and scopes (it is shown once, in a copy dialog), see when each was last used,
- * revoke one. The public API is part of Business and Agency: a workspace without it is told so
- * instead of being offered the form. Owners and admins, like the webhook endpoints. Activity shows a
+ * revoke one. Every plan makes keys (C-207); the public API and Zapier are Business and Agency, so a
+ * workspace without them is told its keys work with AI apps only. Owners and admins, like the webhook endpoints. Activity shows a
  * key's latest tool calls over MCP, as for a connected app.
  *
  * C-167: a key can expire (30 days, 90 days, a year, or never) and can be limited to IP addresses
@@ -90,8 +92,8 @@ export function ApiKeysSection() {
   const [adding, setAdding] = useState(false);
   const [shown, setShown] = useState<string | null>(null);
   const items = keys.data?.items ?? [];
-  // C-172, C-174: API keys are on Business (stored plan max) and Agency.
-  const free = workspace.plan !== "max" && workspace.plan !== "agency";
+  // C-172, C-174: the public API and Zapier are on Business (stored plan max) and Agency.
+  const mcpOnly = workspace.plan !== "max" && workspace.plan !== "agency";
 
   return (
     <SettingsCard
@@ -108,27 +110,30 @@ export function ApiKeysSection() {
         </>
       }
       aside={
-        free ? null : (
-          <Button onClick={() => setAdding(true)}>
-            <Plus aria-hidden /> Create API key
-          </Button>
-        )
+        <Button onClick={() => setAdding(true)}>
+          <Plus aria-hidden /> Create API key
+        </Button>
       }
     >
-      {free && items.length === 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-raised p-4">
-          <p className="text-sm">The public API, API keys and Zapier are part of Business and Agency.</p>
+      {mcpOnly ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-raised p-4">
+          <p className="text-sm">
+            On your plan, API keys work with AI apps over MCP. The public API and Zapier are part of Business and Agency.
+          </p>
           <Button asChild variant="secondary">
             <Link href={PLANS_HREF(workspace.slug)}>See plans</Link>
           </Button>
         </div>
-      ) : keys.isPending ? (
+      ) : null}
+      {keys.isPending ? (
         <Skeleton className="h-24 w-full" />
       ) : keys.isError ? (
         <p className="text-sm text-fg-secondary">Couldn&rsquo;t load your API keys. Try again in a moment.</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-fg-secondary">
-          No API keys yet. Make one to read contacts, tag them or send a message from another tool.
+          {mcpOnly
+            ? "No API keys yet. Make one for an AI app, like Claude Code or Codex, that asks for a key."
+            : "No API keys yet. Make one to read contacts, tag them or send a message from another tool."}
         </p>
       ) : (
         <ul className="divide-y divide-line-subtle" aria-label="API keys">
@@ -148,6 +153,7 @@ export function ApiKeysSection() {
         onOpenChange={setAdding}
         wid={wid}
         catalogue={keys.data?.scopes ?? []}
+        defaultScopes={mcpOnly ? MCP_DEFAULT_SCOPES : DEFAULT_SCOPES}
         onCreated={(key) => {
           setAdding(false);
           setShown(key);
@@ -285,17 +291,19 @@ function CreateKeyDialog({
   onOpenChange,
   wid,
   catalogue,
+  defaultScopes,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wid: string;
   catalogue: ApiScope[];
+  defaultScopes: ApiScopeName[];
   onCreated: (key: string) => void;
 }) {
   const create = useCreateApiKey(wid);
   const [name, setName] = useState("");
-  const [chosen, setChosen] = useState<ApiScopeName[]>(DEFAULT_SCOPES);
+  const [chosen, setChosen] = useState<ApiScopeName[]>(defaultScopes);
   const [expiry, setExpiry] = useState<ExpiryChoice>("never");
   const [ips, setIps] = useState<string[]>([]);
 
@@ -313,7 +321,7 @@ function CreateKeyDialog({
       {
         onSuccess: (made) => {
           setName("");
-          setChosen(DEFAULT_SCOPES);
+          setChosen(defaultScopes);
           setExpiry("never");
           setIps([]);
           onCreated(made.key);

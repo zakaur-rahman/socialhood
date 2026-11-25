@@ -123,18 +123,20 @@ async def test_a_key_is_shown_once_and_only_its_hash_is_kept(
     assert key not in (row.key_hash, row.key_prefix)
 
 
-async def test_the_public_api_is_pro_and_max_only(
-    client: httpx.AsyncClient, setup: Setup, engine: AsyncEngine
+async def test_any_plan_makes_a_key_but_the_public_api_is_business_and_agency(
+    client: httpx.AsyncClient, setup: Setup, engine: AsyncEngine, mcp_app: FastAPI
 ) -> None:
+    """C-207: a key made on Free works on /mcp; the same key is refused on /public/v1."""
     await set_plan(engine, setup.wid, "free")
-    refused = await client.post(
-        f"/v1/w/{setup.wid}/api-keys",
-        json={"name": "Zapier", "scopes": ["contacts:read"]},
-        headers=setup.headers,
-    )
+    key, _ = await make_key(client, setup, "contacts:read")
+    refused = await client.get("/public/v1/contacts", headers=bearer(key))
     assert refused.status_code == 402, refused.text
     assert refused.json()["code"] == "entitlement_required"
     assert refused.json()["entitlement"] == "public_api"
+    assert refused.json()["detail"] == "The public API and Zapier are part of Business and Agency."
+    async with connect(mcp_app, key) as mcp:
+        workspace = structured(await mcp.call_tool("get_workspace", {}))
+    assert workspace["workspace"]["plan"] == "free"
     # Listing stays open, so a workspace that downgraded can still see and revoke its keys.
     assert (
         await client.get(f"/v1/w/{setup.wid}/api-keys", headers=setup.headers)
@@ -148,13 +150,7 @@ async def test_the_public_api_is_pro_and_max_only(
     assert hook.status_code == 201, hook.text
 
     await set_plan(engine, setup.wid, "max")
-    assert (
-        await client.post(
-            f"/v1/w/{setup.wid}/api-keys",
-            json={"name": "Zapier", "scopes": ["contacts:read"]},
-            headers=setup.headers,
-        )
-    ).status_code == 201
+    assert (await client.get("/public/v1/contacts", headers=bearer(key))).status_code == 200
 
 
 async def test_a_key_needs_a_name_and_known_scopes(client: httpx.AsyncClient, setup: Setup) -> None:

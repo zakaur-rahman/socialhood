@@ -36,7 +36,7 @@ describe("/developers/mcp (C-165)", () => {
       expect(row("Files uploaded from AI apps a day")[plan]).toBe(
         `${count(limits.mcp_uploads_daily[plan])} (${count(limits.mcp_upload_mb_daily[plan])} MB)`,
       );
-      expect(row("Make an API key")[plan]).toBe(limits.public_api[plan] ? "Yes" : "No");
+      expect(row("Make an API key")[plan]).toBe("Yes"); // C-207: every plan
     }
   });
 

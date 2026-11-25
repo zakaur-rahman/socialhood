@@ -85,7 +85,7 @@ export const INTEGRATIONS: Integration[] = [
   {
     name: "Zapier and the public API",
     icon: Webhook,
-    body: "Connect to other tools with Zapier and API keys on Business. Webhooks are on every plan.",
+    body: "Connect to other tools with Zapier and the public API on Business. Webhooks are on every plan.",
     status: "Business",
     tone: "yours",
   },

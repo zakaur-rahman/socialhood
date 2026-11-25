@@ -1,6 +1,6 @@
 /**
  * /developers/mcp/api-key (C-165): connect an AI app with an Amplychat API key instead of signing
- * in. Facts: a key needs the public_api entitlement (Business and Agency, billing/plans.py, PD-6); the key
+ * in. Facts: every plan makes keys (C-207; the public API and Zapier stay Business and Agency); the key
  * acts as the member who made it with their current role (docs/architecture/mcp/03-phase-a.md);
  * the MCP scopes are schemas/api_keys.py; limits are mcp/calls.py via security/ratelimit.py.
  */
@@ -21,7 +21,7 @@ export const API_KEY_META = {
 /** The scopes an AI app's key can carry, in plain words (schemas/api_keys.py SCOPE_DESCRIPTIONS). */
 export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "posts:read", body: "Read published and scheduled posts, the calendar, best times and the media library." },
-  { scope: "posts:write", body: "Create, change, schedule, publish and cancel posts. Scheduling and publishing are Creator and Business." },
+  { scope: "posts:write", body: "Create, change, schedule, publish and cancel posts, within your plan's limits." },
   { scope: "media:write", body: "Upload or import images and videos for posts." },
   { scope: "conversations:read", body: "Read conversations and their messages." },
   { scope: "replies:draft", body: "Prepare a reply for a member to send in Amplychat. It is never sent." },
@@ -30,8 +30,8 @@ export const KEY_SCOPES: readonly { scope: string; body: string }[] = [
   { scope: "knowledge:read", body: "Search the knowledge base." },
   { scope: "knowledge:write", body: "Draft a note or a question and answer for a person to approve." },
   { scope: "automations:read", body: "Read automations and their runs." },
-  { scope: "automations:write", body: "Turn automations on and off. Creator and Business." },
-  { scope: "automations:create", body: "Create keyword automations, saved off, and change ones that are off. Creator and Business." },
+  { scope: "automations:write", body: "Turn automations on and off." },
+  { scope: "automations:create", body: "Create keyword automations, saved off, and change ones that are off." },
   { scope: "ask", body: "Ask Amplychat's own assistant. It can read anything the key's member can see in Amplychat, including the inbox, and uses AI credits." },
 ];
 
@@ -126,7 +126,7 @@ export const KEY_PLAN_ROWS = PLAN_ROWS.filter((row) => /a day|API key/.test(row.
 export const API_KEY_FAQ = [
   {
     question: "Which plan do I need for an API key?",
-    answer: "Business or Agency. Making a key is part of the public API, which comes with those two plans. On Free and Creator, connect by signing in instead.",
+    answer: "Any plan, Free included. A key does what your plan allows over MCP. The public API and Zapier are part of Business and Agency.",
   },
   {
     question: "Can I change a key's scopes?",

@@ -4,9 +4,10 @@
   keeps its SHA-256 (the key is long and random, so a plain hash is enough) and its first
   twelve characters, so a member can tell keys apart in the list.
 - Keys carry scopes (schemas/api_keys.py). A key never gains scopes: make another.
-- Public API access is Business and Agency (C-172, C-174; the ``public_api`` entitlement):
-  making a key on Free or Creator is 402. Listing and revoking stay open, so a workspace that
-  downgraded can still clean up.
+- Any plan may make a key (C-207): on /mcp it does what the plan allows. The public API, its
+  REST hooks and Zapier are Business and Agency (C-172, C-174; the ``public_api`` entitlement),
+  checked each time a key is used there (auth/api_key.py), so a key made on Free or Creator is
+  refused on /public/v1 with 402.
 - Revoking sets ``revoked_at`` and deletes the REST hooks the key subscribed (services/
   api_hooks.py): a key that is off sends nothing. Revoking again changes nothing.
 - A workspace holds at most ``ACTIVE_LIMIT`` unrevoked keys.
@@ -37,7 +38,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.deps import WorkspaceContext
-from socialhood.billing.entitlements import check_entitlement
 from socialhood.db.tenancy import require_workspace
 from socialhood.errors import ApiError
 from socialhood.models.api_keys import ApiKey
@@ -107,7 +107,6 @@ async def list_keys(session: AsyncSession) -> ApiKeyList:
 async def create(
     session: AsyncSession, body: ApiKeyCreate, *, user_id: uuid.UUID | None, now: datetime
 ) -> ApiKeyWithKey:
-    await check_entitlement(session, "public_api")
     # Two creations at once would both count 19 and leave 21.
     await workspaces.lock_limit(session, "api_keys", require_workspace())
     active = await session.scalar(

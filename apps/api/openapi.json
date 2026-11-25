@@ -31543,7 +31543,7 @@
         ]
       },
       "post": {
-        "description": "The key is in this response only. 402 entitlement_required on a plan without the public\nAPI (Free and Creator; it is part of Business and Agency); 409 at 20 active keys. C-167:\n``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and\nCIDRs; empty for any address).",
+        "description": "The key is in this response only. Every plan may make one (C-207); the public API checks\nthe plan when the key is used there. 409 at 20 active keys. C-167:\n``expires_in_days`` (30, 90 or 365; leave out for never) and ``allowed_ips`` (IPs and\nCIDRs; empty for any address).",
         "operationId": "create_api_key",
         "parameters": [
           {
