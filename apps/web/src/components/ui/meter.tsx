@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
  * - `consumable`: something used up and renewed, like AI credits, scheduled posts this month or
  *   knowledge characters. It warns at 80% and is full, in danger, at 100%.
  * - `slot`: a number of places, like connected accounts or active automations. Filling them is
- *   normal use, so it never warns and at 100% it says a neutral "All used".
+ *   normal use, so it never warns and stays neutral at 100%.
  */
 export type MeterKind = "consumable" | "slot"
 
@@ -83,7 +83,7 @@ type MeterProps = Omit<React.ComponentProps<"div">, "children"> & {
 /**
  * Meter: usage against a limit (`role="meter"`), for credits, quotas and scores (§8.2). Track
  * `raised`, 6 px; fill the decor gradient, `warning` from 80% and `danger` at 100% for
- * consumables; a slot at 100% stays brand and says "All used". The value text is on screen and is
+ * consumables; a slot at 100% stays brand. The value text is on screen and is
  * the meter's `aria-valuetext`; the message at 100% describes it. The root carries `data-level`
  * and `data-kind`.
  *
@@ -172,7 +172,8 @@ function Meter({
     )
   }
 
-  const full = level === "full" && (kind === "slot" || fullMessage !== undefined || action !== undefined)
+  // A full meter shows a line only when there is something to say: a message or an action.
+  const full = level === "full" && (fullMessage !== undefined || action !== undefined)
   return (
     <div
       data-slot="meter"
@@ -217,7 +218,6 @@ function Meter({
           )}
         >
           {/* The spaces keep the words apart in the description; the flex gap spaces them on screen. */}
-          {kind === "slot" ? <span className="font-medium text-fg">All used</span> : null}{" "}
           {fullMessage}{" "}
           {action}
         </p>

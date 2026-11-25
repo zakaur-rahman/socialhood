@@ -58,6 +58,7 @@ RECOVERY: dict[str, Recovery] = {
     "sweep_stuck": R,
     "check_webhook_health": R,
     "check_failures": R,
+    "check_storage_usage": R,
     "recover_stalled_jobs": R,
     "refresh_tokens": R,
     "reconcile_subscriptions": R,
