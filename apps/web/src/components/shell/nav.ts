@@ -5,8 +5,8 @@ import {
   Funnel,
   House,
   Inbox,
-  Link2,
   MessageSquare,
+  Plug,
   Receipt,
   Settings,
   ShoppingBag,
@@ -72,7 +72,7 @@ export const PRIMARY_NAV: readonly NavItem[] = NAV_GROUPS.flatMap((group) => gro
 export const CONNECTIONS_NAV: NavItem = {
   key: "connections",
   label: "Connections",
-  icon: Link2,
+  icon: Plug,
   segment: "connections",
   roles: EVERYONE,
   href: (s) => route(`/w/${s}/connections`),
