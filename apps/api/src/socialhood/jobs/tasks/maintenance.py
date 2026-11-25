@@ -1,13 +1,14 @@
 """Maintenance: the periodic ping, the stuck-row sweep (TR-JOB-03), jobs left running by a dead
-worker (recover_stalled_jobs, jobs/recovery.py), webhook health (TR-WH-08) and failed-work alerts
-(TR-OPS-04). Alerts are error-level log events named ``alert``, which the error tracker picks up
-(T9.3)."""
+worker (recover_stalled_jobs, jobs/recovery.py), webhook health (TR-WH-08), failed-work alerts
+(TR-OPS-04) and the daily storage check (Cloudinary credits, emailed to OPS_ALERT_EMAIL). Alerts are
+error-level log events named ``alert``, which the error tracker picks up (T9.3)."""
 
 from __future__ import annotations
 
 import time
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from redis.asyncio import Redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,11 +17,15 @@ from socialhood.db.tenancy import tenant_bypass_scope
 from socialhood.jobs.app import BULK, INTERACTIVE, app
 from socialhood.jobs.recovery import recover_stalled
 from socialhood.jobs.runtime import runtime
+from socialhood.media.cloudinary import Cloudinary, CloudinaryError
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.platform import WebhookEvent, WebhookStatus
+from socialhood.notify.email import EmailError, EmailMessage
+from socialhood.notify.registry import get_email_sender
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import webhook_events
 from socialhood.services.webhook_intake import enqueue_processing
+from socialhood.settings import Settings
 
 log = get_logger(__name__)
 
@@ -28,6 +33,8 @@ RECEIVED_GRACE = timedelta(seconds=60)
 FAILURE_RATE_ALERT = 0.01  # TR-WH-08: 1% over 5 minutes
 SILENCE_ALERT_MINUTES = 60
 FAILED_WORK_ALERT = 20  # TR-OPS-04: per hour
+STORAGE_ALERT_TOP = 90.0  # the second, louder level after CLOUDINARY_ALERT_PERCENT
+STORAGE_ALERT_KEPT_S = 40 * 86_400  # one alert per level per month
 
 
 @app.periodic(cron="* * * * *", periodic_id="ping")
@@ -139,3 +146,70 @@ async def failed_work_alerts(
 @app.task(name="check_failures", queue=BULK, queueing_lock="check_failures")
 async def check_failures(timestamp: int) -> None:
     await failed_work_alerts(runtime().sessionmaker)
+
+
+def storage_alert_email(percent: float, level: float, to: str, key: str) -> EmailMessage:
+    """The storage alert, in plain words, with what to do. ``key`` makes a resend a no-op."""
+    subject = f"Amplychat: Cloudinary at {percent:.0f}% of this cycle's credits"
+    text = (
+        f"Cloudinary has used {percent:.0f}% of this cycle's credits "
+        f"(alert level {level:.0f}%).\n\n"
+        "When it reaches 100%, uploads and media delivery can stop until the cycle resets, and "
+        "scheduled posts with media would fail.\n\n"
+        "What to do: check usage in the Cloudinary dashboard. If it keeps climbing, upgrade the "
+        "Cloudinary plan, or move videos to Cloudflare R2 with our own conversion step "
+        "(the R2 plan)."
+    )
+    html = "".join(f"<p>{line}</p>" for line in text.split("\n\n"))
+    return EmailMessage(to=to, subject=subject, html=html, text=text, idempotency_key=key)
+
+
+async def check_storage_usage(
+    http: httpx.AsyncClient, redis: Redis, settings: Settings, now: datetime | None = None
+) -> float | None:
+    """Read Cloudinary's credit usage; at CLOUDINARY_ALERT_PERCENT and again at 90%, alert once
+    per level per month: an ``alert`` log event and, with OPS_ALERT_EMAIL, an email. The level is
+    only marked sent once the email went, so a failed send tries again the next day. None when
+    Cloudinary isn't configured."""
+    cloud = Cloudinary(http, settings)
+    if not cloud.configured:
+        return None
+    now = now or datetime.now(UTC)
+    percent = await cloud.credits_used_percent()
+    log.info("storage_usage", provider="cloudinary", credits_used_percent=round(percent, 1))
+    crossed = [
+        level
+        for level in (settings.cloudinary_alert_percent, STORAGE_ALERT_TOP)
+        if percent >= level
+    ]
+    if not crossed:
+        return percent
+    level = max(crossed)
+    key = f"ops:storage_alert:{now:%Y-%m}:{level:.0f}"
+    if await redis.exists(key):
+        return percent
+    log.error(
+        "alert",
+        kind="storage_usage",
+        detail={"provider": "cloudinary", "percent": percent, "level": level},
+    )
+    if settings.ops_alert_email:
+        try:
+            await get_email_sender(http, settings).send(
+                storage_alert_email(percent, level, settings.ops_alert_email, key)
+            )
+        except EmailError as error:
+            log.warning("storage_alert_email_failed", error=str(error))
+            return percent
+    await redis.set(key, "1", ex=STORAGE_ALERT_KEPT_S)
+    return percent
+
+
+@app.periodic(cron="15 6 * * *", periodic_id="check_storage_usage")
+@app.task(name="check_storage_usage", queue=BULK, queueing_lock="check_storage_usage")
+async def check_storage_usage_task(timestamp: int) -> None:
+    rt = runtime()
+    try:
+        await check_storage_usage(rt.http, rt.redis, rt.settings)
+    except CloudinaryError as error:  # tomorrow's run tries again
+        log.warning("storage_usage_failed", error=str(error))
