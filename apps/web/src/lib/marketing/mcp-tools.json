@@ -6,7 +6,7 @@
       "access": "write",
       "scope": "automations:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -15,7 +15,7 @@
       "access": "write",
       "scope": "knowledge:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -33,7 +33,7 @@
       "access": "write",
       "scope": "posts:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -42,7 +42,7 @@
       "access": "write",
       "scope": "automations:create",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -150,7 +150,7 @@
       "access": "write",
       "scope": "posts:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": false
     },
     {
@@ -222,7 +222,7 @@
       "access": "write",
       "scope": "automations:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -231,7 +231,7 @@
       "access": "write",
       "scope": "posts:write",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {
@@ -258,7 +258,7 @@
       "access": "write",
       "scope": "automations:create",
       "role": "admin",
-      "free": false,
+      "free": true,
       "preview": true
     },
     {

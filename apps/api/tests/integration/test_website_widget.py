@@ -172,7 +172,7 @@ async def test_the_widget_account_is_listed_with_the_others(ws: Ws, site: Site) 
     listed = await ws.ok("GET", "/social-accounts")
     web = [a for a in listed["items"] if a["platform"] == "web"]
     assert [(a["display_name"], a["ai_mode"], a["capabilities"]) for a in web] == [
-        ("Website chat", "suggest", ["dm_send"])
+        ("Website chat", "off", ["dm_send"])
     ]
 
 

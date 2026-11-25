@@ -30,7 +30,7 @@ body:has(.site) {
 
 @layer components {
   .site {
-    --display: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: var(--font-anek-latin), var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --text: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --nav-h: 64px;
     position: relative;

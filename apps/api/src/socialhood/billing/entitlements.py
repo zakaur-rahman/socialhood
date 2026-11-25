@@ -71,10 +71,7 @@ FEATURES = {
     "ai_reply_automations": "AI replies in automations are part of Creator and Business.",
     "sheets_sync": "Google Sheets sync is part of Creator and Business.",
     "public_api": "The public API, API keys and Zapier are part of Business.",
-    "ai_connections": (
-        "Scheduling and changing things from an AI app is part of Creator and Business. On Free, "
-        "AI apps can read and save drafts."
-    ),
+    "ai_connections": ("This AI connection mode isn't part of your plan."),
     "broadcast_recipients_monthly": "WhatsApp broadcasts are part of Creator and Business.",
     "commerce": "The product catalogue is part of Creator and Business.",
     "whatsapp": (

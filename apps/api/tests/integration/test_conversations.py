@@ -454,7 +454,7 @@ async def test_conversation_detail(owner: Owner, engine: AsyncEngine) -> None:
         "display_name": None,
         "status": "active",
     }
-    assert body["ai"] == {"effective_mode": "suggest", "override": None, "paused_until": None}
+    assert body["ai"] == {"effective_mode": "off", "override": None, "paused_until": None}
     assert body["scheduled_count"] == 1
     assert body["latest_analysis"] is None
     assert body["pending_suggestion"] is None
@@ -547,7 +547,7 @@ async def test_ai_mode_override(owner: Owner, engine: AsyncEngine, redis: Redis)
 
     cleared = await owner.call("PATCH", path, json={"clear_ai_mode_override": True})
     assert cleared.json()["ai"] == {
-        "effective_mode": "suggest",
+        "effective_mode": "off",
         "override": None,
         "paused_until": None,
     }

@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from pydantic import BaseModel
 
+from socialhood.billing.plans import ENTITLEMENTS
 from socialhood.errors import ApiError
 from socialhood.mcp import tools as mcp_tools
 from socialhood.mcp.audit import TOO_LARGE, CallRecord, digest, kept_arguments, redact
@@ -291,9 +292,12 @@ def test_visible_tools_follow_scope_role_and_mode() -> None:
 # ---------------------------------------------------------------- mode, audit, results
 
 
-def test_the_plan_caps_the_workspace_mode() -> None:
-    assert plan_cap("free") is AiConnectionsMode.READ_DRAFTS
+def test_the_plan_caps_the_workspace_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert plan_cap("free") is AiConnectionsMode.FULL  # C-205: Full on every plan
     assert plan_cap("pro") is AiConnectionsMode.FULL
+    assert effective_mode("full", "free") is AiConnectionsMode.FULL
+    # The cap still works should a plan leave Full out again.
+    monkeypatch.setitem(ENTITLEMENTS["ai_connections"], "free", ("off", "read_only", "read_drafts"))
     assert effective_mode("full", "free") is AiConnectionsMode.READ_DRAFTS
     assert effective_mode("read_only", "free") is AiConnectionsMode.READ_ONLY
     assert effective_mode("full", "max") is AiConnectionsMode.FULL

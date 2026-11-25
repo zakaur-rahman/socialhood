@@ -12,7 +12,7 @@ afterEach(() => {
 // name, so a module that loads one (the public site's fonts, C-155) can be imported in a test.
 vi.mock("next/font/google", () => {
   const font = (options?: { variable?: string }) => ({ className: "font", variable: options?.variable ?? "font", style: { fontFamily: "font" } });
-  return { Geist: font, Geist_Mono: font, Funnel_Display: font, Funnel_Sans: font };
+  return { Geist: font, Geist_Mono: font, Funnel_Display: font, Funnel_Sans: font, Anek_Latin: font };
 });
 
 // jsdom lacks these; Radix and the media-query hook use them.

@@ -255,27 +255,25 @@ async def test_next_free_slot_uses_the_accounts_posting_times(
     assert "18:00 UTC" in result["publish_at"] or "6:00 pm" in result["publish_at"]
 
 
-async def test_free_saves_drafts_only(
-    mcp_app: FastAPI, key: str, setup: Setup, engine: AsyncEngine
+async def test_free_schedules_within_its_limits(
+    mcp_app: FastAPI,
+    key: str,
+    setup: Setup,
+    engine: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """C-205: Free may schedule from an AI app; its daily cap for AI apps still applies."""
     media = await image(engine, setup)
     await set_plan(engine, setup.wid, "free")
-    draft = structured(
-        await call(mcp_app, key, "create_post", post_args(setup, media, when="draft"))
+    monkeypatch.setitem(ENTITLEMENTS["mcp_posts_daily"], "free", 1)
+    first = structured(
+        await confirm(mcp_app, key, "create_post", post_args(setup, media, when=at(days=2)))
     )
-    assert draft["status"] == "draft"
-    error = error_of(
-        await call(
-            mcp_app, key, "create_post", post_args(setup, media, when=at(days=2), confirmed=True)
-        )
-    )
-    assert (error["code"], error["entitlement"]) == ("entitlement_required", "ai_connections")
+    assert first["status"] == "scheduled"
+    second = post_args(setup, media, when=at(days=3), caption="Second")
+    error = error_of(await confirm(mcp_app, key, "create_post", second))
+    assert (error["code"], error["entitlement"]) == ("quota_exceeded", "mcp_posts_daily")
     assert len(await rows(engine, "SELECT 1 FROM scheduled_posts")) == 1
-    # cancel_post is a write: Free's mode doesn't admit it.
-    refused = error_of(
-        await call(mcp_app, key, "cancel_post", {"post_id": draft["post_id"], "confirmed": True})
-    )
-    assert refused["code"] == "entitlement_required"
 
 
 async def test_a_workspace_set_to_drafts_refuses_scheduling(
@@ -1027,7 +1025,7 @@ async def test_publish_now_is_previewed_then_published_through_the_apps_own_path
     assert len(await jobs("publish_target")) == 1
 
 
-async def test_publish_now_needs_a_paid_plan_and_full_mode_and_counts_against_the_caps(
+async def test_publish_now_needs_full_mode_and_counts_against_the_caps(
     mcp_app: FastAPI,
     key: str,
     setup: Setup,
@@ -1040,14 +1038,6 @@ async def test_publish_now_needs_a_paid_plan_and_full_mode_and_counts_against_th
     )
     change = {"post_id": draft["post_id"], "when": "now"}
     both = (("create_post", post_args(setup, media, when="now")), ("update_post", change))
-    await set_plan(engine, setup.wid, "free")
-    for name, args in both:
-        error = error_of(await call(mcp_app, key, name, args))
-        assert (error["code"], error["entitlement"]) == (
-            "entitlement_required",
-            "ai_connections",
-        ), name
-    await set_plan(engine, setup.wid, "max")
     async with engine.begin() as conn:
         await conn.execute(
             text("UPDATE workspaces SET ai_connections_mode = 'read_drafts' WHERE id = :w"),

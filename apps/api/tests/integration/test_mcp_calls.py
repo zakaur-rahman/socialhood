@@ -158,18 +158,14 @@ async def set_mode(engine: AsyncEngine, wid: str, mode: str) -> None:
         )
 
 
-async def test_free_gets_drafts_but_not_writes(
+async def test_free_gets_every_tool_in_full_mode(
     harness: Harness, setup: Setup, engine: AsyncEngine
 ) -> None:
-    assert await harness.names() == ["draft_note", "queue_note", "save_note"]
+    """C-205: Full is on every plan; Free's own limits still apply inside the tools."""
     await set_plan(engine, setup.wid, "free")
-    assert await harness.names() == ["draft_note"]
-    structured(await harness.call("draft_note", {"note": "hello"}))
-    error = error_of(await harness.call("save_note", {"note": "hello"}))
-    assert error["code"] == "entitlement_required"
-    assert error["entitlement"] == "ai_connections"
-    assert "part of Creator and Business" in error["message"]
-    assert harness.saved == []
+    assert await harness.names() == ["draft_note", "queue_note", "save_note"]
+    structured(await harness.call("save_note", {"note": "hello"}))
+    assert harness.saved == ["hello"]
 
 
 async def test_the_workspace_mode_admits_by_access(

@@ -22,6 +22,7 @@ import { useInboxStore } from "@/lib/inbox/store";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { AiOffHint } from "./AiOffHint";
 import { EditingSuggestionChip, EscalationBanner, SuggestionCard } from "./SuggestionCard";
 import { useTeachAi } from "./TeachAi";
 
@@ -211,6 +212,7 @@ export function useSuggestionSlot({
   const slot = (
     <>
       {escalation ? <EscalationBanner message={escalation} /> : null}
+      {!aiOn && canReply ? <AiOffHint conversation={conversation} /> : null}
       {showCard ? (
         editing ? (
           <EditingSuggestionChip onStop={() => setSuggestionEdit(conversationId, null)} />
