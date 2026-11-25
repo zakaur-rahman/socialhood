@@ -129,12 +129,12 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Connect Claude, ChatGPT or Codex (sign in)", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Read inbox, comments, analytics, posts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Save draft posts and reply drafts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
-  { label: "Schedule, publish, change and cancel posts", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
-  { label: "Draft knowledge for you to approve", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
-  { label: "Create automations and turn them on and off", free: "No", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Schedule, publish, change and cancel posts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Draft knowledge for you to approve", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
+  { label: "Create automations and turn them on and off", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Make an API key", free: "No", pro: "No", max: "Yes", agency: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000", agency: "10,000" },
-  { label: "Posts scheduled from AI apps a day", free: "None", pro: "100", max: "100", agency: "300" },
+  { label: "Posts scheduled from AI apps a day", free: "10", pro: "100", max: "100", agency: "300" },
   {
     label: "Files uploaded from AI apps a day",
     free: "20 (500 MB)",
@@ -198,7 +198,7 @@ export const CONNECT_AI_FAQ = [
   },
   {
     question: "Can the AI reply to my customers' DMs?",
-    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation on Creator and Business. It is saved off; once it is turned on, by you in ${SITE_NAME} or by the AI app after a preview and your yes, the automation sends the DMs, as one made in the app does.`,
+    answer: `No. It can read conversations and prepare a reply, and you send it from ${SITE_NAME}. Sending from an AI app isn't available. It can set up a keyword automation. It is saved off; once it is turned on, by you in ${SITE_NAME} or by the AI app after a preview and your yes, the automation sends the DMs, as one made in the app does.`,
   },
   {
     question: "How do I disconnect an AI app?",

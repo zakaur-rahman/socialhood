@@ -285,7 +285,7 @@ export function ConnectAiView({ apiBase }: { apiBase?: string }) {
           <p className="cx-note">
             Read tools run in Read only mode and up, Draft tools in Read and drafts and up, and Change tools in Full. A draft post is
             saved and edited at once on every plan; scheduling a post, publishing it now or changing a scheduled one asks for the
-            preview and needs a paid plan and Full mode.
+            preview and needs Full mode.
           </p>
         </div>
       </section>

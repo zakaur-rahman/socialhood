@@ -54,7 +54,7 @@ describe("/developers/mcp (C-165)", () => {
     const cancel = within(tools).getByRole("row", { name: /cancel_post/ });
     expect(cancel).toHaveTextContent("Change");
     expect(cancel).toHaveTextContent("Owners and admins");
-    expect(cancel).toHaveTextContent("Paid plans");
+    expect(cancel).toHaveTextContent("Every plan"); // C-205
     expect(cancel).toHaveTextContent("Yes");
   });
 
