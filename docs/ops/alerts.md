@@ -12,6 +12,7 @@ results recorded so far.
 | Prometheus rules (Grafana Cloud or Prometheus) | The four T9.3 alerts, plus worker down, interactive backlog (TR-JOB-06), failed jobs, API 5xx, and scrape health | [`infra/prometheus/alerts.yml`](../../infra/prometheus/alerts.yml) |
 | Sentry, API project | Errors in the API and the worker (with `job`, `lane` and `workspace_id` tags); the worker's log alerts: webhook health (TR-WH-08) and failed work (TR-OPS-04) | Code, plus the rules in section 4 |
 | Sentry, web project | Browser and server errors in the web app | Code, plus the rules in section 4 |
+| Email to `OPS_ALERT_EMAIL` | Cloudinary credits this cycle at `CLOUDINARY_ALERT_PERCENT` (70%) and again at 90%, once per level per month; also an `alert` log event (`kind=storage_usage`) | `check_storage_usage` in `jobs/tasks/maintenance.py`, daily 06:15 UTC |
 
 | Alert | Rule | Severity |
 |---|---|---|

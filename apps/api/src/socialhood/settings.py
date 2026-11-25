@@ -170,6 +170,10 @@ class Settings(BaseSettings):
     cloudinary_cloud_name: str | None = None
     cloudinary_api_key: str | None = None
     cloudinary_api_secret: SecretStr | None = None
+    # Storage alert (jobs/tasks/maintenance.check_storage_usage): emailed to OPS_ALERT_EMAIL when
+    # Cloudinary's credits this cycle reach this share, and again at 90%. Unset email: logged only.
+    cloudinary_alert_percent: float = 70.0
+    ops_alert_email: str | None = None
 
     dodo_api_key: SecretStr | None = None
     dodo_environment: str = "test"

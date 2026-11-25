@@ -179,6 +179,24 @@ class Cloudinary:
             raise CloudinaryError(f"lookup failed with HTTP {response.status_code}")
         return StoredResource.from_api(response.json())
 
+    async def credits_used_percent(self) -> float:
+        """The share of the plan's credits used this cycle (Admin API usage report:
+        ``credits.used_percent``, else ``usage`` over ``limit``)."""
+        self._require()
+        try:
+            response = await self.http.get(
+                f"{API}/{self.cloud}/usage", auth=(self.api_key, self.secret)
+            )
+        except httpx.HTTPError as error:
+            raise CloudinaryError(f"usage failed: {type(error).__name__}") from error
+        if response.status_code >= 400:
+            raise CloudinaryError(f"usage failed with HTTP {response.status_code}")
+        credits = response.json().get("credits") or {}
+        if credits.get("used_percent") is not None:
+            return float(credits["used_percent"])
+        limit = float(credits.get("limit") or 0)
+        return 100.0 * float(credits.get("usage") or 0) / limit if limit else 0.0
+
     async def eager(self, public_id: str, resource_type: ResourceType, eager: str) -> None:
         """Start rendering a derived version now (``{transformation}/{extension}``), in the
         background: Cloudinary answers at once and later serves that transformation's URL from
