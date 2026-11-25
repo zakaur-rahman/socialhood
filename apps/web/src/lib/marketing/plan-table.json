@@ -145,7 +145,8 @@
       "free": [
         "off",
         "read_only",
-        "read_drafts"
+        "read_drafts",
+        "full"
       ],
       "pro": [
         "off",
@@ -173,7 +174,7 @@
       "agency": 10000
     },
     "mcp_posts_daily": {
-      "free": 0,
+      "free": 10,
       "pro": 100,
       "max": 100,
       "agency": 300

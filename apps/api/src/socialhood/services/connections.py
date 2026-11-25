@@ -367,6 +367,8 @@ async def connect_sandbox(
     acct = SocialAccount(
         platform=platform,
         platform_account_id=f"{SANDBOX_PREFIX}{suffix}",
+        # A sandbox is for trying the AI, so it drafts from the start (C-204: real ones start off).
+        ai_mode=AiMode.SUGGEST,
         waba_id=f"{SANDBOX_PREFIX}waba_{suffix}" if whatsapp else None,
         username=(
             f"sandbox.wa.{suffix[:4]}"
@@ -552,7 +554,3 @@ PLATFORM_LABELS = {
 
 def platform_label(acct: SocialAccount) -> str:
     return PLATFORM_LABELS.get(acct.platform, acct.platform.capitalize())
-
-
-def default_ai_mode(plan: str) -> str:
-    return AiMode.SUGGEST if AiMode.SUGGEST in entitlement(plan, "ai_modes") else AiMode.OFF

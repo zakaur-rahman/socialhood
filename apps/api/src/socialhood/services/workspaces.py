@@ -127,11 +127,10 @@ async def cancel_dodo_subscription(session: AsyncSession, dodo: DodoClient) -> b
 
 # Each checklist step is computed from data (FR-ACC-04; docs/QUESTIONS.md Q-008).
 # add_knowledge is done once the workspace has any knowledge source (T5.3). choose_ai_mode is done
-# once a connected account's AI mode is Suggest or Auto (C-060): new accounts start in Suggest
-# when the plan has AI credits (FR-SUG-01), so it usually ticks with the first account and stays
-# open while every account has AI off. create_automation is done once an automation has been
-# activated (a draft is not yet an automation that answers anyone; pausing or ending it later
-# keeps the step done).
+# once a connected account's AI mode is Suggest or Auto (C-060). New accounts start with AI off
+# (C-204), so it stays open until the business turns one on. create_automation is done once an
+# automation has been activated (a draft is not yet an automation that answers anyone; pausing or
+# ending it later keeps the step done).
 StepCheck = Callable[[AsyncSession, uuid.UUID], Awaitable[bool]]
 
 

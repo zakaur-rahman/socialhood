@@ -102,7 +102,7 @@ describe("the landing page", () => {
       "Works with Claude, ChatGPT and Codex",
       "You confirm first",
       "It doesn't message your customers itself",
-      "Reading and drafts on every plan",
+      "On every plan, within its limits",
     ]);
     expect(aiApps.getByRole("link", { name: "How it works with AI apps" })).toHaveAttribute("href", "/mcp");
     expect(aiApps.getByRole("link", { name: "Set it up" })).toHaveAttribute("href", "/developers/mcp");

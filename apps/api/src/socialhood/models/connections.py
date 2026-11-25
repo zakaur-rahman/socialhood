@@ -66,7 +66,8 @@ class SocialAccount(IdMixin, TimestampMixin, TenantScoped, Base):
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     token_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     scopes: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
-    ai_mode: Mapped[str] = mapped_column(Text, server_default=text("'suggest'"))
+    # C-204: off until the business turns it on (sandbox accounts set suggest themselves).
+    ai_mode: Mapped[str] = mapped_column(Text, server_default=text("'off'"))
     ai_analysis_enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     auto_hide_spam: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     webhooks_subscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

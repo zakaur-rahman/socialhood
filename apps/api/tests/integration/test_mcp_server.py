@@ -298,9 +298,10 @@ async def test_free_reads_with_a_daily_cap(
     async with connect(mcp_app, key) as mcp:
         workspace = structured(await mcp.call_tool("get_workspace", {}))
         assert workspace["workspace"]["plan"] == "free"
-        assert workspace["connection"]["mode"] == "read_drafts"
+        # C-205: Full is on every plan, so Free keeps the workspace's mode.
+        assert workspace["connection"]["mode"] == "full"
         assert workspace["connection"]["mode_setting"] == "full"
-        assert workspace["connection"]["plan_allows"] == "read_drafts"
+        assert workspace["connection"]["plan_allows"] == "full"
         assert workspace["usage"] == {"tool_calls_today": 1, "tool_calls_daily_limit": 100}
         structured(await mcp.call_tool("list_conversations", {}))  # reads stay open on Free
         await redis.set(f"mcp-calls:{setup.wid}:{datetime.now(UTC):%Y-%m-%d}", 100)
@@ -490,10 +491,7 @@ async def test_owners_and_admins_set_the_mode(
     async with engine.connect() as conn:
         action = (await conn.execute(text("SELECT action FROM audit_events"))).scalar_one()
     assert action == "ai_connections.mode_changed"
-    await set_plan(engine, setup.wid, "free")
-    refused = await client.put(url, json={"mode": "full"}, headers=setup.headers)
-    assert refused.status_code == 402
-    assert refused.json()["entitlement"] == "ai_connections"
-    assert (await client.put(url, json={"mode": "read_drafts"}, headers=setup.headers)).json()[
-        "effective_mode"
-    ] == "read_drafts"
+    await set_plan(engine, setup.wid, "free")  # C-205: Free may choose Full too
+    full = await client.put(url, json={"mode": "full"}, headers=setup.headers)
+    assert full.status_code == 200, full.text
+    assert full.json()["effective_mode"] == "full"

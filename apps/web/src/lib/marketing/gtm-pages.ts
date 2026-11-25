@@ -97,7 +97,7 @@ export type GtmPage = {
 const OURS_MCP: Cell = {
   status: "yes",
   href: "/mcp",
-  text: "Claude, ChatGPT and Codex: read and draft on every plan; schedule posts and set up automations on Creator and Business after a preview. AI apps can't send messages themselves.",
+  text: "Claude, ChatGPT and Codex on every plan: read, draft, schedule posts and set up automations after a preview, within your plan's limits. AI apps can't send messages themselves.",
 };
 /** C-168: the MCP row was checked later than the rest of each table. */
 const mcpHonesty = (name: string) =>
@@ -173,7 +173,7 @@ export const SWITCH_PAGE: GtmPage = {
         {
           // C-168: the MCP server; Manychat's side is the comparison's MCP row (not found, 2026-11-01).
           title: "Work from Claude, ChatGPT and Codex",
-          body: "Connect your AI assistant to read the inbox, draft replies and, on Creator and Business, schedule posts and set up automations after a preview. AI apps can't send messages themselves.",
+          body: "Connect your AI assistant to read the inbox, draft replies, schedule posts and set up automations after a preview, within your plan's limits. AI apps can't send messages themselves.",
         },
         {
           title: "Flat plans",

@@ -41,9 +41,9 @@ export const AI_APPS_POINTS: { title: string; body: string; icon: LucideIcon }[]
     body: `Sending a DM or a comment reply stays in ${SITE_NAME} with a person. An automation set up from your AI app stays off until it is turned on, and your AI app can turn it on after you say yes.`,
   },
   {
-    title: "Reading and drafts on every plan",
+    title: "On every plan, within its limits",
     icon: BookOpen,
-    body: "Included on Free. Scheduling and publishing posts, drafting knowledge for you to approve, and setting up automations and turning them on and off are on Creator and Business.",
+    body: "Included on Free. Your AI app can schedule and publish posts, draft knowledge for you to approve, and set up automations, up to what your plan allows: on Free, 10 scheduled posts a month and 3 automations.",
   },
 ];
 

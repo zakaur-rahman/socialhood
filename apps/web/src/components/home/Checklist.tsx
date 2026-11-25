@@ -28,7 +28,7 @@ const COPY: Record<ChecklistStep["key"], StepCopy> = {
   },
   choose_ai_mode: {
     title: "Choose an AI mode",
-    why: "Decide whether the AI suggests replies or answers on its own.",
+    why: "AI replies are off until you choose. Turn on Suggest for drafts from your knowledge, or Auto to let the AI answer.",
     action: "Choose a mode",
     // Each account's mode is set on its card in Connections (AiModeControl); done once an
     // account's mode is Suggest or Auto (C-060).

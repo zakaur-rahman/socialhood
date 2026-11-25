@@ -66,7 +66,6 @@ export const ASKS: readonly Ask[] = [
     prompt: "Schedule this Reel for Friday at 6 pm.",
     result:
       "The AI shows a preview with the time, the account and the composer's checklist. Nothing is scheduled until you say yes, and your team is told. Ask it to post now and it publishes right after your yes.",
-    plan: "Creator and Business",
   },
   {
     prompt: "Sum up this week's DMs.",
@@ -87,19 +86,16 @@ export const ASKS: readonly Ask[] = [
   {
     prompt: "Add our new return policy to the knowledge base.",
     result: "It drafts a note and it waits on your Knowledge page. You read it and approve it, and then your AI replies can use it. Your plan's knowledge limit applies.",
-    plan: "Creator and Business",
   },
   {
     prompt: "When someone comments \"price\" on my last post, DM them the price.",
     result:
       "It finds your latest post and shows a preview: the post, the keyword, the DM, and any live automation with the same keyword. Nothing is created until you say yes, and it's saved off. Turn it on in Amplychat, or ask the AI to: it shows a preview and waits for your yes again. Then the automation sends the DMs. Your team is told, and you can ask the AI to pause it.",
-    plan: "Creator and Business",
   },
   {
     prompt: "Edit this video and post it.",
     result:
       "In Claude Code or Codex, it trims the video with your own tools, uploads it to your media library and schedules it as a Reel, after you approve the preview.",
-    plan: "Creator and Business",
   },
 ];
 
@@ -138,11 +134,11 @@ export const MCP_PAGE_FAQ = [
   },
   {
     question: "Can the AI message my customers?",
-    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. On Creator and Business it can also set up a keyword automation. It is saved off. You turn it on in ${SITE_NAME}, or the AI app does after a preview and your yes, and then the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
+    answer: `Not by itself. It can read conversations and draft replies that you send from ${SITE_NAME}. It can also set up a keyword automation. It is saved off. You turn it on in ${SITE_NAME}, or the AI app does after a preview and your yes, and then the automation sends the DMs, as one made in the app does. You can pause it at any time, and your team is told.`,
   },
   {
     question: "Does this cost extra?",
-    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect and read, Creator and Business can schedule and publish posts, draft knowledge for you to approve, and create automations and turn them on and off, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
+    answer: `There is no separate fee. It's part of your ${SITE_NAME} plan: every plan can connect, read, schedule and publish posts, draft knowledge for you to approve, and create automations and turn them on and off, within that plan's limits, and each plan has a daily limit on tool calls. Your AI app's own plan is billed by that app.`,
   },
   {
     question: "Can I use it with Cursor or VS Code?",

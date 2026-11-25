@@ -64,7 +64,7 @@ async def clean_db(engine: AsyncEngine) -> AsyncIterator[None]:
             await conn.execute(
                 text(
                     "TRUNCATE users, workspaces, webhook_events, data_deletion_requests, "
-                    "oauth_clients CASCADE"
+                    "oauth_clients, trial_emails CASCADE"
                 )
             )
 

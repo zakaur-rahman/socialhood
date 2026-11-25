@@ -84,11 +84,12 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # 2026-11-02; was Pro and Max under PD-6). Outbound webhooks above stay on every plan.
     "public_api": {"free": False, "pro": False, "max": True, "agency": True},
     # AI connections over MCP (C-165, D2 decided 2026-10-31): every plan connects; the modes a
-    # workspace may choose (models/mcp.AiConnectionsMode). Free reads and saves drafts; scheduling
-    # from an AI client is part of Creator and Business (C-172). Separate from public_api so either
-    # can change alone.
+    # workspace may choose (models/mcp.AiConnectionsMode). Every plan may choose Full (owner,
+    # 2026-11-25, C-205): an AI app does what the member could do by hand, within the plan's own
+    # limits (Free: 10 scheduled posts a month, 3 automations, no Auto). Separate from public_api
+    # so either can change alone.
     "ai_connections": {
-        "free": ("off", "read_only", "read_drafts"),
+        "free": ("off", "read_only", "read_drafts", "full"),
         "pro": ("off", "read_only", "read_drafts", "full"),
         "max": ("off", "read_only", "read_drafts", "full"),
         "agency": ("off", "read_only", "read_drafts", "full"),
@@ -97,8 +98,9 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "mcp_calls_daily": {"free": 100, "pro": 2000, "max": 2000, "agency": 10_000},
     # Posts AI apps may schedule in a UTC day, across the workspace and all its connections (C-165
     # phase B, C-169, §6.1). It isn't Instagram's per-account limit, which the checklist and the
-    # publish job enforce (DEFAULT_PUBLISHING_LIMIT). Free saves drafts only, so its cap is 0.
-    "mcp_posts_daily": {"free": 0, "pro": 100, "max": 100, "agency": 300},
+    # publish job enforce (DEFAULT_PUBLISHING_LIMIT). Free's monthly 10 scheduled posts bound it
+    # first (C-205).
+    "mcp_posts_daily": {"free": 10, "pro": 100, "max": 100, "agency": 300},
     # Files and megabytes an AI app may upload in a UTC day (§5.3).
     "mcp_uploads_daily": {"free": 20, "pro": 50, "max": 200, "agency": 1000},
     "mcp_upload_mb_daily": {"free": 500, "pro": 2500, "max": 10_000, "agency": 50_000},
