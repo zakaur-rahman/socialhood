@@ -10,9 +10,11 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
-import { TRIAL_DAYS, canStartCheckout, planHighlights, sixMonthOffer } from "@/lib/billing/plan";
+import { TRIAL_DAYS, canChangePlan, canStartCheckout, offersSwitch, planHighlights, sixMonthOffer } from "@/lib/billing/plan";
 import { AGENCY, PLAN_NAME, billingCopy, formatPrice, plannedAmount, renewalLine, type BillingPeriod, type PaidPlan } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+
+import type { PlanSwitch } from "./ChangePlanDialog";
 
 const TAGLINE: Record<PlanOffer["plan"], string> = {
   free: "To get started",
@@ -27,17 +29,20 @@ const TAGLINE: Record<PlanOffer["plan"], string> = {
  * C-174: a Monthly / 6 months switch. A plan with nothing to show for six months keeps its monthly
  * price and button, and Agency is "Coming soon" with a Contact us link until its product is set.
  * C-066: columns from tablets up, the current plan highlighted.
+ * C-209: on a paid plan the owner gets Switch on the other plans (and periods), through ``onSwitch``.
  */
 export function PlanCards({
   plans,
   billing,
   isOwner,
   checkout,
+  onSwitch,
 }: {
   plans: { data?: { items: PlanOffer[] }; isPending: boolean; isError: boolean; refetch: () => unknown };
   billing: BillingState;
   isOwner: boolean;
   checkout: { start: (plan: PaidPlan, period?: BillingPeriod) => void; pending: boolean; plan?: PaidPlan | null };
+  onSwitch?: (target: PlanSwitch) => void;
 }) {
   const [period, setPeriod] = useState<BillingPeriod>("month");
   if (plans.isPending) {
@@ -66,6 +71,7 @@ export function PlanCards({
 
   const current = billing.plan;
   const mayPay = isOwner && canStartCheckout(billing);
+  const mayChange = isOwner && !!onSwitch && canChangePlan(billing);
   return (
     <div className="space-y-4">
       {/* Only once something six-month can really be bought; a switch that changes nothing just confuses. */}
@@ -177,6 +183,22 @@ export function PlanCards({
                       </p>
                     ) : null}
                   </div>
+                ) : mayChange && offer.plan !== "free" && offer.available && (six ? !six.planned : !!offer.price) &&
+                  offersSwitch(billing, offer.plan, six ? "six_month" : "month") ? (
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="mt-5 w-full"
+                    onClick={() =>
+                      onSwitch?.({
+                        plan: offer.plan as PaidPlan,
+                        period: six ? "six_month" : "month",
+                        price: six ? `${six.total} every 6 months` : offer.price ? `${formatPrice(offer.price)} a month` : null,
+                      })
+                    }
+                  >
+                    {billingCopy.switchTo(PLAN_NAME[offer.plan], !!six)}
+                  </Button>
                 ) : offer.plan === "agency" && !offer.available && !isCurrent ? (
                   <Button asChild variant="secondary" size="lg" className="mt-5 w-full">
                     <a href={AGENCY.href}>{AGENCY.cta}</a>

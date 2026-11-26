@@ -477,6 +477,8 @@ EXAMPLE_BODIES.update(
 EXAMPLE_BODIES.update(
     {
         ("POST", "/v1/w/{wid}/billing/checkout"): {"plan": "pro"},
+        ("POST", "/v1/w/{wid}/billing/change-plan"): {"plan": "max"},
+        ("POST", "/v1/w/{wid}/billing/change-plan/preview"): {"plan": "max"},
         ("PUT", "/v1/w/{wid}/notification-preferences"): {
             "email_digest": False,
             "email_ai_changes": False,

@@ -26,6 +26,7 @@ from socialhood.billing.dodo import (
     DodoNotConfigured,
     DodoSubscription,
     DodoSubscriptionStatus,
+    PlanChangePreview,
     ProductPrice,
 )
 from socialhood.observability.logging import get_logger
@@ -132,6 +133,32 @@ def parse_price(data: Mapping[str, Any]) -> ProductPrice:
         currency=currency.upper(),
         interval=interval,
         trial_period_days=trial if isinstance(trial, int) and trial > 0 else 0,
+    )
+
+
+def change_plan_body(product_id: str) -> dict[str, Any]:
+    """C-209: an upgrade pays the difference for the rest of the period and keeps the billing
+    date; a failed charge leaves the plan as it was."""
+    return {
+        "product_id": _checked_id(product_id),
+        "quantity": 1,
+        "proration_billing_mode": "prorated_immediately_keep_cycle",
+        "effective_at": "immediately",
+        "on_payment_failure": "prevent_change",
+    }
+
+
+def parse_plan_change_preview(data: Mapping[str, Any]) -> PlanChangePreview:
+    summary = _mapping(_mapping(data.get("immediate_charge")).get("summary"))
+    amount, currency = summary.get("total_amount"), _text(summary.get("currency"))
+    if not isinstance(amount, int) or isinstance(amount, bool) or currency is None:
+        raise DodoError("Dodo answered the plan change preview without a total")
+    credit = summary.get("customer_credits")
+    return PlanChangePreview(
+        amount_due_minor=max(amount, 0),
+        currency=currency.upper(),
+        credit_minor=credit if isinstance(credit, int) and not isinstance(credit, bool) else 0,
+        next_billing_date=parse_datetime(_mapping(data.get("new_plan")).get("next_billing_date")),
     )
 
 
@@ -259,3 +286,14 @@ class HttpDodoClient:
     async def get_product_price(self, product_id: str) -> ProductPrice:
         path = f"/products/{_checked_id(product_id)}"
         return parse_price(await self._call("GET", path, endpoint="get_product"))
+
+    async def preview_change_plan(self, subscription_id: str, product_id: str) -> PlanChangePreview:
+        path = f"/subscriptions/{_checked_id(subscription_id)}/change-plan/preview"
+        body = await self._call(
+            "POST", path, endpoint="preview_change_plan", json=change_plan_body(product_id)
+        )
+        return parse_plan_change_preview(body)
+
+    async def change_plan(self, subscription_id: str, product_id: str) -> None:
+        path = f"/subscriptions/{_checked_id(subscription_id)}/change-plan"
+        await self._call("POST", path, endpoint="change_plan", json=change_plan_body(product_id))

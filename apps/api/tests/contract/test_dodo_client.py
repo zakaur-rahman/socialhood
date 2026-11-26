@@ -317,3 +317,77 @@ async def test_the_key_and_urls_are_never_logged(
     logged = caplog.text + captured.out + captured.err
     assert KEY not in logged
     assert "dodopayments.com" not in logged
+
+
+# ---------------------------------------------------------------- plan change (C-209)
+
+MAX = "pdt_max_monthly_example"
+
+
+async def test_change_plan_keeps_the_cycle_and_never_applies_a_failed_charge(
+    dodo: HttpDodoClient,
+) -> None:
+    with respx.mock:
+        route = respx.post(f"{BASE}/subscriptions/{SUB}/change-plan").mock(
+            return_value=httpx.Response(200, json={"payment_id": None, "payment_link": None})
+        )
+        await dodo.change_plan(SUB, MAX)
+    body = json.loads(route.calls.last.request.content)
+    assert body == {
+        "product_id": MAX,
+        "quantity": 1,
+        "proration_billing_mode": "prorated_immediately_keep_cycle",
+        "effective_at": "immediately",
+        "on_payment_failure": "prevent_change",
+    }
+    assert route.calls.last.request.headers["Authorization"] == f"Bearer {KEY}"
+
+
+async def test_preview_reads_the_immediate_charge_and_the_next_renewal(
+    dodo: HttpDodoClient,
+) -> None:
+    answer = {
+        "immediate_charge": {
+            "effective_at": "2026-11-27T10:00:00Z",
+            "line_items": [],
+            "summary": {
+                "total_amount": 1450,
+                "currency": "usd",
+                "settlement_amount": 1450,
+                "settlement_currency": "USD",
+                "customer_credits": 0,
+                "customer_credits_currency": "USD",
+            },
+        },
+        "new_plan": {
+            **fixture("subscription_active.json"),
+            "next_billing_date": "2026-12-20T08:00:00Z",
+        },
+    }
+    with respx.mock:
+        route = respx.post(f"{BASE}/subscriptions/{SUB}/change-plan/preview").mock(
+            return_value=httpx.Response(200, json=answer)
+        )
+        preview = await dodo.preview_change_plan(SUB, MAX)
+    assert json.loads(route.calls.last.request.content)["product_id"] == MAX
+    assert (preview.amount_due_minor, preview.currency, preview.credit_minor) == (1450, "USD", 0)
+    assert preview.next_billing_date == datetime(2026, 12, 20, 8, tzinfo=UTC)
+
+
+async def test_a_preview_without_a_total_is_an_error(dodo: HttpDodoClient) -> None:
+    with respx.mock:
+        respx.post(f"{BASE}/subscriptions/{SUB}/change-plan/preview").mock(
+            return_value=httpx.Response(200, json={"immediate_charge": {}})
+        )
+        with pytest.raises(DodoError):
+            await dodo.preview_change_plan(SUB, MAX)
+
+
+async def test_a_pending_change_is_a_409_that_isnt_retried(dodo: HttpDodoClient) -> None:
+    with respx.mock:
+        respx.post(f"{BASE}/subscriptions/{SUB}/change-plan").mock(
+            return_value=httpx.Response(409, json={"code": "PENDING_PLAN_CHANGE_EXISTS"})
+        )
+        with pytest.raises(DodoError) as caught:
+            await dodo.change_plan(SUB, MAX)
+    assert (caught.value.status, caught.value.retryable) == (409, False)

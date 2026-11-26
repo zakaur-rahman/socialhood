@@ -10385,3 +10385,26 @@ features", then changed three rules. The audit report is kept outside the repo.
   social accounts only. This replaces C-180's "MCP & API is only in Settings".
 - **Icon:** the Model Context Protocol mark replaces the plug, in the sidebar row and the Settings
   list. Help, Billing and the rest stay where they are.
+
+## C-209 · Switching a paid plan in the app (owner, 2026-11-27)
+
+- **Why:** a workspace on Creator couldn't move to Business. Checkout refuses a paid workspace, and
+  Dodo's portal switches plans only inside a Product Collection with subscription updates on
+  (C-174's open item). The owner asked for a real Switch button.
+- **API:** `POST …/billing/change-plan/preview` (what Dodo would charge now, or credit, from
+  `POST /subscriptions/{id}/change-plan/preview`) and `POST …/billing/change-plan`. Owner only,
+  like checkout. Dodo is asked for `prorated_immediately_keep_cycle`, `effective_at: immediately`
+  and `on_payment_failure: prevent_change`: an upgrade pays the difference for the rest of the
+  period and keeps the billing date, a downgrade puts the difference in Dodo credit, and a failed
+  charge leaves the plan as it was. Monthly to every 6 months runs as `prorated_immediately` and
+  resets the billing date.
+- **The plan still changes only with Dodo's webhook** (D9): `subscription.plan_changed` was already
+  handled, with the downgrade effects. The answer is the billing state as it was; usage.updated
+  refreshes the page when the webhook lands.
+- **Refused (409):** Free (checkout instead), on hold (update the card first), a plan set to end
+  (resume first), the same plan and period, and every 6 months to monthly. The last is a
+  shortcut: Dodo does a shorter interval only at renewal, so it waits until someone needs it.
+- **Web:** on a paid plan, the other plans' cards say "Switch to …". The dialog shows Dodo's quote
+  (pay now, credit, then the price and renewal date, and what pauses on a downgrade) before
+  "Pay $X and switch". The checkout 409 now points to Settings › Billing and usage. This closes
+  C-174's "Plan changes aren't built" item.

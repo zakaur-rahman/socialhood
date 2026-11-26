@@ -27,6 +27,17 @@ on 2026-09-30:
 - cancel_now: PATCH /subscriptions/{id} {status: "cancelled"} (workspace deletion, F-16).
 - create_portal_session: POST /customers/{customer_id}/customer-portal/session?return_url= ->
   {link}.
+- preview_change_plan: POST /subscriptions/{id}/change-plan/preview, the same body as
+  change_plan -> {immediate_charge: {summary: {total_amount, currency, customer_credits}},
+  new_plan: Subscription}. What the change would charge now (minor units), without changing it.
+- change_plan: POST /subscriptions/{id}/change-plan {product_id, quantity: 1,
+  proration_billing_mode: prorated_immediately_keep_cycle, effective_at: immediately,
+  on_payment_failure: prevent_change} -> {payment_id, …} (nullable fields, not the subscription).
+  Charged off-session to the saved card; the plan changes with subscription.plan_changed. An
+  upgrade charges the difference for the rest of the period and keeps the billing date; a
+  downgrade credits the difference to the customer's Dodo wallet; a longer interval runs as
+  prorated_immediately and resets the billing date; a shorter one is a 422 (C-209, from
+  docs.dodopayments.com 2026-11-27, not recorded from a live call).
 - get_product_price: GET /products/{id} -> price {type: recurring_price, price (minor units),
   currency, payment_frequency_count, payment_frequency_interval, trial_period_days}; 1 Month is
   monthly, 6 Month is six-monthly (C-174: from docs.dodopayments.com, not recorded from a live
@@ -129,6 +140,14 @@ class ProductPrice:
     trial_period_days: int = 0
 
 
+@dataclass(frozen=True)
+class PlanChangePreview:
+    amount_due_minor: int  # charged now; 0 when the change only adds credit
+    currency: str
+    credit_minor: int  # customer credit the change adds (positive) or uses (negative)
+    next_billing_date: datetime | None  # the new plan's next renewal
+
+
 class DodoClient(Protocol):
     async def create_checkout(self, params: CheckoutParams) -> CheckoutSession: ...
 
@@ -145,3 +164,9 @@ class DodoClient(Protocol):
     ) -> str: ...
 
     async def get_product_price(self, product_id: str) -> ProductPrice: ...
+
+    async def preview_change_plan(
+        self, subscription_id: str, product_id: str
+    ) -> PlanChangePreview: ...
+
+    async def change_plan(self, subscription_id: str, product_id: str) -> None: ...

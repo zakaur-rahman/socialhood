@@ -10,7 +10,16 @@ import {
 } from "@tanstack/react-query";
 
 import { useApi } from "../provider";
-import type { BillingState, CheckoutSession, PaymentList, Plan, PlanList, PortalSession, UsageMeter } from "../types";
+import type {
+  BillingState,
+  CheckoutSession,
+  PaymentList,
+  Plan,
+  PlanChangePreview,
+  PlanList,
+  PortalSession,
+  UsageMeter,
+} from "../types";
 import { keys } from "./keys";
 import { unwrap } from "./unwrap";
 
@@ -75,6 +84,28 @@ export function useCheckout(wid: string) {
   return useMutation<CheckoutSession, Error, { plan: "pro" | "max" | "agency"; period: "month" | "six_month" }>({
     mutationFn: (body) =>
       unwrap(api.POST("/v1/w/{wid}/billing/checkout", { params: { path: { wid } }, body })),
+  });
+}
+
+type PlanChangeBody = { plan: "pro" | "max" | "agency"; period: "month" | "six_month" };
+
+/** C-209: what moving a paid plan would charge now (or credit), from Dodo; changes nothing. */
+export function usePlanChangePreview(wid: string) {
+  const api = useApi();
+  return useMutation<PlanChangePreview, Error, PlanChangeBody>({
+    mutationFn: (body) =>
+      unwrap(api.POST("/v1/w/{wid}/billing/change-plan/preview", { params: { path: { wid } }, body })),
+  });
+}
+
+/**
+ * C-209: move a paid plan, charged to the saved card. The answer is the billing state as it was: the
+ * plan changes when Dodo's webhook arrives, and usage.updated refetches the page then.
+ */
+export function useChangePlan(wid: string) {
+  const api = useApi();
+  return useMutation<BillingState, Error, PlanChangeBody>({
+    mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/billing/change-plan", { params: { path: { wid } }, body })),
   });
 }
 

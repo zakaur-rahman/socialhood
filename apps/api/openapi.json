@@ -17632,6 +17632,91 @@
         "title": "PeriodFigure",
         "type": "object"
       },
+      "PlanChangePreview": {
+        "description": "What changing to ``plan`` and ``period`` would do, from Dodo, before anything is charged.\n``amount_due_minor`` is charged now to the saved card (the price difference for the rest of\nthe period on an upgrade); ``credit_minor`` is credit Dodo keeps for later bills (a\ndowngrade). ``next_billing_date``: the next renewal on the new plan.",
+        "properties": {
+          "amount_due_minor": {
+            "title": "Amount Due Minor",
+            "type": "integer"
+          },
+          "credit_minor": {
+            "title": "Credit Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "next_billing_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Billing Date"
+          },
+          "period": {
+            "enum": [
+              "month",
+              "six_month"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "plan": {
+            "enum": [
+              "pro",
+              "max",
+              "agency"
+            ],
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "period",
+          "amount_due_minor",
+          "credit_minor",
+          "currency",
+          "next_billing_date"
+        ],
+        "title": "PlanChangePreview",
+        "type": "object"
+      },
+      "PlanChangeRequest": {
+        "additionalProperties": false,
+        "description": "POST \u2026/billing/change-plan and \u2026/change-plan/preview (C-209): move a paid plan to another\nplan or period. Free workspaces use checkout instead.",
+        "properties": {
+          "period": {
+            "default": "month",
+            "enum": [
+              "month",
+              "six_month"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "plan": {
+            "enum": [
+              "pro",
+              "max",
+              "agency"
+            ],
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "title": "PlanChangeRequest",
+        "type": "object"
+      },
       "PlanList": {
         "properties": {
           "items": {
@@ -33540,9 +33625,137 @@
         ]
       }
     },
+    "/v1/w/{wid}/billing/change-plan": {
+      "post": {
+        "description": "C-209: move a paid plan to ``plan`` and ``period``. Dodo charges the saved card the\ndifference for the rest of the period (an upgrade) or keeps the difference as credit (a\ndowngrade). The answer is the billing state as it was: the plan changes when Dodo's signed\nsubscription.plan_changed webhook arrives (usage.updated then refetches the page); a failed\ncharge leaves the plan as it was. The same 409, 422 and 503 answers as the preview.",
+        "operationId": "change_billing_plan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Change Billing Plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/billing/change-plan/preview": {
+      "post": {
+        "description": "C-209: what moving a paid plan to ``plan`` and ``period`` would charge now (or credit),\nfrom Dodo, without changing anything. 409 conflict on Free (use checkout), on hold, while\nthe plan is set to end, on the same plan and period, or from 6-monthly to monthly. 422 while\nthe plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503\nbilling_unavailable while billing isn't set up (C-149).",
+        "operationId": "preview_billing_plan_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Billing Plan Change",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/v1/w/{wid}/billing/checkout": {
       "post": {
-        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,\nreturning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the\n7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace\nalready has a paid plan (active, trialing or on hold): the portal changes it. 422 while the\nplan's or period's Dodo product isn't set. 503 when Dodo\ndoesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,\nreturning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the\n7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace\nalready has a paid plan (active, trialing or on hold): change-plan moves it (C-209). 422\nwhile the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503\nbilling_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
         "operationId": "create_billing_checkout",
         "parameters": [
           {
