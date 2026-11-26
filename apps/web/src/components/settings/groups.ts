@@ -7,7 +7,6 @@ import {
   MessageSquareText,
   MoreHorizontal,
   Palette,
-  Plug,
   ScrollText,
   Sparkles,
   Timer,
@@ -16,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { McpGlyph } from "@/components/ai-connections/McpGlyph";
 import type { Role } from "@/lib/api/types";
 
 import { SETTINGS_SECTIONS, type SettingsSection } from "./sections";
@@ -64,7 +64,7 @@ export const SEGMENT_META: Record<string, SettingsSegmentMeta> = {
     keywords: ["assistant", "ask", "runs", "history"],
   },
   "ai-apps": {
-    icon: Plug,
+    icon: McpGlyph,
     description: "Connect Claude, ChatGPT or Codex; API keys",
     keywords: ["mcp", "claude", "chatgpt", "codex", "oauth", "connectors", "ai apps", "api", "key", "token", "zapier", "bearer"],
   },

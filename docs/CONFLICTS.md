@@ -10377,3 +10377,11 @@ features", then changed three rules. The audit report is kept outside the repo.
   there starts with the MCP read scopes instead of `contacts:read`.
 - **Copy:** `/developers/mcp`, its API key page, the pricing table ("Public API and the Zapier
   app"), the plan card line and the 402 message no longer say API keys are Business only.
+
+## C-208 · MCP & API in the sidebar (owner, 2026-11-26)
+
+- **Rule:** the sidebar's foot has its own **MCP & API** row between Connections and Settings. It
+  opens Settings › MCP & API and is marked current there (Settings is not). Connections stays for
+  social accounts only. This replaces C-180's "MCP & API is only in Settings".
+- **Icon:** the Model Context Protocol mark replaces the plug, in the sidebar row and the Settings
+  list. Help, Billing and the rest stay where they are.

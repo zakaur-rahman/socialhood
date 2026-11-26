@@ -177,10 +177,14 @@ test.describe("C-165 AI app connections", () => {
     expect(blocks.filter((block) => block.includes('"FAQPage"'))).toHaveLength(1);
   });
 
-  test("Connections is its own page; MCP & API is in Settings with the API keys (C-180)", async ({ page, workspace }) => {
+  test("Connections is its own page; MCP & API is in Settings with the API keys (C-180, C-208)", async ({ page, workspace }) => {
     await page.goto(`/w/${workspace.slug}/home`);
     const sidebar = page.getByRole("navigation", { name: "Main" });
-    await expect(sidebar.getByRole("link", { name: "MCP & API" })).toHaveCount(0);
+    // C-208: its own sidebar row under Connections, opening the Settings page and marked current there.
+    await sidebar.getByRole("link", { name: "MCP & API" }).click();
+    await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/settings/ai-apps$`));
+    await expect(sidebar.getByRole("link", { name: "MCP & API" })).toHaveAttribute("aria-current", "page");
+    await expect(sidebar.getByRole("link", { name: "Settings" })).not.toHaveAttribute("aria-current", "page");
     await sidebar.getByRole("link", { name: "Connections" }).click();
     await expect(page).toHaveURL(new RegExp(`/w/${workspace.slug}/connections$`));
     await expect(page.getByRole("navigation", { name: "Settings" })).toHaveCount(0);
