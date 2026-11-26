@@ -53,7 +53,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "claude-code",
       name: "Claude Code",
-      who: "Sign in with your Amplychat account, or use an API key (Business and Agency).",
+      who: "Sign in with your Amplychat account, or use an API key.",
       steps: [
         { text: "Add the server:", code: `claude mcp add --transport http amplychat ${url}` },
         { text: "In Claude Code, run /mcp, pick amplychat and authenticate. Your browser opens Amplychat to choose the workspace and allow it." },
@@ -78,7 +78,7 @@ export function clientGuides(url: string = mcpUrl()): readonly ClientGuide[] {
     {
       id: "codex",
       name: "Codex",
-      who: "Use an API key (Business and Agency), or sign in with OAuth.",
+      who: "Use an API key, or sign in with OAuth.",
       steps: [
         {
           text: "Add this to ~/.codex/config.toml (or a trusted project's .codex/config.toml):",
@@ -132,7 +132,7 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { label: "Schedule, publish, change and cancel posts", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Draft knowledge for you to approve", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Create automations and turn them on and off", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
-  { label: "Make an API key", free: "No", pro: "No", max: "Yes", agency: "Yes" },
+  { label: "Make an API key", free: "Yes", pro: "Yes", max: "Yes", agency: "Yes" },
   { label: "Tool calls a day", free: "100", pro: "2,000", max: "2,000", agency: "10,000" },
   { label: "Posts scheduled from AI apps a day", free: "10", pro: "100", max: "100", agency: "300" },
   {
@@ -194,7 +194,7 @@ export const SAFETY: readonly Capability[] = [
 export const CONNECT_AI_FAQ = [
   {
     question: "Which plan do I need to connect Claude or ChatGPT?",
-    answer: `Any plan, Free included. An AI app can do what you could do yourself on your plan: on Free that's reading, drafts, up to 10 scheduled posts a month and 3 automations. API keys are on Business and Agency.`,
+    answer: `Any plan, Free included. An AI app can do what you could do yourself on your plan: on Free that's reading, drafts, up to 10 scheduled posts a month and 3 automations. API keys work on every plan too.`,
   },
   {
     question: "Can the AI reply to my customers' DMs?",

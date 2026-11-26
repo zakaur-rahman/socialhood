@@ -150,7 +150,7 @@ export const SWITCH_PAGE: GtmPage = {
         },
         {
           title: "Connect your other tools",
-          body: "Outbound webhooks on every plan. A public API, API keys and a Zapier app on Business, and Google Sheets sync on Creator and Business.",
+          body: "Outbound webhooks on every plan. A public API and a Zapier app on Business, and Google Sheets sync on Creator and Business.",
         },
       ],
     },

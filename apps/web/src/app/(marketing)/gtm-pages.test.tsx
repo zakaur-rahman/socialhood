@@ -362,9 +362,9 @@ describe("the pricing page", () => {
     expect(pro.getByText("2 team members")).toBeInTheDocument();
     expect(pro.getByText("100 scheduled posts a month")).toBeInTheDocument();
     // API keys and Zapier are on Business and Agency.
-    expect(pro.queryByText("API keys and Zapier")).toBeNull();
+    expect(pro.queryByText("Public API and Zapier")).toBeNull();
     const business = within(screen.getByRole("heading", { level: 2, name: "Business" }).closest("li") as HTMLElement);
-    expect(business.getByText("API keys and Zapier")).toBeInTheDocument();
+    expect(business.getByText("Public API and Zapier")).toBeInTheDocument();
     expect(business.getByText("3 team members")).toBeInTheDocument();
     expect(screen.getByTestId("plan-agency")).toHaveTextContent("Contact us");
 

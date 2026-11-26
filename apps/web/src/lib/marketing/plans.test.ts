@@ -40,7 +40,7 @@ describe("buildPricing", () => {
     expect(pro).toMatchObject({ plan: "pro", price: "₹999", offer: { price: "999.00", currency: "INR" }, trialDays: 7 });
     expect(max).toMatchObject({ plan: "max", name: "Business", available: false });
     expect(max.features).toContain("5,000 AI credits a month, up to about 2,500 AI replies");
-    expect(max.features).toContain("API keys and Zapier");
+    expect(max.features).toContain("Public API and Zapier");
     expect(pro.name).toBe("Creator");
     expect(pricing.credits).toEqual({ free: 200, pro: 1500, max: 5000, agency: 12_000 });
   });
@@ -71,7 +71,7 @@ describe("buildPricing", () => {
       "12,000 AI credits a month, up to about 6,000 AI replies",
       "Unlimited scheduled posts",
       "50M characters of knowledge",
-      "API keys and Zapier",
+      "Public API and Zapier",
     ]);
   });
 
@@ -111,7 +111,7 @@ describe("the card lines (C-173)", () => {
       "5,000 AI credits a month, up to about 2,500 AI replies",
       "300 scheduled posts a month",
       "5M characters of knowledge",
-      "API keys and Zapier",
+      "Public API and Zapier",
     ]);
   });
 });

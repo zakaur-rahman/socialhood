@@ -36,7 +36,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "claude-code",
     title: "Claude Code",
-    body: "Add the server with one command and sign in, or use an API key (Business and Agency). It can also upload a video you edited and schedule it as a Reel.",
+    body: "Add the server with one command and sign in, or use an API key. It can also upload a video you edited and schedule it as a Reel.",
   },
   {
     id: "chatgpt",
@@ -46,7 +46,7 @@ export const WHERE_CARDS: readonly WhereCard[] = [
   {
     id: "codex",
     title: "Codex",
-    body: "Use an API key (Business and Agency), or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
+    body: "Use an API key, or sign in with OAuth. Like Claude Code, it can upload an edited video and schedule it.",
   },
   {
     id: "other",
