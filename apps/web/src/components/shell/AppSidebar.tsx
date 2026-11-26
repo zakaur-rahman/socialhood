@@ -13,7 +13,7 @@ import { SUPPORT_EMAIL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
-import { FOOT_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
+import { FOOT_NAV, activeSegment, footSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
 import { COLLAPSE_SHORTCUT_ARIA, shortcutHint, useCollapseShortcut, useModifierKey } from "./shortcuts";
 import { useCollapsedTooltip } from "./use-collapsed-tooltip";
 import { KBD_CLASS, sidebarFadeClass, sidebarIconClass, sidebarLabelClass, sidebarRowClass } from "./sidebar-styles";
@@ -81,6 +81,7 @@ export function AppSidebar({
 }: Props) {
   const pathname = usePathname();
   const active = activeSegment(pathname, workspace.slug);
+  const footActive = footSegment(pathname, workspace.slug);
   const modifier = useModifierKey();
   useCollapseShortcut(onToggleCollapsed);
 
@@ -183,7 +184,7 @@ export function AppSidebar({
             key={item.key}
             item={item}
             href={item.href(workspace.slug)}
-            active={active === item.segment}
+            active={footActive === item.segment}
             collapsed={collapsed}
             onNavigate={onNavigate}
           />

@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { McpGlyph } from "@/components/ai-connections/McpGlyph";
 import type { Role } from "@/lib/api/types";
 
 export type NavItem = {
@@ -87,8 +88,24 @@ export const SETTINGS_NAV: NavItem = {
   href: (s) => route(`/w/${s}/settings`),
 };
 
+// Owner, 2026-11-26 (C-208): MCP & API gets its own row under Connections, which stays for social
+// accounts. It opens the same Settings page; `segment` is matched by footSegment, not activeSegment.
+export const MCP_NAV: NavItem = {
+  key: "mcp",
+  label: "MCP & API",
+  icon: McpGlyph,
+  segment: "settings/ai-apps",
+  roles: EVERYONE,
+  href: (s) => route(`/w/${s}/settings/ai-apps`),
+};
+
 /** The items at the foot of the sidebar, in order. */
-export const FOOT_NAV: readonly NavItem[] = [CONNECTIONS_NAV, SETTINGS_NAV];
+export const FOOT_NAV: readonly NavItem[] = [CONNECTIONS_NAV, MCP_NAV, SETTINGS_NAV];
+
+/** Which foot row is current: the MCP & API page lights its own row, not Settings. */
+export function footSegment(pathname: string, slug: string): string | null {
+  return pathname.startsWith(`/w/${slug}/${MCP_NAV.segment}`) ? MCP_NAV.segment : activeSegment(pathname, slug);
+}
 
 export const BILLING_HREF = (slug: string): Route => route(`/w/${slug}/settings/billing`);
 /** The billing page opened on its Billing tab, where the plans are (C-171). */
