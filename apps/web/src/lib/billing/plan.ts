@@ -82,6 +82,27 @@ export function canStartCheckout(billing: BillingState | undefined): boolean {
   return canCheckout(billing) && billingOpen(billing);
 }
 
+/** C-209: a paid plan the owner can move to another plan or period (not ending, not unpaid). */
+export function canChangePlan(billing: BillingState | undefined): boolean {
+  return (
+    !!billing &&
+    billingOpen(billing) &&
+    billing.plan !== "free" &&
+    (billing.status === "active" || billing.status === "trialing") &&
+    !billing.cancel_at_period_end
+  );
+}
+
+/**
+ * C-209: whether a plan card offers a switch to ``plan`` billed every ``period``: not the plan and
+ * period already paid for, and never from every 6 months to monthly (Dodo does that only at renewal).
+ */
+export function offersSwitch(billing: BillingState, plan: string, period: "month" | "six_month"): boolean {
+  const paidPeriod = billing.current_price?.interval ?? "month";
+  if (plan === billing.plan && period === paidPeriod) return false;
+  return !(paidPeriod === "six_month" && period === "month");
+}
+
 export type StatusTone = "neutral" | "brand" | "warning" | "danger";
 
 export type PlanStatus = {

@@ -72,6 +72,7 @@ import {
   useCheckoutConfirmation,
 } from "./CheckoutReturn";
 import { PaymentHistory } from "./PaymentHistory";
+import { ChangePlanDialog, type PlanSwitch } from "./ChangePlanDialog";
 import { PlanCards } from "./PlanCards";
 import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
 
@@ -150,6 +151,7 @@ export function BillingPage() {
   const [noticeDone, setNoticeDone] = useState(false);
   const plans = useBillingPlans(!agent);
   const checkout = useStartCheckout(workspace.id);
+  const [switching, setSwitching] = useState<PlanSwitch | null>(null);
 
   useEffect(() => {
     if (agent) router.replace(`/w/${workspace.slug}/settings/notifications` as Route);
@@ -216,7 +218,8 @@ export function BillingPage() {
                   What each plan includes. Contacts are unlimited on every plan. {PRICE_TAX_NOTE}{billingOpen(state) ? "" : " Paid plans are coming soon."}
                 </p>
               </div>
-              <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
+              <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} onSwitch={setSwitching} />
+              <ChangePlanDialog billing={state} target={switching} onClose={() => setSwitching(null)} />
             </section>
             <PaymentHistory />
           </TabsContent>

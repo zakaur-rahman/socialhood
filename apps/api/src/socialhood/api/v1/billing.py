@@ -22,6 +22,8 @@ from socialhood.schemas.billing import (
     CheckoutRequest,
     CheckoutSession,
     PaymentList,
+    PlanChangePreview,
+    PlanChangeRequest,
     PlanList,
     PortalSession,
 )
@@ -81,9 +83,9 @@ async def create_billing_checkout(
     """F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,
     returning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the
     7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace
-    already has a paid plan (active, trialing or on hold): the portal changes it. 422 while the
-    plan's or period's Dodo product isn't set. 503 when Dodo
-    doesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes
+    already has a paid plan (active, trialing or on hold): change-plan moves it (C-209). 422
+    while the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503
+    billing_unavailable while billing isn't set up (C-149). Nothing changes
     until Dodo's signed webhook arrives."""
     out = await service.start_checkout(
         session, ctx, body, dodo=_dodo(request), settings=request.app.state.settings
@@ -93,6 +95,39 @@ async def create_billing_checkout(
     )
     await session.commit()
     return out
+
+
+@router.post("/billing/change-plan/preview", operation_id="preview_billing_plan_change")
+async def preview_billing_plan_change(
+    request: Request, body: PlanChangeRequest, ctx: CanManageBilling, session: Session
+) -> PlanChangePreview:
+    """C-209: what moving a paid plan to ``plan`` and ``period`` would charge now (or credit),
+    from Dodo, without changing anything. 409 conflict on Free (use checkout), on hold, while
+    the plan is set to end, on the same plan and period, or from 6-monthly to monthly. 422 while
+    the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503
+    billing_unavailable while billing isn't set up (C-149)."""
+    return await service.preview_plan_change(
+        session, body, dodo=_dodo(request), settings=request.app.state.settings
+    )
+
+
+@router.post("/billing/change-plan", operation_id="change_billing_plan")
+async def change_billing_plan(
+    request: Request, body: PlanChangeRequest, ctx: CanManageBilling, session: Session
+) -> BillingState:
+    """C-209: move a paid plan to ``plan`` and ``period``. Dodo charges the saved card the
+    difference for the rest of the period (an upgrade) or keeps the difference as credit (a
+    downgrade). The answer is the billing state as it was: the plan changes when Dodo's signed
+    subscription.plan_changed webhook arrives (usage.updated then refetches the page); a failed
+    charge leaves the plan as it was. The same 409, 422 and 503 answers as the preview."""
+    await service.change_plan(
+        session, body, dodo=_dodo(request), settings=request.app.state.settings
+    )
+    await audit.record(
+        session, ctx, "billing.plan_change_requested", "billing", plan=body.plan, period=body.period
+    )
+    await session.commit()
+    return await _state(request, ctx, session)
 
 
 @router.post("/billing/portal", operation_id="create_billing_portal")

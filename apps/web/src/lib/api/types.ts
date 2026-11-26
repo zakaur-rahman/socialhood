@@ -277,6 +277,7 @@ export type PlanOffer = Schemas["PlanOffer"];
 export type PlanList = Schemas["PlanList"];
 export type CheckoutSession = Schemas["CheckoutSession"];
 export type PortalSession = Schemas["PortalSession"];
+export type PlanChangePreview = Schemas["PlanChangePreview"];
 /** Payment history (C-066): the workspace's Dodo payments, newest first. */
 export type Payment = Schemas["PaymentOut"];
 export type PaymentList = Schemas["PaymentList"];
