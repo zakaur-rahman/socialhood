@@ -10519,3 +10519,11 @@ grant one, so GR-33's push sync (Catalog Batch API) could never work for any bus
   out of the feed and the card says why.
 - **Also:** the dashboard now loads product pictures from any HTTPS site (`img-src https:`), so
   pictures imported from shops show.
+## C-216: a WhatsApp template can be sent while the window is open (2026-11-28)
+
+Owner: "need send template". The reply box offered a template only once the 24-hour window had
+closed (or on a failed send), though WhatsApp accepts templates at any time and the API already
+allowed one while the window is open (services/reply_window.may_send). The reply box's toolbar
+now has a "Send a template" button on WhatsApp conversations, opening the same picker (approved
+templates only). Inside the window a utility template is free under WhatsApp's pricing; marketing
+templates are charged either way.

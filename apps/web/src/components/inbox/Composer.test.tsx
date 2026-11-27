@@ -174,6 +174,18 @@ describe("Composer (UX-INB-07)", () => {
     expect(onChooseTemplate).toHaveBeenCalledOnce();
   });
 
+  it("WhatsApp inside the window: a template can be sent too", async () => {
+    const user = userEvent.setup();
+    const { onChooseTemplate } = renderComposer({ platform: "whatsapp" });
+    await user.click(screen.getByRole("button", { name: "Send a template" }));
+    expect(onChooseTemplate).toHaveBeenCalledOnce();
+  });
+
+  it("templates are WhatsApp's: no template button on Instagram", () => {
+    renderComposer({ platform: "instagram" });
+    expect(screen.queryByRole("button", { name: "Send a template" })).not.toBeInTheDocument();
+  });
+
   it("account needs reconnecting: disabled with Reconnect", () => {
     renderComposer({ social_account: { id: "a1", username: "maple.bakery", display_name: null, status: "needs_reconnect" } });
     const notice = screen.getByRole("status");
