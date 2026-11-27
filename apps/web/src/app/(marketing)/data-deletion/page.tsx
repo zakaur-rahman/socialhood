@@ -82,8 +82,8 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
         <Option icon={Unplug}>
           <strong className="text-fg">Owners and admins, for one account</strong>: in Connections, use
           Delete account and data (in the account&apos;s ⋯ menu; it disconnects the account first if needed). The account&apos;s
-          conversations, messages, comments, contacts, posts and automations are permanently deleted 15 days later,
-          unless you reconnect the account before then; the workspace&apos;s knowledge, settings and billing stay.
+          conversations, messages, comments, contacts, posts and automations are permanently deleted; the
+          workspace&apos;s knowledge, settings and billing stay.
         </Option>
         <Option icon={KeyRound}>
           <strong className="text-fg">Removed {SITE_NAME} in Instagram or Facebook?</strong> If you asked Meta to delete

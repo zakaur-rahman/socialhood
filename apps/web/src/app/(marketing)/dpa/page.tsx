@@ -118,9 +118,8 @@ function sections(): LegalSection[] {
             details as we learn them. Telling you is not an admission of fault.
           </li>
           <li>
-            <strong>Deletion at the end.</strong> When you delete your workspace, or when the Terms end, we delete customer
-            personal data within 24 hours; when you delete a connected account&apos;s data, 15 days later unless you
-            reconnect the account first; as our{" "}
+            <strong>Deletion at the end.</strong> When you delete a connected account&apos;s data or your workspace, or when
+            the Terms end, we delete customer personal data within 24 hours, as our{" "}
             <Link href="/privacy#retention">Privacy Policy</Link> describes, unless the law requires us to keep it.
             Before that, you can export your contacts and read your data through the API; if you need a copy in another
             common format, ask us before you delete. Copies in our database backups are deleted when those backups expire,
@@ -337,9 +336,8 @@ function sections(): LegalSection[] {
             backups are deleted after at most 30 days. We have tested restoring them.
           </li>
           <li>
-            <strong>Deletion.</strong> Deleting a workspace or an account&apos;s data stops processing at once. A
-            workspace&apos;s data is removed within 24 hours, an account&apos;s 15 days later (so a reconnect can keep it);
-            expired data is removed by daily jobs.
+            <strong>Deletion.</strong> Deleting a workspace or an account&apos;s data stops processing at once and removes
+            the data within 24 hours; expired data is removed by daily jobs.
           </li>
           <li>
             <strong>Changes and testing.</strong> Every code change runs automated tests before release, and we check our
