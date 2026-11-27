@@ -191,6 +191,8 @@ def test_the_account_day_due_from_2am_local(timezone: str, now: datetime, day: d
 
 
 def test_every_window_is_named() -> None:
-    # Every window but a Story's 23 h reading (its own list).
-    assert [w.value for w in ages.WINDOWS] == [w.value for w in SnapshotWindow if w != "23h"]
+    # Every window but a Story's 23 h reading (its own list) and the reading on connect (no age).
+    assert [w.value for w in ages.WINDOWS] == [
+        w.value for w in SnapshotWindow if w not in ("23h", "connect")
+    ]
     assert [w.value for w in ages.STORY_WINDOWS] == ["1h", "6h", "23h"]

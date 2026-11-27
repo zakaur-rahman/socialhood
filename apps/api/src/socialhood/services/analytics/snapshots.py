@@ -33,7 +33,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import ColumnElement, and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -44,6 +44,7 @@ from socialhood.models.analytics import (
     STORY_WINDOWS,
     WINDOW_AGES,
     PostMetricSnapshot,
+    SnapshotWindow,
 )
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.media import MediaItem, MediaType
@@ -57,6 +58,7 @@ from socialhood.platforms.registry import adapter_for
 from socialhood.repositories import analytics as repo
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services.analytics.ages import (
+    FINAL_FROM,
     FINAL_WINDOWS,
     PROVISIONAL_WINDOWS,
     SNAPSHOT_HORIZON,
@@ -72,6 +74,11 @@ log = get_logger(__name__)
 # Accounts that have posts to measure (TR-PL-11: by capability, never by platform name).
 POST_CAPABILITIES = frozenset({Capability.COMMENTS, Capability.PUBLISH})
 LIVE_STATUSES = (AccountStatus.ACTIVE, AccountStatus.ERROR)
+# C-213: the reading on connect covers posts published this long before the account was connected
+# but at least a day before (younger ones still get their 24 h window), at most this many.
+CONNECT_LOOKBACK = timedelta(days=30)
+CONNECT_MIN_AGE = timedelta(hours=24)
+CONNECT_MAX_POSTS = 50
 MAX_INLINE_WAIT_S = 2.0  # wait this long for a bucket token; longer re-schedules the job
 
 Sleep = Callable[[float], Awaitable[object]]
@@ -228,42 +235,144 @@ async def snapshot_account_posts(
         if loaded is None:
             return None
         acct, adapter = loaded
-        with_insights = Capability.POST_INSIGHTS in adapter.capabilities_for(acct)
         async with sessionmaker() as session:
             due = await _due_posts(session, acct.id, now)
-        done = SnapshotPass()
-        for post, window in due:
-            try:
-                counts, insights = await _read(
-                    adapter, acct, post, window, with_insights, buckets, sleep
-                )
-            except PlatformError as error:
-                if error.retryable:
-                    raise
-                log.warning("snapshot_pass_stopped", account_id=str(acct.id), error_code=error.code)
-                break
-            async with sessionmaker() as session:
-                inserted = await repo.insert_snapshot(
-                    session,
-                    media_item_id=post.id,
-                    window=window,
-                    captured_at=now,
-                    metrics=snapshot_metrics(counts, insights),
-                    insights_final=window in FINAL_WINDOWS or post.media_type == MediaType.STORY,
-                )
-                if window in FINAL_WINDOWS:
-                    await repo.mark_final(session, post.id, PROVISIONAL_WINDOWS)
-                if counts is not None:
-                    await repo.set_live_counts(
-                        session,
-                        post.id,
-                        like_count=counts.like_count,
-                        comments_count=counts.comments_count,
-                    )
-                await session.commit()
-            if inserted:
-                done.captured.append((post.id, window))
+        done = await _capture(sessionmaker, adapter, acct, due, now, buckets, sleep)
     log.info("post_snapshots", account_id=str(account_id), captured=len(done.captured))
+    return done
+
+
+def _final(post: MediaItem, window: str, now: datetime) -> bool:
+    """Whether a reading is final when written: 72 h and later, every Story reading, and a reading
+    on connect of a post already 72 h old (C-213)."""
+    if window == SnapshotWindow.CONNECT:
+        return post.posted_at + WINDOW_AGES[FINAL_FROM] <= now
+    return window in FINAL_WINDOWS or post.media_type == MediaType.STORY
+
+
+async def _capture(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    adapter: PlatformAdapter,
+    acct: SocialAccount,
+    due: list[tuple[MediaItem, str]],
+    now: datetime,
+    buckets: TokenBuckets | None,
+    sleep: Sleep,
+) -> SnapshotPass:
+    """Read and store each (post, window), one commit per post."""
+    with_insights = Capability.POST_INSIGHTS in adapter.capabilities_for(acct)
+    done = SnapshotPass()
+    for post, window in due:
+        try:
+            counts, insights = await _read(
+                adapter, acct, post, window, with_insights, buckets, sleep
+            )
+        except PlatformError as error:
+            if error.retryable:
+                raise
+            log.warning("snapshot_pass_stopped", account_id=str(acct.id), error_code=error.code)
+            break
+        async with sessionmaker() as session:
+            inserted = await repo.insert_snapshot(
+                session,
+                media_item_id=post.id,
+                window=window,
+                captured_at=now,
+                metrics=snapshot_metrics(counts, insights),
+                insights_final=_final(post, window, now),
+            )
+            if window in FINAL_WINDOWS:
+                await repo.mark_final(session, post.id, PROVISIONAL_WINDOWS)
+            if counts is not None:
+                await repo.set_live_counts(
+                    session,
+                    post.id,
+                    like_count=counts.like_count,
+                    comments_count=counts.comments_count,
+                )
+            await session.commit()
+        if inserted:
+            done.captured.append((post.id, window))
+    return done
+
+
+# ---------------------------------------------------------------- the reading on connect (C-213)
+
+
+def connect_posts_condition(acct: SocialAccount) -> ColumnElement[bool]:
+    """Posts that get a reading on connect: published 1 to 30 days before the account was
+    connected (younger ones still get their 24 h window), not Stories, not read yet."""
+    assert acct.connected_at is not None
+    return and_(
+        MediaItem.social_account_id == acct.id,
+        MediaItem.media_type != MediaType.STORY,
+        MediaItem.posted_at <= acct.connected_at - CONNECT_MIN_AGE,
+        MediaItem.posted_at > acct.connected_at - CONNECT_LOOKBACK,
+        ~exists().where(
+            PostMetricSnapshot.media_item_id == MediaItem.id,
+            PostMetricSnapshot.window == SnapshotWindow.CONNECT.value,
+        ),
+    )
+
+
+async def queue_connect_reading(session: AsyncSession, acct: SocialAccount) -> bool:
+    """Called after a media sync: queue the reading on connect when a post still needs it. A
+    failed enqueue is logged, never raised (the next sync tries again)."""
+    if acct.connected_at is None:
+        return False
+    waiting = await session.scalar(select(exists().where(connect_posts_condition(acct))))
+    if not waiting:
+        return False
+    from socialhood.jobs.enqueue import enqueue
+    from socialhood.jobs.tasks.insights import snapshot_account_connect
+
+    key = f"snapconn:{acct.id}"
+    try:
+        return await enqueue(
+            snapshot_account_connect,
+            key=key,
+            lock=key,
+            workspace_id=str(acct.workspace_id),
+            account_id=str(acct.id),
+        )
+    except Exception:
+        log.warning("connect_snapshot_enqueue_failed", account_id=str(acct.id))
+        return False
+
+
+async def snapshot_on_connect(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    deps: PlatformDeps,
+    *,
+    workspace_id: uuid.UUID,
+    account_id: uuid.UUID,
+    now: datetime | None = None,
+    buckets: TokenBuckets | None = None,
+    sleep: Sleep = asyncio.sleep,
+) -> SnapshotPass | None:
+    """One reading of each post that missed its early windows because it was published before
+    the account was connected (``connect_posts_condition``), newest first. None when the account
+    has nothing to measure."""
+    now = now or datetime.now(UTC)
+    with workspace_scope(workspace_id):
+        loaded = await measured_account(sessionmaker, deps, account_id)
+        if loaded is None:
+            return None
+        acct, adapter = loaded
+        if acct.connected_at is None:
+            return SnapshotPass()
+        async with sessionmaker() as session:
+            posts = (
+                await session.scalars(
+                    select(MediaItem)
+                    .where(connect_posts_condition(acct))
+                    .order_by(MediaItem.posted_at.desc())
+                    .limit(CONNECT_MAX_POSTS)
+                )
+            ).all()
+        due = [(post, SnapshotWindow.CONNECT.value) for post in posts]
+        done = await _capture(sessionmaker, adapter, acct, due, now, buckets, sleep)
+    log.info("connect_snapshots", account_id=str(account_id), captured=len(done.captured))
     return done
 
 

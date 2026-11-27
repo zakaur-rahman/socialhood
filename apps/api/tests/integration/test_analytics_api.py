@@ -17,7 +17,7 @@ import time_machine
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from tests.support.analytics import make_account_day, make_comment_analysis
+from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, workspace
 from tests.support.automations import make_comment
@@ -190,6 +190,46 @@ async def test_lifetime_is_the_latest_known_values(shop: Shop) -> None:
         4,
         None,
     )
+
+
+async def test_a_reading_on_connect_shows_as_lifetime_and_at_no_age(shop: Shop) -> None:
+    """C-213: a post published before the account was connected, read once on connect."""
+    post = await shop.post(timedelta(days=12))
+    await make_snapshot(
+        shop.engine,
+        workspace_id=shop.wid,
+        media_item_id=post,
+        window="connect",
+        metrics=figures(reach=3200),
+        insights_final=True,
+        captured_at=NOW - timedelta(hours=2),
+    )
+    body = await shop.get(f"/posts/{post}/performance")
+    assert (body["requested_age"], body["age"], body["metrics"]["reach"]) == (
+        None,
+        "lifetime",
+        3200,
+    )
+    at_age = await shop.get(f"/posts/{post}/performance", age="7d")
+    assert (at_age["age"], at_age["captured_at"], at_age["metrics"]["reach"]) == ("7d", None, None)
+
+    # It never joins another post's baseline at an age.
+    later = await shop.post(timedelta(days=3), {"24h": figures(reach=1000)})
+    compared = await shop.get(f"/posts/{later}/compare", age="24h")
+    assert post not in compared["baseline"]["post_ids"]
+
+    # The newest reading is the lifetime figure.
+    measured = await shop.post(timedelta(days=20), {"7d": figures(reach=4000)})
+    await make_snapshot(
+        shop.engine,
+        workspace_id=shop.wid,
+        media_item_id=measured,
+        window="connect",
+        metrics=figures(reach=5000),
+        captured_at=NOW - timedelta(hours=1),
+    )
+    lifetime = await shop.get(f"/posts/{measured}/performance", age="lifetime")
+    assert lifetime["metrics"]["reach"] == 5000
 
 
 async def test_a_brand_new_post_has_no_figures_yet(shop: Shop) -> None:

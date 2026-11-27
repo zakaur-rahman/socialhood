@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 from collections.abc import Collection, Sequence
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, cast
 
 from socialhood.models.analytics import (
     LIVE_COUNT_WINDOWS,
@@ -64,6 +64,11 @@ def grace(window: SnapshotWindow, *, story: bool = False) -> timedelta:
 # Posts older than this have no window left to capture.
 SNAPSHOT_HORIZON = max(WINDOW_AGES[w] + grace(w) for w in WINDOWS)
 STORY_HORIZON = max(WINDOW_AGES[w] + grace(w, story=True) for w in STORY_WINDOWS)
+
+
+def age_name(window: SnapshotWindow) -> AgeName:
+    """A window with an age, as an age name (every window but ``connect``, C-213, has one)."""
+    return cast(AgeName, window.value)
 
 
 def windows_for(media_type: str) -> tuple[SnapshotWindow, ...]:
@@ -128,9 +133,9 @@ def shown_age(
         return SnapshotWindow.H1.value
     target = SnapshotWindow(requested) if requested in old_enough else old_enough[-1]
     if target in taken:
-        return target.value
+        return age_name(target)
     near = closest(taken, target, windows)
-    return (near or target).value
+    return age_name(near or target)
 
 
 def exact_age(
@@ -146,11 +151,11 @@ def exact_age(
         return "lifetime"
     window = SnapshotWindow(requested)
     if window in taken:
-        return window.value
+        return age_name(window)
     if posted_at + WINDOW_AGES[window] <= now:
         return None
     younger = [w for w in windows if w in taken and WINDOW_AGES[w] < WINDOW_AGES[window]]
-    return younger[-1].value if younger else None
+    return age_name(younger[-1]) if younger else None
 
 
 def format_of(media_type: str) -> FormatName:

@@ -10447,3 +10447,18 @@ of a cancelled subscription.
   cancelled only in the app could instead be resumed and switched with proration (C-209); both
   stay offered.
 - **The return page** waits until the plan is no longer ending, so it doesn't confirm the old plan.
+
+## C-213: one reading on connect for posts that missed their early windows (2026-11-27)
+
+Owner, after a Facebook post showed no figures in Analytics: posts are read only at fixed ages
+(1 h, 6 h, 24 h, 72 h, 7 d, 30 d, inside a grace), so a post published before the account was
+connected got nothing until its next window, up to days away.
+- **The reading:** after a media sync, posts published 1 to 30 days before `connected_at` (not
+  Stories, at most 50, newest first) get one reading with their insights, stored as the window
+  `connect` (migration 0066 widens the window check). `snapshot_account_connect` runs in the bulk
+  lane; ON CONFLICT keeps it to one per post. Posts younger than a day at connect still get their
+  24 h window, so they are left out.
+- **Fair comparison kept:** `connect` has no age (not in WINDOW_AGES), so it never joins a
+  comparison or a ranking at an age. It counts in `lifetime` when it is the newest reading, and a
+  post with nothing at an age yet is shown at `lifetime` from it.
+- **Final:** the reading is final when the post was already 72 h old.

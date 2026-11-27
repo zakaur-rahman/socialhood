@@ -17,6 +17,8 @@ Rules (agent-architecture §6 "Fair comparison"):
 - Engagement rate = (likes + comments + shares + saves) ÷ reach, in %, at the same age; only
   with reach.
 - ``lifetime`` is a post's latest snapshot (or, without any, its live like and comment counts).
+  The reading taken on connect (C-213) counts here when it is the newest; it has no age, so it
+  is never used at one, and a post with nothing at an age yet is shown at lifetime from it.
 - Stories are left out of rankings and of other posts' baselines: they take no comments and expire
   before most windows. A Story has its own readings (1 h, 6 h and 23 h) and shows its own figures
   (reach, views, shares, replies, taps) and, if asked to compare, is compared with the account's
@@ -38,7 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError, FieldError
-from socialhood.models.analytics import PostMetricSnapshot
+from socialhood.models.analytics import PostMetricSnapshot, SnapshotWindow
 from socialhood.models.media import MediaItem, MediaType
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts as accounts
@@ -113,6 +115,11 @@ def figures_at(post: MediaItem, snaps: Snapshots, age: AgeName) -> Figures | Non
         latest = next(
             (snaps[w] for w in reversed(windows_for(post.media_type)) if w in snaps), None
         )
+        on_connect = snaps.get(SnapshotWindow.CONNECT)  # C-213: the reading taken on connect
+        if on_connect is not None and (
+            latest is None or on_connect.captured_at > latest.captured_at
+        ):
+            latest = on_connect
         if latest is not None:
             return Figures(
                 "lifetime", _ints(latest.metrics), latest.captured_at, latest.insights_final
@@ -170,6 +177,10 @@ async def _performance(
         post.posted_at, snaps.keys(), requested, view.now, windows_for(post.media_type)
     )
     found = figures_at(post, snaps, used)
+    if requested is None and (found is None or not found.known) and SnapshotWindow.CONNECT in snaps:
+        # C-213: no reading at an age yet, but one from when the account was connected.
+        used = "lifetime"
+        found = figures_at(post, snaps, used)
     acct = await accounts.get(session, post.social_account_id)
     granted = acct is not None and Capability.POST_INSIGHTS in view.capabilities(acct)
     performance = PostPerformance(
