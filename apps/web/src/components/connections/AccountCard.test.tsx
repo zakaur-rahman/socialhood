@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -287,27 +287,6 @@ describe("deleting an account's data (C-067)", () => {
     expect(within(card).getByRole("status")).toHaveTextContent("It disappears from this list when done.");
     expect(within(card).queryAllByRole("button")).toEqual([]);
     expect(within(card).queryByRole("switch")).toBeNull();
-  });
-
-  it("a delete still waiting shows its date and Reconnect keeps the data (C-214)", async () => {
-    const due = new Date(Date.now() + 10 * 86_400_000).toISOString();
-    const { card, handlers } = renderCard({ status: "disconnected", deleting: true, deletion_due_at: due });
-    expect(within(card).getByText(/^Deletes on /)).toBeInTheDocument();
-    expect(within(card).getByRole("status")).toHaveTextContent("Reconnect before then to keep it.");
-    expect(buttons(card)).toEqual(["Reconnect"]);
-    await userEvent.click(within(card).getByRole("button", { name: "Reconnect" }));
-    expect(handlers.onReconnect).toHaveBeenCalled();
-  });
-
-  it("a waiting delete offers no Reconnect to an agent, nor once its day has passed", () => {
-    const due = new Date(Date.now() + 10 * 86_400_000).toISOString();
-    const viewer = renderCard({ status: "disconnected", deleting: true, deletion_due_at: due }, { canManage: false });
-    expect(within(viewer.card).queryAllByRole("button")).toEqual([]);
-    cleanup();
-    const past = new Date(Date.now() - 60_000).toISOString();
-    const { card } = renderCard({ status: "disconnected", deleting: true, deletion_due_at: past });
-    expect(within(card).getByText("Deleting…")).toBeInTheDocument();
-    expect(within(card).queryAllByRole("button")).toEqual([]);
   });
 
   it("a YouTube account without analytics access hints at reconnecting", async () => {

@@ -35,7 +35,6 @@ from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.widget import WidgetSettings
 from socialhood.repositories import widget as repo
 from socialhood.schemas.widget import WidgetSettingsOut, WidgetSettingsUpdate
-from socialhood.services.connections import NOT_DELETING, restorable
 from socialhood.services.widget import origin
 from socialhood.settings import Settings
 
@@ -61,15 +60,8 @@ async def ensure(session: AsyncSession) -> tuple[SocialAccount, WidgetSettings]:
         acct = await _create_account(session)
     elif acct.status == AccountStatus.DISCONNECTED:
         if acct.deletion_requested_at is not None:
-            # C-214: turning it back on while its delete waits keeps its data, like a reconnect.
-            await session.refresh(acct, with_for_update=True)
-            if not restorable(acct, datetime.now(UTC)):
-                raise ApiError(
-                    "conflict", "The website chat is being deleted. Try again in a minute."
-                )
+            raise ApiError("conflict", "The website chat is being deleted. Try again in a minute.")
         await check_new_channel(session, "web", await current_plan(session))
-        for name, value in NOT_DELETING.items():
-            setattr(acct, name, value)
         acct.status = AccountStatus.ACTIVE  # switched off by a disconnect: back on, same id
         acct.disconnected_at = None
         await session.flush()

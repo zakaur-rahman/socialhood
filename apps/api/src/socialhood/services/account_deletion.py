@@ -10,12 +10,9 @@ Three ways in, one purge:
 
 ``begin`` stops the account at once, in the caller's transaction: its tokens are destroyed and it
 is disconnected (webhook routing ignores it), its automations pause, its scheduled messages and
-pending post targets are cancelled, and it is marked deleting (who asked, when, and when the purge
-is due). C-214: a member's delete is due DELETION_GRACE (15 days) later, and the web shows the
-date; reconnecting before then cancels the deletion and keeps everything (services/connections.
-_upsert, and turning the website chat back on). A Meta request is due at once, even for an account
-already waiting. Once a due deletion commits, ``purge_account_data`` is queued (bulk lane, key and
-lock ``acctpurge:{id}``); the sweeper queues the waiting ones when they fall due.
+pending post targets are cancelled, and it is marked deleting (who asked and when; the web shows
+"Deleting…"). Once the transaction commits, ``purge_account_data`` is queued (bulk lane, key and
+lock ``acctpurge:{id}``).
 
 ``purge_account`` (jobs/tasks/purge.py) then removes everything the account holds, and may run
 any number of times: each step is safe to repeat and a run that stops half-way resumes.
@@ -39,10 +36,10 @@ any number of times: each step is safe to repeat and a run that stops half-way r
 Knowledge, workspace settings, billing and the workspace's other accounts are never touched. Plan
 slots count live accounts (billing/entitlements.py), so the account stops counting when it is
 disconnected. A step outside the database that fails (Cloudinary, Valkey) raises
-AccountPurgeBlocked; the job retries with backoff and sweep_deletions re-queues any account whose
-deletion is due every 15 minutes, alerting 6 hours after it fell due. Each run logs
-``account_data_purged`` (or ``account_purge_continues``) with the workspace, account, requester
-and rows deleted per table, never content.
+AccountPurgeBlocked; the job retries with backoff and sweep_deletions re-queues any account still
+deleting every 15 minutes, alerting after 6 hours. Each run logs ``account_data_purged`` (or
+``account_purge_continues``) with the workspace, account, requester and rows deleted per table,
+never content.
 """
 
 from __future__ import annotations
@@ -80,7 +77,7 @@ from socialhood.repositories import publish_targets
 from socialhood.repositories import social_accounts as accounts
 from socialhood.repositories.workspace_deletion import workspace_status
 from socialhood.services.automations.definitions import pause_for_account
-from socialhood.services.connections import DELETION_GRACE, account_out
+from socialhood.services.connections import account_out
 from socialhood.services.post_publishing.projection import derive_status, queue_post_updated
 
 log = get_logger(__name__)
@@ -89,7 +86,7 @@ ROW_BATCH = 2000
 FILE_BATCH = 100
 RUN_BUDGET_S = 540.0  # a run hands over to a fresh job after this, like the bulk lane's 600 s
 KEY_DELETE_CHUNK = 500
-OVERDUE_AFTER = timedelta(hours=6)  # sweep_deletions alerts on a purge due this long
+OVERDUE_AFTER = timedelta(hours=6)  # sweep_deletions alerts on an account deleting this long
 
 ACTIVE_ACCOUNT = "Disconnect this account first, or use Disconnect and delete data."
 CONFIRM_MISMATCH = "Type {target} exactly as shown to confirm."
@@ -138,22 +135,19 @@ async def begin(
     deps: PlatformDeps,
     now: datetime | None = None,
 ) -> None:
-    """Disconnect the account, stop what it would send and mark it deleting: due in
-    DELETION_GRACE for a member (``requested_by``), at once for Meta. A due purge is queued when
-    the caller's transaction commits (and ``social_account.updated`` published, if the caller
-    commits with events.commit_and_publish). Runs in the account's workspace scope."""
+    """Disconnect the account, stop what it would send and mark it deleting; the purge is
+    queued when the caller's transaction commits (and ``social_account.updated`` published, if
+    the caller commits with events.commit_and_publish). Runs in the account's workspace scope."""
     now = now or datetime.now(UTC)
     first = acct.deletion_requested_at is None
-    due = now + DELETION_GRACE if requested_by is not None else now
-    await repo.mark_deleting(session, acct.id, requested_by=requested_by, at=now, due=due)
+    await repo.mark_deleting(session, acct.id, requested_by=requested_by, at=now)
     paused = await pause_for_account(session, acct.id, now=now)
     scheduled = await repo.cancel_scheduled_messages(session, acct.id)
     posts = await repo.cancel_pending_targets(session, acct.id)
     for post_id in posts:
         await _settle_post(session, post_id)
+    purge_after_commit(session, acct.workspace_id, acct.id)
     await session.refresh(acct)
-    if is_due(acct, now):
-        purge_after_commit(session, acct.workspace_id, acct.id)
     events.queue(
         session,
         acct.workspace_id,
@@ -167,15 +161,10 @@ async def begin(
             account_id=str(acct.id),
             requested_by=str(requested_by) if requested_by else None,
             source="member" if requested_by else "meta",
-            due_at=acct.deletion_due_at.isoformat() if acct.deletion_due_at else None,
             automations_paused=paused,
             scheduled_messages_canceled=scheduled,
             post_targets_canceled=len(posts),
         )
-
-
-def is_due(acct: SocialAccount, now: datetime) -> bool:
-    return acct.deletion_due_at is not None and acct.deletion_due_at <= now
 
 
 async def _settle_post(session: AsyncSession, post_id: uuid.UUID) -> None:
@@ -207,8 +196,7 @@ async def request(
     only ``confirm`` (Remove). Remove refuses a live account unless it is a sandbox (409):
     disconnecting first, or Disconnect and delete, says what happens to it. Either way the typed
     handle or number must match (422 on ``confirm``). Asking again for an account already being
-    deleted changes nothing; once it is due, it queues its purge again (a no-op while one
-    waits)."""
+    deleted queues its purge again (a no-op while one waits)."""
     if not delete_data and is_live(acct) and not is_sandbox(acct):
         raise ApiError("conflict", ACTIVE_ACCOUNT)
     if confirm is None or not confirms(acct, confirm):
@@ -216,7 +204,7 @@ async def request(
         raise ApiError("validation_error", errors=[FieldError("confirm", message)])
     if acct.deletion_requested_at is None:
         await begin(session, acct, requested_by=user_id, deps=deps)
-    elif is_due(acct, datetime.now(UTC)):
+    else:
         purge_after_commit(session, acct.workspace_id, acct.id)
     await events.commit_and_publish(session, redis)
 
@@ -301,7 +289,7 @@ class PurgeDeps:
     media: MediaPurger
 
 
-PurgeStatus = Literal["purged", "gone", "not_deleting", "not_due", "workspace_deleting", "continue"]
+PurgeStatus = Literal["purged", "gone", "not_deleting", "workspace_deleting", "continue"]
 BatchDelete = Callable[[AsyncSession, int], Awaitable[int]]
 
 
@@ -343,8 +331,6 @@ async def purge_account(
             if acct.deletion_requested_at is None:
                 log.error("account_purge_refused", account_id=str(account_id), status=acct.status)
                 return PurgeResult(status="not_deleting")
-            if not is_due(acct, datetime.now(UTC)):  # C-214: still waiting for a reconnect
-                return PurgeResult(status="not_due")
             if await workspace_status(session, workspace_id) != WorkspaceStatus.ACTIVE:
                 return PurgeResult(status="workspace_deleting")  # purge_workspace takes it
             facts = _Account(
@@ -517,23 +503,23 @@ class Sweep:
 
 
 async def sweep(pending: list[tuple[uuid.UUID, uuid.UUID, datetime]], now: datetime) -> Sweep:
-    """Queue a purge for every account whose deletion is due (``pending``: account, workspace,
-    due at; a waiting purge makes this a no-op) and alert on any still there OVERDUE_AFTER after
-    it fell due: something outside the database keeps failing."""
+    """Queue a purge for every account still deleting (``pending``: account, workspace, asked
+    at; a waiting purge makes this a no-op) and alert on any still deleting after
+    OVERDUE_AFTER: something outside the database keeps failing."""
     requeued = 0
     overdue: list[uuid.UUID] = []
-    for account_id, workspace_id, due_at in pending:
+    for account_id, workspace_id, requested_at in pending:
         requeued += int(await enqueue_purge_quietly(workspace_id, account_id))
-        if now - due_at > OVERDUE_AFTER:
+        if now - requested_at > OVERDUE_AFTER:
             overdue.append(account_id)
             log.error(
                 "alert",
                 kind="account_purge_overdue",
                 workspace_id=str(workspace_id),
                 account_id=str(account_id),
-                hours=round((now - due_at).total_seconds() / 3600, 1),
+                hours=round((now - requested_at).total_seconds() / 3600, 1),
                 detail="see account_purge_blocked for what it waits on",
             )
     if pending:
-        log.info("sweep_account_deletions", due=len(pending), requeued=requeued)
+        log.info("sweep_account_deletions", deleting=len(pending), requeued=requeued)
     return Sweep(requeued=requeued, overdue=overdue)

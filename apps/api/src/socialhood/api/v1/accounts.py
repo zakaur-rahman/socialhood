@@ -129,16 +129,14 @@ async def disconnect_social_account(
     - Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop
       and automations pause; what was stored stays.
     - Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects
-      the same way, then 15 days later every row, file and cached key of the account is purged
-      in the background (C-214: reconnecting before ``deletion_due_at`` cancels it and keeps the
-      data). Knowledge, workspace settings, billing and other accounts are kept.
+      the same way, then every row, file and cached key of the account is purged in the
+      background. Knowledge, workspace settings, billing and other accounts are kept.
     - Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox
       account; 409 for a live one (disconnect first, or use Disconnect and delete data).
 
     ``confirm`` is the account's handle (with or without "@") or number, else its name; a
-    mismatch is 422 on ``confirm``. Until the purge has run the account is listed with
-    ``deleting`` true and its ``deletion_due_at``; it is gone from the list once done (a
-    ``resync`` event follows)."""
+    mismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``
+    true; it is gone from the list once done (a ``resync`` event follows)."""
     acct = await service.get_or_404(session, account_id)
     credential = acct.access_token_enc  # C-195: revoked with Google once it is deleted here
     if delete_data or confirm is not None:

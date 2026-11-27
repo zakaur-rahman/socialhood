@@ -10527,3 +10527,13 @@ allowed one while the window is open (services/reply_window.may_send). The reply
 now has a "Send a template" button on WhatsApp conversations, opening the same picker (approved
 templates only). Inside the window a utility template is free under WhatsApp's pricing; marketing
 templates are charged either way.
+
+## C-214 held out of the release (2026-11-28)
+
+Owner: every Meta App Review recording ends with connect, disconnect, Delete account and data,
+log out, and shows the account disappearing. C-214 changes that last step (the account stays
+listed with "Deletes on <date>" for 15 days), so it is held until the open reviews are decided.
+Reverted on develop (#287, a revert of #284) except migration 0067 and the model's
+`social_accounts.deletion_due_at`: the column stays, unused, because 0068 (C-215) follows it.
+The Privacy Policy, data-deletion page and DPA are back to 24 hours. To bring C-214 back, revert
+the revert and drop the migration and model lines from its diff.

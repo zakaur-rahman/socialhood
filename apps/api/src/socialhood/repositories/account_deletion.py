@@ -1,8 +1,8 @@
 """Account data deletion rows (C-067; FR-CON-06, F-16).
 
 Marking (in the workspace's scope, like any tenant write): the account is disconnected (its tokens
-destroyed) and records who asked, when, and when the purge is due (C-214); its scheduled messages
-and pending post targets are cancelled, so nothing goes out for it before the purge.
+destroyed) and records who asked and when; its scheduled messages and pending post targets are
+cancelled, so nothing goes out for it before the purge.
 
 Purging: every table holding the account's rows is emptied in batches, children before parents,
 so each statement is short and a purge that stops half-way resumes where it was. The tables come
@@ -165,11 +165,9 @@ async def mark_deleting(
     *,
     requested_by: uuid.UUID | None,
     at: datetime,
-    due: datetime,
 ) -> bool:
     """Disconnect the account (tokens destroyed now) and mark it deleting; the first request's
-    time is kept, and the earlier due time (a Meta request makes a member's waiting delete due at
-    once, C-214). False when it isn't in this workspace."""
+    time is kept. False when it isn't in this workspace."""
     result = await session.execute(
         scoped_update(SocialAccount, id=account_id)
         .values(
@@ -182,7 +180,6 @@ async def mark_deleting(
             deletion_requested_by_user_id=func.coalesce(
                 SocialAccount.deletion_requested_by_user_id, requested_by
             ),
-            deletion_due_at=func.least(SocialAccount.deletion_due_at, due),  # LEAST skips NULL
         )
         .returning(SocialAccount.id)
     )
@@ -381,17 +378,13 @@ async def delete_account(
 
 
 async def deleting_accounts(
-    session: AsyncSession, now: datetime
+    session: AsyncSession,
 ) -> list[tuple[uuid.UUID, uuid.UUID, datetime]]:
-    """(account, workspace, due at) of every account being deleted whose purge is due (C-214: a
-    member's delete waits), oldest first. Across workspaces: the caller (the sweeper, in jobs/)
-    runs it in the tenant bypass."""
+    """(account, workspace, requested at) of every account being deleted, oldest first. Across
+    workspaces: the caller (the sweeper, in jobs/) runs it in the tenant bypass."""
     result = await session.execute(
-        select(SocialAccount.id, SocialAccount.workspace_id, SocialAccount.deletion_due_at)
-        .where(
-            SocialAccount.deletion_requested_at.is_not(None),
-            SocialAccount.deletion_due_at <= now,
-        )
-        .order_by(SocialAccount.deletion_due_at, SocialAccount.id)
+        select(SocialAccount.id, SocialAccount.workspace_id, SocialAccount.deletion_requested_at)
+        .where(SocialAccount.deletion_requested_at.is_not(None))
+        .order_by(SocialAccount.deletion_requested_at, SocialAccount.id)
     )
     return [(row[0], row[1], row[2]) for row in result.all() if row[2] is not None]
