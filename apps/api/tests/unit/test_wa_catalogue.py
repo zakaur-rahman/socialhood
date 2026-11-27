@@ -1,19 +1,12 @@
 """GR-33: the pieces of the WhatsApp catalogue that need no database. What a catalogue item is made
 from, the product and product-list payloads, the stored message read back, a customer's cart parsed
-from the webhook, the Meta batch client's requests, and the sandbox catalogue."""
+from the webhook, and the feed Meta fetches (C-215)."""
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Any
 
-import httpx
-import pytest
-
-from socialhood.metacatalog.client import BatchItem, CatalogueError
-from socialhood.metacatalog.fake import FakeCatalogue
-from socialhood.metacatalog.http import HttpCatalogueClient
 from socialhood.models.catalogue import CatalogueConnection, Product, ProductVariant
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import OutboundMessage, OutboundProducts
@@ -24,7 +17,6 @@ from socialhood.platforms.whatsapp.parse import parse_event
 from socialhood.platforms.whatsapp.webhooks import split_payload
 from socialhood.services.catalogue import wa_catalogue, wa_send
 from socialhood.services.sending import _products_of
-from socialhood.settings import AppEnv, Settings
 
 PICTURE = "https://cdn.example/kurta.jpg"
 
@@ -72,7 +64,22 @@ def test_a_variant_is_one_item_keyed_by_its_id() -> None:
         "link": "https://maple.example/kurta",
         "image_link": PICTURE,
         "brand": "Maple",
+        "item_group_id": str(kurta.id),  # Meta groups a product's variants by it
     }
+
+
+def test_the_feed_is_a_header_and_one_line_per_item() -> None:
+    kurta = product(description="Soft cotton.\nHand-woven, Bihar.")
+    scarf = product(name="Silk scarf", price_minor=49900)
+    items = [
+        wa_catalogue.wanted_item(kurta, variant(kurta), brand="Maple", image_url=None),
+        wa_catalogue.wanted_item(scarf, None, brand="Maple", image_url=None),
+    ]
+    lines = wa_catalogue.render(items).splitlines()
+    assert lines[0] == ",".join(wa_catalogue.FEED_COLUMNS)
+    assert len(lines) == 3  # a description's line break never splits a row
+    assert '"Soft cotton. Hand-woven, Bihar."' in lines[1]
+    assert lines[2].endswith(",Maple,")  # no item_group_id without variants
 
 
 def test_a_product_without_variants_is_keyed_by_its_own_id() -> None:
@@ -241,107 +248,3 @@ def test_a_cart_drops_lines_it_cannot_read() -> None:
     assert isinstance(event, InboundMessage)
     assert event.order is not None
     assert [(i.retailer_id, i.quantity) for i in event.order.items] == [("v1", 1), ("v3", 3)]
-
-
-# ---------------------------------------------------------------- Meta's batch API
-
-
-def client_with(handler: Any) -> HttpCatalogueClient:
-    settings = Settings(_env_file=None, app_env=AppEnv.TEST)
-    return HttpCatalogueClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)), settings)
-
-
-async def test_items_are_sent_as_upserts_and_deletes() -> None:
-    seen: list[httpx.Request] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request)
-        if request.url.path.endswith("/items_batch"):
-            return httpx.Response(200, json={"handles": ["h1"], "validation_status": []})
-        return httpx.Response(200, json={"data": [{"status": "finished"}]})
-
-    result = await client_with(handler).push(
-        "token",
-        "cat-1",
-        [BatchItem("UPDATE", "v1", {"id": "v1", "title": "Kurta"}), BatchItem("DELETE", "v2")],
-    )
-
-    assert result.errors == {}
-    post = seen[0]
-    assert post.url.path.endswith("/cat-1/items_batch")
-    assert post.headers["authorization"] == "Bearer token"
-    form = dict(httpx.QueryParams(post.content.decode()))
-    assert (form["item_type"], form["allow_upsert"]) == ("PRODUCT_ITEM", "true")
-    assert json.loads(form["requests"]) == [
-        {"method": "UPDATE", "data": {"id": "v1", "title": "Kurta"}},
-        {"method": "DELETE", "data": {"id": "v2"}},
-    ]
-    assert seen[1].url.path.endswith("/cat-1/check_batch_request_status")
-    assert seen[1].url.params["handle"] == "h1"
-
-
-async def test_refused_items_come_back_by_retailer_id() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            json={
-                "handles": [],
-                "validation_status": [
-                    {"retailer_id": "v1", "errors": [{"message": "Missing image"}], "warnings": []},
-                    {"retailer_id": "v2", "errors": [], "warnings": []},
-                ],
-            },
-        )
-
-    result = await client_with(handler).push("t", "c", [BatchItem("UPDATE", "v1", {"id": "v1"})])
-    assert result.errors == {"v1": "Missing image"}
-
-
-@pytest.mark.parametrize(
-    ("status", "code", "kind"),
-    [
-        (403, None, "auth"),
-        (400, 190, "auth"),
-        (400, 200, "auth"),
-        (404, None, "not_found"),
-        (400, 100, "not_found"),
-        (429, None, "rate_limited"),
-        (400, 80014, "rate_limited"),
-        (500, None, "unavailable"),
-        (400, 1, "rejected"),
-    ],
-)
-async def test_meta_errors_become_kinds(status: int, code: int | None, kind: str) -> None:
-    body = {"error": {"code": code}} if code else {}
-    client = client_with(lambda request: httpx.Response(status, json=body))
-    with pytest.raises(CatalogueError) as raised:
-        await client.get_catalog("t", "cat-1")
-    assert raised.value.kind == kind
-
-
-# ---------------------------------------------------------------- the sandbox catalogue
-
-
-async def test_the_sandbox_holds_what_was_sent_and_refuses_marked_items() -> None:
-    fake = FakeCatalogue()
-    info = await fake.get_catalog("t", "cat-1")
-    assert info.id == "cat-1"
-    with pytest.raises(CatalogueError) as missing:
-        await fake.get_catalog("t", "missing")
-    assert missing.value.kind == "not_found"
-    with pytest.raises(CatalogueError) as denied:
-        await fake.get_catalog("t", "denied")
-    assert denied.value.kind == "auth"
-
-    result = await fake.push(
-        "t",
-        "cat-1",
-        [
-            BatchItem("UPDATE", "v1", {"id": "v1", "title": "Kurta"}),
-            BatchItem("UPDATE", "v2", {"id": "v2", "title": "Bad [fail]"}),
-        ],
-    )
-    assert result.errors == {"v2": "Sandbox refused this item."}
-    assert list(fake.items["cat-1"]) == ["v1"]
-    await fake.push("t", "cat-1", [BatchItem("DELETE", "v1")])
-    assert fake.items["cat-1"] == {}

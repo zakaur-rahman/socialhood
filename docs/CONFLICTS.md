@@ -10487,3 +10487,43 @@ mind and reconnects keeps the account's data. Before, the purge was queued at on
   "Deleting…" once the day has passed. The dialog and the toast say 15 days. The Privacy Policy,
   the data-deletion page and the DPA say 15 days for a member's delete and keep 24 hours for Meta
   requests and workspace deletion. The legal effective date was not moved (as in C-198 and C-202).
+
+## C-215: the WhatsApp catalogue by scheduled feed, not by push (2026-11-28)
+
+Owner, after connecting a real catalogue failed: on production, a WhatsApp connection with
+`catalog_management` and `business_management` granted, the catalogue in the portfolio that owns
+the number and linked to it in WhatsApp Manager, and the catalogue connected to the app's assets,
+Meta still answered "missing permissions" (code 100/33) for the catalogue. Embedded Signup only
+hands the app the WhatsApp account, never a catalogue, and the business settings have nowhere to
+grant one, so GR-33's push sync (Catalog Batch API) could never work for any business.
+- **The feed:** `GET /v1/feeds/whatsapp-catalogue/{token}.csv` serves the products in Meta's
+  data-file format (id, title, description, availability, condition, price, link, image_link,
+  brand, item_group_id), one row per variant, ids still our variant or product ids (so carts and
+  product messages keep working). The business adds the link once in Commerce Manager (Data
+  sources › Data file › Create a data file from scratch › Upload via URL or Google Sheets,
+  hourly); each fetch replaces the catalogue's items. Migration 0068 adds `feed_token` (unique)
+  and `feed_fetched_at`; the push sync's columns stay unused (expand-only).
+- **The link is the key:** a 32-byte random token; New link replaces it; unknown tokens and a plan
+  without commerce get 404 (Meta keeps what it has). Limited per IP like other public routes; the
+  workspace is found by `webhooks/routing.catalogue_feed_owner` (the cross-workspace lookup). Only
+  owners and admins see the link.
+- **What Meta has:** each fetch records the items it served (`catalogue_items`, with their hash);
+  product messages accept only those. Any fetch counts, also someone opening the link (Meta's
+  fetcher can't be told apart reliably; owner's decision 2). Items added or changed since show as
+  waiting for Meta's next fetch.
+- **Connect** saves the number and the id (digits only) without asking Meta.
+- **Removed (owner's decision 1):** the push sync, its 5-minute sweep and the triggers after
+  product changes, the Sync button, and the Meta catalogue client and its sandbox fake. So the app
+  no longer needs `catalog_management` or `business_management`; neither goes to App Review.
+- **Kept (decision 3):** Meta requires a link and a picture per item; products without them stay
+  out of the feed and the card says why.
+- **Also:** the dashboard now loads product pictures from any HTTPS site (`img-src https:`), so
+  pictures imported from shops show.
+## C-216: a WhatsApp template can be sent while the window is open (2026-11-28)
+
+Owner: "need send template". The reply box offered a template only once the 24-hour window had
+closed (or on a failed send), though WhatsApp accepts templates at any time and the API already
+allowed one while the window is open (services/reply_window.may_send). The reply box's toolbar
+now has a "Send a template" button on WhatsApp conversations, opening the same picker (approved
+templates only). Inside the window a utility template is free under WhatsApp's pricing; marketing
+templates are charged either way.

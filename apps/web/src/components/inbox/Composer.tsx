@@ -1,6 +1,18 @@
 "use client";
 
-import { AlertTriangle, Clock, Paperclip, Reply, SendHorizontal, Smile, Sparkles, Sticker, Undo2, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  MessageSquareText,
+  Paperclip,
+  Reply,
+  SendHorizontal,
+  Smile,
+  Sparkles,
+  Sticker,
+  Undo2,
+  X,
+} from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -486,6 +498,12 @@ export function Composer({
                 data-testid="composer-sticker-input"
               />
             </>
+          ) : null}
+          {/* A template can go out while the window is open too (a fixed, approved message). */}
+          {conversation.platform === "whatsapp" ? (
+            <Button variant="ghost" size="icon" className={TOOL} aria-label="Send a template" onClick={onChooseTemplate}>
+              <MessageSquareText aria-hidden />
+            </Button>
           ) : null}
           {/* An AI action: the soft Button. Empty, it says why it's off (DisabledReason) and is dimmed like
               any disabled control; while it works it is the Button's `loading` (a spinner, aria-busy), with
