@@ -284,6 +284,17 @@ async def test_cancelled_keeps_pro_until_the_period_ends(owner: Owner) -> None:
     assert (sub["plan"], sub["status"], sub["cancel_at_period_end"]) == ("pro", "active", True)
 
 
+async def test_an_update_after_the_cancel_keeps_it_ending(owner: Owner) -> None:
+    # Production, 2026-11-26: Dodo follows subscription.cancelled with subscription.updated,
+    # status cancelled and cancel_at_next_billing_date false; the plan still doesn't renew.
+    await make_pro(owner)
+    end = soon(days=20)
+    for event_type in ("subscription.cancelled", "subscription.updated"):
+        await owner.event(event_type, subscription(owner.wid, status="cancelled", period_end=end))
+    sub = await owner.sub()
+    assert (sub["plan"], sub["status"], sub["cancel_at_period_end"]) == ("pro", "active", True)
+
+
 async def test_cancelled_at_the_period_end_goes_to_free(owner: Owner) -> None:
     await make_pro(owner)
     row = await owner.event(

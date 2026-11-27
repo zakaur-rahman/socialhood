@@ -10408,3 +10408,20 @@ features", then changed three rules. The audit report is kept outside the repo.
   (pay now, credit, then the price and renewal date, and what pauses on a downgrade) before
   "Pay $X and switch". The checkout 409 now points to Settings › Billing and usage. This closes
   C-174's "Plan changes aren't built" item.
+
+## C-210: a plan cancelled in Dodo stays "ending" (2026-11-27)
+
+Found in production when the owner tried Switch to Business: Dodo refused the preview with
+`INACTIVE_SUBSCRIPTION_PLAN_CHANGE_NOT_SUPPORTED`. The subscription had been cancelled outright in
+Dodo (not at the period end), and Dodo then sends `cancel_at_next_billing_date: false` on that
+cancelled subscription. `subscription.updated` and the resume PATCH copied that flag, so the app
+showed the plan as renewing and offered Switch.
+- **Fix:** `parse_subscription` reads a `cancelled` subscription as not renewing, whatever the
+  flag says. The FakeDodo mirrors it.
+- **Resume:** Dodo answers the resume PATCH with 200 on a cancelled subscription and changes
+  nothing, so resume now answers 409 "This plan was cancelled in Dodo, so it can't be resumed…".
+  The page still shows Resume for it, because we store only "ending", not how it was cancelled.
+  shortcut: that's one wasted click; store Dodo's status if it ever matters.
+- **Not changed:** a cancelled plan can't be replaced by a new checkout before its period ends
+  (one live subscription per workspace). The plan goes to Free at the period end, then checkout
+  works.
