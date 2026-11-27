@@ -28,7 +28,7 @@ describe("the pricing section (C-155 layout)", () => {
     expect(pro.getByText(/A card is required to start the trial/)).toBeInTheDocument();
     expect(card("Creator")).toHaveTextContent("Then ₹999 a month after the 7-day trial. Renews until you cancel in Settings → Billing.");
     expect(pro.getByText("AI Auto mode and suggestions")).toBeInTheDocument();
-    expect(pro.getByText("2 Instagram; 1 each of WhatsApp, Facebook and web chat")).toBeInTheDocument();
+    expect(pro.getByText("3 Instagram; 1 each of WhatsApp, Facebook and web chat")).toBeInTheDocument();
     expect(pro.getByRole("link", { name: "Start free, then try Creator" })).toHaveAttribute(
       "href",
       "/sign-up?redirect_url=%2Fapp%3Fplan%3Dpro",

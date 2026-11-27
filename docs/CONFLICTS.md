@@ -10425,3 +10425,10 @@ showed the plan as renewing and offered Switch.
 - **Not changed:** a cancelled plan can't be replaced by a new checkout before its period ends
   (one live subscription per workspace). The plan goes to Free at the period end, then checkout
   works.
+
+## C-211: Creator connects 3 Instagram accounts, Business 6 (2026-11-27)
+
+The owner raised `instagram_accounts` from 2 to 3 on Creator and from 4 to 6 on Business, at the
+same prices; Free (1) and Agency (10) stay. plans.py is the source; plan-table.json was
+regenerated, and the FAQ, the AI info page, a changelog entry and the test fixtures follow it.
+Existing workspaces get the new limit at once (it is read from the plan, not stored).

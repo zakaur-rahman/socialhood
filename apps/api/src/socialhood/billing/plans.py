@@ -41,7 +41,8 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # Channels (C-172): WhatsApp numbers and Facebook Pages, each counted on its own.
     "accounts_per_platform": {"free": 1, "pro": 1, "max": 3, "agency": 10},
     # Instagram has its own limit (C-187): it is where people most often run a second account.
-    "instagram_accounts": {"free": 1, "pro": 2, "max": 4, "agency": 10},
+    # C-211 (2026-11-27): Creator 3 and Business 6 (were 2 and 4).
+    "instagram_accounts": {"free": 1, "pro": 3, "max": 6, "agency": 10},
     # YouTube (C-195, D1): one channel per workspace on every plan. It counts toward Free's
     # channels_total like the others.
     "youtube_accounts": {"free": 1, "pro": 1, "max": 1, "agency": 1},

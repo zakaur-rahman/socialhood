@@ -39,6 +39,13 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-27",
+    title: "More Instagram accounts on Creator and Business",
+    area: "app",
+    body: "Creator now connects 3 Instagram accounts and Business 6, at the same prices.",
+    prs: [278],
+  },
+  {
     date: "2026-11-14",
     title: "YouTube videos and Shorts",
     area: "publishing",
