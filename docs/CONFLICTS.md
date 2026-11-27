@@ -10462,3 +10462,28 @@ connected got nothing until its next window, up to days away.
   comparison or a ranking at an age. It counts in `lifetime` when it is the newest reading, and a
   post with nothing at an age yet is shown at `lifetime` from it.
 - **Final:** the reading is final when the post was already 72 h old.
+
+## C-214: deleting an account's data waits 15 days, and a reconnect keeps it (2026-11-27)
+
+Owner: "Delete account and data" should be scheduled for 15 days, so a business that changes its
+mind and reconnects keeps the account's data. Before, the purge was queued at once (C-067).
+- **The wait:** a member's delete (Disconnect and delete data, or Remove) still stops everything at
+  once (token destroyed, disconnected, automations paused, scheduled messages and pending post
+  targets cancelled), and sets `social_accounts.deletion_due_at` to 15 days later (migration
+  0067; rows already deleting are due at once). The purge is queued only when it is due: by the
+  15-minute sweep, which now lists only due accounts and alerts 6 hours after the due time, not
+  the request. `purge_account` refuses an account not yet due (`not_due`). Asking again while it
+  waits changes nothing.
+- **Restore:** reconnecting the account in the same workspace before the due time (any platform,
+  through `_upsert`; the website chat by opening its settings, which already switched a
+  disconnected chat back on) clears the deletion and keeps every row. It stops 10 minutes before
+  the due time so it never meets a running purge, and the row is locked so a Meta request at the
+  same moment wins. Cancelled scheduled messages and posts stay cancelled; automations stay paused
+  until turned back on, as after a plain disconnect. Messages sent while it was disconnected are
+  not stored; the first sync brings back what it reaches.
+- **Not delayed:** a Meta data-deletion request is due at once, and makes a member's waiting
+  delete due at once too (the earlier due time wins). Deleting the workspace is unchanged.
+- **The card** shows "Deletes on <date>" with a Reconnect button for owners and admins, and
+  "Deleting…" once the day has passed. The dialog and the toast say 15 days. The Privacy Policy,
+  the data-deletion page and the DPA say 15 days for a member's delete and keep 24 hours for Meta
+  requests and workspace deletion. The legal effective date was not moved (as in C-198 and C-202).

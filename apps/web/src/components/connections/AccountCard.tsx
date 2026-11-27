@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AccountStatus, AiMode, Plan, SocialAccount, SocialAccountPatch } from "@/lib/api/types";
+import { billingDate } from "@/lib/billing/plan";
 import { accountStatusLabel } from "@/lib/copy";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import type { Tone } from "@/lib/ui/tone";
@@ -75,7 +76,8 @@ export function lastSyncedText(iso: string, now: Date): string {
  * small line. While connected: the AI replies mode inline and an "AI settings" disclosure holding
  * the two switches. Reconnect or Retry only when needed, for owners and admins; Disconnect and
  * D-09's "Delete account and data" sit in the ⋯ menu, each opening its confirm dialog, so a healthy
- * card shows no red. "Deleting…" with no actions until the purge has removed it.
+ * card shows no red. C-214: a deleted account waits 15 days, showing the date and Reconnect (which
+ * keeps its data); "Deleting…" with no actions once the purge is under way.
  */
 export function AccountCard({
   account,
@@ -97,6 +99,10 @@ export function AccountCard({
   const name = account.display_name ?? account.username ?? `${platformName} account`;
   const subtitle = account.username ? `@${account.username}` : (account.phone_number ?? platformName);
   const deleting = account.deleting;
+  // C-214: the day its data goes, while a reconnect can still keep it.
+  const dueAt = deleting && account.deletion_due_at && new Date(account.deletion_due_at) > now ? account.deletion_due_at : null;
+  const deletesOn = dueAt ? billingDate(dueAt, Intl.DateTimeFormat().resolvedOptions().timeZone, now) : null;
+  const restorable = deletesOn !== null && canManage && !account.sandbox;
   const live = account.status !== "disconnected" && !deleting;
   const manage = canManage && !deleting;
   const autoLocked = plan === "free";
@@ -168,12 +174,16 @@ export function AccountCard({
         ) : (
           <Badge tone={tone.tone} size="md">
             <span className={cn("size-1.5 rounded-full", tone.dot)} aria-hidden />
-            {deleting ? "Deleting…" : accountStatusLabel[account.status]}
+            {deletesOn ? `Deletes on ${deletesOn}` : deleting ? "Deleting…" : accountStatusLabel[account.status]}
           </Badge>
         )}
       </header>
 
-      {deleting ? (
+      {deletesOn ? (
+        <p role="status" className="text-xs text-fg-secondary">
+          Everything stored for it is deleted on {deletesOn}. Reconnect before then to keep it.
+        </p>
+      ) : deleting ? (
         <p role="status" className="text-xs text-fg-secondary">
           Deleting this account and everything stored for it. It disappears from this list when done.
         </p>
@@ -190,6 +200,14 @@ export function AccountCard({
             {account.last_error}
           </span>
         </p>
+      ) : null}
+
+      {restorable ? (
+        <div className="mt-1 flex justify-end border-t border-line pt-3">
+          <Button variant="secondary" size="sm" disabled={busy.reconnecting} onClick={actions.onReconnect}>
+            {busy.reconnecting ? `Opening ${platformName}…` : "Reconnect"}
+          </Button>
+        </div>
       ) : null}
 
       {live || manage ? (

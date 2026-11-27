@@ -53,6 +53,8 @@ class SocialAccountOut(ResponseModel):
     sandbox: bool = False
     # Its data is being deleted (C-067): disconnected, and gone once the purge finishes.
     deleting: bool = False
+    # C-214: when the purge starts; reconnecting before then cancels the deletion.
+    deletion_due_at: datetime | None = None
 
 
 class SocialAccountList(ResponseModel):
