@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./api/errors";
 import {
+  errorMessage,
   plural,
   renewalLine,
   CONNECT_ERRORS,
@@ -213,5 +214,20 @@ describe("renewalLine (P-3)", () => {
   it("no trial: monthly or every 6 months, paid at checkout", () => {
     expect(renewalLine("$15", "month", 0, now)).toBe("Renews monthly until you cancel in Settings → Billing.");
     expect(renewalLine("$81", "six_month", 0, now)).toBe("Renews every 6 months until you cancel in Settings → Billing.");
+  });
+});
+
+describe("errorMessage", () => {
+  const problem = { type: "about:blank", title: "The request is not valid", status: 422, code: "validation_error" };
+
+  it("shows a refusal's field reason when it has no detail", () => {
+    const error = new ApiError({ ...problem, errors: [{ field: "csv", message: "The file needs a name column." }] });
+    expect(errorMessage(error)).toBe("The file needs a name column.");
+  });
+
+  it("prefers the detail, and keeps our-side wording for server errors", () => {
+    expect(errorMessage(new ApiError({ ...problem, detail: "Too many lines." }))).toBe("Too many lines.");
+    const failed = new ApiError({ ...problem, status: 500, code: "internal", request_id: "01REQ" });
+    expect(errorMessage(failed)).toContain("Something went wrong on our side");
   });
 });

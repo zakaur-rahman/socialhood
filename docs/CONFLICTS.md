@@ -10537,3 +10537,11 @@ Reverted on develop (#287, a revert of #284) except migration 0067 and the model
 `social_accounts.deletion_due_at`: the column stays, unused, because 0068 (C-215) follows it.
 The Privacy Policy, data-deletion page and DPA are back to 24 hours. To bring C-214 back, revert
 the revert and drop the migration and model lines from its diff.
+
+## C-217: a refused request shows its reason, not "our side" (2026-11-28)
+
+Owner, importing Meta's data file into Products: the API refused it correctly (422, the header
+has no `name`), but the dialog said "Something went wrong on our side". `errorMessage`
+(apps/web/src/lib/copy.ts) used only `detail` for a 4xx, and a validation error can carry its
+reason only per field. It now falls back to the first field's message, so every form that shows
+`errorMessage` gives the real reason; 5xx and network errors keep their wording.

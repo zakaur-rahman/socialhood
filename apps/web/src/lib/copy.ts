@@ -14,8 +14,10 @@ export function errorMessage(error: unknown): string {
   if (apiError?.code === "network") {
     return `We couldn't reach ${SITE_NAME}. Try again in a moment. If it keeps happening, email ${SUPPORT_EMAIL}.`;
   }
-  if (apiError && apiError.status >= 400 && apiError.status < 500 && apiError.detail) {
-    return apiError.detail;
+  if (apiError && apiError.status >= 400 && apiError.status < 500) {
+    // A refusal names its reason in `detail` or, for validation, per field: never "our side".
+    const reason = apiError.detail ?? apiError.errors[0]?.message;
+    if (reason) return reason;
   }
   const code = apiError?.requestId ? ` with code ${apiError.requestId}` : "";
   return `Something went wrong on our side. Try again. If it keeps happening, email ${SUPPORT_EMAIL}${code}.`;
