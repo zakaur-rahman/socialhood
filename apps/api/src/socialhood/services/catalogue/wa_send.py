@@ -59,7 +59,10 @@ class Resolved:
 
 
 def _not_synced(label: str) -> str:
-    return f"{label} isn't in the WhatsApp catalogue yet. Wait for the sync, or press Sync now."
+    return (
+        f"{label} isn't in the WhatsApp catalogue yet. Meta adds it the next time it fetches your "
+        "product feed (hourly)."
+    )
 
 
 async def _connection_for(session: AsyncSession, conv: Conversation) -> CatalogueConnection:
@@ -68,8 +71,6 @@ async def _connection_for(session: AsyncSession, conv: Conversation) -> Catalogu
     conn = await wa_catalogue.get(session)
     if conn is None:
         raise ApiError("conflict", NOT_CONNECTED)
-    if conn.status != "active":
-        raise ApiError("conflict", wa_catalogue.NEEDS_ATTENTION)
     if conn.social_account_id != conv.social_account_id:
         raise ApiError("conflict", OTHER_NUMBER)
     return conn
@@ -234,7 +235,7 @@ async def native_for_step(
     if conv.platform != "whatsapp":
         return None
     conn = await wa_catalogue.get(session)
-    if conn is None or conn.status != "active" or conn.social_account_id != conv.social_account_id:
+    if conn is None or conn.social_account_id != conv.social_account_id:
         return None
     product = await repo.get(session, product_id)
     if product is None or not product.active:

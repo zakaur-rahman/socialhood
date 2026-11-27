@@ -9,12 +9,10 @@ import type { Message, ProductMessageSend, WaCatalogueConnectInput, WaCatalogueS
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
 
-/** While a sync runs, the card refreshes this often. */
-export const WA_CATALOGUE_POLL_MS = 4_000;
-
 /**
- * The WhatsApp catalogue (GR-33): the connection to a Meta commerce catalogue and how its sync is
- * going. Reading is on every plan; connecting and syncing are part of Creator and Business (PD-8).
+ * The WhatsApp catalogue (GR-33, C-215): the connection to a Meta commerce catalogue, its feed link
+ * (owners and admins only) and how the products stand against Meta's last fetch of that feed.
+ * Reading is on every plan; connecting is part of Creator and Business (PD-8).
  */
 export function useWaCatalogue(wid: string, enabled = true) {
   const api = useApi();
@@ -22,11 +20,10 @@ export function useWaCatalogue(wid: string, enabled = true) {
     queryKey: keys.waCatalogue(wid),
     enabled,
     queryFn: () => unwrap(api.GET("/v1/w/{wid}/integrations/whatsapp-catalogue", { params: { path: { wid } } })),
-    refetchInterval: (query) => (query.state.data?.syncing ? WA_CATALOGUE_POLL_MS : false),
   });
 }
 
-/** 402 on Free; 409 with Meta's reason in plain words when it won't show the catalogue. */
+/** 402 on Free; 422 when the catalogue id isn't digits. Doesn't contact Meta. */
 export function useConnectWaCatalogue(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -38,12 +35,13 @@ export function useConnectWaCatalogue(wid: string) {
   });
 }
 
-export function useSyncWaCatalogue(wid: string) {
+/** A new feed link; the old one stops working at once. */
+export function useRenewWaCatalogueFeedLink(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<WaCatalogueStatus, Error, void>({
     mutationFn: () =>
-      unwrap(api.POST("/v1/w/{wid}/integrations/whatsapp-catalogue/sync", { params: { path: { wid } } })),
+      unwrap(api.POST("/v1/w/{wid}/integrations/whatsapp-catalogue/feed-link", { params: { path: { wid } } })),
     onSuccess: (status) => queryClient.setQueryData(keys.waCatalogue(wid), status),
   });
 }

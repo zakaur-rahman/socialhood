@@ -2,9 +2,9 @@ import type { Api } from "./support/api";
 import { expect, test } from "./support/fixtures";
 
 /**
- * GR-33 WhatsApp catalogue messages, on the e2e stack with a sandbox WhatsApp number: its Meta
- * catalogue is the built-in sandbox (sandbox numbers never reach Meta). Connect a catalogue, let
- * the products sync, send a product message from the inbox, and turn a customer's cart into an
+ * GR-33 WhatsApp catalogue messages (C-215: a scheduled feed), on the e2e stack with a sandbox
+ * WhatsApp number. Connect a catalogue, fetch its feed link as Meta would so the products count as
+ * in the catalogue, send a product message from the inbox, and turn a customer's cart into an
  * order awaiting payment.
  */
 const PICTURE = "https://cdn.example/kurta.jpg";
@@ -24,7 +24,7 @@ async function kurta(api: Api, wid: string): Promise<Kurta> {
 }
 
 test.describe("GR-33 WhatsApp catalogue messages", () => {
-  test("a catalogue is connected, its products sync and a product message is sent", async ({ page, api, sandbox }) => {
+  test("a catalogue is connected, Meta fetches its feed and a product message is sent", async ({ page, api, sandbox, request }) => {
     const { workspace } = sandbox;
     await api.setPlan(workspace.id, "pro");
     const wa = await api.connectSandbox(workspace.id, "whatsapp");
@@ -32,11 +32,19 @@ test.describe("GR-33 WhatsApp catalogue messages", () => {
 
     await page.goto(`/w/${workspace.slug}/products`);
     const card = page.getByRole("region", { name: "WhatsApp catalogue" });
-    await card.getByLabel("Catalogue id").fill("e2e-catalog-1");
+    await card.getByLabel("Catalogue id").fill("100000000033");
     await card.getByRole("button", { name: "Connect catalogue" }).click();
-    await expect(card.getByText(/Connected to .*e2e-catalog-1/)).toBeVisible({ timeout: 30_000 });
-    // The first sync runs in the worker; the card polls while it does.
-    await expect(card.getByText(/2 items in the catalogue/)).toBeVisible({ timeout: 60_000 });
+    await expect(card.getByText(/Connected to catalogue 100000000033/)).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByText(/Meta hasn't fetched your products yet/)).toBeVisible();
+    await expect(card.getByRole("button", { name: /Sync/ })).toHaveCount(0);
+
+    // Meta fetches the feed link; that fetch is what puts the items in the catalogue.
+    const feed = await request.get(await card.getByLabel("Feed link").inputValue());
+    expect(feed.ok()).toBe(true);
+    expect(await feed.text()).toContain("Cotton kurta");
+    await page.reload();
+    await expect(card.getByText(/Meta last fetched your products/)).toBeVisible({ timeout: 30_000 });
+    await expect(card.getByText("In the catalogue").locator("xpath=following-sibling::dd")).toHaveText("2");
 
     await api.inbound(workspace.id, { accountId: wa.id, kind: "dm", text: "Do you have a kurta?", fromId: "919800000033" });
     await page.goto(`/w/${workspace.slug}/inbox`);

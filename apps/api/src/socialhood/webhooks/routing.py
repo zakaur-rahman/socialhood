@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import tenant_bypass_scope
-from socialhood.models.catalogue import ShopifyConnection
+from socialhood.models.catalogue import CatalogueConnection, ShopifyConnection
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.orders import PaymentConnection
 
@@ -106,5 +106,16 @@ async def razorpay_webhook_secret(session: AsyncSession, token: str) -> bytes | 
             select(PaymentConnection.razorpay_webhook_secret_enc).where(
                 PaymentConnection.webhook_token == token,
                 PaymentConnection.razorpay_key_id.is_not(None),
+            )
+        )
+
+
+async def catalogue_feed_owner(session: AsyncSession, feed_token: str) -> uuid.UUID | None:
+    """The workspace whose WhatsApp catalogue feed has this secret link (C-215), or None. Meta's
+    fetch carries no other way to tell whose products it wants."""
+    with tenant_bypass_scope():
+        return await session.scalar(
+            select(CatalogueConnection.workspace_id).where(
+                CatalogueConnection.feed_token == feed_token
             )
         )

@@ -1,34 +1,34 @@
-"""GR-33: WhatsApp catalogue messages on the sandbox number and the sandbox Meta catalogue.
+"""GR-33 and C-215: the WhatsApp catalogue on the sandbox number.
 
-Connecting a catalogue (Pro and Max, PD-8; Meta must show it to the number), the sync (what is
-sent, only what changed, deletes, what can't be sent and why), product and product-list messages
-from the inbox, the flow step's native message and its text fallback, and a customer's cart
-becoming an order awaiting payment."""
+Connecting a catalogue (Pro and Max, PD-8; Meta isn't asked), the feed Meta fetches (Meta's
+data-file format, one row per variant, what can't be in it and why, the secret link, the plan),
+product and product-list messages from the inbox (only items Meta fetched), the flow step's native
+message and its text fallback, and a customer's cart becoming an order awaiting payment."""
 
 from __future__ import annotations
 
+import csv
+import io
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.jobs.tasks import send as send_tasks
-from socialhood.metacatalog.client import CatalogueError
-from socialhood.metacatalog.fake import FakeCatalogue
 from socialhood.models.inbox import Conversation
 from socialhood.platforms.sandbox import outbox
-from socialhood.security.crypto import cipher_for
 from socialhood.services.catalogue import wa_catalogue, wa_send
 from socialhood.services.catalogue.products import ProductData, VariantData
 from tests.support.api import Clerk
 from tests.support.automation_api import workspace
+from tests.support.billing import set_subscription
 from tests.support.broadcasts import Shop, shop
 from tests.support.catalogue import Made, make_product
 from tests.support.sending import clean_outbox, context
@@ -59,7 +59,10 @@ async def kurta(desk: Shop) -> Made:
     return await make_product(desk.engine, workspace_id=desk.ws.wid, image_url=PICTURE)
 
 
-async def connect(desk: Shop, catalog_id: str = "cat-1") -> dict[str, Any]:
+CATALOG = "1555280009762482"
+
+
+async def connect(desk: Shop, catalog_id: str = CATALOG) -> dict[str, Any]:
     return await desk.ws.ok(
         "PUT",
         "/integrations/whatsapp-catalogue",
@@ -67,22 +70,24 @@ async def connect(desk: Shop, catalog_id: str = "cat-1") -> dict[str, Any]:
     )
 
 
-async def sync(desk: Shop) -> str:
-    """One pass of the sync job, as the worker runs it."""
-    settings = desk.app.state.settings
-    with workspace_scope(uuid.UUID(desk.ws.wid)):
-        return await wa_catalogue.run_sync(
-            make_sessionmaker(desk.engine),
-            desk.app.state.http,
-            settings,
-            cipher_for(tuple(settings.token_encryption_keys)),
-            now=datetime.now(UTC),
-        )
+def feed_path(status: dict[str, Any]) -> str:
+    return urlsplit(status["feed_url"]).path
 
 
-async def synced(desk: Shop) -> None:
-    await connect(desk)
-    assert await sync(desk) == "done"
+async def fetch(desk: Shop, path: str) -> httpx.Response:
+    """Meta's fetch of the feed: no sign-in, only the link."""
+    return await desk.ws.client.get(path)
+
+
+def rows_of(response: httpx.Response) -> list[dict[str, str]]:
+    return list(csv.DictReader(io.StringIO(response.text)))
+
+
+async def synced(desk: Shop) -> dict[str, Any]:
+    """Connected, and Meta has fetched the feed once."""
+    status = await connect(desk)
+    assert (await fetch(desk, feed_path(status))).status_code == 200
+    return status
 
 
 # ---------------------------------------------------------------- the plan and the connection
@@ -97,71 +102,55 @@ async def test_free_reads_the_status_but_cannot_connect(
     refused = await free.call(
         "PUT",
         "/integrations/whatsapp-catalogue",
-        json={"social_account_id": free.account_id, "catalog_id": "cat-1"},
+        json={"social_account_id": free.account_id, "catalog_id": CATALOG},
     )
     assert refused.status_code == 402
     assert refused.json()["entitlement"] == "commerce"
 
 
-async def test_connecting_checks_the_catalogue_with_meta(desk: Shop) -> None:
-    for catalog_id in ("missing", "denied"):
-        refused = await desk.ws.call(
-            "PUT",
-            "/integrations/whatsapp-catalogue",
-            json={"social_account_id": desk.ws.account_id, "catalog_id": catalog_id},
-        )
-        assert refused.status_code == 409, catalog_id
-    status = await connect(desk)
-    assert (status["connected"], status["status"], status["catalog_id"]) == (
-        True,
-        "active",
-        "cat-1",
-    )
-    assert status["catalog_name"] == "Sandbox catalogue cat-1"
-    assert status["brand"]  # the workspace's name unless one is given
-
-
-async def test_meta_not_answering_is_a_502_and_saves_nothing(
-    desk: Shop, fake_catalogue: FakeCatalogue
-) -> None:
-    fake_catalogue.fail_next(CatalogueError("unavailable"))
+async def test_connecting_saves_the_id_without_meta_and_makes_a_feed_link(desk: Shop) -> None:
     refused = await desk.ws.call(
         "PUT",
         "/integrations/whatsapp-catalogue",
-        json={"social_account_id": desk.ws.account_id, "catalog_id": "cat-1"},
+        json={"social_account_id": desk.ws.account_id, "catalog_id": "SAR-001"},
     )
-    assert refused.status_code == 502
-    assert (await desk.ws.ok("GET", "/integrations/whatsapp-catalogue"))["connected"] is False
+    assert refused.status_code == 422  # a product code, not Meta's catalogue id
+    status = await connect(desk)
+    assert (status["connected"], status["catalog_id"]) == (True, CATALOG)
+    assert status["brand"]  # the workspace's name unless one is given
+    assert status["feed_url"].endswith(".csv")
+    assert status["feed_fetched_at"] is None
+    # Connecting again keeps the link Meta was given.
+    assert (await connect(desk))["feed_url"] == status["feed_url"]
 
 
-# ---------------------------------------------------------------- the sync
-
-
-async def test_the_sync_sends_one_item_per_variant_and_only_what_changed(
-    desk: Shop, fake_catalogue: FakeCatalogue
+async def test_the_feed_is_meta_s_format_one_row_per_variant_and_records_the_fetch(
+    desk: Shop,
 ) -> None:
     made = await kurta(desk)
-    await synced(desk)
+    status = await connect(desk)
+    assert (status["items_synced"], status["items_pending"]) == (0, 4)
 
-    held = fake_catalogue.items["cat-1"]
-    assert set(held) == {str(v) for v in made.variants.values()}
-    medium = held[str(made.variants["Blue / M"])]
-    assert (medium["title"], medium["price"], medium["availability"]) == (
+    response = await fetch(desk, feed_path(status))
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.text.splitlines()[0] == ",".join(wa_catalogue.FEED_COLUMNS)
+    rows = {row["id"]: row for row in rows_of(response)}
+    assert set(rows) == {str(v) for v in made.variants.values()}
+    medium = rows[str(made.variants["Blue / M"])]
+    assert (medium["title"], medium["price"], medium["availability"], medium["condition"]) == (
         "Cotton kurta - Blue / M",
         "799.00 INR",
         "in stock",
+        "new",
     )
-    assert held[str(made.variants["Blue / L"])]["availability"] == "out of stock"
+    assert (medium["image_link"], medium["item_group_id"]) == (PICTURE, str(made.id))
+    assert rows[str(made.variants["Blue / L"])]["availability"] == "out of stock"
     status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
-    assert (status["items_synced"], status["items_error"], status["items_pending"]) == (4, 0, 0)
-    assert status["synced_at"] is not None
+    assert (status["items_synced"], status["items_pending"], status["items_error"]) == (4, 0, 0)
+    assert status["feed_fetched_at"] is not None
 
-    # Nothing changed: nothing is sent.
-    pushes = len([c for c in fake_catalogue.calls if c[0] == "push"])
-    assert await sync(desk) == "done"
-    assert len([c for c in fake_catalogue.calls if c[0] == "push"]) == pushes
-
-    # One price changes: only that item goes.
+    # One price changes: that item waits for Meta's next fetch.
     await desk.ws.ok(
         "PATCH",
         f"/products/{made.id}",
@@ -177,15 +166,15 @@ async def test_the_sync_sends_one_item_per_variant_and_only_what_changed(
             ]
         },
     )
-    assert await sync(desk) == "done"
-    last = [c for c in fake_catalogue.calls if c[0] == "push"][-1]
-    assert last[1]["count"] == 1  # only Blue / M
-    assert fake_catalogue.items["cat-1"][str(made.variants["Blue / M"])]["price"] == "899.00 INR"
+    status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
+    assert (status["items_synced"], status["items_pending"]) == (4, 1)
+    again = rows_of(await fetch(desk, feed_path(status)))
+    assert {r["id"]: r["price"] for r in again}[str(made.variants["Blue / M"])] == "899.00 INR"
+    status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
+    assert status["items_pending"] == 0
 
 
-async def test_a_deleted_or_switched_off_product_is_deleted_from_the_catalogue(
-    desk: Shop, fake_catalogue: FakeCatalogue
-) -> None:
+async def test_a_deleted_or_switched_off_product_leaves_the_feed(desk: Shop) -> None:
     made = await kurta(desk)
     scarf = await make_product(
         desk.engine,
@@ -198,47 +187,68 @@ async def test_a_deleted_or_switched_off_product_is_deleted_from_the_catalogue(
             variants=[VariantData("One size", 49900)],
         ),
     )
-    await synced(desk)
-    assert len(fake_catalogue.items["cat-1"]) == 5
+    status = await synced(desk)
+    assert (await desk.ws.ok("GET", "/integrations/whatsapp-catalogue"))["items_synced"] == 5
 
     await desk.ws.ok("PATCH", f"/products/{made.id}", json={"active": False})
     await desk.ws.ok("DELETE", f"/products/{scarf.id}", 204)
-    assert await sync(desk) == "done"
-    assert fake_catalogue.items["cat-1"] == {}
+    assert rows_of(await fetch(desk, feed_path(status))) == []
     assert (await desk.ws.ok("GET", "/integrations/whatsapp-catalogue"))["items_synced"] == 0
 
 
-async def test_an_item_that_cannot_be_sent_says_why(
-    desk: Shop, fake_catalogue: FakeCatalogue
-) -> None:
+async def test_a_product_that_cannot_be_in_the_feed_says_why(desk: Shop) -> None:
     await make_product(desk.engine, workspace_id=desk.ws.wid, url=None, image_url=PICTURE)
-    await synced(desk)
-    assert fake_catalogue.items.get("cat-1", {}) == {}
+    status = await synced(desk)
+    assert rows_of(await fetch(desk, feed_path(status))) == []
     status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
-    assert status["items_error"] == 4
+    assert (status["items_error"], status["items_pending"]) == (4, 0)
     assert status["problems"][0]["message"] == wa_catalogue.NO_LINK
 
 
-async def test_meta_refusing_the_token_asks_for_attention(
-    desk: Shop, fake_catalogue: FakeCatalogue
-) -> None:
+async def test_the_link_is_the_only_key_and_a_new_link_replaces_it(desk: Shop) -> None:
     await kurta(desk)
-    await connect(desk)
-    fake_catalogue.fail_next(CatalogueError("auth"))
-    assert await sync(desk) == "reconnect"
+    status = await connect(desk)
+    old = feed_path(status)
+    for path in (
+        "/v1/feeds/whatsapp-catalogue/short.csv",
+        "/v1/feeds/whatsapp-catalogue/" + "x" * 43 + ".csv",
+    ):
+        assert (await fetch(desk, path)).status_code == 404, path
+
+    renewed = await desk.ws.ok("POST", "/integrations/whatsapp-catalogue/feed-link")
+    assert renewed["feed_url"] != status["feed_url"]
+    assert (await fetch(desk, old)).status_code == 404
+    assert (await fetch(desk, feed_path(renewed))).status_code == 200
+
+
+async def test_the_feed_stops_when_the_plan_loses_commerce(desk: Shop) -> None:
+    await kurta(desk)
+    status = await synced(desk)
+    await set_subscription(desk.engine, workspace_id=desk.ws.wid, plan="free")
+    assert (await fetch(desk, feed_path(status))).status_code == 404  # Meta keeps what it has
     status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
-    assert status["status"] == "needs_reconnect"
-    assert status["sync_error"]
-    assert (await desk.ws.call("POST", "/integrations/whatsapp-catalogue/sync")).status_code == 409
+    assert status["last_error"] == wa_catalogue.PLAN_STOPPED
+    assert status["items_synced"] == 4
 
 
-async def test_disconnecting_forgets_the_connection(desk: Shop) -> None:
+async def test_another_catalogue_starts_empty(desk: Shop) -> None:
     await kurta(desk)
     await synced(desk)
+    status = await connect(desk, catalog_id="2000000000000001")
+    assert (status["items_synced"], status["items_pending"], status["feed_fetched_at"]) == (
+        0,
+        4,
+        None,
+    )
+
+
+async def test_disconnecting_forgets_the_connection_and_its_link(desk: Shop) -> None:
+    await kurta(desk)
+    status = await synced(desk)
     await desk.ws.ok("DELETE", "/integrations/whatsapp-catalogue", 204)
-    status = await desk.ws.ok("GET", "/integrations/whatsapp-catalogue")
-    assert status["connected"] is False
+    assert (await desk.ws.ok("GET", "/integrations/whatsapp-catalogue"))["connected"] is False
     assert await desk.rows("SELECT id FROM catalogue_items") == []
+    assert (await fetch(desk, feed_path(status))).status_code == 404
 
 
 # ---------------------------------------------------------------- sending
@@ -281,7 +291,7 @@ async def test_a_product_message_goes_out_as_meta_s_interactive_message(desk: Sh
     [row] = await desk.rows("SELECT interactive FROM messages WHERE id = :m", m=queued["id"])
     assert row["interactive"] == {
         "type": "product",
-        "catalog_id": "cat-1",
+        "catalog_id": CATALOG,
         "retailer_id": str(made.variants["Blue / M"]),
     }
 
@@ -315,7 +325,7 @@ async def test_a_product_list_has_sections_and_needs_a_header(desk: Shop) -> Non
 
 async def test_an_item_not_in_the_catalogue_yet_is_refused_by_name(desk: Shop) -> None:
     made = await kurta(desk)
-    await connect(desk)  # connected, not yet synced
+    await connect(desk)  # connected; Meta hasn't fetched the feed yet
     conversation = await customer_conversation(desk)
     refused = await desk.ws.call(
         "POST",

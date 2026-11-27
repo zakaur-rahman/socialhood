@@ -74,7 +74,7 @@ export function SendProductDialog({
   const [sections, setSections] = useState<Section[]>(() => [nextSection("Products")]);
   const [problem, setProblem] = useState<string | null>(null);
   const list = kind === "product_list";
-  const connected = catalogue.data?.connected && catalogue.data.status === "active";
+  const connected = catalogue.data?.connected;
   const total = sections.reduce((sum, section) => sum + section.picked.size, 0);
 
   function close(next: boolean) {
