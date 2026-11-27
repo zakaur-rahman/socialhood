@@ -24232,6 +24232,18 @@
             "title": "Deleting",
             "type": "boolean"
           },
+          "deletion_due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletion Due At"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -26514,9 +26526,9 @@
             "title": "Brand"
           },
           "catalog_id": {
-            "maxLength": 40,
-            "minLength": 3,
-            "pattern": "^[A-Za-z0-9_-]+$",
+            "maxLength": 30,
+            "minLength": 5,
+            "pattern": "^[0-9]+$",
             "title": "Catalog Id",
             "type": "string"
           },
@@ -26552,6 +26564,7 @@
         "type": "object"
       },
       "WaCatalogueStatus": {
+        "description": "C-215: Meta fetches the products from ``feed_url`` (a scheduled data feed in Commerce\nManager). ``items_synced``: items Meta got in its last fetch; ``items_pending``: items added or\nchanged since; ``items_error``: products that can't be in the feed (``problems`` says why).",
         "properties": {
           "account_label": {
             "anyOf": [
@@ -26586,7 +26599,27 @@
             ],
             "title": "Catalog Id"
           },
-          "catalog_name": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "feed_fetched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feed Fetched At"
+          },
+          "feed_url": {
             "anyOf": [
               {
                 "type": "string"
@@ -26595,15 +26628,7 @@
                 "type": "null"
               }
             ],
-            "title": "Catalog Name"
-          },
-          "connected": {
-            "title": "Connected",
-            "type": "boolean"
-          },
-          "entitled": {
-            "title": "Entitled",
-            "type": "boolean"
+            "title": "Feed Url"
           },
           "items_error": {
             "default": 0,
@@ -26649,49 +26674,6 @@
               }
             ],
             "title": "Social Account Id"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "enum": [
-                  "active",
-                  "needs_reconnect"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          },
-          "sync_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sync Error"
-          },
-          "synced_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Synced At"
-          },
-          "syncing": {
-            "default": false,
-            "title": "Syncing",
-            "type": "boolean"
           }
         },
         "required": [
@@ -38457,7 +38439,7 @@
     },
     "/v1/w/{wid}/conversations/{conversation_id}/product-message": {
       "post": {
-        "description": "Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up\nto 10 sections) in the conversation. Every item must be in the catalogue as last synced. 402\nwithout commerce on the plan, 409 when no catalogue is connected, it belongs to another number\nor the reply window is closed, 422 for an item that isn't ready or a list without a header.",
+        "description": "Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up\nto 10 sections) in the conversation. Every item must have been in Meta's last fetch of the\nfeed. 402\nwithout commerce on the plan, 409 when no catalogue is connected, it belongs to another number\nor the reply window is closed, 422 for an item that isn't ready or a list without a header.",
         "operationId": "send_product_message",
         "parameters": [
           {
@@ -40787,7 +40769,7 @@
     },
     "/v1/w/{wid}/integrations/whatsapp-catalogue": {
       "delete": {
-        "description": "Forget the connection. The catalogue itself is left as it is in Meta.",
+        "description": "Forget the connection; its feed link stops working. The catalogue itself is left as it is\nin Meta.",
         "operationId": "disconnect_whatsapp_catalogue",
         "parameters": [
           {
@@ -40832,7 +40814,7 @@
         ]
       },
       "get": {
-        "description": "The connection, how many items Meta has, which ones it refused and why. Any member may read\nit (the inbox's \"Send product\" needs to know a catalogue is connected).",
+        "description": "The connection, how many items Meta got in its last fetch of the feed, which products\ncan't be in it and why. Any member may read it (the inbox's \"Send product\" needs to know a\ncatalogue is connected); only owners and admins get ``feed_url``.",
         "operationId": "get_whatsapp_catalogue",
         "parameters": [
           {
@@ -40884,7 +40866,7 @@
         ]
       },
       "put": {
-        "description": "Check Meta shows the catalogue to the number's business account, save the connection and\nstart the first sync. 402 without commerce on the plan, 404 for an account that isn't this\nworkspace's, 422 for a number that isn't WhatsApp, 409 for a catalogue Meta won't show (not\nfound, or not connected to the number's business account), 502 when Meta doesn't answer.",
+        "description": "Save the WhatsApp number and the catalogue id, and make the feed link (C-215: Meta fetches\nthe products from it; Meta isn't asked about the catalogue, it doesn't show it to the app).\n402 without commerce on the plan, 404 for an account that isn't this workspace's, 422 for a\nnumber that isn't WhatsApp or an id that isn't Meta's (digits).",
         "operationId": "connect_whatsapp_catalogue",
         "parameters": [
           {
@@ -40946,10 +40928,10 @@
         ]
       }
     },
-    "/v1/w/{wid}/integrations/whatsapp-catalogue/sync": {
+    "/v1/w/{wid}/integrations/whatsapp-catalogue/feed-link": {
       "post": {
-        "description": "Send what changed now. While a sync runs this changes nothing.",
-        "operationId": "sync_whatsapp_catalogue",
+        "description": "A new feed link; the old one stops working at once (paste the new one in Commerce\nManager). 409 when no catalogue is connected.",
+        "operationId": "renew_whatsapp_catalogue_feed_link",
         "parameters": [
           {
             "in": "path",
@@ -40963,7 +40945,7 @@
           }
         ],
         "responses": {
-          "202": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -40994,7 +40976,7 @@
             "description": "Problem details (application/problem+json)"
           }
         },
-        "summary": "Sync Whatsapp Catalogue",
+        "summary": "Renew Whatsapp Catalogue Feed Link",
         "tags": [
           "catalogue"
         ]
@@ -48213,7 +48195,7 @@
     },
     "/v1/w/{wid}/social-accounts/{account_id}": {
       "delete": {
-        "description": "Owners and admins. Three uses (FR-CON-06, C-067):\n\n- Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop\n  and automations pause; what was stored stays.\n- Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects\n  the same way, then every row, file and cached key of the account is purged in the\n  background. Knowledge, workspace settings, billing and other accounts are kept.\n- Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox\n  account; 409 for a live one (disconnect first, or use Disconnect and delete data).\n\n``confirm`` is the account's handle (with or without \"@\") or number, else its name; a\nmismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``\ntrue; it is gone from the list once done (a ``resync`` event follows).",
+        "description": "Owners and admins. Three uses (FR-CON-06, C-067):\n\n- Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop\n  and automations pause; what was stored stays.\n- Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects\n  the same way, then 15 days later every row, file and cached key of the account is purged\n  in the background (C-214: reconnecting before ``deletion_due_at`` cancels it and keeps the\n  data). Knowledge, workspace settings, billing and other accounts are kept.\n- Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox\n  account; 409 for a live one (disconnect first, or use Disconnect and delete data).\n\n``confirm`` is the account's handle (with or without \"@\") or number, else its name; a\nmismatch is 422 on ``confirm``. Until the purge has run the account is listed with\n``deleting`` true and its ``deletion_due_at``; it is gone from the list once done (a\n``resync`` event follows).",
         "operationId": "disconnect_social_account",
         "parameters": [
           {

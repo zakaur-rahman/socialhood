@@ -1,11 +1,21 @@
 "use client";
 
-import { MessageCircle, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Link2, MessageCircle, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { COMMERCE_UPGRADE } from "@/components/billing/upgrade-requests";
 import { SettingsCard } from "@/components/settings/SettingsCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,25 +27,22 @@ import { useUpgradeDialog } from "@/lib/api/provider";
 import {
   useConnectWaCatalogue,
   useDisconnectWaCatalogue,
+  useRenewWaCatalogueFeedLink,
   useSocialAccounts,
-  useSyncWaCatalogue,
   useWaCatalogue,
 } from "@/lib/api/queries";
 import type { WaCatalogueStatus } from "@/lib/api/types";
+import { plural } from "@/lib/copy";
 import { timeAgo } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
-function ago(iso: string): string {
-  return timeAgo(iso);
-}
-
 /**
- * Products, WhatsApp catalogue (GR-33): copy the products to a Meta commerce catalogue so WhatsApp
- * product and product-list messages can show them, and keep it in step. The catalogue is created
- * and connected to the WhatsApp Business Account in Meta's Commerce Manager and WhatsApp Manager;
- * here the catalogue's id is entered and checked with Meta. Part of Pro (PD-8). Nothing here has run
- * against a real catalogue yet (C-121), and the card says Meta's own reason when it refuses.
+ * Products, WhatsApp catalogue (GR-33, C-215): lets WhatsApp product and product-list messages show
+ * the products. Meta's WhatsApp sign-up never gives an app access to a catalogue, so Amplychat
+ * publishes the products at a secret feed link and the business adds that link once in Commerce
+ * Manager as a scheduled data feed; Meta fetches it hourly. Owners and admins see the link (the API
+ * leaves it out for other roles). Part of Creator and Business (PD-8).
  */
 export function WhatsAppCatalogueCard({ wid }: { wid: string }) {
   const status = useWaCatalogue(wid);
@@ -60,8 +67,8 @@ export function WhatsAppCatalogueCard({ wid }: { wid: string }) {
 
 function ConnectionBadge({ status }: { status: WaCatalogueStatus }) {
   if (!status.connected) return <Badge tone="neutral">Not connected</Badge>;
-  if (status.status === "needs_reconnect") return <Badge tone="danger">Needs attention</Badge>;
-  if (status.syncing) return <Badge tone="neutral">Syncing</Badge>;
+  if (status.last_error) return <Badge tone="danger">Needs attention</Badge>;
+  if (!status.feed_fetched_at) return <Badge tone="neutral">Waiting for Meta</Badge>;
   return <Badge tone="success">Connected</Badge>;
 }
 
@@ -84,12 +91,12 @@ function Body({ wid, status }: { wid: string; status: WaCatalogueStatus }) {
   return <Connected wid={wid} status={status} />;
 }
 
-function Connect({ wid, attention = false, catalogId = "" }: { wid: string; attention?: boolean; catalogId?: string }) {
+function Connect({ wid }: { wid: string }) {
   const accounts = useSocialAccounts(wid);
   const connect = useConnectWaCatalogue(wid);
   const numbers = (accounts.data ?? []).filter((account) => account.platform === "whatsapp");
   const [chosen, setChosen] = useState("");
-  const [text, setText] = useState(catalogId);
+  const [text, setText] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const accountId = chosen || numbers[0]?.id || "";
 
@@ -99,11 +106,11 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
     connect.mutate(
       { social_account_id: accountId, catalog_id: text.trim() },
       {
-        onSuccess: () => toast.success("WhatsApp catalogue connected. Your products are being sent."),
+        onSuccess: () => toast.success("WhatsApp catalogue connected. Now add the feed link in Commerce Manager."),
         onError: (error) => {
           if (error instanceof ApiError && (error.status === 409 || error.status === 422)) {
             setProblem(error.errors[0]?.message ?? error.detail ?? null);
-          } else toastError(error, "Meta didn't respond. Try again.");
+          } else toastError(error);
         },
       },
     );
@@ -114,12 +121,11 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
   }
   return (
     <form className="space-y-2" onSubmit={submit}>
-      {attention ? null : (
-        <p className="text-sm text-fg-secondary">
-          Create a catalogue in Meta Commerce Manager and connect it to your WhatsApp Business Account in WhatsApp
-          Manager. Then enter its id here. Amplychat only adds and updates the items it sends.
-        </p>
-      )}
+      <ol className="list-decimal space-y-1 ps-5 text-sm text-fg-secondary">
+        <li>In Meta Commerce Manager, create a catalogue in the business portfolio that owns your WhatsApp number.</li>
+        <li>Link it to the number in WhatsApp Manager &rsaquo; Catalogue.</li>
+        <li>Enter its id here.</li>
+      </ol>
       <Field id="wa-catalogue-number">
         <FieldLabel>WhatsApp number</FieldLabel>
         <select
@@ -136,94 +142,146 @@ function Connect({ wid, attention = false, catalogId = "" }: { wid: string; atte
       </Field>
       <Field id="wa-catalogue-id" invalid={Boolean(problem)}>
         <FieldLabel>Catalogue id</FieldLabel>
-        <Input maxLength={40} inputMode="numeric" value={text} onChange={(event) => setText(event.target.value)} />
-        <FieldDescription>Find it in Commerce Manager, under Catalogue, Settings.</FieldDescription>
+        <Input maxLength={30} inputMode="numeric" value={text} onChange={(event) => setText(event.target.value)} />
+        <FieldDescription>Commerce Manager &rsaquo; Catalogue &rsaquo; Settings.</FieldDescription>
         <FieldError>{problem}</FieldError>
       </Field>
       <Button type="submit" loading={connect.isPending} disabled={!text.trim() || !accountId}>
-        {attention ? "Connect again" : "Connect catalogue"}
+        Connect catalogue
       </Button>
     </form>
   );
 }
 
 function Connected({ wid, status }: { wid: string; status: WaCatalogueStatus }) {
-  const sync = useSyncWaCatalogue(wid);
   const disconnect = useDisconnectWaCatalogue(wid);
-  const attention = status.status === "needs_reconnect";
-  const name = status.catalog_name ? `${status.catalog_name} (${status.catalog_id})` : status.catalog_id;
+  const [renewing, setRenewing] = useState(false);
+  const feedUrl = status.feed_url;
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-fg-secondary">
-        Connected to {name} through {status.account_label ?? "your WhatsApp number"}.{" "}
-        {status.syncing
-          ? "Sending products now."
-          : status.synced_at
-            ? `${status.items_synced} ${status.items_synced === 1 ? "item" : "items"} in the catalogue, checked ${ago(status.synced_at)}.`
-            : "No sync has finished yet."}
+        Connected to catalogue {status.catalog_id} through {status.account_label ?? "your WhatsApp number"}.{" "}
+        {status.feed_fetched_at
+          ? `Meta last fetched your products ${timeAgo(status.feed_fetched_at)}.`
+          : "Meta hasn't fetched your products yet — add the link in Commerce Manager."}
       </p>
-      {attention ? (
-        <div className="space-y-2">
-          <Alert tone="danger" urgent>
-            {status.sync_error ?? status.last_error ?? "Meta no longer lets this number use the catalogue."}
-          </Alert>
-          <Connect wid={wid} attention catalogId={status.catalog_id ?? ""} />
-        </div>
-      ) : (
-        <>
-          {status.sync_error ? <Alert tone="warning">{status.sync_error}</Alert> : null}
-          {status.items_error > 0 ? (
-            <Alert tone="warning">
-              <p>
-                {status.items_error} {status.items_error === 1 ? "item can't" : "items can't"} be sent.
-              </p>
-              <ul className="mt-1 list-disc ps-5">
-                {(status.problems ?? []).map((problem) => (
-                  <li key={`${problem.name}-${problem.message}`}>
-                    {problem.name}: {problem.message}
-                  </li>
-                ))}
-              </ul>
-            </Alert>
-          ) : null}
-          <p className="text-xs text-fg-secondary">
-            Changes to products reach the catalogue within a few minutes. A product needs a price, a link and a
-            picture to be sent.
+      {status.last_error ? <Alert tone="warning">{status.last_error}</Alert> : null}
+
+      <dl className="grid grid-cols-3 gap-2 text-sm">
+        <Count label="In the catalogue" value={status.items_synced} />
+        <Count label="Waiting for Meta's next fetch" value={status.items_pending} />
+        <Count label="Problems" value={status.items_error} />
+      </dl>
+      {status.items_error > 0 ? (
+        <Alert tone="warning">
+          <p>
+            {status.items_error} {plural(status.items_error, "product can't", "products can't")} be in the catalogue.
           </p>
+          <ul className="mt-1 list-disc ps-5">
+            {(status.problems ?? []).map((problem) => (
+              <li key={`${problem.name}-${problem.message}`}>
+                {problem.name}: {problem.message}
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      ) : null}
+
+      {feedUrl ? (
+        <>
+          <FeedLink url={feedUrl} />
+          <div className="space-y-1 text-sm text-fg-secondary">
+            <p>Add it once in Commerce Manager:</p>
+            <ol className="list-decimal space-y-1 ps-5">
+              <li>Data sources &rsaquo; Add items &rsaquo; Data file.</li>
+              <li>Create a data file from scratch &rsaquo; Upload via URL or Google Sheets.</li>
+              <li>Paste the link and set the schedule to hourly.</li>
+            </ol>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setRenewing(true)}>
+              <Link2 aria-hidden /> New link
+            </Button>
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              loading={disconnect.isPending}
+              onClick={() =>
+                disconnect.mutate(undefined, {
+                  onSuccess: () => toast.success("WhatsApp catalogue disconnected."),
+                  onError: (error) => toastError(error),
+                })
+              }
+            >
+              <Trash2 aria-hidden /> Disconnect
+            </Button>
+          </div>
+          <RenewLink wid={wid} open={renewing} onOpenChange={setRenewing} />
         </>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {attention ? null : (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={status.syncing}
-            loading={sync.isPending}
+      ) : null}
+    </div>
+  );
+}
+
+function Count({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-line p-2">
+      <dt className="text-xs text-fg-secondary">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function FeedLink({ url }: { url: string }) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Feed link copied");
+    } catch {
+      toast.error("Couldn't copy. Select the link and copy it by hand.");
+    }
+  }
+  return (
+    <Field id="wa-catalogue-feed">
+      <FieldLabel>Feed link</FieldLabel>
+      <div className="flex gap-2">
+        <Input readOnly value={url} onFocus={(event) => event.currentTarget.select()} />
+        <Button type="button" variant="secondary" onClick={() => void copy()}>
+          <Copy aria-hidden /> Copy
+        </Button>
+      </div>
+      <FieldDescription>Keep it private: anyone with the link can see your product list.</FieldDescription>
+    </Field>
+  );
+}
+
+function RenewLink({ wid, open, onOpenChange }: { wid: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const renew = useRenewWaCatalogueFeedLink(wid);
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Make a new feed link?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The old link stops working at once. Paste the new one in Commerce Manager, or Meta can&rsquo;t fetch your
+            products.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
             onClick={() =>
-              sync.mutate(undefined, {
-                onSuccess: () => toast.success("Sending your products again."),
+              renew.mutate(undefined, {
+                onSuccess: () => toast.success("New feed link made. Paste it in Commerce Manager."),
                 onError: (error) => toastError(error),
               })
             }
           >
-            <RefreshCw aria-hidden /> Sync now
-          </Button>
-        )}
-        <Button
-          variant="destructive-ghost"
-          size="sm"
-          loading={disconnect.isPending}
-          onClick={() =>
-            disconnect.mutate(undefined, {
-              onSuccess: () => toast.success("WhatsApp catalogue disconnected."),
-              onError: (error) => toastError(error),
-            })
-          }
-        >
-          <Trash2 aria-hidden /> Disconnect
-        </Button>
-      </div>
-    </div>
+            Make new link
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

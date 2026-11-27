@@ -232,13 +232,16 @@ describe("search and filters (C-066)", () => {
 });
 
 describe("deleting an account's data (C-067)", () => {
-  it("Delete account and data sends the typed handle, then the list shows Deleting…", async () => {
+  it("Delete account and data sends the typed handle, then the list shows the day it goes (C-214)", async () => {
     const user = userEvent.setup();
     let deleting = false;
+    const due = new Date(Date.now() + 15 * 86_400_000).toISOString();
     const { calls } = renderWithApi(<ConnectionsPage />, {
       handlers: {
         "GET /v1/w/:wid/social-accounts": () =>
-          json({ items: [account(deleting ? { status: "disconnected", deleting: true } : {})] }),
+          json({
+            items: [account(deleting ? { status: "disconnected", deleting: true, deletion_due_at: due } : {})],
+          }),
         "DELETE /v1/w/:wid/social-accounts/:account_id": () => {
           deleting = true;
           return noContent();
@@ -252,14 +255,17 @@ describe("deleting an account's data (C-067)", () => {
     await user.type(within(dialog).getByLabelText(/to confirm/), "@maple.bakery");
     await user.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
 
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Deleting @maple.bakery and its data"));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("@maple.bakery disconnected. Its data is deleted in 15 days."),
+    );
     const sent = calls.find((c) => c.method === "DELETE");
     expect(sent?.path).toBe("/v1/w/w1/social-accounts/a1");
     expect(Object.fromEntries(sent?.url.searchParams ?? [])).toEqual({
       delete_data: "true",
       confirm: "@maple.bakery",
     });
-    expect(await within(card).findByText("Deleting…")).toBeInTheDocument();
+    expect(await within(card).findByText(/^Deletes on /)).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Reconnect" })).toBeInTheDocument();
   });
 
   it("a refusal other than the typed handle is a toast", async () => {

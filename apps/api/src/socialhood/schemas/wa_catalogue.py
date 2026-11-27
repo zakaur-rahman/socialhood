@@ -19,12 +19,11 @@ from socialhood.schemas.common import RequestModel, ResponseModel
 MAX_ITEMS = 30
 MAX_SECTIONS = 10
 
-CatalogueStatusName = Literal["active", "needs_reconnect"]
-
 
 class WaCatalogueConnect(RequestModel):
     social_account_id: uuid.UUID  # the WhatsApp number whose business account owns the catalogue
-    catalog_id: str = Field(min_length=3, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")
+    # Meta's catalogue id (Commerce Manager, Catalogue, Settings): digits only.
+    catalog_id: str = Field(min_length=5, max_length=30, pattern=r"^[0-9]+$")
     brand: str | None = Field(default=None, min_length=1, max_length=100)  # default: the workspace
 
 
@@ -34,22 +33,23 @@ class WaCatalogueProblem(ResponseModel):
 
 
 class WaCatalogueStatus(ResponseModel):
+    """C-215: Meta fetches the products from ``feed_url`` (a scheduled data feed in Commerce
+    Manager). ``items_synced``: items Meta got in its last fetch; ``items_pending``: items added or
+    changed since; ``items_error``: products that can't be in the feed (``problems`` says why)."""
+
     entitled: bool  # the plan includes commerce (PD-8)
     connected: bool
-    status: CatalogueStatusName | None = None
     social_account_id: uuid.UUID | None = None
     account_label: str | None = None
     catalog_id: str | None = None
-    catalog_name: str | None = None
     brand: str | None = None
-    syncing: bool = False
-    synced_at: datetime | None = None
-    sync_error: str | None = None
-    last_error: str | None = None
+    feed_url: str | None = None  # owners and admins only; null for other members
+    feed_fetched_at: datetime | None = None  # Meta's last fetch of the feed
+    last_error: str | None = None  # why the feed is stopped (the plan), if it is
     items_synced: int = 0
     items_pending: int = 0
     items_error: int = 0
-    problems: list[WaCatalogueProblem] = Field(default_factory=list)  # the first few refused items
+    problems: list[WaCatalogueProblem] = Field(default_factory=list)  # the first few, with why
 
 
 class ItemRef(RequestModel):

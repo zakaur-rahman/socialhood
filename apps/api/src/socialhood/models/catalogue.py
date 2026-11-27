@@ -173,9 +173,14 @@ class CatalogueConnection(IdMixin, TimestampMixin, TenantScoped, Base):
     sync_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(Text)
+    # C-215: Meta fetches the products from a scheduled data feed at a secret link (this token);
+    # sync_started_at, synced_at, sync_error and status belonged to the push sync and are unused.
+    feed_token: Mapped[str | None] = mapped_column(Text)
+    feed_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("workspace_id"),
+        UniqueConstraint("feed_token"),
         CheckConstraint("status IN ('active', 'needs_reconnect')", name="status"),
     )
 

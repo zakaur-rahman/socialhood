@@ -162,6 +162,7 @@ export function account(overrides: Partial<SocialAccount> = {}): SocialAccount {
     capabilities: ["dm_send", "dm_attachments"],
     sandbox: false,
     deleting: false,
+    deletion_due_at: null,
     ...overrides,
   };
 }

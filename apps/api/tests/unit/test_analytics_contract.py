@@ -34,11 +34,12 @@ def test_metrics_keep_only_known_values() -> None:
 
 
 def test_windows_and_ages_agree() -> None:
-    assert set(WINDOW_AGES) == set(SnapshotWindow)
+    # Every window has an age but the reading on connect (C-213), which is never asked for.
+    assert set(WINDOW_AGES) == set(SnapshotWindow) - {SnapshotWindow.CONNECT}
     ages = list(WINDOW_AGES.values())
     assert ages == sorted(ages)
     assert sorted(LIVE_COUNT_WINDOWS) == ["1h", "6h"]
-    assert set(get_args(AgeName)) == {w.value for w in SnapshotWindow} | {"lifetime"}
+    assert set(get_args(AgeName)) == {w.value for w in WINDOW_AGES} | {"lifetime"}
 
 
 def test_api_metrics_come_from_snapshots() -> None:

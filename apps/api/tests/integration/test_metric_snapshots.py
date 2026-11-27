@@ -20,15 +20,22 @@ import pytest
 import respx
 import time_machine
 from redis.asyncio import Redis
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.db.tenancy import workspace_scope
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.tasks.insights import queue_account_days, queue_post_snapshots
 from socialhood.platforms.buckets import Bucket, TokenBuckets
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
+from socialhood.repositories import social_accounts as accounts
 from socialhood.services.analytics.account_daily import due_day, snapshot_account_day
-from socialhood.services.analytics.snapshots import snapshot_account_posts
+from socialhood.services.analytics.snapshots import (
+    queue_connect_reading,
+    snapshot_account_posts,
+    snapshot_on_connect,
+)
 from socialhood.settings import Settings
 from tests.support.analytics import make_account_day
 from tests.support.inbox import make_account, make_workspace
@@ -476,6 +483,71 @@ async def test_the_insights_bucket_paces_the_calls(
     assert waits
     assert sum(waits) <= 2.0
     assert graph.calls == []
+
+
+# ---------------------------------------------------------------- the reading on connect (C-213)
+
+
+async def test_posts_from_before_the_connect_get_one_reading(
+    engine: AsyncEngine, deps: PlatformDeps, graph: FakeGraph, ig: Acct
+) -> None:
+    """Posts published 1 to 30 days before the account was connected missed their early
+    windows: each gets one reading, with its insights, stored as the ``connect`` window."""
+    connected = T0 + timedelta(days=40)
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE social_accounts SET connected_at = :c WHERE id = :a"),
+            {"c": connected, "a": ig.account_id},
+        )
+
+    async def post(before: timedelta, media_type: str = "image") -> uuid.UUID:
+        return await make_post(
+            engine,
+            workspace_id=ig.workspace_id,
+            account_id=ig.account_id,
+            posted_at=connected - before,
+            media_type=media_type,
+        )
+
+    old = await post(timedelta(days=3))
+    await post(timedelta(hours=2))  # still gets its own 24 h window
+    await post(timedelta(days=3), media_type="story")  # Stories keep their own readings
+    await post(timedelta(days=31))  # too old
+
+    async def run() -> list[tuple[uuid.UUID, str]]:
+        done = await snapshot_on_connect(
+            sessions(engine), deps, workspace_id=ig.workspace_id, account_id=ig.account_id
+        )
+        assert done is not None
+        return done.captured
+
+    with time_machine.travel(connected + timedelta(minutes=10), tick=False):
+        assert await run() == [(old, "connect")]
+        assert await run() == []  # read once
+    [snap] = await snapshots(engine, old)
+    assert snap["window"] == "connect"
+    assert (snap["metrics"]["likes"], snap["metrics"]["reach"]) == (10, 1000)
+    assert snap["insights_final"] is True  # the post was already 72 h old
+
+
+async def test_a_media_sync_queues_the_reading_on_connect_once(
+    engine: AsyncEngine, ig: Acct, queue: None
+) -> None:
+    await make_post(
+        engine,
+        workspace_id=ig.workspace_id,
+        account_id=ig.account_id,
+        posted_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    with workspace_scope(ig.workspace_id):
+        async with sessions(engine)() as session:
+            acct = await accounts.get(session, ig.account_id)
+            assert acct is not None
+            assert await queue_connect_reading(session, acct) is True
+            assert await queue_connect_reading(session, acct) is False  # already waiting
+    [job] = await jobs("snapshot_account_connect")
+    assert (job["queue_name"], job["queueing_lock"]) == ("bulk", f"snapconn:{ig.account_id}")
+    assert jobs_app.tasks["snapshot_account_connect"].queue == "bulk"
 
 
 # ---------------------------------------------------------------- the tick

@@ -299,7 +299,7 @@ EXAMPLE_BODIES.update(
     {
         ("PUT", "/v1/w/{wid}/integrations/whatsapp-catalogue"): {
             "social_account_id": "{account_id}",
-            "catalog_id": "into-b",
+            "catalog_id": "1000000000000002",
         },
         ("POST", "/v1/w/{wid}/conversations/{conversation_id}/product-message"): {
             "kind": "product",

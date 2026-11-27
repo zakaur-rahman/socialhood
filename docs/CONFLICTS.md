@@ -10447,3 +10447,83 @@ of a cancelled subscription.
   cancelled only in the app could instead be resumed and switched with proration (C-209); both
   stay offered.
 - **The return page** waits until the plan is no longer ending, so it doesn't confirm the old plan.
+
+## C-213: one reading on connect for posts that missed their early windows (2026-11-27)
+
+Owner, after a Facebook post showed no figures in Analytics: posts are read only at fixed ages
+(1 h, 6 h, 24 h, 72 h, 7 d, 30 d, inside a grace), so a post published before the account was
+connected got nothing until its next window, up to days away.
+- **The reading:** after a media sync, posts published 1 to 30 days before `connected_at` (not
+  Stories, at most 50, newest first) get one reading with their insights, stored as the window
+  `connect` (migration 0066 widens the window check). `snapshot_account_connect` runs in the bulk
+  lane; ON CONFLICT keeps it to one per post. Posts younger than a day at connect still get their
+  24 h window, so they are left out.
+- **Fair comparison kept:** `connect` has no age (not in WINDOW_AGES), so it never joins a
+  comparison or a ranking at an age. It counts in `lifetime` when it is the newest reading, and a
+  post with nothing at an age yet is shown at `lifetime` from it.
+- **Final:** the reading is final when the post was already 72 h old.
+
+## C-214: deleting an account's data waits 15 days, and a reconnect keeps it (2026-11-27)
+
+Owner: "Delete account and data" should be scheduled for 15 days, so a business that changes its
+mind and reconnects keeps the account's data. Before, the purge was queued at once (C-067).
+- **The wait:** a member's delete (Disconnect and delete data, or Remove) still stops everything at
+  once (token destroyed, disconnected, automations paused, scheduled messages and pending post
+  targets cancelled), and sets `social_accounts.deletion_due_at` to 15 days later (migration
+  0067; rows already deleting are due at once). The purge is queued only when it is due: by the
+  15-minute sweep, which now lists only due accounts and alerts 6 hours after the due time, not
+  the request. `purge_account` refuses an account not yet due (`not_due`). Asking again while it
+  waits changes nothing.
+- **Restore:** reconnecting the account in the same workspace before the due time (any platform,
+  through `_upsert`; the website chat by opening its settings, which already switched a
+  disconnected chat back on) clears the deletion and keeps every row. It stops 10 minutes before
+  the due time so it never meets a running purge, and the row is locked so a Meta request at the
+  same moment wins. Cancelled scheduled messages and posts stay cancelled; automations stay paused
+  until turned back on, as after a plain disconnect. Messages sent while it was disconnected are
+  not stored; the first sync brings back what it reaches.
+- **Not delayed:** a Meta data-deletion request is due at once, and makes a member's waiting
+  delete due at once too (the earlier due time wins). Deleting the workspace is unchanged.
+- **The card** shows "Deletes on <date>" with a Reconnect button for owners and admins, and
+  "Deleting…" once the day has passed. The dialog and the toast say 15 days. The Privacy Policy,
+  the data-deletion page and the DPA say 15 days for a member's delete and keep 24 hours for Meta
+  requests and workspace deletion. The legal effective date was not moved (as in C-198 and C-202).
+
+## C-215: the WhatsApp catalogue by scheduled feed, not by push (2026-11-28)
+
+Owner, after connecting a real catalogue failed: on production, a WhatsApp connection with
+`catalog_management` and `business_management` granted, the catalogue in the portfolio that owns
+the number and linked to it in WhatsApp Manager, and the catalogue connected to the app's assets,
+Meta still answered "missing permissions" (code 100/33) for the catalogue. Embedded Signup only
+hands the app the WhatsApp account, never a catalogue, and the business settings have nowhere to
+grant one, so GR-33's push sync (Catalog Batch API) could never work for any business.
+- **The feed:** `GET /v1/feeds/whatsapp-catalogue/{token}.csv` serves the products in Meta's
+  data-file format (id, title, description, availability, condition, price, link, image_link,
+  brand, item_group_id), one row per variant, ids still our variant or product ids (so carts and
+  product messages keep working). The business adds the link once in Commerce Manager (Data
+  sources › Data file › Create a data file from scratch › Upload via URL or Google Sheets,
+  hourly); each fetch replaces the catalogue's items. Migration 0068 adds `feed_token` (unique)
+  and `feed_fetched_at`; the push sync's columns stay unused (expand-only).
+- **The link is the key:** a 32-byte random token; New link replaces it; unknown tokens and a plan
+  without commerce get 404 (Meta keeps what it has). Limited per IP like other public routes; the
+  workspace is found by `webhooks/routing.catalogue_feed_owner` (the cross-workspace lookup). Only
+  owners and admins see the link.
+- **What Meta has:** each fetch records the items it served (`catalogue_items`, with their hash);
+  product messages accept only those. Any fetch counts, also someone opening the link (Meta's
+  fetcher can't be told apart reliably; owner's decision 2). Items added or changed since show as
+  waiting for Meta's next fetch.
+- **Connect** saves the number and the id (digits only) without asking Meta.
+- **Removed (owner's decision 1):** the push sync, its 5-minute sweep and the triggers after
+  product changes, the Sync button, and the Meta catalogue client and its sandbox fake. So the app
+  no longer needs `catalog_management` or `business_management`; neither goes to App Review.
+- **Kept (decision 3):** Meta requires a link and a picture per item; products without them stay
+  out of the feed and the card says why.
+- **Also:** the dashboard now loads product pictures from any HTTPS site (`img-src https:`), so
+  pictures imported from shops show.
+## C-216: a WhatsApp template can be sent while the window is open (2026-11-28)
+
+Owner: "need send template". The reply box offered a template only once the 24-hour window had
+closed (or on a failed send), though WhatsApp accepts templates at any time and the API already
+allowed one while the window is open (services/reply_window.may_send). The reply box's toolbar
+now has a "Send a template" button on WhatsApp conversations, opening the same picker (approved
+templates only). Inside the window a utility template is free under WhatsApp's pricing; marketing
+templates are charged either way.

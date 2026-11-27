@@ -44,6 +44,9 @@ class SnapshotWindow(StrEnum):
     H72 = "72h"
     D7 = "7d"
     D30 = "30d"
+    # C-213: one reading after the account is connected, of posts that missed their early windows.
+    # It has no age (not in WINDOW_AGES): shown as lifetime figures, never compared at an age.
+    CONNECT = "connect"
 
 
 # How long after publishing each window is due.

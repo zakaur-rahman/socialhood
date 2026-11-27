@@ -105,6 +105,7 @@ RECOVERY: dict[str, Recovery] = {
     "dispatch_youtube_comments": R,
     "poll_youtube_comments": R,  # reads, and the intake stores each comment once
     "snapshot_account_posts": R,  # each window is captured once
+    "snapshot_account_connect": R,  # each post's reading on connect is captured once
     "snapshot_account_day": R,  # one row per account and day
     "crawl_site": R,  # resumable: the queue is in site_pages, a stale version is dropped
     "dispatch_site_recrawls": R,  # a started crawl is queued, so a re-run leaves it alone
@@ -117,8 +118,6 @@ RECOVERY: dict[str, Recovery] = {
     "decide_auto_reply": R,  # one transaction; a stable client id per suggestion, pending only
     "deliver_webhook": R,  # GR-04: at least once; receivers dedupe on webhook-id
     "sync_shopify_products": R,  # GR-31: a full pass that upserts by Shopify id; re-run is harmless
-    "sync_whatsapp_catalogue": R,  # GR-33: sends only what changed; a re-run is harmless
-    "sweep_whatsapp_catalogue": R,  # GR-33: queues a sync for each connected catalogue
     "append_sheet_row": R,  # GR-27: re-checks the row's status; doubles only if killed mid-append
     "run_automation": R,  # a run recorded for the event means handled; retried on any error
     "drain_private_replies": R,  # each reply is committed ``sending`` before the call

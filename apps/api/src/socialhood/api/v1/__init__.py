@@ -22,6 +22,7 @@ from socialhood.api.v1 import (
     business_hours,
     captions,
     catalogue,
+    catalogue_feed,
     comments,
     connect,
     contacts,
@@ -95,6 +96,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     business_hours.router,
     broadcasts.router,
     catalogue.router,  # GR-31
+    catalogue_feed.router,  # C-215: the WhatsApp catalogue's public feed
     orders.router,  # GR-32
     wa_catalogue.router,  # GR-33
     sequences.router,

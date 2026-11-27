@@ -2233,7 +2233,8 @@ export interface paths {
         /**
          * Send Product Message
          * @description Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up
-         *     to 10 sections) in the conversation. Every item must be in the catalogue as last synced. 402
+         *     to 10 sections) in the conversation. Every item must have been in Meta's last fetch of the
+         *     feed. 402
          *     without commerce on the plan, 409 when no catalogue is connected, it belongs to another number
          *     or the reply window is closed, 422 for an item that isn't ready or a list without a header.
          */
@@ -2824,22 +2825,24 @@ export interface paths {
         };
         /**
          * Get Whatsapp Catalogue
-         * @description The connection, how many items Meta has, which ones it refused and why. Any member may read
-         *     it (the inbox's "Send product" needs to know a catalogue is connected).
+         * @description The connection, how many items Meta got in its last fetch of the feed, which products
+         *     can't be in it and why. Any member may read it (the inbox's "Send product" needs to know a
+         *     catalogue is connected); only owners and admins get ``feed_url``.
          */
         get: operations["get_whatsapp_catalogue"];
         /**
          * Connect Whatsapp Catalogue
-         * @description Check Meta shows the catalogue to the number's business account, save the connection and
-         *     start the first sync. 402 without commerce on the plan, 404 for an account that isn't this
-         *     workspace's, 422 for a number that isn't WhatsApp, 409 for a catalogue Meta won't show (not
-         *     found, or not connected to the number's business account), 502 when Meta doesn't answer.
+         * @description Save the WhatsApp number and the catalogue id, and make the feed link (C-215: Meta fetches
+         *     the products from it; Meta isn't asked about the catalogue, it doesn't show it to the app).
+         *     402 without commerce on the plan, 404 for an account that isn't this workspace's, 422 for a
+         *     number that isn't WhatsApp or an id that isn't Meta's (digits).
          */
         put: operations["connect_whatsapp_catalogue"];
         post?: never;
         /**
          * Disconnect Whatsapp Catalogue
-         * @description Forget the connection. The catalogue itself is left as it is in Meta.
+         * @description Forget the connection; its feed link stops working. The catalogue itself is left as it is
+         *     in Meta.
          */
         delete: operations["disconnect_whatsapp_catalogue"];
         options?: never;
@@ -2847,7 +2850,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/w/{wid}/integrations/whatsapp-catalogue/sync": {
+    "/v1/w/{wid}/integrations/whatsapp-catalogue/feed-link": {
         parameters: {
             query?: never;
             header?: never;
@@ -2857,10 +2860,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sync Whatsapp Catalogue
-         * @description Send what changed now. While a sync runs this changes nothing.
+         * Renew Whatsapp Catalogue Feed Link
+         * @description A new feed link; the old one stops working at once (paste the new one in Commerce
+         *     Manager). 409 when no catalogue is connected.
          */
-        post: operations["sync_whatsapp_catalogue"];
+        post: operations["renew_whatsapp_catalogue_feed_link"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4698,14 +4702,16 @@ export interface paths {
          *     - Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop
          *       and automations pause; what was stored stays.
          *     - Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects
-         *       the same way, then every row, file and cached key of the account is purged in the
-         *       background. Knowledge, workspace settings, billing and other accounts are kept.
+         *       the same way, then 15 days later every row, file and cached key of the account is purged
+         *       in the background (C-214: reconnecting before ``deletion_due_at`` cancels it and keeps the
+         *       data). Knowledge, workspace settings, billing and other accounts are kept.
          *     - Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox
          *       account; 409 for a live one (disconnect first, or use Disconnect and delete data).
          *
          *     ``confirm`` is the account's handle (with or without "@") or number, else its name; a
-         *     mismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``
-         *     true; it is gone from the list once done (a ``resync`` event follows).
+         *     mismatch is 422 on ``confirm``. Until the purge has run the account is listed with
+         *     ``deleting`` true and its ``deletion_due_at``; it is gone from the list once done (a
+         *     ``resync`` event follows).
          */
         delete: operations["disconnect_social_account"];
         options?: never;
@@ -13636,6 +13642,8 @@ export interface components {
              * @default false
              */
             deleting: boolean;
+            /** Deletion Due At */
+            deletion_due_at?: string | null;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -14476,7 +14484,12 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** WaCatalogueStatus */
+        /**
+         * WaCatalogueStatus
+         * @description C-215: Meta fetches the products from ``feed_url`` (a scheduled data feed in Commerce
+         *     Manager). ``items_synced``: items Meta got in its last fetch; ``items_pending``: items added or
+         *     changed since; ``items_error``: products that can't be in the feed (``problems`` says why).
+         */
         WaCatalogueStatus: {
             /** Account Label */
             account_label?: string | null;
@@ -14484,12 +14497,14 @@ export interface components {
             brand?: string | null;
             /** Catalog Id */
             catalog_id?: string | null;
-            /** Catalog Name */
-            catalog_name?: string | null;
             /** Connected */
             connected: boolean;
             /** Entitled */
             entitled: boolean;
+            /** Feed Fetched At */
+            feed_fetched_at?: string | null;
+            /** Feed Url */
+            feed_url?: string | null;
             /**
              * Items Error
              * @default 0
@@ -14511,17 +14526,6 @@ export interface components {
             problems?: components["schemas"]["WaCatalogueProblem"][];
             /** Social Account Id */
             social_account_id?: string | null;
-            /** Status */
-            status?: ("active" | "needs_reconnect") | null;
-            /** Sync Error */
-            sync_error?: string | null;
-            /** Synced At */
-            synced_at?: string | null;
-            /**
-             * Syncing
-             * @default false
-             */
-            syncing: boolean;
         };
         /** WebhookDelivery */
         WebhookDelivery: {
@@ -22313,7 +22317,7 @@ export interface operations {
             };
         };
     };
-    sync_whatsapp_catalogue: {
+    renew_whatsapp_catalogue_feed_link: {
         parameters: {
             query?: never;
             header?: never;
@@ -22325,7 +22329,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            202: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

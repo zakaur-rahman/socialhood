@@ -78,13 +78,16 @@ class SocialAccount(IdMixin, TimestampMixin, TenantScoped, Base):
     connected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
-    # The account's data is being deleted (C-067): it is disconnected, shows "Deleting…" and is
-    # removed, with everything it holds, by purge_account_data. A null requester is Meta's
-    # data-deletion callback.
+    # The account's data is being deleted (C-067): it is disconnected, shows when it will be
+    # deleted and is removed, with everything it holds, by purge_account_data once it is due. A
+    # null requester is Meta's data-deletion callback.
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deletion_requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    # C-214: when the purge may start. A member's delete waits 15 days (a reconnect before then
+    # keeps everything); a Meta request is due at once.
+    deletion_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "platform", "platform_account_id"),

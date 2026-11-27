@@ -48,8 +48,7 @@ describe("the web CSP (SEC-11)", () => {
     expect(directive(csp, "connect-src")).toContain("https://gateway.umami.is"); // C-194
     expect(new URL(UMAMI_SCRIPT).origin).toBe("https://cloud.umami.is"); // the CSP's copy of lib/analytics.ts
     expect(UMAMI_COLLECTOR).toBe("https://gateway.umami.is");
-    expect(directive(csp, "img-src")).toContain("https://res.cloudinary.com");
-    expect(directive(csp, "img-src")).toEqual(expect.arrayContaining(["https://i.ytimg.com", "https://yt3.ggpht.com"]));
+    expect(directive(csp, "img-src")).toEqual(["'self'", "blob:", "data:", "https:"]); // C-215: product pictures from any site
     expect(directive(csp, "connect-src")).toContain("https://www.googleapis.com"); // the YouTube upload
   });
 
