@@ -83,7 +83,8 @@ async def create_billing_checkout(
     """F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,
     returning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the
     7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace
-    already has a paid plan (active, trialing or on hold): change-plan moves it (C-209). 422
+    already has a paid plan (active, trialing or on hold): change-plan moves it (C-209). A plan
+    that is ending can be replaced: the new one starts when it's paid for (C-212). 422
     while the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503
     billing_unavailable while billing isn't set up (C-149). Nothing changes
     until Dodo's signed webhook arrives."""

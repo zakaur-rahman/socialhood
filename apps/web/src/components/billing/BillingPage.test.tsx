@@ -437,6 +437,19 @@ describe("switching a paid plan (C-209)", () => {
     expect(within(await screen.findByTestId("plan-max")).queryByRole("button", { name: /Switch/ })).not.toBeInTheDocument();
   });
 
+  it("an ending plan is replaced through checkout: Choose Business, with what happens to Creator (C-212)", async () => {
+    const user = userEvent.setup();
+    const { posts } = setup({ billing: { ...pro, cancel_at_period_end: true }, handlers: onSale });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    const business = await screen.findByTestId("plan-max");
+    expect(business).toHaveTextContent("Starts when paid for. Creator ends then, with no refund for the days left.");
+    expect(within(await screen.findByTestId("plan-pro")).queryByRole("button", { name: /Choose/ })).not.toBeInTheDocument();
+
+    await user.click(within(business).getByRole("button", { name: "Choose Business" }));
+    await waitFor(() => expect(posts("/billing/checkout")).toHaveLength(1));
+    expect(posts("/billing/checkout")[0].body).toEqual({ plan: "max", period: "month" });
+  });
+
   it("a refusal from the server is shown and nothing changes", async () => {
     const user = userEvent.setup();
     setup({
@@ -473,6 +486,17 @@ describe("checkout return (F-15, FR-BIL-02)", () => {
     await act(() => queryClient.invalidateQueries({ queryKey: keys.billing(workspace.id) }));
     expect(await screen.findByText("Your Creator trial has started")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Creator" })).toHaveTextContent("Trial");
+  });
+
+  it("after replacing an ending plan, waits until the new plan arrives (C-212)", async () => {
+    nav.search = "checkout=return";
+    let current: BillingState = { ...pro, cancel_at_period_end: true };
+    const { queryClient } = setup({ billing: () => current });
+    expect(await screen.findByText("Confirming your payment…")).toBeInTheDocument();
+
+    current = billingState({ plan: "max", prices: [inr] });
+    await act(() => queryClient.invalidateQueries({ queryKey: keys.billing(workspace.id) }));
+    expect(await screen.findByText("You're on Business")).toBeInTheDocument();
   });
 
   it("polls every 3 s, and after 60 s says it can take a minute", async () => {

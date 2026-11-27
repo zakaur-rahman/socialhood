@@ -10,7 +10,15 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
-import { TRIAL_DAYS, canChangePlan, canStartCheckout, offersSwitch, planHighlights, sixMonthOffer } from "@/lib/billing/plan";
+import {
+  TRIAL_DAYS,
+  canChangePlan,
+  canReplacePlan,
+  canStartCheckout,
+  offersSwitch,
+  planHighlights,
+  sixMonthOffer,
+} from "@/lib/billing/plan";
 import { AGENCY, PLAN_NAME, billingCopy, formatPrice, plannedAmount, renewalLine, type BillingPeriod, type PaidPlan } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +80,7 @@ export function PlanCards({
   const current = billing.plan;
   const mayPay = isOwner && canStartCheckout(billing);
   const mayChange = isOwner && !!onSwitch && canChangePlan(billing);
+  const mayReplace = isOwner && canReplacePlan(billing);
   return (
     <div className="space-y-4">
       {/* Only once something six-month can really be bought; a switch that changes nothing just confuses. */}
@@ -162,7 +171,7 @@ export function PlanCards({
                     </li>
                   ))}
                 </ul>
-                {mayPay && offer.plan !== "free" && offer.available ? (
+                {(mayPay || (mayReplace && !isCurrent)) && offer.plan !== "free" && offer.available ? (
                   // D-10: the page header's card holds the one primary; a card here is secondary.
                   <div className="mt-5">
                     <Button
@@ -173,10 +182,13 @@ export function PlanCards({
                       disabled={checkout.pending && checkout.plan !== offer.plan}
                       onClick={() => checkout.start(offer.plan as PaidPlan, six ? "six_month" : "month")}
                     >
-                      {trialing
-                        ? billingCopy.trialCta(trialDays)
-                        : `Upgrade to ${PLAN_NAME[offer.plan]}`}
+                      {mayReplace
+                        ? billingCopy.replaceWith(PLAN_NAME[offer.plan])
+                        : trialing
+                          ? billingCopy.trialCta(trialDays)
+                          : `Upgrade to ${PLAN_NAME[offer.plan]}`}
                     </Button>
+                    {mayReplace ? <p className="mt-2 text-xs text-fg-secondary">{billingCopy.replaceNote(PLAN_NAME[current])}</p> : null}
                     {renewal ? (
                       <p className="mt-2 text-xs text-fg-secondary" data-testid={`renewal-${offer.plan}`}>
                         {renewal}

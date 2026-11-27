@@ -817,6 +817,9 @@ export const billingCopy = {
   confirmedBody: "Your new limits are ready to use.",
   slow: "Payment received? It can take a minute. We'll email you when your plan is active.",
   checkoutConflict: "This workspace already has a paid plan. Switch plans in Settings › Billing and usage.",
+  /** C-212: a checkout that replaces a plan that is ending. */
+  replaceWith: (plan: string) => `Choose ${plan}`,
+  replaceNote: (current: string) => `Starts when paid for. ${current} ends then, with no refund for the days left.`,
   /** C-209: moving a paid plan to another plan or period. */
   switchTo: (plan: string, sixMonths: boolean) => (sixMonths ? `Switch to ${plan}, 6 months` : `Switch to ${plan}`),
   switchTitle: (plan: string, sixMonths: boolean) => (sixMonths ? `Switch to ${plan}, billed every 6 months?` : `Switch to ${plan}?`),

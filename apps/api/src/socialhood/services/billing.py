@@ -332,7 +332,13 @@ async def start_checkout(
             errors=[FieldError("period", f"{name} isn't available every 6 months yet.")],
         )
     sub = await subscriptions.current(session)
-    if sub is not None and sub.plan != Plan.FREE and sub.status in LIVE_STATUSES:
+    # C-212: a plan that is ending (cancelled, or cancelled in Dodo) may be replaced by a new one.
+    if (
+        sub is not None
+        and sub.plan != Plan.FREE
+        and sub.status in LIVE_STATUSES
+        and not sub.cancel_at_period_end
+    ):
         raise ApiError(
             "conflict", "This workspace already has a paid plan. Use Change plan to switch."
         )
