@@ -33755,7 +33755,7 @@
     },
     "/v1/w/{wid}/billing/checkout": {
       "post": {
-        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,\nreturning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the\n7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace\nalready has a paid plan (active, trialing or on hold): change-plan moves it (C-209). 422\nwhile the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503\nbilling_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,\nreturning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the\n7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace\nalready has a paid plan (active, trialing or on hold): change-plan moves it (C-209). A plan\nthat is ending can be replaced: the new one starts when it's paid for (C-212). 422\nwhile the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503\nbilling_unavailable while billing isn't set up (C-149). Nothing changes\nuntil Dodo's signed webhook arrives.",
         "operationId": "create_billing_checkout",
         "parameters": [
           {

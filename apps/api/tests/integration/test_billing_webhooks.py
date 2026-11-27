@@ -604,6 +604,27 @@ async def test_a_second_subscription_cannot_replace_a_live_one(owner: Owner) -> 
     assert (other["status"], other["last_error"]) == ("ignored", "not the workspace's subscription")
 
 
+async def test_a_new_subscription_replaces_one_that_is_ending(owner: Owner) -> None:
+    # C-212: Creator was cancelled in Dodo; Business, bought before Creator's period ends,
+    # takes over at once, and Creator's later events are no longer the workspace's.
+    await make_pro(owner)
+    await owner.event(
+        "subscription.cancelled", subscription(owner.wid, status="cancelled"), at=ago(minutes=30)
+    )
+    row = await owner.event(
+        "subscription.active",
+        subscription(owner.wid, subscription_id="sub_business", product_id=MAX_PRODUCT),
+        at=ago(minutes=5),
+    )
+    assert row["status"] == "processed", row
+    sub = await owner.sub()
+    assert (sub["plan"], sub["status"], sub["cancel_at_period_end"]) == ("max", "active", False)
+    assert sub["dodo_subscription_id"] == "sub_business"
+    old = await owner.event("subscription.expired", subscription(owner.wid, status="expired"))
+    assert (old["status"], old["last_error"]) == ("ignored", "not the workspace's subscription")
+    assert (await owner.sub())["plan"] == "max"
+
+
 # ---------------------------------------------------------------- no Pro without a signed event
 
 

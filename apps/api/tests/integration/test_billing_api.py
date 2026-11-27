@@ -129,6 +129,16 @@ async def test_checkout_is_409_while_a_paid_plan_is_live(
     assert fake_dodo.checkouts == []
 
 
+async def test_checkout_replaces_a_plan_that_is_ending(owner: Owner, fake_dodo: FakeDodo) -> None:
+    """C-212: a Creator plan cancelled (in the app or in Dodo) can be replaced by Business now."""
+    await paid(owner, fake_dodo)
+    assert (await owner.post("/billing/cancel")).status_code == 200
+    response = await owner.post("/billing/checkout", {"plan": "max"})
+    assert response.status_code == 200, response.text
+    assert [params.product_id for params in fake_dodo.checkouts] == [MAX_PRODUCT]
+    assert (await owner.billing())["plan"] == "pro"  # nothing changes until the webhook
+
+
 async def test_checkout_after_an_expired_plan_is_allowed(owner: Owner, fake_dodo: FakeDodo) -> None:
     await paid(owner, fake_dodo, plan="free", status="expired")
     assert (await owner.post("/billing/checkout", {"plan": "pro"})).status_code == 200

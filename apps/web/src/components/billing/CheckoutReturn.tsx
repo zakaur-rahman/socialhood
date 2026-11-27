@@ -15,9 +15,12 @@ export const CONFIRM_TIMEOUT_MS = 60_000;
 
 export type ConfirmPhase = "waiting" | "confirmed" | "slow";
 
-/** A paid plan is what the webhook grants; the return URL alone changes nothing (FR-BIL-02). */
+/**
+ * A paid plan is what the webhook grants; the return URL alone changes nothing (FR-BIL-02). A plan
+ * that was ending is confirmed replaced once it no longer is (C-212).
+ */
 export function isConfirmed(billing: BillingState | undefined): boolean {
-  return Boolean(billing) && !canCheckout(billing);
+  return Boolean(billing) && !canCheckout(billing) && !billing?.cancel_at_period_end;
 }
 
 /**
