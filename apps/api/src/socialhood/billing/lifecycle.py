@@ -150,9 +150,15 @@ async def apply_event(
         plan = plan_for_product(snap.product_id, settings)
         if plan is None:
             return Applied(False, f"product {snap.product_id} is not a plan we sell")
-        if not ours and sub.dodo_subscription_id is not None and sub.status in LIVE_STATUSES:
+        if (
+            not ours
+            and sub.dodo_subscription_id is not None
+            and sub.status in LIVE_STATUSES
+            and not sub.cancel_at_period_end
+        ):
             # Two checkouts completed at once: Dodo bills both, we honour the first. An alert, so
-            # someone cancels and refunds the second in Dodo's dashboard.
+            # someone cancels and refunds the second in Dodo's dashboard. A plan that is ending is
+            # replaced instead (C-212): it doesn't renew, and its later events aren't ours.
             log.error(
                 "alert",
                 kind="billing_duplicate_subscription",

@@ -82,6 +82,14 @@ export function canStartCheckout(billing: BillingState | undefined): boolean {
   return canCheckout(billing) && billingOpen(billing);
 }
 
+/**
+ * C-212: a paid plan that is ending (cancelled here or in Dodo) can't be switched or, once Dodo has
+ * cancelled it, resumed; a checkout for another plan replaces it when paid for.
+ */
+export function canReplacePlan(billing: BillingState | undefined): boolean {
+  return !!billing && billingOpen(billing) && billing.plan !== "free" && billing.cancel_at_period_end;
+}
+
 /** C-209: a paid plan the owner can move to another plan or period (not ending, not unpaid). */
 export function canChangePlan(billing: BillingState | undefined): boolean {
   return (

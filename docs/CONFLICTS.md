@@ -10432,3 +10432,18 @@ The owner raised `instagram_accounts` from 2 to 3 on Creator and from 4 to 6 on 
 same prices; Free (1) and Agency (10) stay. plans.py is the source; plan-table.json was
 regenerated, and the FAQ, the AI info page, a changelog entry and the test fixtures follow it.
 Existing workspaces get the new limit at once (it is read from the plan, not stored).
+
+## C-212: a plan that is ending can be replaced through checkout (2026-11-27)
+
+Owner, after C-210: a Creator plan cancelled in Dodo couldn't move to Business until its period
+ended, because checkout refused any workspace with a live paid plan and Dodo can't change the plan
+of a cancelled subscription.
+- **Checkout** is allowed while the plan is ending (`cancel_at_period_end`), whether it was
+  cancelled in the app or in Dodo.
+- **The webhook:** a new subscription replaces one that is ending (it doesn't renew). Before, it
+  raised the duplicate-subscription alert and was ignored; that still happens when the current
+  plan is not ending. The old subscription's later events are not the workspace's and are ignored.
+- **No refund** for the days left on the old plan; the cards say so under "Choose …". A plan
+  cancelled only in the app could instead be resumed and switched with proration (C-209); both
+  stay offered.
+- **The return page** waits until the plan is no longer ending, so it doesn't confirm the old plan.
