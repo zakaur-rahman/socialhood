@@ -9,6 +9,8 @@ services/analytics (snapshots.py, account_daily.py).
   only, insights start at 24 h behind the insights capability (IG_REQUEST_INSIGHTS_SCOPE), and
   the 72 h run marks the earlier snapshots final. A Story's windows all read its insights. Each
   window is captured once.
+- snapshot_account_connect(account_id): queued after a media sync (C-213); one reading of the
+  posts published 1 to 30 days before the account was connected, which missed their early windows.
 - snapshot_account_daily: hourly, queue snapshot_account_day for each live account once it is
   02:00 or later in its workspace's time zone and yesterday's row is missing
   (key ``acctday:{account_id}:{date}``).
@@ -83,6 +85,29 @@ async def snapshot_account_posts(workspace_id: str, account_id: str) -> None:
     await _in_bulk_slot(
         snapshot_account_posts,
         f"snap:{account_id}",
+        work,
+        workspace_id=workspace_id,
+        account_id=account_id,
+    )
+
+
+@app.task(name="snapshot_account_connect", queue=BULK, retry=PlatformRetry(max_attempts=3))
+async def snapshot_account_connect(workspace_id: str, account_id: str) -> None:
+    """C-213: one reading of the posts published before the account was connected."""
+    rt = runtime()
+
+    async def work() -> None:
+        await snapshots.snapshot_on_connect(
+            rt.sessionmaker,
+            deps_from(rt.http, rt.settings),
+            workspace_id=uuid.UUID(workspace_id),
+            account_id=uuid.UUID(account_id),
+            buckets=TokenBuckets(rt.redis),
+        )
+
+    await _in_bulk_slot(
+        snapshot_account_connect,
+        f"snapconn:{account_id}",
         work,
         workspace_id=workspace_id,
         account_id=account_id,

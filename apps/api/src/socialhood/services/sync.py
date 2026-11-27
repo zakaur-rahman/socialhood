@@ -27,6 +27,7 @@ from socialhood.platforms.registry import adapter_for
 from socialhood.realtime.events import commit_and_publish, queue_conversation
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import social_accounts as accounts
+from socialhood.services.analytics import snapshots
 from socialhood.services.automations import posts as automation_posts
 from socialhood.services.comments import backfill as comment_backfill
 from socialhood.services.ingest import ingest
@@ -115,6 +116,7 @@ async def sync_account_media(
             await accounts.update(session, acct.id, media_synced_at=now)
             await session.commit()
             await comment_backfill.after_media_sync(session, acct)  # T6.1, TR-WH-08
+            await snapshots.queue_connect_reading(session, acct)  # C-213
     log.info("media_synced", account_id=str(account_id), posts=len(media))
     return len(media)
 
