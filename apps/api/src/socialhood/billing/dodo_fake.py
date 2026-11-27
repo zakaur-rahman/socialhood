@@ -5,6 +5,9 @@
   that simulates Dodo's side of a checkout adds the subscription, then posts the signed webhook).
 - ``create_checkout`` records the params and returns a session on a ``.invalid`` host, so nothing
   can follow it anywhere; ``create_portal_session`` likewise.
+- ``change_plan`` moves the stored subscription to the new product (a test then posts the signed
+  subscription.plan_changed webhook); ``preview_change_plan`` charges the monthly price
+  difference, or credits it when the new product costs less.
 - ``fail_next(error)`` makes the next call raise ``error`` (a DodoError, usually).
 - Every call is recorded in ``calls`` as (method name, arguments).
 """
@@ -23,6 +26,7 @@ from socialhood.billing.dodo import (
     DodoError,
     DodoSubscription,
     DodoSubscriptionStatus,
+    PlanChangePreview,
     ProductPrice,
 )
 
@@ -141,3 +145,26 @@ class FakeDodo:
         if price is None:
             raise DodoError("product not found", status=404)
         return price
+
+    async def preview_change_plan(self, subscription_id: str, product_id: str) -> PlanChangePreview:
+        self._record("preview_change_plan", subscription_id=subscription_id, product_id=product_id)
+        sub = self._subscription(subscription_id)
+        new = self.products.get(product_id)
+        if new is None:
+            raise DodoError("product not found", status=404)
+        old = self.products.get(sub.product_id)
+        difference = new.amount_minor - (old.amount_minor if old else 0)
+        return PlanChangePreview(
+            amount_due_minor=max(difference, 0),
+            currency=new.currency,
+            credit_minor=max(-difference, 0),
+            next_billing_date=sub.next_billing_date,
+        )
+
+    async def change_plan(self, subscription_id: str, product_id: str) -> None:
+        self._record("change_plan", subscription_id=subscription_id, product_id=product_id)
+        if product_id not in self.products:
+            raise DodoError("product not found", status=404)
+        self.subscriptions[subscription_id] = dataclasses.replace(
+            self._subscription(subscription_id), product_id=product_id
+        )

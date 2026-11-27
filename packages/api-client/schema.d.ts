@@ -1223,6 +1223,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/billing/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Billing Plan
+         * @description C-209: move a paid plan to ``plan`` and ``period``. Dodo charges the saved card the
+         *     difference for the rest of the period (an upgrade) or keeps the difference as credit (a
+         *     downgrade). The answer is the billing state as it was: the plan changes when Dodo's signed
+         *     subscription.plan_changed webhook arrives (usage.updated then refetches the page); a failed
+         *     charge leaves the plan as it was. The same 409, 422 and 503 answers as the preview.
+         */
+        post: operations["change_billing_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/change-plan/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Billing Plan Change
+         * @description C-209: what moving a paid plan to ``plan`` and ``period`` would charge now (or credit),
+         *     from Dodo, without changing anything. 409 conflict on Free (use checkout), on hold, while
+         *     the plan is set to end, on the same plan and period, or from 6-monthly to monthly. 422 while
+         *     the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503
+         *     billing_unavailable while billing isn't set up (C-149).
+         */
+        post: operations["preview_billing_plan_change"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/billing/checkout": {
         parameters: {
             query?: never;
@@ -1237,9 +1285,9 @@ export interface paths {
          * @description F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` and ``period`` with the owner's email,
          *     returning to /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the
          *     7-day trial only on monthly Creator when eligible (TR-BIL-05). 409 conflict when the workspace
-         *     already has a paid plan (active, trialing or on hold): the portal changes it. 422 while the
-         *     plan's or period's Dodo product isn't set. 503 when Dodo
-         *     doesn't answer; 503 billing_unavailable while billing isn't set up (C-149). Nothing changes
+         *     already has a paid plan (active, trialing or on hold): change-plan moves it (C-209). 422
+         *     while the plan's or period's Dodo product isn't set. 503 when Dodo doesn't answer; 503
+         *     billing_unavailable while billing isn't set up (C-149). Nothing changes
          *     until Dodo's signed webhook arrives.
          */
         post: operations["create_billing_checkout"];
@@ -11286,6 +11334,51 @@ export interface components {
             /** Value */
             value?: number | null;
         };
+        /**
+         * PlanChangePreview
+         * @description What changing to ``plan`` and ``period`` would do, from Dodo, before anything is charged.
+         *     ``amount_due_minor`` is charged now to the saved card (the price difference for the rest of
+         *     the period on an upgrade); ``credit_minor`` is credit Dodo keeps for later bills (a
+         *     downgrade). ``next_billing_date``: the next renewal on the new plan.
+         */
+        PlanChangePreview: {
+            /** Amount Due Minor */
+            amount_due_minor: number;
+            /** Credit Minor */
+            credit_minor: number;
+            /** Currency */
+            currency: string;
+            /** Next Billing Date */
+            next_billing_date: string | null;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "month" | "six_month";
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "pro" | "max" | "agency";
+        };
+        /**
+         * PlanChangeRequest
+         * @description POST …/billing/change-plan and …/change-plan/preview (C-209): move a paid plan to another
+         *     plan or period. Free workspaces use checkout instead.
+         */
+        PlanChangeRequest: {
+            /**
+             * Period
+             * @default month
+             * @enum {string}
+             */
+            period: "month" | "six_month";
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "pro" | "max" | "agency";
+        };
         /** PlanList */
         PlanList: {
             /** Items */
@@ -17992,6 +18085,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change_billing_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_billing_plan_change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangePreview"];
                 };
             };
             /** @description Validation error */

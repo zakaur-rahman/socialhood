@@ -50,7 +50,7 @@ from socialhood.billing.plans import (
 )
 from socialhood.billing.usage import live_used, period_used
 from socialhood.errors import ApiError, FieldError
-from socialhood.models.billing import Plan
+from socialhood.models.billing import Plan, SubscriptionStatus
 from socialhood.models.connections import Platform
 from socialhood.models.identity import Workspace
 from socialhood.observability.logging import get_logger
@@ -66,6 +66,8 @@ from socialhood.schemas.billing import (
     EntitlementValue,
     PaymentList,
     PaymentOut,
+    PlanChangePreview,
+    PlanChangeRequest,
     PlanList,
     PlanOffer,
     PortalSession,
@@ -332,7 +334,7 @@ async def start_checkout(
     sub = await subscriptions.current(session)
     if sub is not None and sub.plan != Plan.FREE and sub.status in LIVE_STATUSES:
         raise ApiError(
-            "conflict", "This workspace already has a paid plan. Change it in Manage billing."
+            "conflict", "This workspace already has a paid plan. Use Change plan to switch."
         )
     product = product_for(body.plan, settings, body.period)
     if product is None:
@@ -361,6 +363,100 @@ async def start_checkout(
         raise ApiError("service_unavailable", DODO_UNAVAILABLE) from error
     log.info("billing_checkout_started", plan=body.plan, period=body.period, trial=trial_days > 0)
     return CheckoutSession(checkout_url=checkout.checkout_url, trial=trial_days > 0)
+
+
+CHANGE_REFUSED = "Dodo couldn't make this change. Try again, or write to support@amplychat.com."
+
+
+async def _plan_change_target(
+    session: AsyncSession, body: PlanChangeRequest, settings: Settings
+) -> tuple[str, str]:
+    """C-209: the Dodo subscription to change and the product it moves to, or the reason it can't.
+    Only a live paid plan changes here (Free starts with checkout); a move to a shorter billing
+    interval (every 6 months to monthly) isn't offered: Dodo can only do it at renewal."""
+    require_billing(settings)
+    name = PLAN_NAMES.get(body.plan, body.plan.capitalize())
+    if not is_available(body.plan, settings):
+        raise ApiError(
+            "validation_error", errors=[FieldError("plan", f"{name} isn't available yet.")]
+        )
+    product = product_for(body.plan, settings, body.period)
+    if product is None:
+        raise ApiError(
+            "validation_error",
+            errors=[FieldError("period", f"{name} isn't available every 6 months yet.")],
+        )
+    sub = await subscriptions.current(session)
+    if (
+        sub is None
+        or sub.plan == Plan.FREE
+        or sub.status not in LIVE_STATUSES
+        or not sub.dodo_subscription_id
+    ):
+        raise ApiError("conflict", "There's no paid plan to change. Choose a plan to upgrade.")
+    if sub.status == SubscriptionStatus.ON_HOLD:
+        raise ApiError(
+            "conflict",
+            "The last payment didn't go through. Update your card in Manage billing first.",
+        )
+    if sub.cancel_at_period_end:
+        raise ApiError("conflict", "Your plan is set to end. Resume it first, then change it.")
+    current = offer_for_product(sub.dodo_product_id, settings)
+    if current == (body.plan, body.period):
+        raise ApiError("conflict", f"You're already on {name}.")
+    if current is not None and current[1] == "six_month" and body.period == "month":
+        # shortcut: Dodo moves to a shorter interval only at renewal; add a scheduled change when
+        # someone on six-month billing asks for it.
+        raise ApiError(
+            "conflict",
+            "Moving from 6-monthly to monthly billing isn't available yet. "
+            "Write to support@amplychat.com.",
+        )
+    return sub.dodo_subscription_id, product
+
+
+def _change_error(error: DodoError, event: str) -> ApiError:
+    log.warning(event, status=error.status, retryable=error.retryable)
+    if error.retryable or error.status is None:
+        return ApiError("service_unavailable", DODO_UNAVAILABLE)
+    if error.status == 409:
+        return ApiError("conflict", "A plan change is already in progress. Try again in a minute.")
+    return ApiError("conflict", CHANGE_REFUSED)
+
+
+async def preview_plan_change(
+    session: AsyncSession, body: PlanChangeRequest, *, dodo: DodoClient, settings: Settings
+) -> PlanChangePreview:
+    """C-209: what the change charges now (or credits), from Dodo, without changing anything."""
+    subscription_id, product = await _plan_change_target(session, body, settings)
+    await session.commit()  # nothing stays open while Dodo answers
+    try:
+        preview = await dodo.preview_change_plan(subscription_id, product)
+    except DodoError as error:
+        raise _change_error(error, "dodo_change_preview_failed") from error
+    return PlanChangePreview(
+        plan=body.plan,
+        period=body.period,
+        amount_due_minor=preview.amount_due_minor,
+        credit_minor=max(preview.credit_minor, 0),
+        currency=preview.currency,
+        next_billing_date=preview.next_billing_date,
+    )
+
+
+async def change_plan(
+    session: AsyncSession, body: PlanChangeRequest, *, dodo: DodoClient, settings: Settings
+) -> None:
+    """C-209: ask Dodo to move the subscription to the new plan, charged to the saved card. The
+    plan changes here only when subscription.plan_changed arrives (D9); a failed charge leaves it
+    as it was (on_payment_failure: prevent_change)."""
+    subscription_id, product = await _plan_change_target(session, body, settings)
+    await session.commit()
+    try:
+        await dodo.change_plan(subscription_id, product)
+    except DodoError as error:
+        raise _change_error(error, "dodo_change_plan_failed") from error
+    log.info("billing_plan_change_requested", plan=body.plan, period=body.period)
 
 
 async def open_portal(

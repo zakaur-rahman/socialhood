@@ -365,6 +365,100 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
   });
 });
 
+describe("switching a paid plan (C-209)", () => {
+  const onSale = { "GET /v1/billing/plans": () => json(planList({ businessOnSale: true })) };
+  const quote = (over: Record<string, unknown> = {}) => ({
+    plan: "max",
+    period: "month",
+    amount_due_minor: 400_000,
+    credit_minor: 0,
+    currency: "INR",
+    next_billing_date: "2026-10-31T18:30:00Z",
+    ...over,
+  });
+  const inrMax = { plan: "max" as const, amount_minor: 499_900, currency: "INR", interval: "month" as const };
+  const business = billingState({ plan: "max", current_period_end: "2026-10-31T18:30:00Z", prices: [inr, inrMax], current_price: inrMax });
+
+  it("Creator to Business: the price now from Dodo, nothing charged until Pay and switch", async () => {
+    const user = userEvent.setup();
+    const { posts } = setup({
+      billing: pro,
+      handlers: {
+        ...onSale,
+        "POST /v1/w/:wid/billing/change-plan/preview": () => json(quote()),
+        "POST /v1/w/:wid/billing/change-plan": () => json(pro),
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    const card = await screen.findByTestId("plan-max");
+    await user.click(within(card).getByRole("button", { name: "Switch to Business" }));
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Switch to Business?" });
+    await waitFor(() => expect(dialog).toHaveTextContent("You pay ₹4,000 now for the rest of this billing period"));
+    expect(dialog).toHaveTextContent("Then ₹4,999 a month, renewing on 1 Nov.");
+    expect(posts("/billing/change-plan/preview")[0].body).toEqual({ plan: "max", period: "month" });
+    expect(posts("/billing/change-plan")).toHaveLength(0);
+
+    await user.click(within(dialog).getByRole("button", { name: "Pay ₹4,000 and switch" }));
+    await waitFor(() => expect(posts("/billing/change-plan")).toHaveLength(1));
+    expect(posts("/billing/change-plan")[0].body).toEqual({ plan: "max", period: "month" });
+    expect(toast.success).toHaveBeenCalledWith("Switching to Business. Your plan updates in a few seconds.");
+  });
+
+  it("Business to Creator: credit for later bills and what pauses", async () => {
+    const user = userEvent.setup();
+    setup({
+      billing: business,
+      handlers: {
+        ...onSale,
+        "POST /v1/w/:wid/billing/change-plan/preview": () =>
+          json(quote({ plan: "pro", amount_due_minor: 0, credit_minor: 400_000 })),
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    await user.click(within(await screen.findByTestId("plan-pro")).getByRole("button", { name: "Switch to Creator" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Switch to Creator?" });
+    await waitFor(() => expect(dialog).toHaveTextContent("Nothing to pay now."));
+    expect(dialog).toHaveTextContent("₹4,000 goes to your credit and pays your next bills.");
+    expect(dialog).toHaveTextContent("Anything above Creator's limits pauses");
+    expect(within(dialog).getByRole("button", { name: "Switch to Creator" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Keep Business" })).toBeInTheDocument();
+  });
+
+  it("no Switch on the plan already paid for, while the plan is ending, or for admins", async () => {
+    const user = userEvent.setup();
+    const view = setup({ billing: pro, handlers: onSale });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    expect(within(await screen.findByTestId("plan-pro")).queryByRole("button", { name: /Switch/ })).not.toBeInTheDocument();
+    view.unmount();
+
+    setup({ billing: { ...pro, cancel_at_period_end: true }, handlers: onSale });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    expect(within(await screen.findByTestId("plan-max")).queryByRole("button", { name: /Switch/ })).not.toBeInTheDocument();
+  });
+
+  it("a refusal from the server is shown and nothing changes", async () => {
+    const user = userEvent.setup();
+    setup({
+      billing: pro,
+      handlers: {
+        ...onSale,
+        "POST /v1/w/:wid/billing/change-plan/preview": () => json(quote()),
+        "POST /v1/w/:wid/billing/change-plan": () =>
+          problem(409, "conflict", "A plan change is already in progress. Try again in a minute."),
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "Billing" }));
+    await user.click(within(await screen.findByTestId("plan-max")).getByRole("button", { name: "Switch to Business" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Switch to Business?" });
+    await user.click(await within(dialog).findByRole("button", { name: "Pay ₹4,000 and switch" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("A plan change is already in progress. Try again in a minute."),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});
+
 describe("checkout return (F-15, FR-BIL-02)", () => {
   it("waits for the webhook: Confirming your payment… until GET …/billing shows Pro (usage.updated)", async () => {
     nav.search = "checkout=return";

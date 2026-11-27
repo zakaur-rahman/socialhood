@@ -816,7 +816,21 @@ export const billingCopy = {
   confirmedTrial: "Your Creator trial has started",
   confirmedBody: "Your new limits are ready to use.",
   slow: "Payment received? It can take a minute. We'll email you when your plan is active.",
-  checkoutConflict: "This workspace already has a paid plan. Change it from Manage billing.",
+  checkoutConflict: "This workspace already has a paid plan. Switch plans in Settings › Billing and usage.",
+  /** C-209: moving a paid plan to another plan or period. */
+  switchTo: (plan: string, sixMonths: boolean) => (sixMonths ? `Switch to ${plan}, 6 months` : `Switch to ${plan}`),
+  switchTitle: (plan: string, sixMonths: boolean) => (sixMonths ? `Switch to ${plan}, billed every 6 months?` : `Switch to ${plan}?`),
+  switchDueNow: (amount: string) => `You pay ${amount} now for the rest of this billing period, charged to your saved card.`,
+  switchNothingDue: "Nothing to pay now.",
+  switchCredit: (amount: string) => `${amount} goes to your credit and pays your next bills.`,
+  switchRenews: (price: string, date: string) => `Then ${price}, renewing on ${date}.`,
+  switchDowngrade: (plan: string) =>
+    `Anything above ${plan}'s limits pauses, such as extra automations or connected accounts. Nothing is deleted.`,
+  switchPay: (amount: string) => `Pay ${amount} and switch`,
+  switchConfirm: (plan: string) => `Switch to ${plan}`,
+  switchKeep: (plan: string) => `Keep ${plan}`,
+  switchStarted: (plan: string) => `Switching to ${plan}. Your plan updates in a few seconds.`,
+  switchPreviewFailed: "We couldn't get the price of this change. Try again in a moment.",
   planUnavailable: "That plan isn't available yet.",
   paymentsUnavailable: "Payments aren't available right now. Try again in a few minutes.",
   /** C-149: billing isn't set up on this server, so only Free exists for now. */

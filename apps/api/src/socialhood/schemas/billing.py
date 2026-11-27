@@ -77,6 +77,28 @@ class CheckoutSession(ResponseModel):
     trial: bool  # the checkout starts the 7-day trial (TR-BIL-05; monthly Creator only)
 
 
+class PlanChangeRequest(RequestModel):
+    """POST …/billing/change-plan and …/change-plan/preview (C-209): move a paid plan to another
+    plan or period. Free workspaces use checkout instead."""
+
+    plan: PaidPlanName
+    period: BillingPeriodName = "month"
+
+
+class PlanChangePreview(ResponseModel):
+    """What changing to ``plan`` and ``period`` would do, from Dodo, before anything is charged.
+    ``amount_due_minor`` is charged now to the saved card (the price difference for the rest of
+    the period on an upgrade); ``credit_minor`` is credit Dodo keeps for later bills (a
+    downgrade). ``next_billing_date``: the next renewal on the new plan."""
+
+    plan: PaidPlanName
+    period: BillingPeriodName
+    amount_due_minor: int
+    credit_minor: int
+    currency: str
+    next_billing_date: datetime | None
+
+
 class PortalSession(ResponseModel):
     """Dodo's customer portal (payment method, invoices; FR-BIL-04), opened in a new tab."""
 

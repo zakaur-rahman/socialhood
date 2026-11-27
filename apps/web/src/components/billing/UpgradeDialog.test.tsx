@@ -160,7 +160,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     await user.click(within(dialog).getByRole("button", { name: "Start 7-day trial" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "This workspace already has a paid plan. Change it from Manage billing.",
+      "This workspace already has a paid plan. Switch plans in Settings › Billing and usage.",
     );
     expect(assign).not.toHaveBeenCalled();
   });
