@@ -74,7 +74,6 @@ def account_out(acct: SocialAccount, deps: PlatformDeps) -> SocialAccountOut:
             "capabilities": capabilities if live else [],
             "sandbox": is_sandbox(acct),
             "deleting": acct.deletion_requested_at is not None,
-            "deletion_due_at": acct.deletion_due_at,
         }
     )
 
@@ -179,23 +178,6 @@ IN_USE = "This account is connected to another Amplychat workspace. Disconnect i
 BEING_DELETED = (
     "This account's data is being deleted. Connect it again once it's gone from this page."
 )
-
-# C-214: Delete account and data waits this long before the purge; reconnecting before then
-# cancels it and keeps everything. A restore stops this long before the due time, so it never
-# meets a purge that has started.
-DELETION_GRACE = timedelta(days=15)
-RESTORE_MARGIN = timedelta(minutes=10)
-NOT_DELETING: dict[str, Any] = {
-    "deletion_requested_at": None,
-    "deletion_requested_by_user_id": None,
-    "deletion_due_at": None,
-}
-
-
-def restorable(acct: SocialAccount, now: datetime) -> bool:
-    """A delete still waiting (C-214): reconnecting cancels it."""
-    due = acct.deletion_due_at
-    return due is not None and now < due - RESTORE_MARGIN
 
 
 def _held_key(nonce: str) -> str:
@@ -311,19 +293,13 @@ async def _upsert(
     session: AsyncSession, platform: str, platform_account_id: str, values: dict[str, Any]
 ) -> SocialAccount | None:
     """Reconnect updates the existing row; otherwise insert. None when the account is live in
-    another workspace (the partial unique index refuses it). A reconnect while this workspace's
-    row waits to be deleted cancels the deletion and keeps its data (C-214); once the purge is
-    due it is 409 (C-067: the purge would take the new connection with it)."""
+    another workspace (the partial unique index refuses it); 409 while this workspace's row is
+    being deleted (C-067: its purge would take the new connection with it)."""
     try:
         async with session.begin_nested():
             existing = await accounts.find(session, platform, platform_account_id)
             if existing is not None and existing.deletion_requested_at is not None:
-                # Locked, so a Meta request making it due at once is seen, never overwritten.
-                await session.refresh(existing, with_for_update=True)
-                if not restorable(existing, datetime.now(UTC)):
-                    raise ApiError("conflict", BEING_DELETED)
-                values = {**values, **NOT_DELETING}
-                log.info("account_deletion_canceled", account_id=str(existing.id))
+                raise ApiError("conflict", BEING_DELETED)
             if existing is not None:
                 await accounts.update(session, existing.id, **values)
                 await session.flush()
