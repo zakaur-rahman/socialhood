@@ -93,7 +93,7 @@ from socialhood.schemas.analytics import (
 from socialhood.schemas.posts import SentimentName
 from socialhood.services.analytics import account_metrics, queries, sentiment
 from socialhood.services.analytics.account_metrics import SeriesPoint
-from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, WINDOWS, format_of
+from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, WINDOWS, age_name, format_of
 from socialhood.services.analytics.common import capabilities_from, load_post
 from socialhood.services.analytics.queries import BaselineQuery
 
@@ -152,12 +152,12 @@ def snapshot_age(phrase: str | None) -> tuple[AgeName | None, str | None]:
         key=lambda w: (abs(math.log(WINDOW_AGES[w].total_seconds() / goal)), WINDOW_AGES[w]),
     )
     if WINDOW_AGES[window] == resolved.age:
-        return window.value, resolved.rule
+        return age_name(window), resolved.rule
     rule = (
         f"figures are recorded at 1 h, 6 h, 24 h, 72 h, 7 d and 30 d, so {resolved.label} is "
         f"read at {AGE_WORDS[window.value]}"
     )
-    return window.value, rule
+    return age_name(window), rule
 
 
 def insights_caveat(acct: SocialAccount | None) -> str:
