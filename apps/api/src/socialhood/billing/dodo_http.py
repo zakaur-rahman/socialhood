@@ -98,7 +98,9 @@ def parse_subscription(data: Mapping[str, Any]) -> DodoSubscription:
         previous_billing_date=parse_datetime(data.get("previous_billing_date")),
         next_billing_date=parse_datetime(data.get("next_billing_date")),
         trial_period_days=trial if isinstance(trial, int) and trial > 0 else 0,
-        cancel_at_next_billing_date=data.get("cancel_at_next_billing_date") is True,
+        # A cancelled subscription never renews, though Dodo then sends the flag as false.
+        cancel_at_next_billing_date=data.get("cancel_at_next_billing_date") is True
+        or status == "cancelled",
         cancelled_at=parse_datetime(data.get("cancelled_at")),
         expires_at=parse_datetime(data.get("expires_at")),
         metadata={str(k): str(v) for k, v in metadata.items() if v is not None},

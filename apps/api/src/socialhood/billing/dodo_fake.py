@@ -121,8 +121,10 @@ class FakeDodo:
         self, subscription_id: str, cancel: bool
     ) -> DodoSubscription:
         self._record("set_cancel_at_period_end", subscription_id=subscription_id, cancel=cancel)
+        sub = self._subscription(subscription_id)
+        # Like Dodo: the PATCH answers 200 on a cancelled subscription, which stays cancelled.
         sub = dataclasses.replace(
-            self._subscription(subscription_id), cancel_at_next_billing_date=cancel
+            sub, cancel_at_next_billing_date=cancel or sub.status == "cancelled"
         )
         self.subscriptions[subscription_id] = sub
         return sub

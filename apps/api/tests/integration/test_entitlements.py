@@ -380,22 +380,23 @@ async def test_channels_past_the_free_total_are_read_only(shop: Shop) -> None:
     assert "is read-only until you upgrade or disconnect another channel" in body["detail"]
 
 
-async def test_instagram_limits_creator_2_and_business_4(
+async def test_instagram_limits_creator_3_and_business_6(
     shop: Shop,
 ) -> None:
-    """C-187: Instagram has its own limit; the shop starts with one account."""
+    """C-187, C-211: Instagram has its own limit; the shop starts with one account."""
     connect = "/social-accounts/instagram/connect"
     await set_plan(shop.engine, shop.wid, "pro")
     assert (await shop.call("POST", connect)).status_code == 200
     await shop.account("maple.cakes")
-    body = assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 2)
-    assert body["detail"] == "Your plan includes 2 Instagram accounts."
+    await shop.account("maple.pies")
+    body = assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 3)
+    assert body["detail"] == "Your plan includes 3 Instagram accounts."
 
     await set_plan(shop.engine, shop.wid, "max")
     assert (await shop.call("POST", connect)).status_code == 200
-    await shop.account("maple.bread")
-    await shop.account("maple.tea")
-    assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 4)
+    for name in ("maple.bread", "maple.tea", "maple.jam"):
+        await shop.account(name)
+    assert_402(await shop.call("POST", connect), "quota_exceeded", "instagram_accounts", 6)
 
 
 async def test_every_plan_makes_api_keys(shop: Shop) -> None:

@@ -20,8 +20,8 @@
     },
     "instagram_accounts": {
       "free": 1,
-      "pro": 2,
-      "max": 4,
+      "pro": 3,
+      "max": 6,
       "agency": 10
     },
     "youtube_accounts": {
