@@ -155,6 +155,7 @@ async def test_a_cancelled_subscription_keeps_its_last_period(dodo: HttpDodoClie
     assert sub.next_billing_date is not None
     # Cancelled at the end of the period: Dodo stops at next_billing_date.
     assert sub.cancelled_at >= sub.next_billing_date
+    assert sub.cancel_at_next_billing_date  # Dodo sends false, but it never renews
 
 
 @respx.mock

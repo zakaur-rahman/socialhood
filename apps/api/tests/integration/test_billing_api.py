@@ -4,6 +4,7 @@ FakeDodo. None of them changes the plan (FR-BIL-02)."""
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -242,6 +243,23 @@ async def test_cancel_at_the_period_end_then_resume(
     assert (await owner.post("/billing/resume")).status_code == 409
     published = [kind for kind, _ in await stream(redis, owner.wid)]
     assert published.count("usage.updated") == 2  # every open billing page refetches
+
+
+async def test_a_plan_cancelled_in_dodo_cannot_be_resumed(
+    owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    await paid(owner, fake_dodo)
+    assert (await owner.post("/billing/cancel")).status_code == 200
+    # Cancelled outright in Dodo's portal or dashboard: Dodo still answers the resume PATCH.
+    fake_dodo.subscriptions["sub_1"] = dataclasses.replace(
+        fake_dodo.subscriptions["sub_1"], status="cancelled"
+    )
+
+    resumed = await owner.post("/billing/resume")
+    assert resumed.status_code == 409
+    assert "can't be resumed" in resumed.text
+    state = (await owner.get("/billing")).json()
+    assert (state["plan"], state["cancel_at_period_end"]) == ("pro", True)
 
 
 async def test_cancel_and_resume_are_409_on_free(owner: Owner, fake_dodo: FakeDodo) -> None:

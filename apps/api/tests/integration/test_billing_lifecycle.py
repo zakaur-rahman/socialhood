@@ -247,7 +247,7 @@ async def test_the_downgrade_is_idempotent(owner: Owner, engine: AsyncEngine) ->
 
 
 async def test_max_to_pro_applies_the_lower_limits(owner: Owner, engine: AsyncEngine) -> None:
-    for n in range(4):
+    for n in range(5):
         await make_account(engine, owner.wid, username=f"shop{n}")
     await send(
         owner.app,
@@ -270,7 +270,7 @@ async def test_max_to_pro_applies_the_lower_limits(owner: Owner, engine: AsyncEn
     [notice] = await owner.rows(
         "SELECT body FROM notifications WHERE workspace_id = :w AND type = 'plan_downgraded'"
     )
-    # Four Instagram accounts; Creator keeps 2 of them (C-187), so 2 can no longer send.
+    # Five Instagram accounts; Creator keeps 3 of them (C-211), so 2 can no longer send.
     assert notice["body"] == "2 accounts can no longer send."
 
 

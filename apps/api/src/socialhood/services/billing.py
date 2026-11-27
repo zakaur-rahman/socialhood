@@ -366,6 +366,10 @@ async def start_checkout(
 
 
 CHANGE_REFUSED = "Dodo couldn't make this change. Try again, or write to support@amplychat.com."
+RESUME_REFUSED = (
+    "This plan was cancelled in Dodo, so it can't be resumed. It stays until the end of the "
+    "period; choose a plan again after that."
+)
 
 
 async def _plan_change_target(
@@ -505,6 +509,8 @@ async def set_cancel(
         if error.retryable or error.status is None:
             raise ApiError("service_unavailable", DODO_UNAVAILABLE) from error
         raise ApiError("conflict", "Dodo refused the change; the plan may have ended.") from error
+    if not cancel and snapshot.status == "cancelled":
+        raise ApiError("conflict", RESUME_REFUSED)
     sub = await subscriptions.current(session, for_update=True)
     if sub is not None and sub.dodo_subscription_id == snapshot.subscription_id:
         sub.cancel_at_period_end = snapshot.cancel_at_next_billing_date
