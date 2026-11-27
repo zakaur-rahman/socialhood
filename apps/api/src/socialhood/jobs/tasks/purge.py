@@ -5,13 +5,15 @@ services/workspace_deletion.py, the retention deletes in repositories/retention.
   a deletion commits). Retries any failure with backoff (10 s doubling, capped at 10 minutes, 8
   tries); a run that uses up its time budget queues the next one.
 - purge_account_data(workspace_id, account_id): bulk lane, queueing lock and run lock
-  ``acctpurge:{id}`` (C-067; queued when an account's deletion commits: Disconnect and delete
-  data, Remove, or Meta's data-deletion callback). The purge is services/account_deletion.py;
-  this keeps the Meta requests waiting on the account in step (jobs/tasks/privacy.py). Same
-  retries as purge_workspace; a run that uses up its time budget queues the next one.
+  ``acctpurge:{id}`` (C-067; queued when an account's deletion is due: Meta's data-deletion
+  callback at once, Disconnect and delete data or Remove 15 days later, by the sweep, C-214).
+  The purge is services/account_deletion.py; this keeps the Meta requests waiting on the account
+  in step (jobs/tasks/privacy.py). Same retries as purge_workspace; a run that uses up its time
+  budget queues the next one.
 - sweep_deletions: periodic, every 15 minutes (bulk lane, singleton). Re-queues the purge of every
-  workspace and every account still deleting (a lost enqueue, a purge that ran out of retries),
-  alerts on one still deleting after 6 hours, and re-queues or settles open Meta requests.
+  workspace still deleting and every account whose deletion is due (one that just fell due, a lost
+  enqueue, a purge that ran out of retries), alerts on one still there 6 hours after it was due,
+  and re-queues or settles open Meta requests.
 - purge_expired: periodic, daily 04:00 UTC (bulk lane, singleton, 600 s), §5.9's retention:
   webhook events 30 days (TR-WH-07; failed ones too, TR-OPS-04), notifications 90 days, AI usage
   events 13 months, finished agent runs 180 days (TR-AGT-08), messages beyond the plan's
@@ -157,7 +159,7 @@ async def sweep_all(sessionmaker: async_sessionmaker[AsyncSession], now: datetim
     await deletion.sweep(sessionmaker, now)
     async with sessionmaker() as session:
         with tenant_bypass_scope():  # every workspace's deleting accounts
-            pending = await account_rows.deleting_accounts(session)
+            pending = await account_rows.deleting_accounts(session, now)
     await account_deletion.sweep(pending, now)
     await privacy.sweep_requests(sessionmaker)
 

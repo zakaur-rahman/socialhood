@@ -1,8 +1,9 @@
 """C-067: deleting one connected account's data (FR-CON-06, F-16).
 
-Disconnect and delete data, Remove, and Meta's data-deletion callback all queue
-purge_account_data. The purge leaves none of the account's rows in any account table (the list
-comes from the schema: repositories/account_deletion.account_tables), none of the files its
+Disconnect and delete data and Remove queue purge_account_data once their 15 days are up, and a
+reconnect before then keeps everything (C-214); Meta's data-deletion callback queues it at once.
+The purge leaves none of the account's rows in any account table (the list comes from the
+schema: repositories/account_deletion.account_tables), none of the files its
 messages own, none of its Valkey keys, and then removes the account; another account in the same
 workspace, the workspace's own data (knowledge, settings, billing) and other workspaces are
 untouched. Cloudinary is a fake.
@@ -34,7 +35,7 @@ from socialhood.repositories.account_deletion import account_tables, owned_by
 from socialhood.repositories.workspace_deletion import tenant_tables
 from socialhood.security.signatures import sign_request
 from socialhood.services import account_deletion as deletion
-from socialhood.services.connections import BEING_DELETED
+from socialhood.services.connections import BEING_DELETED, DELETION_GRACE
 from socialhood.services.scheduled_posts import views as scheduled_post_views
 from tests.support.ai import make_analysis, make_decision, make_site, make_source, make_suggestion
 from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
@@ -646,6 +647,17 @@ def url(wid: str, account_id: str) -> str:
     return f"/v1/w/{wid}/social-accounts/{account_id}"
 
 
+async def make_due(engine: AsyncEngine, *account_ids: str) -> None:
+    """Skip the 15-day wait (C-214)."""
+    for account_id in account_ids:
+        await execute(
+            engine,
+            "UPDATE social_accounts SET deletion_due_at = now() - interval '1 minute'"
+            " WHERE id = :a",
+            a=account_id,
+        )
+
+
 async def jobs(task: str) -> list[dict[str, Any]]:
     return await jobs_app.connector.execute_query_all_async(
         "SELECT args, queueing_lock, lock, queue_name FROM procrastinate_jobs"
@@ -709,6 +721,7 @@ async def test_disconnect_and_delete_data(
     [row] = await rows(engine, "SELECT * FROM social_accounts WHERE id = :a", a=account)
     assert (row["status"], row["access_token_enc"]) == ("disconnected", None)
     assert row["deletion_requested_at"] is not None
+    assert row["deletion_due_at"] == row["deletion_requested_at"] + DELETION_GRACE
     assert str(row["deletion_requested_by_user_id"]) == admin["id"]
     [automation] = await rows(
         engine, "SELECT status FROM automations WHERE id = :a", a=seeded.automation_id
@@ -718,6 +731,31 @@ async def test_disconnect_and_delete_data(
         engine, "SELECT status FROM scheduled_messages WHERE id = :s", s=seeded.scheduled_message_id
     )
     assert scheduled["status"] == "canceled"
+    assert await jobs("purge_account_data") == []  # C-214: it waits 15 days
+
+    listed = (
+        await client.get(f"/v1/w/{wid}/social-accounts", headers=clerk.headers(owner_id))
+    ).json()["items"]
+    by_id = {a["id"]: a for a in listed}
+    assert (by_id[account]["status"], by_id[account]["deleting"]) == ("disconnected", True)
+    assert datetime.fromisoformat(by_id[account]["deletion_due_at"]) == row["deletion_due_at"]
+    assert (by_id[other]["deleting"], by_id[other]["deletion_due_at"]) == (False, None)
+    billing = (await client.get(f"/v1/w/{wid}/billing", headers=clerk.headers(owner_id))).json()
+    meters = {m["metric"]: m["used"] for m in billing["usage"]}
+    assert meters["instagram_accounts"] == 1  # the slot is free at once
+    assert meters["active_automations"] == 0
+
+    # Asking again changes nothing, and a purge before the day does nothing.
+    again = await client.delete(url(wid, account), params=ask, headers=clerk.headers(owner_id))
+    assert again.status_code == 204
+    assert await jobs("purge_account_data") == []
+    early = await run_account_purge(deps(app, media), uuid.UUID(wid), uuid.UUID(account))
+    assert early.status == "not_due"
+    assert await owned_counts(engine, wid, account)
+
+    # Once due, the sweep queues it and the purge removes it.
+    await make_due(engine, account)
+    await sweep_all(app.state.sessionmaker, datetime.now(UTC))
     assert await jobs("purge_account_data") == [
         {
             "args": {"workspace_id": wid, "account_id": account},
@@ -726,21 +764,6 @@ async def test_disconnect_and_delete_data(
             "queue_name": "bulk",
         }
     ]
-
-    listed = (
-        await client.get(f"/v1/w/{wid}/social-accounts", headers=clerk.headers(owner_id))
-    ).json()["items"]
-    by_id = {a["id"]: a for a in listed}
-    assert (by_id[account]["status"], by_id[account]["deleting"]) == ("disconnected", True)
-    assert by_id[other]["deleting"] is False
-    billing = (await client.get(f"/v1/w/{wid}/billing", headers=clerk.headers(owner_id))).json()
-    meters = {m["metric"]: m["used"] for m in billing["usage"]}
-    assert meters["instagram_accounts"] == 1  # the slot is free at once
-    assert meters["active_automations"] == 0
-
-    # Asking again is harmless; the purge then removes it.
-    again = await client.delete(url(wid, account), params=ask, headers=clerk.headers(owner_id))
-    assert again.status_code == 204
     result = await run_account_purge(deps(app, media), uuid.UUID(wid), uuid.UUID(account))
     assert result.status == "purged"
     listed = (
@@ -787,12 +810,11 @@ async def test_remove_is_for_disconnected_and_sandbox_accounts(
         url(wid, sandbox["id"]), params={"confirm": f"@{sandbox['username']}"}, headers=headers
     )
     assert removed.status_code == 204
-    assert [j["args"]["account_id"] for j in await jobs("purge_account_data")] == [
-        live,
-        sandbox["id"],
-    ]
+    assert await jobs("purge_account_data") == []  # C-214: both wait 15 days
     listed = (await client.get(f"/v1/w/{wid}/social-accounts", headers=headers)).json()["items"]
     assert all(a["deleting"] and a["status"] == "disconnected" for a in listed)
+
+    await make_due(engine, live, sandbox["id"])
 
     for account_id in (live, sandbox["id"]):
         assert (
@@ -801,7 +823,7 @@ async def test_remove_is_for_disconnected_and_sandbox_accounts(
     assert (await client.get(f"/v1/w/{wid}/social-accounts", headers=headers)).json()["items"] == []
 
 
-async def test_an_account_being_deleted_cannot_be_reconnected_until_it_is_gone(
+async def test_reconnecting_before_the_day_keeps_the_data_and_after_it_is_refused(
     app: FastAPI,
     client: httpx.AsyncClient,
     clerk: Clerk,
@@ -810,51 +832,96 @@ async def test_an_account_being_deleted_cannot_be_reconnected_until_it_is_gone(
     media: FakeMedia,
     queue: None,
 ) -> None:
+    """C-214: a reconnect while the delete waits cancels it and keeps everything; from 10 minutes
+    before the purge is due it is refused, and once the account is gone it connects as new."""
     clerk_id, me = await sign_in(client, clerk)
     wid = me["workspaces"][0]["id"]
-    connected = await connect(client, clerk, clerk_id, wid)
-    account = connected.json()
-    response = await client.delete(
-        url(wid, account["id"]),
-        params={"delete_data": "true", "confirm": f"@{account['username']}"},
-        headers=clerk.headers(clerk_id),
+    headers = clerk.headers(clerk_id)
+    account = (await connect(client, clerk, clerk_id, wid)).json()
+    seeded = await seed_account(engine, wid, account["id"])
+    kept = await owned_counts(engine, wid, account["id"])
+    ask = {"delete_data": "true", "confirm": f"@{account['username']}"}
+
+    deleted = await client.delete(url(wid, account["id"]), params=ask, headers=headers)
+    assert deleted.status_code == 204
+    restored = await connect(client, clerk, clerk_id, wid, code="code-2")
+    assert restored.status_code == 200, restored.text
+    body = restored.json()
+    assert (body["id"], body["status"], body["deleting"], body["deletion_due_at"]) == (
+        account["id"],
+        "active",
+        False,
+        None,
     )
-    assert response.status_code == 204
+    [row] = await rows(engine, "SELECT * FROM social_accounts WHERE id = :a", a=account["id"])
+    assert (row["deletion_requested_at"], row["deletion_requested_by_user_id"]) == (None, None)
+    assert await owned_counts(engine, wid, account["id"]) == kept
+    [automation] = await rows(
+        engine, "SELECT status FROM automations WHERE id = :a", a=seeded.automation_id
+    )
+    assert automation["status"] == "paused"  # as after any disconnect: turned back on by hand
+    await make_due(engine, account["id"])  # no-op: a restored account has nothing due
+    restored_purge = await run_account_purge(
+        deps(app, media), uuid.UUID(wid), uuid.UUID(account["id"])
+    )
+    assert restored_purge.status == "not_deleting"
 
-    again = await connect(client, clerk, clerk_id, wid, code="code-2")
-    assert again.status_code == 409
-    assert again.json()["detail"] == BEING_DELETED
+    deleted = await client.delete(url(wid, account["id"]), params=ask, headers=headers)
+    assert deleted.status_code == 204
+    await execute(
+        engine,
+        "UPDATE social_accounts SET deletion_due_at = now() + interval '5 minutes' WHERE id = :a",
+        a=account["id"],
+    )
+    late = await connect(client, clerk, clerk_id, wid, code="code-3")
+    assert late.status_code == 409
+    assert late.json()["detail"] == BEING_DELETED
 
+    await make_due(engine, account["id"])
     await run_account_purge(deps(app, media), uuid.UUID(wid), uuid.UUID(account["id"]))
-    reconnected = await connect(client, clerk, clerk_id, wid, code="code-3")
+    reconnected = await connect(client, clerk, clerk_id, wid, code="code-4")
     assert reconnected.status_code == 200
     assert reconnected.json()["id"] != account["id"]
 
 
-async def test_the_sweep_requeues_every_account_still_deleting_and_alerts_when_overdue(
+async def test_the_sweep_requeues_every_account_due_and_alerts_when_overdue(
     app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None
 ) -> None:
     _, wid, _ = await pro_workspace(client, clerk, engine)
     fresh = str(await make_account(engine, wid, platform_account_id="17841400000000009"))
     stuck = str(await make_account(engine, wid, platform_account_id="17841400000000010"))
+    waiting = str(await make_account(engine, wid, platform_account_id="17841400000000013"))
     now = datetime.now(UTC)
-    for account_id, asked in (
+    for account_id, due in (
         (fresh, now - timedelta(minutes=5)),
         (stuck, now - timedelta(hours=7)),
+        (waiting, now + timedelta(days=14)),  # C-214: not due yet
     ):
         await execute(
             engine,
-            "UPDATE social_accounts SET status = 'disconnected', deletion_requested_at = :t"
-            " WHERE id = :a",
-            t=asked,
+            "UPDATE social_accounts SET status = 'disconnected', deletion_due_at = :t,"
+            " deletion_requested_at = :asked WHERE id = :a",
+            t=due,
+            asked=due - timedelta(days=15),
             a=account_id,
         )
-    await sweep_all(app.state.sessionmaker, now)
+    # Overdue counts from the due time, not from the request 15 days earlier.
+    swept = await deletion.sweep(await due_accounts(app), now)
+    assert swept.overdue == [uuid.UUID(stuck)]
     assert sorted(j["args"]["account_id"] for j in await jobs("purge_account_data")) == sorted(
         [fresh, stuck]
     )
     await sweep_all(app.state.sessionmaker, now)  # a waiting purge isn't queued twice
     assert len(await jobs("purge_account_data")) == 2
+
+
+async def due_accounts(app: FastAPI) -> list[tuple[uuid.UUID, uuid.UUID, datetime]]:
+    from socialhood.db.tenancy import tenant_bypass_scope
+    from socialhood.repositories.account_deletion import deleting_accounts
+
+    async with app.state.sessionmaker() as session:
+        with tenant_bypass_scope():
+            return await deleting_accounts(session, datetime.now(UTC))
 
 
 # ---------------------------------------------------------------- Meta's data-deletion callback
@@ -884,7 +951,13 @@ async def test_meta_deletion_purges_the_users_accounts_in_every_workspace(
     second_clerk, second = await sign_in(client, clerk, email="second@example.com")
     w1, w2 = first["workspaces"][0]["id"], second["workspaces"][0]["id"]
     old = str(await make_account(engine, w1, platform_account_id="17841400000000011"))
-    await execute(engine, "UPDATE social_accounts SET status = 'disconnected' WHERE id = :a", a=old)
+    # C-214: a member's delete is waiting on it; Meta's request makes it due at once.
+    await execute(
+        engine,
+        "UPDATE social_accounts SET status = 'disconnected', deletion_requested_at = now(),"
+        " deletion_due_at = now() + interval '15 days' WHERE id = :a",
+        a=old,
+    )
     live = str(await make_account(engine, w2, platform_account_id="17841400000000011"))
     bystander = str(
         await make_account(
@@ -926,8 +999,8 @@ async def test_meta_deletion_purges_the_users_accounts_in_every_workspace(
     assert (await status())["status"] == "processing"
     marked = await rows(
         engine,
-        "SELECT id, status, access_token_enc, deletion_requested_at, deletion_requested_by_user_id"
-        " FROM social_accounts WHERE id IN (:a, :b)",
+        "SELECT id, status, access_token_enc, deletion_requested_at, deletion_requested_by_user_id,"
+        " deletion_due_at FROM social_accounts WHERE id IN (:a, :b)",
         a=old,
         b=live,
     )
@@ -935,6 +1008,7 @@ async def test_meta_deletion_purges_the_users_accounts_in_every_workspace(
         (r["status"], r["access_token_enc"], r["deletion_requested_by_user_id"])
         == ("disconnected", None, None)
         and r["deletion_requested_at"] is not None
+        and r["deletion_due_at"] <= datetime.now(UTC)
         for r in marked
     )
     assert len(marked) == 2
@@ -987,3 +1061,33 @@ async def test_a_meta_request_with_nothing_left_completes_at_once(
     assert await delete_user_data(app.state.sessionmaker, app.state.redis, deps_, code) is True
     status = (await client.get(f"/v1/data-deletion/{code}")).json()
     assert status["status"] == "completed"
+
+
+async def test_turning_the_website_chat_back_on_before_the_day_keeps_it(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None
+) -> None:
+    """C-214: like a reconnect, opening the website chat's settings while its delete waits
+    switches it back on with its data; from 10 minutes before the purge it is refused."""
+    clerk_id, wid, _ = await pro_workspace(client, clerk, engine)
+    headers = clerk.headers(clerk_id)
+    assert (await client.get(f"/v1/w/{wid}/widget", headers=headers)).status_code == 200
+    [acct] = await rows(engine, "SELECT id FROM social_accounts WHERE platform = 'web'")
+    web = str(acct["id"])
+    ask = {"delete_data": "true", "confirm": "Website chat"}
+
+    assert (await client.delete(url(wid, web), params=ask, headers=headers)).status_code == 204
+    assert (await client.get(f"/v1/w/{wid}/widget", headers=headers)).status_code == 200
+    [row] = await rows(engine, "SELECT * FROM social_accounts WHERE id = :a", a=web)
+    assert (row["status"], row["deletion_requested_at"], row["deletion_due_at"]) == (
+        "active",
+        None,
+        None,
+    )
+
+    assert (await client.delete(url(wid, web), params=ask, headers=headers)).status_code == 204
+    await execute(
+        engine,
+        "UPDATE social_accounts SET deletion_due_at = now() + interval '5 minutes' WHERE id = :a",
+        a=web,
+    )
+    assert (await client.get(f"/v1/w/{wid}/widget", headers=headers)).status_code == 409

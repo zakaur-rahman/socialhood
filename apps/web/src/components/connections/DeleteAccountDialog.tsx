@@ -20,7 +20,7 @@ import type { SocialAccount } from "@/lib/api/types";
 
 export type DeleteMode = "disconnect" | "remove";
 
-/** What deleting an account's data removes, and what stays (C-067). */
+/** What deleting an account's data removes, and what stays (C-067); C-214: after 15 days. */
 export const DELETED_FOR_ACCOUNT = [
   "Its conversations, messages and contacts",
   "Its comments, posts and post stats",
@@ -59,12 +59,13 @@ const COPY: Record<DeleteMode, { action: string; title: (handle: string) => stri
     action: "Disconnect and delete",
     title: (handle) => `Disconnect ${handle} and delete its data?`,
     lead: (handle) =>
-      `Amplychat disconnects ${handle} now, then permanently deletes everything stored for it. This can't be undone.`,
+      `Amplychat disconnects ${handle} now and cancels its scheduled messages and posts. Everything stored for it is permanently deleted after 15 days. Reconnect before then to keep it.`,
   },
   remove: {
     action: "Remove account",
     title: (handle) => `Remove ${handle}?`,
-    lead: (handle) => `Amplychat permanently deletes ${handle} and everything stored for it. This can't be undone.`,
+    lead: (handle) =>
+      `Amplychat permanently deletes ${handle} and everything stored for it after 15 days. Reconnect before then to keep it.`,
   },
 };
 

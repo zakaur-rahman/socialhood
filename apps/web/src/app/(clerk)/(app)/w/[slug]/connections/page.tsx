@@ -371,7 +371,7 @@ function Connections() {
                         if (!isConfirmError(error)) toastError(error);
                         throw error;
                       }
-                      toast.success(`Deleting ${handleOf(account)} and its data`);
+                      toast.success(`${handleOf(account)} disconnected. Its data is deleted in 15 days.`);
                     },
                   }}
                 />

@@ -583,6 +583,8 @@ async def test_disconnecting_a_page_and_deleting_its_data_leaves_nothing_of_it(
             params={"delete_data": "true", "confirm": acct["username"]},
         )
         assert removed.status_code == 204, removed.text
+        async with engine.begin() as conn:  # C-214: skip the 15-day wait
+            await conn.execute(text("UPDATE social_accounts SET deletion_due_at = now()"))
         purge = PurgeDeps(sessionmaker=app.state.sessionmaker, redis=redis, media=NoFiles())
         result = await run_account_purge(purge, uuid.UUID(ws.wid), uuid.UUID(ws.account_id))
     assert result.status == "purged"

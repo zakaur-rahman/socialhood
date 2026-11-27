@@ -24232,6 +24232,18 @@
             "title": "Deleting",
             "type": "boolean"
           },
+          "deletion_due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletion Due At"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -48213,7 +48225,7 @@
     },
     "/v1/w/{wid}/social-accounts/{account_id}": {
       "delete": {
-        "description": "Owners and admins. Three uses (FR-CON-06, C-067):\n\n- Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop\n  and automations pause; what was stored stays.\n- Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects\n  the same way, then every row, file and cached key of the account is purged in the\n  background. Knowledge, workspace settings, billing and other accounts are kept.\n- Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox\n  account; 409 for a live one (disconnect first, or use Disconnect and delete data).\n\n``confirm`` is the account's handle (with or without \"@\") or number, else its name; a\nmismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``\ntrue; it is gone from the list once done (a ``resync`` event follows).",
+        "description": "Owners and admins. Three uses (FR-CON-06, C-067):\n\n- Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop\n  and automations pause; what was stored stays.\n- Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects\n  the same way, then 15 days later every row, file and cached key of the account is purged\n  in the background (C-214: reconnecting before ``deletion_due_at`` cancels it and keeps the\n  data). Knowledge, workspace settings, billing and other accounts are kept.\n- Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox\n  account; 409 for a live one (disconnect first, or use Disconnect and delete data).\n\n``confirm`` is the account's handle (with or without \"@\") or number, else its name; a\nmismatch is 422 on ``confirm``. Until the purge has run the account is listed with\n``deleting`` true and its ``deletion_due_at``; it is gone from the list once done (a\n``resync`` event follows).",
         "operationId": "disconnect_social_account",
         "parameters": [
           {

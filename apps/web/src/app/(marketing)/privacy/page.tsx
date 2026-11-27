@@ -251,8 +251,9 @@ function sections(): LegalSection[] {
               What was already stored stays in the workspace until the business deletes it.
             </li>
             <li>
-              Deleting an account&apos;s data (Delete account and data, in Connections), deleting the
-              workspace, or a deletion request through Instagram or Facebook removes everything stored for the account
+              Deleting an account&apos;s data (Delete account and data, in Connections) disconnects it at once and
+              removes everything stored for it 15 days later, unless the business reconnects it before then. Deleting the
+              workspace, or a deletion request through Instagram or Facebook, removes everything stored for the account
               within 24 hours. Raw events from Meta are deleted after 30 days in any case.
             </li>
             <li>
@@ -421,7 +422,7 @@ function sections(): LegalSection[] {
               Google Privacy Policy
             </a>
             . Disconnecting the channel in {N} revokes our access with Google and deletes the token at once; deleting its
-            data removes everything else we stored for it within 24 hours. You can also remove {N}&apos;s access at any
+            data removes everything else we stored for it 15 days later, unless you reconnect the channel first. You can also remove {N}&apos;s access at any
             time on Google&apos;s{" "}
             <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer">
               third-party connections page
@@ -575,8 +576,9 @@ function sections(): LegalSection[] {
                     message files
                   </td>
                   <td>
-                    Until the business deletes that account&apos;s data (or Meta asks us to), then permanently removed within
-                    24 hours, usually within minutes.
+                    Until the business deletes that account&apos;s data, then permanently removed 15 days later unless the
+                    business reconnects the account first. When Meta asks us to delete it, within 24 hours, usually within
+                    minutes.
                   </td>
                 </tr>
                 <tr>
@@ -671,16 +673,17 @@ function sections(): LegalSection[] {
             <li>
               <strong>Delete an account&apos;s data</strong> (Connections, owners and admins: Delete account and
               data, in the account&apos;s menu). The account is disconnected at once, then everything
-              stored for it is permanently deleted within 24 hours: its conversations and messages with their AI analysis
+              stored for it is permanently deleted 15 days later: its conversations and messages with their AI analysis
               and suggested replies, its contacts, its comments, its posts and their statistics, the automations and
               scheduled messages and posts for it, the photos and files received or sent in its messages, and the account
-              itself. The workspace&apos;s knowledge base, settings, members and billing, and its other accounts, are kept.
+              itself. Reconnecting the account within those 15 days cancels the deletion and keeps its data. The
+              workspace&apos;s knowledge base, settings, members and billing, and its other accounts, are kept.
             </li>
             <li>
               <strong>Remove {N} from Instagram or Facebook.</strong> Removing {N} in your Instagram or Facebook settings
               disconnects the account. If you also ask for your data to be deleted, Meta sends us your request: we
               disconnect every account connected with your login, in every workspace, and delete each one&apos;s data as
-              described above, along with the raw events Meta sent us for it. You get a confirmation code you can check on
+              described above, within 24 hours rather than after 15 days, along with the raw events Meta sent us for it. You get a confirmation code you can check on
               our <Link href="/data-deletion">data deletion page</Link>; it shows the request as completed once every
               account&apos;s data is gone.
             </li>
