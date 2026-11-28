@@ -60,7 +60,7 @@ export function EditOrderDialog({
           items: built.items,
           address: filledAddress(address),
           note: note.trim(),
-          payment: resend && order.conversation_id ? { method, send: true, allow_partial: order.accept_partial } : null,
+          payment: resend && order.conversation_id ? { method, send: true, allow_partial: order.accept_partial, ask_address: false } : null,
         },
       },
       {

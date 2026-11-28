@@ -68,6 +68,7 @@ export const keys = {
   shopify: (wid: string) => ["w", wid, "shopify"] as const,
   orders: (wid: string) => ["w", wid, "orders"] as const, // GR-32
   orderList: (wid: string, status: string | null) => ["w", wid, "orders", "list", status] as const,
+  order: (wid: string, id: string) => ["w", wid, "orders", "one", id] as const, // C-218
   payments: (wid: string) => ["w", wid, "payments"] as const,
   waCatalogue: (wid: string) => ["w", wid, "wa-catalogue"] as const, // GR-33
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,

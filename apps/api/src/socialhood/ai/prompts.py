@@ -32,6 +32,8 @@ CURRENT = {
     # summary.v2: a concrete next step from the conversation and the knowledge the latest draft
     # used; polish.v1: the composer's AI Polish (C-063).
     "polish": 1,
+    # address.v1 (C-218): a customer's reply read into an order's delivery address fields.
+    "address": 1,
 }
 
 

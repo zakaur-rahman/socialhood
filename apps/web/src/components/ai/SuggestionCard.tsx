@@ -33,7 +33,7 @@ export type SuggestionActions = {
 };
 
 /** The bar rises 8 px over `duration-slow` (DESIGN_SYSTEM §7.2: the suggestion bar). */
-const BAR =
+export const BAR =
   "mx-4 mb-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-slow motion-safe:ease-enter";
 /** The source and confidence chips are Badges; a long source title truncates inside the chip. */
 const META = "max-w-40";

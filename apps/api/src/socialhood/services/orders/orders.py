@@ -111,6 +111,14 @@ STATUS_WORDS: dict[str, str] = {
     OrderStatus.EXPIRED: "expired",
 }
 EDITABLE = (OrderStatus.DRAFT, OrderStatus.AWAITING_PAYMENT)
+# C-218: the delivery address (and the note) can still change once it's paid: a customer often
+# pays first and sends the address after. The lines and so the total can't.
+DETAILS_EDITABLE = (
+    *EDITABLE,
+    OrderStatus.PARTIALLY_PAID,
+    OrderStatus.PAID,
+    OrderStatus.FULFILLED,
+)
 
 
 @dataclass
@@ -559,6 +567,13 @@ def upi_link(vpa: str, name: str, order: Order, amount_minor: int | None = None)
     return f"upi://pay?{query}"
 
 
+# C-218: how an order's message asks for the delivery address (the reply is read by the AI and
+# saved by a member, services/orders/address_read.py).
+ADDRESS_ASK = (
+    "Please reply with your delivery address: name, house and street, area, city and PIN code."
+)
+
+
 def payment_text(order: Order, items: Sequence[OrderItem], *, pay_url: str, vpa: str | None) -> str:
     """The message that carries the link: the order, its lines, the total and how to pay. An order
     with something already paid says what is left."""
@@ -793,9 +808,11 @@ async def edit(
     """Change a draft or waiting order: re-price the lines from the catalogue, replace the
     address or the note. A new total cancels the payment link (best effort) and returns the order
     to a draft, so the customer can't pay the old amount; the caller may ask for a new request
-    straight after. 422 for an order someone has paid or that is closed."""
+    straight after. The address and the note may also change on a paid or fulfilled order
+    (C-218). 422 for lines on an order someone has paid, or any change to a closed one."""
     await check_entitlement(session, KEY, detail=COPY["plan"])
-    if order.status not in EDITABLE:
+    allowed = EDITABLE if body.items is not None else DETAILS_EDITABLE
+    if order.status not in allowed:
         raise ApiError(
             "validation_error",
             COPY["edit_state"].format(status=STATUS_WORDS.get(order.status, order.status)),

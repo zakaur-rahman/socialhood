@@ -10537,3 +10537,24 @@ Reverted on develop (#287, a revert of #284) except migration 0067 and the model
 `social_accounts.deletion_due_at`: the column stays, unused, because 0068 (C-215) follows it.
 The Privacy Policy, data-deletion page and DPA are back to 24 hours. To bring C-214 back, revert
 the revert and drop the migration and model lines from its diff.
+
+## C-218: a WhatsApp order as a card, a ready order reply, and the delivery address (2026-11-28)
+
+Owner, on a customer's cart in the inbox: "Sent an order of 1 item (INR 2499.00). Order #1." was
+hard to read, the AI's draft vague, and the address never asked for.
+- **Order card:** the cart message stores its order in `messages.interactive`
+  (`{"type": "order", ...}`, no migration) and the API returns `message.order {id, number}`. The
+  bubble shows the order (status, up to 5 lines, total, delivery address, View order, Request
+  payment). The message text, the list preview and search read "Order #1: 1 x Handloom Saree,
+  INR 2499.00 in total" (or the item count).
+- **Order reply:** while the latest message is an order awaiting payment, the AI draft gives way
+  to a reply built from the order (lines, total, the address request when there is none): Send
+  confirmation, or Send with payment link (the existing payment request, with the new
+  `ask_address`). No AI wording, so prices can't be wrong, and no credits.
+- **Address:** when the customer answers, "Is this the delivery address for Order #N?" › Read
+  address: the AI reads the message into the address fields (`POST /orders/{id}/address/read`,
+  prompt `address.v1`, 1 credit `address_read`, migration 0069 widens the feature check). Nothing
+  is saved until the member saves it with the order's edit. The address and the note may now
+  change on a paid or fulfilled order (customers often pay first); the lines may not.
+- Not done: WhatsApp's native address message (India, +91 customers only; the owner's number is
+  +1) and Meta's "Review and pay" order message (needs WhatsApp Payments).

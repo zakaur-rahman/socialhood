@@ -30,6 +30,7 @@ from socialhood.auth.deps import (
     Session,
     WorkspaceContext,
 )
+from socialhood.billing.entitlements import credits_gate
 from socialhood.models.orders import Order
 from socialhood.platforms.deps import deps_from
 from socialhood.razorpay.client import RazorpayClient
@@ -37,6 +38,8 @@ from socialhood.razorpay.registry import get_razorpay
 from socialhood.realtime import events as realtime
 from socialhood.repositories import inbox
 from socialhood.schemas.orders import (
+    AddressReading,
+    AddressReadRequest,
     CancelOrder,
     FulfilOrder,
     MarkPaid,
@@ -53,7 +56,7 @@ from socialhood.schemas.orders import (
 )
 from socialhood.security.crypto import TokenCipher, cipher_for
 from socialhood.services import audit, sending
-from socialhood.services.orders import ledger, notices, orders, payments
+from socialhood.services.orders import address_read, ledger, notices, orders, payments
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["orders"])
 
@@ -132,6 +135,8 @@ async def _send_request(
         cipher=_cipher(request),
         allow_partial=body.allow_partial,
     )
+    if body.ask_address and not order.address:
+        text = f"{text}\n\n{orders.ADDRESS_ASK}"
     if body.send and order.conversation_id is not None:
         conv = await inbox.get_conversation(session, order.conversation_id)
         if conv is not None:
@@ -218,6 +223,25 @@ async def request_payment(
     out = await orders.view(session, order)
     await realtime.commit_and_publish(session, request.app.state.redis)
     return out
+
+
+@router.post("/orders/{order_id}/address/read", operation_id="read_order_address")
+async def read_order_address(
+    request: Request, order_id: uuid.UUID, body: AddressReadRequest, ctx: CanReply, session: Session
+) -> AddressReading:
+    """C-218: the AI reads the customer's message into the order's delivery address fields, for a
+    member to check and save with the order's edit. Nothing is saved. 1 credit; 402
+    quota_exceeded without credits; 422 on ``message_id`` for a message that isn't the
+    customer's in this order's conversation; 503 when the AI can't answer."""
+    order = await orders.get(session, order_id)
+    async with credits_gate(session):
+        return await address_read.read(
+            session,
+            request.app.state.sessionmaker,
+            workspace_id=ctx.workspace_id,
+            order=order,
+            message_id=body.message_id,
+        )
 
 
 @router.patch("/orders/{order_id}", operation_id="edit_order")

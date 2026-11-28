@@ -4,12 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { handOff, resetAgentHandoff, useAgentHandoff } from "@/lib/agent/handoff";
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
-import type { Conversation, Message, SendMessage } from "@/lib/api/types";
+import type { Conversation, Message, Order, SendMessage } from "@/lib/api/types";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
 import { toZonedInputs } from "@/lib/tz";
 import { dayLabel } from "@/lib/day";
 import { scheduleCard } from "@/test/agent";
-import { account, conversation, json, listItem, message, noContent, problem, renderWithApi, type Call } from "@/test/api";
+import { account, conversation, json, listItem, message, noContent, problem, renderWithApi, suggestion, type Call } from "@/test/api";
 
 import { ThreadView } from "./ThreadView";
 
@@ -299,5 +299,34 @@ describe("ThreadView: reply and react (GR-42)", () => {
     expect(put.path).toContain("/conversations/c1/messages/m1/reaction");
     expect(put.body).toEqual({ emoji: "❤️" });
     await waitFor(() => expect(screen.queryByRole("img", { name: /Reactions:/ })).not.toBeInTheDocument());
+  });
+});
+
+describe("ThreadView: a WhatsApp cart (C-218)", () => {
+  it("shows the order card in the bubble and the order's reply in the AI draft's place", async () => {
+    const cart = message({ id: "m9", conversation_id: "c9", text: "Order #1: 1 x Handloom Saree", order: { id: "o1", number: 1 } });
+    threads.c9 = [cart];
+    const order = {
+      id: "o1",
+      number: 1,
+      status: "awaiting_payment",
+      currency: "INR",
+      total_minor: 249900,
+      address: null,
+      items: [{ id: "l1", name: "Handloom Saree", variant_title: null, quantity: 1, line_total_minor: 249900 }],
+    } as Order;
+    renderWithApi(<ThreadView key="c9" conversationId="c9" />, {
+      handlers: {
+        ...handlers(() => noContent(), {
+          c9: conversation({ id: "c9", platform: "whatsapp", pending_suggestion: suggestion({ conversation_id: "c9", message_id: "m9" }) }),
+        }),
+        "GET /v1/w/:wid/orders/:id": () => json(order),
+        "GET /v1/w/:wid/orders": () => json({ items: [], total: 0, limits: { entitled: true, razorpay_ready: true, upi_ready: false } }),
+      },
+    });
+    expect(await screen.findByTestId("order-card")).toHaveTextContent("Order #1");
+    expect(await screen.findByTestId("order-reply-text")).toHaveTextContent("Thanks for your order! Order #1");
+    expect(screen.getByRole("button", { name: "Send with payment link" })).toBeInTheDocument();
+    expect(screen.queryByText("AI draft:")).not.toBeInTheDocument();
   });
 });

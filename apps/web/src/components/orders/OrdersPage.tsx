@@ -1,6 +1,7 @@
 "use client";
 
 import { Receipt } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { COMMERCE_UPGRADE } from "@/components/billing/upgrade-requests";
@@ -48,7 +49,9 @@ export function OrdersPage() {
   const wid = workspace.id;
   const upgrade = useUpgradeDialog();
   const [filter, setFilter] = useState<Filter>("all");
-  const [openId, setOpenId] = useState<string | null>(null);
+  // ?order= opens that order: the inbox's order card links here (C-218).
+  const params = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(() => params?.get("order") ?? null);
   const orders = useOrders(wid, filter === "all" ? null : filter);
   const items = orders.data?.items ?? [];
   const limits = orders.data?.limits;

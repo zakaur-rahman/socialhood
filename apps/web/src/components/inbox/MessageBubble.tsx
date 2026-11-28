@@ -74,6 +74,8 @@ type Props = {
   lang?: string | null;
   /** Under the bubble: the analysis chips of an analysed customer message (FR-AI-02). */
   below?: ReactNode;
+  /** In place of the text: a customer's WhatsApp cart as its order card (C-218). */
+  body?: ReactNode;
   /** GR-42: quote this message in the composer. */
   onReply?: () => void;
   /** GR-42: the reactions this platform takes, and setting ours (null removes it). */
@@ -97,6 +99,7 @@ export function MessageBubble({
   aiInfo,
   lang,
   below,
+  body,
   onReply,
   reactionChoices = [],
   onReact,
@@ -213,6 +216,8 @@ export function MessageBubble({
           ) : null}
           {unsent ? (
             <p className="italic text-fg-secondary">Message unsent</p>
+          ) : body ? (
+            body
           ) : heart ? (
             <p className="text-5xl leading-none" role="img" aria-label="Heart sticker">
               {message.text}
