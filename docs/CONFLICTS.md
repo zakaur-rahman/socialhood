@@ -10538,6 +10538,13 @@ Reverted on develop (#287, a revert of #284) except migration 0067 and the model
 The Privacy Policy, data-deletion page and DPA are back to 24 hours. To bring C-214 back, revert
 the revert and drop the migration and model lines from its diff.
 
+## C-217: a refused request shows its reason, not "our side" (2026-11-28)
+
+Owner, importing Meta's data file into Products: the API refused it correctly (422, the header
+has no `name`), but the dialog said "Something went wrong on our side". `errorMessage`
+(apps/web/src/lib/copy.ts) used only `detail` for a 4xx, and a validation error can carry its
+reason only per field. It now falls back to the first field's message, so every form that shows
+`errorMessage` gives the real reason; 5xx and network errors keep their wording.
 ## C-218: a WhatsApp order as a card, a ready order reply, and the delivery address (2026-11-28)
 
 Owner, on a customer's cart in the inbox: "Sent an order of 1 item (INR 2499.00). Order #1." was
