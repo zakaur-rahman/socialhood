@@ -135,9 +135,19 @@ async def from_cart(
         number=order.number,
         source="whatsapp",
     )
-    count = sum(line.quantity for line in lines)
-    msg.text = (
-        f"Sent an order of {count} {'item' if count == 1 else 'items'} "
-        f"({money.label(order.total_minor, order.currency)}). Order #{order.number}."
-    )
+    msg.text = order_text(order.number, lines, order.total_minor, order.currency)
+    # The inbox shows the message as the order's card (message.order, C-218).
+    msg.interactive = {"type": "order", "order_id": str(order.id), "number": order.number}
     return order
+
+
+def order_text(number: int, lines: list[orders.Line], total_minor: int, currency: str) -> str:
+    """The cart message's text, for the inbox list, search and the AI: "Order #1: 1 x Handloom
+    Saree, 2,499.00 INR in total", or the count when there are more lines."""
+    total = money.label(total_minor, currency)
+    if len(lines) == 1:
+        line = lines[0]
+        name = f"{line.product.name} - {line.variant.title}" if line.variant else line.product.name
+        return f"Order #{number}: {line.quantity} x {name}, {total} in total"
+    count = sum(line.quantity for line in lines)
+    return f"Order #{number}: {count} items, {total} in total"

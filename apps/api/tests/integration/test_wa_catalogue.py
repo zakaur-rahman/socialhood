@@ -26,6 +26,8 @@ from socialhood.models.inbox import Conversation
 from socialhood.platforms.sandbox import outbox
 from socialhood.services.catalogue import wa_catalogue, wa_send
 from socialhood.services.catalogue.products import ProductData, VariantData
+from socialhood.services.orders import orders as orders_service
+from tests.support.ai import FakeProvider
 from tests.support.api import Clerk
 from tests.support.automation_api import workspace
 from tests.support.billing import set_subscription
@@ -418,8 +420,11 @@ async def test_a_cart_becomes_an_order_awaiting_payment(desk: Shop) -> None:
     [message] = await desk.rows(
         "SELECT text FROM messages WHERE direction = 'inbound' ORDER BY created_at DESC LIMIT 1"
     )
-    assert message["text"].startswith("Sent an order of 3 items")
-    assert "Order #1" in message["text"]
+    assert message["text"].startswith("Order #1: 3 items, ")  # the inbox list and search
+    # C-218: the inbox shows the message as the order's card.
+    listed = await desk.ws.ok("GET", f"/conversations/{person.conversation_id}/messages")
+    [cart] = [m for m in listed["items"] if m["order"]]
+    assert cart["order"] == {"id": order["id"], "number": 1}
 
 
 async def test_a_cart_with_nothing_orderable_makes_no_order(desk: Shop) -> None:
@@ -433,3 +438,135 @@ async def test_a_cart_with_nothing_orderable_makes_no_order(desk: Shop) -> None:
         "SELECT text FROM messages WHERE direction = 'inbound' ORDER BY created_at DESC LIMIT 1"
     )
     assert message["text"] == "Sent an order of 1 item"
+
+
+# ---------------------------------------------------------------- C-218: order reply, address
+
+
+async def ordered(desk: Shop) -> tuple[Any, dict[str, Any]]:
+    """A customer's cart of one kurta, made an order."""
+    made = await kurta(desk)
+    person = await desk.customer("Asha Rao")
+    await desk.inject(
+        kind="order",
+        from_id=person.wa_id,
+        cart=[{"retailer_id": str(made.variants["Blue / M"]), "quantity": 1}],
+    )
+    await desk.process_webhooks()
+    [order] = (await desk.ws.ok("GET", "/orders"))["items"]
+    return person, order
+
+
+async def last_outbound(desk: Shop) -> str:
+    [row] = await desk.rows(
+        "SELECT text FROM messages WHERE direction = 'outbound' ORDER BY created_at DESC LIMIT 1"
+    )
+    return str(row["text"])
+
+
+async def test_one_item_s_order_names_it(desk: Shop) -> None:
+    _, order = await ordered(desk)
+    [message] = await desk.rows(
+        "SELECT text FROM messages WHERE direction = 'inbound' ORDER BY created_at DESC LIMIT 1"
+    )
+    assert message["text"].startswith("Order #1: 1 x Cotton kurta - Blue / M, ")
+    [conv] = await desk.rows("SELECT last_message_preview FROM conversations")
+    assert conv["last_message_preview"].startswith("Order #1: 1 x Cotton kurta")  # the list
+    assert order["address"] is None
+
+
+async def test_the_payment_message_asks_for_the_address_until_there_is_one(desk: Shop) -> None:
+    _, order = await ordered(desk)
+    await desk.ws.ok(
+        "PUT", "/integrations/payments/upi", json={"vpa": "maple@okaxis", "name": "Maple"}
+    )
+    await desk.ws.ok(
+        "POST",
+        f"/orders/{order['id']}/payment-request",
+        json={"method": "upi", "ask_address": True},
+    )
+    assert (await last_outbound(desk)).endswith(orders_service.ADDRESS_ASK)
+
+    await desk.ws.ok(
+        "PATCH",
+        f"/orders/{order['id']}",
+        json={"address": {"name": "Asha Rao", "line1": "12 MG Road", "pincode": "800001"}},
+    )
+    await desk.ws.ok(
+        "POST",
+        f"/orders/{order['id']}/payment-request",
+        json={"method": "upi", "ask_address": True},
+    )
+    assert orders_service.ADDRESS_ASK not in await last_outbound(desk)
+
+
+async def test_the_ai_reads_the_customer_s_reply_into_the_address(
+    desk: Shop, fake_ai: FakeProvider
+) -> None:
+    person, order = await ordered(desk)
+    await desk.inject(
+        kind="dm", from_id=person.wa_id, text="Asha Rao, 12 MG Road, near City Mall, Patna 800001"
+    )
+    await desk.process_webhooks()
+    [reply] = await desk.rows(
+        "SELECT id FROM messages WHERE direction = 'inbound' ORDER BY created_at DESC LIMIT 1"
+    )
+    read = await desk.ws.ok(
+        "POST", f"/orders/{order['id']}/address/read", json={"message_id": str(reply["id"])}
+    )
+    assert read["found"] is True
+    assert (read["address"]["city"], read["address"]["pincode"]) == ("Patna", "800001")
+    [call] = fake_ai.calls_for("address")
+    assert "12 MG Road" in str(call.contents)
+    # Nothing is saved until a member saves it.
+    assert (await desk.ws.ok("GET", f"/orders/{order['id']}"))["address"] is None
+    [usage] = await desk.rows("SELECT feature FROM ai_usage_events WHERE feature = 'address_read'")
+    assert usage["feature"] == "address_read"
+
+    # A message that holds no address comes back empty.
+    fake_ai.respond("address", {"found": False})
+    empty = await desk.ws.ok(
+        "POST", f"/orders/{order['id']}/address/read", json={"message_id": str(reply["id"])}
+    )
+    assert empty["found"] is False
+    assert set(empty["address"].values()) == {None}
+
+    # Only the customer's own message in that conversation.
+    for message_id in (uuid.uuid4(), order["id"]):  # unknown, or not a message at all
+        refused = await desk.ws.call(
+            "POST", f"/orders/{order['id']}/address/read", json={"message_id": str(message_id)}
+        )
+        assert refused.status_code == 422
+    note = await desk.ws.ok(
+        "POST",
+        f"/conversations/{person.conversation_id}/messages",
+        202,
+        json={"text": "Thanks!", "client_id": str(uuid.uuid4())},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    refused = await desk.ws.call(
+        "POST", f"/orders/{order['id']}/address/read", json={"message_id": note["id"]}
+    )
+    assert refused.status_code == 422  # our own message
+
+
+async def test_a_paid_order_still_takes_its_address_but_not_new_lines(desk: Shop) -> None:
+    """C-218: customers often pay first and send the address after."""
+    _, order = await ordered(desk)
+    await desk.ws.ok("POST", f"/orders/{order['id']}/mark-paid", json={"reference": "UTR 1"})
+    saved = await desk.ws.ok(
+        "PATCH", f"/orders/{order['id']}", json={"address": {"city": "Patna", "pincode": "800001"}}
+    )
+    assert (saved["status"], saved["address"]["city"]) == ("paid", "Patna")
+    [line] = order["items"]
+    refused = await desk.ws.call(
+        "PATCH",
+        f"/orders/{order['id']}",
+        json={
+            "items": [
+                {"product_id": line["product_id"], "variant_id": line["variant_id"], "quantity": 2}
+            ]
+        },
+    )
+    assert refused.status_code == 422
+    assert "paid" in refused.text.lower()  # refused for its state, not the line

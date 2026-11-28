@@ -475,6 +475,7 @@ export type OrderEditInput = Schemas["OrderEdit"];
 export type OrderRefundInput = Schemas["RefundCreate"];
 export type OrderPaymentMethod = NonNullable<Order["payment_method"]>;
 export type PaymentSettings = Schemas["PaymentSettings"];
+export type OrderAddressReading = Schemas["AddressReading"];
 export type RazorpayConnectInput = Schemas["RazorpayConnect"];
 export type UpiSaveInput = Schemas["UpiSave"];
 

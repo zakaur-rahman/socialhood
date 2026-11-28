@@ -277,6 +277,8 @@ EXAMPLE_BODIES.update(
         },
         ("POST", "/v1/w/{wid}/orders/{order_id}/payment-request"): {"method": "upi"},
         ("POST", "/v1/w/{wid}/orders/{order_id}/mark-paid"): {},
+        # C-218: B's order's address read from B's message.
+        ("POST", "/v1/w/{wid}/orders/{order_id}/address/read"): {"message_id": "{message_id}"},
         # C-125: B's order edited, shipped and refunded.
         ("PATCH", "/v1/w/{wid}/orders/{order_id}"): {"note": "Taken over"},
         ("POST", "/v1/w/{wid}/orders/{order_id}/cancel"): {},

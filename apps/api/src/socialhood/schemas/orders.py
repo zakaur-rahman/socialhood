@@ -191,12 +191,25 @@ class OrderList(ResponseModel):
     limits: OrderLimits
 
 
+class AddressReadRequest(RequestModel):
+    message_id: uuid.UUID  # the customer's message that holds the address (C-218)
+
+
+class AddressReading(ResponseModel):
+    """What the AI read (C-218). Nothing is saved: the member checks it, then edits the order."""
+
+    found: bool  # false: the message holds no address
+    address: AddressOut
+
+
 class PaymentRequest(RequestModel):
     method: PaymentMethodName
     send: bool = True  # also send it as a message on the order's conversation
     # Let the customer pay a Razorpay link in parts (rupees only). A UPI order can always be
     # paid in parts: a member records each one.
     allow_partial: bool = False
+    # C-218: end the message by asking for the delivery address, when the order has none.
+    ask_address: bool = False
 
 
 class MarkPaid(RequestModel):

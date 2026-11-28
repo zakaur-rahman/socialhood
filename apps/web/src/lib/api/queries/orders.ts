@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type {
   Order,
+  OrderAddressReading,
   OrderCreate,
   OrderEditInput,
   OrderList,
@@ -36,6 +37,34 @@ export function useOrders(wid: string, status: OrderStatus | null, enabled = tru
   });
 }
 
+/** One order (C-218: the inbox's order card). Under keys.orders, so every order change refreshes it. */
+export function useOrder(wid: string, orderId: string | null) {
+  const api = useApi();
+  return useQuery<Order>({
+    queryKey: keys.order(wid, orderId ?? ""),
+    enabled: orderId !== null,
+    queryFn: () =>
+      unwrap(api.GET("/v1/w/{wid}/orders/{order_id}", { params: { path: { wid, order_id: orderId ?? "" } } })),
+  });
+}
+
+/**
+ * C-218: the AI reads a customer's message into address fields; nothing is saved (useEditOrder
+ * saves it). 1 AI credit: 402 opens the upgrade dialog.
+ */
+export function useReadOrderAddress(wid: string) {
+  const api = useApi();
+  return useMutation<OrderAddressReading, Error, { orderId: string; messageId: string }>({
+    mutationFn: ({ orderId, messageId }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/orders/{order_id}/address/read", {
+          params: { path: { wid, order_id: orderId } },
+          body: { message_id: messageId },
+        }),
+      ),
+  });
+}
+
 /** 402 on Free (the dialog shows the upgrade path inline); 404 for a conversation or product that isn't ours. */
 export function useCreateOrder(wid: string) {
   const api = useApi();
@@ -47,20 +76,23 @@ export function useCreateOrder(wid: string) {
   });
 }
 
-/** Make the payment link or UPI request and, when `send`, post it in the order's conversation. */
+/**
+ * Make the payment link or UPI request and, when `send`, post it in the order's conversation.
+ * `askAddress` (C-218) ends the message by asking for the delivery address when the order has none.
+ */
 export function useRequestPayment(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<
     Order,
     Error,
-    { orderId: string; method: OrderPaymentMethod; send: boolean; allowPartial?: boolean }
+    { orderId: string; method: OrderPaymentMethod; send: boolean; allowPartial?: boolean; askAddress?: boolean }
   >({
-    mutationFn: ({ orderId, method, send, allowPartial }) =>
+    mutationFn: ({ orderId, method, send, allowPartial, askAddress }) =>
       unwrap(
         api.POST("/v1/w/{wid}/orders/{order_id}/payment-request", {
           params: { path: { wid, order_id: orderId } },
-          body: { method, send, allow_partial: allowPartial ?? false },
+          body: { method, send, allow_partial: allowPartial ?? false, ask_address: askAddress ?? false },
         }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.orders(wid) }),

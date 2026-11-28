@@ -3,6 +3,7 @@ a client can patch its cache from an event without refetching (TR-RT-03)."""
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -17,6 +18,7 @@ from socialhood.schemas.inbox import (
     ConversationListItem,
     ErrorInfo,
     MessageButton,
+    MessageOrder,
     QuickReplyOut,
     Reaction,
     ReplyQuote,
@@ -182,7 +184,16 @@ def message_out(
         human_agent_tag=msg.human_agent_tag,
         reactions=[Reaction.model_validate(r) for r in msg.reactions or []],
         reply_to=reply_quote(reply_to) if reply_to is not None else None,
+        order=order_of(msg),
     )
+
+
+def order_of(msg: Message) -> MessageOrder | None:
+    """The order a cart message became (services/orders/cart.py stores it in ``interactive``)."""
+    data = msg.interactive
+    if msg.direction != "inbound" or not data or data.get("type") != "order":
+        return None
+    return MessageOrder(id=uuid.UUID(str(data["order_id"])), number=int(data["number"]))
 
 
 ATTACHMENT_PREVIEW = {
