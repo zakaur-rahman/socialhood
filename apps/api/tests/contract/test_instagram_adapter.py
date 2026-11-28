@@ -61,6 +61,7 @@ def test_the_authorize_url_asks_for_the_business_scopes() -> None:
     assert "client_id=1234567890" in url
     assert "state=st4te" in url
     assert "instagram_business_manage_messages" in url
+    assert "force_reauth=true" in url  # C-219: the login form, so the right account connects
     assert oauth.INSIGHTS_SCOPE not in url
     with_insights = SETTINGS.model_copy(update={"ig_request_insights_scope": True})
     assert oauth.INSIGHTS_SCOPE in oauth.authorize_url(with_insights, "s")
