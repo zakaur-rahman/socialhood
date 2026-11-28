@@ -10584,3 +10584,13 @@ Signup, read 2026-11-28):
   choice recorded; behaviour is unchanged. v5 (2026-10-20) replaces `waba_id` with
   `messaging_account_ids` in the session info and adds WhatsApp Business app onboarding: a
   separate change when wanted.
+
+## C-220: a WhatsApp contact has its phone number (2026-11-28)
+
+Owner: the contact panel's Phone was empty for a WhatsApp customer. A WhatsApp id is the
+customer's number in E.164 digits, but `contacts.phone` was only filled by a member or a flow's
+question. A new WhatsApp contact now gets `phone = +<wa_id>`, `phone_source = "whatsapp"`,
+`phone_verified = true` (repositories/ingest.whatsapp_phone); migration 0070 fills it for existing
+WhatsApp contacts that have none (data only). A captured phone never qualified a lead (only an
+email does), so lead stages don't change; "has a phone" filters now include WhatsApp contacts.
+Their profile picture stays empty: the Cloud API gives only the number and the profile name.

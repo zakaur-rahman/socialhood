@@ -570,3 +570,18 @@ async def test_a_paid_order_still_takes_its_address_but_not_new_lines(desk: Shop
     )
     assert refused.status_code == 422
     assert "paid" in refused.text.lower()  # refused for its state, not the line
+
+
+async def test_a_whatsapp_customer_s_contact_has_their_phone(desk: Shop) -> None:
+    """C-220: a WhatsApp id is the customer's number; the contact panel shows it as the phone."""
+    await desk.inject(kind="dm", from_id="919811112222", text="Hi, is the kurta available?")
+    await desk.process_webhooks()
+    [contact] = await desk.rows(
+        "SELECT phone, phone_source, phone_verified FROM contacts WHERE platform_user_id = :w",
+        w="919811112222",
+    )
+    assert contact == {
+        "phone": "+919811112222",
+        "phone_source": "whatsapp",
+        "phone_verified": True,
+    }
