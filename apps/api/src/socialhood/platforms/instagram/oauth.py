@@ -70,6 +70,11 @@ def authorize_url(settings: Settings, state: str) -> str:
         "response_type": "code",
         "scope": ",".join(scopes(settings)),
         "state": state,
+        # C-219: Instagram's login form every time, so the person signs in as the account they
+        # mean to connect. Switching accounts on Instagram's own page lands on the feed and never
+        # comes back to us. Business Login docs: "forces an app user to use their Instagram
+        # professional account credentials ... even if the user is logged into Instagram".
+        "force_reauth": "true",
     }
     return f"{AUTHORIZE_URL}?{urlencode(query)}"
 

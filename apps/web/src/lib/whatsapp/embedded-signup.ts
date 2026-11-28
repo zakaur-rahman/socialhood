@@ -206,7 +206,10 @@ export function runEmbeddedSignup(fb: FacebookSdk, configId: string): Promise<Si
         config_id: configId,
         response_type: "code",
         override_default_response_type: true,
-        extras: { setup: {}, sessionInfoVersion: "3" },
+        // C-219: no version, so Meta serves Embedded Signup v4 (v2 and v3 were retired on
+        // 2026-10-15). v4 always sends the session info we read (waba_id, phone_number_id); v5
+        // would replace waba_id with messaging_account_ids and needs its own handling.
+        extras: { setup: {} },
       },
     );
   });
