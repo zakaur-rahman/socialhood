@@ -4,6 +4,7 @@ with it, so every function runs inside ``workspace_scope``."""
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta
@@ -14,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import require_workspace
+from socialhood.models.connections import SocialAccount
 from socialhood.models.inbox import Contact, Conversation, Direction, Message, MessageStatus
 from socialhood.models.media import MediaAsset, MediaItem
 from socialhood.platforms.base import PlatformMedia
@@ -38,6 +40,17 @@ async def find_contact(
     ).one_or_none()
 
 
+# C-220: a WhatsApp customer's id is their phone number (E.164 digits), checked by WhatsApp.
+WA_ID = re.compile(r"^[1-9][0-9]{7,14}$")
+
+
+def whatsapp_phone(platform: str | None, platform_user_id: str) -> dict[str, object]:
+    """The contact's phone for a WhatsApp customer, from their WhatsApp id; nothing otherwise."""
+    if platform != "whatsapp" or not WA_ID.match(platform_user_id):
+        return {}
+    return {"phone": f"+{platform_user_id}", "phone_source": "whatsapp", "phone_verified": True}
+
+
 async def get_or_create_contact(
     session: AsyncSession,
     *,
@@ -51,6 +64,9 @@ async def get_or_create_contact(
     existing = await find_contact(session, social_account_id, platform_user_id)
     if existing is not None:
         return existing, False
+    platform = await session.scalar(
+        select(SocialAccount.platform).where(SocialAccount.id == social_account_id)
+    )
     statement = (
         insert(Contact)
         .values(
@@ -60,6 +76,7 @@ async def get_or_create_contact(
             display_name=display_name,
             platform_name=display_name,  # C-135: the platform's name, kept apart from a team name
             first_seen_at=first_seen_at,
+            **whatsapp_phone(platform, platform_user_id),
         )
         .on_conflict_do_nothing(
             index_elements=[Contact.social_account_id, Contact.platform_user_id]

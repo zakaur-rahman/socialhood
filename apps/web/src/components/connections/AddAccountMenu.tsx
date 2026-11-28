@@ -10,8 +10,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SITE_NAME } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
 import { FacebookGlyph } from "./FacebookGlyph";
@@ -113,6 +115,12 @@ export function AddAccountMenu({
             </span>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuSeparator />
+        {/* C-219: Meta's windows use whoever is logged into Facebook in this browser. */}
+        <p className="max-w-72 px-2 py-1.5 text-xs text-fg-secondary">
+          Facebook and WhatsApp use the Facebook account logged in on this browser. To use another one, log out of
+          Facebook first or open {SITE_NAME} in a private window.
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

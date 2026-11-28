@@ -10565,3 +10565,32 @@ hard to read, the AI's draft vague, and the address never asked for.
   change on a paid or fulfilled order (customers often pay first); the lines may not.
 - Not done: WhatsApp's native address message (India, +91 customers only; the owner's number is
   +1) and Meta's "Review and pay" order message (needs WhatsApp Payments).
+
+## C-219: connecting the right Meta account (2026-11-28)
+
+Owner: choosing "Switch account" on Instagram's consent page, then a saved profile, landed on the
+Instagram feed and never came back to Amplychat; the same question for Facebook and WhatsApp.
+Checked against Meta's docs (Business Login, Facebook Login manual flow, FB.login, Embedded
+Signup, read 2026-11-28):
+- **Instagram:** the authorize URL now sends `force_reauth=true` ("forces an app user to use
+  their Instagram professional account credentials ... even if the user is logged into
+  Instagram"), so Instagram's login form appears every time and returns to us. The cost is a
+  password on each connect.
+- **Facebook Pages and WhatsApp:** Meta documents no way to switch Facebook accounts (only
+  `auth_type=rerequest` for declined permissions); both use the Facebook login of the browser. The
+  Add account menu now says so: log out of Facebook first, or use a private window.
+- **Embedded Signup version:** v2 and v3 were retired on 2026-10-15; a request without a version
+  is served as v4, which ignored our `sessionInfoVersion: "3"`. The option is removed and the
+  choice recorded; behaviour is unchanged. v5 (2026-10-20) replaces `waba_id` with
+  `messaging_account_ids` in the session info and adds WhatsApp Business app onboarding: a
+  separate change when wanted.
+
+## C-220: a WhatsApp contact has its phone number (2026-11-28)
+
+Owner: the contact panel's Phone was empty for a WhatsApp customer. A WhatsApp id is the
+customer's number in E.164 digits, but `contacts.phone` was only filled by a member or a flow's
+question. A new WhatsApp contact now gets `phone = +<wa_id>`, `phone_source = "whatsapp"`,
+`phone_verified = true` (repositories/ingest.whatsapp_phone); migration 0070 fills it for existing
+WhatsApp contacts that have none (data only). A captured phone never qualified a lead (only an
+email does), so lead stages don't change; "has a phone" filters now include WhatsApp contacts.
+Their profile picture stays empty: the Cloud API gives only the number and the profile name.
