@@ -75,6 +75,9 @@ def authorize_url(settings: Settings, state: str) -> str:
         # comes back to us. Business Login docs: "forces an app user to use their Instagram
         # professional account credentials ... even if the user is logged into Instagram".
         "force_reauth": "true",
+        # C-221: no "Log in with Facebook" on that form: it also drops the way back to us (seen in
+        # the owner's recording, 2026-11-28), so only the username and password route is left.
+        "enable_fb_login": "false",
     }
     return f"{AUTHORIZE_URL}?{urlencode(query)}"
 
