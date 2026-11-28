@@ -10594,3 +10594,11 @@ question. A new WhatsApp contact now gets `phone = +<wa_id>`, `phone_source = "w
 WhatsApp contacts that have none (data only). A captured phone never qualified a lead (only an
 email does), so lead stages don't change; "has a phone" filters now include WhatsApp contacts.
 Their profile picture stays empty: the Cloud API gives only the number and the profile name.
+
+## C-221: Instagram's login form without "Log in with Facebook" (2026-11-28)
+
+The owner's recording after C-219: Reconnect opened Instagram's login form (force_reauth worked),
+but "Log in with Facebook" on it went through `signupviafb` and landed on Instagram's profile list
+and then the feed, never back in Amplychat. The authorize URL now also sends
+`enable_fb_login=false` (Business Login docs: "If set to false, the Facebook Login option will be
+hidden"), so the username and password route, which returns to us, is the only one.
