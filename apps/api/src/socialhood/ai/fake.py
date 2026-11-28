@@ -100,6 +100,17 @@ DEFAULTS: dict[str, Any] = {
     "caption": {"caption": "New this week, made for sunny days. Which one is yours? #newarrivals"},
     "hashtags": {"hashtags": ["newarrivals", "shoplocal", "smallbusiness"]},
     "polish": echo_draft,
+    "address": {
+        "found": True,
+        "name": "Asha Rao",
+        "phone": None,
+        "line1": "12 MG Road",
+        "line2": "Near City Mall",
+        "city": "Patna",
+        "state": "Bihar",
+        "pincode": "800001",
+        "country": "India",
+    },
 }
 
 

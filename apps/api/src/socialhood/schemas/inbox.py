@@ -316,6 +316,13 @@ class ReplyQuote(ResponseModel):
     text_preview: str
 
 
+class MessageOrder(ResponseModel):
+    """The order a customer's WhatsApp cart became (C-218): the inbox shows it as a card."""
+
+    id: uuid.UUID
+    number: int
+
+
 class Message(ResponseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
@@ -342,6 +349,7 @@ class Message(ResponseModel):
     human_agent_tag: bool
     reactions: list[Reaction]
     reply_to: ReplyQuote | None = None  # GR-42; null also when the quoted message isn't stored
+    order: MessageOrder | None = None  # C-218: a cart that became an order
 
 
 class MessageList(ResponseModel):

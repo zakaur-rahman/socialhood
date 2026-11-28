@@ -36,6 +36,7 @@ export const ADDRESS_FIELDS: { key: keyof OrderAddressInput; label: string; max:
   { key: "city", label: "City", max: 100 },
   { key: "state", label: "State", max: 100 },
   { key: "pincode", label: "Pincode", max: 12 },
+  { key: "country", label: "Country", max: 60 },
 ];
 
 /** The price one line would have: shown as an estimate, since the server prices the order itself. */

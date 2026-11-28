@@ -266,6 +266,9 @@ async def _cart(
     from socialhood.services.orders import cart
 
     await cart.from_cart(session, conv, contact, msg, event.order, now=now)
+    # The cart rewrote the text ("Order #1: ..."); the list shows that, not the parser's line.
+    if conv.last_message_at is None or msg.occurred_at >= conv.last_message_at:
+        conv.last_message_preview = preview_text(msg.kind, msg.text)
 
 
 async def _automations(session: AsyncSession, contact: Contact, msg: Message, *, run: bool) -> None:

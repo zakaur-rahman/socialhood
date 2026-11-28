@@ -275,6 +275,7 @@
     "knowledge_test": 1,
     "automation_ai_reply": 2,
     "agent_turn": 1,
-    "reply_polish": 1
+    "reply_polish": 1,
+    "address_read": 1
   }
 }

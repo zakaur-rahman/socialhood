@@ -56,6 +56,7 @@ import { Composer, type Uploader } from "./Composer";
 import { useOptionalInboxUi } from "./inbox-context";
 import { MessageBubble } from "./MessageBubble";
 import { MessageLog } from "./MessageLog";
+import { AddressBar, OrderCard, useOrderReply } from "./OrderMessages";
 import { SnoozeDialog } from "./SnoozeDialog";
 import { TemplatePicker } from "./TemplatePicker";
 import { ThreadHeader } from "./ThreadHeader";
@@ -229,6 +230,8 @@ function Thread({
   // GR-42: reactions go to the customer's messages (Meta's docs only describe those).
   const reactionChoices = reactionsFor(conversation.platform);
   const suggestionUi = useSuggestionSlot({ conversation, messages: all, canReply, onSend: send, upload: knowledgeUpload });
+  // C-218: a cart waiting for payment gets the order's own reply, in the AI draft's place.
+  const orderReply = useOrderReply({ messages: all, canReply, onSend: send });
   const analysis = conversation.latest_analysis ?? null;
 
   const failureFor = useCallback(
@@ -323,6 +326,11 @@ function Thread({
                 ? (emoji) => react.mutate({ message, emoji })
                 : undefined
             }
+            body={
+              message.order && message.direction === "inbound" ? (
+                <OrderCard orderId={message.order.id} text={message.text ?? null} />
+              ) : undefined
+            }
             below={
               analysis && message.id === analysis.message_id && message.direction === "inbound" ? (
                 <AnalysisChips analysis={analysis} conversationId={conversationId} />
@@ -337,9 +345,12 @@ function Thread({
         </div>
       ) : null}
       <ScheduledChip conversation={conversation} now={now} onOpen={() => ui?.setTab("scheduled")} />
-      <div className="shrink-0 bg-canvas">{suggestionUi.slot}</div>
+      <div className="shrink-0 bg-canvas">
+        <AddressBar messages={all} />
+        {orderReply ?? suggestionUi.slot}
+      </div>
       <Composer
-        suggestionKeys={suggestionUi.keys}
+        suggestionKeys={orderReply ? null : suggestionUi.keys}
         wid={wid}
         slug={workspace.slug}
         timeZone={workspace.timezone}

@@ -775,6 +775,39 @@
         "title": "AddressOut",
         "type": "object"
       },
+      "AddressReadRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id"
+        ],
+        "title": "AddressReadRequest",
+        "type": "object"
+      },
+      "AddressReading": {
+        "description": "What the AI read (C-218). Nothing is saved: the member checks it, then edits the order.",
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/AddressOut"
+          },
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "found",
+          "address"
+        ],
+        "title": "AddressReading",
+        "type": "object"
+      },
       "AgentApproval": {
         "description": "A write waiting for a person: exactly what will happen (recipients, text, scope, count).",
         "properties": {
@@ -15116,6 +15149,16 @@
             "title": "Occurred At",
             "type": "string"
           },
+          "order": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageOrder"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "quick_replies": {
             "items": {
               "$ref": "#/components/schemas/QuickReplyOut"
@@ -15429,6 +15472,26 @@
           "items"
         ],
         "title": "MessageList",
+        "type": "object"
+      },
+      "MessageOrder": {
+        "description": "The order a customer's WhatsApp cart became (C-218): the inbox shows it as a card.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "number"
+        ],
+        "title": "MessageOrder",
         "type": "object"
       },
       "MetricComparison": {
@@ -17399,6 +17462,11 @@
           "allow_partial": {
             "default": false,
             "title": "Allow Partial",
+            "type": "boolean"
+          },
+          "ask_address": {
+            "default": false,
+            "title": "Ask Address",
             "type": "boolean"
           },
           "method": {
@@ -43680,6 +43748,80 @@
           }
         },
         "summary": "Edit Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}/address/read": {
+      "post": {
+        "description": "C-218: the AI reads the customer's message into the order's delivery address fields, for a\nmember to check and save with the order's edit. Nothing is saved. 1 credit; 402\nquota_exceeded without credits; 422 on ``message_id`` for a message that isn't the\ncustomer's in this order's conversation; 503 when the AI can't answer.",
+        "operationId": "read_order_address",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressReading"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Read Order Address",
         "tags": [
           "orders"
         ]

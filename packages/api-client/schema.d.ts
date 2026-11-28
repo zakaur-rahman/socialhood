@@ -3523,6 +3523,29 @@ export interface paths {
         patch: operations["edit_order"];
         trace?: never;
     };
+    "/v1/w/{wid}/orders/{order_id}/address/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Order Address
+         * @description C-218: the AI reads the customer's message into the order's delivery address fields, for a
+         *     member to check and save with the order's edit. Nothing is saved. 1 credit; 402
+         *     quota_exceeded without credits; 422 on ``message_id`` for a message that isn't the
+         *     customer's in this order's conversation; 503 when the AI can't answer.
+         */
+        post: operations["read_order_address"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/orders/{order_id}/cancel": {
         parameters: {
             query?: never;
@@ -5408,6 +5431,23 @@ export interface components {
             pincode?: string | null;
             /** State */
             state?: string | null;
+        };
+        /** AddressReadRequest */
+        AddressReadRequest: {
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+        };
+        /**
+         * AddressReading
+         * @description What the AI read (C-218). Nothing is saved: the member checks it, then edits the order.
+         */
+        AddressReading: {
+            address: components["schemas"]["AddressOut"];
+            /** Found */
+            found: boolean;
         };
         /**
          * AgentApproval
@@ -10423,6 +10463,7 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+            order?: components["schemas"]["MessageOrder"] | null;
             /** Quick Replies */
             quick_replies?: components["schemas"]["QuickReplyOut"][];
             /** Reactions */
@@ -10511,6 +10552,19 @@ export interface components {
             items: components["schemas"]["Message"][];
             /** Next Cursor */
             next_cursor?: string | null;
+        };
+        /**
+         * MessageOrder
+         * @description The order a customer's WhatsApp cart became (C-218): the inbox shows it as a card.
+         */
+        MessageOrder: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
         };
         /**
          * MetricComparison
@@ -11249,6 +11303,11 @@ export interface components {
              * @default false
              */
             allow_partial: boolean;
+            /**
+             * Ask Address
+             * @default false
+             */
+            ask_address: boolean;
             /**
              * Method
              * @enum {string}
@@ -24027,6 +24086,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    read_order_address: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddressReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddressReading"];
                 };
             };
             /** @description Validation error */

@@ -165,12 +165,14 @@ async def test_a_upi_order_is_paid_in_parts_by_hand(ws: Ws, engine: AsyncEngine)
     assert too_much.status_code == 422
     assert too_much.json()["detail"] == "That payment is more than what is left to pay."
 
-    # A partly paid order can't be cancelled or edited: there is money on it.
+    # A partly paid order can't be cancelled or get new lines: there is money on it. Its note
+    # and address may still change (C-218).
     cancel = await ws.call("POST", f"/orders/{order['id']}/cancel")
     assert cancel.status_code == 422
     assert cancel.json()["detail"] == "This order has payments. Refund them before you cancel it."
-    edit = await ws.call("PATCH", f"/orders/{order['id']}", json={"note": "x"})
+    edit = await ws.call("PATCH", f"/orders/{order['id']}", json={"items": same_lines(order)})
     assert edit.status_code == 422
+    assert (await ws.ok("PATCH", f"/orders/{order['id']}", json={"note": "x"}))["note"] == "x"
 
     done = await ws.ok("POST", f"/orders/{order['id']}/mark-paid", json={})  # all that is left
     assert (done["status"], done["amount_paid_minor"], done["amount_left_minor"]) == (
@@ -584,15 +586,27 @@ async def test_a_new_total_cancels_the_old_link_and_can_send_a_new_one(
     assert "Total: INR 2397.00" in sent["text"]
 
 
-async def test_a_paid_or_cancelled_order_cannot_be_edited(ws: Ws, engine: AsyncEngine) -> None:
+def same_lines(order: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {"product_id": i["product_id"], "variant_id": i["variant_id"], "quantity": i["quantity"]}
+        for i in order["items"]
+    ]
+
+
+async def test_a_paid_order_keeps_its_lines_and_a_cancelled_one_everything(
+    ws: Ws, engine: AsyncEngine
+) -> None:
     paid, kurta = await order_in_chat(ws, engine)
     await ws.ok("POST", f"/orders/{paid['id']}/mark-paid", json={})
-    refused = await ws.call("PATCH", f"/orders/{paid['id']}", json={"note": "x"})
+    refused = await ws.call("PATCH", f"/orders/{paid['id']}", json={"items": same_lines(paid)})
     assert refused.status_code == 422
     assert (
         refused.json()["detail"]
         == "An order can be changed until someone pays it. This one is paid."
     )
+    # C-218: the address (and note) still can, since customers often pay first.
+    moved = await ws.ok("PATCH", f"/orders/{paid['id']}", json={"address": {"city": "Patna"}})
+    assert (moved["status"], moved["address"]["city"]) == ("paid", "Patna")
 
     gone, _ = await order_in_chat(ws, engine, kurta=kurta)
     await ws.ok("POST", f"/orders/{gone['id']}/cancel")

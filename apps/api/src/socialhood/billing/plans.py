@@ -163,6 +163,8 @@ CREDIT_COSTS: dict[str, int] = {
     "agent_turn": 1,
     # The composer's AI Polish: rewrites the member's own draft (C-063).
     "reply_polish": 1,
+    # Reading a customer's reply into an order's delivery address (C-218).
+    "address_read": 1,
 }
 
 

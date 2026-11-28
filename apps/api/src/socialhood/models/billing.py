@@ -86,6 +86,7 @@ class AiFeature(StrEnum):
     AUTOMATION_AI_REPLY = "automation_ai_reply"
     AGENT_TURN = "agent_turn"  # each model call of an Ask Amplychat run (TR-AGT-02)
     REPLY_POLISH = "reply_polish"  # the composer's AI Polish (C-063)
+    ADDRESS_READ = "address_read"  # a customer's reply read into an order's address (C-218)
 
 
 class AiOutcome(StrEnum):
